@@ -42,7 +42,7 @@ impl Add for CurvePoint {
         assert!(self.x.clone() - rhs.x.clone() != FieldElement::zero());
         let m = (self.y.clone() - rhs.y.clone()) / (self.x.clone() - rhs.x.clone());
         let x = m.clone() * m.clone() - self.x.clone() - rhs.x.clone();
-        let y = m.clone() * (self.x.clone() - x.clone()) - rhs.y.clone();
+        let y = m.clone() * (self.x.clone() - x.clone()) - self.y.clone();
         CurvePoint {x, y}
     }
 }
