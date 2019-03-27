@@ -4,6 +4,45 @@ use num::traits::cast::FromPrimitive;
 use num_bigint::BigUint;
 use lazy_static::lazy_static;
 
+pub fn modinv(n: &BigUint, m: &BigUint) -> Option<BigUint> {
+    let mut a = n.clone();
+    let mut b = m.clone();
+    let mut x = BigUint::one();
+    let mut y = BigUint::zero();
+    let mut r = BigUint::zero();
+    let mut s = BigUint::one();
+    while !b.is_zero() {
+        let c = &a % &b;
+        let q = &a / &b;
+        a = b;
+        b = c;
+        let tr = r.clone();
+        let ts = s.clone();
+
+        // r = x - q * r mod m
+        r *= &q;
+        r %= m;
+        r = m - &r;
+        r += &x;
+        r %= m;
+
+        // s = y - q * s mod m
+        s *= &q;
+        s %= m;
+        s = m - &s;
+        s += &y;
+        s %= m;
+
+        x = tr;
+        y = ts;
+    }
+    if a == BigUint::one() {
+        Some(x)
+    } else {
+        None
+    }
+}
+
 // Note: BigUInt does not support compile time initialization
 lazy_static! {
     pub static ref ZERO: BigUint = BigUint::from_slice(&[
@@ -49,6 +88,8 @@ impl One for FieldElement {
     }
 }
 
+// TODO: mul2() mul3() pow2()
+
 impl Neg for FieldElement {
     type Output = FieldElement;
     fn neg(self) -> Self::Output {
@@ -60,10 +101,10 @@ impl Neg for FieldElement {
 
 impl Inv for FieldElement {
     type Output = Self;
+    // TODO: Option
     fn inv(self) -> Self::Output {
-        // Fermats little theorem
-        // TODO: Better.
-        FieldElement(self.0.modpow(&*INVEXP, &*MODULUS))
+        // TODO: Option type.
+        FieldElement(modinv(&self.0, &*MODULUS).unwrap())
     }
 }
 
@@ -139,6 +180,7 @@ use rand::Rng;
 #[cfg(test)]
 impl Arbitrary for FieldElement {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
+        // TODO: Generate 0, 1, p/2 and -1
         let mut n = BigUint::from_slice(&[
             g.gen(), g.gen(), g.gen(), g.gen(),
             g.gen(), g.gen(), g.gen(), g.gen()
