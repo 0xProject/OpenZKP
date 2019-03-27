@@ -1,7 +1,7 @@
 use std::ops::{Add, Neg, Sub, Mul, Div, AddAssign, SubAssign, MulAssign, DivAssign};
-use num::traits::{Zero, One, Inv,cast::FromPrimitive};
+use num::traits::{Zero, One, Inv};
 use num::integer::Integer;
-use num::bigint::{BigInt, BigUint, Sign};
+use num::bigint::BigUint;
 use lazy_static::lazy_static;
 
 pub fn modinv(n: &BigUint, m: &BigUint) -> Option<BigUint> {
@@ -202,7 +202,8 @@ impl Arbitrary for FieldElement {
 mod tests {
     use super::*;
     use quickcheck_macros::quickcheck;
-
+    use num::traits::cast::FromPrimitive;
+    
     #[test]
     fn test_modinv() {
         let n = BigUint::from_u64(271).unwrap();

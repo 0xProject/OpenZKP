@@ -1,7 +1,6 @@
-use crate::field::{FieldElement, modinv};
+use crate::field::modinv;
 use crate::curve::{CurvePoint, ORDER};
-use crate::pedersen_points::PEDERSEN_POINTS;
-use num::{BigUint, integer::Integer, traits::identities::{Zero, One}};
+use num::{BigUint, traits::identities::{Zero, One}};
 use lazy_static::lazy_static;
 
 lazy_static! {
@@ -44,9 +43,9 @@ pub fn verify(msg_hash: &BigUint, r: &BigUint, w: &BigUint, public_key: &CurvePo
     assert!(w.bits() <= 251);
     assert!(public_key.on_curve());
 
-    let A = GENERATOR.clone() * (msg_hash * w);
-    let B = public_key.clone() * (r * w);
-    let x = (A + B).x.0;
+    let a = GENERATOR.clone() * (msg_hash * w);
+    let b = public_key.clone() * (r * w);
+    let x = (a + b).x.0;
     &x == r
 }
 
@@ -54,6 +53,7 @@ pub fn verify(msg_hash: &BigUint, r: &BigUint, w: &BigUint, public_key: &CurvePo
 mod tests {
     use super::*;
     use quickcheck_macros::quickcheck;
+    use crate::field::FieldElement;
 
     #[quickcheck]
     #[test]

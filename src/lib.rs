@@ -1,8 +1,8 @@
 pub mod field;
 pub mod curve;
-mod pedersen;
+pub mod pedersen;
 mod pedersen_points;
-mod ecdsa;
+pub mod ecdsa;
 
 #[cfg(test)]
 mod tests {

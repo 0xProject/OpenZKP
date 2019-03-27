@@ -38,7 +38,6 @@ pub fn hash(elements: &[BigUint]) -> BigUint {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use quickcheck_macros::quickcheck;
 
     #[test]
     fn test_hash_1() {
