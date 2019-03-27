@@ -1,5 +1,6 @@
-use std::ops::{Add, Mul, AddAssign, SubAssign, MulAssign, DivAssign};
-use num::{Zero, One};
+use std::ops::{Add, Neg, Sub, Mul, Div, AddAssign, SubAssign, MulAssign, DivAssign};
+use num::traits::{Zero, One, Inv};
+use num::traits::cast::FromPrimitive;
 use num_bigint::BigUint;
 use lazy_static::lazy_static;
 
@@ -16,6 +17,10 @@ lazy_static! {
     pub static ref MODULUS: BigUint = BigUint::from_slice(&[
         0x00000001, 0x00000000, 0x00000000, 0x00000000,
         0x00000000, 0x00000000, 0x00000011, 0x08000000
+    ]);
+    pub static ref INVEXP: BigUint = BigUint::from_slice(&[
+        0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff,
+        0xffffffff, 0xffffffff, 0x00000010, 0x08000000
     ]);
 }
 
@@ -44,6 +49,24 @@ impl One for FieldElement {
     }
 }
 
+impl Neg for FieldElement {
+    type Output = FieldElement;
+    fn neg(self) -> Self::Output {
+        let mut n = (&*MODULUS).clone();
+        n -= self.0;
+        FieldElement(n)
+    }
+}
+
+impl Inv for FieldElement {
+    type Output = Self;
+    fn inv(self) -> Self::Output {
+        // Fermats little theorem
+        // TODO: Better.
+        FieldElement(self.0.modpow(&*INVEXP, &*MODULUS))
+    }
+}
+
 impl AddAssign<&FieldElement> for FieldElement {
     fn add_assign(&mut self, rhs: &FieldElement) {
         self.0 += &rhs.0;
@@ -66,21 +89,44 @@ impl MulAssign<&FieldElement> for FieldElement {
     }
 }
 
+impl DivAssign<&FieldElement> for FieldElement {
+    fn div_assign(&mut self, rhs: &FieldElement) {
+        let i: FieldElement = rhs.clone().inv();
+        self.mul_assign(&i);
+    }
+}
+
 impl Add for FieldElement {
     type Output = Self;
-    fn add(self, rhs: FieldElement) -> Self {
+    fn add(self, rhs: FieldElement) -> Self::Output {
         let mut result = self.clone();
         result += &rhs;
         result
     }
 }
 
+impl Sub for FieldElement {
+    type Output = Self;
+    fn sub(self, rhs: FieldElement) -> Self::Output {
+        let mut result = self.clone();
+        result -= &rhs;
+        result
+    }
+}
+
 impl Mul for FieldElement {
     type Output = Self;
-    fn mul(self, rhs: FieldElement) -> Self {
+    fn mul(self, rhs: FieldElement) -> Self::Output {
         let mut result = self.clone();
         result *= &rhs;
         result
+    }
+}
+
+impl Div for FieldElement {
+    type Output = Self;
+    fn div(self, rhs: FieldElement) -> Self::Output {
+        self * rhs.inv()
     }
 }
 
@@ -145,15 +191,18 @@ mod tests {
 
     #[quickcheck]
     #[test]
-    fn inverse_add() {
+    fn inverse_add(a: FieldElement) -> bool {
+        a.clone() + a.neg() == FieldElement::zero()
     }
 
     #[quickcheck]
     #[test]
-    fn inverse_mul() {
+    fn inverse_mul(a: FieldElement) -> bool {
+        a.clone() * a.inv() == FieldElement::one()
     }
 
     #[quickcheck]
+    #[test]
     fn distributivity(a: FieldElement, b: FieldElement, c: FieldElement) -> bool {
         a.clone() * (b.clone() + c.clone()) == (a.clone() * b) + (a * c)
     }
