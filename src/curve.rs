@@ -10,19 +10,14 @@ use lazy_static::lazy_static;
 // Order = 0x800000000000010ffffffffffffffffb781126dcae7b2321e66a241adc64d2f
 
 lazy_static! {
-    static ref BETA: FieldElement = FieldElement::new(&[
+    pub static ref BETA: FieldElement = FieldElement::new(&[
         0x9cee9e89, 0xf4cdfcb9, 0x15c915c1, 0x609ad26c,
         0x72f7a8c5, 0x150e596d, 0xefbe40de, 0x06f21413,
     ]);
-    static ref ORDER: BigUint = BigUint::from_slice(&[
+    pub static ref ORDER: BigUint = BigUint::from_slice(&[
         0xadc64d2f, 0x1e66a241, 0xcae7b232, 0xb781126d,
         0xffffffff, 0xffffffff, 0x00000010, 0x08000000,
     ]);
-    static ref GENERATOR: CurvePoint = CurvePoint::new(&[
-            0xc943cfca, 0x3d723d8b, 0x0d1819e0, 0xdeacfd9b,
-            0x5a40f0c7, 0x7beced41, 0x8599971b, 0x01ef15c1],&[
-            0x36e8dc1f, 0x2873000c, 0x1abe43a3, 0xde53ecd1,
-            0xdf46ec62, 0xb7be4801, 0x0aa49730, 0x00566806]);
 }
 
 #[derive(PartialEq,Eq,Clone,Debug)]
@@ -41,6 +36,10 @@ impl CurvePoint {
         }
     }
 
+    pub fn on_curve(&self) -> bool {
+        self.y.clone() * self.y.clone() == self.x.clone() * self.x.clone() * self.x.clone() + self.x.clone() + BETA.clone()
+    }
+ 
     pub fn double(self) -> CurvePoint {
         assert!(self.x.clone() != FieldElement::zero());
         let one = FieldElement::one().clone();
@@ -98,6 +97,7 @@ use rand::Rng;
 #[cfg(test)]
 impl Arbitrary for CurvePoint {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
+        // TODO: Generate the zero point
         CurvePoint {
             x: FieldElement::arbitrary(g),
             y: FieldElement::arbitrary(g),
