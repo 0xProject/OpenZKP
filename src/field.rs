@@ -1,43 +1,55 @@
 use std::ops::{Add, Neg, Sub, Mul, Div, AddAssign, SubAssign, MulAssign, DivAssign};
-use num::traits::{Zero, One, Inv};
-use num::traits::cast::FromPrimitive;
-use num_bigint::BigUint;
+use num::traits::{Zero, One, Inv,cast::FromPrimitive};
+use num::integer::Integer;
+use num::bigint::{BigInt, BigUint, Sign};
 use lazy_static::lazy_static;
 
 pub fn modinv(n: &BigUint, m: &BigUint) -> Option<BigUint> {
-    let mut a = n.clone();
-    let mut b = m.clone();
-    let mut x = BigUint::one();
-    let mut y = BigUint::zero();
-    let mut r = BigUint::zero();
-    let mut s = BigUint::one();
-    while !b.is_zero() {
-        let c = &a % &b;
-        let q = &a / &b;
-        a = b;
-        b = c;
-        let tr = r.clone();
-        let ts = s.clone();
-
-        // r = x - q * r mod m
-        r *= &q;
-        r %= m;
-        r = m - &r;
-        r += &x;
-        r %= m;
-
-        // s = y - q * s mod m
-        s *= &q;
-        s %= m;
-        s = m - &s;
-        s += &y;
-        s %= m;
-
-        x = tr;
-        y = ts;
+    // Handbook of Applied Cryptography Algorithm 14.61:
+    // Binary Extended GCD
+    // See also note 14.64.
+    let mut x = BigInt::from_biguint(Sign::Plus, n.clone());
+    let mut y = BigInt::from_biguint(Sign::Plus, m.clone());
+    let mut u = x.clone();
+    let mut v = y.clone();
+    let mut a = BigInt::one();
+    let mut b = BigInt::zero();
+    let mut c = BigInt::zero();
+    let mut d = BigInt::one();
+    while !u.is_zero() {
+        while u.is_even() {
+            u >>= 1;
+            if a.is_odd() || b.is_odd() {
+                a += &y;
+                b -= &x;
+            }
+            a >>= 1;
+            b >>= 1;
+        }
+        while v.is_even() {
+            v >>= 1;
+            if c.is_odd() || d.is_odd() {
+                c += &y;
+                d -= &x;
+            }
+            c >>= 1;
+            d >>= 1;
+        }
+        if u >= v {
+            u -= &v;
+            a -= &c;
+            b -= &d;
+        } else {
+            v -= &u;
+            c -= &a;
+            d -= &b;
+        }
     }
-    if a == BigUint::one() {
-        Some(x)
+    if v == BigInt::one() {
+        if c < BigInt::zero() {
+            c += BigInt::from_biguint(Sign::Plus, m.clone());
+        }
+        Some(c.to_biguint().unwrap())
     } else {
         None
     }
@@ -194,6 +206,15 @@ impl Arbitrary for FieldElement {
 mod tests {
     use super::*;
     use quickcheck_macros::quickcheck;
+
+    #[test]
+    fn test_modinv() {
+        let n = BigUint::from_u64(271).unwrap();
+        let m = BigUint::from_u64(383).unwrap();
+        let i = BigUint::from_u64(106).unwrap();
+        let r = modinv(&n, &m).unwrap();
+        assert_eq!(i, r);
+    }
 
     #[test]
     fn test_add() {
