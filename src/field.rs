@@ -25,7 +25,7 @@ lazy_static! {
 }
 
 #[derive(PartialEq,Eq,Clone,Debug)]
-pub struct FieldElement(BigUint);
+pub struct FieldElement(pub BigUint);
 
 impl FieldElement {
     // TODO: const ZERO ONE
@@ -152,6 +152,38 @@ impl Arbitrary for FieldElement {
 mod tests {
     use super::*;
     use quickcheck_macros::quickcheck;
+
+    #[test]
+    fn test_add() {
+        let a = FieldElement::new(&[0x0f3855f5, 0x37862eb2, 0x275b919f, 0x325329cb, 0xe968e6a2, 0xa2ceee5c, 0xd5f1d547, 0x07211989]);
+        let b = FieldElement::new(&[0x32c781dd, 0x6f6a3b68, 0x3bac723c, 0xd5893114, 0xd0178b37, 0x5476714f, 0x1c567d5a, 0x0219cad4]);
+        let c = FieldElement::new(&[0x41ffd7d1, 0xa6f06a1a, 0x630803db, 0x07dc5adf, 0xb98071da, 0xf7455fac, 0xf2485290, 0x013ae45d]);
+        assert_eq!(a + b, c);
+    }
+
+    #[test]
+    fn test_sub() {
+        let a = FieldElement::new(&[0x7d14253b, 0xef060e37, 0x98d1486f, 0x8700b80a, 0x0a83500d, 0x961ed57d, 0x68cc0469, 0x02945916]);
+        let b = FieldElement::new(&[0xf3a5912a, 0x62f3d853, 0x748c8465, 0x5f9b78d9, 0x8d66de24, 0xcf8479c5, 0x08cc1bb0, 0x06566f2f]);
+        let c = FieldElement::new(&[0x896e9412, 0x8c1235e3, 0x2444c40a, 0x27653f31, 0x7d1c71e9, 0xc69a5bb7, 0x5fffe8c9, 0x043de9e7]);
+        assert_eq!(a - b, c);
+    }
+
+    #[test]
+    fn test_mul() {
+        let a = FieldElement::new(&[0x25fb5664, 0x9884280e, 0x0dcdbb96, 0x299078c9, 0x4392fd2e, 0x5a3ba2c1, 0x76e8c4ab, 0x06456ad3]);
+        let b = FieldElement::new(&[0xf4926adb, 0x7e94c9d8, 0x18646bfe, 0x75c324f5, 0x1beb13ef, 0xc4195ea4, 0xd6098107, 0x009ce793]);
+        let c = FieldElement::new(&[0x8f18f110, 0x98593af8, 0x1eda2b3f, 0x92f06f39, 0x36f1d62e, 0x8c7b6e67, 0xa1175434, 0x037ad171]);
+        assert_eq!(a * b, c);
+    }
+
+    #[test]
+    fn test_div() {
+        let a = FieldElement::new(&[0x7d14253b, 0xef060e37, 0x98d1486f, 0x8700b80a, 0x0a83500d, 0x961ed57d, 0x68cc0469, 0x02945916]);
+        let b = FieldElement::new(&[0xf3a5912a, 0x62f3d853, 0x748c8465, 0x5f9b78d9, 0x8d66de24, 0xcf8479c5, 0x08cc1bb0, 0x06566f2f]);
+        let c = FieldElement::new(&[0x4fb2a90b, 0x301e1830, 0x97593d1a, 0x97e53783, 0xbf27c713, 0x1bed3220, 0x9a076875, 0x02a40705]);
+        assert_eq!(a / b, c);
+    }
 
     #[quickcheck]
     #[test]
