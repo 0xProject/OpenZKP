@@ -8,40 +8,41 @@ pub fn modinv(n: &BigUint, m: &BigUint) -> Option<BigUint> {
     // Handbook of Applied Cryptography Algorithm 14.61:
     // Binary Extended GCD
     // See also note 14.64.
-    let mut x = BigInt::from_biguint(Sign::Plus, n.clone());
-    let mut y = BigInt::from_biguint(Sign::Plus, m.clone());
-    let mut u = x.clone();
-    let mut v = y.clone();
-    let mut a = BigInt::one();
-    let mut c = BigInt::zero();
+    let mut u = n.clone();
+    let mut v = m.clone();
+    let mut a = BigUint::one();
+    let mut c = BigUint::zero();
     while !u.is_zero() {
         while u.is_even() {
             u >>= 1;
             if a.is_odd() {
-                a += &y;
+                a += m;
             }
             a >>= 1;
         }
         while v.is_even() {
             v >>= 1;
             if c.is_odd() {
-                c += &y;
+                c += m;
             }
             c >>= 1;
         }
         if u >= v {
+            if a < c {
+                a += m;
+            }
             u -= &v;
             a -= &c;
         } else {
+            if c < a {
+                c += m;
+            }
             v -= &u;
             c -= &a;
         }
     }
-    if v == BigInt::one() {
-        if c < BigInt::zero() {
-            c += BigInt::from_biguint(Sign::Plus, m.clone());
-        }
-        Some(c.to_biguint().unwrap())
+    if v == BigUint::one() {
+        Some(c)
     } else {
         None
     }
