@@ -13,36 +13,28 @@ pub fn modinv(n: &BigUint, m: &BigUint) -> Option<BigUint> {
     let mut u = x.clone();
     let mut v = y.clone();
     let mut a = BigInt::one();
-    let mut b = BigInt::zero();
     let mut c = BigInt::zero();
-    let mut d = BigInt::one();
     while !u.is_zero() {
         while u.is_even() {
             u >>= 1;
-            if a.is_odd() || b.is_odd() {
+            if a.is_odd() {
                 a += &y;
-                b -= &x;
             }
             a >>= 1;
-            b >>= 1;
         }
         while v.is_even() {
             v >>= 1;
-            if c.is_odd() || d.is_odd() {
+            if c.is_odd() {
                 c += &y;
-                d -= &x;
             }
             c >>= 1;
-            d >>= 1;
         }
         if u >= v {
             u -= &v;
             a -= &c;
-            b -= &d;
         } else {
             v -= &u;
             c -= &a;
-            d -= &b;
         }
     }
     if v == BigInt::one() {
