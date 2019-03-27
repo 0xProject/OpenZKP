@@ -1,4 +1,4 @@
-use crate::field::FieldElement;
+use crate::field::{FieldElement, modinv};
 use crate::curve::{CurvePoint, ORDER};
 use crate::pedersen_points::PEDERSEN_POINTS;
 use num::{BigUint, integer::Integer, traits::identities::{Zero, One}};
@@ -17,7 +17,7 @@ pub fn private_to_public(private_key: BigUint) -> CurvePoint {
 }
 
 fn divmod(a: &BigUint, b: &BigUint) -> BigUint {
-   (a * b.modpow(&(ORDER.clone() - BigUint::one() - BigUint::one()), &*ORDER)) % &*ORDER
+   (a * modinv(b, &*ORDER).unwrap()) % &*ORDER
 }
 
 pub fn sign(msg_hash: &BigUint, private_key: &BigUint) -> (BigUint, BigUint) {

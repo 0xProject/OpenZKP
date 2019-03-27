@@ -7,7 +7,10 @@ use lazy_static::lazy_static;
 pub fn modinv(n: &BigUint, m: &BigUint) -> Option<BigUint> {
     // Handbook of Applied Cryptography Algorithm 14.61:
     // Binary Extended GCD
-    // See also note 14.64.
+    // See note 14.64 on application to modular inverse.
+    // The algorithm is modified to work with non-negative numbers.
+    // TODO: Constant time algorithm. (Based on fermat's little theorem or
+    // constant time Euclids.)
     let mut u = n.clone();
     let mut v = m.clone();
     let mut a = BigUint::one();
