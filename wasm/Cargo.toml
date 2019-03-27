@@ -1,15 +1,7 @@
 [package]
-name = "starkcrypto"
+name = "wasm"
 version = "0.1.0"
 authors = ["Remco Bloemen <remco@0x.org>"]
 edition = "2018"
 
-[workspace]
-members = [
-    "wasm",
-]
-
 [dependencies]
-members = []
-
-[dev-dependencies]
