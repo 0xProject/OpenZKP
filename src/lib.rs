@@ -1,5 +1,5 @@
-mod field;
-mod curve;
+pub mod field;
+pub mod curve;
 mod pedersen;
 mod pedersen_points;
 mod ecdsa;
