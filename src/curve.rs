@@ -18,17 +18,29 @@ lazy_static! {
         0xadc64d2f, 0x1e66a241, 0xcae7b232, 0xb781126d,
         0xffffffff, 0xffffffff, 0x00000010, 0x08000000,
     ]);
+    static ref GENERATOR: CurvePoint = CurvePoint::new(&[
+            0xc943cfca, 0x3d723d8b, 0x0d1819e0, 0xdeacfd9b,
+            0x5a40f0c7, 0x7beced41, 0x8599971b, 0x01ef15c1],&[
+            0x36e8dc1f, 0x2873000c, 0x1abe43a3, 0xde53ecd1,
+            0xdf46ec62, 0xb7be4801, 0x0aa49730, 0x00566806]);
 }
 
 #[derive(PartialEq,Eq,Clone,Debug)]
 pub struct CurvePoint {
     // TODO: Point at infinity.
     // TODO: Jacobian coordinates.
-    x: FieldElement,
-    y: FieldElement,
+    pub x: FieldElement,
+    pub y: FieldElement,
 }
 
 impl CurvePoint {
+    pub fn new(x: &[u32; 8], y: &[u32; 8]) -> CurvePoint {
+        CurvePoint {
+            x: FieldElement::new(x),
+            y: FieldElement::new(y),
+        }
+    }
+
     pub fn double(self) -> CurvePoint {
         assert!(self.x.clone() != FieldElement::zero());
         let one = FieldElement::one().clone();
@@ -49,6 +61,14 @@ impl Add for CurvePoint {
         let x = m.clone() * m.clone() - self.x.clone() - rhs.x.clone();
         let y = m.clone() * (self.x.clone() - x.clone()) - self.y.clone();
         CurvePoint {x, y}
+    }
+}
+
+impl AddAssign for CurvePoint {
+    fn add_assign(&mut self, rhs: CurvePoint) {
+        let result = self.clone() + rhs;
+        self.x = result.x;
+        self.y = result.y;
     }
 }
 
