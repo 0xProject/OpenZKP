@@ -90,6 +90,7 @@ impl FieldElement {
     }
 }
 
+// TODO: Implement Serde
 impl From<&[u8;32]> for FieldElement {
     fn from(bytes: &[u8;32]) -> Self {
         FieldElement(BigUint::from_bytes_be(bytes))
