@@ -37,8 +37,8 @@ pub fn sign(message_hash: &[u8;32], private_key: &[u8;32]) -> ([u8;32], [u8;32])
 
 pub fn verify(
     message_hash: &[u8;32],
+    signature: (&[u8;32], &[u8;32]),
     public_key: (&[u8;32], &[u8;32]),
-    signature: (&[u8;32], &[u8;32])
 ) -> bool {
     ecdsa::verify(
         &from_bytes(message_hash),
