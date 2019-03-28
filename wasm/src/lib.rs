@@ -1,9 +1,9 @@
 mod utils;
 
 use cfg_if::cfg_if;
+use serde::{Deserialize, Serialize};
 use starkcrypto;
 use wasm_bindgen::prelude::*;
-use serde::{Serialize, Deserialize};
 
 cfg_if! {
     // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
@@ -14,7 +14,7 @@ cfg_if! {
     }
 }
 
-fn from_string(s: &str) -> [u8;32] {
+fn from_string(s: &str) -> [u8; 32] {
     // TODO: Skip '0x' prefix
     // TODO: Decoding error.
     let h = hex::decode(s).unwrap();
@@ -23,16 +23,13 @@ fn from_string(s: &str) -> [u8;32] {
     array
 }
 
-fn to_string(b: &[u8;32]) -> String {
+fn to_string(b: &[u8; 32]) -> String {
     hex::encode(b)
 }
 
 #[wasm_bindgen]
 pub fn nop(a: &str, b: &str) -> String {
-    let elements = [
-        from_string(a),
-        from_string(b),
-    ];
+    let elements = [from_string(a), from_string(b)];
     let h = elements[1].clone();
     to_string(&h)
 }
@@ -60,7 +57,8 @@ pub fn public_key(private_key: &str) -> JsValue {
     JsValue::from_serde(&CurvePoint {
         x: to_string(&x),
         y: to_string(&y),
-    }).unwrap()
+    })
+    .unwrap()
 }
 
 #[wasm_bindgen]
@@ -69,7 +67,8 @@ pub fn sign(message_hash: &str, private_key: &str) -> JsValue {
     JsValue::from_serde(&Signature {
         r: to_string(&r),
         w: to_string(&w),
-    }).unwrap()
+    })
+    .unwrap()
 }
 
 #[wasm_bindgen]

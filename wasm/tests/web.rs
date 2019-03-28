@@ -3,8 +3,8 @@
 #![cfg(target_arch = "wasm32")]
 
 use starkcrypto;
-use wasm_bindgen_test::*;
 use starkcrypto_wasm::*;
+use wasm_bindgen_test::*;
 
 wasm_bindgen_test_configure!(run_in_browser);
 
