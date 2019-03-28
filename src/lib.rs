@@ -3,6 +3,7 @@ pub mod ecdsa;
 pub mod field;
 pub mod pedersen;
 mod pedersen_points;
+pub use num;
 
 #[cfg(test)]
 mod tests {
