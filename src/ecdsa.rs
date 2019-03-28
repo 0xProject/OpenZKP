@@ -19,8 +19,8 @@ lazy_static! {
     );
 }
 
-pub fn private_to_public(private_key: BigUint) -> CurvePoint {
-    GENERATOR.clone() * private_key
+pub fn private_to_public(private_key: &BigUint) -> CurvePoint {
+    GENERATOR.clone() * private_key.clone()
 }
 
 fn divmod(a: &BigUint, b: &BigUint) -> BigUint {
