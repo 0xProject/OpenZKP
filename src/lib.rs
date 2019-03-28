@@ -1,8 +1,9 @@
-mod curve;
-mod ecdsa;
-mod field;
-mod pedersen;
+pub mod curve;
+pub mod ecdsa;
+pub mod field;
+pub mod pedersen;
 mod pedersen_points;
+pub use num;
 use num::BigUint;
 use field::FieldElement;
 use curve::CurvePoint;
