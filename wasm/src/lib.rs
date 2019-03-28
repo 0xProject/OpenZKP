@@ -1,9 +1,9 @@
 mod utils;
 
 use cfg_if::cfg_if;
-use wasm_bindgen::prelude::*;
 use starkcrypto;
 use starkcrypto::num::BigUint;
+use wasm_bindgen::prelude::*;
 
 cfg_if! {
     // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
@@ -24,7 +24,6 @@ pub fn nop(a: &str, b: &str) -> String {
     h.to_str_radix(16)
 }
 
-
 #[wasm_bindgen]
 pub fn pedersen_hash(a: &str, b: &str) -> String {
     let elements = [
@@ -43,7 +42,8 @@ pub fn sign(message_hash: &str, private_key: &str) -> Box<[JsValue]> {
     vec![
         JsValue::from_str(&r.to_str_radix(16)),
         JsValue::from_str(&w.to_str_radix(16)),
-    ].into_boxed_slice()
+    ]
+    .into_boxed_slice()
 }
 
 /*
