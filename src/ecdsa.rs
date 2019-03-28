@@ -67,7 +67,7 @@ mod tests {
     #[quickcheck]
     #[test]
     fn test_ecdsa(message_hash: FieldElement, private_key: FieldElement) -> bool {
-        let public_key = private_to_public(private_key.0.clone());
+        let public_key = private_to_public(&private_key.0);
         let (r, w) = sign(&message_hash.0, &private_key.0);
         verify(&message_hash.0, &r, &w, &public_key)
     }
