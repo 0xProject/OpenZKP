@@ -1,8 +1,8 @@
-use std::ops::{Add, Neg, Sub, Mul, Div, AddAssign, SubAssign, MulAssign, DivAssign};
-use num::traits::{Zero, One, Inv};
-use num::integer::Integer;
-use num::bigint::BigUint;
 use lazy_static::lazy_static;
+use num::bigint::BigUint;
+use num::integer::Integer;
+use num::traits::{Inv, One, Zero};
+use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 pub fn modinv(n: &BigUint, m: &BigUint) -> Option<BigUint> {
     // Handbook of Applied Cryptography Algorithm 14.61:
@@ -54,24 +54,24 @@ pub fn modinv(n: &BigUint, m: &BigUint) -> Option<BigUint> {
 // Note: BigUInt does not support compile time initialization
 lazy_static! {
     pub static ref ZERO: BigUint = BigUint::from_slice(&[
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000
+        0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000
     ]);
     pub static ref ONE: BigUint = BigUint::from_slice(&[
-        0x00000001, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000
+        0x00000001, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000
     ]);
     pub static ref MODULUS: BigUint = BigUint::from_slice(&[
-        0x00000001, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000011, 0x08000000
+        0x00000001, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000011,
+        0x08000000
     ]);
     pub static ref INVEXP: BigUint = BigUint::from_slice(&[
-        0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff,
-        0xffffffff, 0xffffffff, 0x00000010, 0x08000000
+        0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0x00000010,
+        0x08000000
     ]);
 }
 
-#[derive(PartialEq,Eq,Clone,Debug)]
+#[derive(PartialEq, Eq, Clone, Debug)]
 pub struct FieldElement(pub BigUint);
 
 impl FieldElement {
@@ -190,8 +190,14 @@ impl Arbitrary for FieldElement {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         // TODO: Generate 0, 1, p/2 and -1
         let mut n = BigUint::from_slice(&[
-            g.gen(), g.gen(), g.gen(), g.gen(),
-            g.gen(), g.gen(), g.gen(), g.gen()
+            g.gen(),
+            g.gen(),
+            g.gen(),
+            g.gen(),
+            g.gen(),
+            g.gen(),
+            g.gen(),
+            g.gen(),
         ]);
         n %= &*MODULUS;
         FieldElement(n)
@@ -201,9 +207,9 @@ impl Arbitrary for FieldElement {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use quickcheck_macros::quickcheck;
     use num::traits::cast::FromPrimitive;
-    
+    use quickcheck_macros::quickcheck;
+
     #[test]
     fn test_modinv() {
         let n = BigUint::from_u64(271).unwrap();
@@ -213,6 +219,7 @@ mod tests {
         assert_eq!(i, r);
     }
 
+    #[rustfmt::skip]
     #[test]
     fn test_add() {
         let a = FieldElement::new(&[0x0f3855f5, 0x37862eb2, 0x275b919f, 0x325329cb, 0xe968e6a2, 0xa2ceee5c, 0xd5f1d547, 0x07211989]);
@@ -221,6 +228,7 @@ mod tests {
         assert_eq!(a + b, c);
     }
 
+    #[rustfmt::skip]
     #[test]
     fn test_sub() {
         let a = FieldElement::new(&[0x7d14253b, 0xef060e37, 0x98d1486f, 0x8700b80a, 0x0a83500d, 0x961ed57d, 0x68cc0469, 0x02945916]);
@@ -229,6 +237,7 @@ mod tests {
         assert_eq!(a - b, c);
     }
 
+    #[rustfmt::skip]
     #[test]
     fn test_mul() {
         let a = FieldElement::new(&[0x25fb5664, 0x9884280e, 0x0dcdbb96, 0x299078c9, 0x4392fd2e, 0x5a3ba2c1, 0x76e8c4ab, 0x06456ad3]);
@@ -237,6 +246,7 @@ mod tests {
         assert_eq!(a * b, c);
     }
 
+    #[rustfmt::skip]
     #[test]
     fn test_div() {
         let a = FieldElement::new(&[0x7d14253b, 0xef060e37, 0x98d1486f, 0x8700b80a, 0x0a83500d, 0x961ed57d, 0x68cc0469, 0x02945916]);

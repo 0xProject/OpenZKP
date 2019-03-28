@@ -1,14 +1,22 @@
-use crate::field::modinv;
 use crate::curve::{CurvePoint, ORDER};
-use num::{BigUint, traits::identities::{Zero, One}};
+use crate::field::modinv;
 use lazy_static::lazy_static;
+use num::{
+    traits::identities::{One, Zero},
+    BigUint,
+};
 
 lazy_static! {
-    static ref GENERATOR: CurvePoint = CurvePoint::new(&[
-            0xc943cfca, 0x3d723d8b, 0x0d1819e0, 0xdeacfd9b,
-            0x5a40f0c7, 0x7beced41, 0x8599971b, 0x01ef15c1],&[
-            0x36e8dc1f, 0x2873000c, 0x1abe43a3, 0xde53ecd1,
-            0xdf46ec62, 0xb7be4801, 0x0aa49730, 0x00566806]);
+    static ref GENERATOR: CurvePoint = CurvePoint::new(
+        &[
+            0xc943cfca, 0x3d723d8b, 0x0d1819e0, 0xdeacfd9b, 0x5a40f0c7, 0x7beced41, 0x8599971b,
+            0x01ef15c1
+        ],
+        &[
+            0x36e8dc1f, 0x2873000c, 0x1abe43a3, 0xde53ecd1, 0xdf46ec62, 0xb7be4801, 0x0aa49730,
+            0x00566806
+        ]
+    );
 }
 
 pub fn private_to_public(private_key: BigUint) -> CurvePoint {
@@ -16,13 +24,14 @@ pub fn private_to_public(private_key: BigUint) -> CurvePoint {
 }
 
 fn divmod(a: &BigUint, b: &BigUint) -> BigUint {
-   (a * modinv(b, &*ORDER).unwrap()) % &*ORDER
+    (a * modinv(b, &*ORDER).unwrap()) % &*ORDER
 }
 
 pub fn sign(msg_hash: &BigUint, private_key: &BigUint) -> (BigUint, BigUint) {
     assert!(msg_hash.bits() <= 251);
 
-    { // Todo Loop
+    {
+        // Todo Loop
         let k = BigUint::one();
 
         let r: BigUint = (GENERATOR.clone() * k.clone()).x.0;
@@ -52,8 +61,8 @@ pub fn verify(msg_hash: &BigUint, r: &BigUint, w: &BigUint, public_key: &CurvePo
 #[cfg(test)]
 mod tests {
     use super::*;
-    use quickcheck_macros::quickcheck;
     use crate::field::FieldElement;
+    use quickcheck_macros::quickcheck;
 
     #[quickcheck]
     #[test]

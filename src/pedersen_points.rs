@@ -1,7 +1,7 @@
-
-use lazy_static::lazy_static;
 use crate::curve::CurvePoint;
+use lazy_static::lazy_static;
 
+#[rustfmt::skip]
 lazy_static! {
     pub static ref PEDERSEN_POINTS: [CurvePoint; 503] = [
         CurvePoint::new(&[0x50ca6804, 0x551fde40, 0x22947733, 0x716b0b10, 0xeb599f16, 0x00ee1b87, 0xa8c16007, 0x049ee3eb], &[0x6e10268a, 0xd0405d26, 0xc0e056c1, 0x4e621062, 0x06ea0ed3, 0xf346d49d, 0x4b3bc6dd, 0x03ca0cfe]),

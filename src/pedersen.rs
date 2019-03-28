@@ -1,10 +1,11 @@
-use crate::field::FieldElement;
 use crate::curve::CurvePoint;
+use crate::field::FieldElement;
 use crate::pedersen_points::PEDERSEN_POINTS;
-use num::{BigUint, integer::Integer};
 use lazy_static::lazy_static;
+use num::{integer::Integer, BigUint};
 
 lazy_static! {
+    #[rustfmt::skip]
     static ref SHIFT_POINT: CurvePoint = CurvePoint{
         x: FieldElement::new(&[
             0x50ca6804, 0x551fde40, 0x22947733, 0x716b0b10,
@@ -24,7 +25,7 @@ pub fn hash(elements: &[BigUint]) -> BigUint {
         assert!(element.bits() <= N_ELEMENT_BITS);
         // point_list = CONSTANT_POINTS[1 + i * N_ELEMENT_BITS:1 + (i + 1) * N_ELEMENT_BITS]
         let start = 1 + i * N_ELEMENT_BITS;
-        let end = start + N_ELEMENT_BITS; 
+        let end = start + N_ELEMENT_BITS;
         for point in PEDERSEN_POINTS[start..end].iter() {
             if bits.is_odd() {
                 result += point.clone();
@@ -36,6 +37,7 @@ pub fn hash(elements: &[BigUint]) -> BigUint {
 }
 
 #[cfg(test)]
+#[rustfmt::skip]
 mod tests {
     use super::*;
 
