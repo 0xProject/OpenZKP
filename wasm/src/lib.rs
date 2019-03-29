@@ -14,6 +14,14 @@ cfg_if! {
     }
 }
 
+#[wasm_bindgen]
+extern "C" {
+    // Use `js_namespace` here to bind `console.log(..)` instead of just
+    // `log(..)`
+    #[wasm_bindgen(js_namespace = console)]
+    fn log(s: &str);
+}
+
 fn from_string(s: &str) -> [u8; 32] {
     // TODO: Skip '0x' prefix
     // TODO: Decoding error.
