@@ -168,11 +168,10 @@ console.log("StarkCrypto WebAssembly support.");
         trade_id: 0
     };
     var maker_sig = starkcrypto.maker_sign(order, maker_private);
-    var order_hash = starkcrypto.maker_hash(order);
-    var taker_sig = starkcrypto.taker_sign(order_hash, 2, 31, taker_private);
+    var taker_sig = starkcrypto.taker_sign(order, 2, 31, taker_private);
     var maker_valid = starkcrypto.maker_verify(order, maker_sig, maker_public);
     var taker_valid = starkcrypto.taker_verify(
-        order_hash,
+        order,
         2,
         31,
         taker_sig,
@@ -281,7 +280,6 @@ for (var i = 0; i < 10; i++) {
         trade_id: 0
     };
     var maker_sig = starkcrypto.maker_sign(order, maker_private);
-    var order_hash = starkcrypto.maker_hash(order);
-    var taker_sig = starkcrypto.taker_sign(order_hash, 2, 31, taker_private);
+    var taker_sig = starkcrypto.taker_sign(order, 2, 31, taker_private);
 }
 console.timeEnd("Benchmark 10x maker taker sign");

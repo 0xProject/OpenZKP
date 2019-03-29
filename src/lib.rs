@@ -80,12 +80,15 @@ pub fn maker_sign(message: &MakerMessage, private_key: &[u8; 32]) -> ([u8; 32], 
 }
 
 pub fn taker_sign(
-    message_hash: &[u8; 32],
+    message: &MakerMessage,
     vault_a: u32,
     vault_b: u32,
     private_key: &[u8; 32],
 ) -> ([u8; 32], [u8; 32]) {
-    sign(&taker_hash(message_hash, vault_a, vault_b), private_key)
+    sign(
+        &taker_hash(&maker_hash(message), vault_a, vault_b),
+        private_key,
+    )
 }
 
 pub fn maker_verify(
@@ -97,14 +100,14 @@ pub fn maker_verify(
 }
 
 pub fn taker_verify(
-    message_hash: &[u8; 32],
+    message: &MakerMessage,
     vault_a: u32,
     vault_b: u32,
     signature: (&[u8; 32], &[u8; 32]),
     public_key: (&[u8; 32], &[u8; 32]),
 ) -> bool {
     verify(
-        &taker_hash(message_hash, vault_a, vault_b),
+        &taker_hash(&maker_hash(message), vault_a, vault_b),
         signature,
         public_key,
     )

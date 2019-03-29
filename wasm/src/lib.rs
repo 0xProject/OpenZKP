@@ -101,10 +101,9 @@ pub fn verify(message_hash: &str, signature: &JsValue, public_key: &JsValue) -> 
     starkcrypto::verify(&from_string(message_hash), (&r, &w), (&x, &y))
 }
 
-#[wasm_bindgen]
-pub fn maker_hash(message: &JsValue) -> String {
+fn parse_message(message: &JsValue) -> starkcrypto::MakerMessage {
     let message: MakerMessage = message.into_serde().unwrap();
-    to_string(&starkcrypto::maker_hash(&starkcrypto::MakerMessage {
+    starkcrypto::MakerMessage {
         vault_a: message.vault_a,
         vault_b: message.vault_b,
         amount_a: message.amount_a,
@@ -112,7 +111,13 @@ pub fn maker_hash(message: &JsValue) -> String {
         token_a: from_string(&message.token_a),
         token_b: from_string(&message.token_b),
         trade_id: message.trade_id,
-    }))
+    }
+}
+
+#[wasm_bindgen]
+pub fn maker_hash(message: &JsValue) -> String {
+    let message = parse_message(message);
+    to_string(&starkcrypto::maker_hash(&message))
 }
 
 #[wasm_bindgen]
@@ -126,19 +131,8 @@ pub fn taker_hash(maker_message_hash: &str, vault_a: u32, vault_b: u32) -> Strin
 
 #[wasm_bindgen]
 pub fn maker_sign(message: &JsValue, private_key: &str) -> JsValue {
-    let message: MakerMessage = message.into_serde().unwrap();
-    let (r, w) = starkcrypto::maker_sign(
-        &starkcrypto::MakerMessage {
-            vault_a: message.vault_a,
-            vault_b: message.vault_b,
-            amount_a: message.amount_a,
-            amount_b: message.amount_b,
-            token_a: from_string(&message.token_a),
-            token_b: from_string(&message.token_b),
-            trade_id: message.trade_id,
-        },
-        &from_string(private_key),
-    );
+    let message = parse_message(message);
+    let (r, w) = starkcrypto::maker_sign(&message, &from_string(private_key));
     JsValue::from_serde(&Signature {
         r: to_string(&r),
         w: to_string(&w),
@@ -147,18 +141,9 @@ pub fn maker_sign(message: &JsValue, private_key: &str) -> JsValue {
 }
 
 #[wasm_bindgen]
-pub fn taker_sign(
-    maker_message_hash: &str,
-    vault_a: u32,
-    vault_b: u32,
-    private_key: &str,
-) -> JsValue {
-    let (r, w) = starkcrypto::taker_sign(
-        &from_string(&maker_message_hash),
-        vault_a,
-        vault_b,
-        &from_string(private_key),
-    );
+pub fn taker_sign(message: &JsValue, vault_a: u32, vault_b: u32, private_key: &str) -> JsValue {
+    let message = parse_message(message);
+    let (r, w) = starkcrypto::taker_sign(&message, vault_a, vault_b, &from_string(private_key));
     JsValue::from_serde(&Signature {
         r: to_string(&r),
         w: to_string(&w),
@@ -168,47 +153,30 @@ pub fn taker_sign(
 
 #[wasm_bindgen]
 pub fn maker_verify(message: &JsValue, signature: &JsValue, public_key: &JsValue) -> bool {
-    let message: MakerMessage = message.into_serde().unwrap();
+    let message = parse_message(message);
     let s: Signature = signature.into_serde().unwrap();
     let p: CurvePoint = public_key.into_serde().unwrap();
     let r = from_string(&s.r);
     let w = from_string(&s.w);
     let x = from_string(&p.x);
     let y = from_string(&p.y);
-    starkcrypto::maker_verify(
-        &starkcrypto::MakerMessage {
-            vault_a: message.vault_a,
-            vault_b: message.vault_b,
-            amount_a: message.amount_a,
-            amount_b: message.amount_b,
-            token_a: from_string(&message.token_a),
-            token_b: from_string(&message.token_b),
-            trade_id: message.trade_id,
-        },
-        (&r, &w),
-        (&x, &y),
-    )
+    starkcrypto::maker_verify(&message, (&r, &w), (&x, &y))
 }
 
 #[wasm_bindgen]
 pub fn taker_verify(
-    make_message_hash: &str,
+    message: &JsValue,
     vault_a: u32,
     vault_b: u32,
     signature: &JsValue,
     public_key: &JsValue,
 ) -> bool {
+    let message = parse_message(message);
     let s: Signature = signature.into_serde().unwrap();
     let p: CurvePoint = public_key.into_serde().unwrap();
     let r = from_string(&s.r);
     let w = from_string(&s.w);
     let x = from_string(&p.x);
     let y = from_string(&p.y);
-    starkcrypto::taker_verify(
-        &from_string(make_message_hash),
-        vault_a,
-        vault_b,
-        (&r, &w),
-        (&x, &y),
-    )
+    starkcrypto::taker_verify(&message, vault_a, vault_b, (&r, &w), (&x, &y))
 }
