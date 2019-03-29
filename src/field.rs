@@ -80,19 +80,19 @@ impl FieldElement {
         FieldElement(BigUint::from_slice(limbs))
     }
 
-    pub fn to_bytes(&self) -> [u8;32] {
+    pub fn to_bytes(&self) -> [u8; 32] {
         // TODO: Zero padding
         let vec = self.0.to_bytes_be();
         let mut array = [0; 32];
         let bytes = &vec.as_slice()[..array.len()]; // panics if not enough data
-        array.copy_from_slice(bytes); 
+        array.copy_from_slice(bytes);
         array
     }
 }
 
 // TODO: Implement Serde
-impl From<&[u8;32]> for FieldElement {
-    fn from(bytes: &[u8;32]) -> Self {
+impl From<&[u8; 32]> for FieldElement {
+    fn from(bytes: &[u8; 32]) -> Self {
         FieldElement(BigUint::from_bytes_be(bytes))
     }
 }
