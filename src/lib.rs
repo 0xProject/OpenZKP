@@ -15,11 +15,11 @@ fn from_bytes(bytes: &[u8; 32]) -> BigUint {
 }
 
 fn to_bytes(num: &BigUint) -> [u8; 32] {
-    // TODO: Zero padding
+    assert!(num.bits() <= 256);
     let vec = num.to_bytes_be();
     let mut array = [0; 32];
-    let bytes = &vec.as_slice()[..array.len()]; // panics if not enough data
-    array.copy_from_slice(bytes);
+    let padding: usize = 32 - vec.len();
+    array[padding..].copy_from_slice(vec.as_slice());
     array
 }
 
