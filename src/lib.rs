@@ -1,10 +1,13 @@
 #![warn(clippy::all)]
+#![feature(const_fn)]
 pub mod curve;
 pub mod ecdsa;
 pub mod field;
 pub mod orders;
 pub mod pedersen;
 mod pedersen_points;
+pub mod u256;
+mod utils;
 use curve::CurvePoint;
 use field::FieldElement;
 pub use num;
