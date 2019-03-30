@@ -2,7 +2,9 @@
 use criterion::{Criterion, black_box, criterion_group, criterion_main};
 use num::{bigint::BigUint, traits::FromPrimitive, traits::Inv, Integer, One, Zero};
 use starkcrypto::curve::CurvePoint;
+use starkcrypto::ecdsa::{private_to_public, sign, verify};
 use starkcrypto::field::FieldElement;
+use starkcrypto::pedersen::hash;
 
 fn field_add(crit: &mut Criterion) {
     let a = FieldElement::new(&[
@@ -48,7 +50,7 @@ fn field_inv(crit: &mut Criterion) {
     });
 }
 
-fn curve_add() {
+fn curve_add(crit: &mut Criterion) {
     let A = CurvePoint {
         x: FieldElement::new(&[
             0xca9b3b7a, 0xadf5b0d8, 0x4728f1b4, 0x7a5cbd79, 0x316a86d0, 0xb9aaaf56, 0x557c9ca9,
@@ -69,10 +71,14 @@ fn curve_add() {
             0x07cfb4b0,
         ]),
     };
-    black_box(A + B);
+    crit.bench_function("Curve add", move |bench| {
+        bench.iter(|| {
+            black_box(A.clone() + B.clone());
+        })
+    });
 }
 
-fn curve_dbl() {
+fn curve_dbl(crit: &mut Criterion) {
     let A = CurvePoint {
         x: FieldElement::new(&[
             0xa19caf1f, 0x9764694b, 0xd49d26e1, 0xc2d21cea, 0x9d37cc5b, 0xce13e7e3, 0x787be6e0,
@@ -83,10 +89,14 @@ fn curve_dbl() {
             0x011b6c17,
         ]),
     };
-    black_box(A.double());
+    crit.bench_function("Curve dbl", move |bench| {
+        bench.iter(|| {
+            black_box(A.clone().double());
+        })
+    });
 }
 
-fn curve_mul() {
+fn curve_mul(crit: &mut Criterion) {
     let A = CurvePoint {
         x: FieldElement::new(&[
             0x5bf31eb0, 0xfe50a889, 0x2d1a8a21, 0x3242e28e, 0x0d13fe66, 0xcf63e064, 0x9426e2c3,
@@ -101,16 +111,69 @@ fn curve_mul() {
         0x711a14cf, 0xebe54f04, 0x4729d630, 0xd14a329a, 0xf5480b47, 0x35fdc862, 0xde09131d,
         0x029f7a37,
     ]);
-    black_box(A * b);
+    crit.bench_function("Curve mul", move |bench| {
+        bench.iter(|| {
+            black_box(A.clone() * b.clone());
+        })
+    });
+}
+
+fn pedersen_hash(crit: &mut Criterion) {
+    let elements = [
+        BigUint::from_slice(&[
+            0x405371cb, 0x28feb561, 0xa1393627, 0x9c53068d, 0x1a575610, 0x5caf6453, 0x35c87824,
+            0x03d937c0,
+        ]),
+        BigUint::from_slice(&[
+            0x9cd8b31a, 0xbbc6aeff, 0x5695e02f, 0x791bf627, 0x880906c2, 0xe1e4bbe2, 0x0250e382,
+            0x0208a0a1,
+        ]),
+    ];
+    crit.bench_function("Pedersen hash", move |bench| {
+        bench.iter(|| black_box(hash(&elements)))
+    });
+}
+
+fn ecdsa_sign(crit: &mut Criterion) {
+    let message_hash = BigUint::from_slice(&[
+        0x9cd8b31a, 0xbbc6aeff, 0x5695e02f, 0x791bf627, 0x880906c2, 0xe1e4bbe2, 0x0250e382,
+        0x0208a0a1,
+    ]);
+    let private_key = BigUint::from_slice(&[
+        0x405371cb, 0x28feb561, 0xa1393627, 0x9c53068d, 0x1a575610, 0x5caf6453, 0x35c87824,
+        0x03d937c0,
+    ]);
+    crit.bench_function("Ecdsa sign", move |bench| {
+        bench.iter(|| black_box(sign(&message_hash, &private_key)))
+    });
+}
+
+fn ecdsa_verify(crit: &mut Criterion) {
+    let message_hash = BigUint::from_slice(&[
+        0x9cd8b31a, 0xbbc6aeff, 0x5695e02f, 0x791bf627, 0x880906c2, 0xe1e4bbe2, 0x0250e382,
+        0x0208a0a1,
+    ]);
+    let private_key = BigUint::from_slice(&[
+        0x405371cb, 0x28feb561, 0xa1393627, 0x9c53068d, 0x1a575610, 0x5caf6453, 0x35c87824,
+        0x03d937c0,
+    ]);
+    let public = private_to_public(&private_key);
+    let (r, w) = sign(&message_hash, &private_key);
+    crit.bench_function("Ecdsa verify", move |bench| {
+        bench.iter(|| black_box(verify(&message_hash, &r, &w, &public)))
+    });
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
     field_add(c);
     field_mul(c);
     field_inv(c);
-    c.bench_function("Curve add", |b| b.iter(|| curve_add()));
-    c.bench_function("Curve dbl", |b| b.iter(|| curve_dbl()));
-    //c.bench_function("Curve mul", |b| b.iter(|| curve_mul()));
+    curve_add(c);
+    curve_dbl(c);
+    curve_mul(c);
+    pedersen_hash(c);
+    ecdsa_sign(c);
+    ecdsa_verify(c);
 }
 
 criterion_group!(benches, criterion_benchmark);
