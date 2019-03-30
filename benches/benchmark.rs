@@ -5,6 +5,73 @@ use starkcrypto::curve::CurvePoint;
 use starkcrypto::ecdsa::{private_to_public, sign, verify};
 use starkcrypto::field::FieldElement;
 use starkcrypto::pedersen::hash;
+use starkcrypto::u256::U256;
+
+fn u256_add(crit: &mut Criterion) {
+    let a = U256::new(
+        0x531bb3056443bc99,
+        0x4ef3d9c2cb44b6a3,
+        0x471cec503f118188,
+        0x01c9e043b135fa21,
+    );
+    let b = U256::new(
+        0x25f92cbba85e5776,
+        0x39bd034f968ab8a2,
+        0x015941bf06591cd1,
+        0x04742d726d4800e1,
+    );
+    crit.bench_function("U256 add", move |bench| {
+        bench.iter(|| black_box(&a).clone() + black_box(&b))
+    });
+}
+
+fn u256_mul(crit: &mut Criterion) {
+    let a = U256::new(
+        0x531bb3056443bc99,
+        0x4ef3d9c2cb44b6a3,
+        0x471cec503f118188,
+        0x01c9e043b135fa21,
+    );
+    let b = U256::new(
+        0x25f92cbba85e5776,
+        0x39bd034f968ab8a2,
+        0x015941bf06591cd1,
+        0x04742d726d4800e1,
+    );
+    crit.bench_function("U256 mul", move |bench| {
+        bench.iter(|| black_box(&a).clone() * black_box(&b))
+    });
+}
+
+fn u256_invmod256(crit: &mut Criterion) {
+    let n = U256::new(
+        0x1717f47973471ed5,
+        0xe106229070982941,
+        0xd82120c54277c73e,
+        0x07717a21e77894e8,
+    );
+    crit.bench_function("U256 invmod256", move |bench| {
+        bench.iter(|| black_box(&n).invmod256())
+    });
+}
+
+fn u256_invmod(crit: &mut Criterion) {
+    let m = U256::new(
+        0x0000000000000001,
+        0x0000000000000000,
+        0x0000000000000000,
+        0x0800000000000011,
+    );
+    let n = U256::new(
+        0x1717f47973471ed5,
+        0xe106229070982941,
+        0xd82120c54277c73e,
+        0x07717a21e77894e8,
+    );
+    crit.bench_function("U256 invmod", move |bench| {
+        bench.iter(|| black_box(&n).invmod(black_box(&m)))
+    });
+}
 
 fn field_add(crit: &mut Criterion) {
     let a = FieldElement::new(&[
@@ -16,9 +83,7 @@ fn field_add(crit: &mut Criterion) {
         0x0219cad4,
     ]);
     crit.bench_function("Field add", move |bench| {
-        bench.iter(|| {
-            black_box(a.clone() + b.clone());
-        })
+        bench.iter(|| black_box(&a).clone() + black_box(&b).clone())
     });
 }
 
@@ -165,6 +230,10 @@ fn ecdsa_verify(crit: &mut Criterion) {
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
+    u256_add(c);
+    u256_mul(c);
+    u256_invmod256(c);
+    u256_invmod(c);
     field_add(c);
     field_mul(c);
     field_inv(c);
