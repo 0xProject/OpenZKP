@@ -5,6 +5,7 @@ use std::num::Wrapping;
 use std::ops::{
     Add, AddAssign, BitAnd, Mul, MulAssign, Shl, ShlAssign, Shr, ShrAssign, Sub, SubAssign,
 };
+use std::u64;
 
 // We can't use `u64::from` here because it is not a const fn.
 // You'd want to use this with `#[allow(clippy::cast_lossless)]` to
@@ -41,6 +42,7 @@ pub struct U256 {
 impl U256 {
     pub const ZERO: U256 = U256::new(0, 0, 0, 0);
     pub const ONE: U256 = U256::new(1, 0, 0, 0);
+    pub const MAX: U256 = U256::new(u64::MAX, u64::MAX, u64::MAX, u64::MAX);
 
     #[inline(always)]
     pub const fn new(c0: u64, c1: u64, c2: u64, c3: u64) -> Self {
@@ -291,13 +293,13 @@ impl ShlAssign<usize> for U256 {
         // TODO: Test optimizing for RHS being exactly 0, 64, 128, ...
         // Note: Test small values first, they are expected to be more common.
         if rhs < 64 {
-        self.c3 <<= rhs;
-        self.c3 |= self.c2 >> (64 - rhs);
-        self.c2 <<= rhs;
-        self.c2 |= self.c1 >> (64 - rhs);
-        self.c1 <<= rhs;
-        self.c1 |= self.c0 >> (64 - rhs);
-        self.c0 <<= rhs;
+            self.c3 <<= rhs;
+            self.c3 |= self.c2 >> (64 - rhs);
+            self.c2 <<= rhs;
+            self.c2 |= self.c1 >> (64 - rhs);
+            self.c1 <<= rhs;
+            self.c1 |= self.c0 >> (64 - rhs);
+            self.c0 <<= rhs;
         } else if rhs < 128 {
             self.c3 = self.c2 << (rhs - 64);
             self.c3 |= self.c2 >> (128 - rhs);
@@ -321,8 +323,8 @@ impl ShlAssign<usize> for U256 {
             self.c2 = 0;
             self.c1 = 0;
             self.c0 = 0;
+        }
     }
-}
 }
 
 impl Shl<usize> for U256 {
@@ -342,13 +344,13 @@ impl ShrAssign<usize> for U256 {
         // TODO: Test optimizing for RHS being exactly 0, 64, 128, ...
         // Note: Test small values first, they are expected to be more common.
         if rhs < 64 {
-        self.c0 >>= rhs;
-        self.c0 |= self.c1 << (64 - rhs);
-        self.c1 >>= rhs;
-        self.c1 |= self.c2 << (64 - rhs);
-        self.c2 >>= rhs;
-        self.c2 |= self.c3 << (64 - rhs);
-        self.c3 >>= rhs;
+            self.c0 >>= rhs;
+            self.c0 |= self.c1 << (64 - rhs);
+            self.c1 >>= rhs;
+            self.c1 |= self.c2 << (64 - rhs);
+            self.c2 >>= rhs;
+            self.c2 |= self.c3 << (64 - rhs);
+            self.c3 >>= rhs;
         } else if rhs < 128 {
             self.c0 = self.c1 >> (rhs - 64);
             self.c0 |= self.c2 << (128 - rhs);
