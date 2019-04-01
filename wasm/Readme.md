@@ -46,3 +46,6 @@ wasm-pack build --profiling --target nodejs
 node --prof ./tests/node.js
 node --prof-process isolate-*-v8.log > processed.txt
 ```
+
+Note: Some of the Rust code shows up under 'JavaScript' by name, but it can also
+show up under 'Unaccounted'.
