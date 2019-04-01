@@ -40,6 +40,35 @@ impl U256 {
         self.c0 & 1 == 1
     }
 
+    #[inline(always)]
+    pub fn leading_zeros(&self) -> u32 {
+        if self.c3 > 0 {
+            self.c3.leading_zeros()
+        } else if self.c2 > 0 {
+            64 + self.c2.leading_zeros()
+        } else if self.c1 > 0 {
+            128 + self.c1.leading_zeros()
+        } else if self.c0 > 0 {
+            196 + self.c0.leading_zeros()
+        } else {
+            256
+        }
+    }
+
+    #[inline(always)]
+    pub fn trailing_zeros(&self) -> u32 {
+        if self.c0 > 0 {
+            self.c0.trailing_zeros()
+        } else if self.c1 > 0 {
+            64 + self.c1.trailing_zeros()
+        } else if self.c2 > 0 {
+            128 + self.c2.trailing_zeros()
+        } else if self.c3 > 0 {
+            196 + self.c3.trailing_zeros()
+        } else {
+            256
+        }
+    }
     pub fn mulmod(&self, rhs: &U256, modulus: &U256) -> U256 {
         unimplemented!() // TODO
     }
