@@ -1,7 +1,9 @@
 use crate::utils::{adc, mac, sbb};
 use std::cmp::{Ord, Ordering, PartialOrd};
 use std::num::Wrapping;
-use std::ops::{Add, AddAssign, BitAnd, Mul, MulAssign, ShlAssign, ShrAssign, Sub, SubAssign};
+use std::ops::{
+    Add, AddAssign, BitAnd, Mul, MulAssign, Shl, ShlAssign, Shr, ShrAssign, Sub, SubAssign,
+};
 
 #[derive(PartialEq, Eq, Clone, Debug, Default)]
 pub struct U256 {
@@ -232,7 +234,11 @@ impl BitAnd<u64> for &U256 {
 impl ShlAssign<usize> for U256 {
     #[inline(always)]
     fn shl_assign(&mut self, rhs: usize) {
-        assert!(rhs < 64); // TODO: rhs > 64
+        // Note: If RHS is a compile time constant then inlining will allow
+        // the branches to be optimized away.
+        // TODO: Test optimizing for RHS being exactly 0, 64, 128, ...
+        // Note: Test small values first, they are expected to be more common.
+        if rhs < 64 {
         self.c3 <<= rhs;
         self.c3 |= self.c2 >> (64 - rhs);
         self.c2 <<= rhs;
@@ -240,13 +246,50 @@ impl ShlAssign<usize> for U256 {
         self.c1 <<= rhs;
         self.c1 |= self.c0 >> (64 - rhs);
         self.c0 <<= rhs;
+        } else if rhs < 128 {
+            self.c3 = self.c2 << (rhs - 64);
+            self.c3 |= self.c2 >> (128 - rhs);
+            self.c2 = self.c1 << (rhs - 64);
+            self.c2 |= self.c1 >> (128 - rhs);
+            self.c1 = self.c0 << (rhs - 64);
+            self.c0 = 0;
+        } else if rhs < 196 {
+            self.c3 = self.c1 << (rhs - 128);
+            self.c3 |= self.c0 >> (196 - rhs);
+            self.c2 = self.c0 << (rhs - 128);
+            self.c1 = 0;
+            self.c0 = 0;
+        } else if rhs < 256 {
+            self.c3 = self.c0 << (rhs - 196);
+            self.c2 = 0;
+            self.c1 = 0;
+            self.c0 = 0;
+        } else {
+            self.c3 = 0;
+            self.c2 = 0;
+            self.c1 = 0;
+            self.c0 = 0;
+    }
+}
+}
+
+impl Shl<usize> for U256 {
+    type Output = U256;
+    #[inline(always)]
+    fn shl(mut self, rhs: usize) -> U256 {
+        self <<= rhs;
+        self
     }
 }
 
 impl ShrAssign<usize> for U256 {
     #[inline(always)]
     fn shr_assign(&mut self, rhs: usize) {
-        assert!(rhs < 64); // TODO: rhs > 64
+        // Note: If RHS is a compile time constant then inlining will allow
+        // the branches to be optimized away.
+        // TODO: Test optimizing for RHS being exactly 0, 64, 128, ...
+        // Note: Test small values first, they are expected to be more common.
+        if rhs < 64 {
         self.c0 >>= rhs;
         self.c0 |= self.c1 << (64 - rhs);
         self.c1 >>= rhs;
@@ -254,6 +297,39 @@ impl ShrAssign<usize> for U256 {
         self.c2 >>= rhs;
         self.c2 |= self.c3 << (64 - rhs);
         self.c3 >>= rhs;
+        } else if rhs < 128 {
+            self.c0 = self.c1 >> (rhs - 64);
+            self.c0 |= self.c2 << (128 - rhs);
+            self.c1 = self.c2 >> (rhs - 64);
+            self.c1 |= self.c3 << (128 - rhs);
+            self.c2 = self.c3 >> (rhs - 64);
+            self.c3 = 0;
+        } else if rhs < 196 {
+            self.c0 = self.c2 >> (rhs - 128);
+            self.c0 |= self.c3 << (196 - rhs);
+            self.c1 = self.c3 >> (rhs - 128);
+            self.c2 = 0;
+            self.c3 = 0;
+        } else if rhs < 256 {
+            self.c0 = self.c3 >> (rhs - 196);
+            self.c1 = 0;
+            self.c2 = 0;
+            self.c3 = 0;
+        } else {
+            self.c0 = 0;
+            self.c1 = 0;
+            self.c2 = 0;
+            self.c3 = 0;
+        }
+    }
+}
+
+impl Shr<usize> for U256 {
+    type Output = U256;
+    #[inline(always)]
+    fn shr(mut self, rhs: usize) -> U256 {
+        self >>= rhs;
+        self
     }
 }
 
