@@ -1,9 +1,34 @@
 use crate::utils::{adc, div_2_1, mac, sbb};
+use hex_literal::*;
 use std::cmp::{Ord, Ordering, PartialOrd};
 use std::num::Wrapping;
 use std::ops::{
     Add, AddAssign, BitAnd, Mul, MulAssign, Shl, ShlAssign, Shr, ShrAssign, Sub, SubAssign,
 };
+
+// We can't use `u64::from` here because it is not a const fn.
+// You'd want to use this with `#[allow(clippy::cast_lossless)]` to
+// surpress a clippy false positive (u8 -> u64 is always safe).
+macro_rules! u64_from_bytes_be {
+    ($arr:ident, $offset:expr) => {
+        ($arr[$offset + 0] as u64) << 56
+            | ($arr[$offset + 1] as u64) << 48
+            | ($arr[$offset + 2] as u64) << 40
+            | ($arr[$offset + 3] as u64) << 32
+            | ($arr[$offset + 4] as u64) << 24
+            | ($arr[$offset + 5] as u64) << 16
+            | ($arr[$offset + 6] as u64) << 8
+            | ($arr[$offset + 7] as u64)
+    };
+}
+
+/// Hex litterals
+#[macro_export]
+macro_rules! u256h {
+    ($hexstr:expr) => {
+        U256::from_bytes_be(hex!($hexstr))
+    };
+}
 
 #[derive(PartialEq, Eq, Clone, Debug, Default)]
 pub struct U256 {
@@ -20,6 +45,17 @@ impl U256 {
     #[inline(always)]
     pub const fn new(c0: u64, c1: u64, c2: u64, c3: u64) -> Self {
         Self { c0, c1, c2, c3 }
+    }
+
+    #[inline(always)]
+    #[allow(clippy::cast_lossless)]
+    pub const fn from_bytes_be(n: [u8; 32]) -> Self {
+        Self::new(
+            u64_from_bytes_be!(n, 0),
+            u64_from_bytes_be!(n, 8),
+            u64_from_bytes_be!(n, 16),
+            u64_from_bytes_be!(n, 24),
+        )
     }
 
     #[inline(always)]
@@ -466,6 +502,10 @@ mod tests {
     use super::*;
     use quickcheck_macros::quickcheck;
 
+    #[allow(dead_code)]
+    pub const TEST_CONST: U256 =
+        u256h!("0800000000000010ffffffffffffffffffffffffffffffffffffffffffffffff");
+
     #[test]
     fn test_shl() {
         let mut n = U256::new(
@@ -651,7 +691,6 @@ mod tests {
             Some((q, r)) => r < b && q * &U256::from(b) + &U256::from(r) == a,
         }
     }
-
 
     #[quickcheck]
     #[test]
