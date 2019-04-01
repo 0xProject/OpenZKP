@@ -18,3 +18,14 @@ pub const fn mac(a: u64, b: u64, c: u64, carry: u64) -> (u64, u64) {
     let ret = (a as u128) + ((b as u128) * (c as u128)) + (carry as u128);
     (ret as u64, (ret >> 64) as u64)
 }
+
+/// Compute <hi, lo> / d, returning the quotient and the remainder.
+#[inline(always)]
+pub const fn div_2_1(lo: u64, hi: u64, d: u64) -> (u64, u64) {
+    let n = ((hi as u128) << 64) | (lo as u128);
+    let q = n / (d as u128);
+    // TODO: Not supported in cost fn:
+    // debug_assert!(q < 0x1_0000_0000_0000_0000_u128);
+    let r = n % (d as u128);
+    (q as u64, r as u64)
+}
