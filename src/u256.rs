@@ -1,4 +1,4 @@
-use crate::utils::{adc, mac, sbb};
+use crate::utils::{adc, div_2_1, mac, sbb};
 use std::cmp::{Ord, Ordering, PartialOrd};
 use std::num::Wrapping;
 use std::ops::{
@@ -91,6 +91,22 @@ impl U256 {
         let (r5, carry) = mac(r5, self.c3, rhs.c2, carry);
         let (r6, r7) = mac(r6, self.c3, rhs.c2, carry);
         (U256::new(r0, r1, r2, r3), U256::new(r4, r5, r6, r7))
+    }
+
+    // Short division
+    // TODO: Can be computed in-place
+    pub fn divrem_u64(&self, rhs: u64) -> Option<(U256, u64)> {
+        if rhs == 0 {
+            None
+        } else {
+            // Knuth Algorithm S
+            // 4 by 1 division
+            let (q3, r) = div_2_1(self.c3, 0, rhs);
+            let (q2, r) = div_2_1(self.c2, r, rhs);
+            let (q1, r) = div_2_1(self.c1, r, rhs);
+            let (q0, r) = div_2_1(self.c0, r, rhs);
+            Some((U256::new(q0, q1, q2, q3), r))
+        }
     }
 
     pub fn mulmod(&self, rhs: &U256, modulus: &U256) -> U256 {
@@ -626,4 +642,14 @@ mod tests {
         let (lo, _hi) = a.mul_full(&b);
         r == lo
     }
+
+    #[quickcheck]
+    #[test]
+    fn test_divrem_u64(a: U256, b: u64) -> bool {
+        match a.divrem_u64(b) {
+            None => b == 0,
+            Some((q, r)) => r < b && q * &U256::from(b) + &U256::from(r) == a,
+        }
+    }
+
 }
