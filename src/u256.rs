@@ -69,6 +69,28 @@ impl U256 {
             256
         }
     }
+
+    #[inline(always)]
+    pub const fn mul_full(&self, rhs: &U256) -> (U256, U256) {
+        let (r0, carry) = mac(0, self.c0, rhs.c0, 0);
+        let (r1, carry) = mac(0, self.c0, rhs.c1, carry);
+        let (r2, carry) = mac(0, self.c0, rhs.c2, carry);
+        let (r3, r4) = mac(0, self.c0, rhs.c3, carry);
+        let (r1, carry) = mac(r1, self.c1, rhs.c0, 0);
+        let (r2, carry) = mac(r2, self.c1, rhs.c1, carry);
+        let (r3, carry) = mac(r3, self.c1, rhs.c2, carry);
+        let (r4, r5) = mac(r4, self.c1, rhs.c2, carry);
+        let (r2, carry) = mac(r2, self.c2, rhs.c0, 0);
+        let (r3, carry) = mac(r3, self.c2, rhs.c1, carry);
+        let (r4, carry) = mac(r4, self.c2, rhs.c2, carry);
+        let (r5, r6) = mac(r5, self.c2, rhs.c2, carry);
+        let (r3, carry) = mac(r3, self.c3, rhs.c0, 0);
+        let (r4, carry) = mac(r4, self.c3, rhs.c1, carry);
+        let (r5, carry) = mac(r5, self.c3, rhs.c2, carry);
+        let (r6, r7) = mac(r6, self.c3, rhs.c2, carry);
+        (U256::new(r0, r1, r2, r3), U256::new(r4, r5, r6, r7))
+    }
+
     pub fn mulmod(&self, rhs: &U256, modulus: &U256) -> U256 {
         unimplemented!() // TODO
     }
@@ -519,5 +541,13 @@ mod tests {
         l += &b;
         r += &a;
         l == r
+    }
+
+    #[quickcheck]
+    #[test]
+    fn mul_full_lo(a: U256, b: U256) -> bool {
+        let r = a.clone() * &b;
+        let (lo, _hi) = a.mul_full(&b);
+        r == lo
     }
 }
