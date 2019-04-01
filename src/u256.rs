@@ -652,4 +652,13 @@ mod tests {
         }
     }
 
+
+    #[quickcheck]
+    #[test]
+    fn invmod256(a: U256) -> bool {
+        match a.invmod256() {
+            None => true,
+            Some(i) => a * &i == U256::ONE,
+        }
+    }
 }
