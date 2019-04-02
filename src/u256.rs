@@ -90,7 +90,7 @@ impl U256 {
         } else if self.c1 > 0 {
             128 + self.c1.leading_zeros()
         } else if self.c0 > 0 {
-            196 + self.c0.leading_zeros()
+            192 + self.c0.leading_zeros()
         } else {
             256
         }
@@ -105,7 +105,7 @@ impl U256 {
         } else if self.c2 > 0 {
             128 + self.c2.trailing_zeros()
         } else if self.c3 > 0 {
-            196 + self.c3.trailing_zeros()
+            192 + self.c3.trailing_zeros()
         } else {
             256
         }
@@ -309,9 +309,11 @@ impl ShlAssign<usize> for U256 {
     fn shl_assign(&mut self, rhs: usize) {
         // Note: If RHS is a compile time constant then inlining will allow
         // the branches to be optimized away.
-        // TODO: Test optimizing for RHS being exactly 0, 64, 128, ...
         // Note: Test small values first, they are expected to be more common.
-        if rhs < 64 {
+        // Note: We need to handle 0, 64, 128, 192 specially because `>> 0` is
+        //       illegal.
+        if rhs == 0 {
+        } else if rhs < 64 {
             self.c3 <<= rhs;
             self.c3 |= self.c2 >> (64 - rhs);
             self.c2 <<= rhs;
@@ -319,6 +321,11 @@ impl ShlAssign<usize> for U256 {
             self.c1 <<= rhs;
             self.c1 |= self.c0 >> (64 - rhs);
             self.c0 <<= rhs;
+        } else if rhs == 64 {
+            self.c3 = self.c2;
+            self.c2 = self.c1;
+            self.c1 = self.c0;
+            self.c0 = 0;
         } else if rhs < 128 {
             self.c3 = self.c2 << (rhs - 64);
             self.c3 |= self.c2 >> (128 - rhs);
@@ -326,14 +333,24 @@ impl ShlAssign<usize> for U256 {
             self.c2 |= self.c1 >> (128 - rhs);
             self.c1 = self.c0 << (rhs - 64);
             self.c0 = 0;
-        } else if rhs < 196 {
+        } else if rhs == 128 {
+            self.c3 = self.c1;
+            self.c2 = self.c0;
+            self.c1 = 0;
+            self.c0 = 0;
+        } else if rhs < 192 {
             self.c3 = self.c1 << (rhs - 128);
-            self.c3 |= self.c0 >> (196 - rhs);
+            self.c3 |= self.c0 >> (192 - rhs);
             self.c2 = self.c0 << (rhs - 128);
             self.c1 = 0;
             self.c0 = 0;
+        } else if rhs == 192 {
+            self.c3 = self.c0;
+            self.c2 = 0;
+            self.c1 = 0;
+            self.c0 = 0;
         } else if rhs < 256 {
-            self.c3 = self.c0 << (rhs - 196);
+            self.c3 = self.c0 << (rhs - 192);
             self.c2 = 0;
             self.c1 = 0;
             self.c0 = 0;
@@ -362,7 +379,9 @@ impl ShrAssign<usize> for U256 {
         // the branches to be optimized away.
         // TODO: Test optimizing for RHS being exactly 0, 64, 128, ...
         // Note: Test small values first, they are expected to be more common.
-        if rhs < 64 {
+        if rhs == 0 {
+
+        } else if rhs < 64 {
             self.c0 >>= rhs;
             self.c0 |= self.c1 << (64 - rhs);
             self.c1 >>= rhs;
@@ -370,6 +389,11 @@ impl ShrAssign<usize> for U256 {
             self.c2 >>= rhs;
             self.c2 |= self.c3 << (64 - rhs);
             self.c3 >>= rhs;
+        } else if rhs == 64 {
+            self.c0 = self.c1;
+            self.c1 = self.c2;
+            self.c2 = self.c3;
+            self.c3 = 0;
         } else if rhs < 128 {
             self.c0 = self.c1 >> (rhs - 64);
             self.c0 |= self.c2 << (128 - rhs);
@@ -377,14 +401,24 @@ impl ShrAssign<usize> for U256 {
             self.c1 |= self.c3 << (128 - rhs);
             self.c2 = self.c3 >> (rhs - 64);
             self.c3 = 0;
-        } else if rhs < 196 {
+        } else if rhs == 128 {
+            self.c0 = self.c2;
+            self.c1 = self.c3;
+            self.c2 = 0;
+            self.c3 = 0;
+        } else if rhs < 192 {
             self.c0 = self.c2 >> (rhs - 128);
-            self.c0 |= self.c3 << (196 - rhs);
+            self.c0 |= self.c3 << (192 - rhs);
             self.c1 = self.c3 >> (rhs - 128);
             self.c2 = 0;
             self.c3 = 0;
+        } else if rhs == 192 {
+            self.c0 = self.c3;
+            self.c1 = 0;
+            self.c2 = 0;
+            self.c3 = 0;
         } else if rhs < 256 {
-            self.c0 = self.c3 >> (rhs - 196);
+            self.c0 = self.c3 >> (rhs - 192);
             self.c1 = 0;
             self.c2 = 0;
             self.c3 = 0;
