@@ -169,6 +169,31 @@ impl U256 {
         }
     }
 
+    pub fn mulmod(&self, rhs: &U256, modulus: &U256) -> U256 {
+        debug_assert!(modulus != &U256::ZERO);
+        let (mut rlo, mut rhi) = self.mul_full(rhs);
+        for i in (0..=modulus.leading_zeros() as usize + 256).rev() {
+            let tlo = modulus.clone() << i;
+            let thi = if i >= 256 {
+                modulus.clone() << (i - 256)
+            } else {
+                modulus.clone() >> (256 - i)
+            };
+            if thi < rhi || (thi == rhi && tlo <= rlo) {
+                if rlo >= tlo {
+                    rlo -= &tlo;
+                    rhi -= &thi;
+                } else {
+                    rlo -= &tlo;
+                    rhi -= &thi;
+                    rhi -= &U256::ONE;
+                }
+            }
+        }
+        debug_assert!(rhi == U256::ZERO);
+        rlo
+    }
+
     // Computes the inverse modulo 2^256
     pub fn invmod256(&self) -> Option<U256> {
         if self.is_even() {
@@ -784,6 +809,36 @@ mod tests {
         );
         let r = n.invmod(&m).unwrap();
         assert_eq!(i, r);
+    }
+
+    #[test]
+    fn test_mulmod() {
+        let a = U256::new(
+            0xb7eb3137d7271553,
+            0xf44101622499c849,
+            0x6364b9150f381299,
+            0x0487868a9c0b15bb,
+        );
+        let b = U256::new(
+            0xee5c3e0c95ea3606,
+            0xb5d23720247b076a,
+            0x125d5c1cc549a496,
+            0x02fa68e3d326247a,
+        );
+        let m = U256::new(
+            0x04893c41700b0160,
+            0x9ba854d08388861e,
+            0x834be37ce5dd881f,
+            0x0000000425a6a188,
+        );
+        let e = U256::new(
+            0x14527949a28bfa32,
+            0xa388ec81a8763eae,
+            0x35b22ffb468ed013,
+            0x000000032b77bd60,
+        );
+        let r = a.mulmod(&b, &m);
+        assert_eq!(r, e);
     }
 
     #[quickcheck]
