@@ -3,7 +3,7 @@ use hex_literal::*;
 use std::cmp::{Ord, Ordering, PartialOrd};
 use std::num::Wrapping;
 use std::ops::{
-    Add, AddAssign, BitAnd, Mul, MulAssign, Shl, ShlAssign, Shr, ShrAssign, Sub, SubAssign,
+    Add, AddAssign, BitAnd, Mul, MulAssign, Shl, ShlAssign, Shr, ShrAssign, Sub, SubAssign, RemAssign
 };
 use std::u64;
 
@@ -170,7 +170,10 @@ impl U256 {
     }
 
     pub fn mulmod(&self, rhs: &U256, modulus: &U256) -> U256 {
-        unimplemented!() // TODO
+        assert!(modulus != )
+        let (lo, hi) = self.mul_full(rhs);
+
+
     }
 
     // Computes the inverse modulo 2^256
@@ -505,6 +508,16 @@ impl Mul<U256> for &U256 {
     #[inline(always)]
     fn mul(self, rhs: U256) -> U256 {
         rhs * self
+    }
+}
+
+impl RemAssign<&U256> for U256 {
+    fn rem_assign(&mut self, rhs: &U256) {
+        let (_q, r) = self.divrem(rhs).unwrap();
+        self.c0 = r.c0;
+        self.c1 = r.c1;
+        self.c2 = r.c2;
+        self.c3 = r.c3;
     }
 }
 
