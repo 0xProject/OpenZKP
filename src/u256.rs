@@ -158,14 +158,12 @@ impl U256 {
             // TODO: https://surface.syr.edu/cgi/viewcontent.cgi?article=1162&context=eecs_techreports
             let mut r = self.clone();
             let mut q = U256::ZERO;
-            let mut qt = U256::ONE << 255;
-            while qt != U256::ZERO {
-                let t = qt.clone() * rhs;
+            for i in (0..=rhs.leading_zeros() as usize).rev() {
+                let t = rhs.clone() << i;
                 if t < r {
                     r -= &t;
-                    q += &qt;
+                    q += &(U256::ONE.clone() << i);
                 }
-                qt >>= 1;
             }
             Some((q, r))
         }
