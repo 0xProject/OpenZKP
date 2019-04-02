@@ -337,9 +337,9 @@ impl ShlAssign<usize> for U256 {
             self.c0 = 0;
         } else if rhs < 128 {
             self.c3 = self.c2 << (rhs - 64);
-            self.c3 |= self.c2 >> (128 - rhs);
+            self.c3 |= self.c1 >> (128 - rhs);
             self.c2 = self.c1 << (rhs - 64);
-            self.c2 |= self.c1 >> (128 - rhs);
+            self.c2 |= self.c0 >> (128 - rhs);
             self.c1 = self.c0 << (rhs - 64);
             self.c0 = 0;
         } else if rhs == 128 {
@@ -389,7 +389,6 @@ impl ShrAssign<usize> for U256 {
         // TODO: Test optimizing for RHS being exactly 0, 64, 128, ...
         // Note: Test small values first, they are expected to be more common.
         if rhs == 0 {
-
         } else if rhs < 64 {
             self.c0 >>= rhs;
             self.c0 |= self.c1 << (64 - rhs);
