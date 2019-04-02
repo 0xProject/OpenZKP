@@ -147,6 +147,27 @@ impl U256 {
         }
     }
 
+    // Long division
+    pub fn divrem(&self, rhs: &U256) -> Option<(U256, U256)> {
+        if rhs == &U256::ZERO {
+            None
+        } else {
+            // Egyptian Division
+            let mut r = self.clone();
+            let mut q = U256::ZERO;
+            let mut qt = U256::ONE << 255;
+            while qt != U256::ZERO {
+                let t = qt.clone() * rhs;
+                if t < r {
+                    r -= &t;
+                    q += &qt;
+                }
+                qt >>= 1;
+            }
+            Some((q, r))
+        }
+    }
+
     pub fn mulmod(&self, rhs: &U256, modulus: &U256) -> U256 {
         unimplemented!() // TODO
     }
@@ -690,6 +711,15 @@ mod tests {
     fn test_divrem_u64(a: U256, b: u64) -> bool {
         match a.divrem_u64(b) {
             None => b == 0,
+            Some((q, r)) => r < b && q * &U256::from(b) + &U256::from(r) == a,
+        }
+    }
+
+    #[quickcheck]
+    #[test]
+    fn test_divrem(a: U256, b: U256) -> bool {
+        match a.divrem(&b) {
+            None => b == U256::ZERO,
             Some((q, r)) => r < b && q * &U256::from(b) + &U256::from(r) == a,
         }
     }
