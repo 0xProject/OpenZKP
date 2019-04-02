@@ -120,15 +120,15 @@ impl U256 {
         let (r1, carry) = mac(r1, self.c1, rhs.c0, 0);
         let (r2, carry) = mac(r2, self.c1, rhs.c1, carry);
         let (r3, carry) = mac(r3, self.c1, rhs.c2, carry);
-        let (r4, r5) = mac(r4, self.c1, rhs.c2, carry);
+        let (r4, r5) = mac(r4, self.c1, rhs.c3, carry);
         let (r2, carry) = mac(r2, self.c2, rhs.c0, 0);
         let (r3, carry) = mac(r3, self.c2, rhs.c1, carry);
         let (r4, carry) = mac(r4, self.c2, rhs.c2, carry);
-        let (r5, r6) = mac(r5, self.c2, rhs.c2, carry);
+        let (r5, r6) = mac(r5, self.c2, rhs.c3, carry);
         let (r3, carry) = mac(r3, self.c3, rhs.c0, 0);
         let (r4, carry) = mac(r4, self.c3, rhs.c1, carry);
         let (r5, carry) = mac(r5, self.c3, rhs.c2, carry);
-        let (r6, r7) = mac(r6, self.c3, rhs.c2, carry);
+        let (r6, r7) = mac(r6, self.c3, rhs.c3, carry);
         (U256::new(r0, r1, r2, r3), U256::new(r4, r5, r6, r7))
     }
 
@@ -694,6 +694,37 @@ mod tests {
         );
         a *= &b;
         assert_eq!(a, e);
+    }
+
+    #[test]
+    fn test_mul_full() {
+        let mut a = U256::new(
+            0xcef29c5de9ccefc1,
+            0x1f0363af6e0e89e0,
+            0x2edfffcc3ce19c1c,
+            0x0533aefb3249d52d,
+        );
+        let b = U256::new(
+            0x7aedeade9e192566,
+            0xbde10917fae93c03,
+            0x3419d1ecf392f766,
+            0x03027f1aaf32c3fe,
+        );
+        let elo = U256::new(
+            0xc34784904e276be6,
+            0x19f527745e55f913,
+            0x1b805a30c8f277c6,
+            0x360d66c911328f7a,
+        );
+        let ehi = U256::new(
+            0x41f3f98d2b4a4d5c,
+            0x2fdba3d97ab78ebe,
+            0x5b3854220ea8f86c,
+            0x000fa8097e2b023a,
+        );
+        let (rlo, rhi) = a.mul_full(&b);
+        assert_eq!(rlo, elo);
+        assert_eq!(rhi, ehi);
     }
 
     #[test]
