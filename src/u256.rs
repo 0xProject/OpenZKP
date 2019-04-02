@@ -153,6 +153,7 @@ impl U256 {
             None
         } else {
             // Egyptian Division
+            // TODO: https://surface.syr.edu/cgi/viewcontent.cgi?article=1162&context=eecs_techreports
             let mut r = self.clone();
             let mut q = U256::ZERO;
             let mut qt = U256::ONE << 255;
