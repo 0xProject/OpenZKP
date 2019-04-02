@@ -77,7 +77,9 @@ pub struct FieldElement(pub BigUint);
 impl FieldElement {
     // TODO: const ZERO ONE
     pub fn new(limbs: &[u32; 8]) -> Self {
-        FieldElement(BigUint::from_slice(limbs))
+        let mut bu = BigUint::from_slice(limbs);
+        bu %= &*MODULUS;
+        FieldElement(bu)
     }
 
     pub fn to_bytes(&self) -> [u8; 32] {
@@ -93,7 +95,9 @@ impl FieldElement {
 // TODO: Implement Serde
 impl From<&[u8; 32]> for FieldElement {
     fn from(bytes: &[u8; 32]) -> Self {
-        FieldElement(BigUint::from_bytes_be(bytes))
+        let mut bu = BigUint::from_bytes_be(bytes);
+        bu %= &*MODULUS;
+        FieldElement(bu)
     }
 }
 
@@ -135,7 +139,9 @@ impl Inv for FieldElement {
 impl AddAssign<&FieldElement> for FieldElement {
     fn add_assign(&mut self, rhs: &FieldElement) {
         self.0 += &rhs.0;
-        self.0 %= &*MODULUS;
+        if self.0 >= *MODULUS {
+            self.0 -= &*MODULUS;
+        }
     }
 }
 
@@ -143,7 +149,9 @@ impl SubAssign<&FieldElement> for FieldElement {
     fn sub_assign(&mut self, rhs: &FieldElement) {
         self.0 += &*MODULUS;
         self.0 -= &rhs.0;
-        self.0 %= &*MODULUS;
+        if self.0 >= *MODULUS {
+            self.0 -= &*MODULUS;
+        }
     }
 }
 
