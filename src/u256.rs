@@ -1,6 +1,7 @@
 use crate::utils::{adc, div_2_1, mac, sbb};
 use hex_literal::*;
 use std::cmp::{Ord, Ordering, PartialOrd};
+use std::fmt;
 use std::num::Wrapping;
 use std::ops::{
     Add, AddAssign, BitAnd, Mul, MulAssign, Rem, RemAssign, Shl, ShlAssign, Shr, ShrAssign, Sub,
@@ -265,6 +266,16 @@ impl From<u64> for U256 {
 impl From<u128> for U256 {
     fn from(n: u128) -> U256 {
         U256::from_u128(n)
+    }
+}
+
+impl fmt::Display for U256 {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{:016x}{:016x}{:016x}{:016x}",
+            self.c3, self.c2, self.c1, self.c0
+        )
     }
 }
 
