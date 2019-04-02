@@ -1,11 +1,13 @@
 #[macro_use]
 use criterion::{Criterion, black_box, criterion_group, criterion_main};
+use hex_literal::*;
 use num::{bigint::BigUint, traits::FromPrimitive, traits::Inv, Integer, One, Zero};
 use starkcrypto::curve::CurvePoint;
 use starkcrypto::ecdsa::{private_to_public, sign, verify};
 use starkcrypto::field::FieldElement;
 use starkcrypto::pedersen::hash;
 use starkcrypto::u256::U256;
+use starkcrypto::u256h;
 
 fn u256_add(crit: &mut Criterion) {
     let a = U256::new(
@@ -70,6 +72,19 @@ fn u256_invmod(crit: &mut Criterion) {
     );
     crit.bench_function("U256 invmod", move |bench| {
         bench.iter(|| black_box(&n).invmod(black_box(&m)))
+    });
+}
+
+fn u256_divrem(crit: &mut Criterion) {
+    let a = U256::new(
+        0x531bb3056443bc99,
+        0x4ef3d9c2cb44b6a3,
+        0x471cec503f118188,
+        0x01c9e043b135fa21,
+    );
+    let b = u256h!("0800000000000011000000000000000000000000000000000000000000000001");
+    crit.bench_function("U256 divrem", move |bench| {
+        bench.iter(|| black_box(&a).invmod(black_box(&b)))
     });
 }
 
@@ -234,6 +249,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     u256_mul(c);
     u256_invmod256(c);
     u256_invmod(c);
+    u256_divrem(c);
     field_add(c);
     field_mul(c);
     field_inv(c);

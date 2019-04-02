@@ -6,6 +6,7 @@ pub mod field;
 pub mod orders;
 pub mod pedersen;
 mod pedersen_points;
+#[macro_use]
 pub mod u256;
 mod utils;
 use curve::CurvePoint;
