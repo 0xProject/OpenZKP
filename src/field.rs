@@ -71,10 +71,10 @@ impl AddAssign<&FieldElement> for FieldElement {
 
 impl SubAssign<&FieldElement> for FieldElement {
     fn sub_assign(&mut self, rhs: &FieldElement) {
-        self.0 += &MODULUS;
         self.0 -= &rhs.0;
-        if self.0 >= MODULUS {
-            self.0 -= &MODULUS;
+        // Check for underflow
+        if self.0 > rhs.0 {
+            self.0 += &MODULUS;
         }
     }
 }
