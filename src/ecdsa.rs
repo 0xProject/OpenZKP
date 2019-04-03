@@ -1,61 +1,57 @@
 use crate::curve::{CurvePoint, ORDER};
-use crate::field::modinv;
-use lazy_static::lazy_static;
-use num::{
-    traits::identities::{One, Zero},
-    BigUint,
+use crate::field::FieldElement;
+use crate::u256::U256;
+use crate::u256h;
+use hex_literal::*;
+use num::traits::{One, Zero};
+
+pub const GENERATOR: CurvePoint = CurvePoint {
+    x: FieldElement(u256h!(
+        "01ef15c18599971b7beced415a40f0c7deacfd9b0d1819e03d723d8bc943cfca"
+    )),
+    y: FieldElement(u256h!(
+        "005668060aa49730b7be4801df46ec62de53ecd11abe43a32873000c36e8dc1f"
+    )),
 };
 
-lazy_static! {
-    static ref GENERATOR: CurvePoint = CurvePoint::new(
-        &[
-            0xc943cfca, 0x3d723d8b, 0x0d1819e0, 0xdeacfd9b, 0x5a40f0c7, 0x7beced41, 0x8599971b,
-            0x01ef15c1
-        ],
-        &[
-            0x36e8dc1f, 0x2873000c, 0x1abe43a3, 0xde53ecd1, 0xdf46ec62, 0xb7be4801, 0x0aa49730,
-            0x00566806
-        ]
-    );
+pub fn private_to_public(private_key: &U256) -> CurvePoint {
+    GENERATOR.clone() * (private_key.clone() % &ORDER)
 }
 
-pub fn private_to_public(private_key: &BigUint) -> CurvePoint {
-    GENERATOR.clone() * private_key.clone()
+fn divmod(a: &U256, b: &U256) -> U256 {
+    a.mulmod(&b.invmod(&ORDER).unwrap(), &ORDER)
 }
 
-fn divmod(a: &BigUint, b: &BigUint) -> BigUint {
-    (a * modinv(b, &*ORDER).unwrap()) % &*ORDER
-}
-
-pub fn sign(msg_hash: &BigUint, private_key: &BigUint) -> (BigUint, BigUint) {
+pub fn sign(msg_hash: &U256, private_key: &U256) -> (U256, U256) {
     assert!(msg_hash.bits() <= 251);
-
     {
         // Todo Loop
-        let k = BigUint::one();
+        let k = U256::ONE;
 
-        let r: BigUint = (GENERATOR.clone() * k.clone()).x.0;
-        assert!(r > BigUint::zero());
+        let r: U256 = (GENERATOR.clone() * k.clone()).x.0;
+        assert!(r > U256::ZERO);
         assert!(r.bits() <= 251); // TODO: Retry
 
-        assert!(msg_hash + &r * private_key % &*ORDER != BigUint::zero());
-        let w: BigUint = divmod(&k, &(msg_hash + &r * private_key));
+        let r = r % &ORDER;
+
+        assert!(msg_hash + r.clone() * &private_key % &ORDER != U256::ZERO);
+        let w: U256 = divmod(&k, &(msg_hash + &r * private_key.clone()));
 
         (r, w)
     }
 }
 
-pub fn verify(msg_hash: &BigUint, r: &BigUint, w: &BigUint, public_key: &CurvePoint) -> bool {
-    assert!(r != &BigUint::zero());
+pub fn verify(msg_hash: &U256, r: &U256, w: &U256, public_key: &CurvePoint) -> bool {
+    assert!(r != &U256::ZERO);
     assert!(r.bits() <= 251);
-    assert!(w != &BigUint::zero());
+    assert!(w != &U256::ZERO);
     assert!(w.bits() <= 251);
     assert!(public_key.on_curve());
 
-    let a = GENERATOR.clone() * (msg_hash * w);
-    let b = public_key.clone() * (r * w);
+    let a = GENERATOR.clone() * msg_hash.mulmod(&w, &ORDER);
+    let b = public_key.clone() * r.mulmod(&w, &ORDER);
     let x = (a + b).x.0;
-    &x == r
+    x == r
 }
 
 #[cfg(test)]
