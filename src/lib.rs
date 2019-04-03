@@ -12,19 +12,14 @@ mod utils;
 use curve::CurvePoint;
 use field::FieldElement;
 pub use num;
-use num::BigUint;
+use u256::U256;
 
-fn from_bytes(bytes: &[u8; 32]) -> BigUint {
-    BigUint::from_bytes_be(bytes)
+fn from_bytes(bytes: &[u8; 32]) -> U256 {
+    U256::from_bytes_be(*bytes)
 }
 
-fn to_bytes(num: &BigUint) -> [u8; 32] {
-    assert!(num.bits() <= 256);
-    let vec = num.to_bytes_be();
-    let mut array = [0; 32];
-    let padding: usize = 32 - vec.len();
-    array[padding..].copy_from_slice(vec.as_slice());
-    array
+fn to_bytes(num: &U256) -> [u8; 32] {
+    num.to_bytes_be()
 }
 
 pub fn hash(a: &[u8; 32], b: &[u8; 32]) -> [u8; 32] {
