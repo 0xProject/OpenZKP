@@ -1,26 +1,20 @@
 use crate::field::FieldElement;
-use lazy_static::lazy_static;
-use num::{bigint::BigUint, Integer, One, Zero};
+use crate::u256::U256;
+use crate::u256h;
+use hex_literal::*;
+use num::{One, Zero};
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Shr, SubAssign};
 
 // Curve parameters
 
 // Alpha = 1
-// Beta  = 0x6f21413efbe40de150e596d72f7a8c5609ad26c15c915c1f4cdfcb99cee9e89
-// Order = 0x800000000000010ffffffffffffffffb781126dcae7b2321e66a241adc64d2f
+// Beta  = 0x06f21413efbe40de150e596d72f7a8c5609ad26c15c915c1f4cdfcb99cee9e89
+// Order = 0x0800000000000010ffffffffffffffffb781126dcae7b2321e66a241adc64d2f
 
-lazy_static! {
-    #[rustfmt::skip]
-    pub static ref BETA: FieldElement = FieldElement::new(&[
-        0x9cee9e89, 0xf4cdfcb9, 0x15c915c1, 0x609ad26c,
-        0x72f7a8c5, 0x150e596d, 0xefbe40de, 0x06f21413,
-    ]);
-    #[rustfmt::skip]
-    pub static ref ORDER: BigUint = BigUint::from_slice(&[
-        0xadc64d2f, 0x1e66a241, 0xcae7b232, 0xb781126d,
-        0xffffffff, 0xffffffff, 0x00000010, 0x08000000,
-    ]);
-}
+pub const BETA: FieldElement = FieldElement(u256h!(
+    "06f21413efbe40de150e596d72f7a8c5609ad26c15c915c1f4cdfcb99cee9e89"
+));
+pub const ORDER: U256 = u256h!("0800000000000010ffffffffffffffffb781126dcae7b2321e66a241adc64d2f");
 
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub struct CurvePoint {
@@ -76,17 +70,17 @@ impl AddAssign for CurvePoint {
 }
 
 // This is over a multiplicative field of order 'Order'
-impl Mul<BigUint> for CurvePoint {
+impl Mul<U256> for CurvePoint {
     type Output = Self;
-    fn mul(self, scalar: BigUint) -> Self::Output {
-        assert!(scalar != BigUint::zero());
-        if scalar == BigUint::one() {
+    fn mul(self, scalar: U256) -> Self::Output {
+        assert!(scalar != U256::ZERO);
+        if scalar == U256::ONE {
             self
         } else {
             if scalar.is_even() {
                 self.double() * scalar.shr(1)
             } else {
-                self.clone() + (self * (scalar - BigUint::one()))
+                self.clone() + (self * (scalar - &U256::ONE))
             }
         }
     }
@@ -148,7 +142,7 @@ mod tests {
             x: FieldElement::new(&[0x5bf31eb0, 0xfe50a889, 0x2d1a8a21, 0x3242e28e, 0x0d13fe66, 0xcf63e064, 0x9426e2c3, 0x0040ffd5]),
             y: FieldElement::new(&[0xe29859d2, 0xd21b931a, 0xea34d27d, 0x296f19b9, 0x6487ae5b, 0x524260f9, 0x069092ca, 0x060c2257])
         };
-        let b = BigUint::from_slice(&[0x711a14cf, 0xebe54f04, 0x4729d630, 0xd14a329a, 0xf5480b47, 0x35fdc862, 0xde09131d, 0x029f7a37]);
+        let b = U256::from_slice(&[0x711a14cf, 0xebe54f04, 0x4729d630, 0xd14a329a, 0xf5480b47, 0x35fdc862, 0xde09131d, 0x029f7a37]);
         let c = CurvePoint{
             x: FieldElement::new(&[0x143de731, 0x4c657d7e, 0x44b99cbf, 0x49dfc2e5, 0x40ea4226, 0xaf6c4895, 0x9a141832, 0x04851acc]),
             y: FieldElement::new(&[0x138592fd, 0x1377613f, 0xd53c61dd, 0xaa8b32c1, 0xd5bf18bc, 0x3b22a665, 0xf54ed6ae, 0x07f4bb53])
@@ -165,9 +159,9 @@ mod tests {
     #[quickcheck]
     #[test]
     fn distributivity(p: CurvePoint, fa: FieldElement, fb: FieldElement) -> bool {
-        let a = &fa.0 % &*ORDER;
-        let b = &fb.0 % &*ORDER;
-        let c = &a + &b;
+        let a = fa.0.clone() % &ORDER;
+        let b = fb.0.clone() % &ORDER;
+        let c = a.clone() + &b;
         (p.clone() * a) + (p.clone() * b) == p.clone() * c
     }
 }
