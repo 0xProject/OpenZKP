@@ -55,10 +55,10 @@ impl U256 {
     #[allow(clippy::cast_lossless)]
     pub const fn from_bytes_be(n: [u8; 32]) -> Self {
         Self::new(
-            u64_from_bytes_be!(n, 0),
-            u64_from_bytes_be!(n, 8),
-            u64_from_bytes_be!(n, 16),
             u64_from_bytes_be!(n, 24),
+            u64_from_bytes_be!(n, 16),
+            u64_from_bytes_be!(n, 8),
+            u64_from_bytes_be!(n, 0),
         )
     }
 
