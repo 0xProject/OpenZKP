@@ -3,6 +3,7 @@ use crate::field::FieldElement;
 use crate::u256::U256;
 use crate::u256h;
 use hex_literal::*;
+use tiny_keccak::sha3_256;
 
 pub const GENERATOR: CurvePoint = CurvePoint {
     x: FieldElement(u256h!(
@@ -23,10 +24,11 @@ fn divmod(a: &U256, b: &U256) -> U256 {
 
 pub fn sign(msg_hash: &U256, private_key: &U256) -> (U256, U256) {
     assert!(msg_hash.bits() <= 251);
+    let k = U256::from_bytes_be(sha3_256(
+        &[private_key.to_bytes_be(), msg_hash.to_bytes_be()].concat(),
+    ));
     {
-        // Todo Loop
-        let k = U256::ONE;
-
+        // Todo Loop over k
         let r: U256 = (GENERATOR.clone() * k.clone()).x.0;
         assert!(r > U256::ZERO);
         assert!(r.bits() <= 251); // TODO: Retry
@@ -79,8 +81,8 @@ mod tests {
         let private_key =
             u256h!("03c1e9550e66958296d11b60f8e8e7a7ad990d07fa65d5f7652c4a6c87d4e3cc");
         let expected = (
-            u256h!("01ef15c18599971b7beced415a40f0c7deacfd9b0d1819e03d723d8bc943cfca"),
-            u256h!("07656a287e3be47c6e9a29482aecc10cd8b1ae4797b4b956a3573b425d1e66c9"),
+            u256h!("0494e0c7d60c4bba6ed7d18abccaeb9e23ac4d49b4dd5132aa240b4909f4fed8"),
+            u256h!("066778cb0f32c51a2fff78cde3ae697fb75481fd06e0e0451e9f25b5ac4a3ec8"),
         );
         let result = sign(&message_hash, &private_key);
         assert_eq!(result, expected);
