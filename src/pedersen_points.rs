@@ -1,512 +1,4032 @@
 use crate::curve::CurvePoint;
-use lazy_static::lazy_static;
+use crate::field::FieldElement;
+use crate::u256::U256;
+use crate::u256h;
+use hex_literal::*;
 
-#[rustfmt::skip]
-lazy_static! {
-    pub static ref PEDERSEN_POINTS: [CurvePoint; 503] = [
-        #![allow(clippy::style)]
-        CurvePoint::new(&[0x50ca6804, 0x551fde40, 0x22947733, 0x716b0b10, 0xeb599f16, 0x00ee1b87, 0xa8c16007, 0x049ee3eb], &[0x6e10268a, 0xd0405d26, 0xc0e056c1, 0x4e621062, 0x06ea0ed3, 0xf346d49d, 0x4b3bc6dd, 0x03ca0cfe]),
-        CurvePoint::new(&[0xc943cfca, 0x3d723d8b, 0x0d1819e0, 0xdeacfd9b, 0x5a40f0c7, 0x7beced41, 0x8599971b, 0x01ef15c1], &[0x36e8dc1f, 0x2873000c, 0x1abe43a3, 0xde53ecd1, 0xdf46ec62, 0xb7be4801, 0x0aa49730, 0x00566806]),
-        CurvePoint::new(&[0x57ebe47b, 0x1080d179, 0x6d56eb0c, 0x8fa8120b, 0x55fca9e5, 0x969c7486, 0xcbaffe7f, 0x0234287d], &[0xe89e5615, 0x6ed0268e, 0x7a6c94cc, 0x940135dd, 0xd41f4e39, 0x1e889527, 0x00f96fb2, 0x03b056f1]),
-        CurvePoint::new(&[0xba8aa378, 0xb7a6932d, 0xde5e3018, 0x99099ec1, 0x56558f33, 0x3f9dab26, 0x76c83db3, 0x04fa56f3], &[0x0ff5b54d, 0x5168f4e8, 0x2a7a23b4, 0x562761f9, 0xe47e4401, 0x8113e0c0, 0xc931c9e3, 0x03fa0984]),
-        CurvePoint::new(&[0xbd2d6997, 0x3aa372f0, 0x4709e90f, 0x40c690c7, 0x5b45f74b, 0x764910f7, 0x66be8dec, 0x04ba4cc1], &[0xb24b219c, 0x48151f27, 0x5ce5ae7c, 0xcac5c59a, 0xc4ede85f, 0x4b971e46, 0xf5c1751f, 0x0040301c]),
-        CurvePoint::new(&[0x49a58202, 0xd36ff12c, 0xd53fb325, 0x2ca65048, 0xf61a63bb, 0x6e44cca8, 0xb0e6cc1c, 0x054302dc], &[0xe99c2426, 0x879dcc77, 0x3c25561a, 0xce98ad78, 0x68d8ae25, 0xb3480462, 0x37d13504, 0x01b77b3e]),
-        CurvePoint::new(&[0x17ec8430, 0x3efc41fa, 0x80a2217d, 0xadfb35f8, 0xc7a281b4, 0x868ccb5e, 0x9bf1ba2a, 0x00bce48a], &[0x0d7e362d, 0xbd72c545, 0x08e26706, 0xe4cecb15, 0xb39c4497, 0x207b24ae, 0xd6339b88, 0x00436e8d]),
-        CurvePoint::new(&[0xa22a8991, 0xffdf30ff, 0x6a479828, 0x4958d211, 0x56766ec3, 0x749a30fa, 0x8fd5a27b, 0x06005e12], &[0x2e41af8f, 0x18483409, 0x1349af68, 0xa4bdd228, 0xec0b5df2, 0xf1c2895e, 0x6d08f33b, 0x01215881]),
-        CurvePoint::new(&[0x8ce8280c, 0xe99f26f7, 0x02d4563b, 0xcc3591b3, 0xce5ed8b6, 0xd315f6b7, 0xf6f297e8, 0x01c06a16], &[0xaf637975, 0xaa420e75, 0x6666c923, 0x8b8f1c54, 0x575258d7, 0x1faca0a7, 0x10aebfd1, 0x03db7144]),
-        CurvePoint::new(&[0xec7de24c, 0x4e9c246d, 0xdde33a16, 0xb1b60bb2, 0x1fc21102, 0x1a294b04, 0xabaa1125, 0x07bcee06], &[0xe5885a32, 0x25d0f72d, 0x1f8aa3e5, 0x7256f150, 0x9112f0dd, 0x69b3b7ef, 0x6f985bef, 0x01600336]),
-        CurvePoint::new(&[0x62ffb9b4, 0x4e2a49ef, 0xace42a6e, 0xdae8d3b8, 0xe27a2b1e, 0x41296e01, 0x949a4715, 0x02ccd344], &[0xffac852a, 0x8bfb6c22, 0x5cef6418, 0xf884b6f3, 0x09187b45, 0xe473fed4, 0xa7b4c218, 0x030e28f3]),
-        CurvePoint::new(&[0xa6cf0c79, 0x05349c22, 0xf5db8ac1, 0x55fef75c, 0x90164244, 0xdd4abfaa, 0xb29b725b, 0x035b6b70], &[0xb457b040, 0xb0459c5f, 0x625f899b, 0x4b354960, 0x2d007857, 0x862da709, 0x5e6c40ce, 0x02625754]),
-        CurvePoint::new(&[0x982b479a, 0x96ec3507, 0xd8d08b64, 0x952abe24, 0xea0dbdf2, 0x82ea87e8, 0xcf8fef31, 0x0419fb89], &[0x7d915f05, 0xd9dbde3e, 0x34d879bd, 0x83461bc4, 0x6dbd71f8, 0x3d4b26c4, 0xfb62d0a4, 0x0247a42d]),
-        CurvePoint::new(&[0x098b206f, 0xf46292bd, 0xb463fbb8, 0xe8ca1cca, 0x5e19adfb, 0xd5eb7cc7, 0x04f4e570, 0x052c984e], &[0x3c0f22bb, 0x33b8d46f, 0x606eab70, 0x8dd974ec, 0xbfe3e095, 0x338b69f0, 0x0fd0d250, 0x0360e38b]),
-        CurvePoint::new(&[0x38a620ba, 0x3ba80c0d, 0x6f175a27, 0x748ee579, 0x469975db, 0xee4186e8, 0xc48d0e75, 0x0505192f], &[0x85d463da, 0x4bf803c6, 0xcd0473ee, 0x1e830e4d, 0xaa770e8c, 0xb4dddea3, 0x44b1e4b3, 0x0125867a]),
-        CurvePoint::new(&[0x3d8b7f99, 0x9a6f5cb6, 0x156338f1, 0x0075a8ea, 0x1a341cd3, 0xc3cb8579, 0x1c471c17, 0x06980f6d], &[0x238281af, 0x4164da3e, 0x1021758a, 0xca1e5c2c, 0xb72e1554, 0xf75d2f59, 0x9b6e2167, 0x03c41b08]),
-        CurvePoint::new(&[0x59fbab6d, 0x99bcc924, 0x9834e38b, 0x4c6b7702, 0x0dad22fb, 0xda552207, 0x6c52a6f5, 0x050f36f8], &[0x9b0a8595, 0x6a838d57, 0x360ffc82, 0x2cac5999, 0x505ef4d2, 0x56df40ad, 0x67ac7c06, 0x013ea790]),
-        CurvePoint::new(&[0xbbb29f0e, 0xf3e8dfa1, 0x11511731, 0xbd03c848, 0xc5f289b9, 0x0cca82f0, 0x68b6d0f7, 0x008c13fa], &[0x9fd7d186, 0x0e219851, 0xd6eea9c8, 0x11d8670e, 0x7278ddbd, 0x11a3fb02, 0x5d18437e, 0x0191ab50]),
-        CurvePoint::new(&[0x9b3fafa8, 0x01c9d6d3, 0x7972c1fd, 0x99ce0df5, 0x5b715ae6, 0x5d88a8a1, 0xbea32ecc, 0x040b996a], &[0xdbfdfb5e, 0x9461e96c, 0x9426ad6d, 0x36a9b7c9, 0x90cc4ffc, 0xd34b4f46, 0x79a2c3f7, 0x02e44cba]),
-        CurvePoint::new(&[0x754ab07e, 0x9cc1ddca, 0x10b92463, 0xc3e87d11, 0x1da6ca17, 0xdb72a018, 0x948a2ae3, 0x05514394], &[0xef64dee5, 0xcc89b729, 0x41e6f821, 0xe4fb744f, 0xeef8faa3, 0x0a010c76, 0xbacb8d1d, 0x01cb53ca]),
-        CurvePoint::new(&[0xef47f362, 0x71f096e4, 0x9c30057a, 0x9b5a586b, 0x4521906c, 0xf51c673c, 0x2f13ad12, 0x0066c51e], &[0x25f4ea31, 0x691cd4f3, 0xaefd25bd, 0x74dfe9e1, 0x504d2670, 0x0e7eebf4, 0x746fa29f, 0x02eeee7e]),
-        CurvePoint::new(&[0x00675a7c, 0xa6eb3f3c, 0x914d553e, 0x960c0b0b, 0x3226cebb, 0x68b77778, 0x1f23915d, 0x0066b81d], &[0xdb5b1ae0, 0x9c3100dc, 0x526d9446, 0x3725a7ca, 0x7c1e90c8, 0xca14c3d1, 0x5b073b9a, 0x039a226a]),
-        CurvePoint::new(&[0xab80391b, 0x48946623, 0x62bd92e3, 0x9059d9cd, 0xffb40f2e, 0x88391c90, 0x782818b8, 0x03fed4bd], &[0xf4bf9b84, 0x0bc864c8, 0x0dd93940, 0x0737dae5, 0x0b00afdc, 0x08997fa3, 0xde4c72d9, 0x0159c712]),
-        CurvePoint::new(&[0x7f831b41, 0xe05bca7f, 0xe144070d, 0x67e700b8, 0x6db402c9, 0x8ecdac05, 0x4514ff96, 0x005f011d], &[0xfad689c3, 0x161aefe5, 0x592e9d87, 0x2711580d, 0xad670f8a, 0x8a15f729, 0xccf68b73, 0x00a4ff1d]),
-        CurvePoint::new(&[0xb162a3f3, 0x66a1dbac, 0x22dd93af, 0x513c1ba0, 0x08d2d585, 0xf60297ec, 0x7ecc44b5, 0x06c81c70], &[0xaea2b409, 0xf3f91760, 0x7a95e1cd, 0xa33b2d6c, 0xe99f1523, 0x49226268, 0xcbc79820, 0x02500bc5]),
-        CurvePoint::new(&[0x8b54f0e7, 0x45114c14, 0x4f3e96ba, 0x25d0d043, 0xce63b032, 0x1d8828c4, 0x77624e25, 0x0737b2a8], &[0xbfc4df6d, 0x4bf8e1a7, 0x8f6bbf84, 0x400c4213, 0x0c24c003, 0x39869528, 0x03a271f0, 0x004f9a4f]),
-        CurvePoint::new(&[0x250b36b2, 0x08d10011, 0x07eaaaa8, 0x705e22ac, 0xff339843, 0x6f09f82f, 0x3a898be4, 0x06db1705], &[0xd04cd73c, 0x76ef9a77, 0xc9e1680d, 0x0ec3bc0e, 0x6e3b9590, 0xce2de5f5, 0x7c9e3d55, 0x01154926]),
-        CurvePoint::new(&[0x1cfc5b1f, 0x645c1428, 0xefe1d07f, 0x73a5221d, 0x4d1e23b5, 0x5eaaccff, 0xa04d53d1, 0x043717d6], &[0xab81b3f3, 0x39d592c7, 0x7185d343, 0xe6a6bb4c, 0xbf596ca0, 0x93c7d829, 0x7826b170, 0x01cbfa4c]),
-        CurvePoint::new(&[0xe5a7ef14, 0x91063fc6, 0xb1e0563d, 0x58c1687c, 0x42d99c01, 0x33f6a30c, 0x63b9994b, 0x028ad05e], &[0x5522f3ac, 0x970f1db5, 0x5506b487, 0x6a57e29d, 0x9374503c, 0xdf202188, 0x8a177e83, 0x036b54d5]),
-        CurvePoint::new(&[0x2511e5a0, 0x1b632778, 0xa2d706c0, 0xd2d38d08, 0xb0a88d81, 0x161baa97, 0x40cbd74d, 0x05ce51c6], &[0xa64d5ff6, 0x69aab707, 0xfe4e8e03, 0xa6d7bb69, 0x97c942fe, 0xc496ac9f, 0x762bb3c9, 0x0308ebac]),
-        CurvePoint::new(&[0xc6df5aaa, 0x7ea56c2f, 0x950ca663, 0x046a4509, 0x3ad48e92, 0x8f00b29a, 0x832f1efb, 0x0333da15], &[0x7415b8dc, 0xf48cc4a9, 0x9477a2f4, 0x157939b0, 0x154bbdc0, 0x00f3476d, 0x56fc9719, 0x0035c6cc]),
-        CurvePoint::new(&[0xd2898196, 0x62982efb, 0x618c19d4, 0x42152c55, 0x7ab33c3c, 0xbd57ac8b, 0x8c2c31fc, 0x04fc483e], &[0xd01a48b6, 0x248d2a51, 0x40b358c4, 0x15839b7f, 0x2756c5fa, 0xc48c115d, 0xbd4ab3f5, 0x0182719d]),
-        CurvePoint::new(&[0x8c7c25da, 0xe46a853d, 0x07ebda93, 0x45cde966, 0xb3d0e806, 0xda000538, 0x20586084, 0x04f52ddf], &[0xea6e12ee, 0xb8305930, 0x286d90a6, 0x480768a8, 0xfee0e678, 0x271b472b, 0xe215b517, 0x028b7b5a]),
-        CurvePoint::new(&[0x38d30b8e, 0xebfdda9b, 0x696e1054, 0x92826f19, 0xd793c483, 0xa51943f2, 0xad7f4b6d, 0x0356f8a9], &[0x96682477, 0xa323efc6, 0xc46afc9f, 0xc3df5d5b, 0x43e37c1a, 0x2c3c7891, 0x37163e4a, 0x01e872e1]),
-        CurvePoint::new(&[0x17b7ada6, 0xc807e7f4, 0x04c61a28, 0x2ebcbf2c, 0x6ff65ee8, 0x88f49e69, 0xca520206, 0x04ba01fb], &[0x691ad7fb, 0xf310e6ee, 0xd203d9c3, 0x86441364, 0x7c226434, 0xa5150a3d, 0xb9f010ae, 0x02acb6d4]),
-        CurvePoint::new(&[0xaacc000c, 0xd8eac283, 0xa48d02d8, 0x88a74e07, 0x0c4f2116, 0x678f9387, 0xfa35e2ec, 0x050de424], &[0xe1e20566, 0xd920d34d, 0xb22c26c9, 0x021d0205, 0x3026d737, 0xad8d51af, 0xffbd3c3f, 0x0341096a]),
-        CurvePoint::new(&[0xb408b84b, 0x07393415, 0xe4601905, 0x4f78c72e, 0xab13a5db, 0x7c674ced, 0xcabb3657, 0x04ca6a40], &[0x7a5c34f3, 0x611454ed, 0xb3c3bac0, 0xea405744, 0x2e55b385, 0xd59a2e5c, 0x0a90daed, 0x036794b4]),
-        CurvePoint::new(&[0xf18a2195, 0xd9651b09, 0x00221e2e, 0x2b19dec4, 0xe270b435, 0xc67936f1, 0xb4f2c2ab, 0x033ee591], &[0x9c29f8fe, 0xcdd13626, 0xcc3a9506, 0x1424bdbb, 0xc25780f3, 0x13173153, 0x147a8494, 0x03b315af]),
-        CurvePoint::new(&[0x3bb0318f, 0xfb9c10d1, 0x62f92459, 0x1e28f011, 0x0a8654d6, 0xee8139aa, 0x01f8933a, 0x040311da], &[0x6baeafa0, 0x8321a53b, 0x51c896a4, 0x21b2969e, 0x16a9da8f, 0x247a1334, 0xa27349b1, 0x00856de0]),
-        CurvePoint::new(&[0xbdf898a0, 0xe21b70e3, 0x9edcdf52, 0x5a214cf3, 0xd77356c4, 0xf7b4a0c5, 0x4c71a21e, 0x00d98c22], &[0x983d7c3e, 0x8daed1ac, 0xbf7ad645, 0x46d62e39, 0xc9507bcc, 0x82468b6f, 0x62bcb423, 0x01a5eb01]),
-        CurvePoint::new(&[0x1893632e, 0xd90a17f2, 0xfc6dead7, 0x0bdbd436, 0x6af44db6, 0x49a1e2c2, 0xa248e9d0, 0x02e0c4ce], &[0x2fc468c7, 0xee9f8756, 0xf6707931, 0x4a3ec8aa, 0x60612b3e, 0xa74ad569, 0x119d1ae3, 0x0265b614]),
-        CurvePoint::new(&[0x6182a4f6, 0xeec070d1, 0xc1116012, 0xfa375421, 0xa2d4aace, 0x08aea0f6, 0xf9a53d23, 0x04d0925d], &[0x39565d6d, 0x59d42285, 0x20a60549, 0x694a2fe6, 0xf0c5cc80, 0xb9670e79, 0x0c1f8b5e, 0x03b8ea11]),
-        CurvePoint::new(&[0x180aa535, 0x9fa2db98, 0x261970d7, 0xb2272f89, 0x79602070, 0x6560afaf, 0x0282aff2, 0x00e107e8], &[0xf7d13f69, 0x3218f938, 0xdfac4741, 0x1028dd16, 0x5aa5c8c0, 0x68a951c2, 0x29dd75c7, 0x0180fbe1]),
-        CurvePoint::new(&[0x5208c21f, 0x294726b2, 0x30783c96, 0x23296f5c, 0xb772c6f4, 0xc8adbbf6, 0xcd7001dd, 0x030a8d24], &[0x726e2f2c, 0xd0160932, 0x3f9b6059, 0xc1e4f213, 0xfa5b15e3, 0x9c9328ee, 0x54ab9c22, 0x02f0c690]),
-        CurvePoint::new(&[0x184420e5, 0x9abebc6b, 0xe7b62e2e, 0x0b234848, 0xea77d4c6, 0x7a983c00, 0x0b3a4d63, 0x0040551f], &[0xc055f297, 0xc08ab91e, 0x1211a94f, 0x6419230b, 0x1cd88bb9, 0x1bea5f40, 0x30a8507f, 0x016096b7]),
-        CurvePoint::new(&[0x7251fee9, 0xdc5b2554, 0x367ed08d, 0x5e743219, 0xee088e7d, 0x6f5073a0, 0xe78a47cf, 0x06f1e4e8], &[0xd0300479, 0x6977d7be, 0x519cc50a, 0x742c960d, 0x86aa14f5, 0x726c2898, 0x849563ce, 0x028691d8]),
-        CurvePoint::new(&[0x64af905b, 0x634b3c26, 0x6a777601, 0xb22670f1, 0xe9aeaa6e, 0xa98a7e77, 0xc5c265b3, 0x0236f560], &[0xd9f95027, 0xc960a0e8, 0x996199d5, 0x5ec624d7, 0x177ad49f, 0x77725248, 0xa48965ef, 0x0103f9a7]),
-        CurvePoint::new(&[0x04c25aa7, 0x3e2b066d, 0xde2ddbbd, 0xb6a82369, 0x20d726b6, 0x1c9994ad, 0x83c3b622, 0x0321bd22], &[0x3746c782, 0x6e9b8f43, 0x98753a70, 0x5a3f0e66, 0x103be792, 0xf615feae, 0xd1efee0e, 0x002c8027]),
-        CurvePoint::new(&[0xab7af1dd, 0x8ac8ec5f, 0xcf0461b9, 0x0823507d, 0xfabaf502, 0xf6e085c0, 0x02c14a6c, 0x05de9ddd], &[0x2b27fb08, 0xd23dfaeb, 0x644f2499, 0xe575086e, 0x6678a453, 0xe66d8e7b, 0x2f07e33a, 0x02ec56e4]),
-        CurvePoint::new(&[0x8bc71999, 0x16c7c07b, 0x71660757, 0x9d076ac5, 0x090a323b, 0x03ccb6d5, 0x9db37642, 0x05aa496a], &[0x5fcf1359, 0xdf048864, 0x2b3155ca, 0x7495187c, 0x528b7b1f, 0xc4f50f6e, 0x60a05741, 0x00d7ef9b]),
-        CurvePoint::new(&[0x51490c4a, 0x372f94ff, 0x276043c2, 0x39d3e32d, 0xbc8876a9, 0xd961cdf8, 0x6143d5ad, 0x0770be9f], &[0xcda328d6, 0x46c694c4, 0xdf34a724, 0x32c51709, 0x68e09416, 0x51b3bb44, 0xb58deb57, 0x01a0e47d]),
-        CurvePoint::new(&[0xe2cd4788, 0x4b97225b, 0xc358358b, 0xda4a600a, 0xadb4588c, 0xdb1097ce, 0xac0b02d9, 0x01d9435c], &[0x644df560, 0xd9f45571, 0xd875f535, 0x74fb1644, 0x8e1d757f, 0x86942ed4, 0x7e915372, 0x026b6188]),
-        CurvePoint::new(&[0x8e1a82d4, 0x4daf56e2, 0x96c279af, 0x9450680a, 0xefb726ac, 0x1ad46fc4, 0x47e8c964, 0x0224bb64], &[0x6806d893, 0x1481ffe2, 0xa53e2161, 0x4ae89771, 0xcd37d49d, 0x061bc64f, 0xb0e7b477, 0x00639eeb]),
-        CurvePoint::new(&[0x57d85aed, 0x1ffaa268, 0x7a2b19c8, 0xd8308617, 0x1acbbdec, 0x7b6c39bf, 0x67a89462, 0x03911e4e], &[0x9742a226, 0xad18d98b, 0xf47af09f, 0x33b77fa7, 0x0ff065bd, 0xa8bb6037, 0xfc2a4315, 0x02f067ff]),
-        CurvePoint::new(&[0xdcdd5766, 0x54676e1a, 0x821b7480, 0x86853d1e, 0x3f48c258, 0x82676440, 0xc43282a8, 0x02fbf07f], &[0x42a15262, 0x7236b506, 0xb8b0e2ff, 0xf25c7d40, 0x4fa88a6a, 0x6bbbaac9, 0xb35e6f2e, 0x01abd877]),
-        CurvePoint::new(&[0x13bf1ed0, 0x22b9099c, 0xfd431dde, 0x89aa680e, 0xc8e24ef2, 0x2eb63a21, 0x4904f41e, 0x00171571], &[0x7247d406, 0xddea9932, 0xec507cf1, 0x47fce937, 0xfbcb9a2c, 0x3bdd25b9, 0x1eaac12a, 0x03e55704]),
-        CurvePoint::new(&[0x730e31ca, 0xeb481f5f, 0x406ca756, 0x82242598, 0xd3836524, 0x5915a883, 0xaa7c0b2a, 0x00601900], &[0x21f738ec, 0xfbe9364e, 0xba079b1c, 0xde215e76, 0x9c73c880, 0xaa82d59e, 0x3bf70701, 0x020be205]),
-        CurvePoint::new(&[0x4c14b697, 0x623d6f1d, 0x79cbb96a, 0x6b678634, 0xc07295ab, 0x7a6f3c09, 0x26a4efd7, 0x041a0a01], &[0x59ae89cb, 0xa3d639ab, 0x83858344, 0x5a38395e, 0x7bec1fc5, 0x6aacbf3b, 0xbfdc2389, 0x037db3bd]),
-        CurvePoint::new(&[0x6604bcbc, 0x26736586, 0xab7bd878, 0xae3bab01, 0xd3af9e9f, 0x574d3737, 0x05cf420f, 0x037931cf], &[0x75479788, 0xd3eb43ac, 0x5e88ecb3, 0x442e525a, 0xe5209f59, 0x4e9de0ea, 0xcdcb7b10, 0x032c0ab2]),
-        CurvePoint::new(&[0xe301bd26, 0x3aeec172, 0xbea7bc39, 0x0f03f37f, 0x77b3b595, 0x16c282a7, 0x31b626d2, 0x04bf48c1], &[0x245ff63a, 0x032336a0, 0xae5f79d7, 0x5fc0cdc5, 0x31b4807e, 0x8f3140ea, 0xd42bac0d, 0x019703f6]),
-        CurvePoint::new(&[0x2bc71c51, 0xefa11958, 0x25701e89, 0x1541d51e, 0xe895db3d, 0x47cbe9fd, 0x37fa208a, 0x06a4212b], &[0x4adf5974, 0xfeb4ba10, 0x05a7f688, 0x6ea423eb, 0x4b059af7, 0x63a20282, 0x02047406, 0x009c9308]),
-        CurvePoint::new(&[0x5dcef055, 0x08e41072, 0x23a100b3, 0xe60c1359, 0xe1ae468b, 0x0f83c18f, 0x0c0b9adb, 0x024150b9], &[0xd6ca780a, 0x2814abce, 0x01483bdf, 0xbb68a8c9, 0x13ad0c07, 0xd21a9219, 0x0f8bfed2, 0x0129e9fa]),
-        CurvePoint::new(&[0x40eb808c, 0xea6d2f08, 0xaa85760f, 0x1490f005, 0x9412c6c7, 0x9a483027, 0xf5b283fa, 0x0483aca9], &[0x477c7077, 0xbdf23422, 0x3d103392, 0xeb56ba0e, 0x0852df4e, 0x9d47f587, 0x140d8c96, 0x00498c44]),
-        CurvePoint::new(&[0x5ce45d8c, 0xad8fdf02, 0x902cbea8, 0xea9f1110, 0x83ed4251, 0xecc3c57f, 0xe53a619e, 0x009dda3a], &[0xd2954816, 0x0cb7d9b7, 0x9bb6aced, 0x2db5aef0, 0xea78cc8e, 0x7628a8ce, 0xadebc338, 0x00301da8]),
-        CurvePoint::new(&[0xbca71e95, 0x89a85194, 0x486242bc, 0x077f59f3, 0xb94bfbbd, 0xac3d7514, 0x166481fe, 0x01b36c4f], &[0xcec770a9, 0x07bab9b9, 0x18ee14be, 0x6489deb2, 0xff1a3608, 0x8105391e, 0x0c94e32d, 0x0250d3d7]),
-        CurvePoint::new(&[0xc7657a82, 0xe784a54d, 0x00e5f017, 0x55551486, 0xc7e43033, 0x2395c128, 0x0ea7e162, 0x0024e0bd], &[0xf09bfe79, 0x6d4e7a3c, 0x76a695ee, 0x02ca1017, 0xbf5ee103, 0xcec6bd71, 0x3fb064e0, 0x0011338d]),
-        CurvePoint::new(&[0x3a2cef5e, 0x91e16d5a, 0x6a817095, 0x592a4158, 0x4c158962, 0x4518a610, 0x43a08fa3, 0x00daa677], &[0x55f39d5d, 0x42484937, 0xb6f02f95, 0x14c120c8, 0x0160eb03, 0x70451076, 0x5d9cf246, 0x00bd174c]),
-        CurvePoint::new(&[0xe4d69d64, 0x1b58160e, 0x0dc7eb83, 0x7138aee3, 0x5c88b2e9, 0xf41c2fe3, 0x8c94e538, 0x0009053c], &[0x3dbc7f29, 0x4e1bbe80, 0x0e9ba837, 0xb3cbfc71, 0xaed3cd48, 0x8ad77a9c, 0xd12ed8a5, 0x0389ccaa]),
-        CurvePoint::new(&[0x1ff44d27, 0x922f8501, 0xc60dd46c, 0x6ee560df, 0x49d53c64, 0x572449fb, 0xbc162829, 0x0065534a], &[0x37d55ada, 0x2703dc62, 0x15dd99c4, 0xc6c291b3, 0xe5d95796, 0x4914e1ad, 0x4a7237d2, 0x03406181]),
-        CurvePoint::new(&[0x0a489038, 0x992c0976, 0x1632b0b0, 0x048f4725, 0xbe04fa93, 0x7e6a65e2, 0x030aefdc, 0x04830846], &[0x1da5e662, 0xc39e55da, 0x4ca8ec1e, 0xea68523f, 0x6262bcd4, 0x5ffbd58a, 0x0ee6e870, 0x029377fa]),
-        CurvePoint::new(&[0x3ff41d34, 0x24ff52f9, 0x19969ad4, 0x3acd8764, 0xf0306b92, 0x8b7f7abe, 0x34692c65, 0x058f493e], &[0x94f7ee06, 0xd5966561, 0x73133aca, 0xda83e7b5, 0x116a5b36, 0x3b863931, 0x99ff3790, 0x01f0f677]),
-        CurvePoint::new(&[0xaa7f5d53, 0x7dffef51, 0xf65c6496, 0x0aa02308, 0x68dca2fb, 0x695bbba5, 0xbc961503, 0x0413e910], &[0xe479b54b, 0xfeee09d3, 0x678bce97, 0x4d2948a1, 0x4d23b212, 0x8fbae2d5, 0xe13502dc, 0x02f21e8c]),
-        CurvePoint::new(&[0x50409a75, 0x600a9269, 0xba7b6667, 0x0458dccb, 0xf748849b, 0x5a1cf430, 0xde078946, 0x0277b206], &[0x2118eb87, 0xd5ba3f2c, 0xa362f036, 0x151fea34, 0x8d0dfbca, 0x4e09f1b9, 0x98ce2d09, 0x03223f1a]),
-        CurvePoint::new(&[0xb0aa3d9e, 0x4f483d7e, 0xa60400db, 0xc6159194, 0xfefef14b, 0x5ef96a8c, 0x25cb7e4a, 0x06080b99], &[0x71891770, 0x5890d725, 0xd8d08dfb, 0x43f620d2, 0xef6a080d, 0x1df1cdfc, 0x0366a615, 0x00004668]),
-        CurvePoint::new(&[0x3fb0a2f7, 0x6db86165, 0x8ba1640a, 0x1e78064f, 0xd14dbf8b, 0x1dad1d45, 0x1f60dd27, 0x007a8f9d], &[0x30165192, 0x338e82b1, 0x6792d7cd, 0xe807a117, 0x77408562, 0x7d5cd257, 0xf2ad218e, 0x00339d35]),
-        CurvePoint::new(&[0xd21d5753, 0x7abedfc3, 0x7397c69e, 0x41121434, 0x8e2e8a4d, 0xb0b41935, 0x944e7c2c, 0x0293d778], &[0x0619896c, 0xc39e8f1e, 0x985fe4bc, 0x66cdbcb4, 0x2205fc83, 0xcee3cd9e, 0xf3dbd61a, 0x005adb1a]),
-        CurvePoint::new(&[0x845b0d8c, 0x5ba0912f, 0xf5d7bfed, 0x90747f52, 0x2517f446, 0x15fe7b86, 0x85f2c0e6, 0x04edc162], &[0x0b218fad, 0xc2fd258c, 0x29b5abaf, 0x0a01d761, 0x7299752a, 0x70c1eef9, 0x21b0c158, 0x02385fa2]),
-        CurvePoint::new(&[0xc83dc702, 0x7d502ce6, 0x24698bba, 0xfeadc76f, 0x3dbd6e7e, 0x81277917, 0xffed7c0c, 0x07adba6d], &[0x9c839e65, 0x4baaab2b, 0xda344d65, 0x52fbc9d0, 0x72247c18, 0xbcf8c79d, 0xe07db804, 0x034d504f]),
-        CurvePoint::new(&[0x1ce15c17, 0xf12955d6, 0x41abb526, 0x51a91de1, 0x66790111, 0x318c66d2, 0x88cb3366, 0x03943085], &[0xcf389e0f, 0xfb30fa45, 0x57ad40d9, 0x5a35b80f, 0x0b8a86b1, 0xd00d3990, 0x0b19d53e, 0x01ebf8a2]),
-        CurvePoint::new(&[0x2eaf70cf, 0x950e3984, 0xaa1da929, 0x9ab9b78d, 0x65e72384, 0x323f6b59, 0x7c25d3c0, 0x01922ab7], &[0xb27123a2, 0x11fd24bd, 0x09f35eb4, 0x27629f75, 0x1cfbdcb0, 0x4a527c3e, 0xac8e99bb, 0x01c9d94b]),
-        CurvePoint::new(&[0xcb084ee4, 0xa287f985, 0x9bd91bd7, 0xcf69578e, 0x6778276f, 0x72953177, 0xa4e17458, 0x070cc7ba], &[0x15fb481f, 0x2161f07e, 0x7ae175aa, 0x49cb1d5d, 0x07e2c571, 0x3ba39d37, 0x6cc7143d, 0x01e57cf9]),
-        CurvePoint::new(&[0x507c4339, 0xeb3fd115, 0xf1c05012, 0x51e9eea9, 0x1839a67a, 0xd765aacd, 0x3f0c67fb, 0x06663aee], &[0xe26662c0, 0x52ce05ef, 0x782a9828, 0xfec048a7, 0x956b6758, 0x97de25b8, 0xa406ea84, 0x02e03b49]),
-        CurvePoint::new(&[0xe1ed9d22, 0x509efd51, 0x3ee7b214, 0x0311fcc1, 0xf7aaf92d, 0x72fd639e, 0x86db03cb, 0x050dd39b], &[0xd91dc258, 0xccf9f0a2, 0xaf361025, 0x97387e2a, 0x239cab92, 0x141c08b5, 0xeaa1a906, 0x00e69bef]),
-        CurvePoint::new(&[0xb0fcf312, 0x86ac54fe, 0x3cfc3ec8, 0x408070f9, 0x652dd816, 0x7474828d, 0xa7bf550a, 0x01bd3edf], &[0xf4d719bb, 0xcc26a8ff, 0xe546c3a5, 0xb4d0404e, 0xa1ed350a, 0xd6e24b28, 0x649f85ec, 0x01c68453]),
-        CurvePoint::new(&[0x03d7fee4, 0x10f44eba, 0xfae6a5ff, 0xde40d90d, 0x8cf7f9ea, 0x293c5f4b, 0x769f18bb, 0x0125e46d], &[0xc1f07c65, 0x57c8f970, 0x759cbdef, 0xac0e61aa, 0xc363aab3, 0x298218f6, 0xb2f24c5b, 0x0157c7a6]),
-        CurvePoint::new(&[0x3a6b550c, 0x66969964, 0x6b4ffd16, 0xc771b673, 0x4bac6557, 0xb5895739, 0x95e38051, 0x05290361], &[0x87618890, 0xaae40e67, 0xe0bca3ad, 0x6ebaf173, 0x36b35112, 0x4292658e, 0x09915058, 0x03eabbf8]),
-        CurvePoint::new(&[0xdd9a90f5, 0x0c847e2d, 0x68577899, 0x959bc212, 0xfc2475f2, 0x4b1846a6, 0xfd782165, 0x02fbe312], &[0x5cfa9fad, 0x8e1494da, 0x30ca3b25, 0x9b8b8ce0, 0x7f7c6e59, 0x1407c81e, 0x63a00166, 0x035bc5bc]),
-        CurvePoint::new(&[0xb8e2e3bf, 0x41b492c7, 0xa5e0f395, 0x0712a939, 0x0740d64d, 0x73d41437, 0x08e9e915, 0x040ceb5a], &[0xbb4ec452, 0x7b9eef09, 0xcce367eb, 0xcc35ce93, 0x47ae21c2, 0xbb7377c6, 0x65e3d483, 0x01fd1bdc]),
-        CurvePoint::new(&[0x895255c7, 0xa280597d, 0x9cb765f7, 0x909b7eeb, 0x5510fcf6, 0xf23e106e, 0x4cc52399, 0x0088550e], &[0x3aa74173, 0x0e1a56bb, 0xeb1807d1, 0xb0bb85af, 0x0e741e27, 0xe32eded8, 0x0abdbfc0, 0x021df7ed]),
-        CurvePoint::new(&[0x918226f6, 0xf48ce10d, 0xea682ca2, 0x4f1362eb, 0xdd524736, 0xb5b79670, 0x81c4c479, 0x06b9ad65], &[0x4026b897, 0xe246920f, 0x8598131f, 0xe27cabe1, 0x545bb9f0, 0x5824e646, 0x4a959646, 0x0256394c]),
-        CurvePoint::new(&[0x97778c1c, 0x5bd43731, 0x403a8f9d, 0x32b5a34b, 0x28a625b5, 0x1a5e3fb0, 0x4a4a600b, 0x0036c891], &[0x8c9e7f77, 0x48059ded, 0xcd72d523, 0x2fa4fd75, 0x87a522aa, 0x15798036, 0xa4919ef4, 0x01a8909e]),
-        CurvePoint::new(&[0xc9f9a618, 0x0a1e1404, 0xa6a1e59a, 0xcd9a63f8, 0x61ea016a, 0x7dc6e9e8, 0x4c3f0665, 0x00e98951], &[0x2656f2d3, 0x4ee6abfe, 0xcc9a4dcf, 0x8aaeefde, 0xa9c56176, 0x55dd585f, 0x29fd99d6, 0x01b2e61e]),
-        CurvePoint::new(&[0x6098a22e, 0x8605f746, 0x553c9f90, 0xe92e7b5f, 0x1284b0d7, 0xa7814513, 0xb7411b98, 0x0373ce69], &[0x68bbe236, 0xb540f3fc, 0xa6b02b79, 0x991b1f0f, 0x9496615f, 0x0a656703, 0x7f61fa98, 0x0312a90c]),
-        CurvePoint::new(&[0xea7ca5a6, 0xb0da0ff6, 0xc2034146, 0x8a23b2ca, 0xce20eec7, 0x0c9dfa89, 0x8be8ac98, 0x027b9cc6], &[0xefce26e3, 0xe69b2d72, 0xd369372d, 0xae8b0d7e, 0x3e247579, 0xeafcd89d, 0x4dcc0fc3, 0x038d334b]),
-        CurvePoint::new(&[0x5e0c7b03, 0x51a90cf2, 0x0a4de0f8, 0x90e1eeed, 0x8f9f1af3, 0x01cee132, 0x46e0887c, 0x04bcfa20], &[0xbb3c60c5, 0x83a6423f, 0x414a849d, 0x4dc977a8, 0x49f3e808, 0x35b5d0bd, 0xb6108e4e, 0x00c1d24f]),
-        CurvePoint::new(&[0x458af644, 0xbe449756, 0x151dd48f, 0x3f6a6fe5, 0x7216999b, 0x6abd8065, 0x9627581d, 0x01284d93], &[0x920701b3, 0xb78df555, 0x044127cf, 0x443b2422, 0x80a968d4, 0x902b8a84, 0xf2a75478, 0x0263343a]),
-        CurvePoint::new(&[0xbcae0392, 0x02f07590, 0xf06b24ce, 0x66e2dafb, 0xf01e0cb1, 0xfd468b9c, 0x03225f74, 0x0470d4c5], &[0x9c993d81, 0x7064a2f3, 0xef912747, 0xb6a682a7, 0x61a44193, 0x226e8a68, 0xbbcfdf69, 0x034c354f]),
-        CurvePoint::new(&[0xf8cac58c, 0x76444964, 0xdb142dce, 0x07a96cde, 0xb1fee5cc, 0xea40d34c, 0xd8fcd5f4, 0x0582a003], &[0x3d686050, 0xfca535e0, 0xa3a781ad, 0xcd0a4b28, 0x2332cc32, 0x61c3ed64, 0xcc29ea8b, 0x021927c0]),
-        CurvePoint::new(&[0x5cf3c9b4, 0x000b1926, 0xf2d0a21c, 0xa480f205, 0x363ba74c, 0x3097c56e, 0x66815a4b, 0x06b15d6e], &[0x9cef27ca, 0x2c488fe3, 0x99e85ef5, 0x3a592218, 0x1f615661, 0xe233a017, 0xafef269a, 0x023367a4]),
-        CurvePoint::new(&[0x8ff90398, 0x3486e60e, 0xa9a668e8, 0x829ee879, 0x607337cb, 0xe9c14f36, 0xfa01b2a5, 0x0672a2e5], &[0x87d8328e, 0xa3fe4c70, 0x45095edc, 0xcb2eab2f, 0xde5c1b3b, 0xd99ff49c, 0xf6aee6da, 0x02b4b7c1]),
-        CurvePoint::new(&[0xf5cce6dc, 0xdc71da89, 0x6aac5519, 0x9cecc50c, 0x6b29a7ae, 0x55648b53, 0x99c06ccb, 0x064d86ee], &[0xb90f6b4e, 0x3e818637, 0xc7060b27, 0xa2d18070, 0xe09956d7, 0xdee37a26, 0x32731ad3, 0x021d0e88]),
-        CurvePoint::new(&[0xfe18a8d8, 0x52bfb5f5, 0x3daf4bb9, 0xd61e3657, 0x0deec244, 0x8d223d42, 0x1d91bf84, 0x028417dd], &[0x590ac175, 0x398c1211, 0x931a121b, 0x60db026b, 0x162ca8ab, 0x37209f8c, 0x3699ce14, 0x03d499df]),
-        CurvePoint::new(&[0x8c5a9446, 0xa7effaf1, 0x2daddef9, 0xd4f7f93f, 0x73b9c99d, 0x808c73d3, 0xd9cccf60, 0x04170f64], &[0x5e1e0304, 0xf3e6ad0a, 0x4f983090, 0x5138b66c, 0x560a52a0, 0x420c8e0f, 0x2c3abf64, 0x0046b33e]),
-        CurvePoint::new(&[0x939ae756, 0xeee10bfa, 0x6e2f44d5, 0x23a42b30, 0x534ba157, 0x889c5ad8, 0xfeb1ee83, 0x02ba0d3d], &[0x3738bd34, 0xa028b402, 0xa05b2b07, 0xb58fb283, 0xb4689ddd, 0x704f0d71, 0xa94520ba, 0x031ba5db]),
-        CurvePoint::new(&[0x5d7ded8e, 0x7e2af0ba, 0x0bd23742, 0x494de17f, 0x30be7e8c, 0x97fd78f3, 0x494f1bf2, 0x06cb3fdb], &[0xe502ca0d, 0x311f1988, 0x770d038a, 0xd5fff5bc, 0x636a01e2, 0x44ea14cb, 0x70c352bb, 0x00fda7c1]),
-        CurvePoint::new(&[0x1e82926d, 0x5511e70a, 0xdb2618b0, 0xc2ff425e, 0x69fcf612, 0xcf11dd74, 0x01c2565a, 0x045c121c], &[0x0eb98079, 0x4073ae5c, 0x2fc54c4c, 0x4bb107ba, 0x7445b76e, 0xcb3b1063, 0x28ce9779, 0x01a2ef08]),
-        CurvePoint::new(&[0x9e596ff7, 0x41805431, 0x61d247a6, 0xb9d6d923, 0xe3e943ec, 0x182d1d87, 0xa1def078, 0x07546ca8], &[0xdd718bc5, 0x0cd70aec, 0x6ef2d1f3, 0x16d0db5f, 0x1c845d0d, 0x2bcb996e, 0x1e099d6b, 0x00d8e39c]),
-        CurvePoint::new(&[0xb2c1d431, 0xbe242a24, 0x0db66bbe, 0x92059d11, 0xd26a045d, 0x65c90249, 0x8627c913, 0x01fe314f], &[0x32f44a43, 0x6346b39a, 0xe4b3ec82, 0xfb592d0b, 0xd9b107e7, 0xd5360935, 0x8a504691, 0x00838884]),
-        CurvePoint::new(&[0x0e5cee87, 0x1b1133cd, 0x92631244, 0x47117c3f, 0x90bf3c56, 0x2923b6ef, 0xe8d38eb5, 0x00b29e24], &[0x07a870b0, 0xd48ff80f, 0x53d9d94b, 0x54ed35aa, 0x152a980e, 0x06ce03d1, 0xce58e422, 0x000e844f]),
-        CurvePoint::new(&[0x7cb8c1e7, 0xe48619e4, 0xdc23a9a3, 0x5c00a9b3, 0xf6f7c1f1, 0x41ac7bb6, 0x8c6042cc, 0x00eb05b0], &[0x01aab42b, 0xd3ab63bb, 0x90b64d6b, 0xa52b1195, 0x42e8aa2e, 0xbf6c5840, 0x7bd4828e, 0x02aff2d2]),
-        CurvePoint::new(&[0x764e1938, 0x511228b1, 0x7a1b5b81, 0x6b6cac56, 0x799878d2, 0x5925d52d, 0x763a95ec, 0x01f40c55], &[0xf6211ca5, 0x76149efa, 0xf324486f, 0x6cd84908, 0x756971a5, 0x3b9d47c5, 0x4c599e45, 0x00248d96]),
-        CurvePoint::new(&[0xc6d91807, 0x5fce3a02, 0xcb7432ed, 0x90097576, 0xd7aedef3, 0x16a6eccb, 0x1dd5d7b5, 0x02c6299c], &[0x6ce6dd21, 0xf2789ece, 0x067378c2, 0x09e27218, 0xeccf39c3, 0xc298b6c7, 0x22908ff6, 0x03c069cc]),
-        CurvePoint::new(&[0xc2a14be2, 0xccfb1384, 0x27e0ecbf, 0x1a847e30, 0xb5cdc576, 0x18bcf1eb, 0x96161e32, 0x07d65dd5], &[0xe12bf8e5, 0x12d63efc, 0xdcb2ea34, 0x7d3b0453, 0x0360cd6e, 0x225025a2, 0xa0d21cd0, 0x00b31254]),
-        CurvePoint::new(&[0x1a6c4625, 0x0d0861b4, 0x372f2cb9, 0x10cdf885, 0x50dcdc81, 0x20a37cfe, 0xd26859a4, 0x07e71e9f], &[0x16660081, 0xa3713855, 0x55675890, 0xa4d2b2bb, 0x9210192b, 0xbf28bf08, 0x9fd1a908, 0x00751128]),
-        CurvePoint::new(&[0x301b4996, 0x2b260dba, 0x0a5090a3, 0x4af1a886, 0xaa8d2471, 0xd6478414, 0x9719ff73, 0x06cea675], &[0x79d121fa, 0x70d43091, 0xe7135a75, 0xc2d60b32, 0x71353490, 0x8e995369, 0xf9b20bc5, 0x0380ac5f]),
-        CurvePoint::new(&[0x03fd4850, 0xa687e7d2, 0x1e2338a4, 0x731ad1fe, 0x61c8ba9f, 0x257a3ec6, 0xf30bac91, 0x05d69019], &[0xf6a4b12d, 0xfeff659c, 0x55045ecd, 0x3b46ce99, 0x29e4185c, 0x93b07f43, 0xc306937c, 0x00b23707]),
-        CurvePoint::new(&[0xe65b07d5, 0x45bfd96f, 0x4cdea011, 0x9ad48b5b, 0x12e48daa, 0xbf4b2a91, 0x153368eb, 0x05477486], &[0xb2c5b7f9, 0xefd0e8b1, 0x4d2914f6, 0x998eaf41, 0x6f0420d4, 0x70655a55, 0x1dd1fdcd, 0x02ace5e0]),
-        CurvePoint::new(&[0x2a47f2bf, 0xf50ab23f, 0x8ac1b1a3, 0xb5d7709e, 0xd58883ab, 0x28b00bea, 0x2f532740, 0x064d782c], &[0xe7b57a60, 0x12993420, 0xa5f24fcd, 0xb78a0d76, 0x268ccff1, 0x0a5f7389, 0xe4735e97, 0x00a0648b]),
-        CurvePoint::new(&[0x4a29a0a7, 0x33f7850c, 0xa0d2ba9d, 0x0e90105b, 0x8d12e5d3, 0x0791e6a2, 0xe415a5b6, 0x03815c72], &[0x3ba28d7d, 0x68b9470d, 0x60af9573, 0x99061701, 0xc438437f, 0x79af723e, 0x518335a7, 0x01a327db]),
-        CurvePoint::new(&[0x77f8709e, 0x4c6afe19, 0xb53f2a35, 0xe9b30a0d, 0x5478df5b, 0xf970f76f, 0x20b35b61, 0x04bbc2f7], &[0x6354e432, 0xb634624b, 0x57529cb4, 0xa280395f, 0x88306b4c, 0x3c921e39, 0xc1c99d99, 0x00f46942]),
-        CurvePoint::new(&[0x4108d2d6, 0x2e189bc8, 0x4d4066f0, 0xdde50d9d, 0xf102b223, 0x96418c5b, 0x423673d6, 0x01e85dde], &[0xd7d9b45f, 0xbf530c89, 0xaa6874be, 0xc1335887, 0x9ae17f4a, 0xe4366159, 0x8af13884, 0x01f65c58]),
-        CurvePoint::new(&[0xea100b23, 0xfbb14c36, 0xa993353f, 0x9f7e8980, 0x0c5ef7a9, 0xafb7b7ef, 0x30b2d501, 0x0529eb32], &[0x8d7ed66c, 0xe17a6e3c, 0x88e6743e, 0x1e252c54, 0x83360d0d, 0xb20ec17e, 0x2471b09a, 0x006f5d55]),
-        CurvePoint::new(&[0x9a46cb75, 0x7939f13d, 0x9def4e20, 0x8380e7cc, 0x8883bb62, 0xe0c3ddc1, 0xc3aa4138, 0x044ade9c], &[0xbc5bee39, 0x3cfa74e7, 0x15601abe, 0x46138042, 0x4c955d8c, 0xc1758692, 0x4328cebd, 0x01bced24]),
-        CurvePoint::new(&[0x7eb2ec9c, 0x6db0f512, 0xdd083c2e, 0x1ff8668a, 0xcf064677, 0xbb1248d3, 0x7c174d8d, 0x05e02f85], &[0x719451ac, 0xd082fde2, 0x0a128d1f, 0xcae0aeba, 0x848383f6, 0x3b948b86, 0x315efe4a, 0x030af40f]),
-        CurvePoint::new(&[0xcb4422cc, 0x2cd16a47, 0xf3a7334f, 0x40c29370, 0x6454a533, 0x95bab820, 0x7ecc47b8, 0x020fcd95], &[0xd04313cc, 0x82b3c21c, 0x7efeb26b, 0x82fa2e79, 0xba6cb520, 0x11e2a9b0, 0xf18ea401, 0x0194a9a7]),
-        CurvePoint::new(&[0xa766f926, 0xc15d8d62, 0x322e6040, 0x4ad1a402, 0x3ba272fd, 0x941811e7, 0x1cc76e8c, 0x011f50d9], &[0x8bcae06a, 0xb746a7d5, 0x5016bd3b, 0x25ac1e45, 0xc7f419ce, 0xcc1a1847, 0x501404ed, 0x009b08b5]),
-        CurvePoint::new(&[0xcaa4fb03, 0xcc2f9d03, 0xcf7801a2, 0x518fb506, 0x93b7bee7, 0x851c36bc, 0xd6d934e0, 0x07f7daf5], &[0x7fae15fc, 0xf2beca3d, 0x37d8a9c0, 0x0cc0ff70, 0x7f8b197a, 0x38b14a7f, 0x048b18cc, 0x00daed85]),
-        CurvePoint::new(&[0xd2e98c3d, 0x6204e7b3, 0x9ecb9661, 0xc5885c7b, 0xe87c9cad, 0x60a3ba9f, 0xb65286db, 0x05e60e45], &[0x22b62f71, 0xdad146cc, 0x4eb906ab, 0x3b7ced48, 0xde719ce1, 0x44d514ee, 0xeec3350a, 0x018c56b6]),
-        CurvePoint::new(&[0xf9e95816, 0xe731f4ef, 0x0abe166c, 0x8534e9b5, 0xc3e7f1f1, 0xe5ee345e, 0x73eec8d6, 0x004fd09b], &[0x5ffc42bd, 0x59d632e7, 0x2171846a, 0xb1ba18f6, 0x2a632059, 0xc81de27a, 0xcf0b5ea4, 0x0273e4bc]),
-        CurvePoint::new(&[0xff9709d4, 0xeaed5b0f, 0x598edb2f, 0x54da8513, 0x33d9e1d3, 0x62a0b6c2, 0xfea9c1a4, 0x00ffcdca], &[0x4f9b8ba5, 0xe6d05693, 0x0f014750, 0x6879b9f5, 0xe4d23245, 0xf39809aa, 0x6c6dce1d, 0x00093e24]),
-        CurvePoint::new(&[0x66280707, 0x627113ff, 0x1f09c692, 0x29962678, 0x9ba7e902, 0xb09c6377, 0xe49b6899, 0x05daec9e], &[0x5b4bcf73, 0x383b34c3, 0xaf454948, 0x9d5252bd, 0x87c4ce7f, 0xe2b87481, 0xe8983698, 0x01724c6a]),
-        CurvePoint::new(&[0xdbe7cb83, 0x394458d2, 0x80990ebc, 0xcddae788, 0xfc34d777, 0xa8ada6e4, 0x13561284, 0x058f5d87], &[0x05156674, 0x8b8c7f3d, 0x72b8f52b, 0xb1c09bc8, 0x817b57de, 0x9c160394, 0x1f6a7148, 0x03970299]),
-        CurvePoint::new(&[0x3aec5dc3, 0x93a335f6, 0x8a611b94, 0xda8f6bf0, 0x73ca678b, 0xc41c0ae8, 0xa4c308f1, 0x079033e9], &[0x8eb36f93, 0xbc58b4f8, 0x0469ba62, 0x113eec4e, 0xc7edfa15, 0x41081ce1, 0x42362d33, 0x0156084b]),
-        CurvePoint::new(&[0x8ac0e6fb, 0x4a368f52, 0xb39f9b92, 0x58b6fda0, 0x0d2f85e5, 0x11b7572e, 0xf078fc4f, 0x03869ee2], &[0xedbf48ae, 0x435ffeef, 0x0dca947f, 0xe77b6be2, 0xfa84ec45, 0xec56fc9e, 0x97e157c0, 0x01f36dea]),
-        CurvePoint::new(&[0x0a79e44b, 0x42632df4, 0xfd86e5f2, 0x1afd6b54, 0xf77c20ec, 0xdec94155, 0x965486b5, 0x0103b514], &[0x24c24f4b, 0x912b5b12, 0x259a4042, 0xe9428937, 0x35be5c84, 0xb95ca179, 0xf13de7e7, 0x01123ba1]),
-        CurvePoint::new(&[0xeca4c949, 0x8ae2a0d1, 0x5af98b88, 0x23f97af3, 0x9b57f779, 0xb0cd7b76, 0x728fafb5, 0x06bf3526], &[0x036c1179, 0x5b867f9b, 0x2ffaccc4, 0x7f73fea9, 0x5c7bfe81, 0x144af034, 0xc3b7c6a8, 0x00e2ce42]),
-        CurvePoint::new(&[0xe707fb52, 0x78aaf3ca, 0x86129abf, 0xf2f76ee0, 0x2acc55fd, 0x64e12d3e, 0x9e9a607b, 0x002f1b02], &[0x063123ce, 0xc268aece, 0x170f456d, 0x655924b0, 0x240723e5, 0x8cdd08f0, 0x448ba349, 0x03f67d12]),
-        CurvePoint::new(&[0x992b0e56, 0x0afa2fbf, 0x8d6acd35, 0x25b6e450, 0xb2037f44, 0x9ca9886c, 0xf7644c6d, 0x02844881], &[0x5a5fdc0d, 0x589fd735, 0x12b9c0df, 0x9ac84a3d, 0x282dd858, 0xe7024056, 0xe479a316, 0x021e4d2d]),
-        CurvePoint::new(&[0x887057cd, 0xd77a5ca2, 0xfb7ad032, 0xed9dd92b, 0x4ea9d0f2, 0x72244383, 0x7388755b, 0x022cc8a5], &[0xdf1270f3, 0xf8fd80ce, 0x0187e0e7, 0x9ff66641, 0xae462a46, 0x50882676, 0xca347d55, 0x030746ca]),
-        CurvePoint::new(&[0x1707a12b, 0x0e475584, 0x92d7ab39, 0xf496b816, 0x77729534, 0x4823c63a, 0x59d8a065, 0x0783a982], &[0xc7162255, 0xb20996b2, 0xd5bb56ea, 0x1935b1e9, 0x58bf5b66, 0x1366ab6b, 0x95b16e24, 0x01ec5262]),
-        CurvePoint::new(&[0x03b286e1, 0x77289a03, 0xdf0b30e5, 0x44419816, 0x41a6d8e5, 0x6ede102c, 0xfc6e3122, 0x052fd0a7], &[0xfc9c972a, 0x3eae0970, 0x924e5b69, 0x0f3881de, 0xe8d26ed6, 0x2382a4b3, 0xa0d99737, 0x028987b0]),
-        CurvePoint::new(&[0xbd6a9c65, 0xee926322, 0x7c1407c6, 0x9f906066, 0xc621fccf, 0xbdcb8123, 0x7a9d69a9, 0x078e9a6d], &[0x0cbcfe82, 0x8529b8fb, 0x7426df5d, 0x23ef9d0f, 0x6179d2ec, 0xe42e1bcb, 0x4cb18928, 0x0131f92f]),
-        CurvePoint::new(&[0x2c64606a, 0x150efa96, 0x19957e14, 0x26e3d44f, 0xcdfc7f2b, 0x47aec2a5, 0x64b9c472, 0x021177eb], &[0x71d24359, 0x5021cbc4, 0x4df8f813, 0xa511e50d, 0xbf6e3ecc, 0xc4d01479, 0x03635193, 0x03a56bb4]),
-        CurvePoint::new(&[0x66cc036f, 0x033ba279, 0x30728f5d, 0xcc883a95, 0xbf26fa39, 0x3c600cb5, 0xec39885e, 0x02a5a5c7], &[0x2d1748b5, 0x55f07dfa, 0x3d7e6b13, 0x27f62a8d, 0xd7ad0dae, 0x0f46cdad, 0x03e3996d, 0x00d8bac4]),
-        CurvePoint::new(&[0xa1e8d8bb, 0x4ca70e5a, 0x70ec5e9c, 0xf8450dd6, 0x28bd1631, 0x87015f0b, 0x03e49ff1, 0x0635b742], &[0xceb9faae, 0xdc4527cd, 0xc70164e5, 0x5e73dc5e, 0xb796b2fc, 0x7d8bde04, 0x602c6bc9, 0x029b2658]),
-        CurvePoint::new(&[0x1dc24c08, 0x705e995f, 0xb7aed185, 0x5c453e26, 0x86ccd63c, 0x6b77125a, 0xf0e8ed8d, 0x03b49585], &[0x7bbbf0c3, 0x34d7121c, 0x2c8f7869, 0x4b6154ac, 0x01b51dc7, 0x44eef4da, 0x2c3dce9b, 0x02b1d712]),
-        CurvePoint::new(&[0x58ba6fd9, 0x846caf12, 0xef628b1a, 0xc284ae23, 0x622a253f, 0x804a4472, 0xa4b59a71, 0x039d5d09], &[0xc487fbe6, 0x4978f087, 0x4fee2630, 0xb210e940, 0x7ffc93b5, 0xe44359c5, 0x5386544b, 0x02526a5c]),
-        CurvePoint::new(&[0xc3ea4cc9, 0x148c647f, 0x0fcc4551, 0x03fc2867, 0x9c4755e8, 0xd0e8b98c, 0x307a7712, 0x074f4cb7], &[0x704ec096, 0x61401c55, 0x22c548fd, 0x568a9a91, 0xbd2a67fa, 0x2ac5b3e9, 0xf2622987, 0x030073fa]),
-        CurvePoint::new(&[0x59950c71, 0x3ec246e3, 0x26218a22, 0xa9b4eb59, 0x6aff91a9, 0xd360cc30, 0x846b814e, 0x052ed6ef], &[0xed017182, 0x390d857b, 0xbec9830f, 0x6c76e839, 0x857ffe6f, 0x6e7a78a0, 0xe7fa9a64, 0x03cb41e8]),
-        CurvePoint::new(&[0xdcea8045, 0x749e4af5, 0x81602a72, 0x018c56fb, 0xe47c3d6c, 0xae821393, 0xd1060b40, 0x049fb871], &[0xfc52a26e, 0xf430cb1f, 0xa71bb8b7, 0x3f120530, 0x116d1cfd, 0xd9c5f8a3, 0x0203025c, 0x02900c27]),
-        CurvePoint::new(&[0x9e1d4ed0, 0xb744ca69, 0x9ccbc6f2, 0x4019a145, 0x51cf75df, 0x531d6e45, 0x70eb1c4b, 0x04781e52], &[0xbb47fad4, 0x2768baea, 0xbd807bde, 0x3a0e4a65, 0x48082294, 0x40db4596, 0xdf8d1aaa, 0x031b80e7]),
-        CurvePoint::new(&[0x83522275, 0x17666f02, 0x37750332, 0x5861597d, 0x4f71e1a9, 0x54b5ada4, 0x897a973b, 0x01e63177], &[0x82131d5c, 0xc5275a93, 0x2e5dac2b, 0xb0adffe4, 0x6616792b, 0x911cb624, 0x1168651b, 0x00936f3e]),
-        CurvePoint::new(&[0x21b684c8, 0x3c19bc9d, 0x12427a0f, 0xdb3a5c29, 0x5c343315, 0x7b3efe80, 0x6ec41266, 0x038c6cdc], &[0x84237b05, 0xd2fae227, 0x6e6e8775, 0x4243edff, 0xb12a4d32, 0x735332ad, 0xa359b780, 0x0153052f]),
-        CurvePoint::new(&[0x717184de, 0xb808d57e, 0xac4b321a, 0xbbe855e3, 0xd418c8e6, 0x37bd186c, 0x6c028696, 0x04ec8b45], &[0xf1dfffde, 0x8e23c599, 0x05fe89c9, 0x230b1830, 0x6763e589, 0x19df2343, 0xbf1445dd, 0x03e8b35a]),
-        CurvePoint::new(&[0x6ccade3b, 0x0a3bbf34, 0x20e2d8a3, 0xe0be59b1, 0xbbb87735, 0x632dcf3c, 0xa984a674, 0x005dcb4d], &[0x42c3bf89, 0x81e28fab, 0x837e8284, 0xb2ba9dc8, 0xe6e1a536, 0xe96021f3, 0x00f79b96, 0x006695ed]),
-        CurvePoint::new(&[0x7ee2f294, 0xceebdc97, 0x291d4377, 0x0be5b72c, 0x87cbc2d9, 0xf0fac10d, 0x44e3a9e9, 0x055bfdcc], &[0x4586dc6b, 0x1117b3ec, 0x56b06563, 0x9cb01788, 0x69633518, 0xb65627af, 0x6f071e71, 0x00054bb9]),
-        CurvePoint::new(&[0xf85af4a5, 0xdfe97b86, 0x4b8a5716, 0x536523ce, 0x06f08795, 0xd04a6372, 0x106ff725, 0x03059580], &[0x9431a7f2, 0xb89a4392, 0xb4905a70, 0x0a03ed61, 0x108ff147, 0x184446bb, 0x1facd4bb, 0x02325c50]),
-        CurvePoint::new(&[0x53e5f220, 0x57637496, 0x01a0c884, 0x17a03a35, 0x90ebba41, 0xdf544b00, 0xc1ae393c, 0x046c10cd], &[0xc6f9c7e1, 0x5c4d5fd8, 0xa48cfb15, 0x3a12f518, 0xbc551c38, 0xd5511212, 0xcb198479, 0x0086959e]),
-        CurvePoint::new(&[0x1be1ab5d, 0x77e6ff4f, 0x73e2f0e1, 0xe59cfeb3, 0xa3a352a5, 0xe94ff628, 0x551308f2, 0x0753e572], &[0x04bcdd79, 0x5d129311, 0xcdededbb, 0xdee9f93e, 0x458d0582, 0x885d55d1, 0xc255e329, 0x01c000f9]),
-        CurvePoint::new(&[0x98d9e8c1, 0x28d5cc72, 0xbe3fe890, 0x408c873e, 0xed708a92, 0x100636f5, 0x9c06fad2, 0x013ab861], &[0x242f99df, 0x365bb9fb, 0xe25f5763, 0xff401e11, 0xff87eb7f, 0x99ecd2a9, 0xe210fb24, 0x01b24831]),
-        CurvePoint::new(&[0x74a2d4e1, 0xaf208971, 0x3571ee6b, 0x37bb68c5, 0xded796fe, 0x77b123ae, 0x8c27c8a9, 0x02292e6b], &[0x02240421, 0x53c404da, 0xf221d75b, 0xfb9113b0, 0x9b814cb2, 0xa121f6b7, 0x006bf57d, 0x00ba0896]),
-        CurvePoint::new(&[0xbabc8033, 0x5eeff0b7, 0x53541808, 0xf97622f3, 0xc90ec6ae, 0xe8e26989, 0x7d4a33a7, 0x0778c20c], &[0xaac396f3, 0xb86ba52f, 0x0e335f4b, 0x440d557d, 0xd81f8a78, 0xc19ea85e, 0x2a07d3ab, 0x0254308f]),
-        CurvePoint::new(&[0x8b3e4cc4, 0xcc2c2970, 0x78016712, 0x1eeccc12, 0xe5f3ffdc, 0x3d28a9a9, 0x19dbf6d2, 0x0419f3e9], &[0xbf721530, 0xae3729bd, 0xc9aab038, 0x9b1a6b13, 0x1456d759, 0xb5c729f1, 0xbb1843ed, 0x0132cc04]),
-        CurvePoint::new(&[0xb7774421, 0xec9e3d4f, 0x1d0264f5, 0x58c45270, 0xd698adeb, 0xd838eafc, 0xb815ee9c, 0x05285cb2], &[0xd0665599, 0xee9ed6b0, 0x041a1a93, 0x9887f218, 0xe2a7b6be, 0x44660c8c, 0x4a0a462e, 0x0179968b]),
-        CurvePoint::new(&[0x5f08af76, 0x3d9cb79e, 0xf18a2a51, 0x5473fea7, 0x82a3728a, 0x09c552fa, 0x82ba5ddc, 0x0078b448], &[0xcc468a26, 0x7f3ec2d0, 0x6894cd2f, 0x95cad8ea, 0xdaa5c30e, 0xc35132b4, 0x385723ca, 0x0248a5e2]),
-        CurvePoint::new(&[0x100d6f87, 0xd1d9729b, 0xd05938bc, 0x3c545e5b, 0x69725657, 0x2aa4b50f, 0x0536d2b3, 0x063144eb], &[0xe4bf7e93, 0x2b376bd2, 0x2c384502, 0x9c00e869, 0x7cae3e47, 0x817905a3, 0x35402311, 0x033dba8e]),
-        CurvePoint::new(&[0xe704dbc8, 0x4fa16575, 0x082591a1, 0x099a00c9, 0x0a55ff5d, 0xc1fda7e1, 0x7d5315e3, 0x012a63be], &[0x7100fc3b, 0x497b055d, 0xb1eb3988, 0xce36c71c, 0xa433d53d, 0xebec0da6, 0xf1f164d1, 0x03d56a6c]),
-        CurvePoint::new(&[0x4c20cf60, 0x8be3177a, 0x16c8e1d1, 0x8b22bf14, 0xe4635242, 0xd7aba32e, 0x3fd82fe8, 0x04c0a60f], &[0x3b83ca87, 0xf0c354ed, 0xddb5ba6e, 0x42d8c70d, 0x612f7389, 0x8578cfab, 0x42d3191e, 0x003de4f3]),
-        CurvePoint::new(&[0x7df478db, 0xb4354cf5, 0x4d8d80eb, 0x59aeaf49, 0x8065a058, 0xea3e9124, 0x16a246f4, 0x04923ea4], &[0x43da1fd2, 0x05822b09, 0xe9cf6279, 0xfe1ebe72, 0x6e415f6e, 0xc07f49d8, 0x516ad0b2, 0x032d8ae6]),
-        CurvePoint::new(&[0xacbf2554, 0x445e4d93, 0x8ef91bbf, 0x3e93547a, 0x394aa6ba, 0x66809ca2, 0xe9c167c6, 0x051a6694], &[0xfd6a38a4, 0xe3b7cfed, 0x992df927, 0x0a3fb2db, 0x607473fa, 0x17cd7422, 0xed3d3a7e, 0x00971271]),
-        CurvePoint::new(&[0x5c4ad497, 0xc12616e8, 0x950a2c94, 0x0bf0a727, 0xdc081209, 0xee4b9b4f, 0xa41c1f30, 0x05d23132], &[0x6cb9bc56, 0x7dde329e, 0x493c7e71, 0x6a023ef4, 0x8b404856, 0x3b0da60b, 0xc04961cd, 0x00c9f03f]),
-        CurvePoint::new(&[0x5725aeb9, 0x5a3f5d75, 0x13005561, 0x3a9dbbde, 0xca218cb0, 0xd517dc98, 0x141322ed, 0x03a87f0b], &[0x9465c794, 0x2a14fa33, 0x6fdc0f8d, 0x1e758e15, 0xf376c084, 0xb6420d0b, 0xdfc4058f, 0x02722295]),
-        CurvePoint::new(&[0x6c83dfc9, 0x282478ea, 0x64429a25, 0x0c4809b5, 0x17dd2c49, 0xbaf75c19, 0x1b7fd243, 0x011058c2], &[0x05663307, 0x1e1f1001, 0x48d88e58, 0x0f93d9cc, 0x4f34e92a, 0x487ca7e3, 0x7954a4e6, 0x02ccda12]),
-        CurvePoint::new(&[0x7d59f069, 0x94e1d849, 0x843e5f9f, 0xcdb645e8, 0x2c5f7995, 0xaf5c90f9, 0x696c22a9, 0x04189ee0], &[0xa660ff87, 0xfb6e35b3, 0x81e0b5af, 0x4dfbe9ce, 0x655c0522, 0x4dd2146a, 0x228ab14f, 0x03590482]),
-        CurvePoint::new(&[0x12c2d854, 0xec4a0dd3, 0x79ef34ab, 0xd4a20cfb, 0x8c67689b, 0x7b14ef82, 0x159214e1, 0x00a3b1f7], &[0xdbe523e8, 0x360f8bb0, 0xdcf84af6, 0x757d6cad, 0x39f992f6, 0x9c880d7b, 0xd181cbc9, 0x035fde95]),
-        CurvePoint::new(&[0x1db003a0, 0xc53f1831, 0xc60ccf40, 0x3f05db9e, 0x172705c5, 0x18f5a858, 0x16c860f7, 0x000c2525], &[0x2a139b2a, 0xfbcb04c3, 0x3be2efb1, 0x48923846, 0x6c8e2c79, 0x65218bd1, 0x92774918, 0x00aa739c]),
-        CurvePoint::new(&[0x63267b21, 0xa495b293, 0x1e6a9a09, 0x6a0fe593, 0x4db366fb, 0x54d05cb7, 0xc55071ef, 0x058411ee], &[0xbc97df37, 0x53613a15, 0x5be5cff8, 0x5e6cf0e4, 0x40c45451, 0x575660d4, 0x7bc0135c, 0x03efb7d1]),
-        CurvePoint::new(&[0xbd811afe, 0x09ba6dfe, 0x909465ca, 0xa7c75393, 0x69698d92, 0x872890c8, 0x0e8e1a2b, 0x00061f58], &[0xbe5ed261, 0x856889c9, 0x39661388, 0x1aabde5a, 0x104b4f27, 0x102c5484, 0xa5174647, 0x0357d9e9]),
-        CurvePoint::new(&[0x1806f0d0, 0x0e7ef6b6, 0xfbfe6285, 0x08a4d070, 0x8aa6b3f1, 0xadd6bb15, 0x30602128, 0x051c1b66], &[0x1fa1375f, 0x747fa0bc, 0xcbdc34aa, 0x12f10ab0, 0x05fc7860, 0x08cde19b, 0x86034836, 0x01e94aac]),
-        CurvePoint::new(&[0x69d474ea, 0xeaea0323, 0x8e61cc8f, 0x6a8762aa, 0x08cc055b, 0xa5c60d12, 0x2fee4154, 0x07aaae61], &[0xf1058b21, 0xd8c9b15c, 0x2ee8b0ca, 0xb59c06a3, 0x6983de11, 0x2fca7a98, 0x78a3e88f, 0x0373357b]),
-        CurvePoint::new(&[0xff4ef867, 0x532d19eb, 0xfc646903, 0x1443f282, 0xd2719a54, 0x4926a2e7, 0x69701c0a, 0x07bc8727], &[0xbe5eb8f0, 0xfe1aa462, 0x5e644897, 0xac82c5ff, 0x7e97a2da, 0x1e40015b, 0x47855155, 0x0343c263]),
-        CurvePoint::new(&[0xf007f06a, 0xfd4a623c, 0xafe7a839, 0x2811611c, 0xeb07d735, 0x3b513782, 0x65d6bef7, 0x01cde87f], &[0x6f824ea8, 0xffcebac0, 0x3ae76864, 0xd8b18d0b, 0xb8e70cbc, 0x9c6f522b, 0xdfe53586, 0x03cba7dc]),
-        CurvePoint::new(&[0x84181e3b, 0x9fb62145, 0xfdcb440b, 0xf48e84e4, 0x53b70cc7, 0x1ff2ffc8, 0x8b90ff24, 0x00b64e2f], &[0x54439413, 0x557a0565, 0xf0ebb14c, 0x079b1559, 0x666a4317, 0xf3ccfaea, 0x1200526c, 0x009e480a]),
-        CurvePoint::new(&[0x8adbb9fe, 0x85b5e174, 0x7505e50b, 0x7b46d031, 0xdaec61d3, 0x36cc0da4, 0x49f8153e, 0x049f95fa], &[0x2d3e2dd0, 0xf25882f4, 0xe825bf0a, 0x331c8727, 0x9deb4a14, 0xb823be5c, 0xa14e82f0, 0x0295929f]),
-        CurvePoint::new(&[0x0c42ce15, 0x2b26fd96, 0xeba23a93, 0xf2f7df09, 0x1a1b8485, 0xb23fdf17, 0xa1e4c5bd, 0x04e53f0e], &[0xc53bf83b, 0x36595a62, 0xf2eb541e, 0xba2584cb, 0x2991b107, 0x56cba3fc, 0xad913327, 0x03d9e8d9]),
-        CurvePoint::new(&[0xa1c9af1f, 0xb74d62ab, 0xd81a815d, 0x739add96, 0x3b26a8b0, 0x649ce2a8, 0xc82bb472, 0x04c9811d], &[0x336b7373, 0xb386ae09, 0x0adfd139, 0x4e28d5be, 0x1b7a31de, 0x95b3061d, 0x7d4fb544, 0x037d1a8e]),
-        CurvePoint::new(&[0x6cc6f9b3, 0x9e671885, 0xfb64d6b0, 0x8d76502f, 0xc01541dc, 0x08af6458, 0x5260c14b, 0x000a61e0], &[0x2449a272, 0x678a7a74, 0x83dd6890, 0x234e1a9a, 0x6cfdaa34, 0x4a74108b, 0x305de6ae, 0x01433405]),
-        CurvePoint::new(&[0xd2585ea1, 0x24972854, 0x4f650262, 0x582638d7, 0x76e278d0, 0xb450ac41, 0x161aa42d, 0x052e87e3], &[0x8f1ac61f, 0x517fa7a8, 0x8e1a8f7c, 0x0be87509, 0x3e943739, 0x592c03dc, 0x892ff94e, 0x016bf36f]),
-        CurvePoint::new(&[0xe598a660, 0x15978cf6, 0x16b003b7, 0x1969de01, 0x75d522ca, 0xc78b0d8d, 0xaf714d63, 0x0191a50d], &[0x50f88a23, 0xd9cd6ce9, 0xc0b3bf3c, 0xc8ba6b3f, 0xa770fcf8, 0xc25ef287, 0x7e6bd29b, 0x0253f635]),
-        CurvePoint::new(&[0xcc2e98fe, 0x8465a39e, 0xc7bcdbbf, 0x09f77bb7, 0x3edbb773, 0x80d26564, 0x7a133a19, 0x06f8efc9], &[0x7d3fdc27, 0x07469e19, 0xb7422c5e, 0x38c9e1be, 0xbff312a7, 0x52cf4992, 0xc2d9f325, 0x02e3275e]),
-        CurvePoint::new(&[0x18c792a2, 0x0add693f, 0x72f58a99, 0xae9969f4, 0x5594974a, 0xe2df402b, 0xe7407684, 0x04511e53], &[0xf4947767, 0x5ceb58bf, 0x91ba5668, 0xc2801369, 0x04156898, 0x5767fec8, 0xd92fc6bb, 0x0088bb48]),
-        CurvePoint::new(&[0x7297bb95, 0x1f324034, 0x96e13c8c, 0x5945f25a, 0x7e876967, 0x4b5f0052, 0x770429a3, 0x056b558b], &[0xc0b2886c, 0xf6173278, 0xcbc3ea2f, 0x66d2d05b, 0x8183e668, 0xecc41ee5, 0x850e9a18, 0x02334622]),
-        CurvePoint::new(&[0xf535d197, 0xa3cab3f2, 0x4f99de3c, 0xb944ba7d, 0x5af5197d, 0x4731b038, 0xfaa0d6ca, 0x04ea79ca], &[0x0cee97e8, 0x6ef7214e, 0x50000997, 0x345d8196, 0xcbe0723e, 0x40f2684b, 0x4c7ddb9f, 0x00ce6fe7]),
-        CurvePoint::new(&[0xbcd867b9, 0xa58d8050, 0x64bc3bf7, 0xbe2ed6b9, 0x089e1370, 0x30a36c38, 0xcd51da9c, 0x06c65946], &[0xcc8e20bd, 0xe13fd294, 0x5a809dff, 0xbe3178e1, 0x73a92f5c, 0xd09ed9fa, 0xafeed5c6, 0x0238b983]),
-        CurvePoint::new(&[0x78591371, 0x467839fa, 0x18e0311f, 0xf636da99, 0xbe8db872, 0x23f820a0, 0xa5956271, 0x0261993e], &[0xe3789aa7, 0x107e9e85, 0x25ede7b4, 0x80166972, 0x51ce7d2a, 0x3822675b, 0x8ff99ba0, 0x03a5a159]),
-        CurvePoint::new(&[0xb55a8948, 0x26a101cc, 0xc5c5e475, 0x11bceb9f, 0x9e65cc90, 0x0f53c95a, 0x23c8174d, 0x02462c86], &[0x6aaaed2c, 0x4debff6a, 0x73e2778d, 0x0dd24099, 0x40af9d92, 0x4f569b63, 0xa0b2aaa6, 0x02e6f6bf]),
-        CurvePoint::new(&[0x30d3992b, 0xbb9e96e6, 0x4afca74d, 0x7f064ba4, 0x933b77c6, 0xa84b3445, 0x6646b6ad, 0x027f4941], &[0xf003b048, 0xaf0e80e8, 0xabfee10b, 0xc310eba6, 0x2a3dece1, 0xb6524411, 0xe81c98d8, 0x0386d93f]),
-        CurvePoint::new(&[0x669704cf, 0xb31306f9, 0xd5eb1387, 0x92659b98, 0xd3248f74, 0x43e90640, 0xdd9240da, 0x02f5028b], &[0xc2a69d91, 0x21515cb0, 0x12e347f9, 0x9a44b9e2, 0x2d46ad74, 0x15ddfa24, 0x098ddad6, 0x020e59f6]),
-        CurvePoint::new(&[0xbd941ddf, 0x9e3a8c66, 0xb9ef1c59, 0x5ecd0137, 0x619397c0, 0xc5a3e3e3, 0x489ef310, 0x056d4654], &[0x5c472b88, 0x4c6c84f2, 0x70a133b6, 0x3c98d55e, 0x9fc855da, 0x9e57abc2, 0x09a59af7, 0x01c90070]),
-        CurvePoint::new(&[0x4e8c42cd, 0xed74f80f, 0xba351f51, 0xfd918dc8, 0xa76f5da3, 0x613cf294, 0xbcd947a9, 0x041fce82], &[0xa764faeb, 0x971b4ad0, 0x54422207, 0x614ccc80, 0x84d2d1d7, 0x305403ae, 0x056ead47, 0x00ae9359]),
-        CurvePoint::new(&[0xae9be424, 0xfcda038e, 0x1da500da, 0x58e75a80, 0x621a3bed, 0x34654259, 0x478280b3, 0x015e3056], &[0x89c920c1, 0x4e9fd0eb, 0x6837e805, 0xed1381af, 0x6c1b6cfa, 0x69a1dc4d, 0x2f9917b7, 0x03a428b2]),
-        CurvePoint::new(&[0xd6bbe23e, 0xece2c8cd, 0xf863eac5, 0x32a401b2, 0x2a12c2e9, 0x420ac29e, 0x805d8631, 0x04e6305e], &[0xc96c9054, 0xc27cbd91, 0x2db5fb4b, 0xd7ba07c2, 0xc22a1ca2, 0x4f16dfd0, 0xb24d7606, 0x026e2273]),
-        CurvePoint::new(&[0xef013d30, 0xeead515a, 0x178fa34e, 0x01d34c95, 0x9ba166af, 0x59306dbf, 0x708f2019, 0x04f3f304], &[0x1d9fec56, 0x6702d76c, 0xf5a6aba7, 0x471a4d5b, 0xeabd7434, 0xcb63ccdf, 0x1dd47a63, 0x0299acc5]),
-        CurvePoint::new(&[0xa44969df, 0x0757a0b4, 0x698ba0bd, 0xbd4e8bb7, 0xa2f532fc, 0xeebbaa47, 0x82440f86, 0x053d6567], &[0x56f7171f, 0x4b8d597e, 0x7dd7b3f9, 0x41be0a67, 0x5e478e94, 0x4d53196b, 0x066cf256, 0x03f23655]),
-        CurvePoint::new(&[0x7f663964, 0x8e70532a, 0x9ceab290, 0xc169acec, 0xa4946c43, 0x02ecfb6f, 0xf52a1e06, 0x0315b0da], &[0xfc277b7b, 0x660658c9, 0x352d3fbe, 0x32b1381a, 0x9bc81eae, 0xdd703fd4, 0x80637dc8, 0x036a3da4]),
-        CurvePoint::new(&[0x4c30faf6, 0xc711c596, 0x55e72bac, 0x294f2e9d, 0x628190d8, 0xe02e9b0e, 0xc8e9f5d3, 0x058f62b1], &[0xaac31578, 0x4b929cdf, 0xdb5b0770, 0x1c79f9b3, 0x86021b69, 0x764bee0c, 0x95fe87ba, 0x03dd53d6]),
-        CurvePoint::new(&[0x4c52fe58, 0x55383997, 0xb1142eaa, 0x80c42b0c, 0x8ddcb5cc, 0x03aa18c5, 0x09f972a7, 0x05727324], &[0xa77612c5, 0x2187ad7f, 0x3501154e, 0x4f7898f7, 0xc97f8c46, 0xd1b7c1b5, 0x42f3cf78, 0x024a0e5e]),
-        CurvePoint::new(&[0x8116075e, 0xb02a5fb0, 0xfdc69fe0, 0x7a70099f, 0x4d62a4c4, 0xc5bcf47b, 0x3dd2c1cc, 0x016129b9], &[0xf4cae9f8, 0x49f81a0e, 0xad1aa826, 0x047765f1, 0xcf474e2a, 0x8b365ec2, 0xc67a9bef, 0x010f0f9e]),
-        CurvePoint::new(&[0xc3658dde, 0x80277195, 0x3e069680, 0x6236e007, 0x45a26070, 0x84bdb634, 0x2d82f67d, 0x006fe01f], &[0x9a6bd420, 0xbe8b9641, 0x26d3d4bf, 0x3dd3a944, 0x777de5a4, 0xffb3aba7, 0x1239685f, 0x00ef3482]),
-        CurvePoint::new(&[0x842365ef, 0x48604791, 0x8cb24468, 0x925f5d49, 0x8304664f, 0x1f4e0982, 0xa5d04e94, 0x067158f0], &[0x86756499, 0xb03c2e93, 0x26e7189e, 0x97f78307, 0xe1d6e32d, 0xf771943f, 0xb87dc9d7, 0x02f6ce44]),
-        CurvePoint::new(&[0x9830fbdb, 0x69b42a83, 0x4e5f4460, 0xbf743868, 0xe81175fe, 0x61dd162b, 0xaf4e6969, 0x026356f7], &[0xbfc76194, 0xd3ec5d85, 0xddf592de, 0x50d4625f, 0xbb5d7b48, 0x4a42ce48, 0xc3ab4285, 0x02786725]),
-        CurvePoint::new(&[0x42723754, 0x1eff0e1b, 0x2c5159e2, 0xeb4e5b13, 0xa20c98b6, 0x9e5107e1, 0xde5bbc8a, 0x03c0561e], &[0xbe27f512, 0xa5264eae, 0x394bca37, 0xe7e00cb7, 0x85742e5e, 0xaaf44e36, 0x19464d14, 0x01753885]),
-        CurvePoint::new(&[0x3327f1ef, 0x110bce07, 0x43ffc2af, 0x4978619f, 0xa9b6914f, 0x4cbe33b6, 0xcc865d3a, 0x0084cb46], &[0x8d3b60b5, 0x49274454, 0xaa40b4c1, 0xbf5923b7, 0x27960368, 0xa4d74be8, 0x49dc47c2, 0x00b5e2e7]),
-        CurvePoint::new(&[0xbd613c93, 0x224f2b78, 0x204a0acd, 0x60b2396f, 0x18313255, 0x0a7db89d, 0x4912d14b, 0x0500e9d0], &[0xda729d33, 0x0e396846, 0x5b6faab8, 0x8ad45b8e, 0x20f6b723, 0xdbd9e14c, 0x356cf1f9, 0x00046437]),
-        CurvePoint::new(&[0x4727c7d7, 0x8db6409d, 0x96883fb3, 0x934916d1, 0xed9dad3c, 0x8d981948, 0xb7f4ab11, 0x01ed48ef], &[0x59a325b3, 0xf21fc280, 0xf0ba2a59, 0x3b8c738c, 0xe258d175, 0x9fb8050b, 0xb9a39d0e, 0x01733b4a]),
-        CurvePoint::new(&[0x9c36bd22, 0x8cfa9d8b, 0xcf87cc68, 0x8a1bf485, 0x6411de66, 0x15030740, 0x5e056509, 0x0016fa4f], &[0x51cd7381, 0x5637f072, 0xb8d22e9b, 0xc9465c93, 0x462fc526, 0x2a55c0ba, 0xb50d6a02, 0x01167fd0]),
-        CurvePoint::new(&[0x4feb9e01, 0xa57f2c78, 0xda4507af, 0x3884d665, 0x41d92f93, 0x53e13f3e, 0xee3772c8, 0x056c7bc2], &[0x94b085fc, 0x4d7faaec, 0x89e33f61, 0x049114ea, 0xbd786256, 0x7f5d20b5, 0xb9443164, 0x03c9bc6b]),
-        CurvePoint::new(&[0x5895ac6c, 0x3bb81d56, 0x079551da, 0x50f97da8, 0x2d4835ca, 0xc01ac67c, 0x4ebf1269, 0x01343517], &[0x5a89cf14, 0x0f09e6c4, 0x921e6140, 0x32ec660b, 0x1f8a80ac, 0xb1b06016, 0x001cb0e9, 0x02fc4561]),
-        CurvePoint::new(&[0x2368cc4d, 0x08d98443, 0x483f2e1b, 0xce28d27a, 0x93bd2f85, 0xf2f6fbdf, 0x87064fa9, 0x00badcad], &[0x8c2768a9, 0xd9cdcbc0, 0x26c5b792, 0xbcb5e6eb, 0xaf36abea, 0x79c96109, 0xd13aa99f, 0x00df1970]),
-        CurvePoint::new(&[0x51c673bf, 0x611442f2, 0x6d50b605, 0xdd9e05eb, 0x572f7519, 0x41e1dea2, 0xa365e29d, 0x03693aea], &[0xe00ac2ba, 0x55a048f8, 0xe3d966ec, 0x960e5a5c, 0xfeac243d, 0x20fdfef8, 0x2e0fbd46, 0x00ff1738]),
-        CurvePoint::new(&[0x03fabde3, 0x3dede513, 0x37af3847, 0xa68999a7, 0x4f715801, 0x5c457abc, 0x784e00f2, 0x01bf80fc], &[0x00b1ba4e, 0x87dd786f, 0x7ca69225, 0x305a36f3, 0x426d00ce, 0x2a60c1df, 0x06e5c80a, 0x014a0ed0]),
-        CurvePoint::new(&[0xc78e07fd, 0x0dd6d5bf, 0xfdc8beae, 0x03e9047c, 0xb1a11216, 0x15a98e41, 0x30e82bb7, 0x04ea26f7], &[0xe44c3999, 0xd7351f2f, 0x7dcd8adf, 0x59022fdc, 0x9c953ad7, 0x73990941, 0x0207cd78, 0x014e9dfb]),
-        CurvePoint::new(&[0x50143a13, 0x1144603d, 0xd1dab91e, 0xc6a42448, 0xf6df6823, 0xebf709bd, 0xc924976e, 0x07a654ea], &[0xbc3bf85a, 0x20d57402, 0xb0220b00, 0x0b8a66b6, 0xa532f8d1, 0xbad29064, 0x2e22f330, 0x03ea9ad7]),
-        CurvePoint::new(&[0x86a6a9cc, 0xc04c24a3, 0x0973ce8b, 0xe1a6db35, 0xc5c4756a, 0x8b382c00, 0x90e0903b, 0x01d08ff6], &[0x43431c7b, 0x0c335692, 0xe92648a2, 0x0dfac9d2, 0x2d9a6e30, 0x183abb1c, 0xebcb0737, 0x03ec9aa0]),
-        CurvePoint::new(&[0x93038ca2, 0x6a9f55f7, 0x7bca384d, 0x8e3193c5, 0x306f9e90, 0x8c4a2bbd, 0x6cb3f2bb, 0x045c10f6], &[0x3329c3a9, 0x4d095819, 0x933ce386, 0x12e7d848, 0xd9babc10, 0x39111fc6, 0xa6a156e6, 0x0312dd1b]),
-        CurvePoint::new(&[0xf2ed6bd9, 0x4e7c5b67, 0x6f750e17, 0xc24a97bf, 0x0a28159a, 0xc417c32d, 0x07a659e7, 0x05748794], &[0x14f9db62, 0xad771b40, 0xf9ed10be, 0x4f614370, 0xc0028468, 0xc1c06881, 0xbeb28e89, 0x0168b6c5]),
-        CurvePoint::new(&[0xcd2ba4ca, 0x681083de, 0xd5a9ac78, 0x79dde2e0, 0xf79dd604, 0xc20307ec, 0xa2431aa3, 0x024f12eb], &[0x36c6c1f7, 0x07ae317a, 0xe3208707, 0xbbed9369, 0xe77518ae, 0x9ec02a19, 0x912c6b29, 0x02f7ed9b]),
-        CurvePoint::new(&[0x38d0db35, 0x2c01413c, 0x2f630073, 0x705aa07d, 0x5e080dc8, 0xf993443f, 0x462cbffd, 0x02db90a9], &[0x0add184c, 0x50595f52, 0xefd582aa, 0xa1867e3a, 0x8c2923d4, 0x35025b5c, 0xc6a1c5d4, 0x039eae7c]),
-        CurvePoint::new(&[0x58ff8167, 0xea3be206, 0x819ca0dc, 0x814b690a, 0xa485e4fb, 0xdc86293f, 0xc2af0f3b, 0x075d49b3], &[0x7bf52b07, 0x6329f1b6, 0x41ca31bd, 0x2b5057b0, 0xe810164d, 0x7b451777, 0xfc3c6c60, 0x00bedcc0]),
-        CurvePoint::new(&[0xdc64473c, 0x58af066f, 0x71364936, 0x550ccc60, 0x4d65c76f, 0x70825f68, 0x8f83fa95, 0x030a3001], &[0x9400ec89, 0xa58016ff, 0xe8da55ef, 0x7d43daa6, 0xb8eb3714, 0x821c5542, 0x2b42cdd1, 0x00aaf4fc]),
-        CurvePoint::new(&[0xb2ae030b, 0x67d4f928, 0x674f3da1, 0xe95f24e7, 0x12971d51, 0xdf5c01df, 0x7ca62c41, 0x059e613a], &[0xd5be5965, 0x1b9455ba, 0xcd281b5d, 0xb7ebc5e8, 0x4169085d, 0x5c04a712, 0x10d2fa85, 0x01f51f4e]),
-        CurvePoint::new(&[0xf9d18c51, 0x1c6884c0, 0x07caa37e, 0xbb041e4d, 0xcfb1d48a, 0x9de74daa, 0xceb53ec9, 0x00a41a8e], &[0x250e0562, 0x7f2cbf37, 0x68fecffe, 0x3bbce675, 0x41b26bae, 0x6df483b1, 0xffd62003, 0x01949090]),
-        CurvePoint::new(&[0x9b4aa20f, 0x89648a53, 0x85921bbc, 0x9e0e5520, 0x287e21e1, 0x9e2ae9ac, 0x3bf53908, 0x033f01db], &[0xd7a6392e, 0x326887d4, 0x50fb6e40, 0xdfb12d4b, 0xc06d171a, 0xdba02b48, 0x7aeb8a17, 0x006d695e]),
-        CurvePoint::new(&[0xdb9ae172, 0x86cd2b64, 0x97a7e182, 0x46d35ba0, 0xf58b0085, 0x294b5444, 0xce344ab5, 0x004b1202], &[0x02e825b6, 0xf86b930b, 0x49ed54df, 0x35da3e54, 0x15336bee, 0x9def659b, 0xe43cf7dd, 0x03290c13]),
-        CurvePoint::new(&[0x755483b0, 0x81df9a82, 0x08ddc9f0, 0xfeb43ca9, 0xf7c4dffe, 0xf1d9da24, 0x48d4e2eb, 0x00b6d092], &[0xe10f04b0, 0x437eb8e3, 0x2affd018, 0x3b749835, 0x9a59db62, 0x364b9ee8, 0x46ee3b77, 0x0074cafe]),
-        CurvePoint::new(&[0x8dda5a90, 0x06058fb1, 0x2f90590a, 0x955e9ee5, 0x8a6695d7, 0xd4ca976e, 0xbe3fb461, 0x058458d3], &[0x2b5c3960, 0xff306cc6, 0x94d25edf, 0xaaabf3b2, 0x811db4a2, 0x879d77da, 0x2ce015ac, 0x00bad516]),
-        CurvePoint::new(&[0xfcc3f3ca, 0xa68edf19, 0xbc831443, 0x47f21109, 0xd6b0a246, 0x17f4f14d, 0x513a5f67, 0x0718576d], &[0x7fc5bfd1, 0x538e38ca, 0x5df47b94, 0x94cf26f0, 0xb8828a5d, 0x9199f27d, 0x5488739b, 0x037d9fd3]),
-        CurvePoint::new(&[0x572f71fa, 0x35f1946c, 0x07c0cf04, 0xc6f3b909, 0xe1da4803, 0x19117d9e, 0x87a2f0f1, 0x03d66f73], &[0x0dfe3bfe, 0x1833992c, 0xdd4844ff, 0x611dbcb0, 0x2dfa0af6, 0xcb246d69, 0xa19413c4, 0x002cd845]),
-        CurvePoint::new(&[0x4da2ed19, 0xde97d1cd, 0xd5b12b77, 0xd1c32da3, 0xb7c1d5c0, 0x87250c49, 0xe94f350a, 0x02c236d4], &[0x85677146, 0x83842545, 0x0a076486, 0x2e9d0c1b, 0xafdec5a5, 0x4075bfde, 0x6b934b22, 0x024258b5]),
-        CurvePoint::new(&[0x8ab2c9be, 0x8e3a0ffc, 0x657fb1b0, 0x848605ac, 0xd6ce7c03, 0x89b165a5, 0x8f8f6d08, 0x045e03b4], &[0x93b3f4b5, 0x16543754, 0x7c4151c3, 0x7736db54, 0x3c0b832f, 0x14179c48, 0xfb9bb160, 0x0037640f]),
-        CurvePoint::new(&[0xe7739fbc, 0x25193b0a, 0xbde94ddb, 0x63c55208, 0xd0aaf0b4, 0x86dbc0a5, 0x738b742f, 0x0783df8e], &[0xb489d95a, 0x237ab8fc, 0x11758cd9, 0x4fdb7374, 0xe6ca960e, 0xc4ac9f05, 0x1f153d1a, 0x01988f5a]),
-        CurvePoint::new(&[0x72e0ac27, 0x6f5251d8, 0xf0a292e6, 0x3205911f, 0x24c0c9fe, 0x95977877, 0xfaeaac53, 0x004f512b], &[0xf0ff8be2, 0x61494be6, 0x785cca6c, 0x0a45ebbd, 0x4e26fb4e, 0xb21388b1, 0x34537c79, 0x007bbd09]),
-        CurvePoint::new(&[0x1c6de2ce, 0x87614ccc, 0xee260ce4, 0x5cfc40e3, 0x4647890a, 0x16bd3bcc, 0xe188c164, 0x00438890], &[0x8eaf7793, 0x9c23037d, 0x04d648b3, 0xa9867b9d, 0xd17f26d8, 0x6ecddd3c, 0x539181ce, 0x0278ac92]),
-        CurvePoint::new(&[0xb8bcbd45, 0x9ea210b0, 0x5284dc0d, 0x35b11c6a, 0x1d3d6eca, 0xb84a2953, 0x2500783d, 0x0559f41c], &[0xd5382fea, 0x2e9b2f3c, 0x452df0f1, 0x1d5fbabb, 0x8c89732c, 0x90c898d4, 0x9ab17d3c, 0x01af8fdc]),
-        CurvePoint::new(&[0xc1e52d4f, 0x5f0d96e8, 0x7027b7c3, 0x7cdfd1be, 0xa5d7d7d2, 0x89da906e, 0xead846c9, 0x01939ad1], &[0xbb7cef67, 0x5aeefd76, 0x7622d406, 0xa346125c, 0xdd9d2c35, 0x130dd0a4, 0x0242129a, 0x03589e32]),
-        CurvePoint::new(&[0x020c7b0b, 0xbfa93eab, 0x4de8a7da, 0x7e7e36c5, 0xfd760e68, 0x1f13e7ce, 0xe65971fe, 0x00d9aa7b], &[0x713d51d2, 0x47a60573, 0xf84322a2, 0xa9633304, 0xecff2ff8, 0xeb61f7f5, 0xb57e05e7, 0x02852492]),
-        CurvePoint::new(&[0x6239f98f, 0x0842bf3f, 0x573eceb3, 0x01929f82, 0x76c37a4d, 0x161dea85, 0x4c7a8dde, 0x012e4578], &[0xbf238cf9, 0x4e2847fd, 0xe3dac1f4, 0xd91a59a4, 0xe05a0866, 0x0c1f6a45, 0x9ebcb176, 0x009b2606]),
-        CurvePoint::new(&[0x8f5897fd, 0xab54c631, 0x2aff3960, 0xa76d75a8, 0xe79a7d0a, 0xc4c6c9b4, 0xf5e61094, 0x058b72cb], &[0x6dbc1646, 0xa8482aa4, 0xa6db69c4, 0x1e567e16, 0xf869e623, 0x3531d289, 0x52f14f3f, 0x00ac8433]),
-        CurvePoint::new(&[0x4e44b774, 0x7dd7f6b6, 0xf4930405, 0xbecf3655, 0x37751c00, 0xa66bb635, 0xb0746aaa, 0x0067ffc4], &[0xcbcac16e, 0x7c06cf76, 0x880340e2, 0x0c1c9f0d, 0x69b60e56, 0x2025b689, 0x85795871, 0x01b9c00e]),
-        CurvePoint::new(&[0xee7f4135, 0xc0ebff6a, 0x093494ae, 0x7c2a3852, 0xe5f9a329, 0x6b7ef396, 0x2b714d6a, 0x0526c385], &[0xa055bc9b, 0xb5d58a3e, 0xa06adb78, 0x453b14d7, 0x5edd471c, 0x06ff6ef7, 0x0c68cecb, 0x01895a5b]),
-        CurvePoint::new(&[0x773489eb, 0x6645491f, 0x8eb2f83d, 0xb2e2cbeb, 0xc835df84, 0x22037ebe, 0x0411f78e, 0x029df50d], &[0x404c081b, 0x318c25df, 0x12fc1822, 0xd954f125, 0x23daf1fa, 0xe4778918, 0x11665149, 0x03841996]),
-        CurvePoint::new(&[0x04cd6dd3, 0x3450c6c4, 0x57604f73, 0xcda9474e, 0x33967298, 0x0f84ad9a, 0xf3dad0b4, 0x06cb707a], &[0x3073dc95, 0xd9a804a7, 0x99a29f21, 0xd518edbb, 0x6f852fde, 0xa615fc20, 0x25d8111c, 0x01895b11]),
-        CurvePoint::new(&[0x443ca83f, 0xe6b004b9, 0x8c12d070, 0xae80bdb8, 0xddf299d1, 0xc3f36f62, 0xb37ad153, 0x009ba020], &[0xce8b7963, 0x29aa515b, 0xebd0cff6, 0xfb02ad97, 0x02b8f176, 0x2b1cea6f, 0x65708a1b, 0x0261fd0e]),
-        CurvePoint::new(&[0xff5b88c7, 0x114f2a83, 0x59f6c443, 0xbb7cc106, 0x28d018f9, 0x100a995e, 0xea6ced64, 0x0438d911], &[0xcd456529, 0x3737d021, 0x210b4707, 0x9867f293, 0x72aa859c, 0x5415cde4, 0x74eb6bca, 0x02b06c01]),
-        CurvePoint::new(&[0x27206d79, 0xe3f68a0a, 0x7d4dac52, 0xc192fe72, 0x2d1de715, 0x0f2b2f34, 0xd366d944, 0x01a78a9a], &[0xa045d1e7, 0x5dc7ceb2, 0x20cdeac8, 0x2b6a3300, 0x5974fa55, 0x6b34cb17, 0x7e220096, 0x02fd60b8]),
-        CurvePoint::new(&[0xb108138d, 0x90097bfd, 0xc30ee06c, 0xc57fda22, 0x49b2a697, 0x25db843d, 0x0cc2d93b, 0x050b5934], &[0x39659e2f, 0x2012d331, 0xad21817f, 0x877c4033, 0x16b5d9b1, 0x9c75773d, 0x135d65ca, 0x00d7f998]),
-        CurvePoint::new(&[0xf14fe006, 0x3e16f3c8, 0x9367e016, 0xe7763fd6, 0x54fbc15b, 0x39c8ba7b, 0x10d9f961, 0x0408f45f], &[0xd22b6d7e, 0x646867f3, 0x3de27bdf, 0x7312fbd7, 0xb5a05cfa, 0x2c48d975, 0x3366df10, 0x013faca8]),
-        CurvePoint::new(&[0xd3c7c3a5, 0xc9fa4291, 0x3b30e481, 0x0a2d91c5, 0x9e81c389, 0x8badc584, 0xe84b896d, 0x00b05c91], &[0xdf82e56e, 0xd3cd4869, 0xd620aeab, 0x9a721608, 0x796f1ec8, 0xd516a2b5, 0xd2d19d55, 0x00948e55]),
-        CurvePoint::new(&[0x83415e6f, 0x2c28a09d, 0xd2426047, 0x97802833, 0x9c02989d, 0x9d8fe50f, 0x2236c671, 0x00adbd1c], &[0xd3889cf5, 0xaa46f8d9, 0xb4264828, 0xbbfa79c2, 0x358c25a3, 0x90e86ea3, 0x136a335a, 0x00f9326b]),
-        CurvePoint::new(&[0x7267842a, 0xe1623206, 0x27229860, 0x416700a8, 0xf5c7be8d, 0x2abc67fb, 0xa306b040, 0x005b439c], &[0xb8e0e4a3, 0x0eab615f, 0x19ab8592, 0x080eea08, 0x0f05ac7d, 0x45e18f6f, 0x91a01e91, 0x005a20aa]),
-        CurvePoint::new(&[0xb3df3376, 0xf1f0c201, 0x050ae9d0, 0x240acc72, 0xf169eb12, 0x23f72fa5, 0x72b8fabc, 0x037a8cdd], &[0xb42ee212, 0xb6a20614, 0x437a9f4f, 0x84762f16, 0x48566187, 0xe496e2bf, 0xaa3b0478, 0x02b85d08]),
-        CurvePoint::new(&[0xcfd82176, 0x2ffa89a0, 0x41a304be, 0x624963f4, 0x086ae7b3, 0xfbbf2584, 0xf4d25319, 0x0407c683], &[0xb6367234, 0x67409af1, 0xda666547, 0x8e5149fd, 0x7a26f641, 0x377ba29f, 0x3aa13b13, 0x005051dd]),
-        CurvePoint::new(&[0xd0f6bcee, 0x5f0add90, 0xc47eff26, 0xf4fc3cf5, 0xd546b1cb, 0x66d814fb, 0xc986a66c, 0x01ff5abf], &[0x4a75e90f, 0x22d1750b, 0x9d8c9c15, 0x6b0bf988, 0x721ec81c, 0x46166ef0, 0x71e5e1d6, 0x004c7760]),
-        CurvePoint::new(&[0x9cd2e6fa, 0xcdb0c1ff, 0x8461f165, 0x2d15345a, 0x21fa20ae, 0x85d59ec4, 0x71f77100, 0x029a8c8b], &[0x802bdd7b, 0xc4250d5d, 0xdcfd3914, 0xa6806dc9, 0x1663fe6a, 0x8d54f0f2, 0x0fcc2860, 0x024e69df]),
-        CurvePoint::new(&[0x8669b5a5, 0xc0b58440, 0x1d19018c, 0xa1006846, 0xa6203f8c, 0x82b603ce, 0x9d2319df, 0x035080e0], &[0x415f0ad7, 0xd6abb4c6, 0x39c3cb90, 0x9829c14c, 0x3a13d005, 0x38d65939, 0x99b51a66, 0x004d882a]),
-        CurvePoint::new(&[0x8e229bcc, 0xf4c4caa5, 0x38032ae4, 0x4effd59b, 0xd7f29656, 0xd6463c48, 0xe8a4bda3, 0x015cb3c6], &[0x61264f0c, 0x4d40d6c7, 0x69ba5692, 0xd374fa3c, 0x96c0e360, 0x38e65b63, 0x436a7e4f, 0x03d221f8]),
-        CurvePoint::new(&[0xf9fd31e2, 0x68d010bf, 0xa1f30754, 0x0fb13a27, 0x0c182d2d, 0xd95fcd8b, 0xd7dc82cc, 0x0375ccbd], &[0xc8612740, 0x160d7171, 0x7ffca592, 0xff4e88d0, 0xf05fa38a, 0x430071c6, 0x98a7f955, 0x03733c40]),
-        CurvePoint::new(&[0x80fa6a7d, 0xa5c58488, 0xdb56af49, 0x1b5043d4, 0x421edff0, 0x9fe508e8, 0x2f3fd093, 0x0705aa5a], &[0xad86d224, 0x3a41c3dd, 0x7349984a, 0x927dbb26, 0x0d6f4b05, 0x09d0fb14, 0x278c8f67, 0x03b414ac]),
-        CurvePoint::new(&[0x62da52bd, 0xce1f07e0, 0xa2612094, 0x68ba08d5, 0xbd5725db, 0xf4601bcc, 0xbec4a8b9, 0x026dd650], &[0x385f903e, 0xdf7835d6, 0x57f30ecf, 0xf210a303, 0xd2089033, 0x3ad116b6, 0xe79b0c10, 0x00407f17]),
-        CurvePoint::new(&[0x50206618, 0xe4d152c6, 0x392aa012, 0x3244fcbd, 0x3a9d49a8, 0x8b37201a, 0xae3efae7, 0x00838615], &[0x026063af, 0xd4b2972e, 0x50bc9918, 0xee1e9fa4, 0x48eb9c4b, 0xe8b4e19f, 0x0d36cb32, 0x02ca4434]),
-        CurvePoint::new(&[0x1d1cc9a3, 0xf3f89411, 0x7dd87486, 0x84edfed6, 0xca00e844, 0xf72b6195, 0x7bbaca46, 0x032e7232], &[0x88da9d01, 0x11e545f8, 0xb13903f0, 0x21a6f3c1, 0x1ba46532, 0x420d03bc, 0x49efaa79, 0x01e198e2]),
-        CurvePoint::new(&[0x8ce28ebd, 0xa8ac9b5e, 0x8516a3f0, 0x79158b19, 0xa847c438, 0x39c0f32a, 0x2540a98c, 0x00281e02], &[0xbf39f9a5, 0xcc8cc070, 0x864d5655, 0xb0831818, 0x7bd923b7, 0x0f6e0cfb, 0x29ff1f26, 0x01bc9e7f]),
-        CurvePoint::new(&[0x376b68c4, 0xcf1fb46f, 0x178f3dc3, 0xdf97ff6b, 0x2a45b4fa, 0x344a829d, 0x6dda9882, 0x03674205], &[0x50ea8758, 0x77d3ec10, 0x3b13244f, 0xe7034a85, 0xa528e08e, 0xcc2fef8b, 0x89013192, 0x03169ad2]),
-        CurvePoint::new(&[0xbd984ea8, 0x7722f129, 0x7578a5c2, 0xa44e38f5, 0xa1138cb1, 0x3c9f1077, 0x79a82dc2, 0x07f32409], &[0xf3d37e92, 0xb1acde6c, 0x415941df, 0xfe6ee462, 0x8c9c3591, 0x730ffb22, 0xf11da3c9, 0x0198fa22]),
-        CurvePoint::new(&[0xaa28e737, 0x44786a48, 0x5fa72d78, 0xf62ccc4b, 0x95159054, 0x251a2a3c, 0x5e3f72f6, 0x07e119a9], &[0x701459f2, 0x2b52616e, 0x83c32ffe, 0xf9d7052e, 0x6c917798, 0x1459fd7f, 0x73580613, 0x0070051b]),
-        CurvePoint::new(&[0xafff0a20, 0xa52d9050, 0xe3f46155, 0xda0f228c, 0xf7a1a417, 0xb0a990da, 0xab46cb67, 0x02ef576d], &[0xe3240ad1, 0xb78ba856, 0xcc56d396, 0x62d286b1, 0xdaf1eabc, 0xa39838de, 0xf8449c00, 0x00fe8a34]),
-        CurvePoint::new(&[0xb0ac8bbd, 0xca56650e, 0xc18cad1f, 0xda381ae4, 0x8e935db4, 0xa3350620, 0xc15022e2, 0x050c93a6], &[0x87558064, 0xb8f579cd, 0x1833a6e5, 0x1f86dd82, 0xe2c51b42, 0x42d0f334, 0xa0ecab1d, 0x031dae1e]),
-        CurvePoint::new(&[0x104ce8b7, 0x884f7fe3, 0x15bb5595, 0x4b890fb7, 0x12459ba0, 0x5ce2a964, 0x7d18a0b8, 0x0211242f], &[0x843cf3c1, 0x2d12ffa8, 0xa9b70df5, 0x7154c345, 0x80834e17, 0x72d1b9ca, 0x98156ea4, 0x023ef076]),
-        CurvePoint::new(&[0x0bc223bf, 0x8a4be7c5, 0x6bdc2ac1, 0x21687ea3, 0xdb80a3b1, 0xd359af44, 0x1e80d899, 0x0777e18a], &[0xf5b5fa8f, 0xceaed37d, 0x50887d5f, 0xf9974211, 0x62d759cc, 0x110e06f6, 0x003f73b1, 0x00121e9a]),
-        CurvePoint::new(&[0xa66f4dd9, 0xb75e73ee, 0x0a96a9ce, 0x8f6cfdac, 0xdda7b736, 0x2f2ff718, 0x2731a344, 0x0089f780], &[0x3cbeeef8, 0x89d0914d, 0x942d74e2, 0x73c9d2aa, 0xe5631232, 0x6be6b771, 0x6cfa5d0c, 0x0044cd60]),
-        CurvePoint::new(&[0x3a13dd73, 0x0a1c3f5f, 0x11a3978d, 0xf70bdaa2, 0x57608bbe, 0x7457ca44, 0xe178b6a7, 0x0192059b], &[0x7f652da2, 0x9bdd60e0, 0x702edc92, 0xb4401de5, 0x88afe978, 0xca5a6ebb, 0x1d11e59c, 0x0005b280]),
-        CurvePoint::new(&[0x73d67bfe, 0x591209c1, 0x41115822, 0x7e0c8194, 0xcf11bd63, 0x48727e8c, 0xf3c2e27d, 0x01d7b8d1], &[0xcce0c254, 0x61f66dd9, 0x67883f7f, 0x28e899cc, 0xec678359, 0x09e11754, 0x5c330c7c, 0x039b1a21]),
-        CurvePoint::new(&[0x7590ee51, 0xb22f8529, 0x8eb42df5, 0x5aee203b, 0xfe8fe895, 0x7e285e19, 0xdd6f4460, 0x0127a4ca], &[0x197aea94, 0x78892da2, 0x54d3432a, 0x8ba958b0, 0xce4ae04e, 0xd6ced843, 0x8de6a5ed, 0x0362cbdc]),
-        CurvePoint::new(&[0x2023c1fe, 0xd871bc00, 0x216059cd, 0xa0e21733, 0xb3ed8906, 0x775b7922, 0x64a7881c, 0x073b380f], &[0x81389119, 0xeb22ff11, 0xcf80db7f, 0xaac63dca, 0xcb75586d, 0x9e88dec9, 0xdca051d2, 0x00336024]),
-        CurvePoint::new(&[0xe5f4e112, 0x4c826ff6, 0x60c57550, 0x475d7ea6, 0xd248f226, 0x6806e678, 0x71d1c129, 0x07666cf6], &[0x183b10c1, 0x604b15b2, 0xda4a3b04, 0x1cdb3286, 0xf3f6d94f, 0xe42bfd8c, 0xac52208e, 0x03f07d41]),
-        CurvePoint::new(&[0xc4e3ca3c, 0xf1b55352, 0x40863ca0, 0x1291ce28, 0x61230943, 0x9a95d7ef, 0xbbec5cd4, 0x0730fd3c], &[0x2eb93f4c, 0x45985592, 0x32da2e61, 0x803a7c50, 0x3ef5e82b, 0x7c6c1bbf, 0x31efb73f, 0x03c5c0ff]),
-        CurvePoint::new(&[0x592f49d1, 0x9da2defa, 0xefbb030f, 0x1b6e312f, 0xe1b623d3, 0x4052b1e6, 0x1caf9673, 0x014a3f2c], &[0x8648bbb5, 0x39af838a, 0xcef2147c, 0x5d5461a5, 0x49a25924, 0xc9870c07, 0x254b5c36, 0x030afca0]),
-        CurvePoint::new(&[0xe9701409, 0x97926fe1, 0x04cb8648, 0x8f730016, 0xf1bd6db7, 0xc7a90acd, 0x26172033, 0x030688d7], &[0x0f5d919f, 0x43782074, 0x1502bc3f, 0xa0022216, 0x0935870f, 0x1490f42b, 0x1fd23574, 0x00e995bf]),
-        CurvePoint::new(&[0xee70ec87, 0xadbc8d25, 0x0b961963, 0x8178a92b, 0x326ef995, 0x4b98ce69, 0xae39ad3d, 0x072310ae], &[0x0607ea07, 0xf8c3f40f, 0x276dbbb8, 0x27ff7653, 0x3c9a6d38, 0xa10c8f57, 0x981a9bce, 0x01193f4e]),
-        CurvePoint::new(&[0xa3efa778, 0x7a4d10e1, 0xfeb29e1f, 0x1dbe015c, 0x0c57f178, 0xd5cf1aff, 0x5884516b, 0x00bc2a35], &[0x652a71d9, 0xf5823e30, 0x3c31b45d, 0x6a1b651d, 0x2c224f8a, 0x052c372d, 0xdca4456a, 0x01bd062c]),
-        CurvePoint::new(&[0xcb6f162b, 0x2702ed1e, 0x8a765686, 0x29cfc658, 0x927f1831, 0xa8ec9bc1, 0x09bdf5ac, 0x0512524c], &[0xabd0e5db, 0xb7fb416b, 0x845aa524, 0x4978b9fe, 0xbfb50c92, 0xc0868211, 0xf3ee65b8, 0x01774c66]),
-        CurvePoint::new(&[0x443f44e5, 0x37a8ca51, 0x17c3acce, 0x3f543797, 0x305af1f0, 0xbf541e37, 0xd00f7f75, 0x03a65a9d], &[0xffab8e44, 0x3db2bb6c, 0xbd8a5baf, 0x01826bb3, 0x907dd62c, 0x4bfac384, 0x7b6afacc, 0x00afc5e5]),
-        CurvePoint::new(&[0x36248c81, 0x2b8605cb, 0x68f7593f, 0x1860e795, 0x217a8160, 0x73a4afbc, 0xc7e69f4a, 0x03143807], &[0x33b001fa, 0xe7252423, 0x80d90653, 0xc095486d, 0xfa531d1b, 0xb6c112ca, 0xb6acbd8d, 0x01da6593]),
-        CurvePoint::new(&[0x77bd5419, 0x15ac78f4, 0xe633fe6b, 0xa1a1ea7d, 0x98f1c17f, 0x661971a1, 0x6ea2ddd0, 0x041659b1], &[0x93539433, 0xb0942e7c, 0x543f2758, 0x33e3a71c, 0x71ab5f30, 0x71c99a54, 0x5340625c, 0x02de013f]),
-        CurvePoint::new(&[0xc8c95cef, 0x86cd7a97, 0x8ce0ff14, 0x7124adff, 0xaa7402c5, 0x89581857, 0xf37823cd, 0x060915fd], &[0x80c3a2be, 0x673b8c4e, 0x9795e50f, 0xf32be032, 0xf81b46f1, 0x3b3ab8b7, 0x130887ff, 0x0255788d]),
-        CurvePoint::new(&[0x4a787216, 0x629fa9fa, 0x1731689f, 0x9b5d4df8, 0x638b250f, 0x406bbc03, 0x690690cc, 0x026cbf9d], &[0x031ec287, 0x8fc705bb, 0x0f366255, 0xa0d9595e, 0x936a7c66, 0x8fdcf163, 0x6c8aae78, 0x03adfd4e]),
-        CurvePoint::new(&[0x872fb9f5, 0xb33297be, 0xcecd5c89, 0x9f388c02, 0x51d3f865, 0x8c27d3f4, 0xc31b7849, 0x01dfaab1], &[0x45f641ea, 0xefa63dbe, 0x4f3fb76a, 0x90f169b3, 0x7bf3fd94, 0xc02d2bda, 0xcae8692e, 0x02a55287]),
-        CurvePoint::new(&[0xfc7e7e82, 0x8f2e9562, 0x4e785049, 0xb5efb03d, 0x2e302456, 0x6a8505e1, 0x1d0b8aab, 0x00f8c7de], &[0x11396774, 0x8244d9d8, 0x57a21153, 0xf44b957a, 0x4e994828, 0xf9e26585, 0x398a539e, 0x0218af27]),
-        CurvePoint::new(&[0x649eee3e, 0x08e224b3, 0xe890a32d, 0x6dd06db8, 0x4fca239c, 0x328b995e, 0x92126540, 0x01039333], &[0x35c41a0f, 0x0d574c7c, 0xb207325b, 0xd5255cee, 0x2b281967, 0xd5b73acb, 0xa2e882f4, 0x00633e43]),
-        CurvePoint::new(&[0x232a14a7, 0x4d1d639b, 0x810bea82, 0x55adb95c, 0x63c04402, 0xe683b8f4, 0xe16d8ad5, 0x049c4450], &[0x0c38f12f, 0xef72ae43, 0xf78721f9, 0xbcd2d130, 0xe64cbc8c, 0x3f432507, 0x079eeca6, 0x037ad47b]),
-        CurvePoint::new(&[0xe855d5d3, 0xfab32fa5, 0x4d2f8177, 0x8a0d8d1c, 0x56c2b4b7, 0x3a91f858, 0x11f269f3, 0x06f60cec], &[0x06cb9bc4, 0xa8ecc131, 0xb4b5d1ff, 0x6d35f574, 0xc85158b0, 0x4a8fe568, 0xf8a5481b, 0x003b2307]),
-        CurvePoint::new(&[0xbfb23f64, 0x2064b418, 0x307cecc5, 0xa0cc1799, 0xd06352cc, 0x628e1c08, 0x1a496b9e, 0x00a4f8b6], &[0x41427864, 0xc1c1a9a9, 0x6bf31ef5, 0x069a37e9, 0xbc2001c0, 0x9afeda13, 0x603c94d0, 0x00b896ed]),
-        CurvePoint::new(&[0xb60085ce, 0x0b51829f, 0x5e2400a1, 0xdebda7ca, 0xe0fe27d9, 0x651e8144, 0xba1d4899, 0x078be7de], &[0x1e4ad360, 0xc5ba5061, 0x55088d6e, 0x5e33640a, 0xafc0f022, 0xc62c58e5, 0xe46409db, 0x0210e250]),
-        CurvePoint::new(&[0xcbe3a4e3, 0x99665f9a, 0xd0e4dde7, 0x1ea6c99d, 0x676c16bf, 0xcf745718, 0xdc28d999, 0x0450c570], &[0xa19c53a1, 0x0893c6bf, 0xf047a6a4, 0x2a8682ee, 0xd06ceca3, 0xc959a6ac, 0xc9beb423, 0x02358eb7]),
-        CurvePoint::new(&[0xbeadc6d3, 0xdabde200, 0x96f540b4, 0xe36b2d2f, 0x66c974c8, 0xf2131e13, 0xf8fcb6c5, 0x05319fb8], &[0x39724856, 0x55691952, 0xdae5c61e, 0x188af772, 0x58bd495b, 0xd1810718, 0x679fd188, 0x02478272]),
-        CurvePoint::new(&[0x123477c0, 0x9b32c395, 0xd0afa23f, 0x87bc0855, 0x64a7034c, 0x97d9eb8b, 0xfcb6ab92, 0x02c9c205], &[0x1f6bfbb6, 0xab873606, 0x62cb1757, 0x30ee09e0, 0x98f6f114, 0x8a000b19, 0x3195c984, 0x0351db0a]),
-        CurvePoint::new(&[0x03d1ca9d, 0x995ffb03, 0x25fcb375, 0x18a6de77, 0x62950cab, 0x66b34f20, 0x41c7e57f, 0x01c421af], &[0x60c76562, 0x61dbd782, 0x17133f2c, 0x0f9fcb7d, 0xc953ec19, 0x3c500828, 0x628e7e85, 0x002d76b9]),
-        CurvePoint::new(&[0x073941c8, 0x37cd9133, 0x9dae582d, 0xd19d9304, 0x9c5fb15b, 0x0f7d33ad, 0x58588ef9, 0x0341cb07], &[0x1b9d40a4, 0x396c8bd2, 0x90eead07, 0xa3f319e7, 0xf6042e40, 0x0943db96, 0x836e880b, 0x02b8a7a8]),
-        CurvePoint::new(&[0x5f5a7564, 0x95767965, 0x119ec6cc, 0xb66dabda, 0xd3debbef, 0x0237283b, 0xb100ae9a, 0x046cde37], &[0x5dfa64ff, 0x82de54dd, 0x6a4b147c, 0xd53aed9b, 0x3d99ea20, 0x97e06a95, 0x8d32300a, 0x020d1346]),
-        CurvePoint::new(&[0x12e0f50c, 0x266d93f5, 0x776cd61c, 0xd780e4b1, 0x9051d6a9, 0xd6052e5b, 0x1c95c9fa, 0x01248c6b], &[0x3e6a1f31, 0xac48a6f2, 0x3a796d58, 0xa9769bc9, 0xc2f5ca70, 0xddaaac11, 0x7cdf6960, 0x01cdd50e]),
-        CurvePoint::new(&[0x4250f4fd, 0x026fb00a, 0x3db52763, 0x2ef803a6, 0x6ff49c1a, 0x82d7fb8c, 0xe0120bfa, 0x00085bad], &[0x4b984ea4, 0x7cab0c83, 0x23f00ddd, 0x5d0a4179, 0x9bc0433b, 0x72f68ac4, 0xf09d6054, 0x03a87c5a]),
-        CurvePoint::new(&[0xcf798c09, 0x50497a41, 0x12a47457, 0x853b0921, 0x60ffa351, 0x0337824f, 0x9771b9d2, 0x0629b38f], &[0x24746686, 0x66ac0687, 0x074ca454, 0x60de8c94, 0xa73beaca, 0x321e7965, 0x7ea66f37, 0x01c24902]),
-        CurvePoint::new(&[0x333a2c27, 0x208e1192, 0xf90cc7c5, 0xa80e871f, 0x386ec4bc, 0x7aeb088d, 0x7f6a4c4e, 0x019a71fb], &[0x89e3e90a, 0xf706f8ea, 0x9707ab17, 0x8f238c96, 0x692fdfd7, 0x06279719, 0xe8d02657, 0x027fc83b]),
-        CurvePoint::new(&[0x0e9e28a3, 0x362f3acf, 0xe6b6815f, 0x35eb2c5d, 0x97bfc8d2, 0xf6cb0931, 0xe65b5884, 0x013a9654], &[0xe65eeed3, 0xd57db71b, 0xaea3ecbd, 0x6c2a0b9d, 0xa348a2de, 0x6111efcb, 0x48436d4a, 0x0058ce09]),
-        CurvePoint::new(&[0xa281df24, 0xc487ef27, 0xe406b2d8, 0x0d63277d, 0x0a25aff9, 0xbdc2188a, 0x621f2ed5, 0x0550cdd9], &[0xdce7822d, 0x8851837e, 0xe8e553d7, 0x9f7f4f93, 0x39dd9807, 0x6f96f63f, 0x8781a427, 0x03147ed8]),
-        CurvePoint::new(&[0xdfbc97de, 0xe06103fb, 0xd17f581a, 0xafaf7689, 0x0eb182c1, 0x89039d40, 0x9d91deef, 0x01fb7838], &[0x644be228, 0x067e07e9, 0x8ca6f9ba, 0x6580c8dd, 0x6dd16943, 0x57aadae6, 0x952c3144, 0x021f3a95]),
-        CurvePoint::new(&[0xe7f84827, 0x61541339, 0xb085bb57, 0x7cec3785, 0xf6708246, 0x16543625, 0x3c7edd52, 0x031aa5b9], &[0xe9f1d992, 0x40613b36, 0xa9775ffc, 0xa9c3f13f, 0x48190fc8, 0x1eb577e4, 0x0a2f801c, 0x028fc481]),
-        CurvePoint::new(&[0x7cbcee9a, 0xeaafb705, 0xa34e7771, 0xc2d55492, 0xa82e9ad4, 0xb652c08f, 0x6e33571b, 0x00b3ab6b], &[0x143f492b, 0xd3d6f175, 0xfde708ca, 0xdb73e927, 0x83326075, 0x9bb53c4c, 0xb76c1ffc, 0x0271839d]),
-        CurvePoint::new(&[0xc45ff44b, 0x309a44af, 0xf449a972, 0xfa6c8bc9, 0x57869084, 0x5e29cb4a, 0xe79d3f69, 0x07bcbfdf], &[0x22518e34, 0x07a9dfe6, 0x27be76bc, 0x64a536e3, 0x8358e691, 0x475e0529, 0x2a2321f7, 0x004f9117]),
-        CurvePoint::new(&[0x602ecce5, 0x5046b100, 0xaae39ebb, 0xe3a0dd1a, 0x38789880, 0x2327b5a2, 0xcb38dcfc, 0x035bac8f], &[0xacfde934, 0xf9140784, 0x8362218b, 0x9349e5ba, 0x79ddfdbf, 0xb38b597a, 0xf23ee741, 0x03383219]),
-        CurvePoint::new(&[0x45c5999f, 0x52d96d2b, 0xe8e5f5ff, 0x221e3e9a, 0x1b78f3bd, 0x53fcd8bc, 0x145e037f, 0x0580ba87], &[0x23e3c288, 0x71c61145, 0x2923be08, 0x1c7aeb79, 0x24cde460, 0x1faf4ae5, 0x19ec2583, 0x025d6438]),
-        CurvePoint::new(&[0x4620040c, 0x4f33fad1, 0x4e18049c, 0x6a561973, 0xddcb6bc3, 0xdc7c8304, 0xe8e65382, 0x056f1abf], &[0xfefd0d63, 0x79310d57, 0x1e34e711, 0x519ba9a8, 0xb7593455, 0x29f6e7f7, 0x25dc1758, 0x01d491cb]),
-        CurvePoint::new(&[0xe46d881e, 0x09afd9bb, 0xed40094a, 0xf65c38e5, 0x454ec563, 0x5efc936b, 0xdcde12ee, 0x02d0a1ba], &[0x4cd1c3b7, 0xaaf9dce6, 0xcf56844c, 0x6bd69503, 0x1700a555, 0x0f525397, 0x48e21312, 0x03522883]),
-        CurvePoint::new(&[0x584a8113, 0x198b428f, 0xddfdc1e1, 0x2a67a450, 0x4ab8146b, 0xaacefffa, 0x8ef3dd67, 0x013b9042], &[0xa31807a9, 0xb77404ec, 0xf4a2fa4c, 0xfaff690f, 0xf4e58c5b, 0xe640cf27, 0x6f9ead51, 0x0005c6ff]),
-        CurvePoint::new(&[0x43223122, 0xc952efac, 0x1f752a78, 0xeac65d40, 0x22e5d78b, 0xde6422f7, 0x73c8a1ea, 0x03fd5f0a], &[0x1b5e6e9e, 0xf870283b, 0xaf8ef6f9, 0x4e6bdac4, 0x9a1bebb3, 0xd20a7494, 0x6a142b26, 0x0207fbc5]),
-        CurvePoint::new(&[0xa493ef43, 0x5f3c667c, 0x4c50f1e5, 0xbf068355, 0xb635a707, 0xcca329f6, 0xcc98e7e3, 0x021744e6], &[0x5cd1dac6, 0x8861744b, 0x2d6363e9, 0x66f02686, 0xea4f5642, 0x62b9bb3b, 0x1ef3ca25, 0x02feacdf]),
-        CurvePoint::new(&[0x1329a73b, 0x6454a538, 0x34ae3533, 0x6512722d, 0xe7ef9128, 0xdc109c3c, 0x65381ba9, 0x045b59f3], &[0x34476f53, 0x97c1a078, 0x6080065e, 0xc7c2a2f8, 0xa3bbc39a, 0x76ff3e93, 0x02e1e53c, 0x00f8562c]),
-        CurvePoint::new(&[0xef38a973, 0x623b4152, 0x2a804060, 0x18e0d956, 0x83c3e600, 0x32ee1b8b, 0x588e0a60, 0x022ac196], &[0xd801d7df, 0x326562e7, 0xb5ddc6f5, 0x7f03eb6c, 0xd093a9e0, 0x53c3c05a, 0x27997a17, 0x036c960b]),
-        CurvePoint::new(&[0xf630859d, 0xd0cec54e, 0xfa097d02, 0x3a3a40a2, 0xc3d815bb, 0x2478455a, 0xf0653ba1, 0x06a66440], &[0xe3ad1d5d, 0xe23dfebc, 0x46651f9e, 0x24680e04, 0x1231099b, 0x5ef5d232, 0x96d8291a, 0x0075ea80]),
-        CurvePoint::new(&[0x09d9bf45, 0x4fddf3e9, 0x1496c618, 0x5a09abf7, 0xed284423, 0x9b484ec0, 0xb7fc0130, 0x039a7f6c], &[0xede595ac, 0x44422d31, 0xccd3d20d, 0xfe84acfb, 0x73f5e673, 0x50d1e530, 0xd7d753d3, 0x02bb8794]),
-        CurvePoint::new(&[0xee493032, 0x5fde3a4a, 0x4a849e84, 0x1b58d1a6, 0xbaf7a584, 0x1042d1ee, 0xf4746b88, 0x031dcbe0], &[0xee63f7d7, 0xf0e947a7, 0xd964ffcc, 0x9fdbe6a7, 0xb36af0a3, 0x524bbbdb, 0xa6ab68f9, 0x02a0afff]),
-        CurvePoint::new(&[0x03a958f9, 0x6e2fb606, 0x97a78be2, 0x4b15d6cb, 0x4c53a17e, 0x13d2338c, 0x614c1359, 0x03cb75eb], &[0xfb6b3fd9, 0x4d44c2c1, 0x24736d3b, 0xdb126694, 0x25e4cde6, 0x47d31eaa, 0x5951e228, 0x0273ebc6]),
-        CurvePoint::new(&[0x7de40247, 0x959fb72c, 0x78af4615, 0xbf7ee245, 0x39535804, 0x3f9d3c33, 0x249c8fe8, 0x00568309], &[0xec84ff26, 0x38b5808c, 0x980895f4, 0x91bf3478, 0xb22c68e1, 0xd48d8b1b, 0x12f11a5b, 0x02afeab1]),
-        CurvePoint::new(&[0xb89de723, 0x26327dcc, 0x819cfc3c, 0x3ebc14f3, 0xa755fa97, 0x82a74279, 0xe29ecb80, 0x0590545d], &[0x029044b4, 0x84918675, 0x67a87e47, 0x38fed704, 0x2449f7fe, 0x487a00a2, 0x6287d7e1, 0x00eccd15]),
-        CurvePoint::new(&[0x87749879, 0xc8efe211, 0x76d05961, 0x5d85abfc, 0xf4d98fab, 0x4d2d0c13, 0xa59ee341, 0x01a94194], &[0xc0efbec1, 0x981eed9f, 0xdb681738, 0x8b6982d9, 0x2577e7c0, 0x820ccb59, 0x9687db75, 0x0346ab53]),
-        CurvePoint::new(&[0xf0d0831a, 0x51c97b77, 0x14ae10e0, 0x15e2b89d, 0x07d8e4e4, 0x618025dd, 0x313cffc2, 0x0213608e], &[0x9e2869a0, 0x3c72fcff, 0xdd378433, 0x8cab32fc, 0x18071b1d, 0x835a547c, 0x367b2456, 0x02c5abca]),
-        CurvePoint::new(&[0xed867f7c, 0xb564ca6b, 0x5a77ed32, 0x48c86cb3, 0x9f227205, 0xbc7d3d2d, 0xb7baa2c1, 0x01846fda], &[0x167d6689, 0x1a169dc7, 0x4f2a0614, 0x9c8fb6e6, 0xd8f29b5b, 0x9c3d9764, 0x5ba43770, 0x02422053]),
-        CurvePoint::new(&[0x386dd484, 0xbdb066bb, 0x560969be, 0xfd9fa083, 0x2b6440aa, 0x0b4afe09, 0x6b4743cd, 0x03503418], &[0xfbddef50, 0x5b43642b, 0x09dd697e, 0xd420190d, 0x48037ed4, 0x41c9a515, 0x8bc82bd6, 0x01177787]),
-        CurvePoint::new(&[0xa9c4e524, 0x0ea6d93a, 0x33643955, 0xc96fdd3b, 0xe7f8699d, 0x73a31910, 0x7cce4403, 0x055e298f], &[0x4e3ba80e, 0xf0a09b23, 0x5c6ab582, 0x871b8da7, 0x8f0e2362, 0xca882054, 0xa25f834a, 0x0074b13a]),
-        CurvePoint::new(&[0x5dc63500, 0x494017fd, 0x8540c858, 0x5a48686d, 0x5911bda7, 0xbf889f45, 0xcc4598fd, 0x06ae5047], &[0xe0f207ba, 0x754b2961, 0x19e49184, 0x58715d05, 0x2e716c25, 0x12f2f0d6, 0xbc08a037, 0x03817f60]),
-        CurvePoint::new(&[0x11b215bf, 0x71290a48, 0x750eee5a, 0x74b30d85, 0xcb8404cf, 0x0d577934, 0x8a3505c0, 0x071168dc], &[0x16ecefba, 0xe10f3ddb, 0x39f4c59e, 0xb451117e, 0xb2334b2f, 0xd1cd74f0, 0x07e91c01, 0x038cc701]),
-        CurvePoint::new(&[0x928eea6c, 0xf5cb2d87, 0x48ce857c, 0x081be4c3, 0xe4a8d52f, 0x4ad4b20e, 0xf6661eec, 0x00b9195d], &[0xfcf46cc4, 0x48c3431e, 0xd08fff42, 0x2b727dfb, 0x816f9a1f, 0xac7b265c, 0x80ae4521, 0x002b4c17]),
-        CurvePoint::new(&[0x4a146b6f, 0xfefdffd2, 0x2ca433ff, 0x8fc7667b, 0xfa43fd49, 0xb13da87c, 0x26865a81, 0x023593cd], &[0xa697961b, 0xc4c2d72a, 0xc990c17e, 0x42f6572d, 0x8f13c3a1, 0x3e41c840, 0xa94c0b2c, 0x013ef986]),
-        CurvePoint::new(&[0x70e95e54, 0xa9818192, 0xc9596972, 0x07a47878, 0xd8b77b71, 0xc2b8fdc3, 0xc357f283, 0x027da9f5], &[0xd1410710, 0x71bc05b6, 0x84f6e8a6, 0xe7d6fa62, 0xe39c368f, 0x0f45efe1, 0x236e84c4, 0x01cd0caf]),
-        CurvePoint::new(&[0x45f83ff0, 0x911be128, 0xfb6ff63e, 0x0c5d2814, 0xf7ae7360, 0x1b32c01f, 0x3571a353, 0x005506ee], &[0x43d9c612, 0x612a9056, 0x34d951bd, 0xe398049d, 0x51a57302, 0x63f9fcb2, 0x85134e8b, 0x03413d4c]),
-        CurvePoint::new(&[0x4de24f10, 0x6d83d6a6, 0x03572e19, 0x46b53a56, 0x9a40dcb5, 0x1cf62e61, 0x6b6ac900, 0x07f19ec4], &[0x1aba97d9, 0x62d841cc, 0x6b61b458, 0x87a4c86b, 0x008172ba, 0x52d7b8fc, 0x87d3bad2, 0x01c69eac]),
-        CurvePoint::new(&[0xfe23dd1e, 0xdf45585b, 0x4f614a4a, 0x45943c8c, 0x4eb5984d, 0xcad57bd9, 0x0748f152, 0x00ada50a], &[0xcad71ad4, 0x6b2472ef, 0xe46ee49f, 0xed3da012, 0x2090ba3b, 0x64747544, 0xf575c095, 0x0042d6d2]),
-        CurvePoint::new(&[0x15501a7d, 0xa3d449d0, 0xd01f1417, 0x84a7e21a, 0xe02bc76f, 0xd8036041, 0xcbb1b0bd, 0x054736c0], &[0xb27fcd4f, 0x7cf6949d, 0xc368ecd9, 0xd4819bc7, 0x3968e058, 0xddb9c3fb, 0xd1cfcb87, 0x0162b46d]),
-        CurvePoint::new(&[0x6b871555, 0xc53ac6b5, 0xfc922bce, 0xf613f423, 0x41387553, 0x1e425301, 0xcb7e706d, 0x070857e8], &[0x28fa875b, 0xa3f64a44, 0x7073e78f, 0x36c31874, 0x29f7c896, 0xf96985b7, 0x6b2daefc, 0x031033c1]),
-        CurvePoint::new(&[0xe515117b, 0xa1663ece, 0x63074b8f, 0xfe4ba4f0, 0xc0014a08, 0xf7881db4, 0x6bb5721b, 0x03af83fd], &[0x32e2b40c, 0x71f0d374, 0xcb36a0ae, 0x76edaa90, 0x731c9fc9, 0x07781b70, 0xe9ca7863, 0x02b8ebf5]),
-        CurvePoint::new(&[0x69a8ae59, 0xd34f5b48, 0x375a8bba, 0xf45ece42, 0xc8e0c949, 0x8a86b8f7, 0xefdd38e4, 0x008bd447], &[0x537fa02b, 0xf97d93ad, 0x207c83da, 0x7560b346, 0xf3d34de5, 0xdff6abf6, 0xe306bf21, 0x011f934b]),
-        CurvePoint::new(&[0xf0c41f72, 0x2d11aae8, 0x33373683, 0x8c7fe610, 0x47c6dccd, 0x0f94ba5d, 0xd3206953, 0x010d9556], &[0x47072582, 0xf0b5fa60, 0xdfa7ad45, 0x9c04e919, 0xc76dba18, 0x44a4ded0, 0x419caa49, 0x005db88f]),
-        CurvePoint::new(&[0x9df9eb19, 0xd2910ea9, 0x421fcb65, 0x6290dfe0, 0x331d9789, 0x57b47595, 0x4e7c499f, 0x020df910], &[0x83f5c539, 0x3291ae7d, 0x5f286626, 0xcd1531c6, 0x06b2c76a, 0x2bfe5f83, 0xf3c4f5de, 0x00656914]),
-        CurvePoint::new(&[0xc454891f, 0x59e69bab, 0x3021547e, 0x9e079c60, 0xf0f0baf5, 0xccc027fd, 0x6bbf1e37, 0x042fe805], &[0x344fa022, 0x3bfa7660, 0x84449af7, 0xcaca8019, 0xe7982a65, 0xfb77c954, 0x3b26585a, 0x03f07633]),
-        CurvePoint::new(&[0x3fe8af1d, 0x5f04d264, 0x1d7b795e, 0x72fa03ed, 0x8212f6ff, 0xc07aa7cf, 0x76ba1946, 0x009adec6], &[0x798d46eb, 0x0c8fd733, 0x65f2c580, 0xfd6461f9, 0x03dcc03b, 0xaae01798, 0x1123dd56, 0x014fd596]),
-        CurvePoint::new(&[0xac68f2ae, 0xf7a39e8c, 0x6b49ddee, 0x579acaea, 0xfac84563, 0x934d3e7a, 0x165ed2ea, 0x04203df4], &[0xc37d7f02, 0x70a4b22e, 0x297c784e, 0xb3a6548d, 0x7db95213, 0x89c5b300, 0xb14d52a1, 0x02a4371e]),
-        CurvePoint::new(&[0x841e499c, 0x645cbaf0, 0x898ac26d, 0xed0eba87, 0x08b92d0f, 0x5636c903, 0xf5113c85, 0x073a5cf5], &[0x1bb8ffb6, 0x53f73e0b, 0xc7897dab, 0xb92cbea4, 0x7cbedd04, 0xcc7b52fe, 0xf028eab0, 0x0355a15d]),
-        CurvePoint::new(&[0x87d33c6a, 0xc20b2a24, 0xf55f04c9, 0xfd204da0, 0x7d4f35a0, 0x283cc81a, 0xce46e537, 0x0145a105], &[0x4c2645db, 0x6756489c, 0xa0864695, 0xc0da4ac1, 0x13f446ed, 0x983ee35c, 0x32fd0618, 0x0115242a]),
-        CurvePoint::new(&[0x641becab, 0xdc7d7fad, 0xab846830, 0x23e7f4ea, 0xccdc3b28, 0x683fdb76, 0x19036ffd, 0x05867b26], &[0x88a87714, 0x79d144c3, 0xe5b29ab5, 0x218f64fb, 0xdf84d9f2, 0xb8bb792d, 0x5b0b8b17, 0x01690226]),
-        CurvePoint::new(&[0x13a0572e, 0x6a7b5553, 0x8a9a70fe, 0xee37149a, 0xb346f41a, 0xf8ebe412, 0xb2004e1e, 0x03f2e5d2], &[0x94d32bdb, 0x34f72e49, 0x6428bd5c, 0x0481c90e, 0x39a029c9, 0x1be26ecf, 0x65220214, 0x025e4ad2]),
-        CurvePoint::new(&[0x652d946a, 0x91f9352b, 0x78835622, 0xd8f4ca33, 0x63122ca3, 0xca8bad74, 0x2cd7b375, 0x032ea7d5], &[0xb58e272e, 0x2f9c556a, 0xd46be35b, 0xc6925042, 0x53a43404, 0x1f45d789, 0x10a78274, 0x00924efc]),
-        CurvePoint::new(&[0x35577888, 0x37c61ac7, 0x3d231c5e, 0xfa129785, 0x36dbf0c1, 0x6646fb05, 0xdf315151, 0x0545dbc5], &[0x7d5a5c1b, 0xb8c9d763, 0xaa6cf977, 0x2aee0161, 0x2e94276e, 0x7c99cc74, 0xc6a7e41e, 0x00f813e4]),
-        CurvePoint::new(&[0xce68badd, 0xf11c3529, 0xd689d591, 0x57aa31ba, 0x319f2437, 0xf17bb2fa, 0xd67a70dd, 0x01cbb022], &[0xc3c5470e, 0x14b57a80, 0xbeec0a4a, 0xcf7ca781, 0xe0fe1670, 0x33147541, 0xea44eada, 0x007a0256]),
-        CurvePoint::new(&[0x4d28f8b8, 0x3ed74dfb, 0x8aeaa774, 0xabf1c0bb, 0x4f303667, 0xac126519, 0x39f2c0cd, 0x0497382d], &[0x3e625eb8, 0x9fe8450a, 0xbf2f53ac, 0xf1f6d52d, 0x1e40dc57, 0x01011c01, 0x4c5b5742, 0x006b1339]),
-        CurvePoint::new(&[0x69f64071, 0xa79c93c1, 0x347e3da9, 0xf8b6ee7c, 0x038b023a, 0x81377fca, 0xfc1db3f8, 0x07477704], &[0xf220fadf, 0x2d41db06, 0xb0f8cb10, 0x0212ff36, 0x4eb0ebdd, 0x3c6946c4, 0xef76f8fb, 0x00e1daae]),
-        CurvePoint::new(&[0x6ad288b4, 0x9363d8c8, 0xc0292c1a, 0x1433b9a0, 0x0c2c5e63, 0xd2c9c631, 0xfe8c3932, 0x003f1ee0], &[0x0bf08a7d, 0x72eca76a, 0x7b4c8995, 0x0ac6d28c, 0xa77ec446, 0xdfac78f2, 0x3c2a9071, 0x01f62845]),
-        CurvePoint::new(&[0x90673c64, 0x2b77b44c, 0x97cd0780, 0xe16d0519, 0x31361f6b, 0x076030e8, 0x0773d92b, 0x03e4340e], &[0x31c92b0d, 0xb9c93716, 0x2e98b39f, 0x995b80ce, 0xfb39c36b, 0x00ac8b20, 0xbead28f3, 0x012ab7a9]),
-        CurvePoint::new(&[0xab2ee850, 0x798e0e29, 0xb97d292f, 0x58fe083f, 0xf66051d1, 0xc349667c, 0xcb61c569, 0x01f3aab2], &[0x1c36d200, 0x1cf14685, 0x09e49eac, 0x7c12bffa, 0xc08d5944, 0x99ac7335, 0xbe95de4a, 0x0332f985]),
-        CurvePoint::new(&[0x0565a13f, 0x35634378, 0x491afacc, 0xfdf8ca02, 0x87381374, 0x1563ca7f, 0xaecb3e03, 0x0018539d], &[0xcbcb09c5, 0x0c9e294f, 0xd7c13591, 0xc4210360, 0x03b7a122, 0xe4fa4399, 0x93df5493, 0x03c845d2]),
-        CurvePoint::new(&[0x1aa62a46, 0x9e5a8d3f, 0x3d36ebbd, 0x77eaf8da, 0x4904231c, 0x20f696a3, 0xaa1b9427, 0x037f0e2a], &[0x7829a753, 0x7e3f0eb8, 0x32e0345f, 0x2ca436a8, 0x915bdd52, 0x4eea484d, 0xa5f8e3f0, 0x03fb5f0d]),
-        CurvePoint::new(&[0x862c2048, 0xa8f3f0ff, 0xbf822c23, 0x64c37748, 0x6a4d01ee, 0xf5e5d5b4, 0x093e3fcd, 0x0348d098], &[0x2bdd8a2b, 0x9814c25d, 0xed71a4cb, 0xfd7ec474, 0xf81b1650, 0x931ff9de, 0xb57a80f3, 0x01961060]),
-        CurvePoint::new(&[0x43947d42, 0x86bad7d2, 0xdfa79142, 0x79225f40, 0x2aba136b, 0xfe658f59, 0x7fd9822a, 0x057bcfe3], &[0xa3cd4924, 0x03407544, 0x7929a414, 0x90564148, 0x3040572f, 0x4fb9f343, 0x3491e91d, 0x0329b232]),
-        CurvePoint::new(&[0xc5a3e2d4, 0x8ef02263, 0x0115d048, 0x862a4456, 0x31a5f6da, 0x31108088, 0x43922995, 0x01a4888b], &[0x642763be, 0x63163389, 0x44909a28, 0xf08e9952, 0x2b73822f, 0x89e59dc3, 0xe388102f, 0x03db533e]),
-        CurvePoint::new(&[0x450fe7c8, 0xaa8f1c44, 0x49d8b736, 0x332e4737, 0xe3b9c682, 0xe35ca95b, 0x1f7ab1f7, 0x01f14b75], &[0xfa53213e, 0xa8d4e56a, 0xf95e1b18, 0x8cb57a89, 0xc468a945, 0x53ddc7e2, 0xfab9f839, 0x00f7006f]),
-        CurvePoint::new(&[0x87200b1f, 0xb8dd1182, 0x7bb9e12e, 0xc7c79747, 0x957c6965, 0x095ab784, 0x833efc21, 0x01ae0d09], &[0x7e6dce53, 0x00f5e4b9, 0x102610fb, 0xb79d8507, 0xcb218066, 0xf48d2bbf, 0xa5cb0561, 0x0083b457]),
-        CurvePoint::new(&[0x0012da76, 0x51c269d3, 0x80abd98d, 0x9103667c, 0x87b6c9f9, 0x179a050f, 0x79e3c07c, 0x002a1eb6], &[0xbf3e37dd, 0xc0ee0740, 0x3b11254c, 0xc8473d37, 0xa886bbad, 0xfa683cec, 0xb8d71bbc, 0x0212c872]),
-        CurvePoint::new(&[0xce773a7d, 0xf279736c, 0x4ff0b8a7, 0x65eb9505, 0x46db0fd2, 0xe2f39eea, 0xe127bea4, 0x073daa2d], &[0x20352e40, 0xf074e0ee, 0x536c8a41, 0xfbeca837, 0x20d8d915, 0xcbeb8e67, 0x40428d3a, 0x02289c9f]),
-        CurvePoint::new(&[0x87998703, 0xf141d40d, 0xa8a9be2a, 0x56b805e3, 0x64e8f882, 0xc10beb08, 0x2d6cd6df, 0x07b9ef4b], &[0x93de3c54, 0xe143825f, 0x0778d1ae, 0x1ab30e72, 0x216c6684, 0x48ce4c95, 0x5a5f0120, 0x022ffb9b]),
-        CurvePoint::new(&[0x565ce05e, 0x7e16958b, 0xdf36abd1, 0x69545ec4, 0x0a430171, 0x47307080, 0x40bff6aa, 0x05ec9696], &[0x485ad6f0, 0x2230a06e, 0xd4e14398, 0xef946239, 0x357bcefd, 0x71bf27a1, 0x48d02b03, 0x01427e3e]),
-        CurvePoint::new(&[0x804923fb, 0x80a815e9, 0x4f181d1e, 0x8f1066a1, 0x44b7313f, 0x3232dfdc, 0xb06a10de, 0x0007a8ad], &[0xd04b51e5, 0x91110e3b, 0xfc65b0df, 0x26ec0410, 0x5b1b0b15, 0x544a22fe, 0xb50a1566, 0x01eb8f09]),
-        CurvePoint::new(&[0xdddb1c3c, 0x123124a4, 0x24aff17e, 0x9022bce2, 0x64cafbf9, 0x29cd2bc3, 0x6dd39957, 0x02e3467a], &[0x862d55b1, 0x565a18ab, 0x3e1923a2, 0xad443f65, 0xbfc6e5e5, 0x1eccc7e0, 0x9a423172, 0x01463ecd]),
-        CurvePoint::new(&[0x01a1224b, 0x07905861, 0xbf57fb6a, 0x6fafc936, 0xe941dac8, 0xa85181ef, 0x85e311fa, 0x00e8430f], &[0xb055c8c5, 0x97956284, 0x8bde085a, 0x6e18880c, 0x946cdd22, 0xe806d002, 0xd077cf06, 0x00367146]),
-        CurvePoint::new(&[0x90d063b4, 0x1935f22c, 0x1bb6b25b, 0x0a1b4a93, 0xd5c3d92c, 0x6807d8a3, 0x799d80b6, 0x02d00787], &[0x82d4c19e, 0x13133754, 0xe1681d8a, 0xfe8a472d, 0xcb37c1a7, 0x21ccfbe9, 0x5fa4984e, 0x020f0195]),
-        CurvePoint::new(&[0xb9ff77b0, 0xd58f7768, 0x2b003faf, 0x42c629ae, 0x59ffd6d7, 0x1f1b6f28, 0x0f988aa9, 0x05e1b691], &[0x2be263ec, 0x6ed3fb82, 0xc5a7923a, 0x57fea147, 0x8010772c, 0x603f7c3b, 0x9e5e5fea, 0x01282c21]),
-        CurvePoint::new(&[0xc058ce15, 0xaaa7ed42, 0xb5b7de7a, 0x379135fc, 0xb8dbb6d5, 0xcc5bf667, 0x7b200d1d, 0x04be7026], &[0xb94c803c, 0x7601d382, 0x586792cf, 0xfbc0a75b, 0x017fc1e6, 0x40dade94, 0x999ba695, 0x026d8b05]),
-        CurvePoint::new(&[0x2b4a08c2, 0xe4dbc178, 0x62f5d75f, 0x4fbe71ba, 0x40d68d62, 0x6b16d3fe, 0x584d071a, 0x005b7223], &[0x1f590278, 0xac34ba74, 0x90f641d9, 0xaaa1ba8a, 0xa53b1ade, 0x27477ad8, 0x0d752d7d, 0x006cc0f1]),
-        CurvePoint::new(&[0xdd0d38f1, 0xf402eb97, 0xca28aaf2, 0xdec0c4b4, 0xf6bf3964, 0xad41e70a, 0x3e931d94, 0x0500e12e], &[0x62a7b58a, 0x7b595f1d, 0x50674027, 0x87c7aed4, 0x39295163, 0xf622dab9, 0x739fd3cc, 0x01d63eef]),
-        CurvePoint::new(&[0x7ed2d3c5, 0xd5d65555, 0xf613b27c, 0xe2262f98, 0x00019245, 0x7b2593f1, 0x29dc1382, 0x01adec6f], &[0x9840b0a7, 0xddb9e195, 0xc41f1af6, 0xddb92679, 0xb985b686, 0xc7b5b904, 0x866e741f, 0x01d68272]),
-        CurvePoint::new(&[0x3c74393d, 0x0c9cdac8, 0x56229a14, 0x12db6828, 0x55658f04, 0xe428a892, 0x8277276d, 0x07d9e879], &[0xe50f1b70, 0xc9a7e30b, 0xb4026548, 0x799799ad, 0xf69802be, 0x533dc9c6, 0xe23ee5e7, 0x01b25695]),
-        CurvePoint::new(&[0x496272af, 0xe5c40970, 0x1dc59d02, 0x351f1804, 0xff695114, 0x2ea0e046, 0x8663c779, 0x00fa6074], &[0xa661b1cd, 0x72a0f0c2, 0x0bd0384f, 0x9ef99528, 0xf2318220, 0xd1ee70f4, 0x4548ff5a, 0x020d3b8d]),
-        CurvePoint::new(&[0x738669ff, 0xa3e522da, 0x8cfe22c9, 0x99fcfbab, 0xc0ba636e, 0x4649aae8, 0xf30c75ce, 0x04d1eb98], &[0x225ec098, 0x39fa3c4e, 0x94bf3412, 0x241dfe61, 0x84225e07, 0x3f8a84af, 0x1f070770, 0x0104abdf]),
-        CurvePoint::new(&[0xb4ba633d, 0x8adff8fb, 0xbf84dc4c, 0x23e33674, 0x951c7cd2, 0xae7a437f, 0x7ebc72ad, 0x04622be9], &[0x8c043ac9, 0x66c2c74b, 0x50f22ab6, 0x29e2b130, 0x9fb254b7, 0x8870dfa2, 0x9d8e4c6c, 0x007c2c4d]),
-        CurvePoint::new(&[0x1722dbd1, 0xb102119b, 0x94bd5ef3, 0x1d04bbf5, 0x6200a9d5, 0x28227669, 0x0c00019c, 0x06bcf743], &[0x142c0d3b, 0xb308106f, 0xef66e89a, 0xbaa6e5a8, 0x95c49e18, 0x447d5f57, 0xeedfa549, 0x005a4248]),
-        CurvePoint::new(&[0x20a2f6cb, 0xd9ce51c7, 0x64d7a4be, 0x6567dc01, 0xbaa0bd94, 0xa22fcc64, 0x42d649ea, 0x07985c67], &[0x1ab40580, 0x58ed5ebf, 0x13b9bdf9, 0x74bfbed0, 0x9a1b1693, 0x6ac72ee2, 0x71cb3345, 0x03cc3816]),
-        CurvePoint::new(&[0xfb260ee4, 0x2c15ab8f, 0x2a0ebca8, 0xf4a42d35, 0x88acc3f1, 0xa16ec4fa, 0x57f2d245, 0x03970833], &[0x0231778c, 0x000c3a0e, 0x60ab19f8, 0x9cd9a095, 0x3f9d9217, 0x1b3c5061, 0x5595a6bb, 0x000c91a3]),
-        CurvePoint::new(&[0x26640ce8, 0xa584487e, 0x6ee90df6, 0x92cb6469, 0x8412f50c, 0xbb06147b, 0x16f532e3, 0x06fdfd3a], &[0x82640a9a, 0xdbf86cac, 0x20624f69, 0x1fc7baea, 0x28f306a0, 0x8abda4bf, 0x544e57f0, 0x00d9d6b6]),
-        CurvePoint::new(&[0xe9bcf5fd, 0x9c0d8385, 0x4c569198, 0x1d20617d, 0x4846143e, 0xe328a27d, 0x58a14178, 0x060fb9eb], &[0x38cc2827, 0xdbf36608, 0x7a8e24a3, 0xc23876a5, 0x37a087a7, 0xdd0cc32f, 0xfffeabd2, 0x01499fc6]),
-        CurvePoint::new(&[0xaf58a8c5, 0x3b9ba5b4, 0x516e2eaa, 0x3cf5b9c9, 0x481cb52c, 0x82378493, 0xf729d785, 0x0010ee4f], &[0xf0051e7e, 0x3f4f920f, 0x19e7ffb7, 0xe1e0bf62, 0xb76b44e5, 0x5ea05073, 0x42055abf, 0x037b6638]),
-        CurvePoint::new(&[0x6b10f6ac, 0x548f4003, 0x1711fc00, 0x696aa050, 0xc9755f89, 0x544b1820, 0x6ff42963, 0x06274dda], &[0xaf164915, 0x74ee875c, 0x31462762, 0x5c65782d, 0xab516438, 0x2d544704, 0x857c6a57, 0x028a1b47]),
-        CurvePoint::new(&[0x219959ad, 0x61d7a5fa, 0xca12981e, 0xec3cf8fa, 0xdfa850e5, 0x21e113b8, 0x10c7c8c5, 0x0419b9b2], &[0x6d207caf, 0xff4b9ffa, 0xa357bfd3, 0x098eec45, 0x091dd587, 0x201c94bf, 0xba9ce383, 0x03137e62]),
-        CurvePoint::new(&[0x6ab83a57, 0x43fd14b6, 0x0951c882, 0x7ac046ac, 0xcd59e28b, 0x88f6d700, 0x5019d917, 0x06280367], &[0xae22f39c, 0xf05b1b80, 0x822c7651, 0xde6d20bf, 0x454e41e7, 0x44f60d21, 0x32e8e112, 0x01333e28]),
-        CurvePoint::new(&[0xf089ff29, 0x3e79d964, 0x7eea6c7a, 0x0655a886, 0xb05d79fa, 0x9a9a431e, 0x3b00df15, 0x02802d2a], &[0x78838fa4, 0xd01294ed, 0xefe0ae74, 0x87187ae8, 0x26345464, 0xebe10a18, 0x4da1deff, 0x0260243d]),
-        CurvePoint::new(&[0x03073189, 0xc4811f10, 0x7c2cd61d, 0x2de910af, 0x756ffe6d, 0xf9fe83d5, 0x5f7e7935, 0x006b053f], &[0xd94e586c, 0x4742df32, 0x5f899c31, 0x660d4903, 0x22cbe3c3, 0xd04e8a4c, 0x96274577, 0x03bfa34d]),
-        CurvePoint::new(&[0x2519b95e, 0x67906f1c, 0xf8d7d72d, 0xd918758e, 0xf034393e, 0xc36e882a, 0x95474538, 0x04f240c1], &[0xa1eeca13, 0x3f63ae62, 0x250d61ba, 0x1aa26a73, 0x932f9fcd, 0x36b3c038, 0x29c248be, 0x01c698f4]),
-        CurvePoint::new(&[0xb7aaa698, 0xa7337b79, 0x2c7f388b, 0x4852ac30, 0x0cd80c99, 0xc0677c15, 0x1516abb8, 0x05c9b716], &[0x38f36aa6, 0x5e51e3a4, 0x5d06e01d, 0xb11727ab, 0xc9015ec2, 0xa4eaefc6, 0xbaedf5ac, 0x02967285]),
-        CurvePoint::new(&[0x12a21ff7, 0x7092ed09, 0xeaf026b6, 0xe907b0f4, 0x8bab75f9, 0xf167454e, 0x79ee94e4, 0x03154da3], &[0xb82214d3, 0x9fb9d05f, 0x48cbe7a4, 0xe5cc7aa6, 0x40c25c39, 0xa71bc7e4, 0xf30e4e7c, 0x03241ddd]),
-        CurvePoint::new(&[0xfe3a307f, 0x5dff6bc1, 0x4ee58e43, 0x3576bc8d, 0xfe47ba14, 0x6574c07d, 0x3d02f5d9, 0x008aa450], &[0xc8d79ce4, 0x010c6991, 0x719aaffb, 0x06a4e972, 0x82a4261c, 0xb79b6387, 0xa051b439, 0x02918ae4]),
-        CurvePoint::new(&[0xec2d5f8c, 0x036fb7f1, 0xbef73241, 0x2e98aa21, 0xa8bf1615, 0x05ff3669, 0x625163b1, 0x02f0cf27], &[0xcc778473, 0x30899058, 0x5ecbe620, 0xb04bddb6, 0x0084ede6, 0x8ae3fc81, 0x9aa4b638, 0x0072b6a6]),
-        CurvePoint::new(&[0xa50b4d7b, 0x59304c6d, 0x1d92aa81, 0xb8329859, 0x282c06f8, 0x2472f143, 0x2c19789f, 0x00988922], &[0xd51044e8, 0x545d5185, 0x0f9b0ae9, 0x7cf46924, 0x19a4713f, 0x01ef060f, 0x0abbbef3, 0x029cfeeb]),
-        CurvePoint::new(&[0xc07353e8, 0xa7f530f6, 0x44f06f85, 0x83a3485b, 0xf4ff318a, 0x14b51aff, 0x7f996b85, 0x0236ef54], &[0xb7eb54cc, 0xe74596a0, 0x55dc1291, 0x07074957, 0x8fbf19bf, 0x82bf1d2a, 0xcb3f6e7b, 0x0398ff05]),
-        CurvePoint::new(&[0x69b8de9f, 0x5a4239d8, 0x47678eb8, 0xf811ec66, 0x31fed9a6, 0x707732dd, 0x503bf283, 0x03e48269], &[0x190689cf, 0xf9f6ddea, 0x03974ee9, 0x84aea224, 0x4b1f2711, 0x89b813bf, 0xdefc462e, 0x03628a94]),
-        CurvePoint::new(&[0x832f334a, 0xd4504834, 0x1af5dc2c, 0x275740c4, 0x2c5b7445, 0xa803f206, 0x0cb09c8e, 0x0003daf4], &[0x08a313e2, 0x562d5cd6, 0x8803fa0d, 0xc81ee6a5, 0xb9632090, 0x0095c58e, 0x7a30c70a, 0x02915d4a]),
-        CurvePoint::new(&[0x6b5c3587, 0x165a7203, 0x7484b7f0, 0xa5e61da6, 0xaec47622, 0x31b2f93c, 0x984dd352, 0x05193cfd], &[0x0bd62884, 0x2690fe62, 0xe6916bd4, 0x5846fca8, 0xd7565ef7, 0x74178b86, 0x75172c68, 0x0253ae3b]),
-        CurvePoint::new(&[0x60d0e7b8, 0xbefb0bdb, 0x09b48ef6, 0xbf27b1b3, 0x70874049, 0x9b845ca0, 0xcc2c4db9, 0x07b9ac09], &[0x16bb3e9e, 0x3e1f9eb4, 0xec13462f, 0xc847a5ac, 0x8eb90cc2, 0x7b989dc6, 0x3d09d4f8, 0x03bb9cd9]),
-        CurvePoint::new(&[0xdf4c3f80, 0x8f8f8de8, 0x4c43912a, 0x5eb1a33c, 0x8513d0e9, 0x1758bc29, 0x27c534d6, 0x049860af], &[0x12a341f5, 0xd01e5df7, 0x5df3a33d, 0xc73cecf5, 0xbe843257, 0xbec2b666, 0x499093ac, 0x015e12c6]),
-        CurvePoint::new(&[0xefada882, 0xe49170f1, 0x8308a32c, 0x2981c206, 0xf0ee8776, 0xefc61fcf, 0x555b703d, 0x001f2cfd], &[0x7a8c60d6, 0x63215a18, 0x1c315964, 0xb0fd0ad9, 0x19372d99, 0xf43107fc, 0xbdc592aa, 0x03c102b1]),
-        CurvePoint::new(&[0x352bc450, 0xf9828459, 0xc83ed0fd, 0x854bfc89, 0x9f55b580, 0x2ba4ae89, 0x25aff597, 0x029cad75], &[0x6baf8380, 0x97c7a174, 0x43afffc2, 0x32a1e0f9, 0xba78cfaa, 0x796bd4c6, 0x537ed3ce, 0x02650afa]),
-        CurvePoint::new(&[0x43bf2af3, 0x77db21d3, 0xff6cae95, 0xd85a5b51, 0xf133f927, 0x0049a05b, 0xf074dc0d, 0x0793f274], &[0xe55151da, 0x30a7cf05, 0x89be0af9, 0x266c18d9, 0xd21fd5d4, 0x98a598ac, 0x59e6ebf6, 0x00675521]),
-        CurvePoint::new(&[0xae519ba0, 0xa10108de, 0x7cf165bc, 0xe4cf00c4, 0xb0a5ed39, 0x397853b8, 0xedb524bf, 0x011790fc], &[0x4d3993f1, 0xdbba50ac, 0x49ae9a08, 0xb3f038c1, 0xb21e507d, 0xce097df5, 0xa37cf8ec, 0x00404405]),
-        CurvePoint::new(&[0x09f71d7a, 0xc53b4b40, 0x34bb6882, 0xe088b714, 0xf03f60fc, 0x58d36b45, 0x563e9a84, 0x050784a5], &[0x8d134321, 0x8d4779fc, 0xcc56bd2b, 0xb66bd019, 0x2fbb62f6, 0xe0353ac9, 0x7f659a1f, 0x005bdf2d]),
-        CurvePoint::new(&[0x9c3456c8, 0x2f9b89ec, 0x592cad5f, 0xa2904de1, 0x89210ed2, 0xf5ac86fd, 0x47f5ed96, 0x02523d02], &[0x51beb054, 0x37b68180, 0xbc94f7c4, 0xd14cd343, 0x88c5eb15, 0x2a179b5b, 0xfebf9237, 0x02d0b8f9]),
-        CurvePoint::new(&[0x63a1089a, 0xb19c63c5, 0x818f7834, 0x28542eec, 0x3eb214fa, 0x4abe494c, 0xaede135b, 0x025bee14], &[0x4fd95b9c, 0xfbd12d76, 0xc1544b48, 0x8deba75e, 0xec79dff5, 0x9cf99df8, 0x2edbffed, 0x01a11a80]),
-        CurvePoint::new(&[0x5ce4bac8, 0x2e165616, 0x85b93ef3, 0xa67bc6d8, 0x903b6637, 0xa7b8efee, 0xc7761e4a, 0x00d12929], &[0x433b2262, 0xbcd5cef9, 0xa99c15d5, 0xeaae9f36, 0xaa35b1ba, 0xff2f2c52, 0x012cc166, 0x02815a60]),
-        CurvePoint::new(&[0x5d4d5028, 0x93fd9d4a, 0xdbce4f54, 0x062589ac, 0x17fa823b, 0x989fe094, 0xae17010f, 0x027191cd], &[0xa4578e0a, 0xb150c213, 0xb030d867, 0xb98d6c08, 0x507bda8d, 0x9acc764c, 0xfe6a417e, 0x016d9047]),
-        CurvePoint::new(&[0x233b63b7, 0xbd26a7d5, 0x7db24c56, 0x6add89ef, 0xcd9c3996, 0x375d01b9, 0xcfc3baa9, 0x0614b713], &[0xd145b352, 0x9cdd0edd, 0x27d29472, 0x8d2968f2, 0x055aaf06, 0x951d28d6, 0x37fb479b, 0x0207a5ba]),
-        CurvePoint::new(&[0x4d7575ef, 0x65c99854, 0x3e8172ed, 0x253e0a8a, 0xccdd6b29, 0x2de7fa2c, 0x1a37bfb9, 0x063c492f], &[0x833bfa22, 0xee999e30, 0xd3c1523d, 0x90829fbc, 0xb949387c, 0x1d0db2ba, 0xaf3f889c, 0x02827ee6]),
-        CurvePoint::new(&[0x44e7cd13, 0x0a7f4f3c, 0x8218c798, 0x99d6d273, 0x0de6d014, 0xaafb532d, 0xdabc7fda, 0x0462102e], &[0x1f2a8ad5, 0xe8f4cf8c, 0xe31c323a, 0x0d1cdd83, 0xaf024634, 0x7bf19ade, 0x06abf4c4, 0x01142044]),
-        CurvePoint::new(&[0xe94c66eb, 0xa397a8b7, 0xfa2b2185, 0xd8199bbd, 0x79f1332e, 0xf804b64f, 0x852db1e8, 0x05293f4e], &[0x8a555d95, 0xdf59c298, 0x1235cbd7, 0x439c4ab0, 0xf01fe71b, 0x2ce47866, 0x214f5607, 0x0251427a]),
-        CurvePoint::new(&[0x4304dea0, 0x771b9c42, 0x6547eeb8, 0xf424d70f, 0xfcac6bcb, 0x0c01af3c, 0x489615e7, 0x05035cc9], &[0x0ddc9023, 0xb428ec9a, 0x1a01cc54, 0xf2116565, 0x73b8d280, 0x8758bc95, 0x5fe78601, 0x00ee694e]),
-        CurvePoint::new(&[0x4a38c8f5, 0xd01dad23, 0x7ffc59b4, 0xa14dbe42, 0x0d4dda17, 0xba55a268, 0x245ac802, 0x0291ce67], &[0x273a699b, 0x9c48baf1, 0x8b3fef38, 0x6c983b0c, 0x42ee3557, 0xfb882ab7, 0xf5f3161d, 0x02de4539]),
-        CurvePoint::new(&[0xa6c6949f, 0xfd7480ed, 0xfd2dd31d, 0xc278fd24, 0x08db93c7, 0xaa5e3c93, 0xf4adb4a9, 0x03e09c31], &[0x12df0ffb, 0x88503434, 0x047479b0, 0x7540eebd, 0x7dbd8672, 0x340e40ef, 0xbeba0f29, 0x00a5c6ad]),
-        CurvePoint::new(&[0x01f616f0, 0x7f83f998, 0x0323b528, 0xf143086b, 0x67fbac74, 0x221df566, 0xf91a84c4, 0x00192b3d], &[0xe50ead6a, 0x2a8e9b15, 0xa296559f, 0x5bb6b2e4, 0x2d044eab, 0xb9f5eb7c, 0xa70031d4, 0x000ac0a4]),
-        CurvePoint::new(&[0xc58fa1a3, 0xbe533c6e, 0xedc8dc32, 0x9de824e4, 0xe54a2c12, 0x9f624a40, 0x8ef3bccd, 0x015cc377], &[0x54a5461d, 0x407f8772, 0xaa5335f3, 0x57034537, 0xf540e39c, 0x6fbc0a6e, 0x18b145ec, 0x03df3c7f]),
-        CurvePoint::new(&[0xdab84989, 0x1e5c19bc, 0x58af9612, 0x168d3815, 0xce11b83d, 0x5be96610, 0x0505be37, 0x01361a32], &[0x87fe6740, 0xfcc488ba, 0xc50fd605, 0xda17c742, 0x8d991217, 0x2d498d58, 0x081aae1e, 0x032aada5]),
-        CurvePoint::new(&[0xb6f8bf9f, 0x554b632d, 0x6cb00c0a, 0x312b7fa0, 0x4d9d6ac5, 0x3c30df99, 0x77efc9b7, 0x04aef124], &[0xd5f134d8, 0x802bad6b, 0x7acff988, 0xfeb31215, 0x9f68cc50, 0x486b0c7b, 0x4009eb65, 0x01c9686f]),
-        CurvePoint::new(&[0x0f296564, 0xd3e0612a, 0x6f0ac7ba, 0x84090b81, 0xd8f6159a, 0x920c79c6, 0x94672280, 0x0538b415], &[0x73e2cb82, 0xf28cdff3, 0x244678d5, 0x076c17ad, 0xaebddd34, 0x93742c50, 0xe61e373a, 0x00d83d33]),
-        CurvePoint::new(&[0x16b166cf, 0x07cbeca4, 0xd7ee2eae, 0x5791a1b3, 0x9b332faf, 0x0e9212aa, 0xab824606, 0x009c94dd], &[0x0ee2cf7f, 0x238c2f67, 0x787067d7, 0xea06d7ed, 0x1e44f3a9, 0x95908f31, 0xb3699871, 0x028c18a4]),
-        CurvePoint::new(&[0xdc2cc421, 0x9d1cc20d, 0xe1944827, 0x63d9c655, 0x5d53ae96, 0x1036c603, 0x43b57fb8, 0x044ec758], &[0xd76f11ea, 0xde13d3b8, 0xe9f29665, 0xbb96f294, 0x1a129231, 0xa65ece6f, 0x5e4a2e80, 0x00050380]),
-        CurvePoint::new(&[0x1c6d7b7b, 0x91924196, 0xd07df2eb, 0xa90d1c4b, 0x82f127e5, 0x5b4bb224, 0x28cb251a, 0x06b34dd1], &[0xbd97724d, 0x3dfd8560, 0x32579d58, 0x257e9e5b, 0xd60c5865, 0xd4214fc2, 0x5064cd4f, 0x00accce6]),
-        CurvePoint::new(&[0x76b6cdac, 0x365d032f, 0x64bd78ed, 0x070730ee, 0xde02b28f, 0x944b81f7, 0xcdf93e94, 0x04448e0f], &[0xbec91f73, 0x1ac077dc, 0xd6e27dcb, 0xbbbaaed3, 0x5f3c36e9, 0xe115ac3f, 0x466973da, 0x03fae31f]),
-        CurvePoint::new(&[0xbbc6f5e0, 0x75184537, 0x2dff83ad, 0x6507430d, 0x517e4d36, 0x164db7a9, 0x0b22cf89, 0x06350a1b], &[0x6de273b8, 0x9d21fec2, 0xd466f3f0, 0x81af3749, 0xa990c928, 0x31a8a95a, 0x36397a3c, 0x02c07b37]),
-        CurvePoint::new(&[0xd73272ca, 0xa1137f1b, 0xa6881a4f, 0x67bccc28, 0x6427c274, 0x6c2807ec, 0xfb322949, 0x00149481], &[0xadd9b3bc, 0x6275e347, 0x2a2a1033, 0x0fe0a4ef, 0xff5c64d1, 0xd8189405, 0x917167d7, 0x02852590]),
-        CurvePoint::new(&[0xbc268f44, 0x9134ed94, 0xf3046d2e, 0xd502845f, 0x74ef372d, 0x8314cead, 0xa9c3bfe2, 0x02b45b63], &[0xc369fa88, 0x55d3d192, 0xaa5d85d3, 0x4ec51d06, 0x68fc4228, 0xe704690a, 0x67cc17f5, 0x003401c0]),
-        CurvePoint::new(&[0x34b283fc, 0xbfa93e50, 0x764b4387, 0x8598007e, 0xaa5d5b63, 0xa810b5d7, 0xdfa3de8c, 0x0125dc05], &[0x6768c5ac, 0xdcbb47f4, 0x39b5d1f4, 0xf4fd8f64, 0x5efc23dc, 0x8b253ed0, 0x98cf9abc, 0x0283087e]),
-        CurvePoint::new(&[0x47134027, 0x83e6c289, 0xd57d0a96, 0xec7bc51e, 0xc36d66b2, 0x0667a7a6, 0x8cb43a01, 0x0781ce66], &[0xd7564b01, 0x84317cb8, 0x9637c0fd, 0x9d4bd896, 0xea8331cf, 0xe9fc6cd3, 0x691fa1c7, 0x023f061c]),
-        CurvePoint::new(&[0x651fb336, 0x7a946e8e, 0x76adb359, 0x87a5688e, 0xe62fd31c, 0xa7940ba5, 0x495e078d, 0x01145b72], &[0x43a8de4e, 0x873de84e, 0x5aab1080, 0x6f7efe67, 0x7001e809, 0x3c10df2d, 0x362cf8d7, 0x013573ec]),
-        CurvePoint::new(&[0xcf451d2c, 0xdaa8d8f6, 0x7384197a, 0xc6fd23a7, 0xb500da10, 0xe479c7d0, 0xf1f79436, 0x00f452ec], &[0x2fdc5cfa, 0x4260f9d2, 0x722a8fad, 0x10facc07, 0xe71d584c, 0xa838cb3a, 0xf50880d6, 0x0301b1f5]),
-        CurvePoint::new(&[0x802f7b54, 0x1527211b, 0x6e923fca, 0x3afff9e6, 0x0f296fef, 0x7ab06562, 0xfc22aad6, 0x027b82d9], &[0xba8d7e1e, 0x24db051f, 0xbee7c6f0, 0x20a8c279, 0x448bd742, 0x38092ecc, 0x87673580, 0x0163b74f]),
-        CurvePoint::new(&[0x37769497, 0xf4e3d685, 0x08fbb53d, 0xe9e1e8df, 0xecb4f7c7, 0x015c5525, 0x6bb14044, 0x01448e00], &[0xf54b906d, 0xbb0f3973, 0xdb942217, 0x2c880697, 0xebd73254, 0xdd50572a, 0x0c33676b, 0x0302c69f]),
-        CurvePoint::new(&[0x716c6fc8, 0xa5326fda, 0x6a1738c7, 0xa05ad20c, 0xe7720ca6, 0x49463153, 0x5f9f1b56, 0x04c84864], &[0x9293ca43, 0x5d93308e, 0x3bb7b953, 0x7a5aec5d, 0x74854e9c, 0xeec68f87, 0xb73f5d2f, 0x029b87e3]),
-        CurvePoint::new(&[0xa10dc2fa, 0xd4b36c72, 0x2b5ab150, 0xee638896, 0x9d04b141, 0xc01ac5d4, 0x000b9da0, 0x047f9d92], &[0xc8c19b95, 0xa85b6f0c, 0x771ab1f0, 0x4d2145e0, 0x1a7b4822, 0x6976d7ab, 0x90cd082e, 0x0087175c]),
-        CurvePoint::new(&[0x1d3ddada, 0xa68a71ec, 0x5bae99dd, 0xdd38444a, 0xda0fb982, 0xe6c63a02, 0xbc540364, 0x0776257c], &[0x7231a181, 0xa409dfc2, 0xe0fd4df0, 0x0ba3101d, 0x8132e263, 0x99649218, 0x5f1429b1, 0x03db95b4]),
-        CurvePoint::new(&[0x3e2c1a9c, 0x8800c39f, 0x5937dc3f, 0xb3983fba, 0x982299dd, 0xd5e9d7f6, 0x64800ca2, 0x03c17d5f], &[0x7c4145c2, 0x624d444d, 0xea7f8fac, 0xbfbc3e9e, 0x343fa54f, 0xe68bad75, 0x9469cb05, 0x0238a291]),
-        CurvePoint::new(&[0xc0e4ccbf, 0xfba4efc2, 0xd8d822d7, 0xc1b23397, 0xf3a8d46a, 0xf766e47d, 0x1111be0a, 0x06b3acf7], &[0x2208053d, 0x71f4f55f, 0x121e25f4, 0xd8a68e06, 0xed4c5152, 0x896329ad, 0xa99c04f8, 0x03c4c168]),
-        CurvePoint::new(&[0x6cb61eb9, 0x12da5536, 0x76dde52c, 0x6af07547, 0xf7111cba, 0x03e4a9c6, 0x3e645985, 0x0550d9e5], &[0x97491c00, 0x0dea353e, 0xec81098d, 0xe4d0362a, 0x2757a709, 0x27418f61, 0xcd4d686f, 0x02b5030d]),
-        CurvePoint::new(&[0x6e20ec54, 0x58ec3013, 0x7a0ca6b0, 0xfa34e52e, 0xbf16de37, 0xd496bd91, 0xd9b4368a, 0x02a3f1b5], &[0x9b158a23, 0x6da36f46, 0x691d63a5, 0x226255bc, 0xada25de4, 0xf609a889, 0x6268a9ce, 0x01e87d6c]),
-        CurvePoint::new(&[0xcb0ce40b, 0x936d5128, 0x14cf0924, 0x00246a9a, 0xa9775bcd, 0xc49d6e62, 0x33e1a59c, 0x007a6e88], &[0x2ae7830e, 0x513624c0, 0xdbc7d664, 0x62753493, 0x42637680, 0xbca14792, 0x43350372, 0x03ffae49]),
-        CurvePoint::new(&[0xb17c1a96, 0x2c50d3db, 0x53c50bbf, 0xaa185e86, 0xf5517335, 0xe4164bf4, 0xa673fdff, 0x0110478e], &[0x693618eb, 0x0d0cbe6f, 0x7fba1d7c, 0xa0964e3e, 0xd08b641b, 0x2a82376b, 0xf005d29e, 0x00790677]),
-        CurvePoint::new(&[0xfd779712, 0xa2f9b52d, 0xb4196611, 0xb572c979, 0x3afe0252, 0x8a72a95e, 0x6130b6aa, 0x02c773be], &[0xdc2145d3, 0x2947e6f5, 0x955a194c, 0x361d6527, 0xeafd6c9d, 0xa3bbb4c1, 0x08252315, 0x02ce027f]),
-        CurvePoint::new(&[0x080df3d6, 0xce98c6ba, 0xcba270b7, 0xa9c59a63, 0x86d6384b, 0x4e549063, 0x9de6749e, 0x0209f1b7], &[0x3fef9ff6, 0xf0c73443, 0x484939e0, 0x2c25b110, 0xc1c51481, 0x885710a1, 0x0f998c6c, 0x01d55b0e]),
-        CurvePoint::new(&[0x3a975945, 0x688a1684, 0x9c63f8bd, 0x423d5494, 0xf616c465, 0x3c6e8ea6, 0x850d6f7c, 0x017bf05b], &[0x095bb004, 0xbafd7194, 0x86dd59e3, 0xdf0e0e21, 0xf7cd5c6f, 0x76adb73c, 0xcc1932ff, 0x0008ac3d]),
-        CurvePoint::new(&[0x7c7279bb, 0x22fedffb, 0xea7da845, 0x4a1180b8, 0x3b86d3fb, 0x5c61dddc, 0xe5698430, 0x06ae579a], &[0x181bbd5d, 0x460fc395, 0xdd5213ce, 0xd5857f9d, 0x3b50f068, 0x41ca09d3, 0xdfce1be4, 0x015250c2]),
-        CurvePoint::new(&[0xf79c96e1, 0x8d0ee832, 0xe7419666, 0x0153bb7b, 0x982a5908, 0x3fd3c619, 0x9b376678, 0x05a18cb3], &[0xcdea9fa7, 0xdb4aa289, 0xc132df70, 0x8c832b12, 0x953b28c4, 0xae9621c7, 0x391001e6, 0x03393108]),
-        CurvePoint::new(&[0x7c548d0e, 0xe89f6313, 0x27690863, 0xbc0f084a, 0x0dadad33, 0x4ef4b2f2, 0x160c623a, 0x05bab61b], &[0xa33344c9, 0xb26cb185, 0x7e9b8cb8, 0x458ef3a6, 0xbf79b941, 0xc50e628a, 0xccba65cb, 0x01a48720]),
-        CurvePoint::new(&[0x4e68809b, 0x006e7e71, 0x00061745, 0xb2e5bf7d, 0x67f33f32, 0x116245f3, 0x53d75d8e, 0x060e95c3], &[0x68e23af1, 0x318cb525, 0x2512f6c9, 0x7ecf3d60, 0xaf7065a8, 0xd48ee677, 0x13ceb11e, 0x014ee6c3]),
-        CurvePoint::new(&[0xb6ae8c95, 0x475a1e01, 0xb2d982cf, 0x8e1659be, 0x98d06b48, 0xffee3410, 0x6b504504, 0x05f6e981], &[0x2b6a38f3, 0x9160513d, 0xdc5435a3, 0x66b3fbff, 0xe7206e3c, 0x07d3e6b9, 0x80da1ffe, 0x0011ed73]),
-        CurvePoint::new(&[0x6c9a1961, 0x5dcfa6d0, 0x322c5a87, 0xe89573d0, 0xeb5625ec, 0x633a911e, 0x2e7b1a12, 0x02735aa7], &[0xac44cd53, 0xd2f97a95, 0x645a11f1, 0x76aacbca, 0xd27c46e3, 0xa61f6d76, 0x24051fcb, 0x039793f6]),
-        CurvePoint::new(&[0xd980b7e4, 0x00634d40, 0x22905384, 0xa7462b02, 0xa202432c, 0xc194bdcd, 0x32e1742e, 0x017d2653], &[0x650d4ce3, 0xe2531292, 0x927679aa, 0xb3f74214, 0x3f543ceb, 0xbc80f3b4, 0x660b681a, 0x00413a04]),
-        CurvePoint::new(&[0xf4b4cbdf, 0x0a7c35bd, 0x48d35eee, 0x1444f449, 0xcb1025b2, 0x7929cc6d, 0x08a20271, 0x078d95fe], &[0x3641773a, 0xf9ba5ead, 0x2844fe16, 0xcb3b77a7, 0x2fad2806, 0x00b60a04, 0x27d25a37, 0x0040d27c]),
-        CurvePoint::new(&[0x8fe665b2, 0xe824456c, 0x6ff5c0d6, 0x265cd679, 0x3f913dcb, 0xa0d427de, 0xdaad6104, 0x05a96593], &[0x7a6c537c, 0x8531914c, 0x3c1cd447, 0xcea687e3, 0x81c9402b, 0xdff8cc0a, 0x1c075a53, 0x03e4dfca]),
-        CurvePoint::new(&[0xc0ac735f, 0x0c074bb4, 0xb9398c6a, 0x19853bbf, 0x1bad1a47, 0x1938294b, 0xc7b1f99d, 0x066d1749], &[0xc12f4145, 0x20a6a8bb, 0x2f07892e, 0xd8681875, 0x5d9f4bd2, 0xce979b93, 0xedd068fa, 0x02329b8a]),
-        CurvePoint::new(&[0xe7e9fc0b, 0xf154e4ac, 0xc9e3e560, 0x4e4be6f7, 0x5c8c684e, 0x218d7041, 0x85935283, 0x010b15a7], &[0x4c52ff5d, 0x7f2b7b7e, 0x3f01a8ee, 0x3bf6efbd, 0x9e97c817, 0x4e880ab3, 0xff649342, 0x0154af20]),
-        CurvePoint::new(&[0x3591ed4e, 0x92c2591c, 0x79e85545, 0x50ab5bcd, 0x14a8e6f0, 0xb7aa0772, 0xccaf63e1, 0x075bf97a], &[0x26bb8e2c, 0xdedd708a, 0x40c97721, 0xdfc91447, 0xbd11aaa3, 0x06b237b7, 0x3def993b, 0x036e5608]),
-        CurvePoint::new(&[0x759a5d1a, 0xec20b7a3, 0xb20f605d, 0x086c247e, 0x9c3007c9, 0xb8067a4c, 0xaeda01cb, 0x04391b43], &[0x612ae15c, 0x62a4f2d8, 0xa15e30d4, 0xa8c686b9, 0xa30dd6f8, 0x8e7c23a7, 0x167cbe5e, 0x027c424a]),
-        CurvePoint::new(&[0x1c29b55a, 0xeb7ce59e, 0x560f5f06, 0xd345eae3, 0x2597f90e, 0x20bd6de0, 0xc4fe5b12, 0x039e7b14], &[0x6b0c1498, 0x2d60d4e3, 0xef83c943, 0xe20e809a, 0xcb9852ef, 0x4f21c8cd, 0xdab86a25, 0x033fbbbe]),
-        CurvePoint::new(&[0xa3633adb, 0xc2984977, 0x6c3f5af2, 0x275d7e4e, 0xb24aa17e, 0xe85bcd9c, 0x6e0fcb59, 0x02350544], &[0xdb3b746c, 0xd78135c0, 0x15402a5c, 0x932cc64d, 0xe1e89250, 0x9315238f, 0xa4e08c96, 0x0132b83a]),
-        CurvePoint::new(&[0xea8b0ad2, 0x1f3840be, 0x4443a2e1, 0x48706530, 0x513626cf, 0x1a9cdac5, 0x55f610f3, 0x0528a413], &[0xb5323f7a, 0x534632cd, 0x0986cedf, 0x30d1f2cb, 0x081ee450, 0x417d1923, 0x7a5090a0, 0x00d4288e]),
-        CurvePoint::new(&[0x824d43cb, 0x0ebe244c, 0x2ed3913b, 0x7c4f5fab, 0x085fcca2, 0x33f939a6, 0x0e8b3f60, 0x07927b4a], &[0x3b3601d5, 0x3b7341cb, 0xdd00c8c6, 0x0de3aad1, 0xe1a2bdce, 0xceaf828a, 0x061a04c3, 0x03b7d649]),
-        CurvePoint::new(&[0x4875b030, 0x0271714e, 0x953adc65, 0xaf7c66e8, 0xc5d2d9b6, 0xbfc7b0ee, 0x1e798d54, 0x01313132], &[0xeea81d28, 0xb77fe6e9, 0xfc839d89, 0x0228c87e, 0xb0243ba8, 0x60743bcc, 0xd8c03892, 0x0225c946]),
-        CurvePoint::new(&[0xc4881353, 0x3fd2fd27, 0x6fecc88c, 0xef3711dc, 0xd69726de, 0x519c9bfb, 0x99b61fdb, 0x03351821], &[0xca70bd38, 0x4d031848, 0x2c2515c3, 0x567f245d, 0x1dae8282, 0xff3c3a9d, 0x21f968d7, 0x030afa67]),
-        CurvePoint::new(&[0x908b3256, 0x90548580, 0x2c3346b3, 0x9dcec7b8, 0xe11814ea, 0x7429aa90, 0xebb0ef61, 0x0221fb22], &[0xbe21d6c4, 0x923942fa, 0xc1106abc, 0x99962794, 0xe392353c, 0x5a5de06a, 0xb812b774, 0x00aa50ca]),
-        CurvePoint::new(&[0xac1b0eb5, 0xb9f8dd4f, 0xbc284226, 0x14cecf63, 0x3d0521b4, 0xd7207586, 0x13d52201, 0x03f58a65], &[0xb856c7b4, 0x97180f95, 0x0a20f715, 0x8bed6c76, 0x63481bf6, 0x19f6a0d6, 0x5fa187ae, 0x03d26e1c]),
-        CurvePoint::new(&[0x393ba245, 0x61d0fb4f, 0x0ce94101, 0x31ba5d64, 0xadb6d64b, 0x73e5491f, 0xe6bd468a, 0x07d69660], &[0x2316dd2c, 0xd6169fe7, 0x4e68f2c7, 0x0191d504, 0xdca290ad, 0xff4d5c7f, 0x32ba9910, 0x02f3ca43]),
-        CurvePoint::new(&[0x5b470f23, 0x1ac8b7c5, 0xaa490da1, 0x3a1f9d11, 0x7af81478, 0x51e33222, 0x58399a51, 0x04764bb0], &[0x48f7a421, 0x2e439a55, 0xef4cd675, 0xcbdf369e, 0xd57014da, 0x932f4df5, 0xbb3d3361, 0x020066aa]),
-        CurvePoint::new(&[0x4ae3c479, 0x83d0bff5, 0x9f0c7bab, 0xaa79f66b, 0xd8cb6f31, 0x6fe21540, 0xc27d8e09, 0x06803fe8], &[0x68c8dbe6, 0xea28b95f, 0x316a2517, 0xecd1ecc6, 0x999028ae, 0x950a50c9, 0xb430b26d, 0x00b2cbfe]),
-        CurvePoint::new(&[0xc51c9691, 0x7ccb5616, 0x0dbaa270, 0x476affdb, 0x95c4b913, 0xab4d8c03, 0xcaac4907, 0x0432f2c2], &[0xd1d51e35, 0x1b0656ce, 0xfcf82285, 0x704c25c8, 0x0957bb2a, 0xbe24f9cb, 0x83ccbc48, 0x0140c73d]),
-        CurvePoint::new(&[0xdf334b86, 0xe4e6bc6f, 0xfc14e4e5, 0xa82753ac, 0x7a23c972, 0xaf2d5949, 0x31174cd4, 0x012920ee], &[0x47c34b69, 0x8e636fed, 0x6a6971d5, 0x80e2f65a, 0x7c040235, 0xf6e0a0ef, 0x0c2f479b, 0x02931cd9]),
-        CurvePoint::new(&[0x6f448a9a, 0xc0c85084, 0x2eccd023, 0x1798ccab, 0xb504513f, 0xb8f0d4bd, 0x831f8e0e, 0x03b54d9a], &[0xda148883, 0x737831d5, 0x731feace, 0x14760288, 0xfde9336f, 0xe3a72be8, 0x8e0c9f11, 0x012236c9]),
-        CurvePoint::new(&[0x68055838, 0x683b22dd, 0xe3f364e2, 0xa378cac3, 0x3461ab79, 0x23f2cf73, 0x1bd049b7, 0x04794fed], &[0xeeab65dc, 0xfa6cf378, 0x477bcabd, 0x2c77dc6d, 0xa5e9a9b8, 0xa72ad813, 0x566eb206, 0x03c53bd2]),
-        CurvePoint::new(&[0x0c30fcfe, 0x529165e1, 0xfe65438f, 0x8e38c8fb, 0xbb798859, 0x060280f8, 0x47766190, 0x0163f539], &[0xcee23adf, 0xde18c437, 0xa99d8863, 0xe51e5f6d, 0x567a4f41, 0xf79aedec, 0xe62a2166, 0x01e127df]),
-        CurvePoint::new(&[0x0ae282da, 0x2b80c135, 0x2fc4dcdf, 0xca8b6010, 0xe7c1afee, 0x10f5cebd, 0xfaf11460, 0x0251ca65], &[0x1fd53033, 0x74805872, 0xfe6b283a, 0x6f6dba92, 0x77e2ad37, 0xc7211ef5, 0xb1654c5a, 0x03ec5880]),
-        CurvePoint::new(&[0x172edced, 0xfa4c389f, 0x5e95a507, 0x279b875d, 0xa453aee2, 0x81092059, 0x28f31784, 0x00ac99dd], &[0x8b5e26d2, 0x27253327, 0xa17c8f52, 0xe72f9e3f, 0x4dece148, 0x7d218a98, 0xf230df0b, 0x00359911]),
-        CurvePoint::new(&[0x6fa43bf8, 0x9a1dfc0c, 0x22cb40a9, 0xd134db1e, 0x094b439e, 0x4ced3132, 0x8953e426, 0x035076f0], &[0x3bf718b1, 0x334d15ea, 0xa5a18511, 0xc50ae085, 0x99848bbc, 0x08819302, 0x870e1b96, 0x03e407a8]),
-        CurvePoint::new(&[0xeda114ea, 0x2e3d5a96, 0xbd6f2470, 0x63ab0928, 0x31a9248d, 0xf303186c, 0x2f70276b, 0x0195de27], &[0x95628f6d, 0xe73d3d4e, 0xfbd7acce, 0xe79425e5, 0x5ea99af6, 0xadfe2783, 0x620644b9, 0x01f18808]),
-        CurvePoint::new(&[0x44025db7, 0x9fd2af3f, 0x75684704, 0xe7f53698, 0xbd073345, 0x1c06db40, 0x0d88a063, 0x061d40a1], &[0xeaebf24f, 0xddf89f37, 0x2607ca33, 0x3df3d5b6, 0x7731ff9e, 0x42fee17b, 0x1d6fc66d, 0x03b27835]),
-        CurvePoint::new(&[0x818193d0, 0x68d1dbae, 0x5512dff0, 0x00c00475, 0x884ed2d7, 0xa82260df, 0x247144d8, 0x07fd45a0], &[0x1df8f966, 0xa303db3d, 0x5188eb79, 0x93519bc0, 0xf774c021, 0x13458bb1, 0xeb107c7e, 0x02d0be47]),
-        CurvePoint::new(&[0xc7262cdb, 0x888220d9, 0xaa850844, 0xfe0f9a2a, 0x44ae28e0, 0x39413666, 0x3ca9d747, 0x0473d289], &[0xf1fb313e, 0x7414c315, 0x6ae817b4, 0xe9981141, 0xd997532f, 0xbdc09af5, 0x99fea4d2, 0x0177a77f]),
-        CurvePoint::new(&[0xb1d6d1bd, 0x5226286a, 0x008fd952, 0x8c93ac35, 0xdb7dbc8d, 0x6dd0e3bf, 0x5bb9e171, 0x02c1b7ac], &[0x93333c1d, 0x70e513ab, 0xcea955bd, 0x4991f672, 0xb0da6b89, 0xf74ca4a0, 0xe09a25dd, 0x01bb341a]),
-        CurvePoint::new(&[0x84d2eec5, 0xb52fd7aa, 0xda9b3b93, 0x778ba6f0, 0x0cd1d26e, 0x59ea3620, 0xca628fd1, 0x07d2a728], &[0x4fca8c14, 0xd50addd0, 0xc0ba5d6e, 0xa7243302, 0x850ccd3a, 0x01e6a9f1, 0xbb955da3, 0x01bc3932]),
-        CurvePoint::new(&[0x9d18d193, 0x0baf5acb, 0xc10f2d4b, 0xc6d6e50f, 0xe8bc7150, 0x426086d4, 0x579c2618, 0x07516bcc], &[0x373d65a8, 0x7c6fd0b3, 0xe838214a, 0x016e55ba, 0x5e5ad7b7, 0xbdca7414, 0x3b79b333, 0x00e1ccf7]),
-        CurvePoint::new(&[0x69826cf4, 0xfc995c45, 0x10db7fd4, 0x8b7d89e3, 0x94b2eada, 0x48ed6112, 0xdc6178ec, 0x040443d8], &[0x2eb65fb8, 0x9a3862a9, 0x9494cd3f, 0x5e37f036, 0x6c52b1cc, 0x51d64ef1, 0xea32b5f1, 0x034de07f]),
-        CurvePoint::new(&[0xf78bc386, 0x27ede8b8, 0x5860c73e, 0x63374ef3, 0xbf00c82c, 0xa541cd85, 0x658bd20b, 0x00dc2969], &[0xcead5f79, 0x2ad21d73, 0x1203a863, 0xf0adc550, 0xf322a032, 0x9b67581c, 0xc1f44377, 0x01e46692]),
-        CurvePoint::new(&[0xe99c8046, 0xb3bdddf4, 0xc316821d, 0x95f10f84, 0x036b054c, 0xa300958d, 0xa837f465, 0x06240eb2], &[0x166aab76, 0x32a910ca, 0x996a98ef, 0xa215d239, 0xb7261d4c, 0x9d140b44, 0x7b9193fd, 0x01105e2f]),
-    ];
-}
+pub const PEDERSEN_POINTS: [CurvePoint; 503] = [
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "049ee3eba8c1600700ee1b87eb599f16716b0b1022947733551fde4050ca6804"
+        )),
+        y: FieldElement(u256h!(
+            "03ca0cfe4b3bc6ddf346d49d06ea0ed34e621062c0e056c1d0405d266e10268a"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "01ef15c18599971b7beced415a40f0c7deacfd9b0d1819e03d723d8bc943cfca"
+        )),
+        y: FieldElement(u256h!(
+            "005668060aa49730b7be4801df46ec62de53ecd11abe43a32873000c36e8dc1f"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0234287dcbaffe7f969c748655fca9e58fa8120b6d56eb0c1080d17957ebe47b"
+        )),
+        y: FieldElement(u256h!(
+            "03b056f100f96fb21e889527d41f4e39940135dd7a6c94cc6ed0268ee89e5615"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "04fa56f376c83db33f9dab2656558f3399099ec1de5e3018b7a6932dba8aa378"
+        )),
+        y: FieldElement(u256h!(
+            "03fa0984c931c9e38113e0c0e47e4401562761f92a7a23b45168f4e80ff5b54d"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "04ba4cc166be8dec764910f75b45f74b40c690c74709e90f3aa372f0bd2d6997"
+        )),
+        y: FieldElement(u256h!(
+            "0040301cf5c1751f4b971e46c4ede85fcac5c59a5ce5ae7c48151f27b24b219c"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "054302dcb0e6cc1c6e44cca8f61a63bb2ca65048d53fb325d36ff12c49a58202"
+        )),
+        y: FieldElement(u256h!(
+            "01b77b3e37d13504b348046268d8ae25ce98ad783c25561a879dcc77e99c2426"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "00bce48a9bf1ba2a868ccb5ec7a281b4adfb35f880a2217d3efc41fa17ec8430"
+        )),
+        y: FieldElement(u256h!(
+            "00436e8dd6339b88207b24aeb39c4497e4cecb1508e26706bd72c5450d7e362d"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "06005e128fd5a27b749a30fa56766ec34958d2116a479828ffdf30ffa22a8991"
+        )),
+        y: FieldElement(u256h!(
+            "012158816d08f33bf1c2895eec0b5df2a4bdd2281349af68184834092e41af8f"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "01c06a16f6f297e8d315f6b7ce5ed8b6cc3591b302d4563be99f26f78ce8280c"
+        )),
+        y: FieldElement(u256h!(
+            "03db714410aebfd11faca0a7575258d78b8f1c546666c923aa420e75af637975"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "07bcee06abaa11251a294b041fc21102b1b60bb2dde33a164e9c246dec7de24c"
+        )),
+        y: FieldElement(u256h!(
+            "016003366f985bef69b3b7ef9112f0dd7256f1501f8aa3e525d0f72de5885a32"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "02ccd344949a471541296e01e27a2b1edae8d3b8ace42a6e4e2a49ef62ffb9b4"
+        )),
+        y: FieldElement(u256h!(
+            "030e28f3a7b4c218e473fed409187b45f884b6f35cef64188bfb6c22ffac852a"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "035b6b70b29b725bdd4abfaa9016424455fef75cf5db8ac105349c22a6cf0c79"
+        )),
+        y: FieldElement(u256h!(
+            "026257545e6c40ce862da7092d0078574b354960625f899bb0459c5fb457b040"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0419fb89cf8fef3182ea87e8ea0dbdf2952abe24d8d08b6496ec3507982b479a"
+        )),
+        y: FieldElement(u256h!(
+            "0247a42dfb62d0a43d4b26c46dbd71f883461bc434d879bdd9dbde3e7d915f05"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "052c984e04f4e570d5eb7cc75e19adfbe8ca1ccab463fbb8f46292bd098b206f"
+        )),
+        y: FieldElement(u256h!(
+            "0360e38b0fd0d250338b69f0bfe3e0958dd974ec606eab7033b8d46f3c0f22bb"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0505192fc48d0e75ee4186e8469975db748ee5796f175a273ba80c0d38a620ba"
+        )),
+        y: FieldElement(u256h!(
+            "0125867a44b1e4b3b4dddea3aa770e8c1e830e4dcd0473ee4bf803c685d463da"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "06980f6d1c471c17c3cb85791a341cd30075a8ea156338f19a6f5cb63d8b7f99"
+        )),
+        y: FieldElement(u256h!(
+            "03c41b089b6e2167f75d2f59b72e1554ca1e5c2c1021758a4164da3e238281af"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "050f36f86c52a6f5da5522070dad22fb4c6b77029834e38b99bcc92459fbab6d"
+        )),
+        y: FieldElement(u256h!(
+            "013ea79067ac7c0656df40ad505ef4d22cac5999360ffc826a838d579b0a8595"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "008c13fa68b6d0f70cca82f0c5f289b9bd03c84811511731f3e8dfa1bbb29f0e"
+        )),
+        y: FieldElement(u256h!(
+            "0191ab505d18437e11a3fb027278ddbd11d8670ed6eea9c80e2198519fd7d186"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "040b996abea32ecc5d88a8a15b715ae699ce0df57972c1fd01c9d6d39b3fafa8"
+        )),
+        y: FieldElement(u256h!(
+            "02e44cba79a2c3f7d34b4f4690cc4ffc36a9b7c99426ad6d9461e96cdbfdfb5e"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "05514394948a2ae3db72a0181da6ca17c3e87d1110b924639cc1ddca754ab07e"
+        )),
+        y: FieldElement(u256h!(
+            "01cb53cabacb8d1d0a010c76eef8faa3e4fb744f41e6f821cc89b729ef64dee5"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0066c51e2f13ad12f51c673c4521906c9b5a586b9c30057a71f096e4ef47f362"
+        )),
+        y: FieldElement(u256h!(
+            "02eeee7e746fa29f0e7eebf4504d267074dfe9e1aefd25bd691cd4f325f4ea31"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0066b81d1f23915d68b777783226cebb960c0b0b914d553ea6eb3f3c00675a7c"
+        )),
+        y: FieldElement(u256h!(
+            "039a226a5b073b9aca14c3d17c1e90c83725a7ca526d94469c3100dcdb5b1ae0"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "03fed4bd782818b888391c90ffb40f2e9059d9cd62bd92e348946623ab80391b"
+        )),
+        y: FieldElement(u256h!(
+            "0159c712de4c72d908997fa30b00afdc0737dae50dd939400bc864c8f4bf9b84"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "005f011d4514ff968ecdac056db402c967e700b8e144070de05bca7f7f831b41"
+        )),
+        y: FieldElement(u256h!(
+            "00a4ff1dccf68b738a15f729ad670f8a2711580d592e9d87161aefe5fad689c3"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "06c81c707ecc44b5f60297ec08d2d585513c1ba022dd93af66a1dbacb162a3f3"
+        )),
+        y: FieldElement(u256h!(
+            "02500bc5cbc7982049226268e99f1523a33b2d6c7a95e1cdf3f91760aea2b409"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0737b2a877624e251d8828c4ce63b03225d0d0434f3e96ba45114c148b54f0e7"
+        )),
+        y: FieldElement(u256h!(
+            "004f9a4f03a271f0398695280c24c003400c42138f6bbf844bf8e1a7bfc4df6d"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "06db17053a898be46f09f82fff339843705e22ac07eaaaa808d10011250b36b2"
+        )),
+        y: FieldElement(u256h!(
+            "011549267c9e3d55ce2de5f56e3b95900ec3bc0ec9e1680d76ef9a77d04cd73c"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "043717d6a04d53d15eaaccff4d1e23b573a5221defe1d07f645c14281cfc5b1f"
+        )),
+        y: FieldElement(u256h!(
+            "01cbfa4c7826b17093c7d829bf596ca0e6a6bb4c7185d34339d592c7ab81b3f3"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "028ad05e63b9994b33f6a30c42d99c0158c1687cb1e0563d91063fc6e5a7ef14"
+        )),
+        y: FieldElement(u256h!(
+            "036b54d58a177e83df2021889374503c6a57e29d5506b487970f1db55522f3ac"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "05ce51c640cbd74d161baa97b0a88d81d2d38d08a2d706c01b6327782511e5a0"
+        )),
+        y: FieldElement(u256h!(
+            "0308ebac762bb3c9c496ac9f97c942fea6d7bb69fe4e8e0369aab707a64d5ff6"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0333da15832f1efb8f00b29a3ad48e92046a4509950ca6637ea56c2fc6df5aaa"
+        )),
+        y: FieldElement(u256h!(
+            "0035c6cc56fc971900f3476d154bbdc0157939b09477a2f4f48cc4a97415b8dc"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "04fc483e8c2c31fcbd57ac8b7ab33c3c42152c55618c19d462982efbd2898196"
+        )),
+        y: FieldElement(u256h!(
+            "0182719dbd4ab3f5c48c115d2756c5fa15839b7f40b358c4248d2a51d01a48b6"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "04f52ddf20586084da000538b3d0e80645cde96607ebda93e46a853d8c7c25da"
+        )),
+        y: FieldElement(u256h!(
+            "028b7b5ae215b517271b472bfee0e678480768a8286d90a6b8305930ea6e12ee"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0356f8a9ad7f4b6da51943f2d793c48392826f19696e1054ebfdda9b38d30b8e"
+        )),
+        y: FieldElement(u256h!(
+            "01e872e137163e4a2c3c789143e37c1ac3df5d5bc46afc9fa323efc696682477"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "04ba01fbca52020688f49e696ff65ee82ebcbf2c04c61a28c807e7f417b7ada6"
+        )),
+        y: FieldElement(u256h!(
+            "02acb6d4b9f010aea5150a3d7c22643486441364d203d9c3f310e6ee691ad7fb"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "050de424fa35e2ec678f93870c4f211688a74e07a48d02d8d8eac283aacc000c"
+        )),
+        y: FieldElement(u256h!(
+            "0341096affbd3c3fad8d51af3026d737021d0205b22c26c9d920d34de1e20566"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "04ca6a40cabb36577c674cedab13a5db4f78c72ee460190507393415b408b84b"
+        )),
+        y: FieldElement(u256h!(
+            "036794b40a90daedd59a2e5c2e55b385ea405744b3c3bac0611454ed7a5c34f3"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "033ee591b4f2c2abc67936f1e270b4352b19dec400221e2ed9651b09f18a2195"
+        )),
+        y: FieldElement(u256h!(
+            "03b315af147a849413173153c25780f31424bdbbcc3a9506cdd136269c29f8fe"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "040311da01f8933aee8139aa0a8654d61e28f01162f92459fb9c10d13bb0318f"
+        )),
+        y: FieldElement(u256h!(
+            "00856de0a27349b1247a133416a9da8f21b2969e51c896a48321a53b6baeafa0"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "00d98c224c71a21ef7b4a0c5d77356c45a214cf39edcdf52e21b70e3bdf898a0"
+        )),
+        y: FieldElement(u256h!(
+            "01a5eb0162bcb42382468b6fc9507bcc46d62e39bf7ad6458daed1ac983d7c3e"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "02e0c4cea248e9d049a1e2c26af44db60bdbd436fc6dead7d90a17f21893632e"
+        )),
+        y: FieldElement(u256h!(
+            "0265b614119d1ae3a74ad56960612b3e4a3ec8aaf6707931ee9f87562fc468c7"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "04d0925df9a53d2308aea0f6a2d4aacefa375421c1116012eec070d16182a4f6"
+        )),
+        y: FieldElement(u256h!(
+            "03b8ea110c1f8b5eb9670e79f0c5cc80694a2fe620a6054959d4228539565d6d"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "00e107e80282aff26560afaf79602070b2272f89261970d79fa2db98180aa535"
+        )),
+        y: FieldElement(u256h!(
+            "0180fbe129dd75c768a951c25aa5c8c01028dd16dfac47413218f938f7d13f69"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "030a8d24cd7001ddc8adbbf6b772c6f423296f5c30783c96294726b25208c21f"
+        )),
+        y: FieldElement(u256h!(
+            "02f0c69054ab9c229c9328eefa5b15e3c1e4f2133f9b6059d0160932726e2f2c"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0040551f0b3a4d637a983c00ea77d4c60b234848e7b62e2e9abebc6b184420e5"
+        )),
+        y: FieldElement(u256h!(
+            "016096b730a8507f1bea5f401cd88bb96419230b1211a94fc08ab91ec055f297"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "06f1e4e8e78a47cf6f5073a0ee088e7d5e743219367ed08ddc5b25547251fee9"
+        )),
+        y: FieldElement(u256h!(
+            "028691d8849563ce726c289886aa14f5742c960d519cc50a6977d7bed0300479"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0236f560c5c265b3a98a7e77e9aeaa6eb22670f16a777601634b3c2664af905b"
+        )),
+        y: FieldElement(u256h!(
+            "0103f9a7a48965ef77725248177ad49f5ec624d7996199d5c960a0e8d9f95027"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0321bd2283c3b6221c9994ad20d726b6b6a82369de2ddbbd3e2b066d04c25aa7"
+        )),
+        y: FieldElement(u256h!(
+            "002c8027d1efee0ef615feae103be7925a3f0e6698753a706e9b8f433746c782"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "05de9ddd02c14a6cf6e085c0fabaf5020823507dcf0461b98ac8ec5fab7af1dd"
+        )),
+        y: FieldElement(u256h!(
+            "02ec56e42f07e33ae66d8e7b6678a453e575086e644f2499d23dfaeb2b27fb08"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "05aa496a9db3764203ccb6d5090a323b9d076ac57166075716c7c07b8bc71999"
+        )),
+        y: FieldElement(u256h!(
+            "00d7ef9b60a05741c4f50f6e528b7b1f7495187c2b3155cadf0488645fcf1359"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0770be9f6143d5add961cdf8bc8876a939d3e32d276043c2372f94ff51490c4a"
+        )),
+        y: FieldElement(u256h!(
+            "01a0e47db58deb5751b3bb4468e0941632c51709df34a72446c694c4cda328d6"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "01d9435cac0b02d9db1097ceadb4588cda4a600ac358358b4b97225be2cd4788"
+        )),
+        y: FieldElement(u256h!(
+            "026b61887e91537286942ed48e1d757f74fb1644d875f535d9f45571644df560"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0224bb6447e8c9641ad46fc4efb726ac9450680a96c279af4daf56e28e1a82d4"
+        )),
+        y: FieldElement(u256h!(
+            "00639eebb0e7b477061bc64fcd37d49d4ae89771a53e21611481ffe26806d893"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "03911e4e67a894627b6c39bf1acbbdecd83086177a2b19c81ffaa26857d85aed"
+        )),
+        y: FieldElement(u256h!(
+            "02f067fffc2a4315a8bb60370ff065bd33b77fa7f47af09fad18d98b9742a226"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "02fbf07fc43282a8826764403f48c25886853d1e821b748054676e1adcdd5766"
+        )),
+        y: FieldElement(u256h!(
+            "01abd877b35e6f2e6bbbaac94fa88a6af25c7d40b8b0e2ff7236b50642a15262"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "001715714904f41e2eb63a21c8e24ef289aa680efd431dde22b9099c13bf1ed0"
+        )),
+        y: FieldElement(u256h!(
+            "03e557041eaac12a3bdd25b9fbcb9a2c47fce937ec507cf1ddea99327247d406"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "00601900aa7c0b2a5915a883d383652482242598406ca756eb481f5f730e31ca"
+        )),
+        y: FieldElement(u256h!(
+            "020be2053bf70701aa82d59e9c73c880de215e76ba079b1cfbe9364e21f738ec"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "041a0a0126a4efd77a6f3c09c07295ab6b67863479cbb96a623d6f1d4c14b697"
+        )),
+        y: FieldElement(u256h!(
+            "037db3bdbfdc23896aacbf3b7bec1fc55a38395e83858344a3d639ab59ae89cb"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "037931cf05cf420f574d3737d3af9e9fae3bab01ab7bd878267365866604bcbc"
+        )),
+        y: FieldElement(u256h!(
+            "032c0ab2cdcb7b104e9de0eae5209f59442e525a5e88ecb3d3eb43ac75479788"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "04bf48c131b626d216c282a777b3b5950f03f37fbea7bc393aeec172e301bd26"
+        )),
+        y: FieldElement(u256h!(
+            "019703f6d42bac0d8f3140ea31b4807e5fc0cdc5ae5f79d7032336a0245ff63a"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "06a4212b37fa208a47cbe9fde895db3d1541d51e25701e89efa119582bc71c51"
+        )),
+        y: FieldElement(u256h!(
+            "009c93080204740663a202824b059af76ea423eb05a7f688feb4ba104adf5974"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "024150b90c0b9adb0f83c18fe1ae468be60c135923a100b308e410725dcef055"
+        )),
+        y: FieldElement(u256h!(
+            "0129e9fa0f8bfed2d21a921913ad0c07bb68a8c901483bdf2814abced6ca780a"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0483aca9f5b283fa9a4830279412c6c71490f005aa85760fea6d2f0840eb808c"
+        )),
+        y: FieldElement(u256h!(
+            "00498c44140d8c969d47f5870852df4eeb56ba0e3d103392bdf23422477c7077"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "009dda3ae53a619eecc3c57f83ed4251ea9f1110902cbea8ad8fdf025ce45d8c"
+        )),
+        y: FieldElement(u256h!(
+            "00301da8adebc3387628a8ceea78cc8e2db5aef09bb6aced0cb7d9b7d2954816"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "01b36c4f166481feac3d7514b94bfbbd077f59f3486242bc89a85194bca71e95"
+        )),
+        y: FieldElement(u256h!(
+            "0250d3d70c94e32d8105391eff1a36086489deb218ee14be07bab9b9cec770a9"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0024e0bd0ea7e1622395c128c7e430335555148600e5f017e784a54dc7657a82"
+        )),
+        y: FieldElement(u256h!(
+            "0011338d3fb064e0cec6bd71bf5ee10302ca101776a695ee6d4e7a3cf09bfe79"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "00daa67743a08fa34518a6104c158962592a41586a81709591e16d5a3a2cef5e"
+        )),
+        y: FieldElement(u256h!(
+            "00bd174c5d9cf246704510760160eb0314c120c8b6f02f954248493755f39d5d"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0009053c8c94e538f41c2fe35c88b2e97138aee30dc7eb831b58160ee4d69d64"
+        )),
+        y: FieldElement(u256h!(
+            "0389ccaad12ed8a58ad77a9caed3cd48b3cbfc710e9ba8374e1bbe803dbc7f29"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0065534abc162829572449fb49d53c646ee560dfc60dd46c922f85011ff44d27"
+        )),
+        y: FieldElement(u256h!(
+            "034061814a7237d24914e1ade5d95796c6c291b315dd99c42703dc6237d55ada"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "04830846030aefdc7e6a65e2be04fa93048f47251632b0b0992c09760a489038"
+        )),
+        y: FieldElement(u256h!(
+            "029377fa0ee6e8705ffbd58a6262bcd4ea68523f4ca8ec1ec39e55da1da5e662"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "058f493e34692c658b7f7abef0306b923acd876419969ad424ff52f93ff41d34"
+        )),
+        y: FieldElement(u256h!(
+            "01f0f67799ff37903b863931116a5b36da83e7b573133acad596656194f7ee06"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0413e910bc961503695bbba568dca2fb0aa02308f65c64967dffef51aa7f5d53"
+        )),
+        y: FieldElement(u256h!(
+            "02f21e8ce13502dc8fbae2d54d23b2124d2948a1678bce97feee09d3e479b54b"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0277b206de0789465a1cf430f748849b0458dccbba7b6667600a926950409a75"
+        )),
+        y: FieldElement(u256h!(
+            "03223f1a98ce2d094e09f1b98d0dfbca151fea34a362f036d5ba3f2c2118eb87"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "06080b9925cb7e4a5ef96a8cfefef14bc6159194a60400db4f483d7eb0aa3d9e"
+        )),
+        y: FieldElement(u256h!(
+            "000046680366a6151df1cdfcef6a080d43f620d2d8d08dfb5890d72571891770"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "007a8f9d1f60dd271dad1d45d14dbf8b1e78064f8ba1640a6db861653fb0a2f7"
+        )),
+        y: FieldElement(u256h!(
+            "00339d35f2ad218e7d5cd25777408562e807a1176792d7cd338e82b130165192"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0293d778944e7c2cb0b419358e2e8a4d411214347397c69e7abedfc3d21d5753"
+        )),
+        y: FieldElement(u256h!(
+            "005adb1af3dbd61acee3cd9e2205fc8366cdbcb4985fe4bcc39e8f1e0619896c"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "04edc16285f2c0e615fe7b862517f44690747f52f5d7bfed5ba0912f845b0d8c"
+        )),
+        y: FieldElement(u256h!(
+            "02385fa221b0c15870c1eef97299752a0a01d76129b5abafc2fd258c0b218fad"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "07adba6dffed7c0c812779173dbd6e7efeadc76f24698bba7d502ce6c83dc702"
+        )),
+        y: FieldElement(u256h!(
+            "034d504fe07db804bcf8c79d72247c1852fbc9d0da344d654baaab2b9c839e65"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0394308588cb3366318c66d26679011151a91de141abb526f12955d61ce15c17"
+        )),
+        y: FieldElement(u256h!(
+            "01ebf8a20b19d53ed00d39900b8a86b15a35b80f57ad40d9fb30fa45cf389e0f"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "01922ab77c25d3c0323f6b5965e723849ab9b78daa1da929950e39842eaf70cf"
+        )),
+        y: FieldElement(u256h!(
+            "01c9d94bac8e99bb4a527c3e1cfbdcb027629f7509f35eb411fd24bdb27123a2"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "070cc7baa4e17458729531776778276fcf69578e9bd91bd7a287f985cb084ee4"
+        )),
+        y: FieldElement(u256h!(
+            "01e57cf96cc7143d3ba39d3707e2c57149cb1d5d7ae175aa2161f07e15fb481f"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "06663aee3f0c67fbd765aacd1839a67a51e9eea9f1c05012eb3fd115507c4339"
+        )),
+        y: FieldElement(u256h!(
+            "02e03b49a406ea8497de25b8956b6758fec048a7782a982852ce05efe26662c0"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "050dd39b86db03cb72fd639ef7aaf92d0311fcc13ee7b214509efd51e1ed9d22"
+        )),
+        y: FieldElement(u256h!(
+            "00e69befeaa1a906141c08b5239cab9297387e2aaf361025ccf9f0a2d91dc258"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "01bd3edfa7bf550a7474828d652dd816408070f93cfc3ec886ac54feb0fcf312"
+        )),
+        y: FieldElement(u256h!(
+            "01c68453649f85ecd6e24b28a1ed350ab4d0404ee546c3a5cc26a8fff4d719bb"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0125e46d769f18bb293c5f4b8cf7f9eade40d90dfae6a5ff10f44eba03d7fee4"
+        )),
+        y: FieldElement(u256h!(
+            "0157c7a6b2f24c5b298218f6c363aab3ac0e61aa759cbdef57c8f970c1f07c65"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0529036195e38051b58957394bac6557c771b6736b4ffd16669699643a6b550c"
+        )),
+        y: FieldElement(u256h!(
+            "03eabbf8099150584292658e36b351126ebaf173e0bca3adaae40e6787618890"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "02fbe312fd7821654b1846a6fc2475f2959bc212685778990c847e2ddd9a90f5"
+        )),
+        y: FieldElement(u256h!(
+            "035bc5bc63a001661407c81e7f7c6e599b8b8ce030ca3b258e1494da5cfa9fad"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "040ceb5a08e9e91573d414370740d64d0712a939a5e0f39541b492c7b8e2e3bf"
+        )),
+        y: FieldElement(u256h!(
+            "01fd1bdc65e3d483bb7377c647ae21c2cc35ce93cce367eb7b9eef09bb4ec452"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0088550e4cc52399f23e106e5510fcf6909b7eeb9cb765f7a280597d895255c7"
+        )),
+        y: FieldElement(u256h!(
+            "021df7ed0abdbfc0e32eded80e741e27b0bb85afeb1807d10e1a56bb3aa74173"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "06b9ad6581c4c479b5b79670dd5247364f1362ebea682ca2f48ce10d918226f6"
+        )),
+        y: FieldElement(u256h!(
+            "0256394c4a9596465824e646545bb9f0e27cabe18598131fe246920f4026b897"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0036c8914a4a600b1a5e3fb028a625b532b5a34b403a8f9d5bd4373197778c1c"
+        )),
+        y: FieldElement(u256h!(
+            "01a8909ea4919ef41579803687a522aa2fa4fd75cd72d52348059ded8c9e7f77"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "00e989514c3f06657dc6e9e861ea016acd9a63f8a6a1e59a0a1e1404c9f9a618"
+        )),
+        y: FieldElement(u256h!(
+            "01b2e61e29fd99d655dd585fa9c561768aaeefdecc9a4dcf4ee6abfe2656f2d3"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0373ce69b7411b98a78145131284b0d7e92e7b5f553c9f908605f7466098a22e"
+        )),
+        y: FieldElement(u256h!(
+            "0312a90c7f61fa980a6567039496615f991b1f0fa6b02b79b540f3fc68bbe236"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "027b9cc68be8ac980c9dfa89ce20eec78a23b2cac2034146b0da0ff6ea7ca5a6"
+        )),
+        y: FieldElement(u256h!(
+            "038d334b4dcc0fc3eafcd89d3e247579ae8b0d7ed369372de69b2d72efce26e3"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "04bcfa2046e0887c01cee1328f9f1af390e1eeed0a4de0f851a90cf25e0c7b03"
+        )),
+        y: FieldElement(u256h!(
+            "00c1d24fb6108e4e35b5d0bd49f3e8084dc977a8414a849d83a6423fbb3c60c5"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "01284d939627581d6abd80657216999b3f6a6fe5151dd48fbe449756458af644"
+        )),
+        y: FieldElement(u256h!(
+            "0263343af2a75478902b8a8480a968d4443b2422044127cfb78df555920701b3"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0470d4c503225f74fd468b9cf01e0cb166e2dafbf06b24ce02f07590bcae0392"
+        )),
+        y: FieldElement(u256h!(
+            "034c354fbbcfdf69226e8a6861a44193b6a682a7ef9127477064a2f39c993d81"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0582a003d8fcd5f4ea40d34cb1fee5cc07a96cdedb142dce76444964f8cac58c"
+        )),
+        y: FieldElement(u256h!(
+            "021927c0cc29ea8b61c3ed642332cc32cd0a4b28a3a781adfca535e03d686050"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "06b15d6e66815a4b3097c56e363ba74ca480f205f2d0a21c000b19265cf3c9b4"
+        )),
+        y: FieldElement(u256h!(
+            "023367a4afef269ae233a0171f6156613a59221899e85ef52c488fe39cef27ca"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0672a2e5fa01b2a5e9c14f36607337cb829ee879a9a668e83486e60e8ff90398"
+        )),
+        y: FieldElement(u256h!(
+            "02b4b7c1f6aee6dad99ff49cde5c1b3bcb2eab2f45095edca3fe4c7087d8328e"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "064d86ee99c06ccb55648b536b29a7ae9cecc50c6aac5519dc71da89f5cce6dc"
+        )),
+        y: FieldElement(u256h!(
+            "021d0e8832731ad3dee37a26e09956d7a2d18070c7060b273e818637b90f6b4e"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "028417dd1d91bf848d223d420deec244d61e36573daf4bb952bfb5f5fe18a8d8"
+        )),
+        y: FieldElement(u256h!(
+            "03d499df3699ce1437209f8c162ca8ab60db026b931a121b398c1211590ac175"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "04170f64d9cccf60808c73d373b9c99dd4f7f93f2daddef9a7effaf18c5a9446"
+        )),
+        y: FieldElement(u256h!(
+            "0046b33e2c3abf64420c8e0f560a52a05138b66c4f983090f3e6ad0a5e1e0304"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "02ba0d3dfeb1ee83889c5ad8534ba15723a42b306e2f44d5eee10bfa939ae756"
+        )),
+        y: FieldElement(u256h!(
+            "031ba5dba94520ba704f0d71b4689dddb58fb283a05b2b07a028b4023738bd34"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "06cb3fdb494f1bf297fd78f330be7e8c494de17f0bd237427e2af0ba5d7ded8e"
+        )),
+        y: FieldElement(u256h!(
+            "00fda7c170c352bb44ea14cb636a01e2d5fff5bc770d038a311f1988e502ca0d"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "045c121c01c2565acf11dd7469fcf612c2ff425edb2618b05511e70a1e82926d"
+        )),
+        y: FieldElement(u256h!(
+            "01a2ef0828ce9779cb3b10637445b76e4bb107ba2fc54c4c4073ae5c0eb98079"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "07546ca8a1def078182d1d87e3e943ecb9d6d92361d247a6418054319e596ff7"
+        )),
+        y: FieldElement(u256h!(
+            "00d8e39c1e099d6b2bcb996e1c845d0d16d0db5f6ef2d1f30cd70aecdd718bc5"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "01fe314f8627c91365c90249d26a045d92059d110db66bbebe242a24b2c1d431"
+        )),
+        y: FieldElement(u256h!(
+            "008388848a504691d5360935d9b107e7fb592d0be4b3ec826346b39a32f44a43"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "00b29e24e8d38eb52923b6ef90bf3c5647117c3f926312441b1133cd0e5cee87"
+        )),
+        y: FieldElement(u256h!(
+            "000e844fce58e42206ce03d1152a980e54ed35aa53d9d94bd48ff80f07a870b0"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "00eb05b08c6042cc41ac7bb6f6f7c1f15c00a9b3dc23a9a3e48619e47cb8c1e7"
+        )),
+        y: FieldElement(u256h!(
+            "02aff2d27bd4828ebf6c584042e8aa2ea52b119590b64d6bd3ab63bb01aab42b"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "01f40c55763a95ec5925d52d799878d26b6cac567a1b5b81511228b1764e1938"
+        )),
+        y: FieldElement(u256h!(
+            "00248d964c599e453b9d47c5756971a56cd84908f324486f76149efaf6211ca5"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "02c6299c1dd5d7b516a6eccbd7aedef390097576cb7432ed5fce3a02c6d91807"
+        )),
+        y: FieldElement(u256h!(
+            "03c069cc22908ff6c298b6c7eccf39c309e27218067378c2f2789ece6ce6dd21"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "07d65dd596161e3218bcf1ebb5cdc5761a847e3027e0ecbfccfb1384c2a14be2"
+        )),
+        y: FieldElement(u256h!(
+            "00b31254a0d21cd0225025a20360cd6e7d3b0453dcb2ea3412d63efce12bf8e5"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "07e71e9fd26859a420a37cfe50dcdc8110cdf885372f2cb90d0861b41a6c4625"
+        )),
+        y: FieldElement(u256h!(
+            "007511289fd1a908bf28bf089210192ba4d2b2bb55675890a371385516660081"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "06cea6759719ff73d6478414aa8d24714af1a8860a5090a32b260dba301b4996"
+        )),
+        y: FieldElement(u256h!(
+            "0380ac5ff9b20bc58e99536971353490c2d60b32e7135a7570d4309179d121fa"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "05d69019f30bac91257a3ec661c8ba9f731ad1fe1e2338a4a687e7d203fd4850"
+        )),
+        y: FieldElement(u256h!(
+            "00b23707c306937c93b07f4329e4185c3b46ce9955045ecdfeff659cf6a4b12d"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "05477486153368ebbf4b2a9112e48daa9ad48b5b4cdea01145bfd96fe65b07d5"
+        )),
+        y: FieldElement(u256h!(
+            "02ace5e01dd1fdcd70655a556f0420d4998eaf414d2914f6efd0e8b1b2c5b7f9"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "064d782c2f53274028b00bead58883abb5d7709e8ac1b1a3f50ab23f2a47f2bf"
+        )),
+        y: FieldElement(u256h!(
+            "00a0648be4735e970a5f7389268ccff1b78a0d76a5f24fcd12993420e7b57a60"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "03815c72e415a5b60791e6a28d12e5d30e90105ba0d2ba9d33f7850c4a29a0a7"
+        )),
+        y: FieldElement(u256h!(
+            "01a327db518335a779af723ec438437f9906170160af957368b9470d3ba28d7d"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "04bbc2f720b35b61f970f76f5478df5be9b30a0db53f2a354c6afe1977f8709e"
+        )),
+        y: FieldElement(u256h!(
+            "00f46942c1c99d993c921e3988306b4ca280395f57529cb4b634624b6354e432"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "01e85dde423673d696418c5bf102b223dde50d9d4d4066f02e189bc84108d2d6"
+        )),
+        y: FieldElement(u256h!(
+            "01f65c588af13884e43661599ae17f4ac1335887aa6874bebf530c89d7d9b45f"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0529eb3230b2d501afb7b7ef0c5ef7a99f7e8980a993353ffbb14c36ea100b23"
+        )),
+        y: FieldElement(u256h!(
+            "006f5d552471b09ab20ec17e83360d0d1e252c5488e6743ee17a6e3c8d7ed66c"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "044ade9cc3aa4138e0c3ddc18883bb628380e7cc9def4e207939f13d9a46cb75"
+        )),
+        y: FieldElement(u256h!(
+            "01bced244328cebdc17586924c955d8c4613804215601abe3cfa74e7bc5bee39"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "05e02f857c174d8dbb1248d3cf0646771ff8668add083c2e6db0f5127eb2ec9c"
+        )),
+        y: FieldElement(u256h!(
+            "030af40f315efe4a3b948b86848383f6cae0aeba0a128d1fd082fde2719451ac"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "020fcd957ecc47b895bab8206454a53340c29370f3a7334f2cd16a47cb4422cc"
+        )),
+        y: FieldElement(u256h!(
+            "0194a9a7f18ea40111e2a9b0ba6cb52082fa2e797efeb26b82b3c21cd04313cc"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "011f50d91cc76e8c941811e73ba272fd4ad1a402322e6040c15d8d62a766f926"
+        )),
+        y: FieldElement(u256h!(
+            "009b08b5501404edcc1a1847c7f419ce25ac1e455016bd3bb746a7d58bcae06a"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "07f7daf5d6d934e0851c36bc93b7bee7518fb506cf7801a2cc2f9d03caa4fb03"
+        )),
+        y: FieldElement(u256h!(
+            "00daed85048b18cc38b14a7f7f8b197a0cc0ff7037d8a9c0f2beca3d7fae15fc"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "05e60e45b65286db60a3ba9fe87c9cadc5885c7b9ecb96616204e7b3d2e98c3d"
+        )),
+        y: FieldElement(u256h!(
+            "018c56b6eec3350a44d514eede719ce13b7ced484eb906abdad146cc22b62f71"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "004fd09b73eec8d6e5ee345ec3e7f1f18534e9b50abe166ce731f4eff9e95816"
+        )),
+        y: FieldElement(u256h!(
+            "0273e4bccf0b5ea4c81de27a2a632059b1ba18f62171846a59d632e75ffc42bd"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "00ffcdcafea9c1a462a0b6c233d9e1d354da8513598edb2feaed5b0fff9709d4"
+        )),
+        y: FieldElement(u256h!(
+            "00093e246c6dce1df39809aae4d232456879b9f50f014750e6d056934f9b8ba5"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "05daec9ee49b6899b09c63779ba7e902299626781f09c692627113ff66280707"
+        )),
+        y: FieldElement(u256h!(
+            "01724c6ae8983698e2b8748187c4ce7f9d5252bdaf454948383b34c35b4bcf73"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "058f5d8713561284a8ada6e4fc34d777cddae78880990ebc394458d2dbe7cb83"
+        )),
+        y: FieldElement(u256h!(
+            "039702991f6a71489c160394817b57deb1c09bc872b8f52b8b8c7f3d05156674"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "079033e9a4c308f1c41c0ae873ca678bda8f6bf08a611b9493a335f63aec5dc3"
+        )),
+        y: FieldElement(u256h!(
+            "0156084b42362d3341081ce1c7edfa15113eec4e0469ba62bc58b4f88eb36f93"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "03869ee2f078fc4f11b7572e0d2f85e558b6fda0b39f9b924a368f528ac0e6fb"
+        )),
+        y: FieldElement(u256h!(
+            "01f36dea97e157c0ec56fc9efa84ec45e77b6be20dca947f435ffeefedbf48ae"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0103b514965486b5dec94155f77c20ec1afd6b54fd86e5f242632df40a79e44b"
+        )),
+        y: FieldElement(u256h!(
+            "01123ba1f13de7e7b95ca17935be5c84e9428937259a4042912b5b1224c24f4b"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "06bf3526728fafb5b0cd7b769b57f77923f97af35af98b888ae2a0d1eca4c949"
+        )),
+        y: FieldElement(u256h!(
+            "00e2ce42c3b7c6a8144af0345c7bfe817f73fea92ffaccc45b867f9b036c1179"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "002f1b029e9a607b64e12d3e2acc55fdf2f76ee086129abf78aaf3cae707fb52"
+        )),
+        y: FieldElement(u256h!(
+            "03f67d12448ba3498cdd08f0240723e5655924b0170f456dc268aece063123ce"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "02844881f7644c6d9ca9886cb2037f4425b6e4508d6acd350afa2fbf992b0e56"
+        )),
+        y: FieldElement(u256h!(
+            "021e4d2de479a316e7024056282dd8589ac84a3d12b9c0df589fd7355a5fdc0d"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "022cc8a57388755b722443834ea9d0f2ed9dd92bfb7ad032d77a5ca2887057cd"
+        )),
+        y: FieldElement(u256h!(
+            "030746caca347d5550882676ae462a469ff666410187e0e7f8fd80cedf1270f3"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0783a98259d8a0654823c63a77729534f496b81692d7ab390e4755841707a12b"
+        )),
+        y: FieldElement(u256h!(
+            "01ec526295b16e241366ab6b58bf5b661935b1e9d5bb56eab20996b2c7162255"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "052fd0a7fc6e31226ede102c41a6d8e544419816df0b30e577289a0303b286e1"
+        )),
+        y: FieldElement(u256h!(
+            "028987b0a0d997372382a4b3e8d26ed60f3881de924e5b693eae0970fc9c972a"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "078e9a6d7a9d69a9bdcb8123c621fccf9f9060667c1407c6ee926322bd6a9c65"
+        )),
+        y: FieldElement(u256h!(
+            "0131f92f4cb18928e42e1bcb6179d2ec23ef9d0f7426df5d8529b8fb0cbcfe82"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "021177eb64b9c47247aec2a5cdfc7f2b26e3d44f19957e14150efa962c64606a"
+        )),
+        y: FieldElement(u256h!(
+            "03a56bb403635193c4d01479bf6e3ecca511e50d4df8f8135021cbc471d24359"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "02a5a5c7ec39885e3c600cb5bf26fa39cc883a9530728f5d033ba27966cc036f"
+        )),
+        y: FieldElement(u256h!(
+            "00d8bac403e3996d0f46cdadd7ad0dae27f62a8d3d7e6b1355f07dfa2d1748b5"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0635b74203e49ff187015f0b28bd1631f8450dd670ec5e9c4ca70e5aa1e8d8bb"
+        )),
+        y: FieldElement(u256h!(
+            "029b2658602c6bc97d8bde04b796b2fc5e73dc5ec70164e5dc4527cdceb9faae"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "03b49585f0e8ed8d6b77125a86ccd63c5c453e26b7aed185705e995f1dc24c08"
+        )),
+        y: FieldElement(u256h!(
+            "02b1d7122c3dce9b44eef4da01b51dc74b6154ac2c8f786934d7121c7bbbf0c3"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "039d5d09a4b59a71804a4472622a253fc284ae23ef628b1a846caf1258ba6fd9"
+        )),
+        y: FieldElement(u256h!(
+            "02526a5c5386544be44359c57ffc93b5b210e9404fee26304978f087c487fbe6"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "074f4cb7307a7712d0e8b98c9c4755e803fc28670fcc4551148c647fc3ea4cc9"
+        )),
+        y: FieldElement(u256h!(
+            "030073faf26229872ac5b3e9bd2a67fa568a9a9122c548fd61401c55704ec096"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "052ed6ef846b814ed360cc306aff91a9a9b4eb5926218a223ec246e359950c71"
+        )),
+        y: FieldElement(u256h!(
+            "03cb41e8e7fa9a646e7a78a0857ffe6f6c76e839bec9830f390d857bed017182"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "049fb871d1060b40ae821393e47c3d6c018c56fb81602a72749e4af5dcea8045"
+        )),
+        y: FieldElement(u256h!(
+            "02900c270203025cd9c5f8a3116d1cfd3f120530a71bb8b7f430cb1ffc52a26e"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "04781e5270eb1c4b531d6e4551cf75df4019a1459ccbc6f2b744ca699e1d4ed0"
+        )),
+        y: FieldElement(u256h!(
+            "031b80e7df8d1aaa40db4596480822943a0e4a65bd807bde2768baeabb47fad4"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "01e63177897a973b54b5ada44f71e1a95861597d3775033217666f0283522275"
+        )),
+        y: FieldElement(u256h!(
+            "00936f3e1168651b911cb6246616792bb0adffe42e5dac2bc5275a9382131d5c"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "038c6cdc6ec412667b3efe805c343315db3a5c2912427a0f3c19bc9d21b684c8"
+        )),
+        y: FieldElement(u256h!(
+            "0153052fa359b780735332adb12a4d324243edff6e6e8775d2fae22784237b05"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "04ec8b456c02869637bd186cd418c8e6bbe855e3ac4b321ab808d57e717184de"
+        )),
+        y: FieldElement(u256h!(
+            "03e8b35abf1445dd19df23436763e589230b183005fe89c98e23c599f1dfffde"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "005dcb4da984a674632dcf3cbbb87735e0be59b120e2d8a30a3bbf346ccade3b"
+        )),
+        y: FieldElement(u256h!(
+            "006695ed00f79b96e96021f3e6e1a536b2ba9dc8837e828481e28fab42c3bf89"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "055bfdcc44e3a9e9f0fac10d87cbc2d90be5b72c291d4377ceebdc977ee2f294"
+        )),
+        y: FieldElement(u256h!(
+            "00054bb96f071e71b65627af696335189cb0178856b065631117b3ec4586dc6b"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "03059580106ff725d04a637206f08795536523ce4b8a5716dfe97b86f85af4a5"
+        )),
+        y: FieldElement(u256h!(
+            "02325c501facd4bb184446bb108ff1470a03ed61b4905a70b89a43929431a7f2"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "046c10cdc1ae393cdf544b0090ebba4117a03a3501a0c8845763749653e5f220"
+        )),
+        y: FieldElement(u256h!(
+            "0086959ecb198479d5511212bc551c383a12f518a48cfb155c4d5fd8c6f9c7e1"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0753e572551308f2e94ff628a3a352a5e59cfeb373e2f0e177e6ff4f1be1ab5d"
+        )),
+        y: FieldElement(u256h!(
+            "01c000f9c255e329885d55d1458d0582dee9f93ecdededbb5d12931104bcdd79"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "013ab8619c06fad2100636f5ed708a92408c873ebe3fe89028d5cc7298d9e8c1"
+        )),
+        y: FieldElement(u256h!(
+            "01b24831e210fb2499ecd2a9ff87eb7fff401e11e25f5763365bb9fb242f99df"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "02292e6b8c27c8a977b123aeded796fe37bb68c53571ee6baf20897174a2d4e1"
+        )),
+        y: FieldElement(u256h!(
+            "00ba0896006bf57da121f6b79b814cb2fb9113b0f221d75b53c404da02240421"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0778c20c7d4a33a7e8e26989c90ec6aef97622f3535418085eeff0b7babc8033"
+        )),
+        y: FieldElement(u256h!(
+            "0254308f2a07d3abc19ea85ed81f8a78440d557d0e335f4bb86ba52faac396f3"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0419f3e919dbf6d23d28a9a9e5f3ffdc1eeccc1278016712cc2c29708b3e4cc4"
+        )),
+        y: FieldElement(u256h!(
+            "0132cc04bb1843edb5c729f11456d7599b1a6b13c9aab038ae3729bdbf721530"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "05285cb2b815ee9cd838eafcd698adeb58c452701d0264f5ec9e3d4fb7774421"
+        )),
+        y: FieldElement(u256h!(
+            "0179968b4a0a462e44660c8ce2a7b6be9887f218041a1a93ee9ed6b0d0665599"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0078b44882ba5ddc09c552fa82a3728a5473fea7f18a2a513d9cb79e5f08af76"
+        )),
+        y: FieldElement(u256h!(
+            "0248a5e2385723cac35132b4daa5c30e95cad8ea6894cd2f7f3ec2d0cc468a26"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "063144eb0536d2b32aa4b50f697256573c545e5bd05938bcd1d9729b100d6f87"
+        )),
+        y: FieldElement(u256h!(
+            "033dba8e35402311817905a37cae3e479c00e8692c3845022b376bd2e4bf7e93"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "012a63be7d5315e3c1fda7e10a55ff5d099a00c9082591a14fa16575e704dbc8"
+        )),
+        y: FieldElement(u256h!(
+            "03d56a6cf1f164d1ebec0da6a433d53dce36c71cb1eb3988497b055d7100fc3b"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "04c0a60f3fd82fe8d7aba32ee46352428b22bf1416c8e1d18be3177a4c20cf60"
+        )),
+        y: FieldElement(u256h!(
+            "003de4f342d3191e8578cfab612f738942d8c70dddb5ba6ef0c354ed3b83ca87"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "04923ea416a246f4ea3e91248065a05859aeaf494d8d80ebb4354cf57df478db"
+        )),
+        y: FieldElement(u256h!(
+            "032d8ae6516ad0b2c07f49d86e415f6efe1ebe72e9cf627905822b0943da1fd2"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "051a6694e9c167c666809ca2394aa6ba3e93547a8ef91bbf445e4d93acbf2554"
+        )),
+        y: FieldElement(u256h!(
+            "00971271ed3d3a7e17cd7422607473fa0a3fb2db992df927e3b7cfedfd6a38a4"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "05d23132a41c1f30ee4b9b4fdc0812090bf0a727950a2c94c12616e85c4ad497"
+        )),
+        y: FieldElement(u256h!(
+            "00c9f03fc04961cd3b0da60b8b4048566a023ef4493c7e717dde329e6cb9bc56"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "03a87f0b141322edd517dc98ca218cb03a9dbbde130055615a3f5d755725aeb9"
+        )),
+        y: FieldElement(u256h!(
+            "02722295dfc4058fb6420d0bf376c0841e758e156fdc0f8d2a14fa339465c794"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "011058c21b7fd243baf75c1917dd2c490c4809b564429a25282478ea6c83dfc9"
+        )),
+        y: FieldElement(u256h!(
+            "02ccda127954a4e6487ca7e34f34e92a0f93d9cc48d88e581e1f100105663307"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "04189ee0696c22a9af5c90f92c5f7995cdb645e8843e5f9f94e1d8497d59f069"
+        )),
+        y: FieldElement(u256h!(
+            "03590482228ab14f4dd2146a655c05224dfbe9ce81e0b5affb6e35b3a660ff87"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "00a3b1f7159214e17b14ef828c67689bd4a20cfb79ef34abec4a0dd312c2d854"
+        )),
+        y: FieldElement(u256h!(
+            "035fde95d181cbc99c880d7b39f992f6757d6caddcf84af6360f8bb0dbe523e8"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "000c252516c860f718f5a858172705c53f05db9ec60ccf40c53f18311db003a0"
+        )),
+        y: FieldElement(u256h!(
+            "00aa739c9277491865218bd16c8e2c79489238463be2efb1fbcb04c32a139b2a"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "058411eec55071ef54d05cb74db366fb6a0fe5931e6a9a09a495b29363267b21"
+        )),
+        y: FieldElement(u256h!(
+            "03efb7d17bc0135c575660d440c454515e6cf0e45be5cff853613a15bc97df37"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "00061f580e8e1a2b872890c869698d92a7c75393909465ca09ba6dfebd811afe"
+        )),
+        y: FieldElement(u256h!(
+            "0357d9e9a5174647102c5484104b4f271aabde5a39661388856889c9be5ed261"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "051c1b6630602128add6bb158aa6b3f108a4d070fbfe62850e7ef6b61806f0d0"
+        )),
+        y: FieldElement(u256h!(
+            "01e94aac8603483608cde19b05fc786012f10ab0cbdc34aa747fa0bc1fa1375f"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "07aaae612fee4154a5c60d1208cc055b6a8762aa8e61cc8feaea032369d474ea"
+        )),
+        y: FieldElement(u256h!(
+            "0373357b78a3e88f2fca7a986983de11b59c06a32ee8b0cad8c9b15cf1058b21"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "07bc872769701c0a4926a2e7d2719a541443f282fc646903532d19ebff4ef867"
+        )),
+        y: FieldElement(u256h!(
+            "0343c263478551551e40015b7e97a2daac82c5ff5e644897fe1aa462be5eb8f0"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "01cde87f65d6bef73b513782eb07d7352811611cafe7a839fd4a623cf007f06a"
+        )),
+        y: FieldElement(u256h!(
+            "03cba7dcdfe535869c6f522bb8e70cbcd8b18d0b3ae76864ffcebac06f824ea8"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "00b64e2f8b90ff241ff2ffc853b70cc7f48e84e4fdcb440b9fb6214584181e3b"
+        )),
+        y: FieldElement(u256h!(
+            "009e480a1200526cf3ccfaea666a4317079b1559f0ebb14c557a056554439413"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "049f95fa49f8153e36cc0da4daec61d37b46d0317505e50b85b5e1748adbb9fe"
+        )),
+        y: FieldElement(u256h!(
+            "0295929fa14e82f0b823be5c9deb4a14331c8727e825bf0af25882f42d3e2dd0"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "04e53f0ea1e4c5bdb23fdf171a1b8485f2f7df09eba23a932b26fd960c42ce15"
+        )),
+        y: FieldElement(u256h!(
+            "03d9e8d9ad91332756cba3fc2991b107ba2584cbf2eb541e36595a62c53bf83b"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "04c9811dc82bb472649ce2a83b26a8b0739add96d81a815db74d62aba1c9af1f"
+        )),
+        y: FieldElement(u256h!(
+            "037d1a8e7d4fb54495b3061d1b7a31de4e28d5be0adfd139b386ae09336b7373"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "000a61e05260c14b08af6458c01541dc8d76502ffb64d6b09e6718856cc6f9b3"
+        )),
+        y: FieldElement(u256h!(
+            "01433405305de6ae4a74108b6cfdaa34234e1a9a83dd6890678a7a742449a272"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "052e87e3161aa42db450ac4176e278d0582638d74f65026224972854d2585ea1"
+        )),
+        y: FieldElement(u256h!(
+            "016bf36f892ff94e592c03dc3e9437390be875098e1a8f7c517fa7a88f1ac61f"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0191a50daf714d63c78b0d8d75d522ca1969de0116b003b715978cf6e598a660"
+        )),
+        y: FieldElement(u256h!(
+            "0253f6357e6bd29bc25ef287a770fcf8c8ba6b3fc0b3bf3cd9cd6ce950f88a23"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "06f8efc97a133a1980d265643edbb77309f77bb7c7bcdbbf8465a39ecc2e98fe"
+        )),
+        y: FieldElement(u256h!(
+            "02e3275ec2d9f32552cf4992bff312a738c9e1beb7422c5e07469e197d3fdc27"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "04511e53e7407684e2df402b5594974aae9969f472f58a990add693f18c792a2"
+        )),
+        y: FieldElement(u256h!(
+            "0088bb48d92fc6bb5767fec804156898c280136991ba56685ceb58bff4947767"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "056b558b770429a34b5f00527e8769675945f25a96e13c8c1f3240347297bb95"
+        )),
+        y: FieldElement(u256h!(
+            "02334622850e9a18ecc41ee58183e66866d2d05bcbc3ea2ff6173278c0b2886c"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "04ea79cafaa0d6ca4731b0385af5197db944ba7d4f99de3ca3cab3f2f535d197"
+        )),
+        y: FieldElement(u256h!(
+            "00ce6fe74c7ddb9f40f2684bcbe0723e345d8196500009976ef7214e0cee97e8"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "06c65946cd51da9c30a36c38089e1370be2ed6b964bc3bf7a58d8050bcd867b9"
+        )),
+        y: FieldElement(u256h!(
+            "0238b983afeed5c6d09ed9fa73a92f5cbe3178e15a809dffe13fd294cc8e20bd"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0261993ea595627123f820a0be8db872f636da9918e0311f467839fa78591371"
+        )),
+        y: FieldElement(u256h!(
+            "03a5a1598ff99ba03822675b51ce7d2a8016697225ede7b4107e9e85e3789aa7"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "02462c8623c8174d0f53c95a9e65cc9011bceb9fc5c5e47526a101ccb55a8948"
+        )),
+        y: FieldElement(u256h!(
+            "02e6f6bfa0b2aaa64f569b6340af9d920dd2409973e2778d4debff6a6aaaed2c"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "027f49416646b6ada84b3445933b77c67f064ba44afca74dbb9e96e630d3992b"
+        )),
+        y: FieldElement(u256h!(
+            "0386d93fe81c98d8b65244112a3dece1c310eba6abfee10baf0e80e8f003b048"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "02f5028bdd9240da43e90640d3248f7492659b98d5eb1387b31306f9669704cf"
+        )),
+        y: FieldElement(u256h!(
+            "020e59f6098ddad615ddfa242d46ad749a44b9e212e347f921515cb0c2a69d91"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "056d4654489ef310c5a3e3e3619397c05ecd0137b9ef1c599e3a8c66bd941ddf"
+        )),
+        y: FieldElement(u256h!(
+            "01c9007009a59af79e57abc29fc855da3c98d55e70a133b64c6c84f25c472b88"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "041fce82bcd947a9613cf294a76f5da3fd918dc8ba351f51ed74f80f4e8c42cd"
+        )),
+        y: FieldElement(u256h!(
+            "00ae9359056ead47305403ae84d2d1d7614ccc8054422207971b4ad0a764faeb"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "015e3056478280b334654259621a3bed58e75a801da500dafcda038eae9be424"
+        )),
+        y: FieldElement(u256h!(
+            "03a428b22f9917b769a1dc4d6c1b6cfaed1381af6837e8054e9fd0eb89c920c1"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "04e6305e805d8631420ac29e2a12c2e932a401b2f863eac5ece2c8cdd6bbe23e"
+        )),
+        y: FieldElement(u256h!(
+            "026e2273b24d76064f16dfd0c22a1ca2d7ba07c22db5fb4bc27cbd91c96c9054"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "04f3f304708f201959306dbf9ba166af01d34c95178fa34eeead515aef013d30"
+        )),
+        y: FieldElement(u256h!(
+            "0299acc51dd47a63cb63ccdfeabd7434471a4d5bf5a6aba76702d76c1d9fec56"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "053d656782440f86eebbaa47a2f532fcbd4e8bb7698ba0bd0757a0b4a44969df"
+        )),
+        y: FieldElement(u256h!(
+            "03f23655066cf2564d53196b5e478e9441be0a677dd7b3f94b8d597e56f7171f"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0315b0daf52a1e0602ecfb6fa4946c43c169acec9ceab2908e70532a7f663964"
+        )),
+        y: FieldElement(u256h!(
+            "036a3da480637dc8dd703fd49bc81eae32b1381a352d3fbe660658c9fc277b7b"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "058f62b1c8e9f5d3e02e9b0e628190d8294f2e9d55e72bacc711c5964c30faf6"
+        )),
+        y: FieldElement(u256h!(
+            "03dd53d695fe87ba764bee0c86021b691c79f9b3db5b07704b929cdfaac31578"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0572732409f972a703aa18c58ddcb5cc80c42b0cb1142eaa553839974c52fe58"
+        )),
+        y: FieldElement(u256h!(
+            "024a0e5e42f3cf78d1b7c1b5c97f8c464f7898f73501154e2187ad7fa77612c5"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "016129b93dd2c1ccc5bcf47b4d62a4c47a70099ffdc69fe0b02a5fb08116075e"
+        )),
+        y: FieldElement(u256h!(
+            "010f0f9ec67a9bef8b365ec2cf474e2a047765f1ad1aa82649f81a0ef4cae9f8"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "006fe01f2d82f67d84bdb63445a260706236e0073e06968080277195c3658dde"
+        )),
+        y: FieldElement(u256h!(
+            "00ef34821239685fffb3aba7777de5a43dd3a94426d3d4bfbe8b96419a6bd420"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "067158f0a5d04e941f4e09828304664f925f5d498cb2446848604791842365ef"
+        )),
+        y: FieldElement(u256h!(
+            "02f6ce44b87dc9d7f771943fe1d6e32d97f7830726e7189eb03c2e9386756499"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "026356f7af4e696961dd162be81175febf7438684e5f446069b42a839830fbdb"
+        )),
+        y: FieldElement(u256h!(
+            "02786725c3ab42854a42ce48bb5d7b4850d4625fddf592ded3ec5d85bfc76194"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "03c0561ede5bbc8a9e5107e1a20c98b6eb4e5b132c5159e21eff0e1b42723754"
+        )),
+        y: FieldElement(u256h!(
+            "0175388519464d14aaf44e3685742e5ee7e00cb7394bca37a5264eaebe27f512"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0084cb46cc865d3a4cbe33b6a9b6914f4978619f43ffc2af110bce073327f1ef"
+        )),
+        y: FieldElement(u256h!(
+            "00b5e2e749dc47c2a4d74be827960368bf5923b7aa40b4c1492744548d3b60b5"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0500e9d04912d14b0a7db89d1831325560b2396f204a0acd224f2b78bd613c93"
+        )),
+        y: FieldElement(u256h!(
+            "00046437356cf1f9dbd9e14c20f6b7238ad45b8e5b6faab80e396846da729d33"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "01ed48efb7f4ab118d981948ed9dad3c934916d196883fb38db6409d4727c7d7"
+        )),
+        y: FieldElement(u256h!(
+            "01733b4ab9a39d0e9fb8050be258d1753b8c738cf0ba2a59f21fc28059a325b3"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0016fa4f5e056509150307406411de668a1bf485cf87cc688cfa9d8b9c36bd22"
+        )),
+        y: FieldElement(u256h!(
+            "01167fd0b50d6a022a55c0ba462fc526c9465c93b8d22e9b5637f07251cd7381"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "056c7bc2ee3772c853e13f3e41d92f933884d665da4507afa57f2c784feb9e01"
+        )),
+        y: FieldElement(u256h!(
+            "03c9bc6bb94431647f5d20b5bd786256049114ea89e33f614d7faaec94b085fc"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "013435174ebf1269c01ac67c2d4835ca50f97da8079551da3bb81d565895ac6c"
+        )),
+        y: FieldElement(u256h!(
+            "02fc4561001cb0e9b1b060161f8a80ac32ec660b921e61400f09e6c45a89cf14"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "00badcad87064fa9f2f6fbdf93bd2f85ce28d27a483f2e1b08d984432368cc4d"
+        )),
+        y: FieldElement(u256h!(
+            "00df1970d13aa99f79c96109af36abeabcb5e6eb26c5b792d9cdcbc08c2768a9"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "03693aeaa365e29d41e1dea2572f7519dd9e05eb6d50b605611442f251c673bf"
+        )),
+        y: FieldElement(u256h!(
+            "00ff17382e0fbd4620fdfef8feac243d960e5a5ce3d966ec55a048f8e00ac2ba"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "01bf80fc784e00f25c457abc4f715801a68999a737af38473dede51303fabde3"
+        )),
+        y: FieldElement(u256h!(
+            "014a0ed006e5c80a2a60c1df426d00ce305a36f37ca6922587dd786f00b1ba4e"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "04ea26f730e82bb715a98e41b1a1121603e9047cfdc8beae0dd6d5bfc78e07fd"
+        )),
+        y: FieldElement(u256h!(
+            "014e9dfb0207cd78739909419c953ad759022fdc7dcd8adfd7351f2fe44c3999"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "07a654eac924976eebf709bdf6df6823c6a42448d1dab91e1144603d50143a13"
+        )),
+        y: FieldElement(u256h!(
+            "03ea9ad72e22f330bad29064a532f8d10b8a66b6b0220b0020d57402bc3bf85a"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "01d08ff690e0903b8b382c00c5c4756ae1a6db350973ce8bc04c24a386a6a9cc"
+        )),
+        y: FieldElement(u256h!(
+            "03ec9aa0ebcb0737183abb1c2d9a6e300dfac9d2e92648a20c33569243431c7b"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "045c10f66cb3f2bb8c4a2bbd306f9e908e3193c57bca384d6a9f55f793038ca2"
+        )),
+        y: FieldElement(u256h!(
+            "0312dd1ba6a156e639111fc6d9babc1012e7d848933ce3864d0958193329c3a9"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0574879407a659e7c417c32d0a28159ac24a97bf6f750e174e7c5b67f2ed6bd9"
+        )),
+        y: FieldElement(u256h!(
+            "0168b6c5beb28e89c1c06881c00284684f614370f9ed10bead771b4014f9db62"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "024f12eba2431aa3c20307ecf79dd60479dde2e0d5a9ac78681083decd2ba4ca"
+        )),
+        y: FieldElement(u256h!(
+            "02f7ed9b912c6b299ec02a19e77518aebbed9369e320870707ae317a36c6c1f7"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "02db90a9462cbffdf993443f5e080dc8705aa07d2f6300732c01413c38d0db35"
+        )),
+        y: FieldElement(u256h!(
+            "039eae7cc6a1c5d435025b5c8c2923d4a1867e3aefd582aa50595f520add184c"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "075d49b3c2af0f3bdc86293fa485e4fb814b690a819ca0dcea3be20658ff8167"
+        )),
+        y: FieldElement(u256h!(
+            "00bedcc0fc3c6c607b451777e810164d2b5057b041ca31bd6329f1b67bf52b07"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "030a30018f83fa9570825f684d65c76f550ccc607136493658af066fdc64473c"
+        )),
+        y: FieldElement(u256h!(
+            "00aaf4fc2b42cdd1821c5542b8eb37147d43daa6e8da55efa58016ff9400ec89"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "059e613a7ca62c41df5c01df12971d51e95f24e7674f3da167d4f928b2ae030b"
+        )),
+        y: FieldElement(u256h!(
+            "01f51f4e10d2fa855c04a7124169085db7ebc5e8cd281b5d1b9455bad5be5965"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "00a41a8eceb53ec99de74daacfb1d48abb041e4d07caa37e1c6884c0f9d18c51"
+        )),
+        y: FieldElement(u256h!(
+            "01949090ffd620036df483b141b26bae3bbce67568fecffe7f2cbf37250e0562"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "033f01db3bf539089e2ae9ac287e21e19e0e552085921bbc89648a539b4aa20f"
+        )),
+        y: FieldElement(u256h!(
+            "006d695e7aeb8a17dba02b48c06d171adfb12d4b50fb6e40326887d4d7a6392e"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "004b1202ce344ab5294b5444f58b008546d35ba097a7e18286cd2b64db9ae172"
+        )),
+        y: FieldElement(u256h!(
+            "03290c13e43cf7dd9def659b15336bee35da3e5449ed54dff86b930b02e825b6"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "00b6d09248d4e2ebf1d9da24f7c4dffefeb43ca908ddc9f081df9a82755483b0"
+        )),
+        y: FieldElement(u256h!(
+            "0074cafe46ee3b77364b9ee89a59db623b7498352affd018437eb8e3e10f04b0"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "058458d3be3fb461d4ca976e8a6695d7955e9ee52f90590a06058fb18dda5a90"
+        )),
+        y: FieldElement(u256h!(
+            "00bad5162ce015ac879d77da811db4a2aaabf3b294d25edfff306cc62b5c3960"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0718576d513a5f6717f4f14dd6b0a24647f21109bc831443a68edf19fcc3f3ca"
+        )),
+        y: FieldElement(u256h!(
+            "037d9fd35488739b9199f27db8828a5d94cf26f05df47b94538e38ca7fc5bfd1"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "03d66f7387a2f0f119117d9ee1da4803c6f3b90907c0cf0435f1946c572f71fa"
+        )),
+        y: FieldElement(u256h!(
+            "002cd845a19413c4cb246d692dfa0af6611dbcb0dd4844ff1833992c0dfe3bfe"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "02c236d4e94f350a87250c49b7c1d5c0d1c32da3d5b12b77de97d1cd4da2ed19"
+        )),
+        y: FieldElement(u256h!(
+            "024258b56b934b224075bfdeafdec5a52e9d0c1b0a0764868384254585677146"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "045e03b48f8f6d0889b165a5d6ce7c03848605ac657fb1b08e3a0ffc8ab2c9be"
+        )),
+        y: FieldElement(u256h!(
+            "0037640ffb9bb16014179c483c0b832f7736db547c4151c31654375493b3f4b5"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0783df8e738b742f86dbc0a5d0aaf0b463c55208bde94ddb25193b0ae7739fbc"
+        )),
+        y: FieldElement(u256h!(
+            "01988f5a1f153d1ac4ac9f05e6ca960e4fdb737411758cd9237ab8fcb489d95a"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "004f512bfaeaac539597787724c0c9fe3205911ff0a292e66f5251d872e0ac27"
+        )),
+        y: FieldElement(u256h!(
+            "007bbd0934537c79b21388b14e26fb4e0a45ebbd785cca6c61494be6f0ff8be2"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "00438890e188c16416bd3bcc4647890a5cfc40e3ee260ce487614ccc1c6de2ce"
+        )),
+        y: FieldElement(u256h!(
+            "0278ac92539181ce6ecddd3cd17f26d8a9867b9d04d648b39c23037d8eaf7793"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0559f41c2500783db84a29531d3d6eca35b11c6a5284dc0d9ea210b0b8bcbd45"
+        )),
+        y: FieldElement(u256h!(
+            "01af8fdc9ab17d3c90c898d48c89732c1d5fbabb452df0f12e9b2f3cd5382fea"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "01939ad1ead846c989da906ea5d7d7d27cdfd1be7027b7c35f0d96e8c1e52d4f"
+        )),
+        y: FieldElement(u256h!(
+            "03589e320242129a130dd0a4dd9d2c35a346125c7622d4065aeefd76bb7cef67"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "00d9aa7be65971fe1f13e7cefd760e687e7e36c54de8a7dabfa93eab020c7b0b"
+        )),
+        y: FieldElement(u256h!(
+            "02852492b57e05e7eb61f7f5ecff2ff8a9633304f84322a247a60573713d51d2"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "012e45784c7a8dde161dea8576c37a4d01929f82573eceb30842bf3f6239f98f"
+        )),
+        y: FieldElement(u256h!(
+            "009b26069ebcb1760c1f6a45e05a0866d91a59a4e3dac1f44e2847fdbf238cf9"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "058b72cbf5e61094c4c6c9b4e79a7d0aa76d75a82aff3960ab54c6318f5897fd"
+        )),
+        y: FieldElement(u256h!(
+            "00ac843352f14f3f3531d289f869e6231e567e16a6db69c4a8482aa46dbc1646"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0067ffc4b0746aaaa66bb63537751c00becf3655f49304057dd7f6b64e44b774"
+        )),
+        y: FieldElement(u256h!(
+            "01b9c00e857958712025b68969b60e560c1c9f0d880340e27c06cf76cbcac16e"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0526c3852b714d6a6b7ef396e5f9a3297c2a3852093494aec0ebff6aee7f4135"
+        )),
+        y: FieldElement(u256h!(
+            "01895a5b0c68cecb06ff6ef75edd471c453b14d7a06adb78b5d58a3ea055bc9b"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "029df50d0411f78e22037ebec835df84b2e2cbeb8eb2f83d6645491f773489eb"
+        )),
+        y: FieldElement(u256h!(
+            "0384199611665149e477891823daf1fad954f12512fc1822318c25df404c081b"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "06cb707af3dad0b40f84ad9a33967298cda9474e57604f733450c6c404cd6dd3"
+        )),
+        y: FieldElement(u256h!(
+            "01895b1125d8111ca615fc206f852fded518edbb99a29f21d9a804a73073dc95"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "009ba020b37ad153c3f36f62ddf299d1ae80bdb88c12d070e6b004b9443ca83f"
+        )),
+        y: FieldElement(u256h!(
+            "0261fd0e65708a1b2b1cea6f02b8f176fb02ad97ebd0cff629aa515bce8b7963"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0438d911ea6ced64100a995e28d018f9bb7cc10659f6c443114f2a83ff5b88c7"
+        )),
+        y: FieldElement(u256h!(
+            "02b06c0174eb6bca5415cde472aa859c9867f293210b47073737d021cd456529"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "01a78a9ad366d9440f2b2f342d1de715c192fe727d4dac52e3f68a0a27206d79"
+        )),
+        y: FieldElement(u256h!(
+            "02fd60b87e2200966b34cb175974fa552b6a330020cdeac85dc7ceb2a045d1e7"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "050b59340cc2d93b25db843d49b2a697c57fda22c30ee06c90097bfdb108138d"
+        )),
+        y: FieldElement(u256h!(
+            "00d7f998135d65ca9c75773d16b5d9b1877c4033ad21817f2012d33139659e2f"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0408f45f10d9f96139c8ba7b54fbc15be7763fd69367e0163e16f3c8f14fe006"
+        )),
+        y: FieldElement(u256h!(
+            "013faca83366df102c48d975b5a05cfa7312fbd73de27bdf646867f3d22b6d7e"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "00b05c91e84b896d8badc5849e81c3890a2d91c53b30e481c9fa4291d3c7c3a5"
+        )),
+        y: FieldElement(u256h!(
+            "00948e55d2d19d55d516a2b5796f1ec89a721608d620aeabd3cd4869df82e56e"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "00adbd1c2236c6719d8fe50f9c02989d97802833d24260472c28a09d83415e6f"
+        )),
+        y: FieldElement(u256h!(
+            "00f9326b136a335a90e86ea3358c25a3bbfa79c2b4264828aa46f8d9d3889cf5"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "005b439ca306b0402abc67fbf5c7be8d416700a827229860e16232067267842a"
+        )),
+        y: FieldElement(u256h!(
+            "005a20aa91a01e9145e18f6f0f05ac7d080eea0819ab85920eab615fb8e0e4a3"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "037a8cdd72b8fabc23f72fa5f169eb12240acc72050ae9d0f1f0c201b3df3376"
+        )),
+        y: FieldElement(u256h!(
+            "02b85d08aa3b0478e496e2bf4856618784762f16437a9f4fb6a20614b42ee212"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0407c683f4d25319fbbf2584086ae7b3624963f441a304be2ffa89a0cfd82176"
+        )),
+        y: FieldElement(u256h!(
+            "005051dd3aa13b13377ba29f7a26f6418e5149fdda66654767409af1b6367234"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "01ff5abfc986a66c66d814fbd546b1cbf4fc3cf5c47eff265f0add90d0f6bcee"
+        )),
+        y: FieldElement(u256h!(
+            "004c776071e5e1d646166ef0721ec81c6b0bf9889d8c9c1522d1750b4a75e90f"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "029a8c8b71f7710085d59ec421fa20ae2d15345a8461f165cdb0c1ff9cd2e6fa"
+        )),
+        y: FieldElement(u256h!(
+            "024e69df0fcc28608d54f0f21663fe6aa6806dc9dcfd3914c4250d5d802bdd7b"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "035080e09d2319df82b603cea6203f8ca10068461d19018cc0b584408669b5a5"
+        )),
+        y: FieldElement(u256h!(
+            "004d882a99b51a6638d659393a13d0059829c14c39c3cb90d6abb4c6415f0ad7"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "015cb3c6e8a4bda3d6463c48d7f296564effd59b38032ae4f4c4caa58e229bcc"
+        )),
+        y: FieldElement(u256h!(
+            "03d221f8436a7e4f38e65b6396c0e360d374fa3c69ba56924d40d6c761264f0c"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0375ccbdd7dc82ccd95fcd8b0c182d2d0fb13a27a1f3075468d010bff9fd31e2"
+        )),
+        y: FieldElement(u256h!(
+            "03733c4098a7f955430071c6f05fa38aff4e88d07ffca592160d7171c8612740"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0705aa5a2f3fd0939fe508e8421edff01b5043d4db56af49a5c5848880fa6a7d"
+        )),
+        y: FieldElement(u256h!(
+            "03b414ac278c8f6709d0fb140d6f4b05927dbb267349984a3a41c3ddad86d224"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "026dd650bec4a8b9f4601bccbd5725db68ba08d5a2612094ce1f07e062da52bd"
+        )),
+        y: FieldElement(u256h!(
+            "00407f17e79b0c103ad116b6d2089033f210a30357f30ecfdf7835d6385f903e"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "00838615ae3efae78b37201a3a9d49a83244fcbd392aa012e4d152c650206618"
+        )),
+        y: FieldElement(u256h!(
+            "02ca44340d36cb32e8b4e19f48eb9c4bee1e9fa450bc9918d4b2972e026063af"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "032e72327bbaca46f72b6195ca00e84484edfed67dd87486f3f894111d1cc9a3"
+        )),
+        y: FieldElement(u256h!(
+            "01e198e249efaa79420d03bc1ba4653221a6f3c1b13903f011e545f888da9d01"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "00281e022540a98c39c0f32aa847c43879158b198516a3f0a8ac9b5e8ce28ebd"
+        )),
+        y: FieldElement(u256h!(
+            "01bc9e7f29ff1f260f6e0cfb7bd923b7b0831818864d5655cc8cc070bf39f9a5"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "036742056dda9882344a829d2a45b4fadf97ff6b178f3dc3cf1fb46f376b68c4"
+        )),
+        y: FieldElement(u256h!(
+            "03169ad289013192cc2fef8ba528e08ee7034a853b13244f77d3ec1050ea8758"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "07f3240979a82dc23c9f1077a1138cb1a44e38f57578a5c27722f129bd984ea8"
+        )),
+        y: FieldElement(u256h!(
+            "0198fa22f11da3c9730ffb228c9c3591fe6ee462415941dfb1acde6cf3d37e92"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "07e119a95e3f72f6251a2a3c95159054f62ccc4b5fa72d7844786a48aa28e737"
+        )),
+        y: FieldElement(u256h!(
+            "0070051b735806131459fd7f6c917798f9d7052e83c32ffe2b52616e701459f2"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "02ef576dab46cb67b0a990daf7a1a417da0f228ce3f46155a52d9050afff0a20"
+        )),
+        y: FieldElement(u256h!(
+            "00fe8a34f8449c00a39838dedaf1eabc62d286b1cc56d396b78ba856e3240ad1"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "050c93a6c15022e2a33506208e935db4da381ae4c18cad1fca56650eb0ac8bbd"
+        )),
+        y: FieldElement(u256h!(
+            "031dae1ea0ecab1d42d0f334e2c51b421f86dd821833a6e5b8f579cd87558064"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0211242f7d18a0b85ce2a96412459ba04b890fb715bb5595884f7fe3104ce8b7"
+        )),
+        y: FieldElement(u256h!(
+            "023ef07698156ea472d1b9ca80834e177154c345a9b70df52d12ffa8843cf3c1"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0777e18a1e80d899d359af44db80a3b121687ea36bdc2ac18a4be7c50bc223bf"
+        )),
+        y: FieldElement(u256h!(
+            "00121e9a003f73b1110e06f662d759ccf997421150887d5fceaed37df5b5fa8f"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0089f7802731a3442f2ff718dda7b7368f6cfdac0a96a9ceb75e73eea66f4dd9"
+        )),
+        y: FieldElement(u256h!(
+            "0044cd606cfa5d0c6be6b771e563123273c9d2aa942d74e289d0914d3cbeeef8"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0192059be178b6a77457ca4457608bbef70bdaa211a3978d0a1c3f5f3a13dd73"
+        )),
+        y: FieldElement(u256h!(
+            "0005b2801d11e59cca5a6ebb88afe978b4401de5702edc929bdd60e07f652da2"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "01d7b8d1f3c2e27d48727e8ccf11bd637e0c819441115822591209c173d67bfe"
+        )),
+        y: FieldElement(u256h!(
+            "039b1a215c330c7c09e11754ec67835928e899cc67883f7f61f66dd9cce0c254"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0127a4cadd6f44607e285e19fe8fe8955aee203b8eb42df5b22f85297590ee51"
+        )),
+        y: FieldElement(u256h!(
+            "0362cbdc8de6a5edd6ced843ce4ae04e8ba958b054d3432a78892da2197aea94"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "073b380f64a7881c775b7922b3ed8906a0e21733216059cdd871bc002023c1fe"
+        )),
+        y: FieldElement(u256h!(
+            "00336024dca051d29e88dec9cb75586daac63dcacf80db7feb22ff1181389119"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "07666cf671d1c1296806e678d248f226475d7ea660c575504c826ff6e5f4e112"
+        )),
+        y: FieldElement(u256h!(
+            "03f07d41ac52208ee42bfd8cf3f6d94f1cdb3286da4a3b04604b15b2183b10c1"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0730fd3cbbec5cd49a95d7ef612309431291ce2840863ca0f1b55352c4e3ca3c"
+        )),
+        y: FieldElement(u256h!(
+            "03c5c0ff31efb73f7c6c1bbf3ef5e82b803a7c5032da2e61459855922eb93f4c"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "014a3f2c1caf96734052b1e6e1b623d31b6e312fefbb030f9da2defa592f49d1"
+        )),
+        y: FieldElement(u256h!(
+            "030afca0254b5c36c9870c0749a259245d5461a5cef2147c39af838a8648bbb5"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "030688d726172033c7a90acdf1bd6db78f73001604cb864897926fe1e9701409"
+        )),
+        y: FieldElement(u256h!(
+            "00e995bf1fd235741490f42b0935870fa00222161502bc3f437820740f5d919f"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "072310aeae39ad3d4b98ce69326ef9958178a92b0b961963adbc8d25ee70ec87"
+        )),
+        y: FieldElement(u256h!(
+            "01193f4e981a9bcea10c8f573c9a6d3827ff7653276dbbb8f8c3f40f0607ea07"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "00bc2a355884516bd5cf1aff0c57f1781dbe015cfeb29e1f7a4d10e1a3efa778"
+        )),
+        y: FieldElement(u256h!(
+            "01bd062cdca4456a052c372d2c224f8a6a1b651d3c31b45df5823e30652a71d9"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0512524c09bdf5aca8ec9bc1927f183129cfc6588a7656862702ed1ecb6f162b"
+        )),
+        y: FieldElement(u256h!(
+            "01774c66f3ee65b8c0868211bfb50c924978b9fe845aa524b7fb416babd0e5db"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "03a65a9dd00f7f75bf541e37305af1f03f54379717c3acce37a8ca51443f44e5"
+        )),
+        y: FieldElement(u256h!(
+            "00afc5e57b6afacc4bfac384907dd62c01826bb3bd8a5baf3db2bb6cffab8e44"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "03143807c7e69f4a73a4afbc217a81601860e79568f7593f2b8605cb36248c81"
+        )),
+        y: FieldElement(u256h!(
+            "01da6593b6acbd8db6c112cafa531d1bc095486d80d90653e725242333b001fa"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "041659b16ea2ddd0661971a198f1c17fa1a1ea7de633fe6b15ac78f477bd5419"
+        )),
+        y: FieldElement(u256h!(
+            "02de013f5340625c71c99a5471ab5f3033e3a71c543f2758b0942e7c93539433"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "060915fdf37823cd89581857aa7402c57124adff8ce0ff1486cd7a97c8c95cef"
+        )),
+        y: FieldElement(u256h!(
+            "0255788d130887ff3b3ab8b7f81b46f1f32be0329795e50f673b8c4e80c3a2be"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "026cbf9d690690cc406bbc03638b250f9b5d4df81731689f629fa9fa4a787216"
+        )),
+        y: FieldElement(u256h!(
+            "03adfd4e6c8aae788fdcf163936a7c66a0d9595e0f3662558fc705bb031ec287"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "01dfaab1c31b78498c27d3f451d3f8659f388c02cecd5c89b33297be872fb9f5"
+        )),
+        y: FieldElement(u256h!(
+            "02a55287cae8692ec02d2bda7bf3fd9490f169b34f3fb76aefa63dbe45f641ea"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "00f8c7de1d0b8aab6a8505e12e302456b5efb03d4e7850498f2e9562fc7e7e82"
+        )),
+        y: FieldElement(u256h!(
+            "0218af27398a539ef9e265854e994828f44b957a57a211538244d9d811396774"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0103933392126540328b995e4fca239c6dd06db8e890a32d08e224b3649eee3e"
+        )),
+        y: FieldElement(u256h!(
+            "00633e43a2e882f4d5b73acb2b281967d5255ceeb207325b0d574c7c35c41a0f"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "049c4450e16d8ad5e683b8f463c0440255adb95c810bea824d1d639b232a14a7"
+        )),
+        y: FieldElement(u256h!(
+            "037ad47b079eeca63f432507e64cbc8cbcd2d130f78721f9ef72ae430c38f12f"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "06f60cec11f269f33a91f85856c2b4b78a0d8d1c4d2f8177fab32fa5e855d5d3"
+        )),
+        y: FieldElement(u256h!(
+            "003b2307f8a5481b4a8fe568c85158b06d35f574b4b5d1ffa8ecc13106cb9bc4"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "00a4f8b61a496b9e628e1c08d06352cca0cc1799307cecc52064b418bfb23f64"
+        )),
+        y: FieldElement(u256h!(
+            "00b896ed603c94d09afeda13bc2001c0069a37e96bf31ef5c1c1a9a941427864"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "078be7deba1d4899651e8144e0fe27d9debda7ca5e2400a10b51829fb60085ce"
+        )),
+        y: FieldElement(u256h!(
+            "0210e250e46409dbc62c58e5afc0f0225e33640a55088d6ec5ba50611e4ad360"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0450c570dc28d999cf745718676c16bf1ea6c99dd0e4dde799665f9acbe3a4e3"
+        )),
+        y: FieldElement(u256h!(
+            "02358eb7c9beb423c959a6acd06ceca32a8682eef047a6a40893c6bfa19c53a1"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "05319fb8f8fcb6c5f2131e1366c974c8e36b2d2f96f540b4dabde200beadc6d3"
+        )),
+        y: FieldElement(u256h!(
+            "02478272679fd188d181071858bd495b188af772dae5c61e5569195239724856"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "02c9c205fcb6ab9297d9eb8b64a7034c87bc0855d0afa23f9b32c395123477c0"
+        )),
+        y: FieldElement(u256h!(
+            "0351db0a3195c9848a000b1998f6f11430ee09e062cb1757ab8736061f6bfbb6"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "01c421af41c7e57f66b34f2062950cab18a6de7725fcb375995ffb0303d1ca9d"
+        )),
+        y: FieldElement(u256h!(
+            "002d76b9628e7e853c500828c953ec190f9fcb7d17133f2c61dbd78260c76562"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0341cb0758588ef90f7d33ad9c5fb15bd19d93049dae582d37cd9133073941c8"
+        )),
+        y: FieldElement(u256h!(
+            "02b8a7a8836e880b0943db96f6042e40a3f319e790eead07396c8bd21b9d40a4"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "046cde37b100ae9a0237283bd3debbefb66dabda119ec6cc957679655f5a7564"
+        )),
+        y: FieldElement(u256h!(
+            "020d13468d32300a97e06a953d99ea20d53aed9b6a4b147c82de54dd5dfa64ff"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "01248c6b1c95c9fad6052e5b9051d6a9d780e4b1776cd61c266d93f512e0f50c"
+        )),
+        y: FieldElement(u256h!(
+            "01cdd50e7cdf6960ddaaac11c2f5ca70a9769bc93a796d58ac48a6f23e6a1f31"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "00085bade0120bfa82d7fb8c6ff49c1a2ef803a63db52763026fb00a4250f4fd"
+        )),
+        y: FieldElement(u256h!(
+            "03a87c5af09d605472f68ac49bc0433b5d0a417923f00ddd7cab0c834b984ea4"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0629b38f9771b9d20337824f60ffa351853b092112a4745750497a41cf798c09"
+        )),
+        y: FieldElement(u256h!(
+            "01c249027ea66f37321e7965a73beaca60de8c94074ca45466ac068724746686"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "019a71fb7f6a4c4e7aeb088d386ec4bca80e871ff90cc7c5208e1192333a2c27"
+        )),
+        y: FieldElement(u256h!(
+            "027fc83be8d0265706279719692fdfd78f238c969707ab17f706f8ea89e3e90a"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "013a9654e65b5884f6cb093197bfc8d235eb2c5de6b6815f362f3acf0e9e28a3"
+        )),
+        y: FieldElement(u256h!(
+            "0058ce0948436d4a6111efcba348a2de6c2a0b9daea3ecbdd57db71be65eeed3"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0550cdd9621f2ed5bdc2188a0a25aff90d63277de406b2d8c487ef27a281df24"
+        )),
+        y: FieldElement(u256h!(
+            "03147ed88781a4276f96f63f39dd98079f7f4f93e8e553d78851837edce7822d"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "01fb78389d91deef89039d400eb182c1afaf7689d17f581ae06103fbdfbc97de"
+        )),
+        y: FieldElement(u256h!(
+            "021f3a95952c314457aadae66dd169436580c8dd8ca6f9ba067e07e9644be228"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "031aa5b93c7edd5216543625f67082467cec3785b085bb5761541339e7f84827"
+        )),
+        y: FieldElement(u256h!(
+            "028fc4810a2f801c1eb577e448190fc8a9c3f13fa9775ffc40613b36e9f1d992"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "00b3ab6b6e33571bb652c08fa82e9ad4c2d55492a34e7771eaafb7057cbcee9a"
+        )),
+        y: FieldElement(u256h!(
+            "0271839db76c1ffc9bb53c4c83326075db73e927fde708cad3d6f175143f492b"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "07bcbfdfe79d3f695e29cb4a57869084fa6c8bc9f449a972309a44afc45ff44b"
+        )),
+        y: FieldElement(u256h!(
+            "004f91172a2321f7475e05298358e69164a536e327be76bc07a9dfe622518e34"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "035bac8fcb38dcfc2327b5a238789880e3a0dd1aaae39ebb5046b100602ecce5"
+        )),
+        y: FieldElement(u256h!(
+            "03383219f23ee741b38b597a79ddfdbf9349e5ba8362218bf9140784acfde934"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0580ba87145e037f53fcd8bc1b78f3bd221e3e9ae8e5f5ff52d96d2b45c5999f"
+        )),
+        y: FieldElement(u256h!(
+            "025d643819ec25831faf4ae524cde4601c7aeb792923be0871c6114523e3c288"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "056f1abfe8e65382dc7c8304ddcb6bc36a5619734e18049c4f33fad14620040c"
+        )),
+        y: FieldElement(u256h!(
+            "01d491cb25dc175829f6e7f7b7593455519ba9a81e34e71179310d57fefd0d63"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "02d0a1badcde12ee5efc936b454ec563f65c38e5ed40094a09afd9bbe46d881e"
+        )),
+        y: FieldElement(u256h!(
+            "0352288348e213120f5253971700a5556bd69503cf56844caaf9dce64cd1c3b7"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "013b90428ef3dd67aacefffa4ab8146b2a67a450ddfdc1e1198b428f584a8113"
+        )),
+        y: FieldElement(u256h!(
+            "0005c6ff6f9ead51e640cf27f4e58c5bfaff690ff4a2fa4cb77404eca31807a9"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "03fd5f0a73c8a1eade6422f722e5d78beac65d401f752a78c952efac43223122"
+        )),
+        y: FieldElement(u256h!(
+            "0207fbc56a142b26d20a74949a1bebb34e6bdac4af8ef6f9f870283b1b5e6e9e"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "021744e6cc98e7e3cca329f6b635a707bf0683554c50f1e55f3c667ca493ef43"
+        )),
+        y: FieldElement(u256h!(
+            "02feacdf1ef3ca2562b9bb3bea4f564266f026862d6363e98861744b5cd1dac6"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "045b59f365381ba9dc109c3ce7ef91286512722d34ae35336454a5381329a73b"
+        )),
+        y: FieldElement(u256h!(
+            "00f8562c02e1e53c76ff3e93a3bbc39ac7c2a2f86080065e97c1a07834476f53"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "022ac196588e0a6032ee1b8b83c3e60018e0d9562a804060623b4152ef38a973"
+        )),
+        y: FieldElement(u256h!(
+            "036c960b27997a1753c3c05ad093a9e07f03eb6cb5ddc6f5326562e7d801d7df"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "06a66440f0653ba12478455ac3d815bb3a3a40a2fa097d02d0cec54ef630859d"
+        )),
+        y: FieldElement(u256h!(
+            "0075ea8096d8291a5ef5d2321231099b24680e0446651f9ee23dfebce3ad1d5d"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "039a7f6cb7fc01309b484ec0ed2844235a09abf71496c6184fddf3e909d9bf45"
+        )),
+        y: FieldElement(u256h!(
+            "02bb8794d7d753d350d1e53073f5e673fe84acfbccd3d20d44422d31ede595ac"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "031dcbe0f4746b881042d1eebaf7a5841b58d1a64a849e845fde3a4aee493032"
+        )),
+        y: FieldElement(u256h!(
+            "02a0afffa6ab68f9524bbbdbb36af0a39fdbe6a7d964ffccf0e947a7ee63f7d7"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "03cb75eb614c135913d2338c4c53a17e4b15d6cb97a78be26e2fb60603a958f9"
+        )),
+        y: FieldElement(u256h!(
+            "0273ebc65951e22847d31eaa25e4cde6db12669424736d3b4d44c2c1fb6b3fd9"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "00568309249c8fe83f9d3c3339535804bf7ee24578af4615959fb72c7de40247"
+        )),
+        y: FieldElement(u256h!(
+            "02afeab112f11a5bd48d8b1bb22c68e191bf3478980895f438b5808cec84ff26"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0590545de29ecb8082a74279a755fa973ebc14f3819cfc3c26327dccb89de723"
+        )),
+        y: FieldElement(u256h!(
+            "00eccd156287d7e1487a00a22449f7fe38fed70467a87e4784918675029044b4"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "01a94194a59ee3414d2d0c13f4d98fab5d85abfc76d05961c8efe21187749879"
+        )),
+        y: FieldElement(u256h!(
+            "0346ab539687db75820ccb592577e7c08b6982d9db681738981eed9fc0efbec1"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0213608e313cffc2618025dd07d8e4e415e2b89d14ae10e051c97b77f0d0831a"
+        )),
+        y: FieldElement(u256h!(
+            "02c5abca367b2456835a547c18071b1d8cab32fcdd3784333c72fcff9e2869a0"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "01846fdab7baa2c1bc7d3d2d9f22720548c86cb35a77ed32b564ca6bed867f7c"
+        )),
+        y: FieldElement(u256h!(
+            "024220535ba437709c3d9764d8f29b5b9c8fb6e64f2a06141a169dc7167d6689"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "035034186b4743cd0b4afe092b6440aafd9fa083560969bebdb066bb386dd484"
+        )),
+        y: FieldElement(u256h!(
+            "011777878bc82bd641c9a51548037ed4d420190d09dd697e5b43642bfbddef50"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "055e298f7cce440373a31910e7f8699dc96fdd3b336439550ea6d93aa9c4e524"
+        )),
+        y: FieldElement(u256h!(
+            "0074b13aa25f834aca8820548f0e2362871b8da75c6ab582f0a09b234e3ba80e"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "06ae5047cc4598fdbf889f455911bda75a48686d8540c858494017fd5dc63500"
+        )),
+        y: FieldElement(u256h!(
+            "03817f60bc08a03712f2f0d62e716c2558715d0519e49184754b2961e0f207ba"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "071168dc8a3505c00d577934cb8404cf74b30d85750eee5a71290a4811b215bf"
+        )),
+        y: FieldElement(u256h!(
+            "038cc70107e91c01d1cd74f0b2334b2fb451117e39f4c59ee10f3ddb16ecefba"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "00b9195df6661eec4ad4b20ee4a8d52f081be4c348ce857cf5cb2d87928eea6c"
+        )),
+        y: FieldElement(u256h!(
+            "002b4c1780ae4521ac7b265c816f9a1f2b727dfbd08fff4248c3431efcf46cc4"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "023593cd26865a81b13da87cfa43fd498fc7667b2ca433fffefdffd24a146b6f"
+        )),
+        y: FieldElement(u256h!(
+            "013ef986a94c0b2c3e41c8408f13c3a142f6572dc990c17ec4c2d72aa697961b"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "027da9f5c357f283c2b8fdc3d8b77b7107a47878c9596972a981819270e95e54"
+        )),
+        y: FieldElement(u256h!(
+            "01cd0caf236e84c40f45efe1e39c368fe7d6fa6284f6e8a671bc05b6d1410710"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "005506ee3571a3531b32c01ff7ae73600c5d2814fb6ff63e911be12845f83ff0"
+        )),
+        y: FieldElement(u256h!(
+            "03413d4c85134e8b63f9fcb251a57302e398049d34d951bd612a905643d9c612"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "07f19ec46b6ac9001cf62e619a40dcb546b53a5603572e196d83d6a64de24f10"
+        )),
+        y: FieldElement(u256h!(
+            "01c69eac87d3bad252d7b8fc008172ba87a4c86b6b61b45862d841cc1aba97d9"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "00ada50a0748f152cad57bd94eb5984d45943c8c4f614a4adf45585bfe23dd1e"
+        )),
+        y: FieldElement(u256h!(
+            "0042d6d2f575c095647475442090ba3bed3da012e46ee49f6b2472efcad71ad4"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "054736c0cbb1b0bdd8036041e02bc76f84a7e21ad01f1417a3d449d015501a7d"
+        )),
+        y: FieldElement(u256h!(
+            "0162b46dd1cfcb87ddb9c3fb3968e058d4819bc7c368ecd97cf6949db27fcd4f"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "070857e8cb7e706d1e42530141387553f613f423fc922bcec53ac6b56b871555"
+        )),
+        y: FieldElement(u256h!(
+            "031033c16b2daefcf96985b729f7c89636c318747073e78fa3f64a4428fa875b"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "03af83fd6bb5721bf7881db4c0014a08fe4ba4f063074b8fa1663ecee515117b"
+        )),
+        y: FieldElement(u256h!(
+            "02b8ebf5e9ca786307781b70731c9fc976edaa90cb36a0ae71f0d37432e2b40c"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "008bd447efdd38e48a86b8f7c8e0c949f45ece42375a8bbad34f5b4869a8ae59"
+        )),
+        y: FieldElement(u256h!(
+            "011f934be306bf21dff6abf6f3d34de57560b346207c83daf97d93ad537fa02b"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "010d9556d32069530f94ba5d47c6dccd8c7fe610333736832d11aae8f0c41f72"
+        )),
+        y: FieldElement(u256h!(
+            "005db88f419caa4944a4ded0c76dba189c04e919dfa7ad45f0b5fa6047072582"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "020df9104e7c499f57b47595331d97896290dfe0421fcb65d2910ea99df9eb19"
+        )),
+        y: FieldElement(u256h!(
+            "00656914f3c4f5de2bfe5f8306b2c76acd1531c65f2866263291ae7d83f5c539"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "042fe8056bbf1e37ccc027fdf0f0baf59e079c603021547e59e69babc454891f"
+        )),
+        y: FieldElement(u256h!(
+            "03f076333b26585afb77c954e7982a65caca801984449af73bfa7660344fa022"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "009adec676ba1946c07aa7cf8212f6ff72fa03ed1d7b795e5f04d2643fe8af1d"
+        )),
+        y: FieldElement(u256h!(
+            "014fd5961123dd56aae0179803dcc03bfd6461f965f2c5800c8fd733798d46eb"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "04203df4165ed2ea934d3e7afac84563579acaea6b49ddeef7a39e8cac68f2ae"
+        )),
+        y: FieldElement(u256h!(
+            "02a4371eb14d52a189c5b3007db95213b3a6548d297c784e70a4b22ec37d7f02"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "073a5cf5f5113c855636c90308b92d0fed0eba87898ac26d645cbaf0841e499c"
+        )),
+        y: FieldElement(u256h!(
+            "0355a15df028eab0cc7b52fe7cbedd04b92cbea4c7897dab53f73e0b1bb8ffb6"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0145a105ce46e537283cc81a7d4f35a0fd204da0f55f04c9c20b2a2487d33c6a"
+        )),
+        y: FieldElement(u256h!(
+            "0115242a32fd0618983ee35c13f446edc0da4ac1a08646956756489c4c2645db"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "05867b2619036ffd683fdb76ccdc3b2823e7f4eaab846830dc7d7fad641becab"
+        )),
+        y: FieldElement(u256h!(
+            "016902265b0b8b17b8bb792ddf84d9f2218f64fbe5b29ab579d144c388a87714"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "03f2e5d2b2004e1ef8ebe412b346f41aee37149a8a9a70fe6a7b555313a0572e"
+        )),
+        y: FieldElement(u256h!(
+            "025e4ad2652202141be26ecf39a029c90481c90e6428bd5c34f72e4994d32bdb"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "032ea7d52cd7b375ca8bad7463122ca3d8f4ca337883562291f9352b652d946a"
+        )),
+        y: FieldElement(u256h!(
+            "00924efc10a782741f45d78953a43404c6925042d46be35b2f9c556ab58e272e"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0545dbc5df3151516646fb0536dbf0c1fa1297853d231c5e37c61ac735577888"
+        )),
+        y: FieldElement(u256h!(
+            "00f813e4c6a7e41e7c99cc742e94276e2aee0161aa6cf977b8c9d7637d5a5c1b"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "01cbb022d67a70ddf17bb2fa319f243757aa31bad689d591f11c3529ce68badd"
+        )),
+        y: FieldElement(u256h!(
+            "007a0256ea44eada33147541e0fe1670cf7ca781beec0a4a14b57a80c3c5470e"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0497382d39f2c0cdac1265194f303667abf1c0bb8aeaa7743ed74dfb4d28f8b8"
+        )),
+        y: FieldElement(u256h!(
+            "006b13394c5b574201011c011e40dc57f1f6d52dbf2f53ac9fe8450a3e625eb8"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "07477704fc1db3f881377fca038b023af8b6ee7c347e3da9a79c93c169f64071"
+        )),
+        y: FieldElement(u256h!(
+            "00e1daaeef76f8fb3c6946c44eb0ebdd0212ff36b0f8cb102d41db06f220fadf"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "003f1ee0fe8c3932d2c9c6310c2c5e631433b9a0c0292c1a9363d8c86ad288b4"
+        )),
+        y: FieldElement(u256h!(
+            "01f628453c2a9071dfac78f2a77ec4460ac6d28c7b4c899572eca76a0bf08a7d"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "03e4340e0773d92b076030e831361f6be16d051997cd07802b77b44c90673c64"
+        )),
+        y: FieldElement(u256h!(
+            "012ab7a9bead28f300ac8b20fb39c36b995b80ce2e98b39fb9c9371631c92b0d"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "01f3aab2cb61c569c349667cf66051d158fe083fb97d292f798e0e29ab2ee850"
+        )),
+        y: FieldElement(u256h!(
+            "0332f985be95de4a99ac7335c08d59447c12bffa09e49eac1cf146851c36d200"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0018539daecb3e031563ca7f87381374fdf8ca02491afacc356343780565a13f"
+        )),
+        y: FieldElement(u256h!(
+            "03c845d293df5493e4fa439903b7a122c4210360d7c135910c9e294fcbcb09c5"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "037f0e2aaa1b942720f696a34904231c77eaf8da3d36ebbd9e5a8d3f1aa62a46"
+        )),
+        y: FieldElement(u256h!(
+            "03fb5f0da5f8e3f04eea484d915bdd522ca436a832e0345f7e3f0eb87829a753"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0348d098093e3fcdf5e5d5b46a4d01ee64c37748bf822c23a8f3f0ff862c2048"
+        )),
+        y: FieldElement(u256h!(
+            "01961060b57a80f3931ff9def81b1650fd7ec474ed71a4cb9814c25d2bdd8a2b"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "057bcfe37fd9822afe658f592aba136b79225f40dfa7914286bad7d243947d42"
+        )),
+        y: FieldElement(u256h!(
+            "0329b2323491e91d4fb9f3433040572f905641487929a41403407544a3cd4924"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "01a4888b439229953110808831a5f6da862a44560115d0488ef02263c5a3e2d4"
+        )),
+        y: FieldElement(u256h!(
+            "03db533ee388102f89e59dc32b73822ff08e995244909a2863163389642763be"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "01f14b751f7ab1f7e35ca95be3b9c682332e473749d8b736aa8f1c44450fe7c8"
+        )),
+        y: FieldElement(u256h!(
+            "00f7006ffab9f83953ddc7e2c468a9458cb57a89f95e1b18a8d4e56afa53213e"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "01ae0d09833efc21095ab784957c6965c7c797477bb9e12eb8dd118287200b1f"
+        )),
+        y: FieldElement(u256h!(
+            "0083b457a5cb0561f48d2bbfcb218066b79d8507102610fb00f5e4b97e6dce53"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "002a1eb679e3c07c179a050f87b6c9f99103667c80abd98d51c269d30012da76"
+        )),
+        y: FieldElement(u256h!(
+            "0212c872b8d71bbcfa683ceca886bbadc8473d373b11254cc0ee0740bf3e37dd"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "073daa2de127bea4e2f39eea46db0fd265eb95054ff0b8a7f279736cce773a7d"
+        )),
+        y: FieldElement(u256h!(
+            "02289c9f40428d3acbeb8e6720d8d915fbeca837536c8a41f074e0ee20352e40"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "07b9ef4b2d6cd6dfc10beb0864e8f88256b805e3a8a9be2af141d40d87998703"
+        )),
+        y: FieldElement(u256h!(
+            "022ffb9b5a5f012048ce4c95216c66841ab30e720778d1aee143825f93de3c54"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "05ec969640bff6aa473070800a43017169545ec4df36abd17e16958b565ce05e"
+        )),
+        y: FieldElement(u256h!(
+            "01427e3e48d02b0371bf27a1357bcefdef946239d4e143982230a06e485ad6f0"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0007a8adb06a10de3232dfdc44b7313f8f1066a14f181d1e80a815e9804923fb"
+        )),
+        y: FieldElement(u256h!(
+            "01eb8f09b50a1566544a22fe5b1b0b1526ec0410fc65b0df91110e3bd04b51e5"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "02e3467a6dd3995729cd2bc364cafbf99022bce224aff17e123124a4dddb1c3c"
+        )),
+        y: FieldElement(u256h!(
+            "01463ecd9a4231721eccc7e0bfc6e5e5ad443f653e1923a2565a18ab862d55b1"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "00e8430f85e311faa85181efe941dac86fafc936bf57fb6a0790586101a1224b"
+        )),
+        y: FieldElement(u256h!(
+            "00367146d077cf06e806d002946cdd226e18880c8bde085a97956284b055c8c5"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "02d00787799d80b66807d8a3d5c3d92c0a1b4a931bb6b25b1935f22c90d063b4"
+        )),
+        y: FieldElement(u256h!(
+            "020f01955fa4984e21ccfbe9cb37c1a7fe8a472de1681d8a1313375482d4c19e"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "05e1b6910f988aa91f1b6f2859ffd6d742c629ae2b003fafd58f7768b9ff77b0"
+        )),
+        y: FieldElement(u256h!(
+            "01282c219e5e5fea603f7c3b8010772c57fea147c5a7923a6ed3fb822be263ec"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "04be70267b200d1dcc5bf667b8dbb6d5379135fcb5b7de7aaaa7ed42c058ce15"
+        )),
+        y: FieldElement(u256h!(
+            "026d8b05999ba69540dade94017fc1e6fbc0a75b586792cf7601d382b94c803c"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "005b7223584d071a6b16d3fe40d68d624fbe71ba62f5d75fe4dbc1782b4a08c2"
+        )),
+        y: FieldElement(u256h!(
+            "006cc0f10d752d7d27477ad8a53b1adeaaa1ba8a90f641d9ac34ba741f590278"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0500e12e3e931d94ad41e70af6bf3964dec0c4b4ca28aaf2f402eb97dd0d38f1"
+        )),
+        y: FieldElement(u256h!(
+            "01d63eef739fd3ccf622dab93929516387c7aed4506740277b595f1d62a7b58a"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "01adec6f29dc13827b2593f100019245e2262f98f613b27cd5d655557ed2d3c5"
+        )),
+        y: FieldElement(u256h!(
+            "01d68272866e741fc7b5b904b985b686ddb92679c41f1af6ddb9e1959840b0a7"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "07d9e8798277276de428a89255658f0412db682856229a140c9cdac83c74393d"
+        )),
+        y: FieldElement(u256h!(
+            "01b25695e23ee5e7533dc9c6f69802be799799adb4026548c9a7e30be50f1b70"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "00fa60748663c7792ea0e046ff695114351f18041dc59d02e5c40970496272af"
+        )),
+        y: FieldElement(u256h!(
+            "020d3b8d4548ff5ad1ee70f4f23182209ef995280bd0384f72a0f0c2a661b1cd"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "04d1eb98f30c75ce4649aae8c0ba636e99fcfbab8cfe22c9a3e522da738669ff"
+        )),
+        y: FieldElement(u256h!(
+            "0104abdf1f0707703f8a84af84225e07241dfe6194bf341239fa3c4e225ec098"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "04622be97ebc72adae7a437f951c7cd223e33674bf84dc4c8adff8fbb4ba633d"
+        )),
+        y: FieldElement(u256h!(
+            "007c2c4d9d8e4c6c8870dfa29fb254b729e2b13050f22ab666c2c74b8c043ac9"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "06bcf7430c00019c282276696200a9d51d04bbf594bd5ef3b102119b1722dbd1"
+        )),
+        y: FieldElement(u256h!(
+            "005a4248eedfa549447d5f5795c49e18baa6e5a8ef66e89ab308106f142c0d3b"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "07985c6742d649eaa22fcc64baa0bd946567dc0164d7a4bed9ce51c720a2f6cb"
+        )),
+        y: FieldElement(u256h!(
+            "03cc381671cb33456ac72ee29a1b169374bfbed013b9bdf958ed5ebf1ab40580"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0397083357f2d245a16ec4fa88acc3f1f4a42d352a0ebca82c15ab8ffb260ee4"
+        )),
+        y: FieldElement(u256h!(
+            "000c91a35595a6bb1b3c50613f9d92179cd9a09560ab19f8000c3a0e0231778c"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "06fdfd3a16f532e3bb06147b8412f50c92cb64696ee90df6a584487e26640ce8"
+        )),
+        y: FieldElement(u256h!(
+            "00d9d6b6544e57f08abda4bf28f306a01fc7baea20624f69dbf86cac82640a9a"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "060fb9eb58a14178e328a27d4846143e1d20617d4c5691989c0d8385e9bcf5fd"
+        )),
+        y: FieldElement(u256h!(
+            "01499fc6fffeabd2dd0cc32f37a087a7c23876a57a8e24a3dbf3660838cc2827"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0010ee4ff729d78582378493481cb52c3cf5b9c9516e2eaa3b9ba5b4af58a8c5"
+        )),
+        y: FieldElement(u256h!(
+            "037b663842055abf5ea05073b76b44e5e1e0bf6219e7ffb73f4f920ff0051e7e"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "06274dda6ff42963544b1820c9755f89696aa0501711fc00548f40036b10f6ac"
+        )),
+        y: FieldElement(u256h!(
+            "028a1b47857c6a572d544704ab5164385c65782d3146276274ee875caf164915"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0419b9b210c7c8c521e113b8dfa850e5ec3cf8faca12981e61d7a5fa219959ad"
+        )),
+        y: FieldElement(u256h!(
+            "03137e62ba9ce383201c94bf091dd587098eec45a357bfd3ff4b9ffa6d207caf"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "062803675019d91788f6d700cd59e28b7ac046ac0951c88243fd14b66ab83a57"
+        )),
+        y: FieldElement(u256h!(
+            "01333e2832e8e11244f60d21454e41e7de6d20bf822c7651f05b1b80ae22f39c"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "02802d2a3b00df159a9a431eb05d79fa0655a8867eea6c7a3e79d964f089ff29"
+        )),
+        y: FieldElement(u256h!(
+            "0260243d4da1deffebe10a182634546487187ae8efe0ae74d01294ed78838fa4"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "006b053f5f7e7935f9fe83d5756ffe6d2de910af7c2cd61dc4811f1003073189"
+        )),
+        y: FieldElement(u256h!(
+            "03bfa34d96274577d04e8a4c22cbe3c3660d49035f899c314742df32d94e586c"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "04f240c195474538c36e882af034393ed918758ef8d7d72d67906f1c2519b95e"
+        )),
+        y: FieldElement(u256h!(
+            "01c698f429c248be36b3c038932f9fcd1aa26a73250d61ba3f63ae62a1eeca13"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "05c9b7161516abb8c0677c150cd80c994852ac302c7f388ba7337b79b7aaa698"
+        )),
+        y: FieldElement(u256h!(
+            "02967285baedf5aca4eaefc6c9015ec2b11727ab5d06e01d5e51e3a438f36aa6"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "03154da379ee94e4f167454e8bab75f9e907b0f4eaf026b67092ed0912a21ff7"
+        )),
+        y: FieldElement(u256h!(
+            "03241dddf30e4e7ca71bc7e440c25c39e5cc7aa648cbe7a49fb9d05fb82214d3"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "008aa4503d02f5d96574c07dfe47ba143576bc8d4ee58e435dff6bc1fe3a307f"
+        )),
+        y: FieldElement(u256h!(
+            "02918ae4a051b439b79b638782a4261c06a4e972719aaffb010c6991c8d79ce4"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "02f0cf27625163b105ff3669a8bf16152e98aa21bef73241036fb7f1ec2d5f8c"
+        )),
+        y: FieldElement(u256h!(
+            "0072b6a69aa4b6388ae3fc810084ede6b04bddb65ecbe62030899058cc778473"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "009889222c19789f2472f143282c06f8b83298591d92aa8159304c6da50b4d7b"
+        )),
+        y: FieldElement(u256h!(
+            "029cfeeb0abbbef301ef060f19a4713f7cf469240f9b0ae9545d5185d51044e8"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0236ef547f996b8514b51afff4ff318a83a3485b44f06f85a7f530f6c07353e8"
+        )),
+        y: FieldElement(u256h!(
+            "0398ff05cb3f6e7b82bf1d2a8fbf19bf0707495755dc1291e74596a0b7eb54cc"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "03e48269503bf283707732dd31fed9a6f811ec6647678eb85a4239d869b8de9f"
+        )),
+        y: FieldElement(u256h!(
+            "03628a94defc462e89b813bf4b1f271184aea22403974ee9f9f6ddea190689cf"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0003daf40cb09c8ea803f2062c5b7445275740c41af5dc2cd4504834832f334a"
+        )),
+        y: FieldElement(u256h!(
+            "02915d4a7a30c70a0095c58eb9632090c81ee6a58803fa0d562d5cd608a313e2"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "05193cfd984dd35231b2f93caec47622a5e61da67484b7f0165a72036b5c3587"
+        )),
+        y: FieldElement(u256h!(
+            "0253ae3b75172c6874178b86d7565ef75846fca8e6916bd42690fe620bd62884"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "07b9ac09cc2c4db99b845ca070874049bf27b1b309b48ef6befb0bdb60d0e7b8"
+        )),
+        y: FieldElement(u256h!(
+            "03bb9cd93d09d4f87b989dc68eb90cc2c847a5acec13462f3e1f9eb416bb3e9e"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "049860af27c534d61758bc298513d0e95eb1a33c4c43912a8f8f8de8df4c3f80"
+        )),
+        y: FieldElement(u256h!(
+            "015e12c6499093acbec2b666be843257c73cecf55df3a33dd01e5df712a341f5"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "001f2cfd555b703defc61fcff0ee87762981c2068308a32ce49170f1efada882"
+        )),
+        y: FieldElement(u256h!(
+            "03c102b1bdc592aaf43107fc19372d99b0fd0ad91c31596463215a187a8c60d6"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "029cad7525aff5972ba4ae899f55b580854bfc89c83ed0fdf9828459352bc450"
+        )),
+        y: FieldElement(u256h!(
+            "02650afa537ed3ce796bd4c6ba78cfaa32a1e0f943afffc297c7a1746baf8380"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0793f274f074dc0d0049a05bf133f927d85a5b51ff6cae9577db21d343bf2af3"
+        )),
+        y: FieldElement(u256h!(
+            "0067552159e6ebf698a598acd21fd5d4266c18d989be0af930a7cf05e55151da"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "011790fcedb524bf397853b8b0a5ed39e4cf00c47cf165bca10108deae519ba0"
+        )),
+        y: FieldElement(u256h!(
+            "00404405a37cf8ecce097df5b21e507db3f038c149ae9a08dbba50ac4d3993f1"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "050784a5563e9a8458d36b45f03f60fce088b71434bb6882c53b4b4009f71d7a"
+        )),
+        y: FieldElement(u256h!(
+            "005bdf2d7f659a1fe0353ac92fbb62f6b66bd019cc56bd2b8d4779fc8d134321"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "02523d0247f5ed96f5ac86fd89210ed2a2904de1592cad5f2f9b89ec9c3456c8"
+        )),
+        y: FieldElement(u256h!(
+            "02d0b8f9febf92372a179b5b88c5eb15d14cd343bc94f7c437b6818051beb054"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "025bee14aede135b4abe494c3eb214fa28542eec818f7834b19c63c563a1089a"
+        )),
+        y: FieldElement(u256h!(
+            "01a11a802edbffed9cf99df8ec79dff58deba75ec1544b48fbd12d764fd95b9c"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "00d12929c7761e4aa7b8efee903b6637a67bc6d885b93ef32e1656165ce4bac8"
+        )),
+        y: FieldElement(u256h!(
+            "02815a60012cc166ff2f2c52aa35b1baeaae9f36a99c15d5bcd5cef9433b2262"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "027191cdae17010f989fe09417fa823b062589acdbce4f5493fd9d4a5d4d5028"
+        )),
+        y: FieldElement(u256h!(
+            "016d9047fe6a417e9acc764c507bda8db98d6c08b030d867b150c213a4578e0a"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0614b713cfc3baa9375d01b9cd9c39966add89ef7db24c56bd26a7d5233b63b7"
+        )),
+        y: FieldElement(u256h!(
+            "0207a5ba37fb479b951d28d6055aaf068d2968f227d294729cdd0eddd145b352"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "063c492f1a37bfb92de7fa2cccdd6b29253e0a8a3e8172ed65c998544d7575ef"
+        )),
+        y: FieldElement(u256h!(
+            "02827ee6af3f889c1d0db2bab949387c90829fbcd3c1523dee999e30833bfa22"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0462102edabc7fdaaafb532d0de6d01499d6d2738218c7980a7f4f3c44e7cd13"
+        )),
+        y: FieldElement(u256h!(
+            "0114204406abf4c47bf19adeaf0246340d1cdd83e31c323ae8f4cf8c1f2a8ad5"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "05293f4e852db1e8f804b64f79f1332ed8199bbdfa2b2185a397a8b7e94c66eb"
+        )),
+        y: FieldElement(u256h!(
+            "0251427a214f56072ce47866f01fe71b439c4ab01235cbd7df59c2988a555d95"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "05035cc9489615e70c01af3cfcac6bcbf424d70f6547eeb8771b9c424304dea0"
+        )),
+        y: FieldElement(u256h!(
+            "00ee694e5fe786018758bc9573b8d280f21165651a01cc54b428ec9a0ddc9023"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0291ce67245ac802ba55a2680d4dda17a14dbe427ffc59b4d01dad234a38c8f5"
+        )),
+        y: FieldElement(u256h!(
+            "02de4539f5f3161dfb882ab742ee35576c983b0c8b3fef389c48baf1273a699b"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "03e09c31f4adb4a9aa5e3c9308db93c7c278fd24fd2dd31dfd7480eda6c6949f"
+        )),
+        y: FieldElement(u256h!(
+            "00a5c6adbeba0f29340e40ef7dbd86727540eebd047479b08850343412df0ffb"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "00192b3df91a84c4221df56667fbac74f143086b0323b5287f83f99801f616f0"
+        )),
+        y: FieldElement(u256h!(
+            "000ac0a4a70031d4b9f5eb7c2d044eab5bb6b2e4a296559f2a8e9b15e50ead6a"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "015cc3778ef3bccd9f624a40e54a2c129de824e4edc8dc32be533c6ec58fa1a3"
+        )),
+        y: FieldElement(u256h!(
+            "03df3c7f18b145ec6fbc0a6ef540e39c57034537aa5335f3407f877254a5461d"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "01361a320505be375be96610ce11b83d168d381558af96121e5c19bcdab84989"
+        )),
+        y: FieldElement(u256h!(
+            "032aada5081aae1e2d498d588d991217da17c742c50fd605fcc488ba87fe6740"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "04aef12477efc9b73c30df994d9d6ac5312b7fa06cb00c0a554b632db6f8bf9f"
+        )),
+        y: FieldElement(u256h!(
+            "01c9686f4009eb65486b0c7b9f68cc50feb312157acff988802bad6bd5f134d8"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0538b41594672280920c79c6d8f6159a84090b816f0ac7bad3e0612a0f296564"
+        )),
+        y: FieldElement(u256h!(
+            "00d83d33e61e373a93742c50aebddd34076c17ad244678d5f28cdff373e2cb82"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "009c94ddab8246060e9212aa9b332faf5791a1b3d7ee2eae07cbeca416b166cf"
+        )),
+        y: FieldElement(u256h!(
+            "028c18a4b369987195908f311e44f3a9ea06d7ed787067d7238c2f670ee2cf7f"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "044ec75843b57fb81036c6035d53ae9663d9c655e19448279d1cc20ddc2cc421"
+        )),
+        y: FieldElement(u256h!(
+            "000503805e4a2e80a65ece6f1a129231bb96f294e9f29665de13d3b8d76f11ea"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "06b34dd128cb251a5b4bb22482f127e5a90d1c4bd07df2eb919241961c6d7b7b"
+        )),
+        y: FieldElement(u256h!(
+            "00accce65064cd4fd4214fc2d60c5865257e9e5b32579d583dfd8560bd97724d"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "04448e0fcdf93e94944b81f7de02b28f070730ee64bd78ed365d032f76b6cdac"
+        )),
+        y: FieldElement(u256h!(
+            "03fae31f466973dae115ac3f5f3c36e9bbbaaed3d6e27dcb1ac077dcbec91f73"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "06350a1b0b22cf89164db7a9517e4d366507430d2dff83ad75184537bbc6f5e0"
+        )),
+        y: FieldElement(u256h!(
+            "02c07b3736397a3c31a8a95aa990c92881af3749d466f3f09d21fec26de273b8"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "00149481fb3229496c2807ec6427c27467bccc28a6881a4fa1137f1bd73272ca"
+        )),
+        y: FieldElement(u256h!(
+            "02852590917167d7d8189405ff5c64d10fe0a4ef2a2a10336275e347add9b3bc"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "02b45b63a9c3bfe28314cead74ef372dd502845ff3046d2e9134ed94bc268f44"
+        )),
+        y: FieldElement(u256h!(
+            "003401c067cc17f5e704690a68fc42284ec51d06aa5d85d355d3d192c369fa88"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0125dc05dfa3de8ca810b5d7aa5d5b638598007e764b4387bfa93e5034b283fc"
+        )),
+        y: FieldElement(u256h!(
+            "0283087e98cf9abc8b253ed05efc23dcf4fd8f6439b5d1f4dcbb47f46768c5ac"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0781ce668cb43a010667a7a6c36d66b2ec7bc51ed57d0a9683e6c28947134027"
+        )),
+        y: FieldElement(u256h!(
+            "023f061c691fa1c7e9fc6cd3ea8331cf9d4bd8969637c0fd84317cb8d7564b01"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "01145b72495e078da7940ba5e62fd31c87a5688e76adb3597a946e8e651fb336"
+        )),
+        y: FieldElement(u256h!(
+            "013573ec362cf8d73c10df2d7001e8096f7efe675aab1080873de84e43a8de4e"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "00f452ecf1f79436e479c7d0b500da10c6fd23a77384197adaa8d8f6cf451d2c"
+        )),
+        y: FieldElement(u256h!(
+            "0301b1f5f50880d6a838cb3ae71d584c10facc07722a8fad4260f9d22fdc5cfa"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "027b82d9fc22aad67ab065620f296fef3afff9e66e923fca1527211b802f7b54"
+        )),
+        y: FieldElement(u256h!(
+            "0163b74f8767358038092ecc448bd74220a8c279bee7c6f024db051fba8d7e1e"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "01448e006bb14044015c5525ecb4f7c7e9e1e8df08fbb53df4e3d68537769497"
+        )),
+        y: FieldElement(u256h!(
+            "0302c69f0c33676bdd50572aebd732542c880697db942217bb0f3973f54b906d"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "04c848645f9f1b5649463153e7720ca6a05ad20c6a1738c7a5326fda716c6fc8"
+        )),
+        y: FieldElement(u256h!(
+            "029b87e3b73f5d2feec68f8774854e9c7a5aec5d3bb7b9535d93308e9293ca43"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "047f9d92000b9da0c01ac5d49d04b141ee6388962b5ab150d4b36c72a10dc2fa"
+        )),
+        y: FieldElement(u256h!(
+            "0087175c90cd082e6976d7ab1a7b48224d2145e0771ab1f0a85b6f0cc8c19b95"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0776257cbc540364e6c63a02da0fb982dd38444a5bae99dda68a71ec1d3ddada"
+        )),
+        y: FieldElement(u256h!(
+            "03db95b45f1429b1996492188132e2630ba3101de0fd4df0a409dfc27231a181"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "03c17d5f64800ca2d5e9d7f6982299ddb3983fba5937dc3f8800c39f3e2c1a9c"
+        )),
+        y: FieldElement(u256h!(
+            "0238a2919469cb05e68bad75343fa54fbfbc3e9eea7f8fac624d444d7c4145c2"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "06b3acf71111be0af766e47df3a8d46ac1b23397d8d822d7fba4efc2c0e4ccbf"
+        )),
+        y: FieldElement(u256h!(
+            "03c4c168a99c04f8896329aded4c5152d8a68e06121e25f471f4f55f2208053d"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0550d9e53e64598503e4a9c6f7111cba6af0754776dde52c12da55366cb61eb9"
+        )),
+        y: FieldElement(u256h!(
+            "02b5030dcd4d686f27418f612757a709e4d0362aec81098d0dea353e97491c00"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "02a3f1b5d9b4368ad496bd91bf16de37fa34e52e7a0ca6b058ec30136e20ec54"
+        )),
+        y: FieldElement(u256h!(
+            "01e87d6c6268a9cef609a889ada25de4226255bc691d63a56da36f469b158a23"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "007a6e8833e1a59cc49d6e62a9775bcd00246a9a14cf0924936d5128cb0ce40b"
+        )),
+        y: FieldElement(u256h!(
+            "03ffae4943350372bca147924263768062753493dbc7d664513624c02ae7830e"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0110478ea673fdffe4164bf4f5517335aa185e8653c50bbf2c50d3dbb17c1a96"
+        )),
+        y: FieldElement(u256h!(
+            "00790677f005d29e2a82376bd08b641ba0964e3e7fba1d7c0d0cbe6f693618eb"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "02c773be6130b6aa8a72a95e3afe0252b572c979b4196611a2f9b52dfd779712"
+        )),
+        y: FieldElement(u256h!(
+            "02ce027f08252315a3bbb4c1eafd6c9d361d6527955a194c2947e6f5dc2145d3"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0209f1b79de6749e4e54906386d6384ba9c59a63cba270b7ce98c6ba080df3d6"
+        )),
+        y: FieldElement(u256h!(
+            "01d55b0e0f998c6c885710a1c1c514812c25b110484939e0f0c734433fef9ff6"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "017bf05b850d6f7c3c6e8ea6f616c465423d54949c63f8bd688a16843a975945"
+        )),
+        y: FieldElement(u256h!(
+            "0008ac3dcc1932ff76adb73cf7cd5c6fdf0e0e2186dd59e3bafd7194095bb004"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "06ae579ae56984305c61dddc3b86d3fb4a1180b8ea7da84522fedffb7c7279bb"
+        )),
+        y: FieldElement(u256h!(
+            "015250c2dfce1be441ca09d33b50f068d5857f9ddd5213ce460fc395181bbd5d"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "05a18cb39b3766783fd3c619982a59080153bb7be74196668d0ee832f79c96e1"
+        )),
+        y: FieldElement(u256h!(
+            "03393108391001e6ae9621c7953b28c48c832b12c132df70db4aa289cdea9fa7"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "05bab61b160c623a4ef4b2f20dadad33bc0f084a27690863e89f63137c548d0e"
+        )),
+        y: FieldElement(u256h!(
+            "01a48720ccba65cbc50e628abf79b941458ef3a67e9b8cb8b26cb185a33344c9"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "060e95c353d75d8e116245f367f33f32b2e5bf7d00061745006e7e714e68809b"
+        )),
+        y: FieldElement(u256h!(
+            "014ee6c313ceb11ed48ee677af7065a87ecf3d602512f6c9318cb52568e23af1"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "05f6e9816b504504ffee341098d06b488e1659beb2d982cf475a1e01b6ae8c95"
+        )),
+        y: FieldElement(u256h!(
+            "0011ed7380da1ffe07d3e6b9e7206e3c66b3fbffdc5435a39160513d2b6a38f3"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "02735aa72e7b1a12633a911eeb5625ece89573d0322c5a875dcfa6d06c9a1961"
+        )),
+        y: FieldElement(u256h!(
+            "039793f624051fcba61f6d76d27c46e376aacbca645a11f1d2f97a95ac44cd53"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "017d265332e1742ec194bdcda202432ca7462b022290538400634d40d980b7e4"
+        )),
+        y: FieldElement(u256h!(
+            "00413a04660b681abc80f3b43f543cebb3f74214927679aae2531292650d4ce3"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "078d95fe08a202717929cc6dcb1025b21444f44948d35eee0a7c35bdf4b4cbdf"
+        )),
+        y: FieldElement(u256h!(
+            "0040d27c27d25a3700b60a042fad2806cb3b77a72844fe16f9ba5ead3641773a"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "05a96593daad6104a0d427de3f913dcb265cd6796ff5c0d6e824456c8fe665b2"
+        )),
+        y: FieldElement(u256h!(
+            "03e4dfca1c075a53dff8cc0a81c9402bcea687e33c1cd4478531914c7a6c537c"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "066d1749c7b1f99d1938294b1bad1a4719853bbfb9398c6a0c074bb4c0ac735f"
+        )),
+        y: FieldElement(u256h!(
+            "02329b8aedd068face979b935d9f4bd2d86818752f07892e20a6a8bbc12f4145"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "010b15a785935283218d70415c8c684e4e4be6f7c9e3e560f154e4ace7e9fc0b"
+        )),
+        y: FieldElement(u256h!(
+            "0154af20ff6493424e880ab39e97c8173bf6efbd3f01a8ee7f2b7b7e4c52ff5d"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "075bf97accaf63e1b7aa077214a8e6f050ab5bcd79e8554592c2591c3591ed4e"
+        )),
+        y: FieldElement(u256h!(
+            "036e56083def993b06b237b7bd11aaa3dfc9144740c97721dedd708a26bb8e2c"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "04391b43aeda01cbb8067a4c9c3007c9086c247eb20f605dec20b7a3759a5d1a"
+        )),
+        y: FieldElement(u256h!(
+            "027c424a167cbe5e8e7c23a7a30dd6f8a8c686b9a15e30d462a4f2d8612ae15c"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "039e7b14c4fe5b1220bd6de02597f90ed345eae3560f5f06eb7ce59e1c29b55a"
+        )),
+        y: FieldElement(u256h!(
+            "033fbbbedab86a254f21c8cdcb9852efe20e809aef83c9432d60d4e36b0c1498"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "023505446e0fcb59e85bcd9cb24aa17e275d7e4e6c3f5af2c2984977a3633adb"
+        )),
+        y: FieldElement(u256h!(
+            "0132b83aa4e08c969315238fe1e89250932cc64d15402a5cd78135c0db3b746c"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0528a41355f610f31a9cdac5513626cf487065304443a2e11f3840beea8b0ad2"
+        )),
+        y: FieldElement(u256h!(
+            "00d4288e7a5090a0417d1923081ee45030d1f2cb0986cedf534632cdb5323f7a"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "07927b4a0e8b3f6033f939a6085fcca27c4f5fab2ed3913b0ebe244c824d43cb"
+        )),
+        y: FieldElement(u256h!(
+            "03b7d649061a04c3ceaf828ae1a2bdce0de3aad1dd00c8c63b7341cb3b3601d5"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "013131321e798d54bfc7b0eec5d2d9b6af7c66e8953adc650271714e4875b030"
+        )),
+        y: FieldElement(u256h!(
+            "0225c946d8c0389260743bccb0243ba80228c87efc839d89b77fe6e9eea81d28"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0335182199b61fdb519c9bfbd69726deef3711dc6fecc88c3fd2fd27c4881353"
+        )),
+        y: FieldElement(u256h!(
+            "030afa6721f968d7ff3c3a9d1dae8282567f245d2c2515c34d031848ca70bd38"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0221fb22ebb0ef617429aa90e11814ea9dcec7b82c3346b390548580908b3256"
+        )),
+        y: FieldElement(u256h!(
+            "00aa50cab812b7745a5de06ae392353c99962794c1106abc923942fabe21d6c4"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "03f58a6513d52201d72075863d0521b414cecf63bc284226b9f8dd4fac1b0eb5"
+        )),
+        y: FieldElement(u256h!(
+            "03d26e1c5fa187ae19f6a0d663481bf68bed6c760a20f71597180f95b856c7b4"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "07d69660e6bd468a73e5491fadb6d64b31ba5d640ce9410161d0fb4f393ba245"
+        )),
+        y: FieldElement(u256h!(
+            "02f3ca4332ba9910ff4d5c7fdca290ad0191d5044e68f2c7d6169fe72316dd2c"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "04764bb058399a5151e332227af814783a1f9d11aa490da11ac8b7c55b470f23"
+        )),
+        y: FieldElement(u256h!(
+            "020066aabb3d3361932f4df5d57014dacbdf369eef4cd6752e439a5548f7a421"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "06803fe8c27d8e096fe21540d8cb6f31aa79f66b9f0c7bab83d0bff54ae3c479"
+        )),
+        y: FieldElement(u256h!(
+            "00b2cbfeb430b26d950a50c9999028aeecd1ecc6316a2517ea28b95f68c8dbe6"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0432f2c2caac4907ab4d8c0395c4b913476affdb0dbaa2707ccb5616c51c9691"
+        )),
+        y: FieldElement(u256h!(
+            "0140c73d83ccbc48be24f9cb0957bb2a704c25c8fcf822851b0656ced1d51e35"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "012920ee31174cd4af2d59497a23c972a82753acfc14e4e5e4e6bc6fdf334b86"
+        )),
+        y: FieldElement(u256h!(
+            "02931cd90c2f479bf6e0a0ef7c04023580e2f65a6a6971d58e636fed47c34b69"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "03b54d9a831f8e0eb8f0d4bdb504513f1798ccab2eccd023c0c850846f448a9a"
+        )),
+        y: FieldElement(u256h!(
+            "012236c98e0c9f11e3a72be8fde9336f14760288731feace737831d5da148883"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "04794fed1bd049b723f2cf733461ab79a378cac3e3f364e2683b22dd68055838"
+        )),
+        y: FieldElement(u256h!(
+            "03c53bd2566eb206a72ad813a5e9a9b82c77dc6d477bcabdfa6cf378eeab65dc"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0163f53947766190060280f8bb7988598e38c8fbfe65438f529165e10c30fcfe"
+        )),
+        y: FieldElement(u256h!(
+            "01e127dfe62a2166f79aedec567a4f41e51e5f6da99d8863de18c437cee23adf"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0251ca65faf1146010f5cebde7c1afeeca8b60102fc4dcdf2b80c1350ae282da"
+        )),
+        y: FieldElement(u256h!(
+            "03ec5880b1654c5ac7211ef577e2ad376f6dba92fe6b283a748058721fd53033"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "00ac99dd28f3178481092059a453aee2279b875d5e95a507fa4c389f172edced"
+        )),
+        y: FieldElement(u256h!(
+            "00359911f230df0b7d218a984dece148e72f9e3fa17c8f52272533278b5e26d2"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "035076f08953e4264ced3132094b439ed134db1e22cb40a99a1dfc0c6fa43bf8"
+        )),
+        y: FieldElement(u256h!(
+            "03e407a8870e1b960881930299848bbcc50ae085a5a18511334d15ea3bf718b1"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0195de272f70276bf303186c31a9248d63ab0928bd6f24702e3d5a96eda114ea"
+        )),
+        y: FieldElement(u256h!(
+            "01f18808620644b9adfe27835ea99af6e79425e5fbd7accee73d3d4e95628f6d"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "061d40a10d88a0631c06db40bd073345e7f53698756847049fd2af3f44025db7"
+        )),
+        y: FieldElement(u256h!(
+            "03b278351d6fc66d42fee17b7731ff9e3df3d5b62607ca33ddf89f37eaebf24f"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "07fd45a0247144d8a82260df884ed2d700c004755512dff068d1dbae818193d0"
+        )),
+        y: FieldElement(u256h!(
+            "02d0be47eb107c7e13458bb1f774c02193519bc05188eb79a303db3d1df8f966"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "0473d2893ca9d7473941366644ae28e0fe0f9a2aaa850844888220d9c7262cdb"
+        )),
+        y: FieldElement(u256h!(
+            "0177a77f99fea4d2bdc09af5d997532fe99811416ae817b47414c315f1fb313e"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "02c1b7ac5bb9e1716dd0e3bfdb7dbc8d8c93ac35008fd9525226286ab1d6d1bd"
+        )),
+        y: FieldElement(u256h!(
+            "01bb341ae09a25ddf74ca4a0b0da6b894991f672cea955bd70e513ab93333c1d"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "07d2a728ca628fd159ea36200cd1d26e778ba6f0da9b3b93b52fd7aa84d2eec5"
+        )),
+        y: FieldElement(u256h!(
+            "01bc3932bb955da301e6a9f1850ccd3aa7243302c0ba5d6ed50addd04fca8c14"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "07516bcc579c2618426086d4e8bc7150c6d6e50fc10f2d4b0baf5acb9d18d193"
+        )),
+        y: FieldElement(u256h!(
+            "00e1ccf73b79b333bdca74145e5ad7b7016e55bae838214a7c6fd0b3373d65a8"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "040443d8dc6178ec48ed611294b2eada8b7d89e310db7fd4fc995c4569826cf4"
+        )),
+        y: FieldElement(u256h!(
+            "034de07fea32b5f151d64ef16c52b1cc5e37f0369494cd3f9a3862a92eb65fb8"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "00dc2969658bd20ba541cd85bf00c82c63374ef35860c73e27ede8b8f78bc386"
+        )),
+        y: FieldElement(u256h!(
+            "01e46692c1f443779b67581cf322a032f0adc5501203a8632ad21d73cead5f79"
+        )),
+    },
+    CurvePoint {
+        x: FieldElement(u256h!(
+            "06240eb2a837f465a300958d036b054c95f10f84c316821db3bdddf4e99c8046"
+        )),
+        y: FieldElement(u256h!(
+            "01105e2f7b9193fd9d140b44b7261d4ca215d239996a98ef32a910ca166aab76"
+        )),
+    },
+];
