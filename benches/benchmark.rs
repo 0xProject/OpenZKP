@@ -187,10 +187,7 @@ fn curve_mul(crit: &mut Criterion) {
             0x060c2257,
         ]),
     };
-    let b = BigUint::from_slice(&[
-        0x711a14cf, 0xebe54f04, 0x4729d630, 0xd14a329a, 0xf5480b47, 0x35fdc862, 0xde09131d,
-        0x029f7a37,
-    ]);
+    let b = u256h!("014023b44fbb1e6f2a79c929c6da775be3c4b9e043d439385b5050fdc69177e3");
     crit.bench_function("Curve mul", move |bench| {
         bench.iter(|| {
             black_box(A.clone() * b.clone());
@@ -200,14 +197,8 @@ fn curve_mul(crit: &mut Criterion) {
 
 fn pedersen_hash(crit: &mut Criterion) {
     let elements = [
-        BigUint::from_slice(&[
-            0x405371cb, 0x28feb561, 0xa1393627, 0x9c53068d, 0x1a575610, 0x5caf6453, 0x35c87824,
-            0x03d937c0,
-        ]),
-        BigUint::from_slice(&[
-            0x9cd8b31a, 0xbbc6aeff, 0x5695e02f, 0x791bf627, 0x880906c2, 0xe1e4bbe2, 0x0250e382,
-            0x0208a0a1,
-        ]),
+        u256h!("03d937c035c878245caf64531a5756109c53068da139362728feb561405371cb"),
+        u256h!("0208a0a10250e382e1e4bbe2880906c2791bf6275695e02fbbc6aeff9cd8b31a"),
     ];
     crit.bench_function("Pedersen hash", move |bench| {
         bench.iter(|| black_box(hash(&elements)))
@@ -215,28 +206,16 @@ fn pedersen_hash(crit: &mut Criterion) {
 }
 
 fn ecdsa_sign(crit: &mut Criterion) {
-    let message_hash = BigUint::from_slice(&[
-        0x9cd8b31a, 0xbbc6aeff, 0x5695e02f, 0x791bf627, 0x880906c2, 0xe1e4bbe2, 0x0250e382,
-        0x0208a0a1,
-    ]);
-    let private_key = BigUint::from_slice(&[
-        0x405371cb, 0x28feb561, 0xa1393627, 0x9c53068d, 0x1a575610, 0x5caf6453, 0x35c87824,
-        0x03d937c0,
-    ]);
+    let message_hash = u256h!("03d937c035c878245caf64531a5756109c53068da139362728feb561405371cb");
+    let private_key = u256h!("0208a0a10250e382e1e4bbe2880906c2791bf6275695e02fbbc6aeff9cd8b31a");
     crit.bench_function("Ecdsa sign", move |bench| {
         bench.iter(|| black_box(sign(&message_hash, &private_key)))
     });
 }
 
 fn ecdsa_verify(crit: &mut Criterion) {
-    let message_hash = BigUint::from_slice(&[
-        0x9cd8b31a, 0xbbc6aeff, 0x5695e02f, 0x791bf627, 0x880906c2, 0xe1e4bbe2, 0x0250e382,
-        0x0208a0a1,
-    ]);
-    let private_key = BigUint::from_slice(&[
-        0x405371cb, 0x28feb561, 0xa1393627, 0x9c53068d, 0x1a575610, 0x5caf6453, 0x35c87824,
-        0x03d937c0,
-    ]);
+    let message_hash = u256h!("03d937c035c878245caf64531a5756109c53068da139362728feb561405371cb");
+    let private_key = u256h!("0208a0a10250e382e1e4bbe2880906c2791bf6275695e02fbbc6aeff9cd8b31a");
     let public = private_to_public(&private_key);
     let (r, w) = sign(&message_hash, &private_key);
     crit.bench_function("Ecdsa verify", move |bench| {
