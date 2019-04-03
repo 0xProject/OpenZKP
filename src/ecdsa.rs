@@ -32,11 +32,8 @@ pub fn sign(msg_hash: &U256, private_key: &U256) -> (U256, U256) {
         assert!(r > U256::ZERO);
         assert!(r.bits() <= 251); // TODO: Retry
 
-        let r = r % &ORDER;
-
-        assert!(msg_hash + r.clone() * &private_key % &ORDER != U256::ZERO);
-        let w: U256 = divmod(&k, &(msg_hash + &r * private_key.clone()));
-
+        debug_assert!(msg_hash + r.mulmod(&private_key, &ORDER) != U256::ZERO);
+        let w: U256 = divmod(&k, &(msg_hash + r.mulmod(private_key, &ORDER)));
         (r, w)
     }
 }
@@ -59,6 +56,36 @@ mod tests {
     use super::*;
     use crate::field::FieldElement;
     use quickcheck_macros::quickcheck;
+
+    #[test]
+    fn test_pubkey() {
+        let private_key =
+            u256h!("03c1e9550e66958296d11b60f8e8e7a7ad990d07fa65d5f7652c4a6c87d4e3cc");
+        let expected = CurvePoint {
+            x: FieldElement(u256h!(
+                "077a3b314db07c45076d11f62b6f9e748a39790441823307743cf00d6597ea43"
+            )),
+            y: FieldElement(u256h!(
+                "054d7beec5ec728223671c627557efc5c9a6508425dc6c900b7741bf60afec06"
+            )),
+        };
+        let result = private_to_public(&private_key);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_sign() {
+        let message_hash =
+            u256h!("01e542e2da71b3f5d7b4e9d329b4d30ac0b5d6f266ebef7364bf61c39aac35d0");
+        let private_key =
+            u256h!("03c1e9550e66958296d11b60f8e8e7a7ad990d07fa65d5f7652c4a6c87d4e3cc");
+        let expected = (
+            u256h!("01ef15c18599971b7beced415a40f0c7deacfd9b0d1819e03d723d8bc943cfca"),
+            u256h!("07656a287e3be47c6e9a29482aecc10cd8b1ae4797b4b956a3573b425d1e66c9"),
+        );
+        let result = sign(&message_hash, &private_key);
+        assert_eq!(result, expected);
+    }
 
     #[quickcheck]
     #[test]
