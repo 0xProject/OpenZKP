@@ -2,13 +2,17 @@ use crate::curve::CurvePoint;
 use crate::field::FieldElement;
 use crate::pedersen_points::PEDERSEN_POINTS;
 use crate::u256::U256;
-use lazy_static::lazy_static;
 use crate::u256h;
 use hex_literal::*;
+use lazy_static::lazy_static;
 
 pub const SHIFT_POINT: CurvePoint = CurvePoint {
-    x: FieldElement(u256h!("049ee3eba8c1600700ee1b87eb599f16716b0b1022947733551fde4050ca6804")),
-    y: FieldElement(u256h!("03ca0cfe4b3bc6ddf346d49d06ea0ed34e621062c0e056c1d0405d266e10268a")),
+    x: FieldElement(u256h!(
+        "049ee3eba8c1600700ee1b87eb599f16716b0b1022947733551fde4050ca6804"
+    )),
+    y: FieldElement(u256h!(
+        "03ca0cfe4b3bc6ddf346d49d06ea0ed34e621062c0e056c1d0405d266e10268a"
+    )),
 };
 
 pub const N_ELEMENT_BITS: u32 = 251;
