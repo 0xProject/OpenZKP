@@ -51,7 +51,7 @@ pub fn verify(msg_hash: &U256, r: &U256, w: &U256, public_key: &CurvePoint) -> b
     let a = GENERATOR.clone() * msg_hash.mulmod(&w, &ORDER);
     let b = public_key.clone() * r.mulmod(&w, &ORDER);
     let x = (a + b).x.0;
-    x == r
+    &x == r
 }
 
 #[cfg(test)]
