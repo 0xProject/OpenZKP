@@ -83,6 +83,11 @@ impl U256 {
     }
 
     #[inline(always)]
+    pub fn bits(&self) -> u32 {
+        256 - self.leading_zeros()
+    }
+
+    #[inline(always)]
     pub fn leading_zeros(&self) -> u32 {
         if self.c3 > 0 {
             self.c3.leading_zeros()
