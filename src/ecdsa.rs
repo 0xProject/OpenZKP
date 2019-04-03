@@ -86,6 +86,23 @@ mod tests {
         assert_eq!(result, expected);
     }
 
+    #[test]
+    fn test_verify() {
+        let message_hash =
+            u256h!("01e542e2da71b3f5d7b4e9d329b4d30ac0b5d6f266ebef7364bf61c39aac35d0");
+        let public_key = CurvePoint {
+            x: FieldElement(u256h!(
+                "077a3b314db07c45076d11f62b6f9e748a39790441823307743cf00d6597ea43"
+            )),
+            y: FieldElement(u256h!(
+                "054d7beec5ec728223671c627557efc5c9a6508425dc6c900b7741bf60afec06"
+            )),
+        };
+        let r = u256h!("01ef15c18599971b7beced415a40f0c7deacfd9b0d1819e03d723d8bc943cfca");
+        let w = u256h!("07656a287e3be47c6e9a29482aecc10cd8b1ae4797b4b956a3573b425d1e66c9");
+        assert!(verify(&message_hash, &r, &w, &public_key));
+    }
+
     #[quickcheck]
     #[test]
     fn test_ecdsa(message_hash: FieldElement, private_key: FieldElement) -> bool {
