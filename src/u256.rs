@@ -62,6 +62,16 @@ impl U256 {
         )
     }
 
+    pub fn to_bytes_be(&self) -> [u8; 32] {
+        let mut r = [0; 32];
+        let mut n = self.clone();
+        for i in (0..32).rev() {
+            r[i] = n.c0 as u8;
+            n >>= 8;
+        }
+        r
+    }
+
     #[inline(always)]
     #[allow(clippy::cast_lossless)]
     pub const fn from_slice(limbs: &[u32; 8]) -> Self {
