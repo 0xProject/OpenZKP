@@ -4,7 +4,6 @@ use crate::pedersen_points::PEDERSEN_POINTS;
 use crate::u256::U256;
 use crate::u256h;
 use hex_literal::*;
-use lazy_static::lazy_static;
 
 pub const SHIFT_POINT: CurvePoint = CurvePoint {
     x: FieldElement(u256h!(
