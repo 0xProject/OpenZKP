@@ -63,6 +63,18 @@ impl U256 {
     }
 
     #[inline(always)]
+    #[allow(clippy::cast_lossless)]
+    pub const fn from_slice(limbs: &[u32; 8]) -> Self {
+        // TODO: Remove
+        Self::new(
+            ((limbs[1] as u64) << 32) | (limbs[0] as u64),
+            ((limbs[3] as u64) << 32) | (limbs[2] as u64),
+            ((limbs[5] as u64) << 32) | (limbs[4] as u64),
+            ((limbs[7] as u64) << 32) | (limbs[6] as u64),
+        )
+    }
+
+    #[inline(always)]
     pub const fn from_u64(n: u64) -> Self {
         Self::new(n, 0, 0, 0)
     }
