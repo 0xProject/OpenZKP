@@ -1,6 +1,5 @@
 use crate::pedersen::hash;
 use crate::u256::U256;
-use num::{traits::cast::FromPrimitive, traits::Zero};
 
 pub struct MakerMessage<T> {
     pub vault_a: u32,

@@ -3,7 +3,6 @@ use crate::field::FieldElement;
 use crate::u256::U256;
 use crate::u256h;
 use hex_literal::*;
-use num::traits::{One, Zero};
 
 pub const GENERATOR: CurvePoint = CurvePoint {
     x: FieldElement(u256h!(

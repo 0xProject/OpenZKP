@@ -1,7 +1,6 @@
 use crate::u256::U256;
 use crate::u256h;
 use hex_literal::*;
-use num::traits::{Inv, One, Zero};
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 pub const MODULUS: U256 =
@@ -12,7 +11,9 @@ pub const INVEXP: U256 = u256h!("0800000000000010fffffffffffffffffffffffffffffff
 pub struct FieldElement(pub U256);
 
 impl FieldElement {
-    // TODO: const ZERO ONE
+    pub const ZERO: FieldElement = FieldElement(U256::ZERO);
+    pub const ONE: FieldElement = FieldElement(U256::ONE);
+
     pub fn new(limbs: &[u32; 8]) -> Self {
         let mut bu = U256::new(
             ((limbs[1] as u64) << 32) | (limbs[0] as u64),
@@ -26,12 +27,16 @@ impl FieldElement {
     }
 
     pub fn to_bytes(&self) -> [u8; 32] {
-        // TODO: Zero padding
-        // TODO let vec = self.0.to_bytes_be();
-        let mut array = [0; 32];
-        //let bytes = &vec.as_slice()[..array.len()]; // panics if not enough data
-        //array.copy_from_slice(bytes);
-        array
+        self.0.to_bytes_be()
+    }
+
+    pub fn is_zero(&self) -> bool {
+        self.0 == U256::ZERO
+    }
+
+    pub fn inv(&self) -> FieldElement {
+        // TODO: Option type.
+        FieldElement(self.0.invmod(&MODULUS).unwrap())
     }
 }
 
@@ -44,21 +49,6 @@ impl From<&[u8; 32]> for FieldElement {
     }
 }
 
-impl Zero for FieldElement {
-    fn is_zero(&self) -> bool {
-        self.0 == U256::ZERO
-    }
-    fn zero() -> Self {
-        FieldElement(U256::ZERO.clone())
-    }
-}
-
-impl One for FieldElement {
-    fn one() -> Self {
-        FieldElement(U256::ONE.clone())
-    }
-}
-
 // TODO: mul2() mul3() pow2()
 
 impl Neg for FieldElement {
@@ -67,15 +57,6 @@ impl Neg for FieldElement {
         let mut n = (&MODULUS).clone();
         n -= &self.0;
         FieldElement(n)
-    }
-}
-
-impl Inv for FieldElement {
-    type Output = Self;
-    // TODO: Option
-    fn inv(self) -> Self::Output {
-        // TODO: Option type.
-        FieldElement(self.0.invmod(&MODULUS).unwrap())
     }
 }
 
@@ -162,7 +143,6 @@ impl Arbitrary for FieldElement {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use num::traits::cast::FromPrimitive;
     use quickcheck_macros::quickcheck;
 
     #[rustfmt::skip]
@@ -204,13 +184,13 @@ mod tests {
     #[quickcheck]
     #[test]
     fn add_identity(a: FieldElement) -> bool {
-        a.clone() + FieldElement::zero() == a
+        a.clone() + FieldElement::ZERO == a
     }
 
     #[quickcheck]
     #[test]
     fn mul_identity(a: FieldElement) -> bool {
-        a.clone() * FieldElement::one() == a
+        a.clone() * FieldElement::ONE == a
     }
 
     #[quickcheck]
@@ -240,13 +220,13 @@ mod tests {
     #[quickcheck]
     #[test]
     fn inverse_add(a: FieldElement) -> bool {
-        a.clone() + a.neg() == FieldElement::zero()
+        a.clone() + a.neg() == FieldElement::ZERO
     }
 
     #[quickcheck]
     #[test]
     fn inverse_mul(a: FieldElement) -> bool {
-        a.clone() * a.inv() == FieldElement::one()
+        a.clone() * a.inv() == FieldElement::ONE
     }
 
     #[quickcheck]

@@ -11,7 +11,6 @@ pub mod u256;
 mod utils;
 use curve::CurvePoint;
 use field::FieldElement;
-pub use num;
 use u256::U256;
 
 fn from_bytes(bytes: &[u8; 32]) -> U256 {

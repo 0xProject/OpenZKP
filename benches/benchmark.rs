@@ -1,7 +1,6 @@
 #[macro_use]
 use criterion::{Criterion, black_box, criterion_group, criterion_main};
 use hex_literal::*;
-use num::{bigint::BigUint, traits::FromPrimitive, traits::Inv, Integer, One, Zero};
 use starkcrypto::curve::CurvePoint;
 use starkcrypto::ecdsa::{private_to_public, sign, verify};
 use starkcrypto::field::FieldElement;

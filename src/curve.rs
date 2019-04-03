@@ -2,7 +2,6 @@ use crate::field::FieldElement;
 use crate::u256::U256;
 use crate::u256h;
 use hex_literal::*;
-use num::{One, Zero};
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Shr, SubAssign};
 
 // Curve parameters
@@ -38,8 +37,8 @@ impl CurvePoint {
     }
 
     pub fn double(self) -> CurvePoint {
-        assert!(self.x.clone() != FieldElement::zero());
-        let one = FieldElement::one().clone();
+        assert!(self.x.clone() != FieldElement::ZERO);
+        let one = FieldElement::ONE.clone();
         let two = one.clone() + one.clone();
         let three = two.clone() + one.clone();
         let m = (three.clone() * self.x.clone() * self.x.clone() + one.clone())
@@ -53,7 +52,7 @@ impl CurvePoint {
 impl Add for CurvePoint {
     type Output = Self;
     fn add(self, rhs: CurvePoint) -> Self {
-        assert!(self.x.clone() - rhs.x.clone() != FieldElement::zero());
+        assert!(self.x.clone() - rhs.x.clone() != FieldElement::ZERO);
         let m = (self.y.clone() - rhs.y.clone()) / (self.x.clone() - rhs.x.clone());
         let x = m.clone() * m.clone() - self.x.clone() - rhs.x.clone();
         let y = m.clone() * (self.x.clone() - x.clone()) - self.y.clone();
