@@ -1,93 +1,36 @@
-use lazy_static::lazy_static;
-use num::bigint::BigUint;
-use num::integer::Integer;
+use crate::u256::U256;
+use crate::u256h;
+use hex_literal::*;
 use num::traits::{Inv, One, Zero};
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
-pub fn modinv(n: &BigUint, m: &BigUint) -> Option<BigUint> {
-    // Handbook of Applied Cryptography Algorithm 14.61:
-    // Binary Extended GCD
-    // See note 14.64 on application to modular inverse.
-    // The algorithm is modified to work with non-negative numbers.
-    // TODO: Constant time algorithm. (Based on fermat's little theorem or
-    // constant time Euclids.)
-    let mut u = n.clone();
-    let mut v = m.clone();
-    let mut a = BigUint::one();
-    let mut c = BigUint::zero();
-    while !u.is_zero() {
-        while u.is_even() {
-            u >>= 1;
-            if a.is_odd() {
-                a += m;
-            }
-            a >>= 1;
-        }
-        while v.is_even() {
-            v >>= 1;
-            if c.is_odd() {
-                c += m;
-            }
-            c >>= 1;
-        }
-        if u >= v {
-            if a < c {
-                a += m;
-            }
-            u -= &v;
-            a -= &c;
-        } else {
-            if c < a {
-                c += m;
-            }
-            v -= &u;
-            c -= &a;
-        }
-    }
-    if v == BigUint::one() {
-        Some(c)
-    } else {
-        None
-    }
-}
-
-// Note: BigUInt does not support compile time initialization
-lazy_static! {
-    pub static ref ZERO: BigUint = BigUint::from_slice(&[
-        0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000
-    ]);
-    pub static ref ONE: BigUint = BigUint::from_slice(&[
-        0x00000001, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000
-    ]);
-    pub static ref MODULUS: BigUint = BigUint::from_slice(&[
-        0x00000001, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000011,
-        0x08000000
-    ]);
-    pub static ref INVEXP: BigUint = BigUint::from_slice(&[
-        0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0x00000010,
-        0x08000000
-    ]);
-}
+pub const MODULUS: U256 =
+    u256h!("0800000000000011000000000000000000000000000000000000000000000001");
+pub const INVEXP: U256 = u256h!("0800000000000010ffffffffffffffffffffffffffffffffffffffffffffffff");
 
 #[derive(PartialEq, Eq, Clone, Debug)]
-pub struct FieldElement(pub BigUint);
+pub struct FieldElement(pub U256);
 
 impl FieldElement {
     // TODO: const ZERO ONE
     pub fn new(limbs: &[u32; 8]) -> Self {
-        let mut bu = BigUint::from_slice(limbs);
-        bu %= &*MODULUS;
+        let mut bu = U256::new(
+            ((limbs[1] as u64) << 32) | (limbs[0] as u64),
+            ((limbs[3] as u64) << 32) | (limbs[2] as u64),
+            ((limbs[5] as u64) << 32) | (limbs[4] as u64),
+            ((limbs[7] as u64) << 32) | (limbs[6] as u64),
+        );
+        bu %= &MODULUS;
+        assert!(bu < MODULUS);
         FieldElement(bu)
     }
 
     pub fn to_bytes(&self) -> [u8; 32] {
         // TODO: Zero padding
-        let vec = self.0.to_bytes_be();
+        // TODO let vec = self.0.to_bytes_be();
         let mut array = [0; 32];
-        let bytes = &vec.as_slice()[..array.len()]; // panics if not enough data
-        array.copy_from_slice(bytes);
+        //let bytes = &vec.as_slice()[..array.len()]; // panics if not enough data
+        //array.copy_from_slice(bytes);
         array
     }
 }
@@ -95,24 +38,24 @@ impl FieldElement {
 // TODO: Implement Serde
 impl From<&[u8; 32]> for FieldElement {
     fn from(bytes: &[u8; 32]) -> Self {
-        let mut bu = BigUint::from_bytes_be(bytes);
-        bu %= &*MODULUS;
+        let mut bu = U256::from_bytes_be(bytes.clone());
+        bu %= &MODULUS;
         FieldElement(bu)
     }
 }
 
 impl Zero for FieldElement {
     fn is_zero(&self) -> bool {
-        self.0.is_zero()
+        self.0 == U256::ZERO
     }
     fn zero() -> Self {
-        FieldElement(ZERO.clone())
+        FieldElement(U256::ZERO.clone())
     }
 }
 
 impl One for FieldElement {
     fn one() -> Self {
-        FieldElement(ONE.clone())
+        FieldElement(U256::ONE.clone())
     }
 }
 
@@ -121,8 +64,8 @@ impl One for FieldElement {
 impl Neg for FieldElement {
     type Output = FieldElement;
     fn neg(self) -> Self::Output {
-        let mut n = (&*MODULUS).clone();
-        n -= self.0;
+        let mut n = (&MODULUS).clone();
+        n -= &self.0;
         FieldElement(n)
     }
 }
@@ -132,33 +75,32 @@ impl Inv for FieldElement {
     // TODO: Option
     fn inv(self) -> Self::Output {
         // TODO: Option type.
-        FieldElement(modinv(&self.0, &*MODULUS).unwrap())
+        FieldElement(self.0.invmod(&MODULUS).unwrap())
     }
 }
 
 impl AddAssign<&FieldElement> for FieldElement {
     fn add_assign(&mut self, rhs: &FieldElement) {
         self.0 += &rhs.0;
-        if self.0 >= *MODULUS {
-            self.0 -= &*MODULUS;
+        if self.0 >= MODULUS {
+            self.0 -= &MODULUS;
         }
     }
 }
 
 impl SubAssign<&FieldElement> for FieldElement {
     fn sub_assign(&mut self, rhs: &FieldElement) {
-        self.0 += &*MODULUS;
+        self.0 += &MODULUS;
         self.0 -= &rhs.0;
-        if self.0 >= *MODULUS {
-            self.0 -= &*MODULUS;
+        if self.0 >= MODULUS {
+            self.0 -= &MODULUS;
         }
     }
 }
 
 impl MulAssign<&FieldElement> for FieldElement {
     fn mul_assign(&mut self, rhs: &FieldElement) {
-        self.0 *= &rhs.0;
-        self.0 %= &*MODULUS;
+        self.0 = self.0.mulmod(&rhs.0, &MODULUS);
     }
 }
 
@@ -213,18 +155,7 @@ use rand::Rng;
 impl Arbitrary for FieldElement {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         // TODO: Generate 0, 1, p/2 and -1
-        let mut n = BigUint::from_slice(&[
-            g.gen(),
-            g.gen(),
-            g.gen(),
-            g.gen(),
-            g.gen(),
-            g.gen(),
-            g.gen(),
-            g.gen(),
-        ]);
-        n %= &*MODULUS;
-        FieldElement(n)
+        FieldElement(U256::arbitrary(g) % &MODULUS)
     }
 }
 
@@ -234,21 +165,12 @@ mod tests {
     use num::traits::cast::FromPrimitive;
     use quickcheck_macros::quickcheck;
 
-    #[test]
-    fn test_modinv() {
-        let n = BigUint::from_u64(271).unwrap();
-        let m = BigUint::from_u64(383).unwrap();
-        let i = BigUint::from_u64(106).unwrap();
-        let r = modinv(&n, &m).unwrap();
-        assert_eq!(i, r);
-    }
-
     #[rustfmt::skip]
     #[test]
     fn test_add() {
-        let a = FieldElement::new(&[0x0f3855f5, 0x37862eb2, 0x275b919f, 0x325329cb, 0xe968e6a2, 0xa2ceee5c, 0xd5f1d547, 0x07211989]);
-        let b = FieldElement::new(&[0x32c781dd, 0x6f6a3b68, 0x3bac723c, 0xd5893114, 0xd0178b37, 0x5476714f, 0x1c567d5a, 0x0219cad4]);
-        let c = FieldElement::new(&[0x41ffd7d1, 0xa6f06a1a, 0x630803db, 0x07dc5adf, 0xb98071da, 0xf7455fac, 0xf2485290, 0x013ae45d]);
+        let a = FieldElement(u256h!("0548c135e26faa9c977fb2eda057b54b2e0baa9a77a0be7c80278f4f03462d4c"));
+        let b = FieldElement(u256h!("024385f6bebc1c496e09955db534ef4b1eaff9a78e27d4093cfa8f7c8f886f6b"));
+        let c = FieldElement(u256h!("078c472ca12bc6e60589484b558ca4964cbba44205c89285bd221ecb92ce9cb7"));
         assert_eq!(a + b, c);
     }
 
