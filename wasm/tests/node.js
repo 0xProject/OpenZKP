@@ -214,14 +214,14 @@ for (var i = 0; i < 100; i++) {
 console.timeEnd("Benchmark 100x public key");
 
 // Benchmark sign
-console.time("Benchmark 1000x sign");
-for (var i = 0; i < 1000; i++) {
+console.time("Benchmark 100x sign");
+for (var i = 0; i < 100; i++) {
     var result = starkcrypto.sign(
         "03d937c035c878245caf64531a5756109c53068da139362728feb561405371cb",
         "03d937c035c878245caf64531a5756109c53068da139362728feb561405371cb"
     );
 }
-console.timeEnd("Benchmark 1000x sign");
+console.timeEnd("Benchmark 100x sign");
 
 // Benchmark verify
 console.time("Benchmark 10x verify");
