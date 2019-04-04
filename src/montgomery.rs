@@ -57,9 +57,14 @@ pub fn redc(lo: &U256, hi: &U256) -> U256 {
 }
 
 pub fn mul_redc(a: &U256, b: &U256) -> U256 {
-    // TODO: Algorithm 14.36
+    // TODO: Algorithm 14.36 from Handbook of Applied Cryptography
     let (lo, hi) = a.mul_full(b);
     redc(&lo, &hi)
+}
+
+pub fn sqr_redc(a: &U256) -> U256 {
+    // TODO: special case
+    mul_redc(&a, &a)
 }
 
 pub fn inv_redc(n: &U256) -> U256 {
