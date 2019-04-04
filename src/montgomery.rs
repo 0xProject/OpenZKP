@@ -19,87 +19,49 @@ pub const R3: U256 = u256h!("038e5f79873c0a6df47d84f8363000187545706677ffcc06cc7
 // TODO: make const
 pub fn redc(lo: &U256, hi: &U256) -> U256 {
     // Algorithm 14.32 from Handbook of Applied Cryptography.
-    let mut a = [lo.c0, lo.c1, lo.c2, lo.c3, hi.c0, hi.c1, hi.c2, hi.c3];
-    let m = [MODULUS.c0, MODULUS.c1, MODULUS.c2, MODULUS.c3];
-    {
-        let ui = a[0].wrapping_mul(M64);
-        let carry = 0;
-        let (ai, carry) = mac(a[0], ui, m[0], carry);
-        a[0] = ai;
-        let (ai, carry) = mac(a[1], ui, m[1], carry);
-        a[1] = ai;
-        let (ai, carry) = mac(a[2], ui, m[2], carry);
-        a[2] = ai;
-        let (ai, carry) = mac(a[3], ui, m[3], carry);
-        a[3] = ai;
-        let (ai, carry) = adc(a[4], 0, carry);
-        a[4] = ai;
-        let (ai, carry) = adc(a[5], 0, carry);
-        a[5] = ai;
-        let (ai, carry) = adc(a[6], 0, carry);
-        a[6] = ai;
-        let (ai, carry) = adc(a[7], 0, carry);
-        a[7] = ai;
-        //debug_assert!(carry == 0);
-        //debug_assert!(a[i] == 0);
-    }
-    {
-        let ui = a[1].wrapping_mul(M64);
-        let mut carry = 0;
-        let (ai, carry) = mac(a[1], ui, m[0], carry);
-        a[1] = ai;
-        let (ai, carry) = mac(a[2], ui, m[1], carry);
-        a[2] = ai;
-        let (ai, carry) = mac(a[3], ui, m[2], carry);
-        a[3] = ai;
-        let (ai, carry) = mac(a[4], ui, m[3], carry);
-        a[4] = ai;
-        let (ai, carry) = adc(a[5], 0, carry);
-        a[5] = ai;
-        let (ai, carry) = adc(a[6], 0, carry);
-        a[6] = ai;
-        let (ai, carry) = adc(a[7], 0, carry);
-        a[7] = ai;
-        //debug_assert!(carry == 0);
-        //debug_assert!(a[i] == 0);
-    }
-    {
-        let ui = a[2].wrapping_mul(M64);
-        let mut carry = 0;
-        let (ai, carry) = mac(a[2], ui, m[0], carry);
-        a[2] = ai;
-        let (ai, carry) = mac(a[3], ui, m[1], carry);
-        a[3] = ai;
-        let (ai, carry) = mac(a[4], ui, m[2], carry);
-        a[4] = ai;
-        let (ai, carry) = mac(a[5], ui, m[3], carry);
-        a[5] = ai;
-        let (ai, carry) = adc(a[6], 0, carry);
-        a[6] = ai;
-        let (ai, carry) = adc(a[7], 0, carry);
-        a[7] = ai;
-        //debug_assert!(carry == 0);
-        //debug_assert!(a[i] == 0);
-    }
-    {
-        let ui = a[3].wrapping_mul(M64);
-        let mut carry = 0;
-        let (ai, carry) = mac(a[3], ui, m[0], carry);
-        a[3] = ai;
-        let (ai, carry) = mac(a[4], ui, m[1], carry);
-        a[4] = ai;
-        let (ai, carry) = mac(a[5], ui, m[2], carry);
-        a[5] = ai;
-        let (ai, carry) = mac(a[6], ui, m[3], carry);
-        a[6] = ai;
-        let (ai, carry) = adc(a[7], 0, carry);
-        a[7] = ai;
-        //debug_assert!(carry == 0);
-        //debug_assert!(a[i] == 0);
-    }
+    let ui = a[0].wrapping_mul(M64);
+    let (a0, carry) = mac(lo.c0, ui, MODULUS.c0, 0);
+    let (a1, carry) = mac(lo.c1, ui, MODULUS.c1, carry);
+    let (a2, carry) = mac(lo.c2, ui, MODULUS.c2, carry);
+    let (a3, carry) = mac(lo.c3, ui, MODULUS.c3, carry);
+    let (a4, carry) = adc(hi.c0, 0, carry);
+    let (a5, carry) = adc(hi.c1, 0, carry);
+    let (a6, carry) = adc(hi.c2, 0, carry);
+    let (a7, carry) = adc(hi.c3, 0, carry);
+    //debug_assert!(carry == 0);
+    //debug_assert!(a0 == 0);
+    let ui = a1.wrapping_mul(M64);
+    let (a1, carry) = mac(a1, ui, MODULUS.c0, 0);
+    let (a2, carry) = mac(a2, ui, MODULUS.c1, carry);
+    let (a3, carry) = mac(a3, ui, MODULUS.c2, carry);
+    let (a4, carry) = mac(a4, ui, MODULUS.c3, carry);
+    let (a5, carry) = adc(a5, 0, carry);
+    let (a6, carry) = adc(a6, 0, carry);
+    let (a7, carry) = adc(a7, 0, carry);
+    //debug_assert!(carry == 0);
+    //debug_assert!(a1 == 0);
+    let ui = a2.wrapping_mul(M64);
+    let mut carry = 0;
+    let (a2, carry) = mac(a2, ui, MODULUS.c0, 0);
+    let (a3, carry) = mac(a3, ui, MODULUS.c1, carry);
+    let (a4, carry) = mac(a4, ui, MODULUS.c2, carry);
+    let (a5, carry) = mac(a5, ui, MODULUS.c3, carry);
+    let (a6, carry) = adc(a6, 0, carry);
+    let (a7, carry) = adc(a7, 0, carry);
+    //debug_assert!(carry == 0);
+    //debug_assert!(a2 == 0);
+    let ui = a3.wrapping_mul(M64);
+    let mut carry = 0;
+    let (a3, carry) = mac(a3, ui, MODULUS.c0, carry);
+    let (a4, carry) = mac(a4, ui, MODULUS.c1, carry);
+    let (a5, carry) = mac(a5, ui, MODULUS.c2, carry);
+    let (a6, carry) = mac(a6, ui, MODULUS.c3, carry);
+    let (a7, carry) = adc(a7, 0, carry);
+    //debug_assert!(carry == 0);
+    //debug_assert!(a3 == 0);
 
     // Final reduction
-    let mut r = U256::new(a[4], a[5], a[6], a[7]);
+    let mut r = U256::new(a4, a5, a6, a7);
     if r >= MODULUS {
         r -= &MODULUS;
     }
