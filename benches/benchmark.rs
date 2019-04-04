@@ -83,10 +83,28 @@ fn u256_divrem(crit: &mut Criterion) {
     );
     let b = u256h!("0800000000000011000000000000000000000000000000000000000000000001");
     crit.bench_function("U256 divrem", move |bench| {
-        bench.iter(|| black_box(&a).invmod(black_box(&b)))
+        bench.iter(|| black_box(black_box(&a).divrem(black_box(&b))))
     });
 }
 
+fn u256_mulmod(crit: &mut Criterion) {
+    let a = U256::new(
+        0x531bb3056443bc99,
+        0x4ef3d9c2cb44b6a3,
+        0x471cec503f118188,
+        0x01c9e043b135fa21,
+    );
+    let b = U256::new(
+        0x1717f47973471ed5,
+        0xe106229070982941,
+        0xd82120c54277c73e,
+        0x07717a21e77894e8,
+    );
+    let m = u256h!("0800000000000011000000000000000000000000000000000000000000000001");
+    crit.bench_function("U256 mulmod", move |bench| {
+        bench.iter(|| black_box(black_box(&a).mulmod(black_box(&b), black_box(&m))))
+    });
+}
 fn field_add(crit: &mut Criterion) {
     let a = FieldElement::new(&[
         0x0f3855f5, 0x37862eb2, 0x275b919f, 0x325329cb, 0xe968e6a2, 0xa2ceee5c, 0xd5f1d547,
@@ -228,6 +246,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     u256_invmod256(c);
     u256_invmod(c);
     u256_divrem(c);
+    u256_mulmod(c);
     field_add(c);
     field_mul(c);
     field_inv(c);
