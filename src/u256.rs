@@ -1,3 +1,4 @@
+use crate::division::{divrem_nby1, divrem_nbym};
 use crate::utils::{adc, div_2_1, mac, sbb};
 use hex_literal::*;
 use std::cmp::{Ord, Ordering, PartialOrd};
@@ -178,21 +179,34 @@ impl U256 {
 
     // Long division
     pub fn divrem(&self, rhs: &U256) -> Option<(U256, U256)> {
-        if rhs == &U256::ZERO {
-            None
+        // TODO: Remove extra zero and make divrem_nbym handle it.
+        let mut numerator = [self.c0, self.c1, self.c2, self.c3, 0];
+        if rhs.c3 > 0 {
+            let quotient = divrem_nbym(&mut numerator, &mut [rhs.c0, rhs.c1, rhs.c2, rhs.c3]);
+            Some((
+                U256::new(quotient[0], 0, 0, 0),
+                U256::new(numerator[0], numerator[1], numerator[2], numerator[3]),
+            ))
+        } else if rhs.c2 > 0 {
+            let quotient = divrem_nbym(&mut numerator, &mut [rhs.c0, rhs.c1, rhs.c2]);
+            Some((
+                U256::new(quotient[0], quotient[1], 0, 0),
+                U256::new(numerator[0], numerator[1], numerator[2], 0),
+            ))
+        } else if rhs.c1 > 0 {
+            let quotient = divrem_nbym(&mut numerator, &mut [rhs.c0, rhs.c1]);
+            Some((
+                U256::new(quotient[0], quotient[1], quotient[2], 0),
+                U256::new(numerator[0], numerator[1], 0, 0),
+            ))
+        } else if rhs.c0 > 0 {
+            let remainder = divrem_nby1(&mut numerator, rhs.c0);
+            Some((
+                U256::new(numerator[0], numerator[1], numerator[2], numerator[3]),
+                U256::new(remainder, 0, 0, 0),
+            ))
         } else {
-            // Egyptian Division
-            // TODO: https://surface.syr.edu/cgi/viewcontent.cgi?article=1162&context=eecs_techreports
-            let mut r = self.clone();
-            let mut q = U256::ZERO;
-            for i in (0..=rhs.leading_zeros() as usize).rev() {
-                let t = rhs.clone() << i;
-                if t < r {
-                    r -= &t;
-                    q += &(U256::ONE.clone() << i);
-                }
-            }
-            Some((q, r))
+            None
         }
     }
 

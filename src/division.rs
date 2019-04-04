@@ -67,7 +67,7 @@ fn div_3by2(n: &[u64; 3], d: &[u64; 2]) -> u64 {
 // Implements Knuth's division algorithm.
 // See D. Knuth "The Art of Computer Programming". Sec. 4.3.1. Algorithm D.
 // See https://github.com/chfast/intx/blob/master/lib/intx/div.cpp
-fn divrem_nbym(numerator: &mut [u64], divisor: &mut [u64]) -> Vec<u64> {
+pub fn divrem_nbym(numerator: &mut [u64], divisor: &mut [u64]) -> Vec<u64> {
     assert!(numerator.len() > 2);
     assert!(divisor.len() >= 2);
     assert!(divisor.last().unwrap() > &0);
