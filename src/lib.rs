@@ -9,6 +9,7 @@ pub mod pedersen;
 mod pedersen_points;
 #[macro_use]
 pub mod u256;
+pub mod montgomery;
 mod utils;
 use curve::CurvePoint;
 use field::FieldElement;
