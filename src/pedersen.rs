@@ -5,12 +5,14 @@ use crate::u256::U256;
 use crate::u256h;
 use hex_literal::*;
 
+// x = 0x049ee3eba8c1600700ee1b87eb599f16716b0b1022947733551fde4050ca6804
+// y = 0x03ca0cfe4b3bc6ddf346d49d06ea0ed34e621062c0e056c1d0405d266e10268a
 pub const SHIFT_POINT: CurvePoint = CurvePoint {
-    x: FieldElement(u256h!(
-        "049ee3eba8c1600700ee1b87eb599f16716b0b1022947733551fde4050ca6804"
+    x: FieldElement::from_montgomery(u256h!(
+        "0463d1e72d2ebf3416c727d5f24b5dc16b69f758cd49de911ad69b41a9ba0b3a"
     )),
-    y: FieldElement(u256h!(
-        "03ca0cfe4b3bc6ddf346d49d06ea0ed34e621062c0e056c1d0405d266e10268a"
+    y: FieldElement::from_montgomery(u256h!(
+        "01211aac6ce572de4298f85b038ef6a8aeae324054290152c5c9927f66d85eeb"
     )),
 };
 
@@ -31,7 +33,7 @@ pub fn hash(elements: &[U256]) -> U256 {
             bits >>= 1;
         }
     }
-    result.x.0
+    result.x.into()
 }
 
 #[cfg(test)]

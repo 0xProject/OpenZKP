@@ -10,8 +10,8 @@ use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Shr, SubAssign};
 // Beta  = 0x06f21413efbe40de150e596d72f7a8c5609ad26c15c915c1f4cdfcb99cee9e89
 // Order = 0x0800000000000010ffffffffffffffffb781126dcae7b2321e66a241adc64d2f
 
-pub const BETA: FieldElement = FieldElement(u256h!(
-    "06f21413efbe40de150e596d72f7a8c5609ad26c15c915c1f4cdfcb99cee9e89"
+pub const BETA: FieldElement = FieldElement::from_montgomery(u256h!(
+    "013931651774247fab8a1e002a41f9476725f2237aab9006359ddd67b59a21ca"
 ));
 pub const ORDER: U256 = u256h!("0800000000000010ffffffffffffffffb781126dcae7b2321e66a241adc64d2f");
 
@@ -152,13 +152,13 @@ mod tests {
     #[test]
     fn test_mul_2() {
         let p = CurvePoint {
-            x: FieldElement(u256h!("01ef15c18599971b7beced415a40f0c7deacfd9b0d1819e03d723d8bc943cfca")),
-            y: FieldElement(u256h!("005668060aa49730b7be4801df46ec62de53ecd11abe43a32873000c36e8dc1f"))
+            x: FieldElement::from(u256h!("01ef15c18599971b7beced415a40f0c7deacfd9b0d1819e03d723d8bc943cfca")),
+            y: FieldElement::from(u256h!("005668060aa49730b7be4801df46ec62de53ecd11abe43a32873000c36e8dc1f"))
         };
         let c = u256h!("07374b7d69dc9825fc758b28913c8d2a27be5e7c32412f612b20c9c97afbe4dd");
         let expected = CurvePoint {
-            x: FieldElement(u256h!("00f24921907180cd42c9d2d4f9490a7bc19ac987242e80ac09a8ac2bcf0445de")),
-            y: FieldElement(u256h!("018a7a2ab4e795405f924de277b0e723d90eac55f2a470d8532113d735bdedd4"))
+            x: FieldElement::from(u256h!("00f24921907180cd42c9d2d4f9490a7bc19ac987242e80ac09a8ac2bcf0445de")),
+            y: FieldElement::from(u256h!("018a7a2ab4e795405f924de277b0e723d90eac55f2a470d8532113d735bdedd4"))
         };
         let result = p.clone() * c;
         assert_eq!(result, expected);
@@ -172,10 +172,11 @@ mod tests {
 
     #[quickcheck]
     #[test]
-    fn distributivity(p: CurvePoint, fa: FieldElement, fb: FieldElement) -> bool {
-        let a = fa.0.clone() % &ORDER;
-        let b = fb.0.clone() % &ORDER;
-        let c = a.clone() + &b;
+    fn distributivity(p: CurvePoint, mut a: U256, mut b: U256) -> bool {
+        a %= &ORDER;
+        b %= &ORDER;
+        let mut c = (a.clone() + &b);
+        // TODO: c %= &ORDER;
         (p.clone() * a) + (p.clone() * b) == p.clone() * c
     }
 }

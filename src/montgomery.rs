@@ -16,6 +16,7 @@ pub const R1: U256 = u256h!("07fffffffffffdf0fffffffffffffffffffffffffffffffffff
 pub const R2: U256 = u256h!("07ffd4ab5e008810ffffffffff6f800000000001330ffffffffffd737e000401");
 pub const R3: U256 = u256h!("038e5f79873c0a6df47d84f8363000187545706677ffcc06cc7177d1406df18e");
 
+// TODO: make const
 pub fn redc(lo: &U256, hi: &U256) -> U256 {
     // Algorithm 14.32 from Handbook of Applied Cryptography.
     let mut a = [lo.c0, lo.c1, lo.c2, lo.c3, hi.c0, hi.c1, hi.c2, hi.c3];
@@ -33,8 +34,8 @@ pub fn redc(lo: &U256, hi: &U256) -> U256 {
             a[j] = ai;
             carry = c;
         }
-        debug_assert!(carry == 0);
-        debug_assert!(a[i] == 0);
+        //debug_assert!(carry == 0);
+        //debug_assert!(a[i] == 0);
     }
     let mut r = U256::new(a[4], a[5], a[6], a[7]);
     if r >= MODULUS {

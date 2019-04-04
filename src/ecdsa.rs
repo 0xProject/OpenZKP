@@ -5,12 +5,14 @@ use crate::u256h;
 use hex_literal::*;
 use tiny_keccak::sha3_256;
 
+// x = 0x01ef15c18599971b7beced415a40f0c7deacfd9b0d1819e03d723d8bc943cfca
+// y = 0x005668060aa49730b7be4801df46ec62de53ecd11abe43a32873000c36e8dc1f
 pub const GENERATOR: CurvePoint = CurvePoint {
-    x: FieldElement(u256h!(
-        "01ef15c18599971b7beced415a40f0c7deacfd9b0d1819e03d723d8bc943cfca"
+    x: FieldElement::from_montgomery(u256h!(
+        "033840300bf6cec10429bf5184041c7b51a9bf65d4403deac9019623cf0273dd"
     )),
-    y: FieldElement(u256h!(
-        "005668060aa49730b7be4801df46ec62de53ecd11abe43a32873000c36e8dc1f"
+    y: FieldElement::from_montgomery(u256h!(
+        "05a0e71610f55329fbd89a97cf4b33ad0939e3442869bbe7569d0da34235308a"
     )),
 };
 
@@ -29,7 +31,7 @@ pub fn sign(msg_hash: &U256, private_key: &U256) -> (U256, U256) {
     ));
     {
         // Todo Loop over k
-        let r: U256 = (GENERATOR.clone() * k.clone()).x.0;
+        let r: U256 = (GENERATOR.clone() * k.clone()).x.into();
         assert!(r > U256::ZERO);
         assert!(r.bits() <= 251); // TODO: Retry
 
@@ -48,7 +50,7 @@ pub fn verify(msg_hash: &U256, r: &U256, w: &U256, public_key: &CurvePoint) -> b
 
     let a = GENERATOR.clone() * msg_hash.mulmod(&w, &ORDER);
     let b = public_key.clone() * r.mulmod(&w, &ORDER);
-    let x = (a + b).x.0;
+    let x: U256 = (a + b).x.into();
     &x == r
 }
 
@@ -63,10 +65,10 @@ mod tests {
         let private_key =
             u256h!("03c1e9550e66958296d11b60f8e8e7a7ad990d07fa65d5f7652c4a6c87d4e3cc");
         let expected = CurvePoint {
-            x: FieldElement(u256h!(
+            x: FieldElement::from(u256h!(
                 "077a3b314db07c45076d11f62b6f9e748a39790441823307743cf00d6597ea43"
             )),
-            y: FieldElement(u256h!(
+            y: FieldElement::from(u256h!(
                 "054d7beec5ec728223671c627557efc5c9a6508425dc6c900b7741bf60afec06"
             )),
         };
@@ -93,10 +95,10 @@ mod tests {
         let message_hash =
             u256h!("01e542e2da71b3f5d7b4e9d329b4d30ac0b5d6f266ebef7364bf61c39aac35d0");
         let public_key = CurvePoint {
-            x: FieldElement(u256h!(
+            x: FieldElement::from(u256h!(
                 "077a3b314db07c45076d11f62b6f9e748a39790441823307743cf00d6597ea43"
             )),
-            y: FieldElement(u256h!(
+            y: FieldElement::from(u256h!(
                 "054d7beec5ec728223671c627557efc5c9a6508425dc6c900b7741bf60afec06"
             )),
         };
@@ -107,9 +109,10 @@ mod tests {
 
     #[quickcheck]
     #[test]
-    fn test_ecdsa(message_hash: FieldElement, private_key: FieldElement) -> bool {
-        let public_key = private_to_public(&private_key.0);
-        let (r, w) = sign(&message_hash.0, &private_key.0);
-        verify(&message_hash.0, &r, &w, &public_key)
+    fn test_ecdsa(mut message_hash: U256, private_key: U256) -> bool {
+        message_hash >>= 5; // Need message_hash <= 2**251
+        let public_key = private_to_public(&private_key);
+        let (r, w) = sign(&message_hash, &private_key);
+        verify(&message_hash, &r, &w, &public_key)
     }
 }
