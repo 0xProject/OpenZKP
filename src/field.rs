@@ -1,18 +1,29 @@
+use crate::montgomery::*;
 use crate::u256::U256;
 use crate::u256h;
 use hex_literal::*;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
+// TODO: Implement Serde
+
+// 0800000000000011 // 1 | 1 << 4 | 1 << 59
+// 0000000000000000
+// 0000000000000000
+// 0000000000000001
 pub const MODULUS: U256 =
     u256h!("0800000000000011000000000000000000000000000000000000000000000001");
 pub const INVEXP: U256 = u256h!("0800000000000010ffffffffffffffffffffffffffffffffffffffffffffffff");
 
 #[derive(PartialEq, Eq, Clone, Debug)]
-pub struct FieldElement(pub U256);
+pub struct FieldElement(U256);
 
 impl FieldElement {
     pub const ZERO: FieldElement = FieldElement(U256::ZERO);
-    pub const ONE: FieldElement = FieldElement(U256::ONE);
+    pub const ONE: FieldElement = FieldElement(R1);
+
+    pub const fn from_montgomery(n: U256) -> Self {
+        FieldElement(n)
+    }
 
     pub fn new(limbs: &[u32; 8]) -> Self {
         let mut bu = U256::new(
@@ -21,13 +32,12 @@ impl FieldElement {
             ((limbs[5] as u64) << 32) | (limbs[4] as u64),
             ((limbs[7] as u64) << 32) | (limbs[6] as u64),
         );
-        bu %= &MODULUS;
-        assert!(bu < MODULUS);
+        bu = to_montgomery(&bu);
         FieldElement(bu)
     }
 
     pub fn to_bytes(&self) -> [u8; 32] {
-        self.0.to_bytes_be()
+        from_montgomery(&self.0).to_bytes_be()
     }
 
     pub fn is_zero(&self) -> bool {
@@ -35,17 +45,38 @@ impl FieldElement {
     }
 
     pub fn inv(&self) -> FieldElement {
-        // TODO: Option type.
-        FieldElement(self.0.invmod(&MODULUS).unwrap())
+        FieldElement(inv_redc(&self.0))
     }
 }
 
-// TODO: Implement Serde
+impl From<U256> for FieldElement {
+    fn from(n: U256) -> Self {
+        FieldElement(to_montgomery(&n))
+    }
+}
+
+impl From<&U256> for FieldElement {
+    fn from(n: &U256) -> Self {
+        FieldElement(to_montgomery(n))
+    }
+}
+
+impl From<FieldElement> for U256 {
+    fn from(n: FieldElement) -> Self {
+        from_montgomery(&n.0)
+    }
+}
+
+impl From<&FieldElement> for U256 {
+    fn from(n: &FieldElement) -> Self {
+        from_montgomery(&n.0)
+    }
+}
+
 impl From<&[u8; 32]> for FieldElement {
     fn from(bytes: &[u8; 32]) -> Self {
         let mut bu = U256::from_bytes_be(bytes.clone());
-        bu %= &MODULUS;
-        FieldElement(bu)
+        FieldElement(to_montgomery(&bu))
     }
 }
 
@@ -82,7 +113,7 @@ impl SubAssign<&FieldElement> for FieldElement {
 
 impl MulAssign<&FieldElement> for FieldElement {
     fn mul_assign(&mut self, rhs: &FieldElement) {
-        self.0 = self.0.mulmod(&rhs.0, &MODULUS);
+        self.0 = mul_redc(&self.0, &rhs.0);
     }
 }
 
@@ -149,9 +180,15 @@ mod tests {
     #[rustfmt::skip]
     #[test]
     fn test_add() {
-        let a = FieldElement(u256h!("0548c135e26faa9c977fb2eda057b54b2e0baa9a77a0be7c80278f4f03462d4c"));
-        let b = FieldElement(u256h!("024385f6bebc1c496e09955db534ef4b1eaff9a78e27d4093cfa8f7c8f886f6b"));
-        let c = FieldElement(u256h!("078c472ca12bc6e60589484b558ca4964cbba44205c89285bd221ecb92ce9cb7"));
+        let a = FieldElement(u256h!(
+            "0548c135e26faa9c977fb2eda057b54b2e0baa9a77a0be7c80278f4f03462d4c"
+        ));
+        let b = FieldElement(u256h!(
+            "024385f6bebc1c496e09955db534ef4b1eaff9a78e27d4093cfa8f7c8f886f6b"
+        ));
+        let c = FieldElement(u256h!(
+            "078c472ca12bc6e60589484b558ca4964cbba44205c89285bd221ecb92ce9cb7"
+        ));
         assert_eq!(a + b, c);
     }
 
