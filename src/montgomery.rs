@@ -23,69 +23,77 @@ pub fn redc(lo: &U256, hi: &U256) -> U256 {
     let m = [MODULUS.c0, MODULUS.c1, MODULUS.c2, MODULUS.c3];
     {
         let ui = a[0].wrapping_mul(M64);
-        let mut carry = 0;
-
-        for j in 0..4 {
-            let (ai, c) = mac(a[j], ui, m[j], carry);
-            a[j] = ai;
-            carry = c;
-        }
-        for j in 4..8 {
-            let (ai, c) = adc(a[j], 0, carry);
-            a[j] = ai;
-            carry = c;
-        }
+        let carry = 0;
+        let (ai, carry) = mac(a[0], ui, m[0], carry);
+        a[0] = ai;
+        let (ai, carry) = mac(a[1], ui, m[1], carry);
+        a[1] = ai;
+        let (ai, carry) = mac(a[2], ui, m[2], carry);
+        a[2] = ai;
+        let (ai, carry) = mac(a[3], ui, m[3], carry);
+        a[3] = ai;
+        let (ai, carry) = adc(a[4], 0, carry);
+        a[4] = ai;
+        let (ai, carry) = adc(a[5], 0, carry);
+        a[5] = ai;
+        let (ai, carry) = adc(a[6], 0, carry);
+        a[6] = ai;
+        let (ai, carry) = adc(a[7], 0, carry);
+        a[7] = ai;
         //debug_assert!(carry == 0);
         //debug_assert!(a[i] == 0);
     }
     {
         let ui = a[1].wrapping_mul(M64);
         let mut carry = 0;
-
-        for j in 0..4 {
-            let (ai, c) = mac(a[1 + j], ui, m[j], carry);
-            a[1 + j] = ai;
-            carry = c;
-        }
-        for j in 5..8 {
-            let (ai, c) = adc(a[j], 0, carry);
-            a[j] = ai;
-            carry = c;
-        }
+        let (ai, carry) = mac(a[1], ui, m[0], carry);
+        a[1] = ai;
+        let (ai, carry) = mac(a[2], ui, m[1], carry);
+        a[2] = ai;
+        let (ai, carry) = mac(a[3], ui, m[2], carry);
+        a[3] = ai;
+        let (ai, carry) = mac(a[4], ui, m[3], carry);
+        a[4] = ai;
+        let (ai, carry) = adc(a[5], 0, carry);
+        a[5] = ai;
+        let (ai, carry) = adc(a[6], 0, carry);
+        a[6] = ai;
+        let (ai, carry) = adc(a[7], 0, carry);
+        a[7] = ai;
         //debug_assert!(carry == 0);
         //debug_assert!(a[i] == 0);
     }
     {
         let ui = a[2].wrapping_mul(M64);
         let mut carry = 0;
-
-        for j in 0..4 {
-            let (ai, c) = mac(a[2 + j], ui, m[j], carry);
-            a[2 + j] = ai;
-            carry = c;
-        }
-        for j in 6..8 {
-            let (ai, c) = adc(a[j], 0, carry);
-            a[j] = ai;
-            carry = c;
-        }
+        let (ai, carry) = mac(a[2], ui, m[0], carry);
+        a[2] = ai;
+        let (ai, carry) = mac(a[3], ui, m[1], carry);
+        a[3] = ai;
+        let (ai, carry) = mac(a[4], ui, m[2], carry);
+        a[4] = ai;
+        let (ai, carry) = mac(a[5], ui, m[3], carry);
+        a[5] = ai;
+        let (ai, carry) = adc(a[6], 0, carry);
+        a[6] = ai;
+        let (ai, carry) = adc(a[7], 0, carry);
+        a[7] = ai;
         //debug_assert!(carry == 0);
         //debug_assert!(a[i] == 0);
     }
     {
         let ui = a[3].wrapping_mul(M64);
         let mut carry = 0;
-
-        for j in 0..4 {
-            let (ai, c) = mac(a[3 + j], ui, m[j], carry);
-            a[3 + j] = ai;
-            carry = c;
-        }
-        for j in 7..8 {
-            let (ai, c) = adc(a[j], 0, carry);
-            a[j] = ai;
-            carry = c;
-        }
+        let (ai, carry) = mac(a[3], ui, m[0], carry);
+        a[3] = ai;
+        let (ai, carry) = mac(a[4], ui, m[1], carry);
+        a[4] = ai;
+        let (ai, carry) = mac(a[5], ui, m[2], carry);
+        a[5] = ai;
+        let (ai, carry) = mac(a[6], ui, m[3], carry);
+        a[6] = ai;
+        let (ai, carry) = adc(a[7], 0, carry);
+        a[7] = ai;
         //debug_assert!(carry == 0);
         //debug_assert!(a[i] == 0);
     }
