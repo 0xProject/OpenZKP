@@ -182,6 +182,7 @@ impl U256 {
         // TODO: Remove extra zero and make divrem_nbym handle it.
         let mut numerator = [self.c0, self.c1, self.c2, self.c3, 0];
         if rhs.c3 > 0 {
+            // TODO: Use div_3by2 to compute quotient[0] directly.
             let quotient = divrem_nbym(&mut numerator, &mut [rhs.c0, rhs.c1, rhs.c2, rhs.c3]);
             Some((
                 U256::new(quotient[0], 0, 0, 0),
@@ -211,28 +212,26 @@ impl U256 {
     }
 
     pub fn mulmod(&self, rhs: &U256, modulus: &U256) -> U256 {
-        debug_assert!(modulus != &U256::ZERO);
-        let (mut rlo, mut rhi) = self.mul_full(rhs);
-        for i in (0..=modulus.leading_zeros() as usize + 256).rev() {
-            let tlo = modulus.clone() << i;
-            let thi = if i >= 256 {
-                modulus.clone() << (i - 256)
-            } else {
-                modulus.clone() >> (256 - i)
-            };
-            if thi < rhi || (thi == rhi && tlo <= rlo) {
-                if rlo >= tlo {
-                    rlo -= &tlo;
-                    rhi -= &thi;
-                } else {
-                    rlo -= &tlo;
-                    rhi -= &thi;
-                    rhi -= &U256::ONE;
-                }
-            }
+        let (lo, hi) = self.mul_full(rhs);
+        let mut numerator = [lo.c0, lo.c1, lo.c2, lo.c3, hi.c0, hi.c1, hi.c2, hi.c3, 0];
+        if modulus.c3 > 0 {
+            let _quotient = divrem_nbym(
+                &mut numerator,
+                &mut [modulus.c0, modulus.c1, modulus.c2, modulus.c3],
+            );
+            U256::new(numerator[0], numerator[1], numerator[2], numerator[3])
+        } else if modulus.c2 > 0 {
+            let _quotient = divrem_nbym(&mut numerator, &mut [modulus.c0, modulus.c1, modulus.c2]);
+            U256::new(numerator[0], numerator[1], numerator[2], 0)
+        } else if modulus.c1 > 0 {
+            let _quotient = divrem_nbym(&mut numerator, &mut [modulus.c0, modulus.c1]);
+            U256::new(numerator[0], numerator[1], 0, 0)
+        } else if modulus.c0 > 0 {
+            let remainder = divrem_nby1(&mut numerator, modulus.c0);
+            U256::new(remainder, 0, 0, 0)
+        } else {
+            panic!(); // TODO: return Option<>
         }
-        debug_assert!(rhi == U256::ZERO);
-        rlo
     }
 
     // Computes the inverse modulo 2^256
