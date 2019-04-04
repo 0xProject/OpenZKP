@@ -21,15 +21,16 @@ pub fn redc(lo: &U256, hi: &U256) -> U256 {
     // Algorithm 14.32 from Handbook of Applied Cryptography.
     let mut a = [lo.c0, lo.c1, lo.c2, lo.c3, hi.c0, hi.c1, hi.c2, hi.c3];
     let m = [MODULUS.c0, MODULUS.c1, MODULUS.c2, MODULUS.c3];
-    for i in 0..4 {
-        let ui = a[i].wrapping_mul(M64);
+    {
+        let ui = a[0].wrapping_mul(M64);
         let mut carry = 0;
+
         for j in 0..4 {
-            let (ai, c) = mac(a[i + j], ui, m[j], carry);
-            a[i + j] = ai;
+            let (ai, c) = mac(a[j], ui, m[j], carry);
+            a[j] = ai;
             carry = c;
         }
-        for j in (i + 4)..8 {
+        for j in 4..8 {
             let (ai, c) = adc(a[j], 0, carry);
             a[j] = ai;
             carry = c;
@@ -37,6 +38,59 @@ pub fn redc(lo: &U256, hi: &U256) -> U256 {
         //debug_assert!(carry == 0);
         //debug_assert!(a[i] == 0);
     }
+    {
+        let ui = a[1].wrapping_mul(M64);
+        let mut carry = 0;
+
+        for j in 0..4 {
+            let (ai, c) = mac(a[1 + j], ui, m[j], carry);
+            a[1 + j] = ai;
+            carry = c;
+        }
+        for j in 5..8 {
+            let (ai, c) = adc(a[j], 0, carry);
+            a[j] = ai;
+            carry = c;
+        }
+        //debug_assert!(carry == 0);
+        //debug_assert!(a[i] == 0);
+    }
+    {
+        let ui = a[2].wrapping_mul(M64);
+        let mut carry = 0;
+
+        for j in 0..4 {
+            let (ai, c) = mac(a[2 + j], ui, m[j], carry);
+            a[2 + j] = ai;
+            carry = c;
+        }
+        for j in 6..8 {
+            let (ai, c) = adc(a[j], 0, carry);
+            a[j] = ai;
+            carry = c;
+        }
+        //debug_assert!(carry == 0);
+        //debug_assert!(a[i] == 0);
+    }
+    {
+        let ui = a[3].wrapping_mul(M64);
+        let mut carry = 0;
+
+        for j in 0..4 {
+            let (ai, c) = mac(a[3 + j], ui, m[j], carry);
+            a[3 + j] = ai;
+            carry = c;
+        }
+        for j in 7..8 {
+            let (ai, c) = adc(a[j], 0, carry);
+            a[j] = ai;
+            carry = c;
+        }
+        //debug_assert!(carry == 0);
+        //debug_assert!(a[i] == 0);
+    }
+
+    // Final reduction
     let mut r = U256::new(a[4], a[5], a[6], a[7]);
     if r >= MODULUS {
         r -= &MODULUS;
