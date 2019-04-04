@@ -54,8 +54,9 @@ fn div_3by2(n: &[u64; 3], d: &[u64; 2]) -> u64 {
 
     if mul_2(q, d[0]) > val_2(n[0], r) {
         q -= 1;
-        r += d[1];
-        if mul_2(q, d[0]) > val_2(n[0], r) {
+        r = r.wrapping_add(d[1]);
+        let overflow = r < d[1];
+        if !overflow && mul_2(q, d[0]) > val_2(n[0], r) {
             q -= 1;
             // UNUSED: r += d[1];
         }
