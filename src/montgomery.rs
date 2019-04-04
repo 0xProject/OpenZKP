@@ -4,11 +4,7 @@ use crate::u256h;
 use crate::utils::{adc, mac};
 use hex_literal::*;
 
-// Min = -MODULUS^(-1) mod 2^256
-pub const Min: U256 = u256h!("0800000000000010ffffffffffffffffffffffffffffffffffffffffffffffff");
-
 // M64 = -MODULUS^(-1) mod 2^64
-// TODO: Optimize for it being -1
 pub const M64: u64 = 0xffff_ffff_ffff_ffff; // = -1
 
 // R2 = 2^512 mod MODULUS
@@ -16,49 +12,41 @@ pub const R1: U256 = u256h!("07fffffffffffdf0fffffffffffffffffffffffffffffffffff
 pub const R2: U256 = u256h!("07ffd4ab5e008810ffffffffff6f800000000001330ffffffffffd737e000401");
 pub const R3: U256 = u256h!("038e5f79873c0a6df47d84f8363000187545706677ffcc06cc7177d1406df18e");
 
-// TODO: make const
+// TODO: Make const fn
+#[inline(always)]
 pub fn redc(lo: &U256, hi: &U256) -> U256 {
     // Algorithm 14.32 from Handbook of Applied Cryptography.
-    let ui = a[0].wrapping_mul(M64);
-    let (a0, carry) = mac(lo.c0, ui, MODULUS.c0, 0);
+    // TODO: Optimize for the specific values of M64 and MODULUS.
+    let ui = lo.c0.wrapping_mul(M64);
+    let (_a0, carry) = mac(lo.c0, ui, MODULUS.c0, 0);
     let (a1, carry) = mac(lo.c1, ui, MODULUS.c1, carry);
     let (a2, carry) = mac(lo.c2, ui, MODULUS.c2, carry);
     let (a3, carry) = mac(lo.c3, ui, MODULUS.c3, carry);
     let (a4, carry) = adc(hi.c0, 0, carry);
     let (a5, carry) = adc(hi.c1, 0, carry);
     let (a6, carry) = adc(hi.c2, 0, carry);
-    let (a7, carry) = adc(hi.c3, 0, carry);
-    //debug_assert!(carry == 0);
-    //debug_assert!(a0 == 0);
+    let (a7, _carry) = adc(hi.c3, 0, carry);
     let ui = a1.wrapping_mul(M64);
-    let (a1, carry) = mac(a1, ui, MODULUS.c0, 0);
+    let (_a1, carry) = mac(a1, ui, MODULUS.c0, 0);
     let (a2, carry) = mac(a2, ui, MODULUS.c1, carry);
     let (a3, carry) = mac(a3, ui, MODULUS.c2, carry);
     let (a4, carry) = mac(a4, ui, MODULUS.c3, carry);
     let (a5, carry) = adc(a5, 0, carry);
     let (a6, carry) = adc(a6, 0, carry);
-    let (a7, carry) = adc(a7, 0, carry);
-    //debug_assert!(carry == 0);
-    //debug_assert!(a1 == 0);
+    let (a7, _carry) = adc(a7, 0, carry);
     let ui = a2.wrapping_mul(M64);
-    let mut carry = 0;
-    let (a2, carry) = mac(a2, ui, MODULUS.c0, 0);
+    let (_a2, carry) = mac(a2, ui, MODULUS.c0, 0);
     let (a3, carry) = mac(a3, ui, MODULUS.c1, carry);
     let (a4, carry) = mac(a4, ui, MODULUS.c2, carry);
     let (a5, carry) = mac(a5, ui, MODULUS.c3, carry);
     let (a6, carry) = adc(a6, 0, carry);
-    let (a7, carry) = adc(a7, 0, carry);
-    //debug_assert!(carry == 0);
-    //debug_assert!(a2 == 0);
+    let (a7, _carry) = adc(a7, 0, carry);
     let ui = a3.wrapping_mul(M64);
-    let mut carry = 0;
-    let (a3, carry) = mac(a3, ui, MODULUS.c0, carry);
+    let (_a3, carry) = mac(a3, ui, MODULUS.c0, carry);
     let (a4, carry) = mac(a4, ui, MODULUS.c1, carry);
     let (a5, carry) = mac(a5, ui, MODULUS.c2, carry);
     let (a6, carry) = mac(a6, ui, MODULUS.c3, carry);
-    let (a7, carry) = adc(a7, 0, carry);
-    //debug_assert!(carry == 0);
-    //debug_assert!(a3 == 0);
+    let (a7, _carry) = adc(a7, 0, carry);
 
     // Final reduction
     let mut r = U256::new(a4, a5, a6, a7);
