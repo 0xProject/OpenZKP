@@ -41,7 +41,8 @@ pub fn divrem_nby1(numerator: &mut [u64], divisor: u64) -> u64 {
 //      |  n2 n1 n0  |
 //  q = |  --------  |
 //      |_    d1 d0 _|
-fn div_3by2(n: &[u64; 3], d: &[u64; 2]) -> u64 {
+#[inline(always)]
+pub fn div_3by2(n: &[u64; 3], d: &[u64; 2]) -> u64 {
     // The highest bit of d needs to be set
     debug_assert!(d[1] >> 63 == 1);
 
@@ -68,37 +69,35 @@ fn div_3by2(n: &[u64; 3], d: &[u64; 2]) -> u64 {
 // Implements Knuth's division algorithm.
 // See D. Knuth "The Art of Computer Programming". Sec. 4.3.1. Algorithm D.
 // See https://github.com/chfast/intx/blob/master/lib/intx/div.cpp
-pub fn divrem_nbym(numerator: &mut [u64], divisor: &mut [u64]) -> Vec<u64> {
-    assert!(numerator.len() > 2);
-    assert!(divisor.len() >= 2);
-    assert!(divisor.last().unwrap() > &0);
-    // TODO: Assert numerator < divisor when word offset is ignored.
+// NOTE: numerator must have one additional zero at the end.
+// The result will be computed in-place in numerator.
+// The divisor will be normalized.
+pub fn divrem_nbym(numerator: &mut [u64], divisor: &mut [u64]) {
+    debug_assert!(divisor.len() >= 2);
+    debug_assert!(numerator.len() > divisor.len());
+    debug_assert!(divisor.last().unwrap() > &0);
+    debug_assert!(numerator.last().unwrap() == &0);
+    let n = divisor.len();
+    let m = numerator.len() - n - 1;
 
     // D1. Normalize.
-    assert!(numerator.last().unwrap().leading_zeros() >= divisor.last().unwrap().leading_zeros());
-    let shift = divisor.last().unwrap().leading_zeros();
+    let shift = divisor[n - 1].leading_zeros();
     if shift > 0 {
-        for i in (1..numerator.len()).rev() {
+        numerator[n + m] = numerator[n + m - 1] >> (64 - shift);
+        for i in (1..n + m).rev() {
             numerator[i] <<= shift;
             numerator[i] |= numerator[i - 1] >> (64 - shift);
         }
         numerator[0] <<= shift;
-        for i in (1..divisor.len()).rev() {
+        for i in (1..n).rev() {
             divisor[i] <<= shift;
             divisor[i] |= divisor[i - 1] >> (64 - shift);
         }
         divisor[0] <<= shift;
     }
 
-    let n = divisor.len();
-    let m = numerator.len() - n;
-
-    // Allocate quotient.
-    let mut quotient = vec![0u64; m + 1];
-
     // D2. Loop over quotient digits
-    // TODO:
-    for j in (0..m).rev() {
+    for j in (0..=m).rev() {
         // D3. Calculate approximate quotient word
         let mut qhat = div_3by2(
             &[numerator[j + n - 2], numerator[j + n - 1], numerator[j + n]],
@@ -113,7 +112,7 @@ pub fn divrem_nbym(numerator: &mut [u64], divisor: &mut [u64]) -> Vec<u64> {
             borrow = 0u64.wrapping_sub(b); // TODO: Why this inversion?
         }
         let negative = numerator[j + n] < borrow;
-        numerator[j + n] = numerator[j + n].wrapping_sub(borrow);
+        // IGNORED: numerator[j + n] = numerator[j + n].wrapping_sub(borrow);
 
         // D5. Test remainder for negative result.
         if negative {
@@ -124,30 +123,33 @@ pub fn divrem_nbym(numerator: &mut [u64], divisor: &mut [u64]) -> Vec<u64> {
                 numerator[j + i] = a;
                 carry = b;
             }
-            numerator[j + n] = numerator[j + n].wrapping_add(carry);
+            // This should alwayst be zero, so we don't compute:
+            // numerator[j + n] = numerator[j + n].wrapping_add(carry);
             qhat -= 1;
         }
 
-        // Store remainder
-        quotient[j] = qhat;
+        // Store remainder in the now vacant bits of numerator
+        numerator[j + n] = qhat;
     }
 
     // D8. Unnormalize.
     if shift > 0 {
-        for i in (0..numerator.len() - 1) {
+        // Make sure to only normalize the remainder part, the quotient
+        // is alreadt normalized.
+        for i in 0..(n - 1) {
             numerator[i] >>= shift;
             numerator[i] |= numerator[i + 1] << (64 - shift);
         }
-        numerator[numerator.len() - 1] >>= shift;
+        numerator[n - 1] >>= shift;
     }
-
-    quotient
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::u256::U256;
+    use crate::u256h;
+    use hex_literal::*;
     use quickcheck_macros::quickcheck;
 
     const HALF: u64 = 1u64 << 63;
@@ -169,6 +171,7 @@ mod tests {
             0xc5c179973cdb1663u64,
             0x7d7f67780bb268ffu64,
             0x0000000000000003u64,
+            0x0000000000000000u64,
         ];
         let mut divisor = [
             0x0181880b078ab6a1u64,
@@ -188,16 +191,26 @@ mod tests {
             0xb5aeb3f9ad5e294eu64,
             0xfc710038c13e4eedu64,
             0x000000000000000bu64,
-            0x0000000000000000u64,
-            0x0000000000000000u64,
-            0x0000000000000000u64,
-            0x0000000000000000u64,
         ];
         let quotient = divrem_nbym(&mut numerator, &mut divisor);
-        let remainder = numerator;
-        assert_eq!(quotient.len(), 5);
-        assert_eq!(quotient, expected_quotient);
+        let remainder = &numerator[0..4];
+        let quotient = &numerator[4..9];
         assert_eq!(remainder, expected_remainder);
+        assert_eq!(quotient, expected_quotient);
+    }
+
+    #[test]
+    fn test_divrem_4by4() {
+        let a = u256h!("6f1480e63854afa41868b9a7d418e9c64edef514135f5899e72530a3d4e91ea3");
+        let b = u256h!("3ba5ddaec5090ef0b87126f34ee28533ffb08af4108f9aeaa62b65900d2a62bb");
+        let r = a.clone() - &b;
+        let mut numerator = [a.c0, a.c1, a.c2, a.c3, 0];
+        let mut divisor = [b.c0, b.c1, b.c2, b.c3];
+        divrem_nbym(&mut numerator, &mut divisor);
+        let remainder = &numerator[0..4];
+        let quotient = numerator[4];
+        assert_eq!(remainder, [r.c0, r.c1, r.c2, r.c3]);
+        assert_eq!(quotient, 1);
     }
 
     #[quickcheck]

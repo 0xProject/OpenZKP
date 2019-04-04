@@ -179,25 +179,23 @@ impl U256 {
 
     // Long division
     pub fn divrem(&self, rhs: &U256) -> Option<(U256, U256)> {
-        // TODO: Remove extra zero and make divrem_nbym handle it.
         let mut numerator = [self.c0, self.c1, self.c2, self.c3, 0];
         if rhs.c3 > 0 {
-            // TODO: Use div_3by2 to compute quotient[0] directly.
-            let quotient = divrem_nbym(&mut numerator, &mut [rhs.c0, rhs.c1, rhs.c2, rhs.c3]);
+            divrem_nbym(&mut numerator, &mut [rhs.c0, rhs.c1, rhs.c2, rhs.c3]);
             Some((
-                U256::new(quotient[0], 0, 0, 0),
+                U256::new(numerator[4], 0, 0, 0),
                 U256::new(numerator[0], numerator[1], numerator[2], numerator[3]),
             ))
         } else if rhs.c2 > 0 {
-            let quotient = divrem_nbym(&mut numerator, &mut [rhs.c0, rhs.c1, rhs.c2]);
+            divrem_nbym(&mut numerator, &mut [rhs.c0, rhs.c1, rhs.c2]);
             Some((
-                U256::new(quotient[0], quotient[1], 0, 0),
+                U256::new(numerator[3], numerator[4], 0, 0),
                 U256::new(numerator[0], numerator[1], numerator[2], 0),
             ))
         } else if rhs.c1 > 0 {
-            let quotient = divrem_nbym(&mut numerator, &mut [rhs.c0, rhs.c1]);
+            divrem_nbym(&mut numerator, &mut [rhs.c0, rhs.c1]);
             Some((
-                U256::new(quotient[0], quotient[1], quotient[2], 0),
+                U256::new(numerator[2], numerator[3], numerator[4], 0),
                 U256::new(numerator[0], numerator[1], 0, 0),
             ))
         } else if rhs.c0 > 0 {
@@ -215,16 +213,16 @@ impl U256 {
         let (lo, hi) = self.mul_full(rhs);
         let mut numerator = [lo.c0, lo.c1, lo.c2, lo.c3, hi.c0, hi.c1, hi.c2, hi.c3, 0];
         if modulus.c3 > 0 {
-            let _quotient = divrem_nbym(
+            divrem_nbym(
                 &mut numerator,
                 &mut [modulus.c0, modulus.c1, modulus.c2, modulus.c3],
             );
             U256::new(numerator[0], numerator[1], numerator[2], numerator[3])
         } else if modulus.c2 > 0 {
-            let _quotient = divrem_nbym(&mut numerator, &mut [modulus.c0, modulus.c1, modulus.c2]);
+            divrem_nbym(&mut numerator, &mut [modulus.c0, modulus.c1, modulus.c2]);
             U256::new(numerator[0], numerator[1], numerator[2], 0)
         } else if modulus.c1 > 0 {
-            let _quotient = divrem_nbym(&mut numerator, &mut [modulus.c0, modulus.c1]);
+            divrem_nbym(&mut numerator, &mut [modulus.c0, modulus.c1]);
             U256::new(numerator[0], numerator[1], 0, 0)
         } else if modulus.c0 > 0 {
             let remainder = divrem_nby1(&mut numerator, modulus.c0);
