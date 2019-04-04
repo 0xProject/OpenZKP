@@ -34,7 +34,7 @@ macro_rules! u256h {
     };
 }
 
-#[derive(PartialEq, Eq, Clone, Debug, Default)]
+#[derive(PartialEq, Eq, Clone, Default)]
 pub struct U256 {
     pub c0: u64,
     pub c1: u64,
@@ -335,6 +335,16 @@ impl fmt::Display for U256 {
         write!(
             f,
             "{:016x}{:016x}{:016x}{:016x}",
+            self.c3, self.c2, self.c1, self.c0
+        )
+    }
+}
+
+impl fmt::Debug for U256 {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "u256h!(\"{:016x}{:016x}{:016x}{:016x}\")",
             self.c3, self.c2, self.c1, self.c0
         )
     }
