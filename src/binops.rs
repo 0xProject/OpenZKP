@@ -1,7 +1,16 @@
 /// Implement infix operator using assignment version.
 #[macro_export]
 macro_rules! commutative_binop {
-    ($type:ident, $trait:ident, $trait_fn:ident, $inplace_fn:ident) => {
+    ($type:ident, $trait:ident, $trait_fn:ident, $inplace:ident, $inplace_fn:ident) => {
+        // &mut <op>= value
+        // Note: a value is wasted
+        impl $inplace<$type> for $type {
+            #[inline(always)]
+            fn $inplace_fn(&mut self, rhs: $type) {
+                self.$inplace_fn(&rhs)
+            }
+        }
+
         // Value <op> value
         // Note: a value is wasted
         impl $trait<$type> for $type {
@@ -44,9 +53,19 @@ macro_rules! commutative_binop {
 }
 
 /// Implement infix operator using assignment version.
+/// It is assumed `OpAssign<&Type>` is implemented.
 #[macro_export]
 macro_rules! noncommutative_binop {
-    ($type:ident, $trait:ident, $trait_fn:ident, $inplace_fn:ident) => {
+    ($type:ident, $trait:ident, $trait_fn:ident, $inplace:ident, $inplace_fn:ident) => {
+        // &mut <op>= value
+        // Note: a value is wasted
+        impl $inplace<$type> for $type {
+            #[inline(always)]
+            fn $inplace_fn(&mut self, rhs: $type) {
+                self.$inplace_fn(&rhs)
+            }
+        }
+
         // Value <op> value
         // Note: a value is wasted
         impl $trait<$type> for $type {

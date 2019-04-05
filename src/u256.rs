@@ -603,18 +603,11 @@ impl RemAssign<&U256> for U256 {
     }
 }
 
-// TODO: Handle by macro
-impl RemAssign<U256> for U256 {
-    fn rem_assign(&mut self, rhs: U256) {
-        *self %= &rhs;
-    }
-}
-
-commutative_binop!(U256, Add, add, add_assign);
-commutative_binop!(U256, Mul, mul, mul_assign);
-noncommutative_binop!(U256, Sub, sub, sub_assign);
-noncommutative_binop!(U256, Div, div, div_assign);
-noncommutative_binop!(U256, Rem, rem, rem_assign);
+commutative_binop!(U256, Add, add, AddAssign, add_assign);
+commutative_binop!(U256, Mul, mul, MulAssign, mul_assign);
+noncommutative_binop!(U256, Sub, sub, SubAssign, sub_assign);
+noncommutative_binop!(U256, Div, div, DivAssign, div_assign);
+noncommutative_binop!(U256, Rem, rem, RemAssign, rem_assign);
 
 #[cfg(test)]
 use quickcheck::{Arbitrary, Gen};

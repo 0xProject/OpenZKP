@@ -135,10 +135,10 @@ impl DivAssign<&FieldElement> for FieldElement {
     }
 }
 
-commutative_binop!(FieldElement, Add, add, add_assign);
-commutative_binop!(FieldElement, Mul, mul, mul_assign);
-noncommutative_binop!(FieldElement, Sub, sub, sub_assign);
-noncommutative_binop!(FieldElement, Div, div, div_assign);
+commutative_binop!(FieldElement, Add, add, AddAssign, add_assign);
+commutative_binop!(FieldElement, Mul, mul, MulAssign, mul_assign);
+noncommutative_binop!(FieldElement, Sub, sub, SubAssign, sub_assign);
+noncommutative_binop!(FieldElement, Div, div, DivAssign, div_assign);
 
 #[cfg(test)]
 use quickcheck::{Arbitrary, Gen};
