@@ -1,7 +1,7 @@
-use criterion::{black_box, Criterion};
+use criterion::{black_box, Bencher};
 use secp256k1_bindings::{Message, PublicKey, Secp256k1, Signature};
 
-pub fn secp256k1_bindings_verify(crit: &mut Criterion) {
+pub fn secp256k1_bindings_verify(bench: &mut Bencher, _i: &()) {
     let secp = Secp256k1::verification_only();
 
     let public_key = PublicKey::from_slice(&[
@@ -27,12 +27,10 @@ pub fn secp256k1_bindings_verify(crit: &mut Criterion) {
     ])
     .expect("compact signatures are 64 bytes; DER signatures are 68-72 bytes");
 
-    crit.bench_function("secp256k1 bindings verify", move |bench| {
-        bench.iter(|| {
-            black_box(
-                secp.verify(black_box(&message), black_box(&sig), black_box(&public_key))
-                    .is_ok(),
-            )
-        })
-    });
+    bench.iter(|| {
+        black_box(
+            secp.verify(black_box(&message), black_box(&sig), black_box(&public_key))
+                .is_ok(),
+        )
+    })
 }

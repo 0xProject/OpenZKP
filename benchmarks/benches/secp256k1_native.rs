@@ -1,7 +1,7 @@
-use criterion::{black_box, Criterion};
+use criterion::{black_box, Bencher};
 use secp256k1_native::{verify, Message, PublicKey, Signature};
 
-pub fn secp256k1_native_verify(crit: &mut Criterion) {
+pub fn secp256k1_native_verify(bench: &mut Bencher, _i: &()) {
     let public_key = PublicKey::parse_compressed(&[
         0x02, 0xc6, 0x6e, 0x7d, 0x89, 0x66, 0xb5, 0xc5, 0x55, 0xaf, 0x58, 0x05, 0x98, 0x9d, 0xa9,
         0xfb, 0xf8, 0xdb, 0x95, 0xe1, 0x56, 0x31, 0xce, 0x35, 0x8c, 0x3a, 0x17, 0x10, 0xc9, 0x62,
@@ -23,13 +23,11 @@ pub fn secp256k1_native_verify(crit: &mut Criterion) {
         0x69, 0xc1, 0x32, 0xa2,
     ]);
 
-    crit.bench_function("secp256k1 native verify", move |bench| {
-        bench.iter(|| {
-            black_box(verify(
-                black_box(&message),
-                black_box(&sig),
-                black_box(&public_key),
-            ))
-        })
-    });
+    bench.iter(|| {
+        black_box(verify(
+            black_box(&message),
+            black_box(&sig),
+            black_box(&public_key),
+        ))
+    })
 }
