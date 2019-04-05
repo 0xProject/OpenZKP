@@ -1,0 +1,30 @@
+[package]
+name = "benchmarks"
+version = "0.1.0"
+authors = ["Remco Bloemen <remco@0x.org>"]
+edition = "2018"
+
+[dependencies]
+
+[dev-dependencies]
+criterion = "0.2.10"
+starkcrypto = { path = "..", version = "0.1.0" }
+secp256k1-bindings = { package = "secp256k1", version = "0.12.2" }
+secp256k1-native = {package = "libsecp256k1", version = "0.2.2" }
+ed25519-dalek = "0.9.1"
+curve25519-donna = { package = "elliptic", version= "0.5.0" }
+sha2 = "0.8.0"
+hex-literal = "0.1.4"
+# HACK: Make Rand compile
+# See https://github.com/dalek-cryptography/ed25519-dalek/issues/56
+# See https://github.com/rust-random/rand/issues/645
+rand = "0.6"
+
+[[bench]]
+name = "benchmark"
+harness = false
+
+# The benchmarks are build using the release profile from the workspace
+# cargo configuration. To modify compiler flags, you need to edit the
+# [profile.release] section in ../Cargo.toml.
+# Don't forget to run `cargo clean` to force a rebuild!
