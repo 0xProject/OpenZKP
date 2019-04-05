@@ -21,7 +21,6 @@ pub const N_ELEMENT_BITS: u32 = 251;
 pub fn hash(elements: &[U256]) -> U256 {
     let mut result = SHIFT_POINT;
     for (i, element) in elements.iter().enumerate() {
-        let mut bits = element;
         assert!(element.bits() <= N_ELEMENT_BITS);
         // point_list = CONSTANT_POINTS[1 + i * N_ELEMENT_BITS:1 + (i + 1) * N_ELEMENT_BITS]
         let start = 1 + i * (N_ELEMENT_BITS as usize);
@@ -35,7 +34,7 @@ pub fn hash(elements: &[U256]) -> U256 {
     }
     match result {
         Affine::Zero => panic!(),
-        Affine::Point { x, y } => x.into(),
+        Affine::Point { x, y: _ } => x.into(),
     }
 }
 

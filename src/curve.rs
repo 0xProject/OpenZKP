@@ -60,7 +60,7 @@ impl Affine {
     pub fn neg_assign(&mut self) {
         match self {
             Affine::Zero => {}
-            Affine::Point { x, y } => y.neg_assign(),
+            Affine::Point { x: _, y } => y.neg_assign(),
         }
     }
 }

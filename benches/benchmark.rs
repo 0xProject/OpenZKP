@@ -1,6 +1,6 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use hex_literal::*;
-use starkcrypto::curve::CurvePoint;
+use starkcrypto::curve::Affine;
 use starkcrypto::ecdsa::{private_to_public, sign, verify};
 use starkcrypto::field::FieldElement;
 use starkcrypto::pedersen::hash;
@@ -147,7 +147,7 @@ fn field_inv(crit: &mut Criterion) {
 }
 
 fn curve_add(crit: &mut Criterion) {
-    let a = CurvePoint {
+    let a = Affine::Point {
         x: FieldElement::new(&[
             0xca9b3b7a, 0xadf5b0d8, 0x4728f1b4, 0x7a5cbd79, 0x316a86d0, 0xb9aaaf56, 0x557c9ca9,
             0x0259dee2,
@@ -157,7 +157,7 @@ fn curve_add(crit: &mut Criterion) {
             0x011cf020,
         ]),
     };
-    let b = CurvePoint {
+    let b = Affine::Point {
         x: FieldElement::new(&[
             0x55893510, 0x5985d659, 0xc0cda9ae, 0xfb1db2ec, 0xc78fe4ec, 0xe60f0d63, 0xfb0e0cf5,
             0x0449895d,
@@ -175,7 +175,7 @@ fn curve_add(crit: &mut Criterion) {
 }
 
 fn curve_dbl(crit: &mut Criterion) {
-    let a = CurvePoint {
+    let a = Affine::Point {
         x: FieldElement::new(&[
             0xa19caf1f, 0x9764694b, 0xd49d26e1, 0xc2d21cea, 0x9d37cc5b, 0xce13e7e3, 0x787be6e0,
             0x00ea1dff,
@@ -193,7 +193,7 @@ fn curve_dbl(crit: &mut Criterion) {
 }
 
 fn curve_mul(crit: &mut Criterion) {
-    let a = CurvePoint {
+    let a = Affine::Point {
         x: FieldElement::new(&[
             0x5bf31eb0, 0xfe50a889, 0x2d1a8a21, 0x3242e28e, 0x0d13fe66, 0xcf63e064, 0x9426e2c3,
             0x0040ffd5,

@@ -40,7 +40,7 @@ pub fn sign(msg_hash: &U256, private_key: &U256) -> (U256, U256) {
         }
         match GENERATOR * &k {
             Affine::Zero => continue,
-            Affine::Point { x, _y } => {
+            Affine::Point { x, y: _ } => {
                 let r = U256::from(x);
                 if r == U256::ZERO || r.bits() > 251 {
                     continue;
@@ -66,7 +66,7 @@ pub fn verify(msg_hash: &U256, r: &U256, w: &U256, public_key: &Affine) -> bool 
     let b = public_key * r.mulmod(&w, &ORDER);
     match a + b {
         Affine::Zero => false,
-        Affine::Point { x, y } => U256::from(x) == *r,
+        Affine::Point { x, y: _ } => U256::from(x) == *r,
     }
 }
 
