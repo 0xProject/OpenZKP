@@ -23,3 +23,12 @@ criterion = "0.2.10"
 [[bench]]
 name = "benchmark"
 harness = false
+
+# Don't forget to run `cargo clean` to force a rebuild of all dependencies!
+[profile.release]
+opt-level = 3
+lto = true
+
+# TODO: Make sure it doesn't hurt wasm
+[build]
+rustflags = ["-C target-cpu=native"]
