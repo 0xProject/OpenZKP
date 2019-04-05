@@ -19,18 +19,18 @@ pub const SHIFT_POINT: CurvePoint = CurvePoint {
 pub const N_ELEMENT_BITS: u32 = 251;
 
 pub fn hash(elements: &[U256]) -> U256 {
-    let mut result = SHIFT_POINT.clone();
+    let mut result = SHIFT_POINT;
     for (i, element) in elements.iter().enumerate() {
-        let mut bits = element.clone();
+        let mut bits = element;
         assert!(element.bits() <= N_ELEMENT_BITS);
         // point_list = CONSTANT_POINTS[1 + i * N_ELEMENT_BITS:1 + (i + 1) * N_ELEMENT_BITS]
         let start = 1 + i * (N_ELEMENT_BITS as usize);
         let end = start + (N_ELEMENT_BITS as usize);
-        for point in PEDERSEN_POINTS[start..end].iter() {
-            if bits.is_odd() {
+        for (j, point) in PEDERSEN_POINTS[start..end].iter().enumerate() {
+            // TODO: Convert u32 to usize in u256::bit
+            if element.bit(j as u32) {
                 result += point;
             }
-            bits >>= 1;
         }
     }
     result.x.into()

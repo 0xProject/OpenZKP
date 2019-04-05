@@ -48,8 +48,8 @@ pub fn verify(msg_hash: &U256, r: &U256, w: &U256, public_key: &CurvePoint) -> b
     assert!(w.bits() <= 251);
     assert!(public_key.on_curve());
 
-    let a = GENERATOR.clone() * msg_hash.mulmod(&w, &ORDER);
-    let b = public_key.clone() * r.mulmod(&w, &ORDER);
+    let a = GENERATOR * msg_hash.mulmod(&w, &ORDER);
+    let b = public_key * r.mulmod(&w, &ORDER);
     let x: U256 = (a + b).x.into();
     &x == r
 }
