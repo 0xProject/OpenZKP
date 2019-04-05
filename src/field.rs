@@ -46,8 +46,8 @@ impl FieldElement {
         self.0 == U256::ZERO
     }
 
-    pub fn inv(&self) -> FieldElement {
-        FieldElement(inv_redc(&self.0))
+    pub fn inv(&self) -> Option<FieldElement> {
+        inv_redc(&self.0).map(FieldElement)
     }
 
     pub fn double(&self) -> FieldElement {
@@ -134,8 +134,7 @@ impl MulAssign<&FieldElement> for FieldElement {
 
 impl DivAssign<&FieldElement> for FieldElement {
     fn div_assign(&mut self, rhs: &FieldElement) {
-        let i: FieldElement = rhs.clone().inv();
-        self.mul_assign(&i);
+        *self *= rhs.inv().unwrap();
     }
 }
 
@@ -247,7 +246,10 @@ mod tests {
     #[quickcheck]
     #[test]
     fn inverse_mul(a: FieldElement) -> bool {
-        &a * a.inv() == FieldElement::ONE
+        match a.inv() {
+            None => a == FieldElement::ZERO,
+            Some(ai) => a * ai == FieldElement::ONE,
+        }
     }
 
     #[quickcheck]

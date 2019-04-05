@@ -117,8 +117,8 @@ pub fn sqr_redc(a: &U256) -> U256 {
     mul_redc(&a, &a)
 }
 
-pub fn inv_redc(n: &U256) -> U256 {
-    mul_redc(&n.invmod(&MODULUS).unwrap(), &R3)
+pub fn inv_redc(n: &U256) -> Option<U256> {
+    n.invmod(&MODULUS).map(|ni| mul_redc(&ni, &R3))
 }
 
 pub fn to_montgomery(n: &U256) -> U256 {
