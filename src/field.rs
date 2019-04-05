@@ -63,6 +63,10 @@ impl FieldElement {
     pub fn square(&self) -> FieldElement {
         FieldElement(sqr_redc(&self.0))
     }
+
+    pub fn neg_assign(&mut self) {
+        *self = self.neg()
+    }
 }
 
 impl From<U256> for FieldElement {
