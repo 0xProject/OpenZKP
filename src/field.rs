@@ -1,6 +1,7 @@
 use crate::montgomery::*;
 use crate::u256::U256;
 use crate::u256h;
+use crate::{commutative_binop, noncommutative_binop};
 use hex_literal::*;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
@@ -47,6 +48,20 @@ impl FieldElement {
     pub fn inv(&self) -> FieldElement {
         FieldElement(inv_redc(&self.0))
     }
+
+    pub fn double(&self) -> FieldElement {
+        // TODO: Optimize
+        self.clone() + self
+    }
+
+    pub fn triple(&self) -> FieldElement {
+        // TODO: Optimize
+        self.clone() + self + self
+    }
+
+    pub fn square(&self) -> FieldElement {
+        FieldElement(sqr_redc(&self.0))
+    }
 }
 
 impl From<U256> for FieldElement {
@@ -75,19 +90,14 @@ impl From<&FieldElement> for U256 {
 
 impl From<&[u8; 32]> for FieldElement {
     fn from(bytes: &[u8; 32]) -> Self {
-        let mut bu = U256::from_bytes_be(bytes.clone());
-        FieldElement(to_montgomery(&bu))
+        FieldElement(to_montgomery(&U256::from_bytes_be(*bytes)))
     }
 }
 
-// TODO: mul2() mul3() pow2()
-
-impl Neg for FieldElement {
+impl Neg for &FieldElement {
     type Output = FieldElement;
     fn neg(self) -> Self::Output {
-        let mut n = (&MODULUS).clone();
-        n -= &self.0;
-        FieldElement(n)
+        FieldElement(MODULUS - &self.0)
     }
 }
 
@@ -124,39 +134,10 @@ impl DivAssign<&FieldElement> for FieldElement {
     }
 }
 
-impl Add for FieldElement {
-    type Output = Self;
-    fn add(self, rhs: FieldElement) -> Self::Output {
-        let mut result = self.clone();
-        result += &rhs;
-        result
-    }
-}
-
-impl Sub for FieldElement {
-    type Output = Self;
-    fn sub(self, rhs: FieldElement) -> Self::Output {
-        let mut result = self.clone();
-        result -= &rhs;
-        result
-    }
-}
-
-impl Mul for FieldElement {
-    type Output = Self;
-    fn mul(self, rhs: FieldElement) -> Self::Output {
-        let mut result = self.clone();
-        result *= &rhs;
-        result
-    }
-}
-
-impl Div for FieldElement {
-    type Output = Self;
-    fn div(self, rhs: FieldElement) -> Self::Output {
-        self * rhs.inv()
-    }
-}
+commutative_binop!(FieldElement, Add, add, add_assign);
+commutative_binop!(FieldElement, Mul, mul, mul_assign);
+noncommutative_binop!(FieldElement, Sub, sub, sub_assign);
+noncommutative_binop!(FieldElement, Div, div, div_assign);
 
 #[cfg(test)]
 use quickcheck::{Arbitrary, Gen};
@@ -222,54 +203,54 @@ mod tests {
     #[quickcheck]
     #[test]
     fn add_identity(a: FieldElement) -> bool {
-        a.clone() + FieldElement::ZERO == a
+        &a + FieldElement::ZERO == a
     }
 
     #[quickcheck]
     #[test]
     fn mul_identity(a: FieldElement) -> bool {
-        a.clone() * FieldElement::ONE == a
+        &a * FieldElement::ONE == a
     }
 
     #[quickcheck]
     #[test]
     fn commutative_add(a: FieldElement, b: FieldElement) -> bool {
-        a.clone() + b.clone() == b + a
+        &a + &b == b + a
     }
 
     #[quickcheck]
     #[test]
     fn commutative_mul(a: FieldElement, b: FieldElement) -> bool {
-        a.clone() * b.clone() == b * a
+        &a * &b == b * a
     }
 
     #[quickcheck]
     #[test]
     fn associative_add(a: FieldElement, b: FieldElement, c: FieldElement) -> bool {
-        a.clone() + (b.clone() + c.clone()) == (a + b) + c
+        &a + (&b + &c) == (a + b) + c
     }
 
     #[quickcheck]
     #[test]
     fn associative_mul(a: FieldElement, b: FieldElement, c: FieldElement) -> bool {
-        a.clone() * (b.clone() * c.clone()) == (a * b) * c
+        &a * (&b * &c) == (a * b) * c
     }
 
     #[quickcheck]
     #[test]
     fn inverse_add(a: FieldElement) -> bool {
-        a.clone() + a.neg() == FieldElement::ZERO
+        &a + a.neg() == FieldElement::ZERO
     }
 
     #[quickcheck]
     #[test]
     fn inverse_mul(a: FieldElement) -> bool {
-        a.clone() * a.inv() == FieldElement::ONE
+        &a * a.inv() == FieldElement::ONE
     }
 
     #[quickcheck]
     #[test]
     fn distributivity(a: FieldElement, b: FieldElement, c: FieldElement) -> bool {
-        a.clone() * (b.clone() + c.clone()) == (a.clone() * b) + (a * c)
+        &a * (&b + &c) == (&a * b) + (a * c)
     }
 }
