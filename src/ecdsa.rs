@@ -1,4 +1,4 @@
-use crate::curve::{CurvePoint, ORDER};
+use crate::curve::{Affine, ORDER};
 use crate::field::FieldElement;
 use crate::u256::U256;
 use crate::u256h;
@@ -7,7 +7,7 @@ use tiny_keccak::sha3_256;
 
 // x = 0x01ef15c18599971b7beced415a40f0c7deacfd9b0d1819e03d723d8bc943cfca
 // y = 0x005668060aa49730b7be4801df46ec62de53ecd11abe43a32873000c36e8dc1f
-pub const GENERATOR: CurvePoint = CurvePoint {
+pub const GENERATOR: Affine = Affine::Point {
     x: FieldElement::from_montgomery(u256h!(
         "033840300bf6cec10429bf5184041c7b51a9bf65d4403deac9019623cf0273dd"
     )),
@@ -16,32 +16,46 @@ pub const GENERATOR: CurvePoint = CurvePoint {
     )),
 };
 
-pub fn private_to_public(private_key: &U256) -> CurvePoint {
+pub fn private_to_public(private_key: &U256) -> Affine {
     GENERATOR * (private_key % ORDER)
 }
 
-fn divmod(a: &U256, b: &U256) -> U256 {
-    a.mulmod(&b.invmod(&ORDER).unwrap(), &ORDER)
+fn divmod(a: &U256, b: &U256) -> Option<U256> {
+    b.invmod(&ORDER).map(|bi| a.mulmod(&bi, &ORDER))
 }
 
 pub fn sign(msg_hash: &U256, private_key: &U256) -> (U256, U256) {
     assert!(msg_hash.bits() <= 251);
-    let k = U256::from_bytes_be(sha3_256(
-        &[private_key.to_bytes_be(), msg_hash.to_bytes_be()].concat(),
-    ));
-    {
-        // Todo Loop over k
-        let r: U256 = (GENERATOR.clone() * k.clone()).x.into();
-        assert!(r > U256::ZERO);
-        assert!(r.bits() <= 251); // TODO: Retry
-
-        debug_assert!(msg_hash + r.mulmod(&private_key, &ORDER) != U256::ZERO);
-        let w: U256 = divmod(&k, &(msg_hash + r.mulmod(private_key, &ORDER)));
-        (r, w)
+    for i in 0..1000 {
+        let k = U256::from_bytes_be(sha3_256(
+            &[
+                private_key.to_bytes_be(),
+                msg_hash.to_bytes_be(),
+                U256::from(i as u64).to_bytes_be(),
+            ]
+            .concat(),
+        )) >> 4;
+        if k == U256::ZERO || k.bits() > 251 {
+            continue;
+        }
+        match GENERATOR * &k {
+            Affine::Zero => continue,
+            Affine::Point { x, _y } => {
+                let r = U256::from(x);
+                if r == U256::ZERO || r.bits() > 251 {
+                    continue;
+                }
+                match divmod(&k, &(msg_hash + r.mulmod(private_key, &ORDER))) {
+                    None => continue,
+                    Some(w) => return (r, w),
+                }
+            }
+        }
     }
+    panic!()
 }
 
-pub fn verify(msg_hash: &U256, r: &U256, w: &U256, public_key: &CurvePoint) -> bool {
+pub fn verify(msg_hash: &U256, r: &U256, w: &U256, public_key: &Affine) -> bool {
     assert!(r != &U256::ZERO);
     assert!(r.bits() <= 251);
     assert!(w != &U256::ZERO);
@@ -50,8 +64,10 @@ pub fn verify(msg_hash: &U256, r: &U256, w: &U256, public_key: &CurvePoint) -> b
 
     let a = GENERATOR * msg_hash.mulmod(&w, &ORDER);
     let b = public_key * r.mulmod(&w, &ORDER);
-    let x: U256 = (a + b).x.into();
-    &x == r
+    match a + b {
+        Affine::Zero => false,
+        Affine::Point { x, y } => U256::from(x) == *r,
+    }
 }
 
 #[cfg(test)]
@@ -64,7 +80,7 @@ mod tests {
     fn test_pubkey() {
         let private_key =
             u256h!("03c1e9550e66958296d11b60f8e8e7a7ad990d07fa65d5f7652c4a6c87d4e3cc");
-        let expected = CurvePoint {
+        let expected = Affine::Point {
             x: FieldElement::from(u256h!(
                 "077a3b314db07c45076d11f62b6f9e748a39790441823307743cf00d6597ea43"
             )),
@@ -83,8 +99,8 @@ mod tests {
         let private_key =
             u256h!("03c1e9550e66958296d11b60f8e8e7a7ad990d07fa65d5f7652c4a6c87d4e3cc");
         let expected = (
-            u256h!("0494e0c7d60c4bba6ed7d18abccaeb9e23ac4d49b4dd5132aa240b4909f4fed8"),
-            u256h!("066778cb0f32c51a2fff78cde3ae697fb75481fd06e0e0451e9f25b5ac4a3ec8"),
+            u256h!("0010eaece1a727f8c64faf2f236943c2691ba8ca34e1da77880586f5c20fcf63"),
+            u256h!("077e670848f61ff0a6d7f4f04a4740f8d50dcf8db8e7a4522dc05ef8c2d3ad89"),
         );
         let result = sign(&message_hash, &private_key);
         assert_eq!(result, expected);
@@ -94,7 +110,7 @@ mod tests {
     fn test_verify() {
         let message_hash =
             u256h!("01e542e2da71b3f5d7b4e9d329b4d30ac0b5d6f266ebef7364bf61c39aac35d0");
-        let public_key = CurvePoint {
+        let public_key = Affine::Point {
             x: FieldElement::from(u256h!(
                 "077a3b314db07c45076d11f62b6f9e748a39790441823307743cf00d6597ea43"
             )),
