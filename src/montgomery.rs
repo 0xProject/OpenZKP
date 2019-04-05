@@ -57,40 +57,55 @@ pub fn redc(lo: &U256, hi: &U256) -> U256 {
     r
 }
 
-pub fn mul_redc(a: &U256, b: &U256) -> U256 {
+pub fn mul_redc(x: &U256, y: &U256) -> U256 {
     // Algorithm 14.36 from Handbook of Applied Cryptography
-    let x = [a.c0, a.c1, a.c2, a.c3];
-    let y = [b.c0, b.c1, b.c2, b.c3];
-    let m = [MODULUS.c0, MODULUS.c1, MODULUS.c2, MODULUS.c3];
-    let mut a = [0u64; 5];
-    for i in 0..4 {
-        let ui = ((Wrapping(a[0]) + Wrapping(x[i]) * Wrapping(y[0])) * Wrapping(M64)).0;
-        // A += x[i] * y
-        let mut carry = 0;
-        for j in 0..4 {
-            let (ai, c) = mac(a[j], x[i], y[j], carry);
-            a[j] = ai;
-            carry = c;
-        }
-        a[4] += carry;
-        // A += ui * m
-        let mut carry = 0;
-        for j in 0..4 {
-            let (ai, c) = mac(a[j], ui, m[j], carry);
-            a[j] = ai;
-            carry = c;
-        }
-        a[4] += carry;
-        // A >>= 64
-        for j in 0..4 {
-            a[j] = a[j + 1];
-        }
-        a[4] = 0;
-        let A = U256::new(a[0], a[1], a[2], a[3]);
-    }
+    let ui = ((Wrapping(x.c0) * Wrapping(y.c0)) * Wrapping(M64)).0;
+    let (a0, carry) = mac(0, x.c0, y.c0, 0);
+    let (a1, carry) = mac(0, x.c0, y.c1, carry);
+    let (a2, carry) = mac(0, x.c0, y.c2, carry);
+    let (a3, carry) = mac(0, x.c0, y.c3, carry);
+    let a4 = carry;
+    let (_a, carry) = mac(a0, ui, MODULUS.c0, 0);
+    let (a0, carry) = mac(a1, ui, MODULUS.c1, carry);
+    let (a1, carry) = mac(a2, ui, MODULUS.c2, carry);
+    let (a2, carry) = mac(a3, ui, MODULUS.c3, carry);
+    let a3 = a4 + carry;
+    let ui = ((Wrapping(a0) + Wrapping(x.c1) * Wrapping(y.c0)) * Wrapping(M64)).0;
+    let (a0, carry) = mac(a0, x.c1, y.c0, 0);
+    let (a1, carry) = mac(a1, x.c1, y.c1, carry);
+    let (a2, carry) = mac(a2, x.c1, y.c2, carry);
+    let (a3, carry) = mac(a3, x.c1, y.c3, carry);
+    let a4 = carry;
+    let (_a, carry) = mac(a0, ui, MODULUS.c0, 0);
+    let (a0, carry) = mac(a1, ui, MODULUS.c1, carry);
+    let (a1, carry) = mac(a2, ui, MODULUS.c2, carry);
+    let (a2, carry) = mac(a3, ui, MODULUS.c3, carry);
+    let a3 = a4 + carry;
+    let ui = ((Wrapping(a0) + Wrapping(x.c2) * Wrapping(y.c0)) * Wrapping(M64)).0;
+    let (a0, carry) = mac(a0, x.c2, y.c0, 0);
+    let (a1, carry) = mac(a1, x.c2, y.c1, carry);
+    let (a2, carry) = mac(a2, x.c2, y.c2, carry);
+    let (a3, carry) = mac(a3, x.c2, y.c3, carry);
+    let a4 = carry;
+    let (_a, carry) = mac(a0, ui, MODULUS.c0, 0);
+    let (a0, carry) = mac(a1, ui, MODULUS.c1, carry);
+    let (a1, carry) = mac(a2, ui, MODULUS.c2, carry);
+    let (a2, carry) = mac(a3, ui, MODULUS.c3, carry);
+    let a3 = a4 + carry;
+    let ui = ((Wrapping(a0) + Wrapping(x.c3) * Wrapping(y.c0)) * Wrapping(M64)).0;
+    let (a0, carry) = mac(a0, x.c3, y.c0, 0);
+    let (a1, carry) = mac(a1, x.c3, y.c1, carry);
+    let (a2, carry) = mac(a2, x.c3, y.c2, carry);
+    let (a3, carry) = mac(a3, x.c3, y.c3, carry);
+    let a4 = carry;
+    let (_a, carry) = mac(a0, ui, MODULUS.c0, 0);
+    let (a0, carry) = mac(a1, ui, MODULUS.c1, carry);
+    let (a1, carry) = mac(a2, ui, MODULUS.c2, carry);
+    let (a2, carry) = mac(a3, ui, MODULUS.c3, carry);
+    let a3 = a4 + carry;
 
     // Final reduction
-    let mut r = U256::new(a[0], a[1], a[2], a[3]);
+    let mut r = U256::new(a0, a1, a2, a3);
     if r >= MODULUS {
         r -= &MODULUS;
     }
