@@ -17,7 +17,7 @@ pub const GENERATOR: CurvePoint = CurvePoint {
 };
 
 pub fn private_to_public(private_key: &U256) -> CurvePoint {
-    GENERATOR.clone() * (private_key.clone() % &ORDER)
+    GENERATOR * (private_key % ORDER)
 }
 
 fn divmod(a: &U256, b: &U256) -> U256 {

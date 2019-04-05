@@ -1,8 +1,9 @@
 use crate::field::FieldElement;
 use crate::u256::U256;
 use crate::u256h;
+use crate::{commutative_binop, noncommutative_binop};
 use hex_literal::*;
-use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Shr, SubAssign};
+use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 // Curve parameters
 
@@ -36,7 +37,7 @@ impl CurvePoint {
             == self.x.clone() * self.x.clone() * self.x.clone() + self.x.clone() + BETA.clone()
     }
 
-    pub fn double(self) -> CurvePoint {
+    pub fn double_assign(&mut self) {
         assert!(self.x.clone() != FieldElement::ZERO);
         let one = FieldElement::ONE.clone();
         let two = one.clone() + one.clone();
@@ -45,45 +46,95 @@ impl CurvePoint {
             / (two.clone() * self.y.clone());
         let x = m.clone() * m.clone() - two.clone() * self.x.clone();
         let y = m.clone() * (self.x.clone() - x.clone()) - self.y.clone();
-        CurvePoint { x, y }
+        self.x = x;
+        self.y = y;
+    }
+
+    pub fn double(&self) -> CurvePoint {
+        let mut t = self.clone();
+        t.double_assign();
+        t
     }
 }
 
-impl Add for CurvePoint {
-    type Output = Self;
-    fn add(self, rhs: CurvePoint) -> Self {
+impl Neg for &CurvePoint {
+    type Output = CurvePoint;
+    fn neg(self) -> Self::Output {
+        CurvePoint {
+            x: self.x.clone(),
+            y: self.y.neg(),
+        }
+    }
+}
+
+impl AddAssign<&CurvePoint> for CurvePoint {
+    fn add_assign(&mut self, rhs: &CurvePoint) {
         assert!(self.x.clone() - rhs.x.clone() != FieldElement::ZERO);
         let m = (self.y.clone() - rhs.y.clone()) / (self.x.clone() - rhs.x.clone());
         let x = m.clone() * m.clone() - self.x.clone() - rhs.x.clone();
         let y = m.clone() * (self.x.clone() - x.clone()) - self.y.clone();
-        CurvePoint { x, y }
+        self.x = x;
+        self.y = y;
     }
 }
 
-impl AddAssign for CurvePoint {
-    fn add_assign(&mut self, rhs: CurvePoint) {
-        let result = self.clone() + rhs;
-        self.x = result.x;
-        self.y = result.y;
+impl SubAssign<&CurvePoint> for CurvePoint {
+    fn sub_assign(&mut self, rhs: &CurvePoint) {
+        *self += &rhs.neg()
     }
 }
 
-// This is over a multiplicative field of order 'Order'
-impl Mul<U256> for CurvePoint {
-    type Output = Self;
-    fn mul(self, scalar: U256) -> Self::Output {
-        assert!(scalar != U256::ZERO);
-        if scalar == U256::ONE {
-            self
-        } else {
-            if scalar.is_even() {
-                self.double() * scalar.shr(1)
-            } else {
-                self.clone() + (self * (scalar - &U256::ONE))
+impl Mul<&U256> for &CurvePoint {
+    type Output = CurvePoint;
+    fn mul(self, scalar: &U256) -> CurvePoint {
+        let mut r = self.clone();
+        for i in (0..scalar.msb()).rev() {
+            r.double_assign();
+            if scalar.bit(i) {
+                r += self;
             }
         }
+        r
     }
 }
+
+impl MulAssign<&U256> for CurvePoint {
+    fn mul_assign(&mut self, scalar: &U256) {
+        *self = &*self * scalar;
+    }
+}
+
+impl MulAssign<U256> for CurvePoint {
+    fn mul_assign(&mut self, mut scalar: U256) {
+        *self *= &scalar;
+    }
+}
+
+impl Mul<U256> for CurvePoint {
+    type Output = Self;
+    fn mul(mut self, scalar: U256) -> CurvePoint {
+        &self * &scalar
+    }
+}
+
+impl Mul<&U256> for CurvePoint {
+    type Output = Self;
+    fn mul(mut self, scalar: &U256) -> CurvePoint {
+        &self * scalar
+    }
+}
+
+impl Mul<U256> for &CurvePoint {
+    type Output = CurvePoint;
+    fn mul(self, scalar: U256) -> CurvePoint {
+        self * &scalar
+    }
+}
+
+// TODO: Left multiplication by scalar
+
+commutative_binop!(CurvePoint, Add, add, add_assign);
+noncommutative_binop!(CurvePoint, Sub, sub, sub_assign);
 
 #[cfg(test)]
 use quickcheck::{Arbitrary, Gen};
@@ -164,10 +215,11 @@ mod tests {
         assert_eq!(result, expected);
     }
 
+    #[allow(clippy::eq_op)]
     #[quickcheck]
     #[test]
     fn add_commutative(a: CurvePoint, b: CurvePoint) -> bool {
-        a.clone() + b.clone() == b.clone() + a.clone()
+        &a + &b == &b + &a
     }
 
     #[quickcheck]
@@ -175,8 +227,8 @@ mod tests {
     fn distributivity(p: CurvePoint, mut a: U256, mut b: U256) -> bool {
         a %= &ORDER;
         b %= &ORDER;
-        let mut c = (a.clone() + &b);
+        let c = &a + &b;
         // TODO: c %= &ORDER;
-        (p.clone() * a) + (p.clone() * b) == p.clone() * c
+        (&p * a) + (&p * b) == &p * c
     }
 }

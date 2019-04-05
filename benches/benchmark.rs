@@ -1,5 +1,4 @@
-#[macro_use]
-use criterion::{Criterion, black_box, criterion_group, criterion_main};
+use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use hex_literal::*;
 use starkcrypto::curve::CurvePoint;
 use starkcrypto::ecdsa::{private_to_public, sign, verify};
@@ -130,7 +129,7 @@ fn field_mul(crit: &mut Criterion) {
     ]);
     crit.bench_function("Field mul", move |bench| {
         bench.iter(|| {
-            black_box(a.clone() * b.clone());
+            black_box(black_box(&a) * black_box(&b));
         })
     });
 }
@@ -142,13 +141,13 @@ fn field_inv(crit: &mut Criterion) {
     ]);
     crit.bench_function("Field inv", move |bench| {
         bench.iter(|| {
-            black_box(a.clone().inv());
+            black_box(black_box(&a).clone().inv());
         })
     });
 }
 
 fn curve_add(crit: &mut Criterion) {
-    let A = CurvePoint {
+    let a = CurvePoint {
         x: FieldElement::new(&[
             0xca9b3b7a, 0xadf5b0d8, 0x4728f1b4, 0x7a5cbd79, 0x316a86d0, 0xb9aaaf56, 0x557c9ca9,
             0x0259dee2,
@@ -158,7 +157,7 @@ fn curve_add(crit: &mut Criterion) {
             0x011cf020,
         ]),
     };
-    let B = CurvePoint {
+    let b = CurvePoint {
         x: FieldElement::new(&[
             0x55893510, 0x5985d659, 0xc0cda9ae, 0xfb1db2ec, 0xc78fe4ec, 0xe60f0d63, 0xfb0e0cf5,
             0x0449895d,
@@ -170,13 +169,13 @@ fn curve_add(crit: &mut Criterion) {
     };
     crit.bench_function("Curve add", move |bench| {
         bench.iter(|| {
-            black_box(A.clone() + B.clone());
+            black_box(black_box(&a) + black_box(&b));
         })
     });
 }
 
 fn curve_dbl(crit: &mut Criterion) {
-    let A = CurvePoint {
+    let a = CurvePoint {
         x: FieldElement::new(&[
             0xa19caf1f, 0x9764694b, 0xd49d26e1, 0xc2d21cea, 0x9d37cc5b, 0xce13e7e3, 0x787be6e0,
             0x00ea1dff,
@@ -188,13 +187,13 @@ fn curve_dbl(crit: &mut Criterion) {
     };
     crit.bench_function("Curve dbl", move |bench| {
         bench.iter(|| {
-            black_box(A.clone().double());
+            black_box(black_box(&a).double());
         })
     });
 }
 
 fn curve_mul(crit: &mut Criterion) {
-    let A = CurvePoint {
+    let a = CurvePoint {
         x: FieldElement::new(&[
             0x5bf31eb0, 0xfe50a889, 0x2d1a8a21, 0x3242e28e, 0x0d13fe66, 0xcf63e064, 0x9426e2c3,
             0x0040ffd5,
@@ -207,7 +206,7 @@ fn curve_mul(crit: &mut Criterion) {
     let b = u256h!("014023b44fbb1e6f2a79c929c6da775be3c4b9e043d439385b5050fdc69177e3");
     crit.bench_function("Curve mul", move |bench| {
         bench.iter(|| {
-            black_box(A.clone() * b.clone());
+            black_box(black_box(&a) * black_box(&b));
         })
     });
 }

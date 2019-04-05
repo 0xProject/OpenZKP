@@ -28,7 +28,7 @@ pub fn hash(elements: &[U256]) -> U256 {
         let end = start + (N_ELEMENT_BITS as usize);
         for point in PEDERSEN_POINTS[start..end].iter() {
             if bits.is_odd() {
-                result += point.clone();
+                result += point;
             }
             bits >>= 1;
         }

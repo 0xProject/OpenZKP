@@ -143,13 +143,10 @@ noncommutative_binop!(FieldElement, Div, div, div_assign);
 use quickcheck::{Arbitrary, Gen};
 
 #[cfg(test)]
-use rand::Rng;
-
-#[cfg(test)]
 impl Arbitrary for FieldElement {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         // TODO: Generate 0, 1, p/2 and -1
-        FieldElement(U256::arbitrary(g) % &MODULUS)
+        FieldElement(U256::arbitrary(g) % MODULUS)
     }
 }
 
