@@ -33,19 +33,14 @@ impl CurvePoint {
     }
 
     pub fn on_curve(&self) -> bool {
-        self.y.clone() * self.y.clone()
-            == self.x.clone() * self.x.clone() * self.x.clone() + self.x.clone() + BETA.clone()
+        &self.y * &self.y == &self.x * &self.x * &self.x + &self.x + BETA
     }
 
     pub fn double_assign(&mut self) {
-        assert!(self.x.clone() != FieldElement::ZERO);
-        let one = FieldElement::ONE.clone();
-        let two = one.clone() + one.clone();
-        let three = two.clone() + one.clone();
-        let m = (three.clone() * self.x.clone() * self.x.clone() + one.clone())
-            / (two.clone() * self.y.clone());
-        let x = m.clone() * m.clone() - two.clone() * self.x.clone();
-        let y = m.clone() * (self.x.clone() - x.clone()) - self.y.clone();
+        assert!(self.x != FieldElement::ZERO);
+        let m = ((&self.x + &self.x + &self.x) * &self.x + FieldElement::ONE) / (&self.y + &self.y);
+        let x = &m * &m - &self.x - &self.x;
+        let y = m * (&self.x - &x) - &self.y;
         self.x = x;
         self.y = y;
     }
@@ -69,10 +64,10 @@ impl Neg for &CurvePoint {
 
 impl AddAssign<&CurvePoint> for CurvePoint {
     fn add_assign(&mut self, rhs: &CurvePoint) {
-        assert!(self.x.clone() - rhs.x.clone() != FieldElement::ZERO);
-        let m = (self.y.clone() - rhs.y.clone()) / (self.x.clone() - rhs.x.clone());
-        let x = m.clone() * m.clone() - self.x.clone() - rhs.x.clone();
-        let y = m.clone() * (self.x.clone() - x.clone()) - self.y.clone();
+        assert!(self.x != rhs.x);
+        let m = (&self.y - &rhs.y) / (&self.x - &rhs.x);
+        let x = &m * &m - &self.x - &rhs.x;
+        let y = m * (&self.x - &x) - &self.y;
         self.x = x;
         self.y = y;
     }
@@ -105,21 +100,21 @@ impl MulAssign<&U256> for CurvePoint {
 }
 
 impl MulAssign<U256> for CurvePoint {
-    fn mul_assign(&mut self, mut scalar: U256) {
+    fn mul_assign(&mut self, scalar: U256) {
         *self *= &scalar;
     }
 }
 
 impl Mul<U256> for CurvePoint {
     type Output = Self;
-    fn mul(mut self, scalar: U256) -> CurvePoint {
+    fn mul(self, scalar: U256) -> CurvePoint {
         &self * &scalar
     }
 }
 
 impl Mul<&U256> for CurvePoint {
     type Output = Self;
-    fn mul(mut self, scalar: &U256) -> CurvePoint {
+    fn mul(self, scalar: &U256) -> CurvePoint {
         &self * scalar
     }
 }
