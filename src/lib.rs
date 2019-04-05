@@ -5,6 +5,7 @@ pub mod curve;
 mod division;
 pub mod ecdsa;
 pub mod field;
+pub mod jacobian;
 pub mod orders;
 pub mod pedersen;
 mod pedersen_points;

@@ -23,6 +23,8 @@ pub enum Affine {
 }
 
 impl Affine {
+    pub const ZERO: Affine = Affine::Zero;
+
     pub fn new(x: &[u32; 8], y: &[u32; 8]) -> Affine {
         Affine::Point {
             x: FieldElement::new(x),
@@ -99,61 +101,68 @@ impl AddAssign<&Affine> for Affine {
     }
 }
 
-impl SubAssign<&Affine> for Affine {
-    fn sub_assign(&mut self, rhs: &Affine) {
-        *self += &rhs.neg()
-    }
-}
-
-impl Mul<&U256> for &Affine {
-    type Output = Affine;
-    fn mul(self, scalar: &U256) -> Affine {
-        let mut r = self.clone();
-        for i in (0..scalar.msb()).rev() {
-            r.double_assign();
-            if scalar.bit(i) {
-                r += self;
+// TODO: This can be more elegantly done using traits
+#[macro_export]
+macro_rules! curve_operations {
+    ($type:ident) => {
+        impl SubAssign<&$type> for $type {
+            fn sub_assign(&mut self, rhs: &$type) {
+                *self += &rhs.neg()
             }
         }
-        r
-    }
+
+        impl Mul<&U256> for &$type {
+            type Output = $type;
+            fn mul(self, scalar: &U256) -> $type {
+                let mut r = self.clone();
+                for i in (0..scalar.msb()).rev() {
+                    r.double_assign();
+                    if scalar.bit(i) {
+                        r += self;
+                    }
+                }
+                r
+            }
+        }
+
+        impl MulAssign<&U256> for $type {
+            fn mul_assign(&mut self, scalar: &U256) {
+                *self = &*self * scalar;
+            }
+        }
+
+        impl MulAssign<U256> for $type {
+            fn mul_assign(&mut self, scalar: U256) {
+                *self *= &scalar;
+            }
+        }
+
+        impl Mul<U256> for $type {
+            type Output = Self;
+            fn mul(self, scalar: U256) -> $type {
+                &self * &scalar
+            }
+        }
+
+        impl Mul<&U256> for $type {
+            type Output = Self;
+            fn mul(self, scalar: &U256) -> $type {
+                &self * scalar
+            }
+        }
+
+        impl Mul<U256> for &$type {
+            type Output = $type;
+            fn mul(self, scalar: U256) -> $type {
+                self * &scalar
+            }
+        }
+
+        // TODO: Left multiplication by scalar
+    };
 }
 
-impl MulAssign<&U256> for Affine {
-    fn mul_assign(&mut self, scalar: &U256) {
-        *self = &*self * scalar;
-    }
-}
-
-impl MulAssign<U256> for Affine {
-    fn mul_assign(&mut self, scalar: U256) {
-        *self *= &scalar;
-    }
-}
-
-impl Mul<U256> for Affine {
-    type Output = Self;
-    fn mul(self, scalar: U256) -> Affine {
-        &self * &scalar
-    }
-}
-
-impl Mul<&U256> for Affine {
-    type Output = Self;
-    fn mul(self, scalar: &U256) -> Affine {
-        &self * scalar
-    }
-}
-
-impl Mul<U256> for &Affine {
-    type Output = Affine;
-    fn mul(self, scalar: U256) -> Affine {
-        self * &scalar
-    }
-}
-
-// TODO: Left multiplication by scalar
-
+curve_operations!(Affine);
 commutative_binop!(Affine, Add, add, AddAssign, add_assign);
 noncommutative_binop!(Affine, Sub, sub, SubAssign, sub_assign);
 
@@ -166,6 +175,7 @@ impl Arbitrary for Affine {
         if u8::arbitrary(g) < 50 {
             Affine::Zero
         } else {
+            // TODO: Make sure it is on the curve
             Affine::Point {
                 x: FieldElement::arbitrary(g),
                 y: FieldElement::arbitrary(g),
