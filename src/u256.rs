@@ -1,12 +1,12 @@
 use crate::division::{divrem_nby1, divrem_nbym};
 use crate::utils::{adc, div_2_1, mac, sbb};
-use hex_literal::*;
+use crate::{commutative_binop, noncommutative_binop};
 use std::cmp::{Ord, Ordering, PartialOrd};
 use std::fmt;
 use std::num::Wrapping;
 use std::ops::{
-    Add, AddAssign, BitAnd, Mul, MulAssign, Rem, RemAssign, Shl, ShlAssign, Shr, ShrAssign, Sub,
-    SubAssign,
+    Add, AddAssign, BitAnd, Div, DivAssign, Mul, MulAssign, Rem, RemAssign, Shl, ShlAssign, Shr,
+    ShrAssign, Sub, SubAssign,
 };
 use std::u64;
 
@@ -535,23 +535,6 @@ impl AddAssign<&U256> for U256 {
     }
 }
 
-impl Add<&U256> for U256 {
-    type Output = U256;
-    #[inline(always)]
-    fn add(mut self, rhs: &U256) -> U256 {
-        self += rhs;
-        self
-    }
-}
-
-impl Add<U256> for &U256 {
-    type Output = U256;
-    #[inline(always)]
-    fn add(self, rhs: U256) -> U256 {
-        rhs + self
-    }
-}
-
 impl SubAssign<&U256> for U256 {
     #[inline(always)]
     fn sub_assign(&mut self, rhs: &U256) {
@@ -563,23 +546,6 @@ impl SubAssign<&U256> for U256 {
         self.c2 = t;
         let (t, _borrow) = sbb(self.c3, rhs.c3, borrow);
         self.c3 = t;
-    }
-}
-
-impl Sub<&U256> for U256 {
-    type Output = U256;
-    #[inline(always)]
-    fn sub(mut self, rhs: &U256) -> U256 {
-        self -= rhs;
-        self
-    }
-}
-
-impl Sub<U256> for &U256 {
-    type Output = U256;
-    #[inline(always)]
-    fn sub(self, rhs: U256) -> U256 {
-        self.clone() - &rhs // TODO: inplace algorithm
     }
 }
 
@@ -603,20 +569,13 @@ impl MulAssign<&U256> for U256 {
     }
 }
 
-impl Mul<&U256> for U256 {
-    type Output = U256;
-    #[inline(always)]
-    fn mul(mut self, rhs: &U256) -> U256 {
-        self *= rhs;
-        self
-    }
-}
-
-impl Mul<U256> for &U256 {
-    type Output = U256;
-    #[inline(always)]
-    fn mul(self, rhs: U256) -> U256 {
-        rhs * self
+impl DivAssign<&U256> for U256 {
+    fn div_assign(&mut self, rhs: &U256) {
+        let (q, _r) = self.divrem(rhs).unwrap();
+        self.c0 = q.c0;
+        self.c1 = q.c1;
+        self.c2 = q.c2;
+        self.c3 = q.c3;
     }
 }
 
@@ -630,22 +589,11 @@ impl RemAssign<&U256> for U256 {
     }
 }
 
-impl Rem<&U256> for U256 {
-    type Output = U256;
-    #[inline(always)]
-    fn rem(mut self, rhs: &U256) -> U256 {
-        self %= rhs;
-        self
-    }
-}
-
-impl Rem<U256> for &U256 {
-    type Output = U256;
-    #[inline(always)]
-    fn rem(self, rhs: U256) -> U256 {
-        rhs % self
-    }
-}
+commutative_binop!(U256, Add, add, add_assign);
+commutative_binop!(U256, Mul, mul, mul_assign);
+noncommutative_binop!(U256, Sub, sub, sub_assign);
+noncommutative_binop!(U256, Div, div, div_assign);
+noncommutative_binop!(U256, Rem, rem, rem_assign);
 
 #[cfg(test)]
 use quickcheck::{Arbitrary, Gen};
@@ -663,6 +611,7 @@ impl Arbitrary for U256 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use hex_literal::*;
     use quickcheck_macros::quickcheck;
 
     #[allow(dead_code)]

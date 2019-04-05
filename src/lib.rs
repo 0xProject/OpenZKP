@@ -1,5 +1,6 @@
 #![warn(clippy::all)]
 #![feature(const_fn)]
+pub mod binops;
 pub mod curve;
 mod division;
 pub mod ecdsa;
