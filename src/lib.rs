@@ -12,7 +12,7 @@ mod pedersen_points;
 pub mod u256;
 pub mod montgomery;
 mod utils;
-use curve::CurvePoint;
+use curve::Affine;
 use field::FieldElement;
 use u256::U256;
 
@@ -31,7 +31,10 @@ pub fn hash(a: &[u8; 32], b: &[u8; 32]) -> [u8; 32] {
 
 pub fn public_key(private_key: &[u8; 32]) -> ([u8; 32], [u8; 32]) {
     let p = ecdsa::private_to_public(&from_bytes(private_key));
-    (p.x.to_bytes(), p.y.to_bytes())
+    match p {
+        Affine::Zero => panic!(),
+        Affine::Point { x, y } => (x.to_bytes(), y.to_bytes()),
+    }
 }
 
 pub fn sign(message_hash: &[u8; 32], private_key: &[u8; 32]) -> ([u8; 32], [u8; 32]) {
@@ -48,7 +51,7 @@ pub fn verify(
         &from_bytes(message_hash),
         &from_bytes(signature.0),
         &from_bytes(signature.1),
-        &CurvePoint {
+        &Affine::Point {
             x: FieldElement::from(public_key.0),
             y: FieldElement::from(public_key.1),
         },

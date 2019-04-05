@@ -1,4 +1,4 @@
-use crate::curve::CurvePoint;
+use crate::curve::Affine;
 use crate::field::FieldElement;
 use crate::pedersen_points::PEDERSEN_POINTS;
 use crate::u256::U256;
@@ -7,7 +7,7 @@ use hex_literal::*;
 
 // x = 0x049ee3eba8c1600700ee1b87eb599f16716b0b1022947733551fde4050ca6804
 // y = 0x03ca0cfe4b3bc6ddf346d49d06ea0ed34e621062c0e056c1d0405d266e10268a
-pub const SHIFT_POINT: CurvePoint = CurvePoint {
+pub const SHIFT_POINT: Affine = Affine::Point {
     x: FieldElement::from_montgomery(u256h!(
         "0463d1e72d2ebf3416c727d5f24b5dc16b69f758cd49de911ad69b41a9ba0b3a"
     )),
@@ -33,7 +33,10 @@ pub fn hash(elements: &[U256]) -> U256 {
             }
         }
     }
-    result.x.into()
+    match result {
+        Affine::Zero => panic!(),
+        Affine::Point { x, y } => x.into(),
+    }
 }
 
 #[cfg(test)]
