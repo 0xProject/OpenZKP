@@ -1,5 +1,6 @@
 use crate::curve::Affine;
 use crate::field::FieldElement;
+use crate::jacobian::Jacobian;
 use crate::pedersen_points::PEDERSEN_POINTS;
 use crate::u256::U256;
 use crate::u256h;
@@ -19,7 +20,7 @@ pub const SHIFT_POINT: Affine = Affine::Point {
 pub const N_ELEMENT_BITS: u32 = 251;
 
 pub fn hash(elements: &[U256]) -> U256 {
-    let mut result = SHIFT_POINT;
+    let mut result = Jacobian::from(SHIFT_POINT);
     for (i, element) in elements.iter().enumerate() {
         assert!(element.bits() <= N_ELEMENT_BITS);
         // point_list = CONSTANT_POINTS[1 + i * N_ELEMENT_BITS:1 + (i + 1) * N_ELEMENT_BITS]
@@ -32,9 +33,9 @@ pub fn hash(elements: &[U256]) -> U256 {
             }
         }
     }
-    match result {
+    match Affine::from(&result) {
         Affine::Zero => panic!(),
-        Affine::Point { x, y: _ } => x.into(),
+        Affine::Point { x, .. } => x.into(),
     }
 }
 
