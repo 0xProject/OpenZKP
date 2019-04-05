@@ -1,5 +1,6 @@
 use crate::curve::{Affine, ORDER};
 use crate::field::FieldElement;
+use crate::jacobian::Jacobian;
 use crate::u256::U256;
 use crate::u256h;
 use hex_literal::*;
@@ -17,7 +18,7 @@ pub const GENERATOR: Affine = Affine::Point {
 };
 
 pub fn private_to_public(private_key: &U256) -> Affine {
-    GENERATOR * (private_key % ORDER)
+    Affine::from(&Jacobian::mul(&GENERATOR, &(private_key % ORDER)))
 }
 
 fn divmod(a: &U256, b: &U256) -> Option<U256> {
@@ -38,9 +39,9 @@ pub fn sign(msg_hash: &U256, private_key: &U256) -> (U256, U256) {
         if k == U256::ZERO || k.bits() > 251 {
             continue;
         }
-        match GENERATOR * &k {
+        match Affine::from(&Jacobian::mul(&GENERATOR, &k)) {
             Affine::Zero => continue,
-            Affine::Point { x, y: _ } => {
+            Affine::Point { x, .. } => {
                 let r = U256::from(x);
                 if r == U256::ZERO || r.bits() > 251 {
                     continue;
@@ -62,11 +63,11 @@ pub fn verify(msg_hash: &U256, r: &U256, w: &U256, public_key: &Affine) -> bool 
     assert!(w.bits() <= 251);
     assert!(public_key.on_curve());
 
-    let a = GENERATOR * msg_hash.mulmod(&w, &ORDER);
-    let b = public_key * r.mulmod(&w, &ORDER);
-    match a + b {
+    let a = Jacobian::mul(&GENERATOR, &msg_hash.mulmod(&w, &ORDER));
+    let b = Jacobian::mul(&public_key, &r.mulmod(&w, &ORDER));
+    match Affine::from(&(a + b)) {
         Affine::Zero => false,
-        Affine::Point { x, y: _ } => U256::from(x) == *r,
+        Affine::Point { x, .. } => U256::from(x) == *r,
     }
 }
 
