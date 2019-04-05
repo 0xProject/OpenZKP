@@ -9,10 +9,10 @@ use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 // See http://www.hyperelliptic.org/EFD/g1p/auto-shortw-jacobian.html
 
 #[derive(Clone, Debug)]
-struct Jacobian {
-    x: FieldElement,
-    y: FieldElement,
-    z: FieldElement,
+pub struct Jacobian {
+    pub x: FieldElement,
+    pub y: FieldElement,
+    pub z: FieldElement,
 }
 
 impl Jacobian {
@@ -47,6 +47,18 @@ impl Jacobian {
     pub fn double(&self) -> Jacobian {
         let mut r = self.clone();
         r.double_assign();
+        r
+    }
+
+    // Multiply Affine point using Jacobian accumulator
+    pub fn mul(p: &Affine, scalar: &U256) -> Jacobian {
+        let mut r = Jacobian::from(p);
+        for i in (0..scalar.msb()).rev() {
+            r.double_assign();
+            if scalar.bit(i) {
+                r += p;
+            }
+        }
         r
     }
 }
@@ -153,6 +165,14 @@ impl AddAssign<&Affine> for Jacobian {
 }
 
 // TODO: Various Add implementations mixing Affine and Jacobian values and refs.
+impl Add<&Affine> for &Jacobian {
+    type Output = Jacobian;
+    fn add(self, rhs: &Affine) -> Jacobian {
+        let mut r = self.clone();
+        r += rhs;
+        r
+    }
+}
 
 curve_operations!(Jacobian);
 commutative_binop!(Jacobian, Add, add, AddAssign, add_assign);
