@@ -75,8 +75,8 @@ pub fn div_3by2(n: &[u64; 3], d: &[u64; 2]) -> u64 {
 pub fn divrem_nbym(numerator: &mut [u64], divisor: &mut [u64]) {
     debug_assert!(divisor.len() >= 2);
     debug_assert!(numerator.len() > divisor.len());
-    debug_assert!(divisor.last().unwrap() > &0);
-    debug_assert!(numerator.last().unwrap() == &0);
+    debug_assert!(*divisor.last().unwrap() > 0);
+    debug_assert!(*numerator.last().unwrap() == 0);
     let n = divisor.len();
     let m = numerator.len() - n - 1;
 
@@ -160,6 +160,7 @@ mod tests {
         assert_eq!(q, u64::MAX);
     }
 
+    #[allow(clippy::unreadable_literal)]
     #[test]
     fn test_divrem_8by4() {
         let mut numerator = [
@@ -192,7 +193,7 @@ mod tests {
             0xfc710038c13e4eedu64,
             0x000000000000000bu64,
         ];
-        let quotient = divrem_nbym(&mut numerator, &mut divisor);
+        divrem_nbym(&mut numerator, &mut divisor);
         let remainder = &numerator[0..4];
         let quotient = &numerator[4..9];
         assert_eq!(remainder, expected_remainder);

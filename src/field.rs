@@ -26,6 +26,7 @@ impl FieldElement {
         FieldElement(n)
     }
 
+    #[allow(clippy::cast_lossless)]
     pub fn new(limbs: &[u32; 8]) -> Self {
         let mut bu = U256::new(
             ((limbs[1] as u64) << 32) | (limbs[0] as u64),
