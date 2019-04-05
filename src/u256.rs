@@ -111,6 +111,26 @@ impl U256 {
     }
 
     #[inline(always)]
+    pub fn msb(&self) -> u32 {
+        255 - self.leading_zeros()
+    }
+
+    #[inline(always)]
+    pub fn bit(&self, i: u32) -> bool {
+        if i < 64 {
+            self.c0 >> i & 1 == 1
+        } else if i < 128 {
+            self.c1 >> (i - 64) & 1 == 1
+        } else if i < 192 {
+            self.c2 >> (i - 128) & 1 == 1
+        } else if i < 256 {
+            self.c3 >> (i - 192) & 1 == 1
+        } else {
+            false
+        }
+    }
+
+    #[inline(always)]
     pub fn leading_zeros(&self) -> u32 {
         if self.c3 > 0 {
             self.c3.leading_zeros()
@@ -572,20 +592,21 @@ impl MulAssign<&U256> for U256 {
 impl DivAssign<&U256> for U256 {
     fn div_assign(&mut self, rhs: &U256) {
         let (q, _r) = self.divrem(rhs).unwrap();
-        self.c0 = q.c0;
-        self.c1 = q.c1;
-        self.c2 = q.c2;
-        self.c3 = q.c3;
+        *self = q;
     }
 }
 
 impl RemAssign<&U256> for U256 {
     fn rem_assign(&mut self, rhs: &U256) {
         let (_q, r) = self.divrem(rhs).unwrap();
-        self.c0 = r.c0;
-        self.c1 = r.c1;
-        self.c2 = r.c2;
-        self.c3 = r.c3;
+        *self = r;
+    }
+}
+
+// TODO: Handle by macro
+impl RemAssign<U256> for U256 {
+    fn rem_assign(&mut self, rhs: U256) {
+        *self %= &rhs;
     }
 }
 
@@ -728,7 +749,7 @@ mod tests {
 
     #[test]
     fn test_mul_full() {
-        let mut a = U256::new(
+        let a = U256::new(
             0xcef29c5de9ccefc1,
             0x1f0363af6e0e89e0,
             0x2edfffcc3ce19c1c,
