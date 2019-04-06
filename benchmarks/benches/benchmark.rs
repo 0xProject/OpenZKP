@@ -30,7 +30,25 @@ fn criterion_benchmark(c: &mut Criterion) {
         vec![
             Fun::new("starkcrypto", starkcrypto_field_mul),
             Fun::new("matter", matter_field_mul),
-            Fun::new("dalek", dalek_scalar_mul),
+            Fun::new("dalek", dalek_scalar_mul), // Note: this is with a disadvantageous modulus.
+        ],
+        (),
+    );
+    c.bench_functions(
+        "Field sqr",
+        vec![
+            Fun::new("starkcrypto", starkcrypto_field_sqr),
+            Fun::new("matter", matter_field_sqr),
+            Fun::new("dalek", dalek_scalar_sqr), // Note: this is with a disadvantageous modulus.
+        ],
+        (),
+    );
+    c.bench_functions(
+        "Field inv",
+        vec![
+            Fun::new("starkcrypto", starkcrypto_field_inv),
+            Fun::new("matter", matter_field_inv),
+            Fun::new("dalek", dalek_scalar_inv), // Note: this is with a disadvantageous modulus.
         ],
         (),
     );

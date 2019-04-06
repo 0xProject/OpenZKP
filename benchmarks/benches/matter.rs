@@ -1,6 +1,6 @@
 use criterion::{black_box, Bencher};
-use matter::Fp;
 use matter::Field;
+use matter::Fp;
 
 pub fn matter_field_mul(bench: &mut Bencher, _i: &()) {
     let a =
@@ -13,5 +13,25 @@ pub fn matter_field_mul(bench: &mut Bencher, _i: &()) {
             r.mul_assign(black_box(&b));
             r
         });
+    })
+}
+
+pub fn matter_field_sqr(bench: &mut Bencher, _i: &()) {
+    let a =
+        Fp::from_hex("03d937c035c878245caf64531a5756109c53068da139362728feb561405371cb").unwrap();
+    bench.iter(|| {
+        black_box({
+            let mut r = black_box(&a).clone();
+            r.square();
+            r
+        });
+    })
+}
+
+pub fn matter_field_inv(bench: &mut Bencher, _i: &()) {
+    let a =
+        Fp::from_hex("03d937c035c878245caf64531a5756109c53068da139362728feb561405371cb").unwrap();
+    bench.iter(|| {
+        black_box(black_box(&a).inverse());
     })
 }

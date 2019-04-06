@@ -14,15 +14,31 @@ pub fn starkcrypto_verify(bench: &mut Bencher, _i: &()) {
 }
 
 pub fn starkcrypto_field_mul(bench: &mut Bencher, _i: &()) {
-    let a = FieldElement::new(&[
-        0x0f3855f5, 0x37862eb2, 0x275b919f, 0x325329cb, 0xe968e6a2, 0xa2ceee5c, 0xd5f1d547,
-        0x07211989,
-    ]);
-    let b = FieldElement::new(&[
-        0x32c781dd, 0x6f6a3b68, 0x3bac723c, 0xd5893114, 0xd0178b37, 0x5476714f, 0x1c567d5a,
-        0x0219cad4,
-    ]);
+    let a = FieldElement::from(u256h!(
+        "03d937c035c878245caf64531a5756109c53068da139362728feb561405371cb"
+    ));
+    let b = FieldElement::from(u256h!(
+        "0208a0a10250e382e1e4bbe2880906c2791bf6275695e02fbbc6aeff9cd8b31a"
+    ));
     bench.iter(|| {
         black_box(black_box(&a) * black_box(&b));
+    })
+}
+
+pub fn starkcrypto_field_sqr(bench: &mut Bencher, _i: &()) {
+    let a = FieldElement::from(u256h!(
+        "03d937c035c878245caf64531a5756109c53068da139362728feb561405371cb"
+    ));
+    bench.iter(|| {
+        black_box(black_box(&a).square());
+    })
+}
+
+pub fn starkcrypto_field_inv(bench: &mut Bencher, _i: &()) {
+    let a = FieldElement::from(u256h!(
+        "03d937c035c878245caf64531a5756109c53068da139362728feb561405371cb"
+    ));
+    bench.iter(|| {
+        black_box(black_box(&a).inv());
     })
 }
