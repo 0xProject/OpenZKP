@@ -3,7 +3,7 @@ use crate::u256::U256;
 use crate::u256h;
 use crate::utils::{adc, mac};
 use hex_literal::*;
-use std::num::Wrapping;
+use std::cmp::Ordering;
 
 // M64 = -MODULUS^(-1) mod 2^64
 pub const M64: u64 = 0xffff_ffff_ffff_ffff; // = -1
@@ -23,31 +23,25 @@ pub fn redc(lo: &U256, hi: &U256) -> U256 {
     let (a1, carry) = mac(lo.c1, ui, MODULUS.c1, carry);
     let (a2, carry) = mac(lo.c2, ui, MODULUS.c2, carry);
     let (a3, carry) = mac(lo.c3, ui, MODULUS.c3, carry);
-    let (a4, carry) = adc(hi.c0, 0, carry);
-    let (a5, carry) = adc(hi.c1, 0, carry);
-    let (a6, carry) = adc(hi.c2, 0, carry);
-    let (a7, _carry) = adc(hi.c3, 0, carry);
+    let (a4, carry2) = adc(hi.c0, 0, carry);
     let ui = a1.wrapping_mul(M64);
     let (_a1, carry) = mac(a1, ui, MODULUS.c0, 0);
     let (a2, carry) = mac(a2, ui, MODULUS.c1, carry);
     let (a3, carry) = mac(a3, ui, MODULUS.c2, carry);
     let (a4, carry) = mac(a4, ui, MODULUS.c3, carry);
-    let (a5, carry) = adc(a5, 0, carry);
-    let (a6, carry) = adc(a6, 0, carry);
-    let (a7, _carry) = adc(a7, 0, carry);
+    let (a5, carry2) = adc(hi.c1, carry2, carry);
     let ui = a2.wrapping_mul(M64);
     let (_a2, carry) = mac(a2, ui, MODULUS.c0, 0);
     let (a3, carry) = mac(a3, ui, MODULUS.c1, carry);
     let (a4, carry) = mac(a4, ui, MODULUS.c2, carry);
     let (a5, carry) = mac(a5, ui, MODULUS.c3, carry);
-    let (a6, carry) = adc(a6, 0, carry);
-    let (a7, _carry) = adc(a7, 0, carry);
+    let (a6, carry2) = adc(hi.c2, carry2, carry);
     let ui = a3.wrapping_mul(M64);
-    let (_a3, carry) = mac(a3, ui, MODULUS.c0, carry);
+    let (_a3, carry) = mac(a3, ui, MODULUS.c0, 0);
     let (a4, carry) = mac(a4, ui, MODULUS.c1, carry);
     let (a5, carry) = mac(a5, ui, MODULUS.c2, carry);
     let (a6, carry) = mac(a6, ui, MODULUS.c3, carry);
-    let (a7, _carry) = adc(a7, 0, carry);
+    let (a7, _carry) = adc(hi.c3, carry2, carry);
 
     // Final reduction
     let mut r = U256::new(a4, a5, a6, a7);
@@ -57,64 +51,67 @@ pub fn redc(lo: &U256, hi: &U256) -> U256 {
     r
 }
 
+#[inline(always)]
 pub fn mul_redc(x: &U256, y: &U256) -> U256 {
-    // Algorithm 14.36 from Handbook of Applied Cryptography
-    let ui = ((Wrapping(x.c0) * Wrapping(y.c0)) * Wrapping(M64)).0;
+    // TODO: This might not be faster than:
+    // let (lo, hi) = x.mul_full(y);
+    // return redc(&lo, &hi);
+    let k = x.c0.wrapping_mul(y.c0).wrapping_mul(M64);
     let (a0, carry) = mac(0, x.c0, y.c0, 0);
     let (a1, carry) = mac(0, x.c0, y.c1, carry);
     let (a2, carry) = mac(0, x.c0, y.c2, carry);
     let (a3, carry) = mac(0, x.c0, y.c3, carry);
     let a4 = carry;
-    let (_a, carry) = mac(a0, ui, MODULUS.c0, 0);
-    let (a0, carry) = mac(a1, ui, MODULUS.c1, carry);
-    let (a1, carry) = mac(a2, ui, MODULUS.c2, carry);
-    let (a2, carry) = mac(a3, ui, MODULUS.c3, carry);
+    let (_a, carry) = mac(a0, k, MODULUS.c0, 0);
+    let (a0, carry) = mac(a1, k, MODULUS.c1, carry);
+    let (a1, carry) = mac(a2, k, MODULUS.c2, carry);
+    let (a2, carry) = mac(a3, k, MODULUS.c3, carry);
     let a3 = a4 + carry;
-    let ui = ((Wrapping(a0) + Wrapping(x.c1) * Wrapping(y.c0)) * Wrapping(M64)).0;
+    let k = x.c1.wrapping_mul(y.c0).wrapping_add(a0).wrapping_mul(M64);
     let (a0, carry) = mac(a0, x.c1, y.c0, 0);
     let (a1, carry) = mac(a1, x.c1, y.c1, carry);
     let (a2, carry) = mac(a2, x.c1, y.c2, carry);
     let (a3, carry) = mac(a3, x.c1, y.c3, carry);
     let a4 = carry;
-    let (_a, carry) = mac(a0, ui, MODULUS.c0, 0);
-    let (a0, carry) = mac(a1, ui, MODULUS.c1, carry);
-    let (a1, carry) = mac(a2, ui, MODULUS.c2, carry);
-    let (a2, carry) = mac(a3, ui, MODULUS.c3, carry);
+    let (_a, carry) = mac(a0, k, MODULUS.c0, 0);
+    let (a0, carry) = mac(a1, k, MODULUS.c1, carry);
+    let (a1, carry) = mac(a2, k, MODULUS.c2, carry);
+    let (a2, carry) = mac(a3, k, MODULUS.c3, carry);
     let a3 = a4 + carry;
-    let ui = ((Wrapping(a0) + Wrapping(x.c2) * Wrapping(y.c0)) * Wrapping(M64)).0;
+    let k = x.c2.wrapping_mul(y.c0).wrapping_add(a0).wrapping_mul(M64);
     let (a0, carry) = mac(a0, x.c2, y.c0, 0);
     let (a1, carry) = mac(a1, x.c2, y.c1, carry);
     let (a2, carry) = mac(a2, x.c2, y.c2, carry);
     let (a3, carry) = mac(a3, x.c2, y.c3, carry);
     let a4 = carry;
-    let (_a, carry) = mac(a0, ui, MODULUS.c0, 0);
-    let (a0, carry) = mac(a1, ui, MODULUS.c1, carry);
-    let (a1, carry) = mac(a2, ui, MODULUS.c2, carry);
-    let (a2, carry) = mac(a3, ui, MODULUS.c3, carry);
+    let (_a, carry) = mac(a0, k, MODULUS.c0, 0);
+    let (a0, carry) = mac(a1, k, MODULUS.c1, carry);
+    let (a1, carry) = mac(a2, k, MODULUS.c2, carry);
+    let (a2, carry) = mac(a3, k, MODULUS.c3, carry);
     let a3 = a4 + carry;
-    let ui = ((Wrapping(a0) + Wrapping(x.c3) * Wrapping(y.c0)) * Wrapping(M64)).0;
+    let k = x.c3.wrapping_mul(y.c0).wrapping_add(a0).wrapping_mul(M64);
     let (a0, carry) = mac(a0, x.c3, y.c0, 0);
     let (a1, carry) = mac(a1, x.c3, y.c1, carry);
     let (a2, carry) = mac(a2, x.c3, y.c2, carry);
     let (a3, carry) = mac(a3, x.c3, y.c3, carry);
     let a4 = carry;
-    let (_a, carry) = mac(a0, ui, MODULUS.c0, 0);
-    let (a0, carry) = mac(a1, ui, MODULUS.c1, carry);
-    let (a1, carry) = mac(a2, ui, MODULUS.c2, carry);
-    let (a2, carry) = mac(a3, ui, MODULUS.c3, carry);
+    let (_a, carry) = mac(a0, k, MODULUS.c0, 0);
+    let (a0, carry) = mac(a1, k, MODULUS.c1, carry);
+    let (a1, carry) = mac(a2, k, MODULUS.c2, carry);
+    let (a2, carry) = mac(a3, k, MODULUS.c3, carry);
     let a3 = a4 + carry;
 
     // Final reduction
     let mut r = U256::new(a0, a1, a2, a3);
-    if r >= MODULUS {
+    if r.cmp(&MODULUS) != Ordering::Less {
         r -= &MODULUS;
     }
     r
 }
 
 pub fn sqr_redc(a: &U256) -> U256 {
-    // TODO: special case
-    mul_redc(&a, &a)
+    let (lo, hi) = a.sqr_full();
+    redc(&lo, &hi)
 }
 
 pub fn inv_redc(n: &U256) -> Option<U256> {
