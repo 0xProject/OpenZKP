@@ -34,6 +34,10 @@ macro_rules! u256h {
     };
 }
 
+// Reexport hex_litteral
+//#[macro_reexport]
+//use hex_literal::*; // TODO
+
 #[derive(PartialEq, Eq, Clone, Default)]
 pub struct U256 {
     pub c0: u64,
@@ -178,6 +182,32 @@ impl U256 {
         let (r4, carry) = mac(r4, self.c3, rhs.c1, carry);
         let (r5, carry) = mac(r5, self.c3, rhs.c2, carry);
         let (r6, r7) = mac(r6, self.c3, rhs.c3, carry);
+        (U256::new(r0, r1, r2, r3), U256::new(r4, r5, r6, r7))
+    }
+
+    #[inline(always)]
+    pub const fn sqr_full(&self) -> (U256, U256) {
+        let (r1, carry) = mac(0, self.c0, self.c1, 0);
+        let (r2, carry) = mac(0, self.c0, self.c2, carry);
+        let (r3, r4) = mac(0, self.c0, self.c3, carry);
+        let (r3, carry) = mac(r3, self.c1, self.c2, 0);
+        let (r4, r5) = mac(r4, self.c1, self.c3, carry);
+        let (r5, r6) = mac(r5, self.c2, self.c3, 0);
+        let r7 = r6 >> 63;
+        let r6 = (r6 << 1) | (r5 >> 63);
+        let r5 = (r5 << 1) | (r4 >> 63);
+        let r4 = (r4 << 1) | (r3 >> 63);
+        let r3 = (r3 << 1) | (r2 >> 63);
+        let r2 = (r2 << 1) | (r1 >> 63);
+        let r1 = r1 << 1;
+        let (r0, carry) = mac(0, self.c0, self.c0, 0);
+        let (r1, carry) = adc(r1, 0, carry);
+        let (r2, carry) = mac(r2, self.c1, self.c1, carry);
+        let (r3, carry) = adc(r3, 0, carry);
+        let (r4, carry) = mac(r4, self.c2, self.c2, carry);
+        let (r5, carry) = adc(r5, 0, carry);
+        let (r6, carry) = mac(r6, self.c3, self.c3, carry);
+        let (r7, _carry) = adc(r7, 0, carry);
         (U256::new(r0, r1, r2, r3), U256::new(r4, r5, r6, r7))
     }
 
@@ -895,5 +925,11 @@ mod tests {
             None => true,
             Some(i) => a * &i == U256::ONE,
         }
+    }
+
+    #[quickcheck]
+    #[test]
+    fn square(a: U256) -> bool {
+        a.sqr_full() == a.mul_full(&a)
     }
 }
