@@ -2,28 +2,18 @@ use crate::curve::Affine;
 use crate::jacobian::Jacobian;
 use crate::u256::U256;
 
-// ResultType
-// ScalarType
-// PointType
-
-// P + P -> R
-// R += P
-//
-
-// Zero Element: ResultType
-
 const W: usize = 5;
 const MASK: u64 = ((1 << W) - 1);
 const WINDOW: i8 = 1 << W;
 const HALF: i8 = 1 << (W - 1);
 const ENTRIES: usize = 1usize << (W - 2);
 
-pub fn window_table(p: &Affine, size: usize) -> [Jacobian; ENTRIES] {
+pub fn window_table(p: &Affine) -> [Jacobian; ENTRIES] {
     // naf = P, 3P, 5P, ... 15P
     // OPT: Optimal window size
     let mut naf: [Jacobian; ENTRIES] = Default::default();;
     naf[0] = Jacobian::from(p);
-    let p2 = p.double();
+    let p2 = naf[0].double();
     for i in 1..naf.len() {
         naf[i] = &naf[i - 1] + &p2;
     }

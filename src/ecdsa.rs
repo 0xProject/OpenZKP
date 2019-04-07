@@ -67,7 +67,8 @@ pub fn verify(msg_hash: &U256, r: &U256, w: &U256, public_key: &Affine) -> bool 
     // PubKey * msg_hash + G * s
 
     match Affine::from(&double_mul(
-        &GENERATOR, // OPT: Precomputed table        msg_hash.mulmod(&w, &ORDER),
+        &GENERATOR, // OPT: Precomputed table
+        msg_hash.mulmod(&w, &ORDER),
         &public_key,
         r.mulmod(&w, &ORDER),
     )) {
