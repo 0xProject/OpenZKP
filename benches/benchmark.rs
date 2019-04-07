@@ -7,6 +7,7 @@ use starkcrypto::jacobian::Jacobian;
 use starkcrypto::pedersen::hash;
 use starkcrypto::u256::U256;
 use starkcrypto::u256h;
+use starkcrypto::wnaf;
 
 fn u256_add(crit: &mut Criterion) {
     let a = U256::new(
@@ -342,6 +343,25 @@ fn jacobian_mul_affine(crit: &mut Criterion) {
     });
 }
 
+fn wnaf_mul_affine(crit: &mut Criterion) {
+    let a = Affine::Point {
+        x: FieldElement::new(&[
+            0x5bf31eb0, 0xfe50a889, 0x2d1a8a21, 0x3242e28e, 0x0d13fe66, 0xcf63e064, 0x9426e2c3,
+            0x0040ffd5,
+        ]),
+        y: FieldElement::new(&[
+            0xe29859d2, 0xd21b931a, 0xea34d27d, 0x296f19b9, 0x6487ae5b, 0x524260f9, 0x069092ca,
+            0x060c2257,
+        ]),
+    };
+    let b = u256h!("014023b44fbb1e6f2a79c929c6da775be3c4b9e043d439385b5050fdc69177e3");
+    crit.bench_function("Wnaf mul", move |bench| {
+        bench.iter(|| {
+            black_box(wnaf::mul(black_box(&a), black_box(&b)));
+        })
+    });
+}
+
 fn pedersen_hash(crit: &mut Criterion) {
     let elements = [
         u256h!("03d937c035c878245caf64531a5756109c53068da139362728feb561405371cb"),
@@ -388,6 +408,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     jacobian_dbl(c);
     jacobian_mul(c);
     jacobian_mul_affine(c);
+    wnaf_mul_affine(c);
     pedersen_hash(c);
     ecdsa_sign(c);
     ecdsa_verify(c);
