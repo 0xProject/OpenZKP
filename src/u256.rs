@@ -110,17 +110,17 @@ impl U256 {
     }
 
     #[inline(always)]
-    pub fn bits(&self) -> u32 {
+    pub fn bits(&self) -> usize {
         256 - self.leading_zeros()
     }
 
     #[inline(always)]
-    pub fn msb(&self) -> u32 {
+    pub fn msb(&self) -> usize {
         255 - self.leading_zeros()
     }
 
     #[inline(always)]
-    pub fn bit(&self, i: u32) -> bool {
+    pub fn bit(&self, i: usize) -> bool {
         if i < 64 {
             self.c0 >> i & 1 == 1
         } else if i < 128 {
@@ -135,30 +135,30 @@ impl U256 {
     }
 
     #[inline(always)]
-    pub fn leading_zeros(&self) -> u32 {
+    pub fn leading_zeros(&self) -> usize {
         if self.c3 > 0 {
-            self.c3.leading_zeros()
+            self.c3.leading_zeros() as usize
         } else if self.c2 > 0 {
-            64 + self.c2.leading_zeros()
+            64 + self.c2.leading_zeros() as usize
         } else if self.c1 > 0 {
-            128 + self.c1.leading_zeros()
+            128 + self.c1.leading_zeros() as usize
         } else if self.c0 > 0 {
-            192 + self.c0.leading_zeros()
+            192 + self.c0.leading_zeros() as usize
         } else {
             256
         }
     }
 
     #[inline(always)]
-    pub fn trailing_zeros(&self) -> u32 {
+    pub fn trailing_zeros(&self) -> usize {
         if self.c0 > 0 {
-            self.c0.trailing_zeros()
+            self.c0.trailing_zeros() as usize
         } else if self.c1 > 0 {
-            64 + self.c1.trailing_zeros()
+            64 + self.c1.trailing_zeros() as usize
         } else if self.c2 > 0 {
-            128 + self.c2.trailing_zeros()
+            128 + self.c2.trailing_zeros() as usize
         } else if self.c3 > 0 {
-            192 + self.c3.trailing_zeros()
+            192 + self.c3.trailing_zeros() as usize
         } else {
             256
         }
