@@ -17,8 +17,8 @@ pub struct Jacobian {
 
 impl Jacobian {
     pub const ZERO: Jacobian = Jacobian {
-        x: FieldElement::ZERO,
-        y: FieldElement::ZERO,
+        x: FieldElement::ONE,
+        y: FieldElement::ONE,
         z: FieldElement::ZERO,
     };
 
@@ -28,6 +28,9 @@ impl Jacobian {
     }
 
     pub fn double_assign(&mut self) {
+        if self.z == FieldElement::ZERO {
+            return;
+        }
         // See http://www.hyperelliptic.org/EFD/g1p/auto-shortw-jacobian.html#doubling-dbl-2007-bl
         let xx = self.x.square();
         let yy = self.y.square();
@@ -67,6 +70,12 @@ impl PartialEq for Jacobian {
     fn eq(&self, rhs: &Jacobian) -> bool {
         // TODO: without inverting Z
         Affine::from(self) == Affine::from(rhs)
+    }
+}
+
+impl Default for Jacobian {
+    fn default() -> Self {
+        Jacobian::ZERO
     }
 }
 
@@ -123,6 +132,13 @@ impl Neg for &Jacobian {
 
 impl AddAssign<&Jacobian> for Jacobian {
     fn add_assign(&mut self, rhs: &Jacobian) {
+        if self.z == FieldElement::ZERO {
+            *self = rhs.clone();
+            return;
+        }
+        if rhs.z == FieldElement::ZERO {
+            return;
+        }
         // See http://www.hyperelliptic.org/EFD/g1p/auto-shortw-jacobian.html#addition-add-2007-bl
         let z1z1 = self.z.square();
         let z2z2 = rhs.z.square();
@@ -144,8 +160,14 @@ impl AddAssign<&Jacobian> for Jacobian {
 impl AddAssign<&Affine> for Jacobian {
     fn add_assign(&mut self, rhs: &Affine) {
         match rhs {
-            Affine::Zero => self.z = FieldElement::ZERO,
+            Affine::Zero => {}
             Affine::Point { x, y } => {
+                if self.z == FieldElement::ZERO {
+                    self.x = x.clone();
+                    self.y = y.clone();
+                    self.z = FieldElement::ONE;
+                    return;
+                }
                 // See http://www.hyperelliptic.org/EFD/g1p/auto-shortw-jacobian.html#addition-madd-2007-bl
                 let z1z1 = self.z.square();
                 let u2 = x * &z1z1;
