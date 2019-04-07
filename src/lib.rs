@@ -9,6 +9,7 @@ pub mod jacobian;
 pub mod orders;
 pub mod pedersen;
 mod pedersen_points;
+pub mod wnaf;
 #[macro_use]
 pub mod u256;
 pub mod montgomery;

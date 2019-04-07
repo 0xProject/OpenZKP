@@ -3,6 +3,7 @@ use crate::field::FieldElement;
 use crate::jacobian::Jacobian;
 use crate::u256::U256;
 use crate::u256h;
+use crate::wnaf::double_mul;
 use hex_literal::*;
 use tiny_keccak::sha3_256;
 
@@ -63,9 +64,13 @@ pub fn verify(msg_hash: &U256, r: &U256, w: &U256, public_key: &Affine) -> bool 
     assert!(w.bits() <= 251);
     assert!(public_key.on_curve());
 
-    let a = Jacobian::mul(&GENERATOR, &msg_hash.mulmod(&w, &ORDER));
-    let b = Jacobian::mul(&public_key, &r.mulmod(&w, &ORDER));
-    match Affine::from(&(a + b)) {
+    // PubKey * msg_hash + G * s
+
+    match Affine::from(&double_mul(
+        &GENERATOR, // OPT: Precomputed table        msg_hash.mulmod(&w, &ORDER),
+        &public_key,
+        r.mulmod(&w, &ORDER),
+    )) {
         Affine::Zero => false,
         Affine::Point { x, .. } => U256::from(x) == *r,
     }
