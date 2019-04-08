@@ -1,4 +1,5 @@
 use crate::curve::Affine;
+use crate::field::FieldElement;
 use crate::jacobian::Jacobian;
 use crate::u256::U256;
 
@@ -21,7 +22,39 @@ pub fn window_table_affine(p: &Affine, naf: &mut [Affine]) {
     for i in 1..naf.len() {
         naf[i] = &naf[i - 1] + &p2;
     }
-    // OPT: Use batch inversion to convert to Affine
+}
+
+pub fn batch_convert(jac: &[Jacobian], aff: &mut [Affine]) {
+    let mut scratch = vec![FieldElement::ONE; jac.len()];
+
+    // Accumulate all z values
+    let mut accumulator = FieldElement::ONE;
+    for (j, s) in jac.iter().zip(scratch.iter_mut()) {
+        *s = accumulator.clone();
+        accumulator *= &j.z;
+    }
+
+    // Invert accumulator
+    accumulator = accumulator.inv().unwrap(); // TODO: inv_assign
+
+    // Compute inverses and affine points
+    for ((j, s), a) in jac
+        .iter()
+        .zip(scratch.into_iter().rev())
+        .zip(aff.iter_mut())
+    {
+        // Compute zi
+        let zi = &accumulator * &s;
+        accumulator *= &j.z;
+
+        // Compute affine point
+        let zi2 = zi.square();
+        let zi3 = zi * &zi2;
+        *a = Affine::Point {
+            x: &j.x * zi2,
+            y: &j.y * zi3,
+        }
+    }
 }
 
 // Convert scalar to naf form
@@ -124,6 +157,13 @@ pub fn double_base_mul(nafa: &[Affine], sa: U256, pb: &Affine, sb: U256) -> Jaco
     // Precomputed odd multiples
     let mut nafb: [Jacobian; 8] = Default::default();
     window_table(pb, &mut nafb);
+
+    // Batch convert to affine
+    // OPT: Right now this doesn't hurt or improve performance. It should be
+    // better with more points.
+    let mut naf: [Affine; 8] = Default::default();
+    batch_convert(&nafb, &mut naf);
+    let nafb = naf;
 
     // Get SNAF
     let snafa = non_adjacent_form(sa, 7);
