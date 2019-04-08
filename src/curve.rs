@@ -67,6 +67,12 @@ impl Affine {
     }
 }
 
+impl Default for Affine {
+    fn default() -> Self {
+        Affine::ZERO
+    }
+}
+
 impl Neg for &Affine {
     type Output = Affine;
     fn neg(self) -> Self::Output {
