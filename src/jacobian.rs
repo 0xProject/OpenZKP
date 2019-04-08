@@ -196,6 +196,12 @@ impl Add<&Affine> for &Jacobian {
     }
 }
 
+impl SubAssign<&Affine> for Jacobian {
+    fn sub_assign(&mut self, rhs: &Affine) {
+        self.add_assign(&rhs.neg())
+    }
+}
+
 curve_operations!(Jacobian);
 commutative_binop!(Jacobian, Add, add, AddAssign, add_assign);
 noncommutative_binop!(Jacobian, Sub, sub, SubAssign, sub_assign);
