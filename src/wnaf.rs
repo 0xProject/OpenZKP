@@ -13,6 +13,17 @@ pub fn window_table(p: &Affine, naf: &mut [Jacobian]) {
     // OPT: Use batch inversion to convert to Affine
 }
 
+pub fn window_table_affine(p: &Affine, naf: &mut [Affine]) {
+    // naf = P, 3P, 5P, ... 15P
+    // OPT: Optimal window size
+    naf[0] = p.clone();
+    let p2 = naf[0].double();
+    for i in 1..naf.len() {
+        naf[i] = &naf[i - 1] + &p2;
+    }
+    // OPT: Use batch inversion to convert to Affine
+}
+
 // Convert scalar to naf form
 // See https://doc-internal.dalek.rs/curve25519_dalek/scalar/struct.Scalar.html#method.non_adjacent_form
 // See https://github.com/dalek-cryptography/curve25519-dalek/blob/ca6305232f08ced340819b8ae691f90492d1b054/src/scalar.rs#L872
@@ -87,6 +98,35 @@ pub fn double_mul(pa: &Affine, sa: U256, pb: &Affine, sb: U256) -> Jacobian {
 
     // Get SNAF
     let snafa = non_adjacent_form(sa, 5);
+    let snafb = non_adjacent_form(sb, 5);
+
+    // Algorithm 3.36 of Guide to Elliptic Curve Cryptography
+    let mut r = Jacobian::ZERO;
+    for i in (0..snafa.len()).rev() {
+        // OPT: Avoid doubling zeros
+        // OPT: Use A + A -> J formular for first
+        r.double_assign();
+        if snafa[i] > 0 {
+            r += &nafa[(snafa[i] >> 1) as usize];
+        } else if snafa[i] < 0 {
+            r -= &nafa[(-snafa[i] >> 1) as usize];
+        }
+        if snafb[i] > 0 {
+            r += &nafb[(snafb[i] >> 1) as usize];
+        } else if snafb[i] < 0 {
+            r -= &nafb[(-snafb[i] >> 1) as usize];
+        }
+    }
+    r
+}
+
+pub fn double_base_mul(nafa: &[Affine], sa: U256, pb: &Affine, sb: U256) -> Jacobian {
+    // Precomputed odd multiples
+    let mut nafb: [Jacobian; 8] = Default::default();
+    window_table(pb, &mut nafb);
+
+    // Get SNAF
+    let snafa = non_adjacent_form(sa, 7);
     let snafb = non_adjacent_form(sb, 5);
 
     // Algorithm 3.36 of Guide to Elliptic Curve Cryptography
