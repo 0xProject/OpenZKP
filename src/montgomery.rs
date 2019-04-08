@@ -109,6 +109,7 @@ pub fn mul_redc(x: &U256, y: &U256) -> U256 {
     r
 }
 
+#[inline(always)]
 pub fn sqr_redc(a: &U256) -> U256 {
     let (lo, hi) = a.sqr_full();
     redc(&lo, &hi)

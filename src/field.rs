@@ -42,28 +42,34 @@ impl FieldElement {
         from_montgomery(&self.0).to_bytes_be()
     }
 
+    #[inline(always)]
     pub fn is_zero(&self) -> bool {
         self.0 == U256::ZERO
     }
 
+    #[inline(always)]
     pub fn inv(&self) -> Option<FieldElement> {
         inv_redc(&self.0).map(FieldElement)
     }
 
+    #[inline(always)]
     pub fn double(&self) -> FieldElement {
         // TODO: Optimize
         self.clone() + self
     }
 
+    #[inline(always)]
     pub fn triple(&self) -> FieldElement {
         // TODO: Optimize
         self.clone() + self + self
     }
 
+    #[inline(always)]
     pub fn square(&self) -> FieldElement {
         FieldElement(sqr_redc(&self.0))
     }
 
+    #[inline(always)]
     pub fn neg_assign(&mut self) {
         *self = self.neg()
     }
@@ -101,12 +107,14 @@ impl From<&[u8; 32]> for FieldElement {
 
 impl Neg for &FieldElement {
     type Output = FieldElement;
+    #[inline(always)]
     fn neg(self) -> Self::Output {
         FieldElement(MODULUS - &self.0)
     }
 }
 
 impl AddAssign<&FieldElement> for FieldElement {
+    #[inline(always)]
     fn add_assign(&mut self, rhs: &FieldElement) {
         self.0 += &rhs.0;
         if self.0 >= MODULUS {
@@ -116,6 +124,7 @@ impl AddAssign<&FieldElement> for FieldElement {
 }
 
 impl SubAssign<&FieldElement> for FieldElement {
+    #[inline(always)]
     fn sub_assign(&mut self, rhs: &FieldElement) {
         if self.0 >= rhs.0 {
             self.0 -= &rhs.0;
@@ -127,6 +136,7 @@ impl SubAssign<&FieldElement> for FieldElement {
 }
 
 impl MulAssign<&FieldElement> for FieldElement {
+    #[inline(always)]
     fn mul_assign(&mut self, rhs: &FieldElement) {
         self.0 = mul_redc(&self.0, &rhs.0);
     }
