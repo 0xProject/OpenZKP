@@ -3,8 +3,9 @@ use crate::field::FieldElement;
 use crate::jacobian::Jacobian;
 use crate::u256::U256;
 use crate::u256h;
-use crate::wnaf::double_mul;
+use crate::wnaf::{double_base_mul, window_table_affine};
 use hex_literal::*;
+use lazy_static::*;
 use tiny_keccak::sha3_256;
 
 // x = 0x01ef15c18599971b7beced415a40f0c7deacfd9b0d1819e03d723d8bc943cfca
@@ -17,6 +18,17 @@ pub const GENERATOR: Affine = Affine::Point {
         "05a0e71610f55329fbd89a97cf4b33ad0939e3442869bbe7569d0da34235308a"
     )),
 };
+
+lazy_static! {
+    static ref GENERATOR_TABLE: [Affine; 32] = {
+        unsafe {
+            use std::mem::uninitialized;
+            let mut naf: [Affine; 32] = uninitialized();
+            window_table_affine(&GENERATOR, &mut naf);
+            naf
+        }
+    };
+}
 
 pub fn private_to_public(private_key: &U256) -> Affine {
     Affine::from(&Jacobian::mul(&GENERATOR, &(private_key % ORDER)))
@@ -66,8 +78,8 @@ pub fn verify(msg_hash: &U256, r: &U256, w: &U256, public_key: &Affine) -> bool 
 
     // PubKey * msg_hash + G * s
 
-    match Affine::from(&double_mul(
-        &GENERATOR, // OPT: Precomputed table
+    match Affine::from(&double_base_mul(
+        &*GENERATOR_TABLE,
         msg_hash.mulmod(&w, &ORDER),
         &public_key,
         r.mulmod(&w, &ORDER),
