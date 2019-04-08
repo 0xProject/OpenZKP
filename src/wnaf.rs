@@ -2,23 +2,15 @@ use crate::curve::Affine;
 use crate::jacobian::Jacobian;
 use crate::u256::U256;
 
-const W: usize = 5;
-const MASK: u64 = ((1 << W) - 1);
-const WINDOW: i8 = 1 << W;
-const HALF: i8 = 1 << (W - 1);
-const ENTRIES: usize = 1usize << (W - 2);
-
-pub fn window_table(p: &Affine) -> [Jacobian; ENTRIES] {
+pub fn window_table(p: &Affine, naf: &mut [Jacobian]) {
     // naf = P, 3P, 5P, ... 15P
     // OPT: Optimal window size
-    let mut naf: [Jacobian; ENTRIES] = Default::default();;
     naf[0] = Jacobian::from(p);
     let p2 = naf[0].double();
     for i in 1..naf.len() {
         naf[i] = &naf[i - 1] + &p2;
     }
     // OPT: Use batch inversion to convert to Affine
-    naf
 }
 
 // Convert scalar to naf form
@@ -28,7 +20,9 @@ pub fn window_table(p: &Affine) -> [Jacobian; ENTRIES] {
 // OPT: Can we turn this into a left-to-right version of the algorithm
 //      so we can consume the values as they are produced and we don't
 //      need any allocations?
-pub fn non_adjacent_form(mut scalar: U256) -> [i8; 257] {
+pub fn non_adjacent_form(mut scalar: U256, window: usize) -> [i8; 257] {
+    let mask = (1u64 << window) - 1;
+    let half = 1i8 << (window - 1);
     let mut snaf = [0i8; 257];
     let mut i: usize = 0;
     loop {
@@ -43,20 +37,19 @@ pub fn non_adjacent_form(mut scalar: U256) -> [i8; 257] {
         }
 
         // Extract window and shift W buts
-        let mut n: i8 = (scalar.c0 & MASK) as i8;
-        scalar >>= W;
+        let mut n: i8 = (scalar.c0 & mask) as i8;
+        scalar >>= window;
 
         // Make negative if n > 2^(w-1)
-        if n >= HALF {
-            n -= WINDOW;
+        if n >= half {
+            n -= 1i8 << window;
             scalar += U256::ONE;
         }
 
         // Store and advance index
         snaf[i] = n;
-        i += W;
+        i += window;
     }
-
     snaf
 }
 
@@ -64,10 +57,11 @@ pub fn non_adjacent_form(mut scalar: U256) -> [i8; 257] {
 // See https://doc-internal.dalek.rs/curve25519_dalek/traits/trait.VartimeMultiscalarMul.html
 pub fn mul(p: &Affine, scalar: &U256) -> Jacobian {
     // Precomputed odd multiples
-    let naf = window_table(p);
+    let mut naf: [Jacobian; 8] = Default::default();
+    window_table(p, &mut naf);
 
     // Get SNAF
-    let snaf = non_adjacent_form(scalar.clone());
+    let snaf = non_adjacent_form(scalar.clone(), 5);
 
     // Algorithm 3.36 of Guide to Elliptic Curve Cryptography
     let mut r = Jacobian::ZERO;
@@ -86,12 +80,14 @@ pub fn mul(p: &Affine, scalar: &U256) -> Jacobian {
 
 pub fn double_mul(pa: &Affine, sa: U256, pb: &Affine, sb: U256) -> Jacobian {
     // Precomputed odd multiples
-    let nafa = window_table(pa);
-    let nafb = window_table(pb);
+    let mut nafa: [Jacobian; 8] = Default::default();
+    let mut nafb: [Jacobian; 8] = Default::default();
+    window_table(pa, &mut nafa);
+    window_table(pb, &mut nafb);
 
     // Get SNAF
-    let snafa = non_adjacent_form(sa);
-    let snafb = non_adjacent_form(sb);
+    let snafa = non_adjacent_form(sa, 5);
+    let snafb = non_adjacent_form(sb, 5);
 
     // Algorithm 3.36 of Guide to Elliptic Curve Cryptography
     let mut r = Jacobian::ZERO;
