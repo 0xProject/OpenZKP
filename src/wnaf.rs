@@ -64,10 +64,10 @@ pub fn batch_convert(jac: &[Jacobian], aff: &mut [Affine]) {
 // OPT: Can we turn this into a left-to-right version of the algorithm
 //      so we can consume the values as they are produced and we don't
 //      need any allocations?
-pub fn non_adjacent_form(mut scalar: U256, window: usize) -> [i8; 257] {
+pub fn non_adjacent_form(mut scalar: U256, window: usize) -> [i16; 257] {
     let mask = (1u64 << window) - 1;
-    let half = 1i8 << (window - 1);
-    let mut snaf = [0i8; 257];
+    let half = 1i16 << (window - 1);
+    let mut snaf = [0i16; 257];
     let mut i: usize = 0;
     loop {
         // Shift to next set bit (and hence make k odd)
@@ -81,12 +81,12 @@ pub fn non_adjacent_form(mut scalar: U256, window: usize) -> [i8; 257] {
         }
 
         // Extract window and shift W buts
-        let mut n: i8 = (scalar.c0 & mask) as i8;
+        let mut n: i16 = (scalar.c0 & mask) as i16;
         scalar >>= window;
 
         // Make negative if n > 2^(w-1)
         if n >= half {
-            n -= 1i8 << window;
+            n -= 1i16 << window;
             scalar += U256::ONE;
         }
 
