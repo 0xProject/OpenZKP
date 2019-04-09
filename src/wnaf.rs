@@ -2,6 +2,7 @@ use crate::curve::Affine;
 use crate::field::FieldElement;
 use crate::jacobian::Jacobian;
 use crate::u256::U256;
+use itertools::izip;
 
 pub fn window_table(p: &Affine, naf: &mut [Jacobian]) {
     // naf = P, 3P, 5P, ... 15P
@@ -24,35 +25,40 @@ pub fn window_table_affine(p: &Affine, naf: &mut [Affine]) {
     }
 }
 
-pub fn batch_convert(jac: &[Jacobian], aff: &mut [Affine]) {
-    let mut scratch = vec![FieldElement::ONE; jac.len()];
+// TODO: https://link.springer.com/content/pdf/10.1007/3-540-36400-5_41.pdf
+pub fn batch_convert(jacobians: &[Jacobian], affines: &mut [Affine]) {
+    debug_assert!(jacobians.len() == affines.len());
+
+    // Intermediate values
+    let mut vals = vec![FieldElement::ONE; jacobians.len()];
 
     // Accumulate all z values
-    let mut accumulator = FieldElement::ONE;
-    for (j, s) in jac.iter().zip(scratch.iter_mut()) {
-        *s = accumulator.clone();
-        accumulator *= &j.z;
+    let mut acc = FieldElement::ONE;
+    // OPT: Check if `izip!` has overhead
+    for (jac, val) in izip!(jacobians.iter(), vals.iter_mut()) {
+        // TODO: Handle zeros
+        // OPT: First mul is with one, can be removed
+        *val = acc.clone();
+        acc *= &jac.z;
     }
 
     // Invert accumulator
-    accumulator = accumulator.inv().unwrap(); // TODO: inv_assign
+    // OPT: inv_assign
+    acc = acc.inv().unwrap();
 
     // Compute inverses and affine points
-    for ((j, s), a) in jac
-        .iter()
-        .zip(scratch.into_iter().rev())
-        .zip(aff.iter_mut())
-    {
+    for (jac, val, aff) in izip!(jacobians.iter(), vals.into_iter(), affines.iter_mut()).rev() {
         // Compute zi
-        let zi = &accumulator * &s;
-        accumulator *= &j.z;
+        // OPT: Last mul is with one, can be removed
+        let zi = &acc * val;
+        acc *= &jac.z;
 
         // Compute affine point
         let zi2 = zi.square();
         let zi3 = zi * &zi2;
-        *a = Affine::Point {
-            x: &j.x * zi2,
-            y: &j.y * zi3,
+        *aff = Affine::Point {
+            x: &jac.x * zi2,
+            y: &jac.y * zi3,
         }
     }
 }
