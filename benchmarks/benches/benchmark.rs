@@ -4,12 +4,14 @@ mod matter;
 mod secp256k1_bindings;
 mod secp256k1_native;
 mod starkcrypto;
+mod gmp;
 use crate::curve25519_donna::*;
 use crate::dalek::*;
 use crate::matter::*;
 use crate::secp256k1_bindings::*;
 use crate::secp256k1_native::*;
 use crate::starkcrypto::*;
+use crate::gmp::*;
 
 use criterion::{criterion_group, criterion_main, Criterion, Fun};
 
@@ -52,6 +54,7 @@ fn criterion_benchmark(c: &mut Criterion) {
             Fun::new("matter", matter_field_inv),
             Fun::new("dalek field", dalek_field_inv),
             Fun::new("dalek scalar", dalek_scalar_inv),
+            Fun::new("gmp", gmp_field_inv),
         ],
         (),
     );
