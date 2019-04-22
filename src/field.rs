@@ -16,7 +16,7 @@ pub const MODULUS: U256 =
 pub const INVEXP: U256 = u256h!("0800000000000010ffffffffffffffffffffffffffffffffffffffffffffffff");
 
 #[derive(PartialEq, Eq, Clone, Debug)]
-pub struct FieldElement(U256);
+pub struct FieldElement(pub U256);
 
 impl FieldElement {
     pub const ZERO: FieldElement = FieldElement(U256::ZERO);
