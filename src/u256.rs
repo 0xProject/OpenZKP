@@ -639,6 +639,53 @@ noncommutative_binop!(U256, Sub, sub, SubAssign, sub_assign);
 noncommutative_binop!(U256, Div, div, DivAssign, div_assign);
 noncommutative_binop!(U256, Rem, rem, RemAssign, rem_assign);
 
+impl MulAssign<u64> for U256 {
+    #[inline(always)]
+    fn mul_assign(&mut self, rhs: u64) {
+        let (r0, carry) = mac(0, self.c0, rhs, 0);
+        let (r1, carry) = mac(0, self.c1, rhs, carry);
+        let (r2, carry) = mac(0, self.c2, rhs, carry);
+        let (r3, _carry) = mac(0, self.c3, rhs, carry);
+        self.c0 = r0;
+        self.c1 = r1;
+        self.c2 = r2;
+        self.c3 = r3;
+    }
+}
+
+impl Mul<u64> for U256 {
+    type Output = U256;
+    #[inline(always)]
+    fn mul(mut self, rhs: u64) -> U256 {
+        self.mul_assign(rhs);
+        self
+    }
+}
+
+impl Mul<u64> for &U256 {
+    type Output = U256;
+    #[inline(always)]
+    fn mul(self, rhs: u64) -> U256 {
+        self.clone().mul(rhs)
+    }
+}
+
+impl Mul<U256> for u64 {
+    type Output = U256;
+    #[inline(always)]
+    fn mul(self, mut rhs: U256) -> U256 {
+        rhs.mul(self)
+    }
+}
+
+impl Mul<&U256> for u64 {
+    type Output = U256;
+    #[inline(always)]
+    fn mul(self, rhs: &U256) -> U256 {
+        rhs.mul(self)
+    }
+}
+
 #[cfg(test)]
 use quickcheck::{Arbitrary, Gen};
 
