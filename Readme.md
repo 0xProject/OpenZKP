@@ -28,6 +28,13 @@ cargo instruments --release --bench benchmark --open
     https://en.wikipedia.org/wiki/Template:Number-theoretic_algorithms
 -   Migrate to libcore
     https://doc.rust-lang.org/core/
+-   Use const genetics for modulus and const fn for field params?
+    This RFC seems to explicitly not allow that:
+    https://github.com/rust-lang/rfcs/blob/master/text/2000-const-generics.md
+
+-   GCD http://www.csd.uwo.ca/~moreno/CS424/Ressources/ComparingSeveralGCDAlgorithms.Jebelean.1993.pdf
+    https://pdfs.semanticscholar.org/a7e7/b01a3dd6ac0ec160b35e513c5efa38c2369e.pdf
+    https://math.stackexchange.com/questions/2515148/lehmers-algorithm-for-finding-the-greatest-common-divisor
 
 ## Goals
 
@@ -38,10 +45,22 @@ cargo instruments --release --bench benchmark --open
 
 For optimization, there are a few different scenarios:
 
--   Programmer time known fields.
+Note: The modulus is always assumed to be 256bit or less.
+
+-   Programmer time known fields. The programmer can supply hand tuned optimized
+    implementations of various algorithms. Ideally well performing defaults are
+    provided.
 -   Compiler time known fields.
+    The compiler can compute constants, for example for Montgomery
+    rerpesentation. The field parameters should be inlined.
 -   Statically runtime known fields.
+    Modulus is not known during compilation (but it's size is). Element
+    membership of a particular field is known at compile time. The field
+    parameters should statically allocated and the pointers inlined.
 -   Dynamically runtime known fields.
+    Modulus is not known during compilation (but it's size is). Element
+    membership of a particular field is not known at compile time. The field
+    element should carry a pointer to the field parameters.
 
 ## References and benchmarks
 
@@ -67,3 +86,10 @@ For optimization, there are a few different scenarios:
         -   https://crates.io/crates/bellman_ce
 -   Fast implementation of zksnark in java
     https://github.com/scipr-lab/dizk
+
+## References
+
+-   Handbook of Applied Cryptography
+    http://cacr.uwaterloo.ca/hac/
+-   Guide to Elliptic Curve Cryptography
+    https://cdn.preterhuman.net/texts/cryptography/Hankerson,%20Menezes,%20Vanstone.%20Guide%20to%20elliptic%20curve%20cryptography%20(Springer,%202004)(ISBN%20038795273X)(332s)_CsCr_.pdf
