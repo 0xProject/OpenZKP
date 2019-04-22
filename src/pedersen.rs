@@ -48,7 +48,7 @@ mod tests {
             u256h!("03d937c035c878245caf64531a5756109c53068da139362728feb561405371cb"),
             u256h!("0208a0a10250e382e1e4bbe2880906c2791bf6275695e02fbbc6aeff9cd8b31a")
         ];
-        let result = u256h!("02d895bd76790645fb867eaf57037e4aa8af1bbb139a84d01e311a7c53f3111b");
+        let result = u256h!("004cd9415015d53d3d71f13e865a52a70457c60fa534fe0efffe34d2f6af6744");
         assert_eq!(hash(&elements), result);
     }
 
@@ -58,7 +58,7 @@ mod tests {
             u256h!("058f580910a6ca59b28927c08fe6c43e2e303ca384badc365795fc645d479d45"),
             u256h!("078734f65a067be9bdb39de18434d71e79f7b6466a4b66bbd979ab9e7515fe0b"),
         ];
-        let result = u256h!("014023b44fbb1e6f2a79c929c6da775be3c4b9e043d439385b5050fdc69177e3");
+        let result = u256h!("00ffb73f24fb724b208e8efeee07b826a537cae03691c35e679c7c61d776702d");
         assert_eq!(hash(&elements), result);
     }
 }

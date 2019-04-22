@@ -38,6 +38,9 @@ pub fn hash_taker(maker_hash: &U256, vault_a: u32, vault_b: u32) -> U256 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::u256h;
+    use hex_literal::*;
+
 
     #[test]
     fn test_hash_maker() {
@@ -56,10 +59,7 @@ mod tests {
             ]),
             trade_id: 0,
         });
-        let expected = U256::from_slice(&[
-            0x9aac35d0, 0x64bf61c3, 0x66ebef73, 0xc0b5d6f2, 0x29b4d30a, 0xd7b4e9d3, 0xda71b3f5,
-            0x01e542e2,
-        ]);
+        let expected = u256h!("01c280f77aa5859027c67411b6859584143d49970528bcbd8db131d39ecf7eb1");
         assert_eq!(result, expected);
     }
 
@@ -73,10 +73,7 @@ mod tests {
             2,
             31,
         );
-        let expected = U256::from_slice(&[
-            0xb8cba1b1, 0x9b231805, 0x5499fa31, 0x1d602af0, 0x2d00cad6, 0xf4f1d615, 0x6e819b57,
-            0x039df78a,
-        ]);
+        let expected = u256h!("040747af7abcdb049d52d3370876e5e547cb3da817e72dbc209aa83d371f01cb");
         assert_eq!(result, expected);
     }
 }
