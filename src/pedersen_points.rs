@@ -4,7 +4,7 @@ use crate::u256::U256;
 use crate::u256h;
 use hex_literal::*;
 
-pub const PEDERSEN_POINTS: [Affine; 503] = [
+pub const PEDERSEN_POINTS: [Affine; 505] = [
     Affine::Point {
         x: FieldElement::from_montgomery(u256h!(
             "0463d1e72d2ebf3416c727d5f24b5dc16b69f758cd49de911ad69b41a9ba0b3a"
@@ -4027,6 +4027,22 @@ pub const PEDERSEN_POINTS: [Affine; 503] = [
         )),
         y: FieldElement::from_montgomery(u256h!(
             "05b95ab49cc93e9eb683343bc68b1a67e676b9c6eb14c54fee932009a687476a"
+        )),
+    },
+    Affine::Point {
+        x: FieldElement::from_montgomery(u256h!(
+            "066d66224e3ccecc4f6c0ecc559de1729b2507c0e19e41b4aefc628ff42952ba"
+        )),
+        y: FieldElement::from_montgomery(u256h!(
+            "079c720174357a93231fd76e9bbe08a003c643642d54429efe223d2d9143ec72"
+        )),
+    },
+    Affine::Point {
+        x: FieldElement::from_montgomery(u256h!(
+            "0618430857f2fd3f6ec867639a924d1f6b58b03b04ab9c70c17e652b7724b90d"
+        )),
+        y: FieldElement::from_montgomery(u256h!(
+            "017734b8920fde4282a50492ffcfe7b689178ae5b111f399ad44af7eb9aeb9d9"
         )),
     },
 ];
