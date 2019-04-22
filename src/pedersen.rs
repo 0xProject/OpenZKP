@@ -17,17 +17,15 @@ pub const SHIFT_POINT: Affine = Affine::Point {
     )),
 };
 
-pub const N_ELEMENT_BITS: usize = 251;
+pub const N_ELEMENT_BITS: usize = 252;
 
 pub fn hash(elements: &[U256]) -> U256 {
     let mut result = Jacobian::from(SHIFT_POINT);
     for (i, element) in elements.iter().enumerate() {
         assert!(element.bits() <= N_ELEMENT_BITS);
-        // point_list = CONSTANT_POINTS[1 + i * N_ELEMENT_BITS:1 + (i + 1) * N_ELEMENT_BITS]
-        let start = 1 + i * (N_ELEMENT_BITS as usize);
-        let end = start + (N_ELEMENT_BITS as usize);
+        let start = 2 + i * N_ELEMENT_BITS;
+        let end = start + N_ELEMENT_BITS;
         for (j, point) in PEDERSEN_POINTS[start..end].iter().enumerate() {
-            // TODO: Convert u32 to usize in u256::bit
             if element.bit(j) {
                 result += point;
             }
