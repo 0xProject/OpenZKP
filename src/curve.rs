@@ -47,7 +47,7 @@ impl Affine {
         match self {
             Affine::Zero => Affine::Zero,
             Affine::Point { x, y } => {
-                if *x == FieldElement::ZERO {
+                if *y == FieldElement::ZERO {
                     Affine::Zero
                 } else {
                     let m = ((x + x + x) * x + FieldElement::ONE) / (y + y);
@@ -62,7 +62,7 @@ impl Affine {
     pub fn neg_assign(&mut self) {
         match self {
             Affine::Zero => {}
-            Affine::Point { x: _, y } => y.neg_assign(),
+            Affine::Point { y, .. } => y.neg_assign(),
         }
     }
 }
@@ -94,7 +94,11 @@ impl AddAssign<&Affine> for Affine {
                 Affine::Zero => {}
                 Affine::Point { x: bx, y: by } => {
                     if ax == bx {
-                        *self = Affine::Zero
+                        if ay == by {
+                            self.double_assign()
+                        } else {
+                            *self = Affine::Zero
+                        }
                     } else {
                         let m = (&*ay - by) / (&*ax - bx);
                         let x = &m * &m - &*ax - &*bx;
@@ -120,6 +124,7 @@ macro_rules! curve_operations {
         impl Mul<&U256> for &$type {
             type Output = $type;
             fn mul(self, scalar: &U256) -> $type {
+                // OPT: Use WNAF
                 let mut r = self.clone();
                 for i in (0..scalar.msb()).rev() {
                     r.double_assign();
