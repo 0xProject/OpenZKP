@@ -1,6 +1,7 @@
 use crate::pedersen::hash;
 use crate::u256::U256;
 
+#[derive(Debug)]
 pub struct MakerMessage<T> {
     pub vault_a: u32,
     pub vault_b: u32,
@@ -41,7 +42,6 @@ mod tests {
     use crate::u256h;
     use hex_literal::*;
 
-
     #[test]
     fn test_hash_maker() {
         let result = hash_maker(&MakerMessage {
@@ -49,14 +49,8 @@ mod tests {
             vault_b: 27,
             amount_a: 2154686749748910716,
             amount_b: 1470242115489520459,
-            token_a: U256::from_slice(&[
-                0x7e661020, 0x19de8ab9, 0xed18ca96, 0x7989c35c, 0x9e1a4f0f, 0xa9d827a7, 0x3597691e,
-                0x005fa338,
-            ]),
-            token_b: U256::from_slice(&[
-                0xef18d56a, 0x0c08dca2, 0xdbde659e, 0xc7734bf8, 0xf01471c9, 0xfb3d2965, 0xc824a3b0,
-                0x00774961,
-            ]),
+            token_a: u256h!("005fa3383597691ea9d827a79e1a4f0f7989c35ced18ca9619de8ab97e661020"),
+            token_b: u256h!("00774961c824a3b0fb3d2965f01471c9c7734bf8dbde659e0c08dca2ef18d56a"),
             trade_id: 0,
         });
         let expected = u256h!("01c280f77aa5859027c67411b6859584143d49970528bcbd8db131d39ecf7eb1");
@@ -64,16 +58,28 @@ mod tests {
     }
 
     #[test]
+    fn test_hash_maker_2() {
+        let result = hash_maker(&MakerMessage {
+            vault_a: 21,
+            vault_b: 27,
+            amount_a: 6873058723796400,
+            amount_b: 852209057714036,
+            token_a: u256h!("005fa3383597691ea9d827a79e1a4f0f7989c35ced18ca9619de8ab97e661020"),
+            token_b: u256h!("00774961c824a3b0fb3d2965f01471c9c7734bf8dbde659e0c08dca2ef18d56a"),
+            trade_id: 0,
+        });
+        let expected = u256h!("035d22e6b67d9dbe893149ede8ae5efb82d1a3f97734689f5189031cc45eebbd");
+        assert_eq!(result, expected);
+    }
+
+    #[test]
     fn test_hash_taker() {
         let result = hash_taker(
-            &U256::from_slice(&[
-                0x9aac35d0, 0x64bf61c3, 0x66ebef73, 0xc0b5d6f2, 0x29b4d30a, 0xd7b4e9d3, 0xda71b3f5,
-                0x01e542e2,
-            ]),
+            &u256h!("01c280f77aa5859027c67411b6859584143d49970528bcbd8db131d39ecf7eb1"),
             2,
             31,
         );
-        let expected = u256h!("040747af7abcdb049d52d3370876e5e547cb3da817e72dbc209aa83d371f01cb");
+        let expected = u256h!("024e516a8e5f3a523f7725108516bbded20cb290c21925c95836fd66af4c0ec1");
         assert_eq!(result, expected);
     }
 }
