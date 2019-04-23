@@ -28,9 +28,11 @@ impl Jacobian {
     }
 
     pub fn double_assign(&mut self) {
-        if self.z == FieldElement::ZERO {
+        if self.y == FieldElement::ZERO {
+            *self = Jacobian::ZERO;
             return;
         }
+        // OPT: Special case z == FieldElement::ONE?
         // See http://www.hyperelliptic.org/EFD/g1p/auto-shortw-jacobian.html#doubling-dbl-2007-bl
         let xx = self.x.square();
         let yy = self.y.square();
@@ -132,13 +134,15 @@ impl Neg for &Jacobian {
 
 impl AddAssign<&Jacobian> for Jacobian {
     fn add_assign(&mut self, rhs: &Jacobian) {
-        if self.z == FieldElement::ZERO {
-            *self = rhs.clone();
-            return;
-        }
         if rhs.z == FieldElement::ZERO {
             return;
         }
+        if self.z == FieldElement::ZERO {
+            // OPT: In non-assign move add, take rhs.
+            *self = rhs.clone();
+            return;
+        }
+        // OPT: Special case z == FieldElement::ONE?
         // See http://www.hyperelliptic.org/EFD/g1p/auto-shortw-jacobian.html#addition-add-2007-bl
         let z1z1 = self.z.square();
         let z2z2 = rhs.z.square();
@@ -146,6 +150,13 @@ impl AddAssign<&Jacobian> for Jacobian {
         let u2 = &rhs.x * &z1z1;
         let s1 = &self.y * &rhs.z * &z2z2;
         let s2 = &rhs.y * &self.z * &z1z1;
+        if u1 == u2 {
+            return if s1 == s2 {
+                self.double_assign()
+            } else {
+                *self = Jacobian::ZERO
+            };
+        }
         let h = u2 - &u1;
         let i = h.double().square();
         let j = &h * &i;
@@ -160,7 +171,7 @@ impl AddAssign<&Jacobian> for Jacobian {
 impl AddAssign<&Affine> for Jacobian {
     fn add_assign(&mut self, rhs: &Affine) {
         match rhs {
-            Affine::Zero => {}
+            Affine::Zero => { /* Do nothing */ }
             Affine::Point { x, y } => {
                 if self.z == FieldElement::ZERO {
                     self.x = x.clone();
@@ -168,10 +179,18 @@ impl AddAssign<&Affine> for Jacobian {
                     self.z = FieldElement::ONE;
                     return;
                 }
+                // OPT: Special case z == FieldElement::ONE?
                 // See http://www.hyperelliptic.org/EFD/g1p/auto-shortw-jacobian.html#addition-madd-2007-bl
                 let z1z1 = self.z.square();
                 let u2 = x * &z1z1;
                 let s2 = y * &self.z * &z1z1;
+                if self.x == u2 {
+                    return if self.x == s2 {
+                        self.double_assign()
+                    } else {
+                        *self = Jacobian::ZERO
+                    };
+                }
                 let h = u2 - &self.x;
                 let hh = h.square();
                 let i = hh.double().double(); // TODO .quadruple()
