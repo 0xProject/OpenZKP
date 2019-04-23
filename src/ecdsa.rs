@@ -3,7 +3,7 @@ use crate::field::FieldElement;
 use crate::jacobian::Jacobian;
 use crate::u256::U256;
 use crate::u256h;
-use crate::wnaf::{double_base_mul, window_table_affine};
+use crate::wnaf::{base_mul, double_base_mul, window_table_affine};
 use hex_literal::*;
 use lazy_static::*;
 use tiny_keccak::sha3_256;
@@ -31,7 +31,7 @@ lazy_static! {
 }
 
 pub fn private_to_public(private_key: &U256) -> Affine {
-    Affine::from(&Jacobian::mul(&GENERATOR, &(private_key % ORDER)))
+    Affine::from(&base_mul(&*GENERATOR_TABLE, private_key % ORDER))
 }
 
 fn divmod(a: &U256, b: &U256) -> Option<U256> {
@@ -52,7 +52,7 @@ pub fn sign(msg_hash: &U256, private_key: &U256) -> (U256, U256) {
         if k == U256::ZERO || k.bits() > 251 {
             continue;
         }
-        match Affine::from(&Jacobian::mul(&GENERATOR, &k)) {
+        match Affine::from(&base_mul(&*GENERATOR_TABLE, k.clone())) {
             Affine::Zero => continue,
             Affine::Point { x, .. } => {
                 let r = U256::from(x);
@@ -75,8 +75,6 @@ pub fn verify(msg_hash: &U256, r: &U256, w: &U256, public_key: &Affine) -> bool 
     assert!(w != &U256::ZERO);
     assert!(w.bits() <= 251);
     assert!(public_key.on_curve());
-
-    // PubKey * msg_hash + G * s
 
     match Affine::from(&double_base_mul(
         &*GENERATOR_TABLE,
