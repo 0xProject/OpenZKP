@@ -59,7 +59,7 @@ pub struct CurvePoint {
     y: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct MakerMessage {
     vault_a: u32,
     vault_b: u32,

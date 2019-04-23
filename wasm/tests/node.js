@@ -26,7 +26,7 @@ console.log("StarkCrypto WebAssembly support.");
     );
     if (
         result ==
-        "02d895bd76790645fb867eaf57037e4aa8af1bbb139a84d01e311a7c53f3111b"
+        "004cd9415015d53d3d71f13e865a52a70457c60fa534fe0efffe34d2f6af6744"
     ) {
         console.log("Pedersen hash test succeed.");
     } else {
@@ -54,14 +54,14 @@ console.log("StarkCrypto WebAssembly support.");
 // Test sign
 {
     var result = starkcrypto.sign(
-        "0208a0a10250e382e1e4bbe2880906c2791bf6275695e02fbbc6aeff9cd8b31a",
-        "03d937c035c878245caf64531a5756109c53068da139362728feb561405371cb"
+        "01e542e2da71b3f5d7b4e9d329b4d30ac0b5d6f266ebef7364bf61c39aac35d0",
+        "03c1e9550e66958296d11b60f8e8e7a7ad990d07fa65d5f7652c4a6c87d4e3cc"
     );
     if (
         result.r ==
-            "01ef15c18599971b7beced415a40f0c7deacfd9b0d1819e03d723d8bc943cfca" &&
+            "0010eaece1a727f8c64faf2f236943c2691ba8ca34e1da77880586f5c20fcf63" &&
         result.w ==
-            "020709125651d6d1147c4f45e72ecd4848432fa86b3b867c9e7f61b47bcb907c"
+            "077e670848f61ff0a6d7f4f04a4740f8d50dcf8db8e7a4522dc05ef8c2d3ad89"
     ) {
         console.log("Sign test succeed.");
     } else {
@@ -113,8 +113,8 @@ console.log("StarkCrypto WebAssembly support.");
     var result = starkcrypto.maker_hash({
         vault_a: 21,
         vault_b: 27,
-        amount_a: 2154686749748910716,
-        amount_b: 1470242115489520459,
+        amount_a: 6873058723796400,
+        amount_b: 852209057714036,
         token_a:
             "005fa3383597691ea9d827a79e1a4f0f7989c35ced18ca9619de8ab97e661020",
         token_b:
@@ -123,7 +123,7 @@ console.log("StarkCrypto WebAssembly support.");
     });
     if (
         result ==
-        "00b196f2b56d05c32cccdc7de5c39f161f9766b93c7796ae3655fd8279325626"
+        "035d22e6b67d9dbe893149ede8ae5efb82d1a3f97734689f5189031cc45eebbd"
     ) {
         console.log("Maker hash test succeed.");
     } else {
@@ -134,13 +134,13 @@ console.log("StarkCrypto WebAssembly support.");
 // Test taker hash
 {
     var result = starkcrypto.taker_hash(
-        "00b196f2b56d05c32cccdc7de5c39f161f9766b93c7796ae3655fd8279325626",
+        "01c280f77aa5859027c67411b6859584143d49970528bcbd8db131d39ecf7eb1",
         2,
         31
     );
     if (
         result ==
-        "01fc24ac854878ce580cae987e1fb13ba099f39567662e486aaae7c1f892a77d"
+        "024e516a8e5f3a523f7725108516bbded20cb290c21925c95836fd66af4c0ec1"
     ) {
         console.log("Taker hash test succeed.");
     } else {
@@ -185,47 +185,47 @@ console.log("StarkCrypto WebAssembly support.");
 }
 
 // Benchmark nop
-console.time("Benchmark 1000x nop");
-for (var i = 0; i < 1000; i++) {
+console.time("Benchmark 100k nop");
+for (var i = 0; i < 100000; i++) {
     var result = starkcrypto.nop(
         "03d937c035c878245caf64531a5756109c53068da139362728feb561405371cb",
         "0208a0a10250e382e1e4bbe2880906c2791bf6275695e02fbbc6aeff9cd8b31a"
     );
 }
-console.timeEnd("Benchmark 1000x nop");
+console.timeEnd("Benchmark 100k nop");
 
 // Benchmark hash
-console.time("Benchmark 100x hash");
-for (var i = 0; i < 100; i++) {
+console.time("Benchmark 10k hash");
+for (var i = 0; i < 10000; i++) {
     var result = starkcrypto.pedersen_hash(
         "03d937c035c878245caf64531a5756109c53068da139362728feb561405371cb",
         "0208a0a10250e382e1e4bbe2880906c2791bf6275695e02fbbc6aeff9cd8b31a"
     );
 }
-console.timeEnd("Benchmark 100x hash");
+console.timeEnd("Benchmark 10k hash");
 
 // Benchmark public key
-console.time("Benchmark 100x public key");
-for (var i = 0; i < 100; i++) {
+console.time("Benchmark 10k public key");
+for (var i = 0; i < 10000; i++) {
     var result = starkcrypto.public_key(
         "03d937c035c878245caf64531a5756109c53068da139362728feb561405371cb"
     );
 }
-console.timeEnd("Benchmark 100x public key");
+console.timeEnd("Benchmark 10k public key");
 
 // Benchmark sign
-console.time("Benchmark 100x sign");
-for (var i = 0; i < 100; i++) {
+console.time("Benchmark 10k sign");
+for (var i = 0; i < 10000; i++) {
     var result = starkcrypto.sign(
         "03d937c035c878245caf64531a5756109c53068da139362728feb561405371cb",
         "03d937c035c878245caf64531a5756109c53068da139362728feb561405371cb"
     );
 }
-console.timeEnd("Benchmark 100x sign");
+console.timeEnd("Benchmark 10k sign");
 
 // Benchmark verify
-console.time("Benchmark 10x verify");
-for (var i = 0; i < 10; i++) {
+console.time("Benchmark 10k verify");
+for (var i = 0; i < 1000; i++) {
     var result = starkcrypto.verify(
         "0208a0a10250e382e1e4bbe2880906c2791bf6275695e02fbbc6aeff9cd8b31a",
         {
@@ -242,11 +242,11 @@ for (var i = 0; i < 10; i++) {
         }
     );
 }
-console.timeEnd("Benchmark 10x verify");
+console.timeEnd("Benchmark 10k verify");
 
 // Benchmark verify
-console.time("Benchmark 10x maker_hash");
-for (var i = 0; i < 10; i++) {
+console.time("Benchmark 1k maker_hash");
+for (var i = 0; i < 1000; i++) {
     var result = starkcrypto.maker_hash({
         vault_a: 21,
         vault_b: 27,
@@ -259,11 +259,11 @@ for (var i = 0; i < 10; i++) {
         trade_id: 0
     });
 }
-console.timeEnd("Benchmark 10x maker_hash");
+console.timeEnd("Benchmark 1k maker_hash");
 
 // Benchmark verify
-console.time("Benchmark 10x maker taker sign");
-for (var i = 0; i < 10; i++) {
+console.time("Benchmark 1k maker taker sign");
+for (var i = 0; i < 1000; i++) {
     var maker_private =
         "03c1e9550e66958296d11b60f8e8e7a7ad990d07fa65d5f7652c4a6c87d4e3cc";
     var taker_private =
@@ -282,4 +282,4 @@ for (var i = 0; i < 10; i++) {
     var maker_sig = starkcrypto.maker_sign(order, maker_private);
     var taker_sig = starkcrypto.taker_sign(order, 2, 31, taker_private);
 }
-console.timeEnd("Benchmark 10x maker taker sign");
+console.timeEnd("Benchmark 1k maker taker sign");
