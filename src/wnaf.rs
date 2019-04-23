@@ -159,6 +159,25 @@ pub fn double_mul(pa: &Affine, sa: U256, pb: &Affine, sb: U256) -> Jacobian {
     r
 }
 
+pub fn base_mul(naf: &[Affine], s: U256) -> Jacobian {
+    // Get SNAF
+    let snaf = non_adjacent_form(s, 7);
+
+    // Algorithm 3.36 of Guide to Elliptic Curve Cryptography
+    let mut r = Jacobian::ZERO;
+    for i in (0..snaf.len()).rev() {
+        // OPT: Avoid doubling zeros
+        // OPT: Use A + A -> J formular for first
+        r.double_assign();
+        if snaf[i] > 0 {
+            r += &naf[(snaf[i] >> 1) as usize];
+        } else if snaf[i] < 0 {
+            r -= &naf[(-snaf[i] >> 1) as usize];
+        }
+    }
+    r
+}
+
 pub fn double_base_mul(nafa: &[Affine], sa: U256, pb: &Affine, sb: U256) -> Jacobian {
     // Precomputed odd multiples
     let mut nafb: [Jacobian; 8] = Default::default();
