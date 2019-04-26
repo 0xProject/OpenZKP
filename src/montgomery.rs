@@ -149,7 +149,6 @@ mod tests {
     }
 
     #[quickcheck]
-    #[test]
     fn test_to_from(mut n: U256) -> bool {
         n %= MODULUS;
         from_montgomery(&to_montgomery(&n)) == n

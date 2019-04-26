@@ -305,13 +305,11 @@ mod tests {
 
     #[allow(clippy::eq_op)]
     #[quickcheck]
-    #[test]
     fn add_commutative(a: Jacobian, b: Jacobian) -> bool {
         &a + &b == &b + &a
     }
 
     #[quickcheck]
-    #[test]
     fn distributivity(p: Jacobian, mut a: U256, mut b: U256) -> bool {
         a %= &ORDER;
         b %= &ORDER;
