@@ -140,7 +140,6 @@ mod tests {
     }
 
     #[quickcheck]
-    #[test]
     fn test_ecdsa(mut message_hash: U256, private_key: U256) -> bool {
         message_hash >>= 5; // Need message_hash <= 2**251
         let public_key = private_to_public(&private_key);
