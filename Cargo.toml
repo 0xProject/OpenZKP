@@ -30,7 +30,7 @@ harness = false
 [profile.release]
 opt-level = 3
 lto = true
-debug = true # Debug symbols are required for profiling. Remove for produciont!
+debug = true # Debug symbols are required for profiling. Remove for production!
 
 # TODO: Make sure it doesn't hurt wasm
 [build]
