@@ -26,7 +26,6 @@ macro_rules! u64_from_bytes_be {
     };
 }
 
-/// Hex litterals
 #[macro_export]
 macro_rules! u256h {
     ($hexstr:expr) => {
@@ -34,11 +33,7 @@ macro_rules! u256h {
     };
 }
 
-// Reexport hex_litteral
-//#[macro_reexport]
-//use hex_literal::*; // TODO
-
-#[derive(PartialEq, Eq, Clone, Default)]
+#[derive(PartialEq, Eq, Clone, Copy, Default)]
 pub struct U256 {
     pub c0: u64,
     pub c1: u64,
@@ -380,6 +375,12 @@ impl From<u128> for U256 {
     }
 }
 
+impl From<usize> for U256 {
+    fn from(n: usize) -> U256 {
+        U256::from_u128(n as u128)
+    }
+}
+
 impl fmt::Display for U256 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
@@ -427,7 +428,7 @@ impl Ord for U256 {
 }
 
 // Useful for checking divisability by small powers of two
-impl BitAnd<u64> for &U256 {
+impl BitAnd<u64> for U256 {
     type Output = u64;
 
     #[inline(always)]
@@ -619,6 +620,14 @@ impl MulAssign<&U256> for U256 {
     }
 }
 
+impl Rem<u64> for U256 {
+    type Output = u64;
+
+    fn rem(self, other: u64) -> u64 {
+        self.c0 % other
+    }
+}
+
 impl DivAssign<&U256> for U256 {
     fn div_assign(&mut self, rhs: &U256) {
         let (q, _r) = self.divrem(rhs).unwrap();
@@ -673,7 +682,7 @@ impl Mul<u64> for &U256 {
 impl Mul<U256> for u64 {
     type Output = U256;
     #[inline(always)]
-    fn mul(self, mut rhs: U256) -> U256 {
+    fn mul(self, rhs: U256) -> U256 {
         rhs.mul(self)
     }
 }
@@ -702,7 +711,6 @@ impl Arbitrary for U256 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hex_literal::*;
     use quickcheck_macros::quickcheck;
 
     #[allow(dead_code)]
@@ -930,7 +938,6 @@ mod tests {
     }
 
     #[quickcheck]
-    #[test]
     fn commutative_add(a: U256, b: U256) -> bool {
         let mut l = a.clone();
         let mut r = b.clone();
@@ -940,7 +947,6 @@ mod tests {
     }
 
     #[quickcheck]
-    #[test]
     fn mul_full_lo(a: U256, b: U256) -> bool {
         let r = a.clone() * &b;
         let (lo, _hi) = a.mul_full(&b);
@@ -948,7 +954,6 @@ mod tests {
     }
 
     #[quickcheck]
-    #[test]
     fn test_divrem_u64(a: U256, b: u64) -> bool {
         match a.divrem_u64(b) {
             None => b == 0,
@@ -957,7 +962,6 @@ mod tests {
     }
 
     #[quickcheck]
-    #[test]
     fn test_divrem(a: U256, b: U256) -> bool {
         match a.divrem(&b) {
             None => b == U256::ZERO,
@@ -966,7 +970,6 @@ mod tests {
     }
 
     #[quickcheck]
-    #[test]
     fn invmod256(a: U256) -> bool {
         match a.invmod256() {
             None => true,
@@ -975,7 +978,6 @@ mod tests {
     }
 
     #[quickcheck]
-    #[test]
     fn square(a: U256) -> bool {
         a.sqr_full() == a.mul_full(&a)
     }

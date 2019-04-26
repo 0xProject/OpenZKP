@@ -1,8 +1,6 @@
 use crate::montgomery::*;
 use crate::u256::U256;
-use crate::u256h;
 use crate::{commutative_binop, noncommutative_binop};
-use hex_literal::*;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 // TODO: Implement Serde
@@ -15,7 +13,7 @@ pub const MODULUS: U256 =
     u256h!("0800000000000011000000000000000000000000000000000000000000000001");
 pub const INVEXP: U256 = u256h!("0800000000000010ffffffffffffffffffffffffffffffffffffffffffffffff");
 
-#[derive(PartialEq, Eq, Clone, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct FieldElement(pub U256);
 
 impl FieldElement {
@@ -72,6 +70,24 @@ impl FieldElement {
     #[inline(always)]
     pub fn neg_assign(&mut self) {
         *self = self.neg()
+    }
+
+    pub fn pow(&self, exponent: U256) -> Option<FieldElement> {
+        if *self == FieldElement::ZERO && exponent == U256::from(0 as u64) {
+            None
+        } else {
+            let mut result = FieldElement::ONE;
+            let mut remaining_exponent = exponent;
+            let mut square = self.clone();
+            while remaining_exponent > U256::from(0 as u64) {
+                if remaining_exponent & 1 == 1 {
+                    result *= square;
+                }
+                remaining_exponent >>= 1;
+                square *= square;
+            }
+            Some(result)
+        }
     }
 }
 
@@ -165,8 +181,16 @@ impl Arbitrary for FieldElement {
 }
 
 #[cfg(test)]
+impl std::iter::Product for FieldElement {
+    fn product<I: Iterator<Item = FieldElement>>(iter: I) -> FieldElement {
+        iter.fold(FieldElement::ONE, Mul::mul)
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
+    use itertools::repeat_n;
     use quickcheck_macros::quickcheck;
 
     #[rustfmt::skip]
@@ -212,49 +236,41 @@ mod tests {
     }
 
     #[quickcheck]
-    #[test]
     fn add_identity(a: FieldElement) -> bool {
         &a + FieldElement::ZERO == a
     }
 
     #[quickcheck]
-    #[test]
     fn mul_identity(a: FieldElement) -> bool {
         &a * FieldElement::ONE == a
     }
 
     #[quickcheck]
-    #[test]
     fn commutative_add(a: FieldElement, b: FieldElement) -> bool {
         &a + &b == b + a
     }
 
     #[quickcheck]
-    #[test]
     fn commutative_mul(a: FieldElement, b: FieldElement) -> bool {
         &a * &b == b * a
     }
 
     #[quickcheck]
-    #[test]
     fn associative_add(a: FieldElement, b: FieldElement, c: FieldElement) -> bool {
         &a + (&b + &c) == (a + b) + c
     }
 
     #[quickcheck]
-    #[test]
     fn associative_mul(a: FieldElement, b: FieldElement, c: FieldElement) -> bool {
         &a * (&b * &c) == (a * b) * c
     }
 
     #[quickcheck]
-    #[test]
     fn inverse_add(a: FieldElement) -> bool {
         &a + a.neg() == FieldElement::ZERO
     }
 
     #[quickcheck]
-    #[test]
     fn inverse_mul(a: FieldElement) -> bool {
         match a.inv() {
             None => a == FieldElement::ZERO,
@@ -263,8 +279,39 @@ mod tests {
     }
 
     #[quickcheck]
-    #[test]
     fn distributivity(a: FieldElement, b: FieldElement, c: FieldElement) -> bool {
         &a * (&b + &c) == (&a * b) + (a * c)
+    }
+
+    #[quickcheck]
+    fn pow_0(a: FieldElement) -> bool {
+        match a.pow(U256::from(0 as u64)) {
+            None => a == FieldElement::ZERO,
+            Some(ai) => ai == FieldElement::ONE,
+        }
+    }
+
+    #[quickcheck]
+    fn pow_1(a: FieldElement) -> bool {
+        match a.pow(U256::from(1 as u64)) {
+            None => false,
+            Some(result) => result == a,
+        }
+    }
+
+    #[quickcheck]
+    fn pow_2(a: FieldElement) -> bool {
+        match a.pow(U256::from(2 as u64)) {
+            None => false,
+            Some(result) => result == a.square(),
+        }
+    }
+
+    #[quickcheck]
+    fn pow_n(a: FieldElement, n: usize) -> bool {
+        match a.pow(U256::from(n)) {
+            None => a == FieldElement::ZERO && n == 0,
+            Some(result) => result == repeat_n(a, n).product(),
+        }
     }
 }
