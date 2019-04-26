@@ -1,6 +1,5 @@
 use crate::curve::{Affine, ORDER};
 use crate::field::FieldElement;
-use crate::jacobian::Jacobian;
 use crate::u256::U256;
 use crate::u256h;
 use crate::wnaf::{base_mul, double_base_mul, window_table_affine};
@@ -141,7 +140,6 @@ mod tests {
     }
 
     #[quickcheck]
-    #[test]
     fn test_ecdsa(mut message_hash: U256, private_key: U256) -> bool {
         message_hash >>= 5; // Need message_hash <= 2**251
         let public_key = private_to_public(&private_key);
