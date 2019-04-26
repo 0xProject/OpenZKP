@@ -39,8 +39,6 @@ pub fn hash_taker(maker_hash: &U256, vault_a: u32, vault_b: u32) -> U256 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::u256h;
-    use hex_literal::*;
 
     #[test]
     fn test_hash_maker() {
