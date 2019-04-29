@@ -36,6 +36,12 @@ fn to_string(b: &[u8; 32]) -> String {
 }
 
 #[wasm_bindgen]
+pub fn init() {
+    console_error_panic_hook::set_once();
+    // Debugging support is limited: https://github.com/rustwasm/wasm-bindgen/issues/1289
+}
+
+#[wasm_bindgen]
 pub fn nop(a: &str, b: &str) -> String {
     let elements = [from_string(a), from_string(b)];
     let h = elements[1].clone();
@@ -72,6 +78,7 @@ pub struct MakerMessage {
 
 #[wasm_bindgen]
 pub fn public_key(private_key: &str) -> JsValue {
+    console_error_panic_hook::set_once();
     let (x, y) = starkcrypto::public_key(&from_string(private_key));
     JsValue::from_serde(&CurvePoint {
         x: to_string(&x),

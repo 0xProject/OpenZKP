@@ -1,6 +1,7 @@
 var starkcrypto = require("../pkg/starkcrypto_wasm");
 
 console.log("StarkCrypto WebAssembly support.");
+starkcrypto.init();
 
 // Test nop
 {
