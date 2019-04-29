@@ -99,6 +99,35 @@ impl U256 {
         Self::new(n as u64, (n >> 64) as u64, 0, 0)
     }
 
+    pub fn from_decimal_str(s: &str) -> Result<U256, std::num::ParseIntError> {
+        // TODO: Support other radices
+        // TODO: Implement as trait
+        let mut result = U256::ZERO;
+        for (i, _c) in s.chars().enumerate() {
+            // OPT: Convert 19 digits at a time using u64.
+            result *= U256::from(10u64);
+            result += U256::from(u64::from_str_radix(&s[i..i + 1], 10)?);
+        }
+        Ok(result)
+    }
+
+    pub fn to_decimal_str(mut self) -> String {
+        if self == U256::ZERO {
+            return "0".to_string();
+        }
+        let mut result = String::new();
+        while self > U256::ZERO {
+            // OPT: Convert 19 digits at a time using u64.
+            let digit = (&self % U256::from(10u64)).c0;
+            result.push_str(&digit.to_string());
+            self /= U256::from(10u64);
+        }
+        // Reverse digits
+        // Note: Chars are safe here instead of graphemes, because all graphemes
+        // are a single codepoint.
+        result.chars().rev().collect()
+    }
+
     #[inline(always)]
     pub const fn is_even(&self) -> bool {
         self.c0 & 1 == 0
@@ -673,7 +702,7 @@ impl Mul<u64> for &U256 {
 impl Mul<U256> for u64 {
     type Output = U256;
     #[inline(always)]
-    fn mul(self, mut rhs: U256) -> U256 {
+    fn mul(self, /* mut */ rhs: U256) -> U256 {
         rhs.mul(self)
     }
 }
@@ -708,6 +737,21 @@ mod tests {
     #[allow(dead_code)]
     pub const TEST_CONST: U256 =
         u256h!("0800000000000010ffffffffffffffffffffffffffffffffffffffffffffffff");
+
+    #[test]
+    fn test_from_decimal_str() {
+        let expected = U256::from(1_234_567_890_123u64);
+        let result = U256::from_decimal_str("0000000000001234567890123").unwrap();
+        assert_eq!(expected, result);
+    }
+
+    #[quickcheck]
+    #[test]
+    fn test_decimal_to_from(n: U256) -> bool {
+        let decimal = n.clone().to_decimal_str();
+        let m = U256::from_decimal_str(&decimal).unwrap();
+        n == m
+    }
 
     #[test]
     fn test_shl() {
