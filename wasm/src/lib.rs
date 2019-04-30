@@ -51,7 +51,6 @@ pub fn nop(a: &str, b: &str) -> String {
     to_string(&h)
 }
 
-
 #[wasm_bindgen]
 pub fn pedersen_hash(a: &str, b: &str) -> JsValue {
     let msg_hash = to_string(&starkcrypto::hash(&from_string(a), &from_string(b)));

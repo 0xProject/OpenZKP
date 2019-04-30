@@ -11,7 +11,6 @@ use std::ops::{
 };
 use std::u64;
 
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ParseError {
     Empty,
