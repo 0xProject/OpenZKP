@@ -15,13 +15,13 @@ pub struct MakerMessage<T> {
 pub fn hash_maker(message: &MakerMessage<U256>) -> U256 {
     let mut packed = U256::ZERO;
     packed += &U256::from(message.vault_a as u64);
-    packed <<= 32;
+    packed <<= 31;
     packed += &U256::from(message.vault_b as u64);
     packed <<= 63;
     packed += &U256::from(message.amount_a as u64);
     packed <<= 63;
     packed += &U256::from(message.amount_b as u64);
-    packed <<= 32;
+    packed <<= 31;
     packed += &U256::from(message.trade_id as u64);
     hash(&[
         hash(&[message.token_a.clone(), message.token_b.clone()]),
@@ -47,28 +47,18 @@ mod tests {
         let result = hash_maker(&MakerMessage {
             vault_a: 21,
             vault_b: 27,
-            amount_a: 2154686749748910716,
-            amount_b: 1470242115489520459,
-            token_a: u256h!("005fa3383597691ea9d827a79e1a4f0f7989c35ced18ca9619de8ab97e661020"),
-            token_b: u256h!("00774961c824a3b0fb3d2965f01471c9c7734bf8dbde659e0c08dca2ef18d56a"),
-            trade_id: 0,
-        });
-        let expected = u256h!("01c280f77aa5859027c67411b6859584143d49970528bcbd8db131d39ecf7eb1");
-        assert_eq!(result, expected);
-    }
-
-    #[test]
-    fn test_hash_maker_2() {
-        let result = hash_maker(&MakerMessage {
-            vault_a: 21,
-            vault_b: 27,
             amount_a: 6873058723796400,
             amount_b: 852209057714036,
             token_a: u256h!("005fa3383597691ea9d827a79e1a4f0f7989c35ced18ca9619de8ab97e661020"),
             token_b: u256h!("00774961c824a3b0fb3d2965f01471c9c7734bf8dbde659e0c08dca2ef18d56a"),
             trade_id: 0,
         });
-        let expected = u256h!("035d22e6b67d9dbe893149ede8ae5efb82d1a3f97734689f5189031cc45eebbd");
+        // python3 ./signature_cli.py sign_maker --vault_a 21 --vault_b 27
+        // --amount_a 6873058723796400 --amount_b 852209057714036
+        // --token_a 168976971209324910088270776698114429107164817795147365551345596466024812576\
+        // --token_b 210761264384301076547763280170970365712477797880932555831340857495337358698\
+        // --trade_id 0 --priv_key 1699550429262868952957733065396688802326540225623380427551300052767936406476
+        let expected = u256h!("01921ce52df68f0185ade7572776513304bdd4a07faf6cf28cefc65a86fc496c");
         assert_eq!(result, expected);
     }
 
