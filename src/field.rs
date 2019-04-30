@@ -13,7 +13,7 @@ pub const MODULUS: U256 =
     u256h!("0800000000000011000000000000000000000000000000000000000000000001");
 pub const INVEXP: U256 = u256h!("0800000000000010ffffffffffffffffffffffffffffffffffffffffffffffff");
 
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Debug)]
 pub struct FieldElement(pub U256);
 
 impl FieldElement {
@@ -73,18 +73,18 @@ impl FieldElement {
     }
 
     pub fn pow(&self, exponent: U256) -> Option<FieldElement> {
-        if *self == FieldElement::ZERO && exponent == U256::from(0 as u64) {
+        if self.is_zero() && exponent.is_zero() {
             None
         } else {
             let mut result = FieldElement::ONE;
             let mut remaining_exponent = exponent;
             let mut square = self.clone();
-            while remaining_exponent > U256::from(0 as u64) {
-                if remaining_exponent & 1 == 1 {
-                    result *= square;
+            while !remaining_exponent.is_zero() {
+                if remaining_exponent.is_odd() {
+                    result *= &square;
                 }
                 remaining_exponent >>= 1;
-                square *= square;
+                square = square.square();
             }
             Some(result)
         }
@@ -164,6 +164,12 @@ impl DivAssign<&FieldElement> for FieldElement {
     }
 }
 
+impl std::iter::Product for FieldElement {
+    fn product<I: Iterator<Item = FieldElement>>(iter: I) -> FieldElement {
+        iter.fold(FieldElement::ONE, Mul::mul)
+    }
+}
+
 commutative_binop!(FieldElement, Add, add, AddAssign, add_assign);
 commutative_binop!(FieldElement, Mul, mul, MulAssign, mul_assign);
 noncommutative_binop!(FieldElement, Sub, sub, SubAssign, sub_assign);
@@ -177,13 +183,6 @@ impl Arbitrary for FieldElement {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         // TODO: Generate 0, 1, p/2 and -1
         FieldElement(U256::arbitrary(g) % MODULUS)
-    }
-}
-
-#[cfg(test)]
-impl std::iter::Product for FieldElement {
-    fn product<I: Iterator<Item = FieldElement>>(iter: I) -> FieldElement {
-        iter.fold(FieldElement::ONE, Mul::mul)
     }
 }
 
@@ -285,15 +284,15 @@ mod tests {
 
     #[quickcheck]
     fn pow_0(a: FieldElement) -> bool {
-        match a.pow(U256::from(0 as u64)) {
-            None => a == FieldElement::ZERO,
-            Some(ai) => ai == FieldElement::ONE,
+        match a.pow(U256::from(0u128)) {
+            None => a.is_zero(),
+            Some(result) => result == FieldElement::ONE,
         }
     }
 
     #[quickcheck]
     fn pow_1(a: FieldElement) -> bool {
-        match a.pow(U256::from(1 as u64)) {
+        match a.pow(U256::from(1u128)) {
             None => false,
             Some(result) => result == a,
         }
@@ -301,7 +300,7 @@ mod tests {
 
     #[quickcheck]
     fn pow_2(a: FieldElement) -> bool {
-        match a.pow(U256::from(2 as u64)) {
+        match a.pow(U256::from(2u128)) {
             None => false,
             Some(result) => result == a.square(),
         }
@@ -309,9 +308,14 @@ mod tests {
 
     #[quickcheck]
     fn pow_n(a: FieldElement, n: usize) -> bool {
-        match a.pow(U256::from(n)) {
-            None => a == FieldElement::ZERO && n == 0,
+        match a.pow(U256::from(n as u128)) {
+            None => a.is_zero() && n == 0,
             Some(result) => result == repeat_n(a, n).product(),
         }
+    }
+
+    #[quickcheck]
+    fn fermats_little_theorem(a: FieldElement) -> bool {
+        a.pow(MODULUS).unwrap() == a
     }
 }
