@@ -1,3 +1,4 @@
+// TODO: #![deny(warnings, missing_docs)]
 #![warn(clippy::all)]
 #![feature(const_fn)]
 pub mod binops;
@@ -19,7 +20,7 @@ use field::FieldElement;
 use u256::U256;
 
 fn from_bytes(bytes: &[u8; 32]) -> U256 {
-    U256::from_bytes_be(*bytes)
+    U256::from_bytes_be(bytes)
 }
 
 fn to_bytes(num: &U256) -> [u8; 32] {

@@ -7,7 +7,7 @@ use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssi
 
 // TODO: Implement Serde
 
-// 0800000000000011 // 1 | 1 << 4 | 1 << 59
+// 0800000000000011 // (1 << 59) | (1 << 4) | (1)
 // 0000000000000000
 // 0000000000000000
 // 0000000000000001
@@ -101,7 +101,7 @@ impl From<&FieldElement> for U256 {
 
 impl From<&[u8; 32]> for FieldElement {
     fn from(bytes: &[u8; 32]) -> Self {
-        FieldElement(to_montgomery(&U256::from_bytes_be(*bytes)))
+        FieldElement(to_montgomery(&U256::from_bytes_be(bytes)))
     }
 }
 

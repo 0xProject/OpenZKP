@@ -41,7 +41,7 @@ fn divmod(a: &U256, b: &U256) -> Option<U256> {
 pub fn sign(msg_hash: &U256, private_key: &U256) -> (U256, U256) {
     assert!(msg_hash.bits() <= 251);
     for i in 0..1000 {
-        let k = U256::from_bytes_be(sha3_256(
+        let k = U256::from_bytes_be(&sha3_256(
             &[
                 private_key.to_bytes_be(),
                 msg_hash.to_bytes_be(),

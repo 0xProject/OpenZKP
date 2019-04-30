@@ -45,7 +45,7 @@ macro_rules! u64_from_bytes_be {
 #[macro_export]
 macro_rules! u256h {
     ($hexstr:expr) => {
-        U256::from_bytes_be(hex!($hexstr))
+        U256::from_bytes_be(&hex!($hexstr))
     };
 }
 
@@ -73,7 +73,7 @@ impl U256 {
 
     #[inline(always)]
     #[allow(clippy::cast_lossless)]
-    pub const fn from_bytes_be(n: [u8; 32]) -> Self {
+    pub const fn from_bytes_be(n: &[u8; 32]) -> Self {
         Self::new(
             u64_from_bytes_be!(n, 24),
             u64_from_bytes_be!(n, 16),
