@@ -1,7 +1,8 @@
 use crate::division::{divrem_nby1, divrem_nbym};
 use crate::utils::{adc, div_2_1, mac, sbb};
 use crate::{commutative_binop, noncommutative_binop};
-use std::cmp::{Ord, Ordering, PartialOrd};
+use hex_literal::*;
+use std::cmp::Ordering;
 use std::fmt;
 use std::num::Wrapping;
 use std::ops::{
@@ -9,6 +10,20 @@ use std::ops::{
     ShrAssign, Sub, SubAssign,
 };
 use std::u64;
+
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ParseError {
+    Empty,
+    Overflow,
+    InnerError(std::num::ParseIntError),
+}
+
+impl From<std::num::ParseIntError> for ParseError {
+    fn from(error: std::num::ParseIntError) -> Self {
+        ParseError::InnerError(error)
+    }
+}
 
 // We can't use `u64::from` here because it is not a const fn.
 // You'd want to use this with `#[allow(clippy::cast_lossless)]` to
@@ -99,14 +114,27 @@ impl U256 {
         Self::new(n as u64, (n >> 64) as u64, 0, 0)
     }
 
-    pub fn from_decimal_str(s: &str) -> Result<U256, std::num::ParseIntError> {
+    pub fn from_decimal_str(s: &str) -> Result<U256, ParseError> {
+        if s.is_empty() {
+            return Err(ParseError::Empty);
+        }
+        // ceil(2^256 / 10)
+        const MAX10: U256 =
+            u256h!("199999999999999999999999999999999999999999999999999999999999999a");
         // TODO: Support other radices
         // TODO: Implement as trait
+        // OPT: Convert 19 digits at a time using u64.
         let mut result = U256::ZERO;
         for (i, _c) in s.chars().enumerate() {
-            // OPT: Convert 19 digits at a time using u64.
+            if result > MAX10 {
+                return Err(ParseError::Overflow);
+            }
             result *= U256::from(10u64);
-            result += U256::from(u64::from_str_radix(&s[i..i + 1], 10)?);
+            let digit = U256::from(u64::from_str_radix(&s[i..i + 1], 10)?);
+            if &result + &digit < result {
+                return Err(ParseError::Overflow);
+            }
+            result += digit;
         }
         Ok(result)
     }
@@ -740,9 +768,32 @@ mod tests {
 
     #[test]
     fn test_from_decimal_str() {
-        let expected = U256::from(1_234_567_890_123u64);
-        let result = U256::from_decimal_str("0000000000001234567890123").unwrap();
-        assert_eq!(expected, result);
+        assert_eq!(U256::from_decimal_str(""), Err(ParseError::Empty));
+        assert_eq!(U256::from_decimal_str("0"), Ok(U256::ZERO));
+        assert_eq!(U256::from_decimal_str("00"), Ok(U256::ZERO));
+        assert_eq!(U256::from_decimal_str("000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"), Ok(U256::ZERO));
+        assert_eq!(U256::from_decimal_str("1"), Ok(U256::ONE));
+        assert_eq!(
+            U256::from_decimal_str(
+                "115792089237316195423570985008687907853269984665640564039457584007913129639935"
+            ),
+            Ok(u256h!(
+                "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+            ))
+        );
+        assert_eq!(
+            U256::from_decimal_str(
+                "115792089237316195423570985008687907853269984665640564039457584007913129639936"
+            ),
+            Err(ParseError::Overflow)
+        );
+        assert_eq!(
+            U256::from_decimal_str(
+                "1000000000000000000000000000000000000000000000000000000000000000000000000000000"
+            ),
+            Err(ParseError::Overflow)
+        );
+        assert!(U256::from_decimal_str("12a3").is_err());
     }
 
     #[quickcheck]
