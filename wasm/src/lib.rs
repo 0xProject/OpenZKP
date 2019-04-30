@@ -3,8 +3,10 @@ mod utils;
 use cfg_if::cfg_if;
 use serde::{Deserialize, Serialize};
 use starkcrypto;
-use wasm_bindgen::prelude::*;
 
+use starkcrypto::u256::U256;
+use std::u64;
+use wasm_bindgen::prelude::*;
 cfg_if! {
     // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
     // allocator.
@@ -22,17 +24,18 @@ extern "C" {
     fn log(s: &str);
 }
 
+fn u64_from_string(s: &str) -> u64 {
+    u64::from_str_radix(s, 10).expect("Expected decimal number (as string) less than 2^64.")
+}
+
 fn from_string(s: &str) -> [u8; 32] {
-    // TODO: Skip '0x' prefix
-    // TODO: Decoding error.
-    let h = hex::decode(s).unwrap();
-    let mut array = [0; 32];
-    array.copy_from_slice(h.as_slice());
-    array
+    U256::from_decimal_str(s)
+        .expect("Expected decimal number (as string) less than 2^256.")
+        .to_bytes_be()
 }
 
 fn to_string(b: &[u8; 32]) -> String {
-    hex::encode(b)
+    U256::from_bytes_be(b).to_decimal_str()
 }
 
 #[wasm_bindgen]
@@ -48,9 +51,16 @@ pub fn nop(a: &str, b: &str) -> String {
     to_string(&h)
 }
 
+
 #[wasm_bindgen]
-pub fn pedersen_hash(a: &str, b: &str) -> String {
-    to_string(&starkcrypto::hash(&from_string(a), &from_string(b)))
+pub fn pedersen_hash(a: &str, b: &str) -> JsValue {
+    let msg_hash = to_string(&starkcrypto::hash(&from_string(a), &from_string(b)));
+
+    #[derive(Serialize, Deserialize)]
+    pub struct Result {
+        msg_hash: String,
+    }
+    JsValue::from_serde(&Result { msg_hash }).unwrap()
 }
 
 #[derive(Serialize, Deserialize)]
@@ -63,17 +73,6 @@ pub struct Signature {
 pub struct CurvePoint {
     x: String,
     y: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct MakerMessage {
-    vault_a: u32,
-    vault_b: u32,
-    amount_a: u64,
-    amount_b: u64,
-    token_a: String,
-    token_b: String,
-    trade_id: u32,
 }
 
 #[wasm_bindgen]
@@ -98,23 +97,39 @@ pub fn sign(message_hash: &str, private_key: &str) -> JsValue {
 }
 
 #[wasm_bindgen]
-pub fn verify(message_hash: &str, signature: &JsValue, public_key: &JsValue) -> bool {
+pub fn verify(message_hash: &str, signature: &JsValue, public_key: &JsValue) -> JsValue {
     let s: Signature = signature.into_serde().unwrap();
     let p: CurvePoint = public_key.into_serde().unwrap();
     let r = from_string(&s.r);
     let w = from_string(&s.w);
     let x = from_string(&p.x);
     let y = from_string(&p.y);
-    starkcrypto::verify(&from_string(message_hash), (&r, &w), (&x, &y))
+    let is_valid = starkcrypto::verify(&from_string(message_hash), (&r, &w), (&x, &y));
+
+    #[derive(Serialize, Deserialize)]
+    struct Result {
+        is_valid: bool,
+    }
+    JsValue::from_serde(&Result { is_valid }).unwrap()
 }
 
 fn parse_message(message: &JsValue) -> starkcrypto::MakerMessage {
+    #[derive(Debug, Serialize, Deserialize)]
+    struct MakerMessage {
+        vault_a: u32,
+        vault_b: u32,
+        amount_a: String,
+        amount_b: String,
+        token_a: String,
+        token_b: String,
+        trade_id: u32,
+    }
     let message: MakerMessage = message.into_serde().unwrap();
     starkcrypto::MakerMessage {
         vault_a: message.vault_a,
         vault_b: message.vault_b,
-        amount_a: message.amount_a,
-        amount_b: message.amount_b,
+        amount_a: u64_from_string(&message.amount_a),
+        amount_b: u64_from_string(&message.amount_b),
         token_a: from_string(&message.token_a),
         token_b: from_string(&message.token_b),
         trade_id: message.trade_id,
@@ -139,21 +154,44 @@ pub fn taker_hash(maker_message_hash: &str, vault_a: u32, vault_b: u32) -> Strin
 #[wasm_bindgen]
 pub fn maker_sign(message: &JsValue, private_key: &str) -> JsValue {
     let message = parse_message(message);
-    let (r, w) = starkcrypto::maker_sign(&message, &from_string(private_key));
-    JsValue::from_serde(&Signature {
-        r: to_string(&r),
-        w: to_string(&w),
-    })
-    .unwrap()
+    let maker_msg = starkcrypto::maker_hash(&message);
+    let (r, w) = starkcrypto::sign(&maker_msg, &from_string(private_key));
+
+    #[derive(Serialize, Deserialize)]
+    struct Result {
+        maker_msg: String,
+        r: String,
+        w: String,
+    }
+    let maker_msg = to_string(&maker_msg);
+    let r = to_string(&r);
+    let w = to_string(&w);
+    JsValue::from_serde(&Result { maker_msg, r, w }).unwrap()
 }
 
 #[wasm_bindgen]
 pub fn taker_sign(message: &JsValue, vault_a: u32, vault_b: u32, private_key: &str) -> JsValue {
     let message = parse_message(message);
-    let (r, w) = starkcrypto::taker_sign(&message, vault_a, vault_b, &from_string(private_key));
-    JsValue::from_serde(&Signature {
-        r: to_string(&r),
-        w: to_string(&w),
+    let maker_msg = starkcrypto::maker_hash(&message);
+    let taker_msg = starkcrypto::taker_hash(&maker_msg, vault_a, vault_b);
+    let (r, w) = starkcrypto::sign(&taker_msg, &from_string(private_key));
+
+    #[derive(Serialize, Deserialize)]
+    struct Result {
+        maker_msg: String,
+        taker_msg: String,
+        r: String,
+        w: String,
+    }
+    let maker_msg = to_string(&maker_msg);
+    let taker_msg = to_string(&taker_msg);
+    let r = to_string(&r);
+    let w = to_string(&w);
+    JsValue::from_serde(&Result {
+        maker_msg,
+        taker_msg,
+        r,
+        w,
     })
     .unwrap()
 }
