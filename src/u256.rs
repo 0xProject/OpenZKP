@@ -697,7 +697,7 @@ impl MulAssign<u64> for U256 {
 impl Mul<u64> for U256 {
     type Output = U256;
     #[inline(always)]
-    fn mul(mut self, rhs: u64) -> U256 {
+    fn mul(mut self, /* mut */ rhs: u64) -> U256 {
         self.mul_assign(rhs);
         self
     }
