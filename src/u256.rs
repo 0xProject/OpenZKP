@@ -99,13 +99,8 @@ impl U256 {
     }
 
     #[inline(always)]
-    pub const fn from_u64(n: u64) -> Self {
-        Self::new(n, 0, 0, 0)
-    }
-
-    #[inline(always)]
-    pub const fn from_u128(n: u128) -> Self {
-        Self::new(n as u64, (n >> 64) as u64, 0, 0)
+    pub fn is_zero(&self) -> bool {
+        *self == U256::ZERO
     }
 
     pub fn from_decimal_str(s: &str) -> Result<U256, ParseError> {
@@ -419,21 +414,10 @@ impl From<&U256> for u128 {
     }
 }
 
-impl From<u64> for U256 {
-    fn from(n: u64) -> U256 {
-        U256::from_u64(n)
-    }
-}
-
-impl From<u128> for U256 {
-    fn from(n: u128) -> U256 {
-        U256::from_u128(n)
-    }
-}
-
-impl From<usize> for U256 {
-    fn from(n: usize) -> U256 {
-        U256::from_u128(n as u128)
+impl<T: Into<u128>> From<T> for U256 {
+    fn from(n: T) -> U256 {
+        let m: u128 = n.into();
+        Self::new(m as u64, (m >> 64) as u64, 0, 0)
     }
 }
 
@@ -484,7 +468,7 @@ impl Ord for U256 {
 }
 
 // Useful for checking divisability by small powers of two
-impl BitAnd<u64> for U256 {
+impl BitAnd<u64> for &U256 {
     type Output = u64;
 
     #[inline(always)]
@@ -673,14 +657,6 @@ impl MulAssign<&U256> for U256 {
         self.c2 = r2;
         let (r3, _carry) = mac(r3, self.c3, rhs.c0, 0);
         self.c3 = r3;
-    }
-}
-
-impl Rem<u64> for U256 {
-    type Output = u64;
-
-    fn rem(self, other: u64) -> u64 {
-        self.c0 % other
     }
 }
 
