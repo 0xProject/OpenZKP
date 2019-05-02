@@ -10,6 +10,7 @@ use std::ops::{
     ShrAssign, Sub, SubAssign,
 };
 use std::u64;
+use crate::gcd::{gcd_lehmer};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ParseError {
@@ -410,6 +411,13 @@ impl U256 {
             None
         }
     }
+
+    pub fn invmod_lehmer(&self, modulus: &U256) -> Option<U256>{
+        match gcd_lehmer(self, modulus){
+            None  => None,
+            Some(x) => if x.3 {Some(modulus - &x.2)} else{Some(x.2)},
+        }
+    } 
     pub fn get_word(&self, which: usize) -> u64{
         if which <= 64{
             self.c0

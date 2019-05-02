@@ -57,8 +57,8 @@ pub fn gcd_lehmer(a: &U256, b: &U256) -> Option<(U256, U256, U256, bool)>{
     
 
     let mut even = true;
-    let mut ret_u = U256::ZERO; //We cannot directly use the u and v in the sequence because the deadlock stop eliminate them
-    let mut ret_v = U256::ZERO;
+    let mut U_0 = U256::ZERO; //Unconpressed long form inverse
+    let mut U_1 = U256::ONE;
     while a_prime != U256::ZERO && b_prime != U256::ZERO {
         let m = a_prime.msb()+1;
         let mut a_0 = a_prime.get_word(m);
@@ -90,25 +90,35 @@ pub fn gcd_lehmer(a: &U256, b: &U256) -> Option<(U256, U256, U256, bool)>{
             v_1 = v_2; //Moves both consquence calcs forward in sequnce
         }
         if v_0 == 0 { // Deadlock condition, in this case the algorthim will loop, so we have to advance with normal step.
-            let (hold1, hold2, hold3) = euclid_step(a_prime, b_prime, (U256::from(u_0),U256::from(u_1),U256::from(v_0),U256::from(v_1)));
+            let (hold1, hold2, hold3) = euclid_step(a_prime, b_prime, (U_0,U_1,U256::from(v_0),U256::from(v_1)));
+            //let (hold1, hold2, hold3) = euclid_step(a_prime, b_prime, (U256::from(u_0),U256::from(u_1),U256::from(v_0),U256::from(v_1)));
             a_prime = hold1;
             b_prime = hold2;
 
-            ret_u = hold3.1;
-            ret_v = hold3.3;
+            even = !even;
+            U_0 = hold3.0;
+            U_1 = hold3.1;
         } else{
-            let hold = a_prime.clone();
+            let hold_a = a_prime.clone();
 
             if even {
                 a_prime = a_prime*u_0 - &b_prime*v_0;
-                b_prime = b_prime*v_1 - hold*u_1;
+                b_prime = b_prime*v_1 - hold_a*u_1;
+
+                let hold_u = U_0.clone();
+                U_0 = u_0*U_0 + v_0*&U_1;
+                U_1 = v_1*U_1 + u_1*hold_u;
             } else{
                 a_prime = &b_prime*v_0 - a_prime*u_0;
-                b_prime = hold*u_1 - b_prime*v_1;
+                b_prime = hold_a*u_1 - b_prime*v_1;
+
+                let hold_u = U_0.clone();
+                U_0 = v_0*&U_1 + u_0*U_0;
+                U_1 = u_1*hold_u + v_1*U_1;
             }
         }
     }
-    Some((a_prime, U256::from(ret_u), U256::from(ret_v), even))
+    Some((a_prime, U_0, U_1, even)) //TODO Return a Q and U instead of current
 }
 #[cfg(test)]
 mod tests {
@@ -133,7 +143,7 @@ mod tests {
     fn test_inv_euclid()
     {
         let a = u256h!("008a5cc4c55ac5b050a0831b65e827e5e39fd4515e4e094961c61509e7870814");
-        let b = U256::from(MODULUS);
+        let b = MODULUS;
         let expected = u256h!("0000000000000000000000000000000000000000000000000000000000000001");
         let inv = gcd_euclid(&a,&b).unwrap();
         
@@ -145,26 +155,27 @@ mod tests {
         }
 
         assert_eq!(inv.0, expected); //GCD should be 1 showing they are coprime
+        println!("{}", MODULUS-&result);
         assert_eq!(result, expected) //Then the mulmod should be one showing it's an inverse
     }
 
     #[test]
     fn test_inv_lehmer()
     {
-        let a = u256h!("018a5cc4c55ac5b050a0831b65e827e5e39ff4515e4e094961c61509e7870814");
-        let b = U256::from(MODULUS);
+        let a = u256h!("018a5cc4c55ac5b150a0831b65e828e5e39ff4515e4e094961c61509e7870814");
+        let b = &MODULUS;
         let expected = u256h!("0000000000000000000000000000000000000000000000000000000000000001");
         let inv = gcd_lehmer(&a,&b).unwrap();
-        println!("{:?}", inv);
         
         let result;
         if inv.3 {
-            result = a.mulmod(&(&MODULUS - &inv.2), &MODULUS);
+            result = a.mulmod(&(&MODULUS - &inv.1), &MODULUS);
         } else{
-            result = a.mulmod(&inv.2, &MODULUS);
+            result = a.mulmod(&inv.1, &MODULUS);
         }
+
         assert_eq!(inv.0, expected); //GCD should be 1 showing they are coprime
-        assert_eq!(expected, result) //Then the mulmod should be one showing it's an inverse
+        assert_eq!(expected, (&result%MODULUS)) //Then the mulmod should be one showing it's an inverse
     }
 
     #[test]
