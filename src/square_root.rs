@@ -11,13 +11,9 @@ pub fn square_root(a: &FieldElement) -> Option<FieldElement> {
 
 // Returns the result of (a/p) != -1, where (a/p) is the Legendre symbol.
 fn is_quadratic_residue(a: &FieldElement) -> bool {
-    if *a == FieldElement::ZERO {
-        true
-    } else {
-        match a.pow(MODULUS >> 1) {
-            None => panic!(),
-            Some(value) => value == FieldElement::ONE,
-        }
+    match a.pow(MODULUS >> 1) {
+        None => panic!(),
+        Some(value) => value != FieldElement::NEGATIVE_ONE,
     }
 }
 
@@ -44,13 +40,11 @@ fn tonelli_shanks(a: &FieldElement) -> FieldElement {
     let mut c: FieldElement = QUADRATIC_NONRESIDUE.pow(SIGNIFICAND).unwrap();
     let mut root: FieldElement = a.pow((SIGNIFICAND + U256::from(1u128)) >> 1).unwrap();
 
-    let negative_one = FieldElement::ZERO - FieldElement::ONE;
-
     for i in 1..BINARY_EXPONENT {
         if (root.square() / a)
             .pow(U256::from(1u128) << (BINARY_EXPONENT - i - 1))
             .unwrap()
-            == negative_one
+            == FieldElement::NEGATIVE_ONE
         {
             root *= &c;
         }

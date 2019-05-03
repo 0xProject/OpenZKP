@@ -19,6 +19,9 @@ pub struct FieldElement(pub U256);
 impl FieldElement {
     pub const ZERO: FieldElement = FieldElement(U256::ZERO);
     pub const ONE: FieldElement = FieldElement(R1);
+    pub const NEGATIVE_ONE: FieldElement = FieldElement(u256h!(
+        "0000000000000220000000000000000000000000000000000000000000000020"
+    ));
 
     pub const fn from_montgomery(n: U256) -> Self {
         FieldElement(n)
@@ -191,6 +194,14 @@ mod tests {
     use super::*;
     use itertools::repeat_n;
     use quickcheck_macros::quickcheck;
+
+    #[test]
+    fn negative_one_is_additive_inverse_of_one() {
+        assert_eq!(
+            FieldElement::ONE + FieldElement::NEGATIVE_ONE,
+            FieldElement::ZERO
+        );
+    }
 
     #[rustfmt::skip]
     #[test]
