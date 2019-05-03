@@ -10,7 +10,7 @@ use std::ops::{
     ShrAssign, Sub, SubAssign,
 };
 use std::u64;
-use crate::gcd::{gcd_lehmer};
+use crate::gcd::{gcd_lehmer, gcd_euclid};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ParseError {
@@ -418,6 +418,13 @@ impl U256 {
             Some(x) => if x.3 {Some(modulus - &x.2)} else{Some(x.2)},
         }
     } 
+    pub fn invmod_euclid(&self, modulus: &U256) -> Option<U256>{
+        match gcd_euclid(self, modulus){
+            None  => None,
+            Some(x) => if x.3 {Some(modulus - &x.2)} else{Some(x.2)},
+        }
+    } 
+
     pub fn get_word(&self, which: usize) -> u64{
         if which <= 64{
             self.c0

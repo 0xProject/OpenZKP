@@ -53,7 +53,7 @@ impl FieldElement {
     }
 
     pub fn inv_lehmer(&self) -> Option<FieldElement>{
-        ((&self.0).invmod_lehmer(&MODULUS)).map(FieldElement)
+        (&self.0).invmod_lehmer(&MODULUS).map(FieldElement)
     }
 
     #[inline(always)]
