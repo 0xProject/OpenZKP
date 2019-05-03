@@ -9,6 +9,7 @@ pub fn square_root(a: &FieldElement) -> Option<FieldElement> {
     }
 }
 
+// Returns the result of (a/p) != -1, where (a/p) is the Legendre symbol.
 fn is_quadratic_residue(a: &FieldElement) -> bool {
     if *a == FieldElement::ZERO {
         true
@@ -33,8 +34,13 @@ fn tonelli_shanks(a: &FieldElement) -> FieldElement {
     // This algorithm is still correct when the following assertion fails. However,
     // more efficient algorithms exist when MODULUS % 4 == 1 or MODULUS % 8 == 5
     // (3.36 and 3.37 in HAC).
-    debug_assert!(&MODULUS & 7u64 == 1); // Th
+    debug_assert!(&MODULUS & 7u64 == 1);
 
+    if a.is_zero() {
+        return FieldElement::ZERO;
+    }
+
+    // Because a is not 0 at this point, it's safe to divide by it and exponentiate it.
     let mut c: FieldElement = QUADRATIC_NONRESIDUE.pow(SIGNIFICAND).unwrap();
     let mut root: FieldElement = a.pow((SIGNIFICAND + U256::from(1u128)) >> 1).unwrap();
 
@@ -84,6 +90,11 @@ mod tests {
             None => !is_quadratic_residue(&x),
             Some(result) => result.square() == x,
         }
+    }
+
+    #[test]
+    fn square_root_of_zero() {
+        assert!(square_root(&FieldElement::ZERO).unwrap() == FieldElement::ZERO);
     }
 
     #[test]
