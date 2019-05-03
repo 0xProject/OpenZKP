@@ -9,10 +9,6 @@ pub fn square_root(a: &FieldElement) -> Option<FieldElement> {
     }
 }
 
-const QUADRATIC_NONRESIDUE: FieldElement = FieldElement(u256h!(
-    "028ad127451958b2b5667daad6c2fd516640381f2abac83fba5054da02fdf054"
-));
-
 fn is_quadratic_residue(a: &FieldElement) -> bool {
     if *a == FieldElement::ZERO {
         true
@@ -24,21 +20,29 @@ fn is_quadratic_residue(a: &FieldElement) -> bool {
     }
 }
 
+const QUADRATIC_NONRESIDUE: FieldElement = FieldElement(u256h!(
+    "028ad127451958b2b5667daad6c2fd516640381f2abac83fba5054da02fdf054"
+));
+
+// These two constants are chosen so that 1 + SIGNIFICAND << BINARY_EXPONENT == MODULUS.
+const BINARY_EXPONENT: usize = 3 * 4 * 16;
+const SIGNIFICAND: U256 = U256::new(0x0800000000000011u64, 0, 0, 0);
+
 // What about using algorithm 3.39 instead?
 fn tonelli_shanks(a: &FieldElement) -> FieldElement {
-    assert!(&MODULUS & 7u64 == 1);
+    // This algorithm is still correct when the following assertion fails. However,
+    // more efficient algorithms exist when MODULUS % 4 == 1 or MODULUS % 8 == 5
+    // (3.36 and 3.37 in HAC).
+    debug_assert!(&MODULUS & 7u64 == 1); // Th
 
-    let s: usize = (MODULUS - U256::from(1u128)).trailing_zeros();
-    let t: U256 = (MODULUS - U256::from(1u128)) >> s;
-
-    let mut c: FieldElement = QUADRATIC_NONRESIDUE.pow(t).unwrap();
-    let mut root: FieldElement = a.pow((t + U256::from(1 as u128)) >> 1).unwrap();
+    let mut c: FieldElement = QUADRATIC_NONRESIDUE.pow(SIGNIFICAND).unwrap();
+    let mut root: FieldElement = a.pow((SIGNIFICAND + U256::from(1u128)) >> 1).unwrap();
 
     let negative_one = FieldElement::ZERO - FieldElement::ONE;
 
-    for i in 1..s {
+    for i in 1..BINARY_EXPONENT {
         if (root.square() / a)
-            .pow(U256::from(1u128) << (s - i - 1))
+            .pow(U256::from(1u128) << (BINARY_EXPONENT - i - 1))
             .unwrap()
             == negative_one
         {
@@ -53,6 +57,16 @@ fn tonelli_shanks(a: &FieldElement) -> FieldElement {
 mod tests {
     use super::*;
     use quickcheck_macros::quickcheck;
+
+    #[test]
+    fn binary_exponent_is_correct() {
+        assert!(BINARY_EXPONENT == (MODULUS - U256::from(1u128)).trailing_zeros());
+    }
+
+    #[test]
+    fn significand_is_correct() {
+        assert!(SIGNIFICAND << BINARY_EXPONENT == MODULUS - U256::from(1u128));
+    }
 
     #[test]
     fn quadratic_nonresidue_is_as_claimed() {
