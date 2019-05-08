@@ -8,6 +8,7 @@ use starkcrypto::pedersen::hash;
 use starkcrypto::u256::U256;
 use starkcrypto::u256h;
 use starkcrypto::wnaf;
+use starkcrypto::gcd::{gcd_lehmer};
 
 fn u256_add(crit: &mut Criterion) {
     let a = U256::new(
@@ -438,6 +439,15 @@ fn ecdsa_verify(crit: &mut Criterion) {
     });
 }
 
+fn gcd_speed(crit: &mut Criterion) {
+    let a = u256h!("03d937c035c878245caf64531a5756109c53068da139362728feb561405371cb");
+    let b = u256h!("0208a0a10250e382e1e4bbe2880906c2791bf6275695e02fbbc6aeff9cd8b31a");
+
+    crit.bench_function("Gcd Direct test", move |bench| {
+        bench.iter(|| black_box(gcd_lehmer(&a, &b)))
+    });
+}
+
 // fn criterion_benchmark(c: &mut Criterion) {
 //     u256_add(c);
 //     u256_mul(c);
@@ -463,11 +473,12 @@ fn ecdsa_verify(crit: &mut Criterion) {
 // }
 
 fn criterion_benchmark(c: &mut Criterion) {
-    u256_invmod(c);
-    u256_invmod_Lemher(c);
-    u256_invmod_Euclid(c);
+    //u256_invmod(c);
+    //u256_invmod_Lemher(c);
+    //u256_invmod_Euclid(c);
     field_inv(c);
-    field_inv_Lemher(c);
+    //field_inv_Lemher(c);
+    gcd_speed(c);
 }
 
 criterion_group!(benches, criterion_benchmark);
