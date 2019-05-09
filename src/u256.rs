@@ -444,6 +444,27 @@ impl U256 {
             0
         }
     }
+    pub fn get_double_word(&self, which: usize) -> u128{
+        if which <= 128 {
+            (u128::from(self.c1) << 64) | u128::from(self.c0)
+        } else if which < 192{
+            let part0 = u128::from(self.c1 >> (which%64));
+            let part1 = (u128::from(self.c2)) << (64 - which%64);
+            let part2 = u128::from(self.c3) << (128 - (which%64));
+            part0|part1|part2
+        } else if which == 192{
+            (u128::from(self.c2) << 64) | u128::from(self.c1)
+        } else if which < 256{
+            let part0 = u128::from(self.c1 >> (which%64));
+            let part1 = (u128::from(self.c2)) << (64 - which%64);
+            let part2 = u128::from(self.c3) << (128 - (which%64));
+            part0 | part1 | part2
+        } else if which == 256{
+            (u128::from(self.c3) << 64) | u128::from(self.c2)
+        } else{
+            0
+        }
+    }
 }
 
 impl From<&U256> for u64 {
@@ -773,6 +794,49 @@ impl Mul<&U256> for u64 {
     #[inline(always)]
     fn mul(self, rhs: &U256) -> U256 {
         rhs.mul(self)
+    }
+}
+
+//Adding 128 bit multplications
+impl Mul<u128> for &U256 {
+    type Output = U256;
+    #[inline(always)]
+    fn mul(self, rhs: u128) -> U256 {
+        let hold = self.clone();
+        let part1 = (&hold).mul(rhs as u64);
+        let part2 = hold.mul((rhs >>64) as u64) <<64;
+        part1 + part2
+    }
+}
+
+impl Mul<u128> for U256 {
+    type Output = U256;
+    #[inline(always)]
+    fn mul(self, rhs: u128) -> U256 {
+        let hold = self.clone();
+        let part1 = (&hold).mul(rhs as u64);
+        let part2 = hold.mul((rhs >> 64) as u64) <<64;
+        part1 + part2
+    }
+}
+
+impl Mul<U256> for u128 {
+    type Output = U256;
+    #[inline(always)]
+    fn mul(self, /* mut */ rhs: U256) -> U256 {
+        let part1 = (&rhs).mul(self as u64);
+        let part2 = rhs.mul((self >> 64) as u64) << 64;
+        part1 + part2
+    }
+}
+
+impl Mul<&U256> for u128 {
+    type Output = U256;
+    #[inline(always)]
+    fn mul(self, rhs: &U256) -> U256 {
+        let part1 = (&rhs).mul(self as u64);
+        let part2 = rhs.mul((self >> 64) as u64) << 64;
+        part1 + part2
     }
 }
 
