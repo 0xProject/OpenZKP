@@ -4,6 +4,7 @@ use starkcrypto::curve::Affine;
 use starkcrypto::ecdsa::{private_to_public, sign, verify};
 use starkcrypto::field::FieldElement;
 use starkcrypto::gcd::gcd_lehmer;
+use starkcrypto::jacobian::Jacobian;
 use starkcrypto::pedersen::hash;
 use starkcrypto::u256::U256;
 use starkcrypto::u256h;
