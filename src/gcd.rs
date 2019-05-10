@@ -1,21 +1,31 @@
 use crate::u256::U256;
 
-pub fn gcd_euclid(a: &U256, b: &U256) -> Option<(U256, U256, U256, bool)>{
-    if  a == &U256::ZERO || b == &U256::ZERO {
-        return None
-    }
+#[inline(always)]
+fn euclid_step(
+    a: U256,
+    b: U256,
+    data: (U256, U256, U256, U256),
+) -> (U256, U256, (U256, U256, U256, U256)) {
+    let (q, rem) = a.divrem(&b).unwrap();
+    let hold1 = &data.0 + &data.1 * &q;
+    let hold2 = &data.2 + &data.3 * q;
+    (b, rem, (data.1, hold1, data.3, hold2))
+}
+
+pub fn gcd_euclid(a: &U256, b: &U256) -> (U256, U256, U256, bool) {
     let mut a_prime;
     let mut b_prime;
 
-    if b > a { //Note : Alg assumes a >= b, and gcd(a,b) = gcd(b,a) 
-       a_prime = b.clone(); //Gets correct ordering of mutable data
-       b_prime = a.clone();
-    } else{
+    if b > a {
+        //Note : Alg assumes a >= b, and gcd(a,b) = gcd(b,a)
+        a_prime = b.clone(); //Gets correct ordering of mutable data
+        b_prime = a.clone();
+    } else {
         a_prime = a.clone(); //Gets correct ordering of mutable data
         b_prime = b.clone();
     }
 
-    let mut consquences = (U256::ONE,U256::ZERO,U256::ZERO,U256::ONE);
+    let mut consquences = (U256::ONE, U256::ZERO, U256::ZERO, U256::ONE);
     let mut even = true;
 
     while b_prime != U256::ZERO {
@@ -25,636 +35,291 @@ pub fn gcd_euclid(a: &U256, b: &U256) -> Option<(U256, U256, U256, bool)>{
         consquences = hold3;
         even = !even;
     }
-    Some((a_prime, consquences.0, consquences.2, even))
+    (a_prime, consquences.0, consquences.2, even)
 }
 
-fn euclid_step(a: U256, b: U256, data: (U256, U256, U256, U256)) -> (U256, U256, (U256, U256, U256, U256)){
-    let (q, rem) = a.divrem(&b).unwrap();
-    let hold1 = &data.0 + &data.1*&q;
-    let hold2 = &data.2 + &data.3*q;
-    (b, rem, (data.1, hold1 , data.3, hold2))
+/// Compute the Lehmer update matrix for small values.
+/// This is essentialy Euclids extended GCD algorithm for 64 bits.
+/// OPT: Would this be faster using extended binary gcd?
+#[inline(always)]
+fn lehmer_small(mut r0: u64, mut r1: u64) -> (u64, u64, u64, u64, bool) {
+    let mut q00 = 1u64;
+    let mut q01 = 0u64;
+    let mut q10 = 0u64;
+    let mut q11 = 1u64;
+    loop {
+        // Loop is unrolled once to avoid swapping variables and tracking parity.
+        if r1 == 0u64 {
+            return (q00, q01, q10, q11, true);
+        }
+        let q = r0 / r1;
+        r0 -= q * r1;
+        q00 += q * q10;
+        q01 += q * q11;
+        if r0 == 0u64 {
+            return (q10, q11, q00, q01, false);
+        }
+        let q = r1 / r0;
+        r1 -= q * r0;
+        q10 += q * q00;
+        q11 += q * q01;
+    }
+}
+
+/// Compute the Lehmer update matrix for the most significant 64-bits of r0 and r1.
+/// OPT: Would a variation of binary gcd apply here and be faster?
+#[inline(always)]
+fn lehmer_loop(
+    mut r0: u64,
+    mut r1: u64,
+    mut q00: u64,
+    mut q01: u64,
+    mut q10: u64,
+    mut q11: u64,
+) -> (u64, u64, u64, u64, bool) {
+    const LIMIT: u64 = 1u64 << 32;
+    if r1 == 0u64 {
+        return (q00, q01, q10, q11, true);
+    }
+    // The r values are one step ahead of the q values so we can test the stopping condition.
+    let mut q0 = r0 / r1;
+    r0 -= q0 * r1;
+    if r0 < LIMIT {
+        return (q00, q01, q10, q11, true);
+    }
+    loop {
+        // Loop is unrolled once to avoid swapping variables and tracking parity.
+        let q1 = r1 / r0;
+        r1 -= q1 * r0;
+        if r1 < LIMIT {
+            return (q00, q01, q10, q11, true);
+        }
+        q00 += q0 * q10;
+        q01 += q0 * q11;
+        // Repeat with indices 0 and 1 flipped
+        q0 = r0 / r1;
+        r0 -= q0 * r1;
+        if r0 < LIMIT {
+            return (q10, q11, q00, q01, false);
+        }
+        q10 += q1 * q00;
+        q11 += q1 * q01;
+    }
+}
+
+/// Compute the Lehmer update matrix using double words
+#[inline(always)]
+fn lehmer_double(r0: &U256, r1: &U256) -> (u64, u64, u64, u64, bool) {
+    debug_assert!(r0 >= r1);
+    if r0.bits() < 64 {
+        return lehmer_small(r0.c0, r1.c0);
+    }
+    let s = r0.leading_zeros();
+    let r0s = r0.clone() << s;
+    let r1s = r1.clone() << s;
+    lehmer_loop(r0s.c3, r1s.c3, 1, 0, 0, 1)
+    // We can return here and have a perfectly valid non-double Lehmer GCD.
+
+    // TODO: recompute r0 and r1 using a double-word approximation and repeat.
 }
 
 #[inline(always)]
-pub fn gcd_lehmer(a: &U256, b: &U256) -> Option<(U256, U256, U256, bool)>{
-    if  a == &U256::ZERO || b == &U256::ZERO {
-        return None
+fn lehmer_update(
+    a0: &mut U256,
+    a1: &mut U256,
+    (q00, q01, q10, q11, even): (u64, u64, u64, u64, bool),
+) {
+    // OPT: Inplace clone-free multiply
+    if even {
+        let b0 = q00 * a0.clone() - q01 * a1.clone();
+        let b1 = q11 * a1.clone() - q10 * a0.clone();
+        *a0 = b0;
+        *a1 = b1;
+    } else {
+        let b0 = q01 * a1.clone() - q00 * a0.clone();
+        let b1 = q10 * a0.clone() - q11 * a1.clone();
+        *a0 = b0;
+        *a1 = b1;
     }
+}
 
-    let mut a_prime;
-    let mut b_prime;
-
-    if b > a { //Note : Alg assumes a >= b, and gcd(a,b) = gcd(b,a) 
-       a_prime = b.clone(); //Gets correct ordering of mutable data
-       b_prime = a.clone();
-    } else{
-        a_prime = a.clone(); //Gets correct ordering of mutable data
-        b_prime = b.clone();
-    }
-
-    if b_prime.bits() < 64 { //If the largest entry is less than a word in length we don't gain but using the below use and return simple case
-        return gcd_euclid(a, b);
-    }
-
+pub fn gcd_lehmer(mut r0: U256, mut r1: U256) -> (U256, U256, U256, bool) {
+    debug_assert!(r0 >= r1);
+    // TODO: Support r1 >= r0
+    let mut s0 = U256::ONE;
+    let mut s1 = U256::ZERO;
+    let mut t0 = U256::ZERO;
+    let mut t1 = U256::ONE;
     let mut even = true;
-    let mut U_0 = U256::ZERO; //Unconpressed long form inverse
-    let mut U_1 = U256::ONE;
-
-    let mut index = 0;
-
-    loop{
-        let bits  = a_prime.bits();
-        if  bits > 100{
-            let m = a_prime.msb()+1;
-            let mut a_0 = a_prime.get_double_word(m);
-            let mut a_1 = b_prime.get_double_word(m);
-            let mut a_0_single = (a_0 >> 64) as u64;
-            let mut a_1_single = (a_1 >> 64) as u64;
-
-            println!("{}", a_prime);
-            println!("{}", b_prime);
-
-            index += 1;
-            if index > 100 {break};
-
-            //let (u_0, v_0, u_1 , v_1, hold_even) = lemher_loop_experimental(a_0, a_1);
-            let (u_0, v_0, u_1 , v_1, hold_even)  = cohen_exact(a_0_single, a_1_single, a_0, a_1, &a_prime, &b_prime);
-            even = hold_even;
-
-            
-            let mut hold = a_prime.clone();
-
-            if even {
-                a_prime = a_prime*u_0 - &b_prime*v_0;
-                b_prime = b_prime*v_1 - hold*u_1;
-
-                hold = U_0.clone();
-                U_0 = u_0*U_0 + v_0*&U_1;
-                U_1 = v_1*U_1 + u_1*hold;
-            } else{
-                a_prime = &b_prime*v_0 - a_prime*u_0;
-                b_prime = hold*u_1 - b_prime*v_1;
-
-                hold = U_0.clone();
-                U_0 = v_0*&U_1 + u_0*U_0;
-                U_1 = u_1*hold + v_1*U_1;
-            }
-            
-        } else if bits > 60{
-            let m = a_prime.msb()+1;
-            let mut a_0 = a_prime.get_word(m);
-            let mut a_1 = b_prime.get_word(m);
-
-            println!("{}", a_prime);
-            println!("{}", b_prime);
-
-            index += 1;
-            if index > 100 {break};
-
-
-            let (u_0, v_0, u_1 , v_1, hold_even) = lemher_loop_64(a_0, a_1);
-            even = hold_even;
-
-            
-            let mut hold = a_prime.clone();
-
-            if even {
-                a_prime = a_prime*u_0 - &b_prime*v_0;
-                b_prime = b_prime*v_1 - hold*u_1;
-
-                hold = U_0.clone();
-                U_0 = u_0*U_0 + v_0*&U_1;
-                U_1 = v_1*U_1 + u_1*hold;
-            } else{
-                a_prime = &b_prime*v_0 - a_prime*u_0;
-                b_prime = hold*u_1 - b_prime*v_1;
-
-                hold = U_0.clone();
-                U_0 = v_0*&U_1 + u_0*U_0;
-                U_1 = u_1*hold + v_1*U_1;
-            }
-            
-        } else{
-            break
-        }
+    while r1 != U256::ZERO {
+        let q = lehmer_double(&r0, &r1);
+        // TODO: Full precision step when q10 == q.2 == 0
+        lehmer_update(&mut r0, &mut r1, q);
+        lehmer_update(&mut s0, &mut s1, q);
+        lehmer_update(&mut t0, &mut t1, q);
+        even ^= !q.4;
     }
-    let (final_u, final_v, final_d, next_even) = euclid_64(a_prime.c0, b_prime.c0);
-
-    let u;
-    if next_even{
-        u = final_u*U_0 - final_v*U_1;
-    } else{
-        u = final_v*U_1 - final_u*U_0;
+    // TODO: Compute using absolute value instead of patching sign.
+    if even {
+        // t negative
+        t0 = U256::ZERO - t0;
+    } else {
+        // s negative
+        s0 = U256::ZERO - s0;
     }
-    let v = (U256::from(final_d) - a*final_u)/b;
-
-    Some((U256::from(final_d), v, u, next_even)) //TODO Return a Q and U instead of current
+    (r0, s0, t0, even)
 }
 
-#[inline(always)]
-fn euclid_64(a_0: u64, a_1: u64) -> (u64, u64, u64, bool){
-    let mut a = a_0;
-    let mut b = a_1;
-
-    let mut u_a = 0;
-    let mut u_b = 1;
+pub fn inv_lehmer(modulus: &U256, num: &U256) -> Option<U256> {
+    debug_assert!(modulus > num);
+    let mut r0 = modulus.clone();
+    let mut r1 = num.clone();
+    let mut t0 = U256::ZERO;
+    let mut t1 = U256::ONE;
     let mut even = true;
-
-    let mut index = 0;
-    while(b > 0){
-        println!("{}", a);
-        println!("{}", b);
-
-        index += 1;
-        if index > 100 {break};
-
-        let q = a/b;
-
-        let mut T = a;
-        a = b;
-        b = T - q*b;
-        
-        T = u_a;
-        u_a = u_b;
-        u_b = T + q*u_b;
-        even = !even;
+    while r1 != U256::ZERO {
+        let q = lehmer_double(&r0, &r1);
+        // TODO: Full precision step when q10 == q.2 == 0
+        lehmer_update(&mut r0, &mut r1, q);
+        lehmer_update(&mut t0, &mut t1, q);
+        even ^= !q.4;
     }
-    let q;
-    let test = a_0.checked_mul(u_b);
-    match test {
-        Some(x) => {    if a > a_0*u_b{
-                           q = a - a_0*u_b;
-                        } else{
-                           q = a_0*u_b - a;
-                    }},
-        None => { let hold = (a_0 as u128)*(u_b as u128) - (a as u128);
-                   q = hold as u64},
+    if r0 == U256::ONE {
+        // When `even` t0 is negative and in twos-complement form
+        Some(if even { modulus + t0 } else { t0 })
+    } else {
+        None
     }
-    // if a > a_0*u_b{
-    //     q = a - a_0*u_b;
-    // } else{
-    //     q = a_0*u_b - a;
-    // }
-    (u_b, q, a, even)
 }
 
-#[inline(always)]
-fn lemher_loop_64(mut a_0: u64, mut a_1: u64) -> (u64, u64, u64, u64, bool){
-    
-    let mut u_0 = 1; 
-    let mut v_0 = 0;
-    let mut u_1 = 0;
-    let mut v_1 = 1;
-    let mut even = true;
-
-    loop{
-        if a_1 == 0 {break};
-        let q = a_0/a_1;
-
-        let a_2 = a_0  - q*a_1; //Better than going to a mod calc
-
-        let v_2 = v_0 + q*v_1;
-        let u_2 = u_0 + q*u_1;
-
-        //if a_2 < u32::max_value().into() {break};
-        let v_3 = if v_2 > v_1 { v_2 - v_1} else {v_1 - v_2}; //Asignment of absolute value
-        if !(a_2 >= v_2 && a_1-a_2 >= v_3) {break;} //Collins stoping condition
-        // if a_2 < u32::max_value().into() {break}
-
-        even = !even;
-        a_0 = a_1;
-        a_1 = a_2; //Moves the euclidian algorthim forward a step on a_i
-        u_0 = u_1;
-        u_1 = u_2;
-        v_0 = v_1;
-        v_1 = v_2; //Moves both consquence calcs forward in sequnce
-    }
-    (u_0, v_0, u_1, v_1, even)
-}
-
-#[inline(always)]
-fn lemher_loop_128(mut a_0: u128, mut a_1: u128) -> (u128, u128, u128, u128, bool){
-    
-    let mut u_0 = 1; 
-    let mut v_0 = 0;
-    let mut u_1 = 0;
-    let mut v_1 = 1;
-    let mut even = true;
-
-    loop{
-        if a_1 == 0 {break};
-        let q = a_0/a_1;
-
-        let a_2 = a_0  - q*a_1; //Better than going to a mod calc
-
-        let v_2 = v_0 + q*v_1;
-        let u_2 = u_0 + q*u_1;
-
-        //if a_2 < u32::max_value().into() {break};
-        let v_3 = if v_2 > v_1 { v_2 - v_1} else {v_1 - v_2}; //Asignment of absolute value
-        if !(a_2 >= v_2 && a_1-a_2 >= v_3) {break;} //Collins stoping condition
-        // if a_2 < u32::max_value().into() {break}
-
-        even = !even;
-        a_0 = a_1;
-        a_1 = a_2; //Moves the euclidian algorthim forward a step on a_i
-        u_0 = u_1;
-        u_1 = u_2;
-        v_0 = v_1;
-        v_1 = v_2; //Moves both consquence calcs forward in sequnce
-    }
-    (u_0, v_0, u_1, v_1, even)
-}
-
-fn lemher_loop_64_full(mut a_0: u64, mut a_1: u64, mut u_0: u64, mut v_0: u64, mut u_1: u64, mut v_1: u64, mut even: bool) -> (u64, u64, u64, u64, bool){
-    
-    loop{
-        if a_1 == 0 {break};
-        let q = a_0/a_1;
-
-        let a_2 = a_0  - q*a_1; //Better than going to a mod calc
-
-        let v_2 = v_0 + q*v_1;
-        let u_2 = u_0 + q*u_1;
-
-        if a_2 < u32::max_value().into() {break};
-        let v_3 = if v_2 > v_1 { v_2 - v_1} else {v_1 - v_2}; //Asignment of absolute value
-        if !(a_2 >= v_2 && a_1-a_2 >= v_3) {break;} //Collins stoping condition
-        //if a_2 < u32::max_value().into() {break}
-
-        even = !even;
-        a_0 = a_1;
-        a_1 = a_2; //Moves the euclidian algorthim forward a step on a_i
-        u_0 = u_1;
-        u_1 = u_2;
-        v_0 = v_1;
-        v_1 = v_2; //Moves both consquence calcs forward in sequnce
-    }
-    (u_0, v_0, u_1, v_1, even)
-}
-
-
-
-
-fn lemher_loop_experimental(mut a_0: u128, mut a_1: u128) -> (u128, u128, u128, u128, bool){
-
-    let mut u_0 = 1; 
-    let mut v_0 = 0;
-    let mut u_1 = 0;
-    let mut v_1 = 1;
-    let mut even = true;
-
-    let mut index = 0;
-    loop{
-        println!("{}", a_0);
-        println!("{}", a_1);
-
-        index += 1;
-        if index > 100 {break};
-
-        let mut alpha = 1 as u64;
-        let mut beta  = 0 as u64;
-        let mut alpha_prime = 0 as u64;
-        let mut beta_prime = 1 as u64;
-        let mut internal_even = true;
-
-        let mut a_0_single;
-        let mut a_1_single;
-
-        let bits = a_0.leading_zeros();
-        if  bits > 64 {
-            a_0_single = a_0 as u64;
-            a_1_single = a_1 as u64;
-        } else{
-            a_0_single = (a_0 >> (64 - bits)) as u64;
-            a_1_single = (a_1 >> (64 - bits)) as u64;
-        }
-        println!("{}", a_0_single);
-        println!("{}", a_1_single);
-
-        loop{
-            if a_1_single == 0 {break};
-            let q = a_0_single/a_1_single;
-            println!("q{}", q);
-
-            let a_2_single = a_0_single  - q*a_1_single; //Better than going to a mod calc
-
-            let beta_2 = beta + q*beta_prime;
-            let alpha_2 = alpha + q*alpha_prime;
-
-            let v_3 = if beta_2 > beta_prime { beta_2- beta_prime} else {beta_prime - beta_2}; //Asignment of absolute value
-            if !(a_2_single >= beta_2 && a_1_single-a_2_single >= v_3) {break;} //Collins stoping condition
-            if alpha_2.leading_zeros() + a_0.leading_zeros() < 65 || beta_2.leading_zeros() + a_1.leading_zeros() < 65 {break};
-
-            internal_even = !internal_even;
-            a_0_single = a_1_single;
-            a_1_single = a_2_single; //Moves the euclidian algorthim forward a step on a_i
-            alpha = alpha_prime;
-            alpha_prime = alpha_2;
-            beta = beta_prime;
-            beta_prime = beta_2; 
-        }
-
-        if beta != 0 {
-            let mut a_2;
-            let u_2;
-            let v_2;
-
-            println!("{}", alpha_prime);
-            println!("{}", beta_prime);
-            if internal_even {
-                a_2 = a_1*(beta_prime as u128) - a_0*(alpha_prime as u128);
-                v_2 = v_1*(beta_prime as u128) + v_0*(alpha_prime as u128);
-            } else{
-                a_2 = a_0*(alpha_prime as u128) - a_1*(beta_prime as u128);
-                v_2 = v_0*(alpha_prime as u128) + v_1*(beta_prime as u128);
-            }
-
-            //if a_2 < u32::max_value().into() {break};
-            let v_3 = if v_2 > v_1 { v_2 - v_1} else {v_1 - v_2}; //Asignment of absolute value
-            if (a_1 < a_2) {break};
-            if !(a_2 >= v_2 && a_1-a_2 >= v_3) {break;} //Collins stoping condition
-            // if a_2 < u32::max_value().into() {break}
-
-            if internal_even {
-                
-                //v_2 = v_1*(beta_prime as u128) + v_0*(alpha_prime as u128);
-            } else{
-                a_2 = a_0*(alpha_prime as u128) - a_1*(beta_prime as u128);
-                //v_2 = v_0*(alpha_prime as u128) + v_1*(beta_prime as u128);
-            }
-
-            if !internal_even { //
-                a_0 = a_1*(beta as u128) - a_0*(alpha as u128);
-                u_2 = u_1*(beta_prime as u128) +  u_0*(alpha_prime as u128);
-                u_0 = u_1*(beta as u128) + u_0*(alpha as u128);
-                v_0 = v_1*(beta as u128) + v_0*(alpha as u128);
-            } else{
-                a_0 = a_0*(alpha as u128) - a_1*(beta as u128);
-                u_2 = u_0*(alpha_prime as u128) + u_1*(beta_prime as u128);
-                u_0 = u_0*(alpha as u128) + u_1*(beta as u128);
-                v_0 = v_0*(alpha as u128) + v_1*(beta as u128);
-            }
-            even = !even;
-            a_1 = a_2; //Moves the euclidian algorthim forward a step on a_i
-            u_1 = u_2;
-            v_1 = v_2;
-        } else {
-            println!("got here");
-            if a_1 == 0 {break};
-            let q = a_0/a_1;
-
-            let a_2 = a_0  - q*a_1; //Better than going to a mod calc
-
-            let v_2 = v_0 + q*v_1;
-            let u_2 = u_0 + q*u_1;
-
-            even = !even;
-            a_0 = a_1;
-            a_1 = a_2; //Moves the euclidian algorthim forward a step on a_i
-            u_0 = u_1;
-            u_1 = u_2;
-            v_0 = v_1;
-            v_1 = v_2; 
-        }
-    }
-    
-    (u_0, v_0, u_1, v_1, even)
-}
-
-fn cohen_exact(mut a_single: u64, mut b_single: u64, mut a_double: u128, mut b_double: u128, a: &U256, b : &U256) -> (u64, u64, u64, u64, bool){
-    let mut alpha = 1;
-    let mut beta = 0;
-    let mut alpha_prime = 0;
-    let mut beta_prime = 1;
-    let mut T = 0;
-    let mut even = true;
-    let mut q = 0;
-
-    if b_single != 0 { q = a_single/b_single; T = a_single%b_single;};
-    if T >= 2^32 {
-        loop{
-            let q_prime = b_single/T;
-            let T_prime = b_single%T;
-
-            if T_prime < 2^32 {break};
-            a_single = b_single;
-            b_single = T;
-            T = alpha + q*alpha_prime; //Plus to get the abs value {otherwise will underflow}
-            alpha = alpha_prime;
-            alpha_prime = T;
-            T = beta + q*beta_prime; //Again with the abs
-            beta = beta_prime;
-            beta_prime = T;
-            T = T_prime;
-            q = q_prime;
-
-            even = !even;
-        }
-    }
-    if beta == 0 {let (ret , _) = &a.divrem(&b).unwrap(); return (0,1,1,ret.c0, true);}
-
-    let hold = a_double.clone();
-    a_double = (alpha as u128)*a_double + (beta as u128)*&b_double; //Matrix unfolding step without signs
-    b_double = (alpha_prime as u128)*hold + (beta_prime as u128)*b_double;
-
-    // if even {
-    //     a_double = (alpha as u128)*a_double - (beta as u128)*&b_double; //Matrix unfolding step with signs
-    //     b_double = (alpha_prime as u128)*hold - (beta_prime as u128)*b_double;
-    // } else {
-    //     a_double =  (beta as u128)*&b_double - (alpha as u128)*a_double; //Matrix unfolding step with signs
-    //     b_double = (beta_prime as u128)*b_double - (alpha_prime as u128)*hold ;
-    // }
-
-    let bits = a_double.leading_zeros();
-    if  bits > 64 {
-        a_single = a_double as u64;
-        b_single = b_double as u64;
-    } else{
-        a_single = (a_double >> (64 - bits)) as u64; //Shifts over enough to put the msb in the top slot of a u64
-        b_single = ( b_double >> (64 - bits)) as u64;
-    }
-    T = 0;
-    
-    if b_single != 0 { q = a_single/b_single; T = a_single%b_single;};
-    
-    if T >= 2^32 {
-        loop{
-            let q_prime = b_single/T;
-            let T_prime = b_single%T;
-
-            if T_prime < 2^32 { break};
-            a_single = b_single;
-            b_single = T;
-            T = alpha + q*alpha_prime; //Plus to get the abs value {otherwise will underflow}
-            alpha = alpha_prime;
-            alpha_prime = T;
-            T = beta + q*beta_prime; //Again with the abs
-            beta = beta_prime;
-            beta_prime = T;
-            T = T_prime;
-            q = q_prime;
-
-            even = !even;
-        }
-    }
-    return (alpha, beta, alpha_prime, beta_prime, even)
-}
-
-fn cohen_exact_signed(mut a_single_un: u64, mut b_single_un: u64, mut a_double_un: u128, mut b_double_un: u128, a: &U256, b : &U256) -> (u64, u64, u64, u64, bool){
-    
-    let mut a_single : i64 = (a_single_un >> 1 ) as i64;
-    let mut b_single : i64 = (b_single_un >> 1) as i64;
-    let mut a_double : i128 = (a_double_un >> 1) as i128;
-    let mut b_double : i128 = (b_double_un >> 1) as i128;
-
-    let mut alpha = 1;
-    let mut beta = 0;
-    let mut alpha_prime = 0;
-    let mut beta_prime = 1;
-    let mut T = 0;
-    let mut even = true;
-    let mut q = 0;
-
-    if b_single != 0 { q = a_single/b_single; T = a_single%b_single;};
-    if T >= 2^32 {
-        loop{
-            let q_prime = b_single/T;
-            let T_prime = b_single%T;
-
-            if T_prime < 2^32 {break};
-            a_single = b_single;
-            b_single = T;
-            T = alpha - q*alpha_prime; //Plus to get the abs value {otherwise will underflow}
-            alpha = alpha_prime;
-            alpha_prime = T;
-            T = beta - q*beta_prime; //Again with the abs
-            beta = beta_prime;
-            beta_prime = T;
-            T = T_prime;
-            q = q_prime;
-
-            even = !even;
-        }
-    }
-    if beta == 0 {let (ret , _) = &a.divrem(&b).unwrap(); return (0,1,1,ret.c0, true);}
-
-    let hold = a_double.clone();
-    a_double = (alpha as i128)*a_double + (beta as i128)*&b_double; //Matrix unfolding step without signs
-    b_double = (alpha_prime as i128)*hold + (beta_prime as i128)*b_double;
-
-    // if even {
-    //     a_double = (alpha as u128)*a_double - (beta as u128)*&b_double; //Matrix unfolding step with signs
-    //     b_double = (alpha_prime as u128)*hold - (beta_prime as u128)*b_double;
-    // } else {
-    //     a_double =  (beta as u128)*&b_double - (alpha as u128)*a_double; //Matrix unfolding step with signs
-    //     b_double = (beta_prime as u128)*b_double - (alpha_prime as u128)*hold ;
-    // }
-
-    let bits = a_double.leading_zeros();
-    if  bits > 64 {
-        a_single = a_double as i64;
-        b_single = b_double as i64;
-    } else{
-        a_single = (a_double >> (64 - bits)) as i64; //Shifts over enough to put the msb in the top slot of a u64
-        b_single = ( b_double >> (64 - bits)) as i64;
-    }
-    T = 0;
-    
-    if b_single != 0 { q = a_single/b_single; T = a_single%b_single;};
-    
-    if T >= 2^32 {
-        loop{
-            let q_prime = b_single/T;
-            let T_prime = b_single%T;
-
-            if T_prime < 2^32 { break};
-            a_single = b_single;
-            b_single = T;
-            T = alpha - q*alpha_prime; //Plus to get the abs value {otherwise will underflow}
-            alpha = alpha_prime;
-            alpha_prime = T;
-            T = beta - q*beta_prime; //Again with the abs
-            beta = beta_prime;
-            beta_prime = T;
-            T = T_prime;
-            q = q_prime;
-
-            even = !even;
-        }
-    }
-    //Clear the signing bits
-    let alpha_un = ((alpha << 1) >> 1) as u64;
-    let alpha_prime_un = ((alpha_prime << 1) >> 1) as u64;
-    let beta_un = ((beta << 1) >> 1) as u64;
-    let beta_prime_un = ((beta_prime << 1) >> 1) as u64;
-    return (alpha_un, beta_un, alpha_prime_un, beta_prime_un, even)
-}
 #[cfg(test)]
 mod tests {
-    use crate::field::{FieldElement, MODULUS};
+    #![allow(clippy::unreadable_litteral)]
+
     use super::*;
-    use crate::u256::U256;
+    use crate::field::{FieldElement, MODULUS};
     use crate::u256h;
     use hex_literal::*;
     use quickcheck_macros::quickcheck;
 
     #[test]
-    fn test_gcd_euclid()
-    {
-        let a = u256h!("018a5cc4c55ac5b050a0831b65e827e5e39fd4515e4e094961c61509e7870814");
-        let b = u256h!("518a5cc4c55ac5b050a0831b65e827e5e39fd4515e4e094961c61509e7870814");
-        let expected = u256h!("0000000000000000000000000000000000000000000000000000000000000004");
-        let result = gcd_euclid(&a,&b).unwrap();
-        assert_eq!(result.0, expected)
+    fn test_lehmer_small() {
+        assert_eq!(lehmer_small(0, 0), (1, 0, 0, 1, true));
+        assert_eq!(lehmer_small(0, 1), (0, 1, 1, 0, false));
+        assert_eq!(
+            lehmer_small(5818365597666026993, 14535145444257436950),
+            (
+                947685836737753349,
+                379355176803460069,
+                2076449349179633850,
+                831195085380860999,
+                true
+            )
+        );
+        assert_eq!(
+            lehmer_small(10841422679839906593, 15507080595343815048),
+            (
+                57434639988632077,
+                40154122160696118,
+                5169026865114605016,
+                3613807559946635531,
+                false
+            )
+        );
     }
 
     #[test]
-    fn test_inv_euclid()
-    {
-        let a = u256h!("008a5cc4c55ac5b050a0831b65e827e5e39fd4515e4e094961c61509e7870814");
-        let b = MODULUS;
-        let expected = u256h!("0000000000000000000000000000000000000000000000000000000000000001");
-        let inv = gcd_euclid(&a,&b).unwrap();
-        
-        let result;
-        if inv.3 {
-            result = a.mulmod(&(&MODULUS - &inv.2), &MODULUS);
-        } else{
-            result = a.mulmod(&inv.2, &MODULUS);
-        }
-
-        assert_eq!(inv.0, expected); //GCD should be 1 showing they are coprime
-        println!("{}", MODULUS-&result);
-        assert_eq!(result, expected) //Then the mulmod should be one showing it's an inverse
+    fn test_lehmer_loop() {
+        assert_eq!(lehmer_loop(0, 0, 1, 0, 0, 1), (1, 0, 0, 1, true));
+        assert_eq!(
+            lehmer_loop(5818365597666026993, 14535145444257436950, 1, 0, 0, 1),
+            (139667543, 55908407, 174687518, 69926775, false)
+        );
+        assert_eq!(
+            lehmer_loop(
+                6044159827974199924,
+                6325623274722585764,
+                4189569209,
+                21585722,
+                1706813914,
+                1897815210
+            ),
+            (
+                1130534579495951597,
+                356413338079229448,
+                1604599888673401540,
+                505867589524443154,
+                false
+            )
+        );
     }
 
     #[test]
-    fn test_inv_lehmer()
-    {
-        let a = u256h!("018a5cc4c55ac5b150a0831b65e828e5e39ff4515e4e094961c61509e7870814");
-        let b = &MODULUS;
-        let expected = u256h!("0000000000000000000000000000000000000000000000000000000000000001");
-        let inv = gcd_lehmer(&a,&b).unwrap();
-        
-        let result;
-        if inv.3 {
-            result = a.mulmod(&(&MODULUS - &inv.1), &MODULUS);
-        } else{
-            result = a.mulmod(&inv.1, &MODULUS);
-        }
-
-        assert_eq!(inv.0, expected); //GCD should be 1 showing they are coprime
-        assert_eq!(expected, (&result%MODULUS)) //Then the mulmod should be one showing it's an inverse
+    fn test_lehmer_double() {
+        let a = u256h!("518a5cc4c55ac5b050a0831b65e827e5e39fd4515e4e094961c61509e7870814");
+        let b = u256h!("018a5cc4c55ac5b050a0831b65e827e5e39fd4515e4e094961c61509e7870814");
+        assert_eq!(lehmer_double(&U256::ZERO, &U256::ZERO), (1, 0, 0, 1, true));
+        assert_eq!(
+            lehmer_double(&a, &b),
+            (983378, 52052097, 1024469, 54227123, true)
+        );
     }
 
     #[test]
-    fn test_gcd_lehmer()
-    {
-        let a = u256h!("018a5cc4c55ac5b050a0831b65e827e5e39ff4515e4e094961c61509e7870814");
-        let b = u256h!("218f5cc4c55ac5b050a0831b65e827e5e39fd4515e4e094961c61509e7870814");
-        let expected = u256h!("0000000000000000000000000000000000000000000000000000000000000014");
-        let result = gcd_lehmer(&a,&b).unwrap();
-        assert_eq!(result.0, expected)
+    fn test_gcd_lehmer() {
+        assert_eq!(
+            gcd_lehmer(U256::ZERO, U256::ZERO),
+            (U256::ZERO, U256::ONE, U256::ZERO, true)
+        );
+        assert_eq!(
+            gcd_lehmer(
+                u256h!("518a5cc4c55ac5b050a0831b65e827e5e39fd4515e4e094961c61509e7870814"),
+                u256h!("018a5cc4c55ac5b050a0831b65e827e5e39fd4515e4e094961c61509e7870814")
+            ),
+            (
+                U256::from(4u64),
+                u256h!("002c851a0dddfaa03b9db2e39d48067d9b57fa0d238b70c7feddf8d267accc41"),
+                u256h!("0934869c752ae9c7d2ed8aa55e7754e5492aaac49f8c9f3416156313a16c1174"),
+                true
+            )
+        );
+        assert_eq!(
+            gcd_lehmer(
+                u256h!("7dfd26515f3cd365ea32e1a43dbac87a25d0326fd834a889cb1e4c6c3c8d368c"),
+                u256h!("3d341ef315cbe5b9f0ab79255f9684e153deaf5f460a8425819c84ec1e80a2f3")
+            ),
+            (
+                u256h!("0000000000000000000000000000000000000000000000000000000000000001"),
+                u256h!("0bbc35a0c1fd8f1ae85377ead5a901d4fbf0345fa303a87a4b4b68429cd69293"),
+                u256h!("18283a24821b7de14cf22afb0e1a7efb4212b7f373988f5a0d75f6ee0b936347"),
+                false
+            )
+        );
+        /* TODO
+        assert_eq!(
+            gcd_lehmer(
+                u256h!("836fab5d425345751b3425e733e8150a17fdab2d5fb840ede5e0879f41497a4f"),
+                u256h!("196e875b381eb95d9b5c6c3f198c5092b3ccc21279a7e68bc42cb6bca2d2644d")
+            ),
+            (
+                u256h!("000000000000000000000000000000000000000000000000c59f8490536754fd"),
+                u256h!("000000000000000006865401d85836d50a2bd608f152186fb24072a122d0dc5d"),
+                u256h!("000000000000000021b8940f60792f546cbeb17f8b852d33a00b14b323d6de70"),
+                false
+            )
+        );
+        assert_eq!(
+            gcd_lehmer(
+                u256h!("00253222ed7b612113dbea0be0e1a0b88f2c0c16250f54bf1ec35d62671bf83a"),
+                u256h!("0000000000025d4e064960ef2964b2170f1cd63ab931968621dde8a867079fd4")
+            ),
+            (
+                u256h!("000000000000000000000000000505b22b0a9fd5a6e2166e3486f0109e6f60b2"),
+                u256h!("0000000000000000000000000000000000000000000000001f16d40433587ae9"),
+                u256h!("0000000000000000000000000000000000000001e91177fbec66b1233e79662e"),
+                true
+            )
+        );
+        */
     }
 }
