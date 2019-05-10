@@ -1,6 +1,7 @@
 // TODO: #![deny(warnings, missing_docs)]
 #![warn(clippy::all)]
 #![feature(const_fn)]
+#![feature(custom_inner_attributes)] // For #![rustfmt::skip]
 pub mod binops;
 pub mod curve;
 mod division;

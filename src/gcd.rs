@@ -68,6 +68,8 @@ fn lehmer_small(mut r0: u64, mut r1: u64) -> (u64, u64, u64, u64, bool) {
 
 /// Compute the Lehmer update matrix for the most significant 64-bits of r0 and r1.
 /// OPT: Would a variation of binary gcd apply here and be faster?
+/// OPT: Use a division optimized for small quotients, like in GMPs
+///      https://github.com/ryepdx/gmp/blob/master/mpn/generic/hgcd2.c
 #[inline(always)]
 fn lehmer_loop(
     mut r0: u64,
@@ -108,6 +110,7 @@ fn lehmer_loop(
 }
 
 /// Compute the Lehmer update matrix using double words
+/// See https://github.com/ryepdx/gmp/blob/090b098806bc1a8f3af777b862369f58be465dd9/mpn/generic/hgcd2.c#L226
 #[inline(always)]
 fn lehmer_double(r0: &U256, r1: &U256) -> (u64, u64, u64, u64, bool) {
     debug_assert!(r0 >= r1);
@@ -117,8 +120,13 @@ fn lehmer_double(r0: &U256, r1: &U256) -> (u64, u64, u64, u64, bool) {
     let s = r0.leading_zeros();
     let r0s = r0.clone() << s;
     let r1s = r1.clone() << s;
-    lehmer_loop(r0s.c3, r1s.c3, 1, 0, 0, 1)
+    let q = lehmer_loop(r0s.c3, r1s.c3, 1, 0, 0, 1);
+    if q.2 == 0u64 {
+        return q;
+    }
+    q
     // We can return here and have a perfectly valid non-double Lehmer GCD.
+    // TODO: Return if q10 = 0, i.e. no progress has been made.
 
     // TODO: recompute r0 and r1 using a double-word approximation and repeat.
 }
@@ -129,7 +137,7 @@ fn lehmer_update(
     a1: &mut U256,
     (q00, q01, q10, q11, even): (u64, u64, u64, u64, bool),
 ) {
-    // OPT: Inplace clone-free multiply
+    // OPT: Inplace clone-free multiply, like GMP's addaddmul_1msb
     if even {
         let b0 = q00 * a0.clone() - q01 * a1.clone();
         let b1 = q11 * a1.clone() - q10 * a0.clone();
@@ -153,11 +161,22 @@ pub fn gcd_lehmer(mut r0: U256, mut r1: U256) -> (U256, U256, U256, bool) {
     let mut even = true;
     while r1 != U256::ZERO {
         let q = lehmer_double(&r0, &r1);
-        // TODO: Full precision step when q10 == q.2 == 0
-        lehmer_update(&mut r0, &mut r1, q);
-        lehmer_update(&mut s0, &mut s1, q);
-        lehmer_update(&mut t0, &mut t1, q);
-        even ^= !q.4;
+        if q.2 != 0u64 {
+            lehmer_update(&mut r0, &mut r1, q);
+            lehmer_update(&mut s0, &mut s1, q);
+            lehmer_update(&mut t0, &mut t1, q);
+            even ^= !q.4;
+        } else {
+            #![rustfmt::skip]
+            // Do a full precision Euclid step. q is at least a halfword.
+            // This is a rare event.
+            // OPT: use single limb version when q is small enough?
+            let q = &r0 / &r1;
+            let t = r0 - &q * &r1; r0 = r1; r1 = t;
+            let t = s0 - &q * &s1; s0 = s1; s1 = t;
+            let t = t0 -  q * &t1; t0 = t1; t1 = t;
+            even = !even;
+        }
     }
     // TODO: Compute using absolute value instead of patching sign.
     if even {
@@ -295,7 +314,6 @@ mod tests {
                 false
             )
         );
-        /* TODO
         assert_eq!(
             gcd_lehmer(
                 u256h!("836fab5d425345751b3425e733e8150a17fdab2d5fb840ede5e0879f41497a4f"),
@@ -320,6 +338,5 @@ mod tests {
                 true
             )
         );
-        */
     }
 }
