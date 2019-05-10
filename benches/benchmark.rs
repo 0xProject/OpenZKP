@@ -3,12 +3,12 @@ use hex_literal::*;
 use starkcrypto::curve::Affine;
 use starkcrypto::ecdsa::{private_to_public, sign, verify};
 use starkcrypto::field::FieldElement;
-use starkcrypto::jacobian::Jacobian;
+use starkcrypto::gcd::gcd_lehmer;
 use starkcrypto::pedersen::hash;
 use starkcrypto::u256::U256;
 use starkcrypto::u256h;
 use starkcrypto::wnaf;
-use starkcrypto::gcd::{gcd_lehmer};
+
 
 fn u256_add(crit: &mut Criterion) {
     let a = U256::new(
@@ -185,7 +185,19 @@ fn field_inv(crit: &mut Criterion) {
     });
 }
 
-fn field_inv_Lemher(crit: &mut Criterion) {
+fn field_inv_euclid(crit: &mut Criterion) {
+    let a = FieldElement::new(&[
+        0x0f3855f5, 0x37862eb2, 0x275b919f, 0x325329cb, 0xe968e6a2, 0xa2ceee5c, 0xd5f1d547,
+        0x07211989,
+    ]);
+    crit.bench_function("Field inv Euclid", move |bench| {
+        bench.iter(|| {
+            black_box(black_box(&a).clone().inv_euclid());
+        })
+    });
+}
+
+fn field_inv_lehmer(crit: &mut Criterion) {
     let a = FieldElement::new(&[
         0x0f3855f5, 0x37862eb2, 0x275b919f, 0x325329cb, 0xe968e6a2, 0xa2ceee5c, 0xd5f1d547,
         0x07211989,
@@ -439,15 +451,6 @@ fn ecdsa_verify(crit: &mut Criterion) {
     });
 }
 
-fn gcd_speed(crit: &mut Criterion) {
-    let a = u256h!("03d937c035c878245caf64531a5756109c53068da139362728feb561405371cb");
-    let b = u256h!("0208a0a10250e382e1e4bbe2880906c2791bf6275695e02fbbc6aeff9cd8b31a");
-
-    crit.bench_function("Gcd Direct test", move |bench| {
-        bench.iter(|| black_box(gcd_lehmer(&a, &b)))
-    });
-}
-
 // fn criterion_benchmark(c: &mut Criterion) {
 //     u256_add(c);
 //     u256_mul(c);
@@ -477,8 +480,9 @@ fn criterion_benchmark(c: &mut Criterion) {
     //u256_invmod_Lemher(c);
     //u256_invmod_Euclid(c);
     field_inv(c);
-    //field_inv_Lemher(c);
-    gcd_speed(c);
+    field_inv_euclid(c);
+    field_inv_lehmer(c);
+    //gcd_speed(c);
 }
 
 criterion_group!(benches, criterion_benchmark);
