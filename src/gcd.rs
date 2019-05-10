@@ -112,7 +112,7 @@ fn lehmer_loop(
 /// Compute the Lehmer update matrix using double words
 /// See https://github.com/ryepdx/gmp/blob/090b098806bc1a8f3af777b862369f58be465dd9/mpn/generic/hgcd2.c#L226
 #[inline(always)]
-fn lehmer_double(r0: &U256, r1: &U256) -> (u64, u64, u64, u64, bool) {
+fn lehmer_double(mut r0: U256, mut r1: U256) -> (u64, u64, u64, u64, bool) {
     debug_assert!(r0 >= r1);
     if r0.bits() < 64 {
         return lehmer_small(r0.c0, r1.c0);
@@ -121,14 +121,23 @@ fn lehmer_double(r0: &U256, r1: &U256) -> (u64, u64, u64, u64, bool) {
     let r0s = r0.clone() << s;
     let r1s = r1.clone() << s;
     let q = lehmer_loop(r0s.c3, r1s.c3, 1, 0, 0, 1);
+    // We can return q here and have a perfectly valid single-word Lehmer GCD.
+    // return q;
     if q.2 == 0u64 {
         return q;
     }
-    q
-    // We can return here and have a perfectly valid non-double Lehmer GCD.
-    // TODO: Return if q10 = 0, i.e. no progress has been made.
 
-    // TODO: recompute r0 and r1 using a double-word approximation and repeat.
+    // Recompute r0 and r1 and take the high bits.
+    // OPT: This does not need full precision.
+    // OPT: Can we reuse the shifted variables here?
+    // TODO: Should we use lehmer_small here when r0 is one word?
+    lehmer_update(&mut r0, &mut r1, q);
+    let s = r0.leading_zeros();
+    let r0s = r0.clone() << s;
+    let r1s = r1.clone() << s;
+    let mut qn = lehmer_loop(r0s.c3, r1s.c3, q.0, q.1, q.2, q.3);
+    qn.4 ^= !q.4;
+    qn
 }
 
 #[inline(always)]
@@ -151,6 +160,7 @@ fn lehmer_update(
     }
 }
 
+#[rustfmt::skip]
 pub fn gcd_lehmer(mut r0: U256, mut r1: U256) -> (U256, U256, U256, bool) {
     debug_assert!(r0 >= r1);
     // TODO: Support r1 >= r0
@@ -160,16 +170,15 @@ pub fn gcd_lehmer(mut r0: U256, mut r1: U256) -> (U256, U256, U256, bool) {
     let mut t1 = U256::ONE;
     let mut even = true;
     while r1 != U256::ZERO {
-        let q = lehmer_double(&r0, &r1);
+        let q = lehmer_double(r0.clone(), r1.clone());
         if q.2 != 0u64 {
             lehmer_update(&mut r0, &mut r1, q);
             lehmer_update(&mut s0, &mut s1, q);
             lehmer_update(&mut t0, &mut t1, q);
             even ^= !q.4;
         } else {
-            #![rustfmt::skip]
             // Do a full precision Euclid step. q is at least a halfword.
-            // This is a rare event.
+            // This should happen zero or one time, seldom more.
             // OPT: use single limb version when q is small enough?
             let q = &r0 / &r1;
             let t = r0 - &q * &r1; r0 = r1; r1 = t;
@@ -197,7 +206,7 @@ pub fn inv_lehmer(modulus: &U256, num: &U256) -> Option<U256> {
     let mut t1 = U256::ONE;
     let mut even = true;
     while r1 != U256::ZERO {
-        let q = lehmer_double(&r0, &r1);
+        let q = lehmer_double(r0.clone(), r1.clone());
         // TODO: Full precision step when q10 == q.2 == 0
         lehmer_update(&mut r0, &mut r1, q);
         lehmer_update(&mut t0, &mut t1, q);
@@ -275,12 +284,19 @@ mod tests {
 
     #[test]
     fn test_lehmer_double() {
-        let a = u256h!("518a5cc4c55ac5b050a0831b65e827e5e39fd4515e4e094961c61509e7870814");
-        let b = u256h!("018a5cc4c55ac5b050a0831b65e827e5e39fd4515e4e094961c61509e7870814");
-        assert_eq!(lehmer_double(&U256::ZERO, &U256::ZERO), (1, 0, 0, 1, true));
+        assert_eq!(lehmer_double(U256::ZERO, U256::ZERO), (1, 0, 0, 1, true));
         assert_eq!(
-            lehmer_double(&a, &b),
-            (983378, 52052097, 1024469, 54227123, true)
+            lehmer_double(
+                u256h!("518a5cc4c55ac5b050a0831b65e827e5e39fd4515e4e094961c61509e7870814"),
+                u256h!("018a5cc4c55ac5b050a0831b65e827e5e39fd4515e4e094961c61509e7870814")
+            ),
+            (
+                24753544726280,
+                1310252935479731,
+                64710401929971,
+                3425246566597885,
+                false
+            )
         );
     }
 
