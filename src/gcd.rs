@@ -198,6 +198,7 @@ pub fn gcd_lehmer(mut r0: U256, mut r1: U256) -> (U256, U256, U256, bool) {
     (r0, s0, t0, even)
 }
 
+#[rustfmt::skip]
 pub fn inv_lehmer(modulus: &U256, num: &U256) -> Option<U256> {
     debug_assert!(modulus > num);
     let mut r0 = modulus.clone();
@@ -207,10 +208,19 @@ pub fn inv_lehmer(modulus: &U256, num: &U256) -> Option<U256> {
     let mut even = true;
     while r1 != U256::ZERO {
         let q = lehmer_double(r0.clone(), r1.clone());
-        // TODO: Full precision step when q10 == q.2 == 0
-        lehmer_update(&mut r0, &mut r1, q);
-        lehmer_update(&mut t0, &mut t1, q);
-        even ^= !q.4;
+        if q.2 != 0u64 {
+            lehmer_update(&mut r0, &mut r1, q);
+            lehmer_update(&mut t0, &mut t1, q);
+            even ^= !q.4;
+        } else {
+            // Do a full precision Euclid step. q is at least a halfword.
+            // This should happen zero or one time, seldom more.
+            // OPT: use single limb version when q is small enough?
+            let q = &r0 / &r1;
+            let t = r0 - &q * &r1; r0 = r1; r1 = t;
+            let t = t0 -  q * &t1; t0 = t1; t1 = t;
+            even = !even;
+        }
     }
     if r0 == U256::ONE {
         // When `even` t0 is negative and in twos-complement form
