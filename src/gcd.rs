@@ -1,4 +1,5 @@
 use crate::u256::U256;
+use crunchy::unroll;
 
 #[inline(always)]
 fn euclid_step(
@@ -41,63 +42,18 @@ pub fn gcd_euclid(a: &U256, b: &U256) -> (U256, U256, U256, bool) {
 /// Division optimized for small values
 /// Requires a > b > 0. Returns a / b.
 #[inline(always)]
+#[allow(clippy::cognitive_complexity)]
 fn div1(a: u64, b: u64) -> u64 {
-    let mut r = a - b;
-    if r < b {
-        1
-    } else {
-        r -= b;
-        if r < b {
-            2
-        } else {
+    let mut r = a;
+    unroll! {
+        for i in 1..20 {
             r -= b;
             if r < b {
-                3
-            } else {
-                r -= b;
-                if r < b {
-                    4
-                } else {
-                    r -= b;
-                    if r < b {
-                        5
-                    } else {
-                        r -= b;
-                        if r < b {
-                            6
-                        } else {
-                        r -= b;
-                        if r < b {
-                            7
-                        } else {
-                        r -= b;
-                        if r < b {
-                            8
-                        } else {
-                        r -= b;
-                        if r < b {
-                            9
-                        } else {
-                        r -= b;
-                        if r < b {
-                            10
-                        } else {
-                        r -= b;
-                        if r < b {
-                            11
-                        } else {
-                            a / b
-                        }
-                        }
-                        }
-                        }
-                        }
-                        }
-                    }
-                }
+                return i as u64
             }
         }
     }
+    a / b
 }
 
 /// Compute the Lehmer update matrix for small values.
