@@ -38,10 +38,72 @@ pub fn gcd_euclid(a: &U256, b: &U256) -> (U256, U256, U256, bool) {
     (a_prime, consquences.0, consquences.2, even)
 }
 
+/// Division optimized for small values
+/// Requires a > b > 0. Returns a / b.
+#[inline(always)]
+fn div1(a: u64, b: u64) -> u64 {
+    let mut r = a - b;
+    if r < b {
+        1
+    } else {
+        r -= b;
+        if r < b {
+            2
+        } else {
+            r -= b;
+            if r < b {
+                3
+            } else {
+                r -= b;
+                if r < b {
+                    4
+                } else {
+                    r -= b;
+                    if r < b {
+                        5
+                    } else {
+                        r -= b;
+                        if r < b {
+                            6
+                        } else {
+                        r -= b;
+                        if r < b {
+                            7
+                        } else {
+                        r -= b;
+                        if r < b {
+                            8
+                        } else {
+                        r -= b;
+                        if r < b {
+                            9
+                        } else {
+                        r -= b;
+                        if r < b {
+                            10
+                        } else {
+                        r -= b;
+                        if r < b {
+                            11
+                        } else {
+                            a / b
+                        }
+                        }
+                        }
+                        }
+                        }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 /// Compute the Lehmer update matrix for small values.
 /// This is essentialy Euclids extended GCD algorithm for 64 bits.
 /// OPT: Would this be faster using extended binary gcd?
-#[inline(always)]
+#[inline(never)]
 fn lehmer_small(mut r0: u64, mut r1: u64) -> (u64, u64, u64, u64, bool) {
     let mut q00 = 1u64;
     let mut q01 = 0u64;
@@ -52,14 +114,14 @@ fn lehmer_small(mut r0: u64, mut r1: u64) -> (u64, u64, u64, u64, bool) {
         if r1 == 0u64 {
             return (q00, q01, q10, q11, true);
         }
-        let q = r0 / r1;
+        let q = if r0 < r1 { 0 } else { div1(r0, r1) };
         r0 -= q * r1;
         q00 += q * q10;
         q01 += q * q11;
         if r0 == 0u64 {
             return (q10, q11, q00, q01, false);
         }
-        let q = r1 / r0;
+        let q = div1(r1, r0);
         r1 -= q * r0;
         q10 += q * q00;
         q11 += q * q01;
@@ -70,7 +132,7 @@ fn lehmer_small(mut r0: u64, mut r1: u64) -> (u64, u64, u64, u64, bool) {
 /// OPT: Would a variation of binary gcd apply here and be faster?
 /// OPT: Use a division optimized for small quotients, like in GMPs
 ///      https://github.com/ryepdx/gmp/blob/master/mpn/generic/hgcd2.c
-#[inline(always)]
+#[inline(never)]
 fn lehmer_loop(
     mut r0: u64,
     mut r1: u64,
@@ -84,22 +146,26 @@ fn lehmer_loop(
         return (q00, q01, q10, q11, true);
     }
     // The r values are one step ahead of the q values so we can test the stopping condition.
-    let mut q0 = r0 / r1;
+    // FAILS: debug_assert!(r1 >= r0);
+    // let mut q0 = div1(r0, r1);
+    let mut q0 = if r0 < r1 { 0 } else { div1(r0, r1) };
     r0 -= q0 * r1;
     if r0 < LIMIT {
         return (q00, q01, q10, q11, true);
     }
     loop {
         // Loop is unrolled once to avoid swapping variables and tracking parity.
-        let q1 = r1 / r0;
+        // OPT: Unroll into subtraction only rounds
+        let q1 = div1(r1, r0);
         r1 -= q1 * r0;
         if r1 < LIMIT {
             return (q00, q01, q10, q11, true);
         }
         q00 += q0 * q10;
         q01 += q0 * q11;
+
         // Repeat with indices 0 and 1 flipped
-        q0 = r0 / r1;
+        q0 = div1(r0, r1);
         r0 -= q0 * r1;
         if r0 < LIMIT {
             return (q10, q11, q00, q01, false);
@@ -111,7 +177,7 @@ fn lehmer_loop(
 
 /// Compute the Lehmer update matrix using double words
 /// See https://github.com/ryepdx/gmp/blob/090b098806bc1a8f3af777b862369f58be465dd9/mpn/generic/hgcd2.c#L226
-#[inline(always)]
+#[inline(never)]
 fn lehmer_double(mut r0: U256, mut r1: U256) -> (u64, u64, u64, u64, bool) {
     debug_assert!(r0 >= r1);
     if r0.bits() < 64 {
@@ -140,7 +206,7 @@ fn lehmer_double(mut r0: U256, mut r1: U256) -> (u64, u64, u64, u64, bool) {
     qn
 }
 
-#[inline(always)]
+#[inline(never)]
 fn lehmer_update(
     a0: &mut U256,
     a1: &mut U256,
