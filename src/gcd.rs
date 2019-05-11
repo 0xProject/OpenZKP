@@ -44,6 +44,7 @@ pub fn gcd_euclid(a: &U256, b: &U256) -> (U256, U256, U256, bool) {
 #[inline(always)]
 #[allow(clippy::cognitive_complexity)]
 fn div1(a: u64, b: u64) -> u64 {
+    debug_assert!(a > b);
     let mut r = a;
     unroll! {
         for i in 1..20 {
@@ -61,19 +62,21 @@ fn div1(a: u64, b: u64) -> u64 {
 /// OPT: Would this be faster using extended binary gcd?
 #[inline(never)]
 fn lehmer_small(mut r0: u64, mut r1: u64) -> (u64, u64, u64, u64, bool) {
+    if r1 == 0u64 {
+        return (1, 0, 0, 1, true);
+    }
     let mut q00 = 1u64;
     let mut q01 = 0u64;
     let mut q10 = 0u64;
     let mut q11 = 1u64;
-    loop {
-        // Loop is unrolled once to avoid swapping variables and tracking parity.
-        if r1 == 0u64 {
-            return (q00, q01, q10, q11, true);
-        }
-        let q = if r0 < r1 { 0 } else { div1(r0, r1) };
+    if r0 >= r1 { 
+        let q = div1(r0, r1);
         r0 -= q * r1;
         q00 += q * q10;
         q01 += q * q11;
+    }
+    loop {
+        // Loop is unrolled once to avoid swapping variables and tracking parity.
         if r0 == 0u64 {
             return (q10, q11, q00, q01, false);
         }
@@ -81,6 +84,13 @@ fn lehmer_small(mut r0: u64, mut r1: u64) -> (u64, u64, u64, u64, bool) {
         r1 -= q * r0;
         q10 += q * q00;
         q11 += q * q01;
+        if r1 == 0u64 {
+            return (q00, q01, q10, q11, true);
+        }
+        let q = div1(r0, r1);
+        r0 -= q * r1;
+        q00 += q * q10;
+        q01 += q * q11;
     }
 }
 
