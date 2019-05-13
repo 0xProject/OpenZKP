@@ -429,7 +429,6 @@ impl From<u64> for U256 {
         U256::from_u64(n)
     }
 }
-
 impl From<u128> for U256 {
     fn from(n: u128) -> U256 {
         U256::from_u128(n)

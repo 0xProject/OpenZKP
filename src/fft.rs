@@ -1,7 +1,14 @@
 use crate::field::FieldElement;
 use crate::u256::U256;
 
-pub fn fft(root : FieldElement, vector :  Vec<FieldElement>) -> Vec<FieldElement>{
+pub fn fft(root : FieldElement, vector :  Vec<FieldElement>, cofactor: Option<FieldElement>) -> Vec<FieldElement>{
+    match cofactor{
+        None => return fft_pure(root, vector),
+        Some(x) => return fft_cofactor(root, vector, x),
+    }
+}
+
+pub fn fft_pure(root : FieldElement, vector :  Vec<FieldElement>) -> Vec<FieldElement>{
     let n = vector.len();
 
     if n == 1{
@@ -17,8 +24,8 @@ pub fn fft(root : FieldElement, vector :  Vec<FieldElement>) -> Vec<FieldElement
         index +=2;
     }
     
-    even = fft((&root).square(), even);
-    odd = fft((&root).square(), odd);
+    even = fft_pure((&root).square(), even);
+    odd = fft_pure((&root).square(), odd);
     let mut power = FieldElement::ONE;
     for i in 0..(n/2){
         odd[i] *= &power;
@@ -56,8 +63,8 @@ pub fn fft_cofactor(root : FieldElement, mut vector :  Vec<FieldElement>, cofact
         index +=2;
     }
     
-    even = fft((&root).square(), even);
-    odd = fft((&root).square(), odd);
+    even = fft_pure((&root).square(), even);
+    odd = fft_pure((&root).square(), odd);
     let mut power = FieldElement::ONE;
     for i in 0..(n/2){
         odd[i] *= &power;
@@ -69,6 +76,16 @@ pub fn fft_cofactor(root : FieldElement, mut vector :  Vec<FieldElement>, cofact
 
     (even).append(&mut odd);
     even
+}
+pub fn ifft(root : FieldElement, vector :  Vec<FieldElement>)  -> Vec<FieldElement>{
+    let r = fft_pure((&root).inv().unwrap(), vector);
+    let len_el = FieldElement::from(U256::from((&r).len() as u64));
+    let s =  len_el.inv().unwrap();
+    let mut ret = Vec::new();
+    for i in 0..(r.len()){
+        ret.push(&s*(&r[i]))
+    }
+    ret
 }
 
 #[cfg(test)]
@@ -92,7 +109,7 @@ mod tests {
          vector.push(b);
          vector.push(c);
          vector.push(d);
-         let res = fft(root, vector);
+         let res = fft(root, vector, None);
          assert_eq!(U256::from(&res[0]), U256::from(10 as u64));
          assert_eq!(U256::from(&res[1]), u256h!("0800000000000010fffffffffffffffffffffffffffffffffffffffffffffff7")); // -10 mod P
          assert_eq!(U256::from(&res[2]), U256::ZERO);
