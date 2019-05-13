@@ -11,6 +11,7 @@ pub mod orders;
 pub mod pedersen;
 mod pedersen_points;
 pub mod wnaf;
+pub mod merkle;
 #[macro_use]
 pub mod u256;
 pub mod montgomery;

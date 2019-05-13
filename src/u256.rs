@@ -410,6 +410,14 @@ impl U256 {
             None
         }
     }
+    pub fn to_le(&mut self) {
+        let mut hold = (self.c0).to_le();;
+        self.c0 = (self.c3).to_le();
+        self.c3 = hold;
+        hold = (self.c2).to_le();
+        self.c2 = (self.c1).to_le();
+        self.c3 = hold;
+    }
 }
 
 impl From<&U256> for u64 {
