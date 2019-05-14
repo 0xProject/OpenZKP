@@ -14,8 +14,8 @@ mod pedersen_points;
 pub mod wnaf;
 #[macro_use]
 pub mod u256;
-pub mod montgomery;
 pub mod gcd;
+pub mod montgomery;
 mod utils;
 use curve::Affine;
 use field::FieldElement;

@@ -1,5 +1,6 @@
 use crate::division::{divrem_nby1, divrem_nbym};
 use crate::gcd::{gcd_euclid, gcd_lehmer, inv_lehmer};
+use crate::utils::{adc, div_2_1, mac, sbb};
 use crate::{commutative_binop, noncommutative_binop};
 use hex_literal::*;
 use std::cmp::Ordering;
@@ -10,8 +11,6 @@ use std::ops::{
     ShrAssign, Sub, SubAssign,
 };
 use std::u64;
-use crate::utils::{adc, div_2_1, mac, sbb};
-
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ParseError {

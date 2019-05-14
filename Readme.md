@@ -15,9 +15,16 @@ cargo bench --bench benchmark -- --baseline master
 open target/criterion/report/index.html
 ```
 
+Benchmarking using Mac OS' instrumentation. For this we need the `cargo-instruments` plugin for Cargo.
+
 ```sh
 cargo install cargo-instruments
-cargo instruments --release --bench benchmark --open
+```
+
+You can then run tests under profiling. It is recommended to filter for a specific test.
+
+```sh
+cargo instruments --release --bench benchmark --open [test name]
 ```
 
 ## TODO

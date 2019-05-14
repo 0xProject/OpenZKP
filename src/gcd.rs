@@ -57,25 +57,26 @@ fn div1(a: u64, b: u64) -> u64 {
     a / b
 }
 
-
 /// Division optimized for small values
 /// Requires a > b > 0. Returns a / b.
 #[inline(always)]
 #[allow(clippy::cognitive_complexity)]
 fn div_update(r0: &mut u64, r1: u64, u0: &mut u64, u1: u64, v0: &mut u64, v1: u64) {
     unroll! {
-        for i in 1..20 {
+        for q in 1..10 {
             *r0 -= r1;
             if *r0 < r1 {
-                *u0 += (i as u64) * u1;
-                *v0 += (i as u64) * v1;
+                println!("{:?}", q);
+                *u0 += (q as u64) * u1;
+                *v0 += (q as u64) * v1;
                 return;
             }
         }
     }
     let mut q = *r0 / r1;
     *r0 -= q * r1;
-    q += 19;
+    q += 9;
+    println!("{:?}", q);
     *u0 += q * u1;
     *v0 += q * v1;
 }
@@ -92,7 +93,7 @@ fn lehmer_small(mut r0: u64, mut r1: u64) -> (u64, u64, u64, u64, bool) {
     let mut q01 = 0u64;
     let mut q10 = 0u64;
     let mut q11 = 1u64;
-    if r0 >= r1 { \
+    if r0 >= r1 {
         div_update(&mut r0, r1, &mut q00, q10, &mut q01, q11);
     }
     loop {
@@ -122,36 +123,23 @@ fn lehmer_loop(
     mut q11: u64,
 ) -> (u64, u64, u64, u64, bool) {
     const LIMIT: u64 = 1u64 << 32;
-    if r1 == 0u64 {
+    if r1 < LIMIT {
         return (q00, q01, q10, q11, true);
     }
-    // The r values are one step ahead of the q values so we can test the stopping condition.
-    // FAILS: debug_assert!(r1 >= r0);
-    // let mut q0 = div1(r0, r1);
-    let mut q0 = if r0 < r1 { 0 } else { div1(r0, r1) };
-    r0 -= q0 * r1;
-    if r0 < LIMIT {
-        return (q00, q01, q10, q11, true);
+    if r0 >= r1 {
+        div_update(&mut r0, r1, &mut q00, q10, &mut q01, q11);
     }
     loop {
+        // TODO: Collins stoping condition.
         // Loop is unrolled once to avoid swapping variables and tracking parity.
-        // OPT: Unroll into subtraction only rounds
-        let q1 = div1(r1, r0);
-        r1 -= q1 * r0;
-        if r1 < LIMIT {
-            return (q00, q01, q10, q11, true);
-        }
-        q00 += q0 * q10;
-        q01 += q0 * q11;
-
-        // Repeat with indices 0 and 1 flipped
-        q0 = div1(r0, r1);
-        r0 -= q0 * r1;
         if r0 < LIMIT {
             return (q10, q11, q00, q01, false);
         }
-        q10 += q1 * q00;
-        q11 += q1 * q01;
+        div_update(&mut r1, r0, &mut q10, q00, &mut q11, q01);
+        if r1 < LIMIT {
+            return (q00, q01, q10, q11, true);
+        }
+        div_update(&mut r0, r1, &mut q00, q10, &mut q01, q11);
     }
 }
 
@@ -169,6 +157,7 @@ fn lehmer_double(mut r0: U256, mut r1: U256) -> (u64, u64, u64, u64, bool) {
     let q = lehmer_loop(r0s.c3, r1s.c3, 1, 0, 0, 1);
     // We can return q here and have a perfectly valid single-word Lehmer GCD.
     // return q;
+    println!("({:?}, {:?}, {:?}, {:?}) (single word)", q.0, q.1, q.2, q.3);
     if q.2 == 0u64 {
         return q;
     }
@@ -192,7 +181,7 @@ fn lehmer_update(
     a1: &mut U256,
     (q00, q01, q10, q11, even): (u64, u64, u64, u64, bool),
 ) {
-    // OPT: Inplace clone-free multiply, like GMP's addaddmul_1msb
+    // OPT: Inplace clone-free multiply.
     if even {
         let b0 = q00 * a0.clone() - q01 * a1.clone();
         let b1 = q11 * a1.clone() - q10 * a0.clone();
@@ -217,6 +206,7 @@ pub fn gcd_lehmer(mut r0: U256, mut r1: U256) -> (U256, U256, U256, bool) {
     let mut even = true;
     while r1 != U256::ZERO {
         let q = lehmer_double(r0.clone(), r1.clone());
+        println!("({:?}, {:?}, {:?}, {:?})", q.0, q.1, q.2, q.3);
         if q.2 != 0u64 {
             lehmer_update(&mut r0, &mut r1, q);
             lehmer_update(&mut s0, &mut s1, q);
@@ -227,6 +217,7 @@ pub fn gcd_lehmer(mut r0: U256, mut r1: U256) -> (U256, U256, U256, bool) {
             // This should happen zero or one time, seldom more.
             // OPT: use single limb version when q is small enough?
             let q = &r0 / &r1;
+            println!("{:?} full precission", q);
             let t = r0 - &q * &r1; r0 = r1; r1 = t;
             let t = s0 - &q * &s1; s0 = s1; s1 = t;
             let t = t0 -  q * &t1; t0 = t1; t1 = t;
@@ -351,6 +342,22 @@ mod tests {
                 1310252935479731,
                 64710401929971,
                 3425246566597885,
+                false
+            )
+        );
+    }
+
+    #[test]
+    fn test_lehmer_34() {
+        assert_eq!(
+            gcd_lehmer(
+                u256h!("518a5cc4c55ac5b050a0831b65e827e5e39fd4515e4e094961c61509e7870814"),
+                u256h!("018a5cc4c55ac5b050a0831b65e827e5e39fd4515e4e094961c61509e7870814")
+            ),
+            (
+                u256h!("0000000000000000000000000000000000000000000000000000000000000001"),
+                u256h!("0bbc35a0c1fd8f1ae85377ead5a901d4fbf0345fa303a87a4b4b68429cd69293"),
+                u256h!("18283a24821b7de14cf22afb0e1a7efb4212b7f373988f5a0d75f6ee0b936347"),
                 false
             )
         );
