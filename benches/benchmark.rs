@@ -10,7 +10,6 @@ use starkcrypto::u256::U256;
 use starkcrypto::u256h;
 use starkcrypto::wnaf;
 
-
 fn u256_add(crit: &mut Criterion) {
     let a = U256::new(
         0x531bb3056443bc99,
