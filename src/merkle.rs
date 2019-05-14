@@ -115,6 +115,34 @@ pub fn make_tree(leaves: Vec<U256>, hash: HashType) -> Vec<Vec<u8>>{
     tree
 }
 
+pub fn proof(tree: Vec<Vec<u8>>, indices: Vec<usize>) -> Vec<Vec<u8>>{
+    let depth = 64 - (tree.len() as u64).leading_zeros()-2; //Log base 2 - 1
+    let num_leaves = 2_u64.pow(depth);
+    let num_nodes = 2 * num_leaves;
+    let mut known = vec![false; num_nodes as usize];
+    let mut decommitment = Vec::new();
+
+    let fixed = 2_u64.pow(depth);
+    for i in indices.iter(){
+        known[(fixed as usize) + i] = true;
+    }
+
+    for d in (1..depth).rev(){
+        for i in (2_u64.pow(d-1))..(2_u64.pow(d)){
+            let left = known[(2*i) as usize];
+            let right = known[(2*i + 1) as usize];
+            if left && !right {
+                decommitment.push(tree[(2*i + 1) as usize].clone());
+            }
+            if !left && right {
+                decommitment.push(tree[(2*1) as usize].clone());
+            }
+            known[i as usize] = left || right;
+        }
+    }
+    decommitment
+}
+
 
 //Helper functions
 fn transform_U256(data: U256) -> Vec<u8>{
