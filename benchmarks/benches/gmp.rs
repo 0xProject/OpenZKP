@@ -1,5 +1,5 @@
-use rug::Integer;
 use criterion::{black_box, Bencher};
+use rug::Integer;
 
 // Uses mpz_invert(n, modulus)
 // See https://gmplib.org/repo/gmp/file/tip/mpz/invert.c
@@ -21,8 +21,16 @@ use criterion::{black_box, Bencher};
 // See also https://pdfs.semanticscholar.org/a7e7/b01a3dd6ac0ec160b35e513c5efa38c2369e.pdf
 // See also https://stackoverflow.com/questions/16989677/lehmers-extended-gcd-algorithm-implementation
 pub fn gmp_field_inv(bench: &mut Bencher, _i: &()) {
-    let m = Integer::from_str_radix("0800000000000011000000000000000000000000000000000000000000000001", 16).unwrap();
-    let a = Integer::from_str_radix("03d937c035c878245caf64531a5756109c53068da139362728feb561405371cb", 16).unwrap();
+    let m = Integer::from_str_radix(
+        "0800000000000011000000000000000000000000000000000000000000000001",
+        16,
+    )
+    .unwrap();
+    let a = Integer::from_str_radix(
+        "03d937c035c878245caf64531a5756109c53068da139362728feb561405371cb",
+        16,
+    )
+    .unwrap();
     bench.iter(|| {
         black_box(black_box(&a).clone().invert(&m));
     })

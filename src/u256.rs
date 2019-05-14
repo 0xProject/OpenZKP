@@ -411,12 +411,23 @@ impl U256 {
         }
     }
     pub fn to_le(&mut self) {
-        let mut hold = (self.c0).to_le();;
-        self.c0 = (self.c3).to_le();
+        let mut hold = (self.c0).to_be();
+        self.c0 = (self.c3).to_be();
         self.c3 = hold;
-        hold = (self.c2).to_le();
-        self.c2 = (self.c1).to_le();
-        self.c3 = hold;
+        hold = (self.c2).to_be();
+        self.c2 = (self.c1).to_be();
+        self.c1 = hold;
+
+    }
+    pub fn to_le_ret(self) -> Self {
+        let mut new = self.clone();
+        let mut hold = (self.c0).to_be();
+        new.c0 = (self.c3).to_be();
+        new.c3 = hold;
+        hold = (self.c2).to_be();
+        new.c2 = (self.c1).to_be();
+        new.c1 = hold;
+        new
     }
 }
 

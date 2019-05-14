@@ -8,6 +8,7 @@ use starkcrypto::pedersen::hash;
 use starkcrypto::u256::U256;
 use starkcrypto::u256h;
 use starkcrypto::wnaf;
+use starkcrypto::merkle::*;
 
 fn u256_add(crit: &mut Criterion) {
     let a = U256::new(
@@ -390,6 +391,18 @@ fn ecdsa_verify(crit: &mut Criterion) {
     });
 }
 
+fn merkle_proof_make(crit: &mut Criterion) {
+    let depth = 6;
+    let mut leaves = Vec::new();
+
+    for i in 0..2_u64.pow(depth) {
+        leaves.push(U256::from((i + 10).pow(3)));
+    }
+    crit.bench_function("Making depth 6 Merkle Tree", move |bench| {
+        bench.iter(|| black_box(make_tree(leaves.clone(), HashType::EVM)))
+    });
+}
+
 fn criterion_benchmark(c: &mut Criterion) {
     u256_add(c);
     u256_mul(c);
@@ -412,6 +425,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     pedersen_hash(c);
     ecdsa_sign(c);
     ecdsa_verify(c);
+    merkle_proof_make(c);
 }
 
 criterion_group!(benches, criterion_benchmark);
