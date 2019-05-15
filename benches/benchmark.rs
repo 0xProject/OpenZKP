@@ -2,13 +2,13 @@ use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use hex_literal::*;
 use starkcrypto::curve::Affine;
 use starkcrypto::ecdsa::{private_to_public, sign, verify};
+use starkcrypto::fft::fft_cofactor;
 use starkcrypto::field::FieldElement;
 use starkcrypto::jacobian::Jacobian;
 use starkcrypto::pedersen::hash;
 use starkcrypto::u256::U256;
 use starkcrypto::u256h;
 use starkcrypto::wnaf;
-use starkcrypto::fft::{fft};
 
 fn u256_add(crit: &mut Criterion) {
     let a = U256::new(
@@ -392,20 +392,40 @@ fn ecdsa_verify(crit: &mut Criterion) {
 }
 
 fn fft_timing(crit: &mut Criterion) {
-    let root = FieldElement::from(u256h!("063365fe0de874d9c90adb1e2f9c676e98c62155e4412e873ada5e1dee6feebb"));
-    let cofactor = FieldElement::from(u256h!("07696b8ff70e8e9285c76bef95d3ad76cdb29e213e4b5d9a9cd0afbd7cb29b5c"));
+    let root = FieldElement::from(u256h!(
+        "063365fe0de874d9c90adb1e2f9c676e98c62155e4412e873ada5e1dee6feebb"
+    ));
+    let cofactor = FieldElement::from(u256h!(
+        "07696b8ff70e8e9285c76bef95d3ad76cdb29e213e4b5d9a9cd0afbd7cb29b5c"
+    ));
     let vector = vec![
-        FieldElement::from(u256h!("008ee28fdbe9f1a7983bc1b600dfb9177c2d82d825023022ab4965d999bd3faf")),
-        FieldElement::from(u256h!("037fa3db272cc54444894042223dcf260e1d1ec73fa9baea0e4572817fdf5751")),
-        FieldElement::from(u256h!("054483fc9bcc150b421fae26530f8d3d2e97cf1918f534e67ef593038f683241")),
-        FieldElement::from(u256h!("005b695b9001e5e62549557c48a23fd7f1706c1acdae093909d81451cd455b43")),
-        FieldElement::from(u256h!("025079cb6cb547b63b67614dd2c78474c8a7b17b3bc53f7f7276984b6b67b18a")),
-        FieldElement::from(u256h!("044729b25360c0025d244d31a5f144917e59f728a3d03dd4685c634d2b0e7cda")),
-        FieldElement::from(u256h!("079b0e14d0bae81ff4fe55328fb09c4117bcd961cb60581eb6f2a770a42240ed")),
-        FieldElement::from(u256h!("06c0926a786abb30b8f6e0eb9ef2278b910862717ed4beb35121d4741717e0e0"))
+        FieldElement::from(u256h!(
+            "008ee28fdbe9f1a7983bc1b600dfb9177c2d82d825023022ab4965d999bd3faf"
+        )),
+        FieldElement::from(u256h!(
+            "037fa3db272cc54444894042223dcf260e1d1ec73fa9baea0e4572817fdf5751"
+        )),
+        FieldElement::from(u256h!(
+            "054483fc9bcc150b421fae26530f8d3d2e97cf1918f534e67ef593038f683241"
+        )),
+        FieldElement::from(u256h!(
+            "005b695b9001e5e62549557c48a23fd7f1706c1acdae093909d81451cd455b43"
+        )),
+        FieldElement::from(u256h!(
+            "025079cb6cb547b63b67614dd2c78474c8a7b17b3bc53f7f7276984b6b67b18a"
+        )),
+        FieldElement::from(u256h!(
+            "044729b25360c0025d244d31a5f144917e59f728a3d03dd4685c634d2b0e7cda"
+        )),
+        FieldElement::from(u256h!(
+            "079b0e14d0bae81ff4fe55328fb09c4117bcd961cb60581eb6f2a770a42240ed"
+        )),
+        FieldElement::from(u256h!(
+            "06c0926a786abb30b8f6e0eb9ef2278b910862717ed4beb35121d4741717e0e0"
+        )),
     ];
     crit.bench_function("Performing FFT", move |bench| {
-        bench.iter(|| black_box(fft(root.clone(), vector.clone(),Some(cofactor.clone()))))
+        bench.iter(|| black_box(fft_cofactor(root.clone(), vector.clone(), cofactor.clone())))
     });
 }
 
