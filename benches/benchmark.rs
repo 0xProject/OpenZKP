@@ -399,32 +399,32 @@ fn merkle_proof_make(crit: &mut Criterion) {
         leaves.push(U256::from((i + 10).pow(3)));
     }
     crit.bench_function("Making depth 6 Merkle Tree", move |bench| {
-        bench.iter(|| black_box(make_tree(leaves.clone(), HashType::EVM)))
+        bench.iter(|| black_box(make_tree(leaves.clone())))
     });
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
-    u256_add(c);
-    u256_mul(c);
-    u256_invmod256(c);
-    u256_invmod(c);
-    u256_divrem(c);
-    u256_mulmod(c);
-    field_add(c);
-    field_mul(c);
-    field_inv(c);
-    curve_add(c);
-    curve_dbl(c);
-    curve_mul(c);
-    jacobian_add(c);
-    jacobian_add_affine(c);
-    jacobian_dbl(c);
-    jacobian_mul(c);
-    jacobian_mul_affine(c);
-    wnaf_mul_affine(c);
-    pedersen_hash(c);
-    ecdsa_sign(c);
-    ecdsa_verify(c);
+    // u256_add(c);
+    // u256_mul(c);
+    // u256_invmod256(c);
+    // u256_invmod(c);
+    // u256_divrem(c);
+    // u256_mulmod(c);
+    // field_add(c);
+    // field_mul(c);
+    // field_inv(c);
+    // curve_add(c);
+    // curve_dbl(c);
+    // curve_mul(c);
+    // jacobian_add(c);
+    // jacobian_add_affine(c);
+    // jacobian_dbl(c);
+    // jacobian_mul(c);
+    // jacobian_mul_affine(c);
+    // wnaf_mul_affine(c);
+    // pedersen_hash(c);
+    // ecdsa_sign(c);
+    // ecdsa_verify(c);
     merkle_proof_make(c);
 }
 

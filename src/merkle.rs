@@ -4,129 +4,78 @@ use crate::u256::U256;
 use crate::u256h;
 use hex_literal::*;
 use tiny_keccak::*; //Gets the hash functions we need to use for this merkle libary
-use crypto::digest::Digest;
-use crypto::sha2::*;
+// use crypto::digest::Digest;
+// use crypto::sha2::*;
 
 extern crate hex;
     use hex::encode;
 
-#[derive(Copy, Clone, Debug)]
-pub enum HashType {
-    Starkware, // SHA256 and little endian
-    EVM,       // Keccack256 and big endian
-    MASKED,    // Keccack256 with mask
-}
 
 fn mask(data: &mut [u8; 32]) {
     for i in 0..32 {
-        if i > 20 {
+        if i > 19 {
             data[i] = 0 as u8;
         }
     }
 }
 
-pub fn hash_leaf(mut leaf: U256, hash: &HashType) -> Vec<u8> {
-    match hash {
-        HashType::Starkware => {
-            (&mut leaf).to_le();
-        }
-        _ => {}
-    }
-    transform_U256(leaf)
+pub fn hash_leaf(mut leaf: U256) -> [u8; 32] {
+    U256::to_bytes_be(&leaf)
 }
 
-pub fn hash_leaf_list(mut leaf: Vec<U256>, hash: &HashType) -> Vec<u8> {
-    match hash {
-        HashType::Starkware => {
-            return hash_leaf(leaf[0].clone(), hash);
-        }
-        HashType::EVM => {
-            return hash_leaf(leaf[0].clone(), hash);
-        }
-        HashType::MASKED => {
-            if (&leaf).len() == 1 {
-                return hash_leaf(leaf[0].clone(), hash);
-            }
-
-            let mut sha3 = Keccak::new_keccak256();
-            for x in leaf.iter() {
-                sha3.update(&(transform_U256(x.clone())));
-            }
-            let mut res: [u8; 32] = [0; 32];
-            sha3.finalize(&mut res);
-            return [res].concat();
-        }
+pub fn hash_leaf_list(mut leaf: Vec<U256>) -> [u8; 32] {
+    if (&leaf).len() == 1 {
+        return hash_leaf(leaf[0].clone());
     }
-}
 
-pub fn hash_node(left_node: [u8; 32], right_node: [u8; 32], hash: HashType) -> [u8; 32] {
+    let mut sha3 = Keccak::new_keccak256();
+    for x in leaf.iter() {
+        sha3.update(&(U256::to_bytes_be(x)));
+    }
     let mut res: [u8; 32] = [0; 32];
-    match hash {
-        HashType::Starkware => {
-            let mut hasher = Sha256::new();
-            hasher.input(&left_node);
-            hasher.input(&right_node);
-            hasher.result(&mut res);
-        }
-        HashType::EVM => {
-            let mut sha3 = Keccak::new_keccak256();
-            sha3.update(&left_node);
-            sha3.update(&right_node);
-            sha3.finalize(&mut res);
-        }
-        HashType::MASKED => {
-            let mut sha3 = Keccak::new_keccak256();
-            sha3.update(&left_node);
-            sha3.update(&right_node);
-            sha3.finalize(&mut res);
-            mask(&mut res);
-        }
-    }
+    sha3.finalize(&mut res);
     res
 }
 
-pub fn hash_node_vec(left_node: &Vec<u8>, right_node: &Vec<u8>, hash: &HashType) -> Vec<u8> {
+pub fn hash_node(left_node: &[u8; 32], right_node: &[u8; 32]) -> [u8; 32] {
     let mut res: [u8; 32] = [0; 32];
-    match hash {
-        HashType::Starkware => {
-            let mut hasher = Sha256::new();
-            hasher.input(left_node);
-            hasher.input(right_node);
-            hasher.result(&mut res);
-        }
-        HashType::EVM => {
-            let mut sha3 = Keccak::new_keccak256();
-            sha3.update(left_node);
-            sha3.update(right_node);
-            sha3.finalize(&mut res);
-        }
-        HashType::MASKED => {
-            let mut sha3 = Keccak::new_keccak256();
-            sha3.update(&left_node);
-            sha3.update(&right_node);
-            sha3.finalize(&mut res);
-            mask(&mut res);
-        }
-    }
-    [res].concat()
+
+    let mut sha3 = Keccak::new_keccak256();
+    sha3.update(left_node);
+    sha3.update(right_node);
+    sha3.finalize(&mut res);
+    mask(&mut res);
+
+    res
 }
 
-pub fn make_tree(leaves: Vec<U256>, hash: HashType) -> Vec<Vec<u8>> {
+pub fn hash_node_vec(left_node: &Vec<u8>, right_node: &Vec<u8>) -> [u8; 32] {
+    let mut res: [u8; 32] = [0; 32];
+    let mut sha3 = Keccak::new_keccak256();
+    sha3.update(&left_node);
+    sha3.update(&right_node);
+    sha3.finalize(&mut res);
+    mask(&mut res);
+
+    res
+}
+
+pub fn make_tree(leaves: Vec<U256>) -> Vec<[u8; 32]> {
     let n = leaves.len() as u64;
     let depth = 64 - n.leading_zeros() - 1; //Log_2 of n
 
-    let mut tree = vec![vec![0; 32]; 2 * n as usize]; //Get my vector heap for end results
+    let mut tree = vec![[0; 32]; 2 * n as usize]; //Get my vector heap for end results
     for i in 0..n {
-        tree[(2_u64.pow(depth) + i) as usize] = hash_leaf(leaves[(i) as usize].clone(), &hash);
+        tree[(2_u64.pow(depth) + i) as usize] = hash_leaf(leaves[(i) as usize].clone());
     }
     for i in (0..(2_u64.pow(depth))).rev() {
         tree[i as usize] =
-            hash_node_vec(&tree[(2 * i) as usize], &tree[(2 * i + 1) as usize], &hash);
+            hash_node(&tree[(2 * i) as usize], &tree[(2 * i + 1) as usize]);
     }
     tree
 }
 
-pub fn proof(tree: Vec<Vec<u8>>, indices: Vec<usize>) -> Vec<Vec<u8>> {
+pub fn proof(tree: Vec<[u8; 32]>, indices: Vec<usize>) -> Vec<[u8; 32]> {
     let depth = 64 - (tree.len() as u64).leading_zeros() - 2; //Log base 2 - 1
     let num_leaves = 2_u64.pow(depth);
     let num_nodes = 2 * num_leaves;
@@ -154,17 +103,16 @@ pub fn proof(tree: Vec<Vec<u8>>, indices: Vec<usize>) -> Vec<Vec<u8>> {
 }
 
 pub fn verify(
-    root: Vec<u8>,
+    root: [u8; 32],
     depth: u32,
     mut values: Vec<(u64, U256)>,
-    mut decommitment: Vec<Vec<u8>>,
-    hash: HashType,
+    mut decommitment: Vec<[u8; 32]>,
 ) -> bool {
     let mut queue = Vec::with_capacity(values.len());
     values.sort_by(|a, b| b.0.cmp(&a.0)); //Sorts the list by index
     for leaf in values.iter() {
         let tree_index = 2_u64.pow(depth) + leaf.0;
-        queue.push((tree_index, hash_leaf(leaf.1.clone(), &hash)));
+        queue.push((tree_index, hash_leaf(leaf.1.clone())));
     }
     loop {
         if queue.len() == 0 {
@@ -176,15 +124,15 @@ pub fn verify(
         } else if index % 2 == 0 {
             queue.push((
                 index / 2,
-                hash_node_vec(&data_hash, &decommitment.remove(0), &hash),
+                hash_node(&data_hash, &decommitment.remove(0)),
             ));
         } else if queue.len() > 0 && queue[0].0 == index - 1 {
             let (_, sibbling_hash) = queue.remove(0);
-            queue.push((index / 2, hash_node_vec( &sibbling_hash, &data_hash, &hash)));
+            queue.push((index / 2, hash_node( &sibbling_hash, &data_hash)));
         } else {
             queue.push((
                 index / 2,
-                hash_node_vec(&decommitment.remove(0), &data_hash, &hash),
+                hash_node(&decommitment.remove(0), &data_hash),
             ));
         }
     }
@@ -193,16 +141,6 @@ pub fn verify(
 }
 
 //Helper functions
-fn transform_U256(data: U256) -> Vec<u8> {
-    let ret = [
-        transform_u64(data.c3),
-        transform_u64(data.c2),
-        transform_u64(data.c1),
-        transform_u64(data.c0),
-    ];
-    ret.concat()
-}
-
 fn transform_u64(x: u64) -> [u8; 8] {
     let b1: u8 = ((x >> 56) & 0xff) as u8;
     let b2: u8 = ((x >> 48) & 0xff) as u8;
@@ -230,29 +168,15 @@ mod tests {
             leaves.push(U256::from((i + 10).pow(3)));
         }
 
-        let tree = make_tree(leaves.clone(), HashType::EVM);
+        let tree = make_tree(leaves.clone());
 
         assert_eq!(
             encode(tree[1].clone()),
-            "42b30fb1efc6e1a7e878be62e4ac40059e83ad61d29b2f1f9dbbf8cba339028b"
+            "fd112f44bc944f33e2567f86eea202350913b11c000000000000000000000000" //Value from python masked mode
         );
         let mut values = vec![(1, leaves[1].clone()), (11, leaves[11].clone()), (14, leaves[14].clone())];
         let mut indices = vec![1, 11, 14];
         let mut decommitment = proof(tree.clone(), indices);
-        assert!(verify(tree[1].clone(), depth, values, decommitment, HashType::EVM));
-    }
-    #[test]
-    fn test_starkware_merkle(){
-        let root = transform_U256(u256h!("ada70851a3af058545ab2d46228872463d5ce9919aa9027814595f2eaf6dd727").to_le_ret());
-        let mut values = vec![(1, u256h!("cb6c2ee3e7caa624e41f5c92dc4d4aabcaec3db4472e17e632af643614459225")),
-                               (14, u256h!("b37d6b9227094c545e03ac6102b0c5912b0a3b093a2f0b430cfcf927369e8d17"))];
-        let mut decommitment = vec![transform_U256(u256h!("1d33eac298dda2eec370f2f4e3a19f93596476620aaf0720c70f51696460dd89").to_le_ret()),
-                                    transform_U256(u256h!("70c8670e12c79d8d8804b07be9270820e323668396d612b55914c4095a2cf008").to_le_ret()),
-                                    transform_U256(u256h!("3d7ae1a4a258d19692679d03d45f72710af44f6894aeb5f7f35298e4262c9e11").to_le_ret()),
-                                    transform_U256(u256h!("2780c6c3921b597954a55980793c20d84ed094ca30cb099d96ec8d4f78a640f8").to_le_ret()),
-                                    transform_U256(u256h!("f0ad716e2ec9ed540b259c5eee0327d13421c8940dcf24e93c6ddc74c39184e3").to_le_ret()),
-                                    transform_U256(u256h!("91023ba61a85b2c3fe1835d2c2d2a48a11f626da2ef6af781510fcf4dcf0f122").to_le_ret())
-                                    ];
-        assert!(verify(root, 4, values, decommitment, HashType::Starkware));         
+        assert!(verify(tree[1].clone(), depth, values, decommitment));
     }
 }
