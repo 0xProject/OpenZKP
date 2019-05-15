@@ -47,7 +47,7 @@ macro_rules! u256h {
     };
 }
 
-#[derive(PartialEq, Eq, Clone, Copy, Default)]
+#[derive(PartialEq, Eq, Clone, Default)]
 pub struct U256 {
     pub c0: u64,
     pub c1: u64,
