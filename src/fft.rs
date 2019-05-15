@@ -1,24 +1,25 @@
 use crate::field::FieldElement;
 use crate::u256::U256;
 
-pub fn fft(root: FieldElement, vector: Vec<FieldElement>) -> Vec<FieldElement> {
+pub fn fft(root: FieldElement, vector: &[FieldElement]) -> Vec<FieldElement> {
     //debug_assert(root.pow(vector.len()) == FieldElement::ONE); //Todo - Add a pow method to field element
 
-    let n = vector.len();
+    let mut vector_type = (vector.clone()).to_vec();
+    let n = vector_type.len();
 
     if n == 1 {
-        return vector;
+        return vector_type;
     }
 
     let mut even = Vec::with_capacity(n / 2);
     let mut odd = Vec::with_capacity(n / 2);
     for index in (0..n).step_by(2) {
-        even.push(vector[index].clone());
-        odd.push(vector[index + 1].clone());
+        even.push(vector_type[index].clone());
+        odd.push(vector_type[index + 1].clone());
     }
 
-    even = fft((&root).square(), even);
-    odd = fft((&root).square(), odd);
+    even = fft((&root).square(), &(even.as_slice()));
+    odd = fft((&root).square(), &(odd.as_slice()));
     let mut power = FieldElement::ONE;
     for (even, odd) in even.iter_mut().zip(odd.iter_mut()) {
         *odd *= &power;
@@ -34,22 +35,23 @@ pub fn fft(root: FieldElement, vector: Vec<FieldElement>) -> Vec<FieldElement> {
 //We can implement this function using an option for the cofactor input, depending on what we want
 pub fn fft_cofactor(
     root: FieldElement,
-    mut vector: Vec<FieldElement>,
+    vector: &[FieldElement],
     cofactor: FieldElement,
 ) -> Vec<FieldElement> {
-    let n = vector.len();
+    let mut vector_type = (vector.clone()).to_vec();
+    let n = vector_type.len();
 
     let mut c = FieldElement::ONE;
 
-    for element in vector.iter_mut() {
+    for element in vector_type.iter_mut() {
         *element *= &c;
         c *= &cofactor;
     }
 
-    fft(root, vector)
+    fft(root, &vector_type)
 }
 
-pub fn ifft(root: FieldElement, vector: Vec<FieldElement>) -> Vec<FieldElement> {
+pub fn ifft(root: FieldElement, vector: &[FieldElement]) -> Vec<FieldElement> {
     let r = fft((&root).inv().unwrap(), vector);
     let len_el = FieldElement::from(U256::from((&r).len() as u64));
     let s = len_el.inv().unwrap();
@@ -58,7 +60,7 @@ pub fn ifft(root: FieldElement, vector: Vec<FieldElement>) -> Vec<FieldElement> 
 
 pub fn ifft_cofactor(
     root: FieldElement,
-    vector: Vec<FieldElement>,
+    vector: &[FieldElement],
     cofactor: FieldElement,
 ) -> Vec<FieldElement> {
     let mut r = fft((&root).inv().unwrap(), vector);
@@ -85,22 +87,6 @@ mod tests {
     use crate::u256h;
     use hex_literal::*;
 
-    //#[test] //Test useful for debuging but not robust, doesn't need to be in every test run.
-    fn basic_fft_test() {
-        let root = FieldElement::from(U256::from(3 as u64));
-        let mut vector = vec![2u64, 1, 3, 4]
-            .into_iter()
-            .map(|n| FieldElement::from(U256::from(n)))
-            .collect();
-        let res = fft(root, vector);
-        assert_eq!(U256::from(&res[0]), U256::from(10 as u64));
-        assert_eq!(
-            U256::from(&res[1]),
-            u256h!("0800000000000010fffffffffffffffffffffffffffffffffffffffffffffff7")
-        ); // -10 mod P
-        assert_eq!(U256::from(&res[2]), U256::ZERO);
-        assert_eq!(U256::from(&res[3]), U256::from(8 as u64));
-    }
     #[test]
     fn fft_test() {
         let root = FieldElement::from(u256h!(
@@ -109,7 +95,7 @@ mod tests {
         let cofactor = FieldElement::from(u256h!(
             "07696b8ff70e8e9285c76bef95d3ad76cdb29e213e4b5d9a9cd0afbd7cb29b5c"
         ));
-        let vector = vec![
+        let mut vector = [
             FieldElement::from(u256h!(
                 "008ee28fdbe9f1a7983bc1b600dfb9177c2d82d825023022ab4965d999bd3faf"
             )),
@@ -136,7 +122,7 @@ mod tests {
             )),
         ];
 
-        let mut res = fft(root.clone(), vector.clone());
+        let mut res = fft(root.clone(), &vector);
 
         assert_eq!(
             U256::from(&res[0]),
@@ -171,7 +157,7 @@ mod tests {
             u256h!("048bad0760f8b52ee4f9a46964bcf1ba9439a9467b2576176b1319cec9f12db0")
         );
 
-        res = fft_cofactor(root, vector, cofactor);
+        res = fft_cofactor(root, &vector, cofactor);
 
         assert_eq!(
             U256::from(&res[0]),
@@ -215,7 +201,7 @@ mod tests {
         let cofactor = FieldElement::from(u256h!(
             "07696b8ff70e8e9285c76bef95d3ad76cdb29e213e4b5d9a9cd0afbd7cb29b5c"
         ));
-        let vector = vec![
+        let vector = [
             FieldElement::from(u256h!(
                 "008ee28fdbe9f1a7983bc1b600dfb9177c2d82d825023022ab4965d999bd3faf"
             )),
@@ -242,15 +228,15 @@ mod tests {
             )),
         ];
 
-        let mut res = fft(root.clone(), vector.clone());
-        let mut res_inv = ifft(root.clone(), res);
+        let mut res = fft(root.clone(), &vector);
+        let mut res_inv = ifft(root.clone(), &(res.as_slice()));
 
         for index in 0..8 {
             assert_eq!(vector[index], res_inv[index]);
         }
+        res = fft_cofactor(root.clone(), &vector, cofactor.clone());
 
-        res = fft_cofactor(root.clone(), vector.clone(), cofactor.clone());
-        res_inv = ifft_cofactor(root, res, cofactor);
+        res_inv = ifft_cofactor(root, &(res.as_slice()), cofactor);
 
         for index in 0..8 {
             assert_eq!(vector[index], res_inv[index]);
