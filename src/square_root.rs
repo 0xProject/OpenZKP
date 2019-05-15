@@ -17,9 +17,8 @@ fn is_quadratic_residue(a: &FieldElement) -> bool {
     }
 }
 
-const QUADRATIC_NONRESIDUE: FieldElement = FieldElement(u256h!(
-    "028ad127451958b2b5667daad6c2fd516640381f2abac83fba5054da02fdf054"
-));
+// 3 is the smallest quadratic nonresidue in the finite field.
+const QUADRATIC_NONRESIDUE: FieldElement = FieldElement(U256::new(3, 0, 0, 0));
 
 // These two constants are chosen so that 1 + SIGNIFICAND << BINARY_EXPONENT == MODULUS.
 const BINARY_EXPONENT: usize = 3 * 4 * 16;
@@ -36,11 +35,14 @@ fn tonelli_shanks(a: &FieldElement) -> FieldElement {
         return FieldElement::ZERO;
     }
 
-    // Because a is not 0 at this point, it's safe to divide by it and exponentiate it.
+    // OPT: Good candidate for an addition chain. Declare constant values as such once
+    // conditionals are allowed inside const fn's: https://github.com/rust-lang/rust/issues/49146
     let mut c: FieldElement = QUADRATIC_NONRESIDUE.pow(SIGNIFICAND).unwrap();
+    // Because a is not 0 at this point, it's safe to divide by it and exponentiate it.
     let mut root: FieldElement = a.pow((SIGNIFICAND + U256::from(1u128)) >> 1).unwrap();
 
     for i in 1..BINARY_EXPONENT {
+        // OPT: Precompute the inverse of a.
         if (root.square() / a)
             .pow(U256::from(1u128) << (BINARY_EXPONENT - i - 1))
             .unwrap()
@@ -48,6 +50,7 @@ fn tonelli_shanks(a: &FieldElement) -> FieldElement {
         {
             root *= &c;
         }
+        // OPT: Create lookup table for squares of c.
         c = c.square();
     }
     root
@@ -70,6 +73,9 @@ mod tests {
 
     #[test]
     fn quadratic_nonresidue_is_as_claimed() {
+        assert!(is_quadratic_residue(&FieldElement(U256::new(0, 0, 0, 0))));
+        assert!(is_quadratic_residue(&FieldElement(U256::new(1, 0, 0, 0))));
+        assert!(is_quadratic_residue(&FieldElement(U256::new(2, 0, 0, 0))));
         assert!(!is_quadratic_residue(&QUADRATIC_NONRESIDUE));
     }
 

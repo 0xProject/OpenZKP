@@ -173,6 +173,8 @@ impl std::iter::Product for FieldElement {
     }
 }
 
+// TODO: Implement Sum, Successors, ... for FieldElement.
+
 commutative_binop!(FieldElement, Add, add, AddAssign, add_assign);
 commutative_binop!(FieldElement, Mul, mul, MulAssign, mul_assign);
 noncommutative_binop!(FieldElement, Sub, sub, SubAssign, sub_assign);
