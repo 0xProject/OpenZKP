@@ -109,12 +109,12 @@ mod tests {
     #[test]
     fn test_sign() {
         let message_hash =
-            u256h!("01e542e2da71b3f5d7b4e9d329b4d30ac0b5d6f266ebef7364bf61c39aac35d0");
+            u256h!("01921ce52df68f0185ade7572776513304bdd4a07faf6cf28cefc65a86fc496c");
         let private_key =
             u256h!("03c1e9550e66958296d11b60f8e8e7a7ad990d07fa65d5f7652c4a6c87d4e3cc");
         let expected = (
-            u256h!("0010eaece1a727f8c64faf2f236943c2691ba8ca34e1da77880586f5c20fcf63"),
-            u256h!("077e670848f61ff0a6d7f4f04a4740f8d50dcf8db8e7a4522dc05ef8c2d3ad89"),
+            u256h!("049ae96821351a2bbc91d3d1e84bc825bea2cb645a7184446dd92f4f1bc4f5b8"),
+            u256h!("03cdabfdd233bf8146621fd2e938ef5b326c485eac8fbe59aa9ae39adfaf4cbc"),
         );
         let result = sign(&message_hash, &private_key);
         assert_eq!(result, expected);
