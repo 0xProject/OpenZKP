@@ -1,15 +1,6 @@
-extern crate tiny_keccak;
-
 use crate::u256::U256;
 use crate::u256h;
-use hex_literal::*;
-use tiny_keccak::*; //Gets the hash functions we need to use for this merkle libary
-// use crypto::digest::Digest;
-// use crypto::sha2::*;
-
-extern crate hex;
-    use hex::encode;
-
+use tiny_keccak::Keccak;
 
 fn mask(data: &mut [u8; 32]) {
     for i in 0..32 {
@@ -69,8 +60,7 @@ pub fn make_tree(leaves: Vec<U256>) -> Vec<[u8; 32]> {
         tree[(2_u64.pow(depth) + i) as usize] = hash_leaf(leaves[(i) as usize].clone());
     }
     for i in (0..(2_u64.pow(depth))).rev() {
-        tree[i as usize] =
-            hash_node(&tree[(2 * i) as usize], &tree[(2 * i + 1) as usize]);
+        tree[i as usize] = hash_node(&tree[(2 * i) as usize], &tree[(2 * i + 1) as usize]);
     }
     tree
 }
@@ -87,7 +77,7 @@ pub fn proof(tree: Vec<[u8; 32]>, indices: Vec<usize>) -> Vec<[u8; 32]> {
         known[(fixed as usize) + i] = true;
     }
 
-    for i in (1..2_u64.pow(depth)-1).rev(){
+    for i in (1..2_u64.pow(depth) - 1).rev() {
         let left = known[(2 * i) as usize];
         let right = known[(2 * i + 1) as usize];
         if left && !right {
@@ -97,7 +87,6 @@ pub fn proof(tree: Vec<[u8; 32]>, indices: Vec<usize>) -> Vec<[u8; 32]> {
             decommitment.push(tree[(2 * i) as usize].clone());
         }
         known[i as usize] = left || right;
-        
     }
     decommitment
 }
@@ -115,49 +104,28 @@ pub fn verify(
         queue.push((tree_index, hash_leaf(leaf.1.clone())));
     }
     loop {
-        if queue.len() == 0 {
+        if queue.is_empty() {
             break;
         }
         let (index, data_hash) = queue.remove(0); //Debug check that this is doing it right
         if index == 1 {
             return data_hash == root;
         } else if index % 2 == 0 {
-            queue.push((
-                index / 2,
-                hash_node(&data_hash, &decommitment.remove(0)),
-            ));
+            queue.push((index / 2, hash_node(&data_hash, &decommitment.remove(0))));
         } else if queue.len() > 0 && queue[0].0 == index - 1 {
             let (_, sibbling_hash) = queue.remove(0);
-            queue.push((index / 2, hash_node( &sibbling_hash, &data_hash)));
+            queue.push((index / 2, hash_node(&sibbling_hash, &data_hash)));
         } else {
-            queue.push((
-                index / 2,
-                hash_node(&decommitment.remove(0), &data_hash),
-            ));
+            queue.push((index / 2, hash_node(&decommitment.remove(0), &data_hash)));
         }
     }
 
     false
 }
 
-//Helper functions
-fn transform_u64(x: u64) -> [u8; 8] {
-    let b1: u8 = ((x >> 56) & 0xff) as u8;
-    let b2: u8 = ((x >> 48) & 0xff) as u8;
-    let b3: u8 = ((x >> 40) & 0xff) as u8;
-    let b4: u8 = ((x >> 32) & 0xff) as u8;
-    let b5: u8 = ((x >> 24) & 0xff) as u8;
-    let b6: u8 = ((x >> 16) & 0xff) as u8;
-    let b7: u8 = ((x >> 8) & 0xff) as u8;
-    let b8: u8 = (x & 0xff) as u8;
-    return [b1, b2, b3, b4, b5, b6, b7, b8];
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    extern crate hex;
-    use hex::encode;
     use hex_literal::*;
 
     #[test]
@@ -171,15 +139,25 @@ mod tests {
 
         let tree = make_tree(leaves.clone());
 
+        // Value from python masked mode
         assert_eq!(
-            encode(tree[1].clone()),
-            "fd112f44bc944f33e2567f86eea202350913b11c000000000000000000000000" //Value from python masked mode
+            tree[1].clone(),
+            hex!("fd112f44bc944f33e2567f86eea202350913b11c000000000000000000000000")
         );
-        let mut values = vec![(1, leaves[1].clone()), (11, leaves[11].clone()), (14, leaves[14].clone())];
+        let mut values = vec![
+            (1, leaves[1].clone()),
+            (11, leaves[11].clone()),
+            (14, leaves[14].clone()),
+        ];
         let mut indices = vec![1, 11, 14];
         let mut decommitment = proof(tree.clone(), indices);
         let non_root = hex!("ed112f44bc944f33e2567f86eea202350913b11c000000000000000000000000");
-        assert!(verify(tree[1].clone(), depth, values.clone(), decommitment.clone()));
+        assert!(verify(
+            tree[1].clone(),
+            depth,
+            values.clone(),
+            decommitment.clone()
+        ));
         assert!(!verify(non_root, depth, values, decommitment));
     }
 }

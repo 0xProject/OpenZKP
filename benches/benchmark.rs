@@ -4,11 +4,11 @@ use starkcrypto::curve::Affine;
 use starkcrypto::ecdsa::{private_to_public, sign, verify};
 use starkcrypto::field::FieldElement;
 use starkcrypto::jacobian::Jacobian;
+use starkcrypto::merkle::*;
 use starkcrypto::pedersen::hash;
 use starkcrypto::u256::U256;
 use starkcrypto::u256h;
 use starkcrypto::wnaf;
-use starkcrypto::merkle::*;
 
 fn u256_add(crit: &mut Criterion) {
     let a = U256::new(
