@@ -9,6 +9,7 @@ pub mod binops;
 pub mod curve;
 mod division;
 pub mod ecdsa;
+pub mod fft;
 pub mod field;
 pub mod jacobian;
 pub mod montgomery;
