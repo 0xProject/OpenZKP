@@ -12,6 +12,7 @@ pub mod ecdsa;
 pub mod fft;
 pub mod field;
 pub mod jacobian;
+pub mod merkle;
 pub mod montgomery;
 pub mod orders;
 pub mod pedersen;

@@ -5,6 +5,7 @@ use starkcrypto::ecdsa::{private_to_public, sign, verify};
 use starkcrypto::fft::fft_cofactor;
 use starkcrypto::field::FieldElement;
 use starkcrypto::jacobian::Jacobian;
+use starkcrypto::merkle::*;
 use starkcrypto::pedersen::hash;
 use starkcrypto::square_root::square_root;
 use starkcrypto::u256::U256;
@@ -404,6 +405,18 @@ fn ecdsa_verify(crit: &mut Criterion) {
     });
 }
 
+fn merkle_proof_make(crit: &mut Criterion) {
+    let depth = 6;
+    let mut leaves = Vec::new();
+
+    for i in 0..2_u64.pow(depth) {
+        leaves.push(U256::from((i + 10).pow(3)));
+    }
+    crit.bench_function("Making depth 6 Merkle Tree", move |bench| {
+        bench.iter(|| black_box(make_tree(leaves.clone())))
+    });
+}
+
 fn fft_timing(crit: &mut Criterion) {
     let root = FieldElement::from(u256h!(
         "063365fe0de874d9c90adb1e2f9c676e98c62155e4412e873ada5e1dee6feebb"
@@ -438,7 +451,7 @@ fn fft_timing(crit: &mut Criterion) {
         )),
     ];
     crit.bench_function("Performing FFT", move |bench| {
-        bench.iter(|| black_box(fft_cofactor(root.clone(), vector.clone(), cofactor.clone())))
+        bench.iter(|| black_box(fft_cofactor(root.clone(), &vector, cofactor.clone())))
     });
 }
 
@@ -466,6 +479,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     pedersen_hash(c);
     ecdsa_sign(c);
     ecdsa_verify(c);
+    merkle_proof_make(c);
     fft_timing(c);
 }
 
