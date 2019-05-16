@@ -158,6 +158,7 @@ mod tests {
     use super::*;
     extern crate hex;
     use hex::encode;
+    use hex_literal::*;
 
     #[test]
     fn test_merkle_creation_and_proof() {
@@ -177,6 +178,8 @@ mod tests {
         let mut values = vec![(1, leaves[1].clone()), (11, leaves[11].clone()), (14, leaves[14].clone())];
         let mut indices = vec![1, 11, 14];
         let mut decommitment = proof(tree.clone(), indices);
-        assert!(verify(tree[1].clone(), depth, values, decommitment));
+        let non_root = hex!("ed112f44bc944f33e2567f86eea202350913b11c000000000000000000000000");
+        assert!(verify(tree[1].clone(), depth, values.clone(), decommitment.clone()));
+        assert!(!verify(non_root, depth, values, decommitment));
     }
 }
