@@ -6,6 +6,7 @@ use starkcrypto::fft::fft_cofactor;
 use starkcrypto::field::FieldElement;
 use starkcrypto::jacobian::Jacobian;
 use starkcrypto::pedersen::hash;
+use starkcrypto::square_root::square_root;
 use starkcrypto::u256::U256;
 use starkcrypto::u256h;
 use starkcrypto::wnaf;
@@ -137,6 +138,18 @@ fn field_mul(crit: &mut Criterion) {
     });
 }
 
+fn field_sqrt(crit: &mut Criterion) {
+    let a = FieldElement::new(&[
+        0x0f3855f5, 0x37862eb2, 0x275b919f, 0x325329cb, 0xe968e6a2, 0xa2ceee5c, 0xd5f1d547,
+        0x07211989,
+    ]);
+    crit.bench_function("Field square root", move |bench| {
+        bench.iter(|| {
+            black_box(square_root(black_box(&a)));
+        })
+    });
+}
+
 fn field_inv(crit: &mut Criterion) {
     let a = FieldElement::new(&[
         0x0f3855f5, 0x37862eb2, 0x275b919f, 0x325329cb, 0xe968e6a2, 0xa2ceee5c, 0xd5f1d547,
@@ -225,7 +238,7 @@ fn jacobian_to_affine(crit: &mut Criterion) {
             0x011cf020,
         ]),
     });
-    crit.bench_function("Jacobian add", move |bench| {
+    crit.bench_function("Jacobian to Affine", move |bench| {
         bench.iter(|| {
             black_box(Affine::from(black_box(&a)));
         })
@@ -439,6 +452,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     field_add(c);
     field_mul(c);
     field_inv(c);
+    field_sqrt(c);
     curve_add(c);
     curve_dbl(c);
     curve_mul(c);
@@ -447,6 +461,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     jacobian_dbl(c);
     jacobian_mul(c);
     jacobian_mul_affine(c);
+    jacobian_to_affine(c);
     wnaf_mul_affine(c);
     pedersen_hash(c);
     ecdsa_sign(c);

@@ -1,6 +1,10 @@
 // TODO: #![deny(warnings, missing_docs)]
 #![warn(clippy::all)]
 #![feature(const_fn)]
+#[macro_use]
+extern crate hex_literal;
+#[macro_use]
+pub mod u256;
 pub mod binops;
 pub mod curve;
 mod division;
@@ -8,14 +12,13 @@ pub mod ecdsa;
 pub mod fft;
 pub mod field;
 pub mod jacobian;
+pub mod montgomery;
 pub mod orders;
 pub mod pedersen;
 mod pedersen_points;
-pub mod wnaf;
-#[macro_use]
-pub mod u256;
-pub mod montgomery;
+pub mod square_root;
 mod utils;
+pub mod wnaf;
 use curve::Affine;
 use field::FieldElement;
 use u256::U256;
