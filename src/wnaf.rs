@@ -222,7 +222,6 @@ mod tests {
     use crate::field::FieldElement;
     use crate::u256h;
     use hex_literal::*;
-    use quickcheck_macros::quickcheck;
 
     #[test]
     fn test_mul() {

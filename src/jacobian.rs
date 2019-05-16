@@ -1,9 +1,7 @@
-use crate::curve::{Affine, BETA, ORDER};
+use crate::curve::Affine;
 use crate::field::FieldElement;
 use crate::u256::U256;
-use crate::u256h;
 use crate::{commutative_binop, curve_operations, noncommutative_binop};
-use hex_literal::*;
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 // See http://www.hyperelliptic.org/EFD/g1p/auto-shortw-jacobian.html
@@ -242,6 +240,8 @@ impl Arbitrary for Jacobian {
 #[rustfmt::skip]
 mod tests {
     use super::*;
+    use crate::curve::ORDER;
+    use crate::u256h;
     use quickcheck_macros::quickcheck;
 
     #[test]
@@ -305,13 +305,11 @@ mod tests {
 
     #[allow(clippy::eq_op)]
     #[quickcheck]
-    #[test]
     fn add_commutative(a: Jacobian, b: Jacobian) -> bool {
         &a + &b == &b + &a
     }
 
     #[quickcheck]
-    #[test]
     fn distributivity(p: Jacobian, mut a: U256, mut b: U256) -> bool {
         a %= &ORDER;
         b %= &ORDER;
