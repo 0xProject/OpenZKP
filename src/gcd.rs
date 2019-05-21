@@ -61,24 +61,23 @@ fn div1(a: u64, b: u64) -> u64 {
 /// Requires a > b > 0. Returns a / b.
 #[inline(always)]
 #[allow(clippy::cognitive_complexity)]
-fn div_update(r0: &mut u64, r1: u64, u0: &mut u64, u1: u64, v0: &mut u64, v1: u64) {
+fn div_update(r0: &mut u64, r1: u64, u0: &mut u64, u1: u64, v0: &mut u64, v1: u64) -> u64 {
     unroll! {
         for q in 1..10 {
             *r0 -= r1;
             if *r0 < r1 {
-                println!("{:?}", q);
                 *u0 += (q as u64) * u1;
                 *v0 += (q as u64) * v1;
-                return;
+                return (q as u64);
             }
         }
     }
     let mut q = *r0 / r1;
     *r0 -= q * r1;
     q += 9;
-    println!("{:?}", q);
     *u0 += q * u1;
     *v0 += q * v1;
+    q
 }
 
 /// Compute the Lehmer update matrix for small values.
@@ -114,32 +113,85 @@ fn lehmer_small(mut r0: u64, mut r1: u64) -> (u64, u64, u64, u64, bool) {
 /// OPT: Use a division optimized for small quotients, like in GMPs
 ///      https://github.com/ryepdx/gmp/blob/master/mpn/generic/hgcd2.c
 #[inline(never)]
-fn lehmer_loop(
-    mut r0: u64,
-    mut r1: u64,
-    mut q00: u64,
-    mut q01: u64,
-    mut q10: u64,
-    mut q11: u64,
-) -> (u64, u64, u64, u64, bool) {
+#[rustfmt::skip]
+fn lehmer_loop(a0: u64, mut a1: u64) -> (u64, u64, u64, u64, bool) {
     const LIMIT: u64 = 1u64 << 32;
-    if r1 < LIMIT {
-        return (q00, q01, q10, q11, true);
+
+    let mut u0 = 1u64;
+    let mut v0 = 0u64;
+    let mut u1 = 0u64;
+    let mut v1 = 1u64;
+    let mut even = true;
+    if a1 < LIMIT {
+        return (u0, v0, u1, v1, true)
     }
-    if r0 >= r1 {
-        div_update(&mut r0, r1, &mut q00, q10, &mut q01, q11);
+
+    // Compute a2
+    let q = div1(a0, a1);
+    //println!("{:?}", q);
+    let mut a2 = a0 - q * a1;
+    let mut u2 = u0 + q * u1;
+    let mut v2 = v0 + q * v1;
+    if a2 < LIMIT {
+        // Test i + 1 (odd)
+        if a2 >= v2 && a1 - a2 >= u2 + u1 {
+            return (u1, v1, u2, v2, false);
+        } else {
+            return (u0, v0, u1, v1, true)
+        }
     }
-    loop {
-        // TODO: Collins stoping condition.
-        // Loop is unrolled once to avoid swapping variables and tracking parity.
-        if r0 < LIMIT {
-            return (q10, q11, q00, q01, false);
+
+    // Compute a3
+    let q = div1(a1, a2);
+    //println!("{:?}", q);
+    let mut a3 = a1 - q * a2;
+    let mut u3 = u1 + q * u2;
+    let mut v3 = v1 + q * v2;
+
+    // Loop until a3 < LIMIT
+    while a3 >= LIMIT {
+        let q = div1(a2, a3);
+        //println!("{:?}", q);
+        let t = a2 - q * a3;          a1 = a2; a2 = a3; a3 = t;
+        let t = u2 + q * u3; u0 = u1; u1 = u2; u2 = u3; u3 = t;
+        let t = v2 + q * v3; v0 = v1; v1 = v2; v2 = v3; v3 = t;
+        even = !even;
+    }
+    debug_assert!(a2 >= LIMIT);
+    debug_assert!(a3 < LIMIT);
+
+    if even {
+        // Test i + 1 (odd)
+        debug_assert!(a2 >= v2);
+        if a1 - a2 >= u2 + u1 {
+            // Test i + 2 (even)
+            if a3 >= u3 && a2 - a3 >= v3 + v2 {
+                // Correct value is i + 2
+                (u2, v2, u3, v3, true)
+            } else {
+                // Correct value is i + 1
+                (u1, v1, u2, v2, false)
+            }
+        } else {
+            // Correct value is i
+            (u0, v0, u1, v1, true)
         }
-        div_update(&mut r1, r0, &mut q10, q00, &mut q11, q01);
-        if r1 < LIMIT {
-            return (q00, q01, q10, q11, true);
+    } else {
+        // Test i + 1 (even)
+        debug_assert!(a2 >= u2);
+        if a1 - a2 >= v2 + v1 {
+            // Test i + 2 (odd)
+            if a3 >= v3 && a2 - a3 >= u3 + u2 {
+                // Correct value is i + 2
+                (u2, v2, u3, v3, false)
+            } else {
+                // Correct value is i + 1
+                (u1, v1, u2, v2, true)
+            }
+        } else {
+            // Correct value is i
+            (u0, v0, u1, v1, false)
         }
-        div_update(&mut r0, r1, &mut q00, q10, &mut q01, q11);
     }
 }
 
@@ -154,13 +206,13 @@ fn lehmer_double(mut r0: U256, mut r1: U256) -> (u64, u64, u64, u64, bool) {
     let s = r0.leading_zeros();
     let r0s = r0.clone() << s;
     let r1s = r1.clone() << s;
-    let q = lehmer_loop(r0s.c3, r1s.c3, 1, 0, 0, 1);
-    // We can return q here and have a perfectly valid single-word Lehmer GCD.
-    // return q;
-    println!("({:?}, {:?}, {:?}, {:?}) (single word)", q.0, q.1, q.2, q.3);
+    let q = lehmer_loop(r0s.c3, r1s.c3);
+    println!("({:?}, {:?}, {:?}, {:?}) (first word)", q.0, q.1, q.2, q.3);
     if q.2 == 0u64 {
         return q;
     }
+    // We can return q here and have a perfectly valid single-word Lehmer GCD.
+    // return q;
 
     // Recompute r0 and r1 and take the high bits.
     // OPT: This does not need full precision.
@@ -170,9 +222,17 @@ fn lehmer_double(mut r0: U256, mut r1: U256) -> (u64, u64, u64, u64, bool) {
     let s = r0.leading_zeros();
     let r0s = r0.clone() << s;
     let r1s = r1.clone() << s;
-    let mut qn = lehmer_loop(r0s.c3, r1s.c3, q.0, q.1, q.2, q.3);
-    qn.4 ^= !q.4;
-    qn
+    let qn = lehmer_loop(r0s.c3, r1s.c3);
+    println!("({:?}, {:?}, {:?}, {:?}) (second word)", qn.0, qn.1, qn.2, qn.3);
+
+    // Multiply matrices qn * q
+    (
+        qn.0 * q.0 + qn.1 * q.2,
+        qn.0 * q.1 + qn.1 * q.3,
+        qn.2 * q.0 + qn.3 * q.2,
+        qn.2 * q.1 + qn.3 * q.3,
+        qn.4 ^ !q.4
+    )
 }
 
 #[inline(never)]
@@ -303,6 +363,7 @@ mod tests {
         );
     }
 
+    /*
     #[test]
     fn test_lehmer_loop() {
         assert_eq!(lehmer_loop(0, 0, 1, 0, 0, 1), (1, 0, 0, 1, true));
@@ -328,6 +389,7 @@ mod tests {
             )
         );
     }
+    */
 
     #[test]
     fn test_lehmer_double() {
@@ -351,16 +413,17 @@ mod tests {
     fn test_lehmer_34() {
         assert_eq!(
             gcd_lehmer(
-                u256h!("518a5cc4c55ac5b050a0831b65e827e5e39fd4515e4e094961c61509e7870814"),
-                u256h!("018a5cc4c55ac5b050a0831b65e827e5e39fd4515e4e094961c61509e7870814")
+                u256h!("fea5a792d0a17b24827908e5524bcceec3ec6a92a7a42eac3b93e2bb351cf4f2"),
+                u256h!("00028735553c6c798ed1ffb8b694f8f37b672b1bab7f80c4e6f4c0e710c79fb4")
             ),
             (
-                u256h!("0000000000000000000000000000000000000000000000000000000000000001"),
-                u256h!("0bbc35a0c1fd8f1ae85377ead5a901d4fbf0345fa303a87a4b4b68429cd69293"),
-                u256h!("18283a24821b7de14cf22afb0e1a7efb4212b7f373988f5a0d75f6ee0b936347"),
+                u256h!("0000000000000000000000000000000000000000000000000000000000000002"),
+                u256h!("00000b5a5ecb4dfc4ea08773d0593986592959a646b2f97655ed839928274ebb"),
+                u256h!("0477865490d3994853934bf7eae7dad9afac55ccbf412a60c18fc9bea58ec8ba"),
                 false
             )
         );
+        assert!(false);
     }
 
     #[test]
