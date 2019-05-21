@@ -109,85 +109,80 @@ fn lehmer_small(mut r0: u64, mut r1: u64) -> (u64, u64, u64, u64, bool) {
 }
 
 /// Compute the Lehmer update matrix for the most significant 64-bits of r0 and r1.
-/// OPT: Would a variation of binary gcd apply here and be faster?
-/// OPT: Use a division optimized for small quotients, like in GMPs
-///      https://github.com/ryepdx/gmp/blob/master/mpn/generic/hgcd2.c
 #[inline(never)]
 #[rustfmt::skip]
 #[allow(clippy::cognitive_complexity)]
 fn lehmer_loop(a0: u64, mut a1: u64) -> (u64, u64, u64, u64, bool) {
     const LIMIT: u64 = 1u64 << 32;
 
-    // OPT: Since u and v are < 2^32, can we pack them in a u64?
-    let mut u0 = 1u64;
-    let mut v0 = 0u64;
-    let mut u1 = 0u64;
-    let mut v1 = 1u64;
+    // The cofactors u and v never exceed 32 bit. We can pack them in a single
+    // 64 bit variable.
+    let mut k0 = 1u64 << 32; // u0 = 1, v0 = 0
+    let mut k1 = 1u64; // u1 = 0, v1 = 1
     let mut even = true;
     if a1 < LIMIT {
-        return (u0, v0, u1, v1, true)
+        return (1, 0, 0, 1, true)
     }
 
     // Compute a2
     let q = div1(a0, a1);
     let mut a2 = a0 - q * a1;
-    let mut u2 = u0 + q * u1;
-    let mut v2 = v0 + q * v1;
+    let mut k2 = k0 + q * k1;
     if a2 < LIMIT {
+        let u2 = k2 >> 32;
+        let v2 = k2 % LIMIT;
+
         // Test i + 1 (odd)
-        if a2 >= v2 && a1 - a2 >= u2 + u1 {
-            return (u1, v1, u2, v2, false);
+        if a2 >= v2 && a1 - a2 >= u2 {
+            return (0, 1, u2, v2, false);
         } else {
-            return (u0, v0, u1, v1, true)
+            return (1, 0, 0, 1, true);
         }
     }
 
     // Compute a3
     let q = div1(a1, a2);
     let mut a3 = a1 - q * a2;
-    let mut u3 = u1 + q * u2;
-    let mut v3 = v1 + q * v2;
+    let mut k3 = k1 + q * k2;
 
-    // Loop until a3 < LIMIT
-    let mut k0 = (u0 << 32) | v0;
-    let mut k1 = (u1 << 32) | v1;
-    let mut k2 = (u2 << 32) | v2;
-    let mut k3 = (u3 << 32) | v3;
+    // Loop until a3 < LIMIT, maintaing the last three values
+    // of a and the last four values of k.
     while a3 >= LIMIT {
-        // OPT: Unroll four times to elliminate variable cycling.
-        even = !even;
-        let mut t = a2;
-        unroll! {
-            for q in 1..20 {
-                t -= a3;
-                if t < a3 {
-                    a1 = a2; a2 = a3; a3 = t;
-                    let t = k2 + (q as u64) * k3; k0 = k1; k1 = k2; k2 = k3; k3 = t;
-                    continue;
-                }
-            }
-        }
-        let q = a2 / a3;
-        let t = a2 - q * a3;          a1 = a2; a2 = a3; a3 = t;
-        let t = k2 + (q as u64) * k3; k0 = k1; k1 = k2; k2 = k3; k3 = t;
-        /*
         let q = div1(a2, a3);
-        let t = a2 - q * a3;          a1 = a2; a2 = a3; a3 = t;
-        let t = u2 + q * u3; u0 = u1; u1 = u2; u2 = u3; u3 = t;
-        let t = v2 + q * v3; v0 = v1; v1 = v2; v2 = v3; v3 = t;
-        let t = k2 + q * k3; k0 = k1; k1 = k2; k2 = k3; k3 = t;
-        */
+        a1 = a2;
+        a2 = a3;
+        a3 = a1 - q * a2;
+        k0 = k1;
+        k1 = k2;
+        k2 = k3;
+        k3 = k1 + q * k2;
+        if a3 < LIMIT {
+            even = false;
+            break;
+        }
+        let q = div1(a2, a3);
+        a1 = a2;
+        a2 = a3;
+        a3 = a1 - q * a2;
+        k0 = k1;
+        k1 = k2;
+        k2 = k3;
+        k3 = k1 + q * k2;
     }
-    u0 = k0 >> 32; v0 = k0 % LIMIT;
-    u1 = k1 >> 32; v1 = k1 % LIMIT;
-    u2 = k2 >> 32; v2 = k2 % LIMIT;
-    u3 = k3 >> 32; v3 = k3 % LIMIT;
+    // Unpack k into cofactors u and v
+    let u0 = k0 >> 32;
+    let u1 = k1 >> 32;
+    let u2 = k2 >> 32;
+    let u3 = k3 >> 32;
+    let v0 = k0 % LIMIT;
+    let v1 = k1 % LIMIT;
+    let v2 = k2 % LIMIT;
+    let v3 = k3 % LIMIT;
     debug_assert!(a2 >= LIMIT);
     debug_assert!(a3 < LIMIT);
-    debug_assert!(u3 < LIMIT); // Is this true?
-    debug_assert!(v3 < LIMIT); // Is this true?
 
-    // OPT: Check if the exact condition is worth the additional overhead.
+    // Use Jebelean's exact condition to determine which outputs are correct.
+    // Statistically, i + 2 should be correct about two-thirds of the time.
     if even {
         // Test i + 1 (odd)
         debug_assert!(a2 >= v2);
@@ -397,6 +392,20 @@ mod tests {
                 false
             )
         );
+    }
+
+    #[quickcheck]
+    fn test_lehmer_loop(a: u64, b: u64) -> bool {
+        let (u0, v0, u1, v1, even) = lehmer_loop(a, b);
+        assert!(u0 < 1u64 << 32);
+        assert!(v0 < 1u64 << 32);
+        assert!(u1 < 1u64 << 32);
+        assert!(v1 < 1u64 << 32);
+        if even {
+            false
+        } else {
+            false
+        }
     }
 
     /*
