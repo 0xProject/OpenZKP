@@ -114,6 +114,7 @@ fn lehmer_small(mut r0: u64, mut r1: u64) -> (u64, u64, u64, u64, bool) {
 ///      https://github.com/ryepdx/gmp/blob/master/mpn/generic/hgcd2.c
 #[inline(never)]
 #[rustfmt::skip]
+#[allow(clippy::cognitive_complexity)]
 fn lehmer_loop(a0: u64, mut a1: u64) -> (u64, u64, u64, u64, bool) {
     const LIMIT: u64 = 1u64 << 32;
 
@@ -153,14 +154,29 @@ fn lehmer_loop(a0: u64, mut a1: u64) -> (u64, u64, u64, u64, bool) {
     let mut k2 = (u2 << 32) | v2;
     let mut k3 = (u3 << 32) | v3;
     while a3 >= LIMIT {
+        // OPT: Unroll four times to elliminate variable cycling.
+        even = !even;
+        let mut t = a2;
+        unroll! {
+            for q in 1..20 {
+                t -= a3;
+                if t < a3 {
+                    a1 = a2; a2 = a3; a3 = t;
+                    let t = k2 + (q as u64) * k3; k0 = k1; k1 = k2; k2 = k3; k3 = t;
+                    continue;
+                }
+            }
+        }
+        let q = a2 / a3;
+        let t = a2 - q * a3;          a1 = a2; a2 = a3; a3 = t;
+        let t = k2 + (q as u64) * k3; k0 = k1; k1 = k2; k2 = k3; k3 = t;
+        /*
         let q = div1(a2, a3);
         let t = a2 - q * a3;          a1 = a2; a2 = a3; a3 = t;
-        /*
         let t = u2 + q * u3; u0 = u1; u1 = u2; u2 = u3; u3 = t;
         let t = v2 + q * v3; v0 = v1; v1 = v2; v2 = v3; v3 = t;
-        */
         let t = k2 + q * k3; k0 = k1; k1 = k2; k2 = k3; k3 = t;
-        even = !even;
+        */
     }
     u0 = k0 >> 32; v0 = k0 % LIMIT;
     u1 = k1 >> 32; v1 = k1 % LIMIT;
