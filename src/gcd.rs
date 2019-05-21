@@ -1,7 +1,6 @@
 use crate::u256::U256;
 use crunchy::unroll;
 
-#[inline(always)]
 fn euclid_step(
     a: U256,
     b: U256,
@@ -128,7 +127,6 @@ fn lehmer_unroll(a2: u64, a3: &mut u64, k2: u64, k3: &mut u64) {
 }
 
 /// Compute the Lehmer update matrix for the most significant 64-bits of r0 and r1.
-#[inline(never)]
 #[rustfmt::skip]
 #[allow(clippy::cognitive_complexity)]
 fn lehmer_loop(a0: u64, mut a1: u64) -> (u64, u64, u64, u64, bool) {
@@ -239,7 +237,6 @@ fn lehmer_loop(a0: u64, mut a1: u64) -> (u64, u64, u64, u64, bool) {
 
 /// Compute the Lehmer update matrix using double words
 /// See https://github.com/ryepdx/gmp/blob/090b098806bc1a8f3af777b862369f58be465dd9/mpn/generic/hgcd2.c#L226
-#[inline(never)]
 fn lehmer_double(mut r0: U256, mut r1: U256) -> (u64, u64, u64, u64, bool) {
     debug_assert!(r0 >= r1);
     if r0.bits() < 64 {
@@ -250,10 +247,6 @@ fn lehmer_double(mut r0: U256, mut r1: U256) -> (u64, u64, u64, u64, bool) {
     let r1s = r1.clone() << s;
     let q = lehmer_loop(r0s.c3, r1s.c3);
     //println!("({:?}, {:?}, {:?}, {:?}) (first word)", q.0, q.1, q.2, q.3);
-    debug_assert!(q.0 < (1u64 << 32));
-    debug_assert!(q.1 < (1u64 << 32));
-    debug_assert!(q.2 < (1u64 << 32));
-    debug_assert!(q.3 < (1u64 << 32));
     if q.2 == 0u64 {
         return q;
     }
@@ -285,24 +278,52 @@ fn lehmer_double(mut r0: U256, mut r1: U256) -> (u64, u64, u64, u64, bool) {
     )
 }
 
-#[inline(never)]
 fn lehmer_update(
     a0: &mut U256,
     a1: &mut U256,
     (q00, q01, q10, q11, even): (u64, u64, u64, u64, bool),
 ) {
-    // OPT: Inplace clone-free multiply.
     if even {
-        let b0 = q00 * a0.clone() - q01 * a1.clone();
-        let b1 = q11 * a1.clone() - q10 * a0.clone();
-        *a0 = b0;
-        *a1 = b1;
+        mat_mul(a0, a1, (q00, q01, q10, q11));
     } else {
-        let b0 = q01 * a1.clone() - q00 * a0.clone();
-        let b1 = q10 * a0.clone() - q11 * a1.clone();
-        *a0 = b0;
-        *a1 = b1;
+        mat_mul(a0, a1, (q10, q11, q00, q01));
+        std::mem::swap(a0, a1);
     }
+}
+
+// Simulataneously computes
+//   a' = q00 a - q01 b
+//   b' = q11 b - q10 a
+fn mat_mul(
+    a: &mut U256,
+    b: &mut U256,
+    (q00, q01, q10, q11): (u64, u64, u64, u64),
+) {
+    use crate::utils::{msb, mac};
+    let (ai, ac) = mac( 0, q00, a.c0, 0);
+    let (ai, ab) = msb(ai, q01, b.c0, 0);
+    let (bi, bc) = mac( 0, q11, b.c0, 0);
+    let (bi, bb) = msb(bi, q10, a.c0, 0);
+    a.c0 = ai;
+    b.c0 = bi;
+    let (ai, ac) = mac( 0, q00, a.c1, ac);
+    let (ai, ab) = msb(ai, q01, b.c1, ab);
+    let (bi, bc) = mac( 0, q11, b.c1, bc);
+    let (bi, bb) = msb(bi, q10, a.c1, bb);
+    a.c1 = ai;
+    b.c1 = bi;
+    let (ai, ac) = mac( 0, q00, a.c2, ac);
+    let (ai, ab) = msb(ai, q01, b.c2, ab);
+    let (bi, bc) = mac( 0, q11, b.c2, bc);
+    let (bi, bb) = msb(bi, q10, a.c2, bb);
+    a.c2 = ai;
+    b.c2 = bi;
+    let (ai, _ac) = mac( 0, q00, a.c3, ac);
+    let (ai, _ab) = msb(ai, q01, b.c3, ab);
+    let (bi, _bc) = mac( 0, q11, b.c3, bc);
+    let (bi, _bb) = msb(bi, q10, a.c3, bb);
+    a.c3 = ai;
+    b.c3 = bi;
 }
 
 #[rustfmt::skip]
@@ -362,7 +383,6 @@ pub fn inv_lehmer(modulus: &U256, num: &U256) -> Option<U256> {
         } else {
             // Do a full precision Euclid step. q is at least a halfword.
             // This should happen zero or one time, seldom more.
-            // OPT: use single limb version when q is small enough?
             let q = &r0 / &r1;
             let t = r0 - &q * &r1; r0 = r1; r1 = t;
             let t = t0 -  q * &t1; t0 = t1; t1 = t;
@@ -425,6 +445,16 @@ mod tests {
         } else {
             false
         }
+    }
+
+    #[quickcheck]
+    fn test_mat_mul(a: U256, b: U256, q00: u64, q01: u64, q10: u64, q11: u64) -> bool {
+        let a_expected = q00 * a.clone() - q01 * b.clone();
+        let b_expected = q11 * b.clone() - q10 * a.clone();
+        let mut a_result = a;
+        let mut b_result = b;
+        mat_mul(&mut a_result, &mut b_result, (q00, q01, q10, q11));
+        a_result == a_expected && b_result == b_expected
     }
 
     /*
