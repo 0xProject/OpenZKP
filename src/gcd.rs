@@ -117,6 +117,7 @@ fn lehmer_small(mut r0: u64, mut r1: u64) -> (u64, u64, u64, u64, bool) {
 fn lehmer_loop(a0: u64, mut a1: u64) -> (u64, u64, u64, u64, bool) {
     const LIMIT: u64 = 1u64 << 32;
 
+    // OPT: Since u and v are < 2^32, can we pack them in a u64?
     let mut u0 = 1u64;
     let mut v0 = 0u64;
     let mut u1 = 0u64;
@@ -128,7 +129,6 @@ fn lehmer_loop(a0: u64, mut a1: u64) -> (u64, u64, u64, u64, bool) {
 
     // Compute a2
     let q = div1(a0, a1);
-    //println!("{:?}", q);
     let mut a2 = a0 - q * a1;
     let mut u2 = u0 + q * u1;
     let mut v2 = v0 + q * v1;
@@ -143,23 +143,35 @@ fn lehmer_loop(a0: u64, mut a1: u64) -> (u64, u64, u64, u64, bool) {
 
     // Compute a3
     let q = div1(a1, a2);
-    //println!("{:?}", q);
     let mut a3 = a1 - q * a2;
     let mut u3 = u1 + q * u2;
     let mut v3 = v1 + q * v2;
 
     // Loop until a3 < LIMIT
+    let mut k0 = (u0 << 32) | v0;
+    let mut k1 = (u1 << 32) | v1;
+    let mut k2 = (u2 << 32) | v2;
+    let mut k3 = (u3 << 32) | v3;
     while a3 >= LIMIT {
         let q = div1(a2, a3);
-        //println!("{:?}", q);
         let t = a2 - q * a3;          a1 = a2; a2 = a3; a3 = t;
+        /*
         let t = u2 + q * u3; u0 = u1; u1 = u2; u2 = u3; u3 = t;
         let t = v2 + q * v3; v0 = v1; v1 = v2; v2 = v3; v3 = t;
+        */
+        let t = k2 + q * k3; k0 = k1; k1 = k2; k2 = k3; k3 = t;
         even = !even;
     }
+    u0 = k0 >> 32; v0 = k0 % LIMIT;
+    u1 = k1 >> 32; v1 = k1 % LIMIT;
+    u2 = k2 >> 32; v2 = k2 % LIMIT;
+    u3 = k3 >> 32; v3 = k3 % LIMIT;
     debug_assert!(a2 >= LIMIT);
     debug_assert!(a3 < LIMIT);
+    debug_assert!(u3 < LIMIT); // Is this true?
+    debug_assert!(v3 < LIMIT); // Is this true?
 
+    // OPT: Check if the exact condition is worth the additional overhead.
     if even {
         // Test i + 1 (odd)
         debug_assert!(a2 >= v2);
@@ -207,7 +219,11 @@ fn lehmer_double(mut r0: U256, mut r1: U256) -> (u64, u64, u64, u64, bool) {
     let r0s = r0.clone() << s;
     let r1s = r1.clone() << s;
     let q = lehmer_loop(r0s.c3, r1s.c3);
-    println!("({:?}, {:?}, {:?}, {:?}) (first word)", q.0, q.1, q.2, q.3);
+    //println!("({:?}, {:?}, {:?}, {:?}) (first word)", q.0, q.1, q.2, q.3);
+    debug_assert!(q.0 < (1u64 << 32));
+    debug_assert!(q.1 < (1u64 << 32));
+    debug_assert!(q.2 < (1u64 << 32));
+    debug_assert!(q.3 < (1u64 << 32));
     if q.2 == 0u64 {
         return q;
     }
@@ -223,7 +239,11 @@ fn lehmer_double(mut r0: U256, mut r1: U256) -> (u64, u64, u64, u64, bool) {
     let r0s = r0.clone() << s;
     let r1s = r1.clone() << s;
     let qn = lehmer_loop(r0s.c3, r1s.c3);
-    println!("({:?}, {:?}, {:?}, {:?}) (second word)", qn.0, qn.1, qn.2, qn.3);
+    //println!("({:?}, {:?}, {:?}, {:?}) (second word)", qn.0, qn.1, qn.2, qn.3);
+    debug_assert!(qn.0 < (1u64 << 32));
+    debug_assert!(qn.1 < (1u64 << 32));
+    debug_assert!(qn.2 < (1u64 << 32));
+    debug_assert!(qn.3 < (1u64 << 32));
 
     // Multiply matrices qn * q
     (
@@ -266,7 +286,7 @@ pub fn gcd_lehmer(mut r0: U256, mut r1: U256) -> (U256, U256, U256, bool) {
     let mut even = true;
     while r1 != U256::ZERO {
         let q = lehmer_double(r0.clone(), r1.clone());
-        println!("({:?}, {:?}, {:?}, {:?})", q.0, q.1, q.2, q.3);
+        //println!("({:?}, {:?}, {:?}, {:?})", q.0, q.1, q.2, q.3);
         if q.2 != 0u64 {
             lehmer_update(&mut r0, &mut r1, q);
             lehmer_update(&mut s0, &mut s1, q);
@@ -277,7 +297,7 @@ pub fn gcd_lehmer(mut r0: U256, mut r1: U256) -> (U256, U256, U256, bool) {
             // This should happen zero or one time, seldom more.
             // OPT: use single limb version when q is small enough?
             let q = &r0 / &r1;
-            println!("{:?} full precission", q);
+            //println!("{:?} full precission", q);
             let t = r0 - &q * &r1; r0 = r1; r1 = t;
             let t = s0 - &q * &s1; s0 = s1; s1 = t;
             let t = t0 -  q * &t1; t0 = t1; t1 = t;
@@ -423,7 +443,6 @@ mod tests {
                 false
             )
         );
-        assert!(false);
     }
 
     #[test]
