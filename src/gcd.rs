@@ -126,11 +126,13 @@ fn lehmer_unroll(a2: u64, a3: &mut u64, k2: u64, k3: &mut u64) {
     }
 }
 
-/// Compute the Lehmer update matrix for the most significant 64-bits of r0 and r1.
+/// Compute the Lehmer update matrix for a0 and a1 such that the matrix is valid
+/// for any two large integers starting with a0 and a1.
 #[rustfmt::skip]
 #[allow(clippy::cognitive_complexity)]
 fn lehmer_loop(a0: u64, mut a1: u64) -> (u64, u64, u64, u64, bool) {
     const LIMIT: u64 = 1u64 << 32;
+    debug_assert!(a0 >= a1);
 
     // The cofactors u and v never exceed 32 bit. We can pack them in a single
     // 64 bit variable.
@@ -246,7 +248,6 @@ fn lehmer_double(mut r0: U256, mut r1: U256) -> (u64, u64, u64, u64, bool) {
     let r0s = r0.clone() << s;
     let r1s = r1.clone() << s;
     let q = lehmer_loop(r0s.c3, r1s.c3);
-    //println!("({:?}, {:?}, {:?}, {:?}) (first word)", q.0, q.1, q.2, q.3);
     if q.2 == 0u64 {
         return q;
     }
@@ -256,17 +257,11 @@ fn lehmer_double(mut r0: U256, mut r1: U256) -> (u64, u64, u64, u64, bool) {
     // Recompute r0 and r1 and take the high bits.
     // OPT: This does not need full precision.
     // OPT: Can we reuse the shifted variables here?
-    // TODO: Should we use lehmer_small here when r0 is one word?
     lehmer_update(&mut r0, &mut r1, q);
     let s = r0.leading_zeros();
     let r0s = r0.clone() << s;
     let r1s = r1.clone() << s;
     let qn = lehmer_loop(r0s.c3, r1s.c3);
-    //println!("({:?}, {:?}, {:?}, {:?}) (second word)", qn.0, qn.1, qn.2, qn.3);
-    debug_assert!(qn.0 < (1u64 << 32));
-    debug_assert!(qn.1 < (1u64 << 32));
-    debug_assert!(qn.2 < (1u64 << 32));
-    debug_assert!(qn.3 < (1u64 << 32));
 
     // Multiply matrices qn * q
     (
@@ -278,6 +273,7 @@ fn lehmer_double(mut r0: U256, mut r1: U256) -> (u64, u64, u64, u64, bool) {
     )
 }
 
+// Applies the lehmer matrix to the variables.
 fn lehmer_update(
     a0: &mut U256,
     a1: &mut U256,
@@ -337,7 +333,6 @@ pub fn gcd_lehmer(mut r0: U256, mut r1: U256) -> (U256, U256, U256, bool) {
     let mut even = true;
     while r1 != U256::ZERO {
         let q = lehmer_double(r0.clone(), r1.clone());
-        //println!("({:?}, {:?}, {:?}, {:?})", q.0, q.1, q.2, q.3);
         if q.2 != 0u64 {
             lehmer_update(&mut r0, &mut r1, q);
             lehmer_update(&mut s0, &mut s1, q);
@@ -348,7 +343,6 @@ pub fn gcd_lehmer(mut r0: U256, mut r1: U256) -> (U256, U256, U256, bool) {
             // This should happen zero or one time, seldom more.
             // OPT: use single limb version when q is small enough?
             let q = &r0 / &r1;
-            //println!("{:?} full precission", q);
             let t = r0 - &q * &r1; r0 = r1; r1 = t;
             let t = s0 - &q * &s1; s0 = s1; s1 = t;
             let t = t0 -  q * &t1; t0 = t1; t1 = t;
@@ -435,17 +429,38 @@ mod tests {
 
     #[quickcheck]
     fn test_lehmer_loop(a: u64, b: u64) -> bool {
-        let (u0, v0, u1, v1, even) = lehmer_loop(a, b);
-        assert!(u0 < 1u64 << 32);
-        assert!(v0 < 1u64 << 32);
-        assert!(u1 < 1u64 << 32);
-        assert!(v1 < 1u64 << 32);
-        if even {
-            false
-        } else {
+        const LIMIT: u64 = 1u64 << 32;
+        let q = lehmer_loop(a, b);
+        assert!(q.0 < LIMIT);
+        assert!(q.1 < LIMIT);
+        assert!(q.2 < LIMIT);
+        assert!(q.3 < LIMIT);
+        if q != (1, 0, 0, 1, false) {
+            assert!(q.0 <= q.2);
+            assert!(q.2 <= q.3);
+            assert!(q.1 <= q.3);
+        }
+
+        // Compare with simple GCD
+        let mut a0 = a;
+        let mut a1 = b;
+        let mut s0 = 1;
+        let mut s1 = 0;
+        let mut t0 = 0;
+        let mut t1 = 1;
+        let mut e = true;
+        while a1 > 0 {
+            let r = a0 / a1;
+            let t = a0 - r * a1; a0 = a1; a1 = t;
+            let t = s0 + r * s1; s0 = s1; s1 = t;
+            let t = t0 + r * t1; t0 = t1; t1 = t;
+            e = !e;
+            if q == (s0, t0, s1, t1, e) {
+                return true;
+            }
+        }
             false
         }
-    }
 
     #[quickcheck]
     fn test_mat_mul(a: U256, b: U256, q00: u64, q01: u64, q10: u64, q11: u64) -> bool {
@@ -485,6 +500,7 @@ mod tests {
     }
     */
 
+    /*
     #[test]
     fn test_lehmer_double() {
         assert_eq!(lehmer_double(U256::ZERO, U256::ZERO), (1, 0, 0, 1, true));
@@ -502,6 +518,7 @@ mod tests {
             )
         );
     }
+    */
 
     #[test]
     fn test_lehmer_34() {
