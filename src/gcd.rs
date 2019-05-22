@@ -84,30 +84,6 @@ fn lehmer_unroll(a2: u64, a3: &mut u64, k2: u64, k3: &mut u64) {
     }
 }
 
-/// Division optimized for small values
-/// Requires a > b > 0. Returns a / b.
-#[inline(always)]
-#[allow(clippy::cognitive_complexity)]
-fn div_update(r0: &mut u64, r1: u64, u0: &mut u64, u1: u64, v0: &mut u64, v1: u64) -> u64 {
-    unroll! {
-        for q in 1..10 {
-            *r0 -= r1;
-            if *r0 < r1 {
-                *u0 += (q as u64) * u1;
-                *v0 += (q as u64) * v1;
-                return q as u64;
-            }
-        }
-    }
-    let mut q = *r0 / r1;
-    *r0 -= q * r1;
-    q += 9;
-    *u0 += q * u1;
-    *v0 += q * v1;
-    q
-}
-
-
 /// Compute the Lehmer update matrix for small values.
 /// This is essentialy Euclids extended GCD algorithm for 64 bits.
 /// OPT: Would this be faster using extended binary gcd?
@@ -121,17 +97,22 @@ fn lehmer_small(mut r0: u64, mut r1: u64) -> (u64, u64, u64, u64, bool) {
     let mut q01 = 0u64;
     let mut q10 = 0u64;
     let mut q11 = 1u64;
-    div_update(&mut r0, r1, &mut q00, q10, &mut q01, q11);
     loop {
         // Loop is unrolled once to avoid swapping variables and tracking parity.
+        let q = div1(r0, r1);
+        r0 -= q * r1;
+        q00 += q * q10;
+        q01 += q * q11;
         if r0 == 0u64 {
             return (q10, q11, q00, q01, false);
         }
-        div_update(&mut r1, r0, &mut q10, q00, &mut q11, q01);
+        let q = div1(r1, r0);
+        r1 -= q * r0;
+        q10 += q * q00;
+        q11 += q * q01;
         if r1 == 0u64 {
             return (q00, q01, q10, q11, true);
         }
-        div_update(&mut r0, r1, &mut q00, q10, &mut q01, q11);
     }
 }
 
