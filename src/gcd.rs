@@ -1,43 +1,6 @@
 use crate::u256::U256;
 use crunchy::unroll;
 
-fn euclid_step(
-    a: U256,
-    b: U256,
-    data: (U256, U256, U256, U256),
-) -> (U256, U256, (U256, U256, U256, U256)) {
-    let (q, rem) = a.divrem(&b).unwrap();
-    let hold1 = &data.0 + &data.1 * &q;
-    let hold2 = &data.2 + &data.3 * q;
-    (b, rem, (data.1, hold1, data.3, hold2))
-}
-
-pub fn gcd_euclid(a: &U256, b: &U256) -> (U256, U256, U256, bool) {
-    let mut a_prime;
-    let mut b_prime;
-
-    if b > a {
-        //Note : Alg assumes a >= b, and gcd(a,b) = gcd(b,a)
-        a_prime = b.clone(); //Gets correct ordering of mutable data
-        b_prime = a.clone();
-    } else {
-        a_prime = a.clone(); //Gets correct ordering of mutable data
-        b_prime = b.clone();
-    }
-
-    let mut consquences = (U256::ONE, U256::ZERO, U256::ZERO, U256::ONE);
-    let mut even = true;
-
-    while b_prime != U256::ZERO {
-        let (hold1, hold2, hold3) = euclid_step(a_prime, b_prime, consquences);
-        a_prime = hold1;
-        b_prime = hold2;
-        consquences = hold3;
-        even = !even;
-    }
-    (a_prime, consquences.0, consquences.2, even)
-}
-
 /// Division optimized for small values
 /// Requires a > b > 0. Returns a / b.
 #[inline(always)]
@@ -67,7 +30,7 @@ fn div_update(r0: &mut u64, r1: u64, u0: &mut u64, u1: u64, v0: &mut u64, v1: u6
             if *r0 < r1 {
                 *u0 += (q as u64) * u1;
                 *v0 += (q as u64) * v1;
-                return (q as u64);
+                return q as u64;
             }
         }
     }
@@ -82,7 +45,7 @@ fn div_update(r0: &mut u64, r1: u64, u0: &mut u64, u1: u64, v0: &mut u64, v1: u6
 /// Compute the Lehmer update matrix for small values.
 /// This is essentialy Euclids extended GCD algorithm for 64 bits.
 /// OPT: Would this be faster using extended binary gcd?
-#[inline(never)]
+#[inline]
 fn lehmer_small(mut r0: u64, mut r1: u64) -> (u64, u64, u64, u64, bool) {
     if r1 == 0u64 {
         return (1, 0, 0, 1, true);
@@ -128,8 +91,6 @@ fn lehmer_unroll(a2: u64, a3: &mut u64, k2: u64, k3: &mut u64) {
 
 /// Compute the Lehmer update matrix for a0 and a1 such that the matrix is valid
 /// for any two large integers starting with a0 and a1.
-#[rustfmt::skip]
-#[allow(clippy::cognitive_complexity)]
 fn lehmer_loop(a0: u64, mut a1: u64) -> (u64, u64, u64, u64, bool) {
     const LIMIT: u64 = 1u64 << 32;
     debug_assert!(a0 >= 1u64 << 63);
@@ -141,7 +102,7 @@ fn lehmer_loop(a0: u64, mut a1: u64) -> (u64, u64, u64, u64, bool) {
     let mut k1 = 1u64; // u1 = 0, v1 = 1
     let mut even = true;
     if a1 < LIMIT {
-        return (1, 0, 0, 1, true)
+        return (1, 0, 0, 1, true);
     }
 
     // Compute a2
@@ -239,7 +200,6 @@ fn lehmer_loop(a0: u64, mut a1: u64) -> (u64, u64, u64, u64, bool) {
 }
 
 /// Compute the Lehmer update matrix using double words
-/// See https://github.com/ryepdx/gmp/blob/090b098806bc1a8f3af777b862369f58be465dd9/mpn/generic/hgcd2.c#L226
 fn lehmer_double(mut r0: U256, mut r1: U256) -> (u64, u64, u64, u64, bool) {
     debug_assert!(r0 >= r1);
     if r0.bits() < 64 {
@@ -320,7 +280,6 @@ fn mat_mul(a: &mut U256, b: &mut U256, (q00, q01, q10, q11): (u64, u64, u64, u64
     b.c3 = bi;
 }
 
-#[rustfmt::skip]
 pub fn gcd_lehmer(mut r0: U256, mut r1: U256) -> (U256, U256, U256, bool) {
     let swapped = r1 > r0;
     if swapped {
@@ -344,9 +303,15 @@ pub fn gcd_lehmer(mut r0: U256, mut r1: U256) -> (U256, U256, U256, bool) {
             // This should happen zero or one time, seldom more.
             // OPT: use single limb version when q is small enough?
             let q = &r0 / &r1;
-            let t = r0 - &q * &r1; r0 = r1; r1 = t;
-            let t = s0 - &q * &s1; s0 = s1; s1 = t;
-            let t = t0 -  q * &t1; t0 = t1; t1 = t;
+            let t = r0 - &q * &r1;
+            r0 = r1;
+            r1 = t;
+            let t = s0 - &q * &s1;
+            s0 = s1;
+            s1 = t;
+            let t = t0 - q * &t1;
+            t0 = t1;
+            t1 = t;
             even = !even;
         }
     }
@@ -365,7 +330,6 @@ pub fn gcd_lehmer(mut r0: U256, mut r1: U256) -> (U256, U256, U256, bool) {
     (r0, s0, t0, even)
 }
 
-#[rustfmt::skip]
 pub fn inv_lehmer(modulus: &U256, num: &U256) -> Option<U256> {
     debug_assert!(modulus > num);
     let mut r0 = modulus.clone();
@@ -383,8 +347,12 @@ pub fn inv_lehmer(modulus: &U256, num: &U256) -> Option<U256> {
             // Do a full precision Euclid step. q is at least a halfword.
             // This should happen zero or one time, seldom more.
             let q = &r0 / &r1;
-            let t = r0 - &q * &r1; r0 = r1; r1 = t;
-            let t = t0 -  q * &t1; t0 = t1; t1 = t;
+            let t = r0 - &q * &r1;
+            r0 = r1;
+            r1 = t;
+            let t = t0 - q * &t1;
+            t0 = t1;
+            t1 = t;
             even = !even;
         }
     }
@@ -441,13 +409,8 @@ mod tests {
         );
         assert_eq!(
             // Accumulates the first 27 coefficients
-            lehmer_loop(
-                15267531864828975732,
-                6325623274722585764,
-            ),
-            (
-                88810257, 214352542, 774927313, 1870365485, false
-            )
+            lehmer_loop(15267531864828975732, 6325623274722585764,),
+            (88810257, 214352542, 774927313, 1870365485, false)
         );
     }
 
@@ -505,7 +468,14 @@ mod tests {
     }
 
     #[quickcheck]
-    fn test_mat_mul_match_formula(a: U256, b: U256, q00: u64, q01: u64, q10: u64, q11: u64) -> bool {
+    fn test_mat_mul_match_formula(
+        a: U256,
+        b: U256,
+        q00: u64,
+        q01: u64,
+        q10: u64,
+        q11: u64,
+    ) -> bool {
         let a_expected = q00 * a.clone() - q01 * b.clone();
         let b_expected = q11 * b.clone() - q10 * a.clone();
         let mut a_result = a;
@@ -524,7 +494,11 @@ mod tests {
                 u256h!("018a5cc4c55ac5b050a0831b65e827e5e39fd4515e4e094961c61509e7870814")
             ),
             (
-                2927556694930003, 154961230633081597, 3017020641586254, 159696730135159213, true
+                2927556694930003,
+                154961230633081597,
+                3017020641586254,
+                159696730135159213,
+                true
             )
         );
     }
@@ -610,11 +584,11 @@ mod tests {
     }
 
     #[quickcheck]
-    fn test_gcd_lehmer_extended(a: U256, b:U256) -> bool {
+    fn test_gcd_lehmer_extended(a: U256, b: U256) -> bool {
         let (gcd, u, v, even) = gcd_lehmer(a.clone(), b.clone());
-        &a % &gcd == U256::ZERO &&
-        &b % &gcd == U256::ZERO &&
-        gcd == if even { u * a - v * b } else { v * b - u * a }
+        &a % &gcd == U256::ZERO
+            && &b % &gcd == U256::ZERO
+            && gcd == if even { u * a - v * b } else { v * b - u * a }
     }
 
     #[quickcheck]

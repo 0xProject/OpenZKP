@@ -1,5 +1,5 @@
 use crate::division::{divrem_nby1, divrem_nbym};
-use crate::gcd::{gcd_euclid, gcd_lehmer, inv_lehmer};
+use crate::gcd::{gcd_lehmer, inv_lehmer};
 use crate::utils::{adc, div_2_1, mac, sbb};
 use crate::{commutative_binop, noncommutative_binop};
 use hex_literal::*;
@@ -414,14 +414,6 @@ impl U256 {
 
     pub fn invmod_lehmer(&self, modulus: &U256) -> Option<U256> {
         inv_lehmer(modulus, self)
-    }
-
-    pub fn invmod_euclid(&self, modulus: &U256) -> Option<U256> {
-        match gcd_euclid(modulus, self) {
-            (U256::ONE, _s, t, true) => Some(modulus - t),
-            (U256::ONE, _s, t, false) => Some(t),
-            _ => None,
-        }
     }
 
     pub fn get_word(&self, which: usize) -> u64 {
