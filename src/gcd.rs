@@ -270,7 +270,7 @@ fn lehmer_double(mut r0: U256, mut r1: U256) -> (u64, u64, u64, u64, bool) {
         qn.0 * q.1 + qn.1 * q.3,
         qn.2 * q.0 + qn.3 * q.2,
         qn.2 * q.1 + qn.3 * q.3,
-        qn.4 ^ !q.4
+        qn.4 ^ !q.4,
     )
 }
 
@@ -291,12 +291,9 @@ fn lehmer_update(
 // Simulataneously computes
 //   a' = q00 a - q01 b
 //   b' = q11 b - q10 a
-fn mat_mul(
-    a: &mut U256,
-    b: &mut U256,
-    (q00, q01, q10, q11): (u64, u64, u64, u64),
-) {
-    use crate::utils::{msb, mac};
+#[rustfmt::skip]
+fn mat_mul(a: &mut U256, b: &mut U256, (q00, q01, q10, q11): (u64, u64, u64, u64)) {
+    use crate::utils::{mac, msb};
     let (ai, ac) = mac( 0, q00, a.c0, 0);
     let (ai, ab) = msb(ai, q01, b.c0, 0);
     let (bi, bc) = mac( 0, q11, b.c0, 0);
@@ -402,7 +399,6 @@ pub fn inv_lehmer(modulus: &U256, num: &U256) -> Option<U256> {
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unreadable_litteral)]
-
     use super::*;
     use crate::field::{FieldElement, MODULUS};
     use crate::u256h;
@@ -505,11 +501,11 @@ mod tests {
                 return true;
             }
         }
-            false
-        }
+        false
+    }
 
     #[quickcheck]
-    fn test_mat_mul(a: U256, b: U256, q00: u64, q01: u64, q10: u64, q11: u64) -> bool {
+    fn test_mat_mul_match_formula(a: U256, b: U256, q00: u64, q01: u64, q10: u64, q11: u64) -> bool {
         let a_expected = q00 * a.clone() - q01 * b.clone();
         let b_expected = q11 * b.clone() - q10 * a.clone();
         let mut a_result = a;
@@ -518,56 +514,27 @@ mod tests {
         a_result == a_expected && b_result == b_expected
     }
 
-    /*
-    #[test]
-    fn test_lehmer_loop() {
-        assert_eq!(lehmer_loop(0, 0, 1, 0, 0, 1), (1, 0, 0, 1, true));
-        assert_eq!(
-            lehmer_loop(5818365597666026993, 14535145444257436950, 1, 0, 0, 1),
-            (139667543, 55908407, 174687518, 69926775, false)
-        );
-        assert_eq!(
-            lehmer_loop(
-                6044159827974199924,
-                6325623274722585764,
-                4189569209,
-                21585722,
-                1706813914,
-                1897815210
-            ),
-            (
-                1130534579495951597,
-                356413338079229448,
-                1604599888673401540,
-                505867589524443154,
-                false
-            )
-        );
-    }
-    */
-
-    /*
     #[test]
     fn test_lehmer_double() {
         assert_eq!(lehmer_double(U256::ZERO, U256::ZERO), (1, 0, 0, 1, true));
         assert_eq!(
+            // Aggegrates the first 34 quotients
             lehmer_double(
                 u256h!("518a5cc4c55ac5b050a0831b65e827e5e39fd4515e4e094961c61509e7870814"),
                 u256h!("018a5cc4c55ac5b050a0831b65e827e5e39fd4515e4e094961c61509e7870814")
             ),
             (
-                24753544726280,
-                1310252935479731,
-                64710401929971,
-                3425246566597885,
-                false
+                2927556694930003, 154961230633081597, 3017020641586254, 159696730135159213, true
             )
         );
     }
-    */
 
     #[test]
-    fn test_lehmer_34() {
+    fn test_gcd_lehmer() {
+        assert_eq!(
+            gcd_lehmer(U256::ZERO, U256::ZERO),
+            (U256::ZERO, U256::ONE, U256::ZERO, true)
+        );
         assert_eq!(
             gcd_lehmer(
                 u256h!("fea5a792d0a17b24827908e5524bcceec3ec6a92a7a42eac3b93e2bb351cf4f2"),
@@ -579,14 +546,6 @@ mod tests {
                 u256h!("0477865490d3994853934bf7eae7dad9afac55ccbf412a60c18fc9bea58ec8ba"),
                 false
             )
-        );
-    }
-
-    #[test]
-    fn test_gcd_lehmer() {
-        assert_eq!(
-            gcd_lehmer(U256::ZERO, U256::ZERO),
-            (U256::ZERO, U256::ONE, U256::ZERO, true)
         );
         assert_eq!(
             gcd_lehmer(
@@ -636,5 +595,33 @@ mod tests {
                 true
             )
         );
+        assert_eq!(
+            gcd_lehmer(
+                u256h!("0000000000025d4e064960ef2964b2170f1cd63ab931968621dde8a867079fd4"),
+                u256h!("00253222ed7b612113dbea0be0e1a0b88f2c0c16250f54bf1ec35d62671bf83a")
+            ),
+            (
+                u256h!("000000000000000000000000000505b22b0a9fd5a6e2166e3486f0109e6f60b2"),
+                u256h!("0000000000000000000000000000000000000001e91177fbec66b1233e79662e"),
+                u256h!("0000000000000000000000000000000000000000000000001f16d40433587ae9"),
+                false
+            )
+        );
+    }
+
+    #[quickcheck]
+    fn test_gcd_lehmer_extended(a: U256, b:U256) -> bool {
+        let (gcd, u, v, even) = gcd_lehmer(a.clone(), b.clone());
+        &a % &gcd == U256::ZERO &&
+        &b % &gcd == U256::ZERO &&
+        gcd == if even { u * a - v * b } else { v * b - u * a }
+    }
+
+    #[quickcheck]
+    fn test_inv_lehmer(a: FieldElement) -> bool {
+        match inv_lehmer(&MODULUS, &(&a).into()) {
+            None => a == FieldElement::ZERO,
+            Some(a_inv) => FieldElement::from(a_inv) * a == FieldElement::ONE,
+        }
     }
 }
