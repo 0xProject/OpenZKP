@@ -24,7 +24,7 @@ pub const fn mac(a: u64, b: u64, c: u64, carry: u64) -> (u64, u64) {
 #[inline(always)]
 pub const fn msb(a: u64, b: u64, c: u64, borrow: u64) -> (u64, u64) {
     let ret = (a as u128).wrapping_sub((b as u128) * (c as u128) + (borrow as u128));
-    (ret as u64, (ret >> 64) as u64)
+    (ret as u64, 0u64.wrapping_sub((ret >> 64) as u64)) // TODO: Why is this wrapping_sub required?
 }
 
 /// Compute <hi, lo> / d, returning the quotient and the remainder.

@@ -109,7 +109,7 @@ pub fn divrem_nbym(numerator: &mut [u64], divisor: &mut [u64]) {
         for i in 0..n {
             let (a, b) = msb(numerator[j + i], qhat, divisor[i], borrow);
             numerator[j + i] = a;
-            borrow = 0u64.wrapping_sub(b); // TODO: Why this inversion?
+            borrow = b;
         }
         let negative = numerator[j + n] < borrow;
         // IGNORED: numerator[j + n] = numerator[j + n].wrapping_sub(borrow);
