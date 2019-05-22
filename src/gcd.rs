@@ -49,6 +49,9 @@ fn lehmer_update(
 
 /// Division optimized for small values
 /// Requires a > b > 0. Returns a / b.
+/// See also `div1` in GMPs Lehmer implementation.
+/// https://gmplib.org/repo/gmp-6.1/file/tip/mpn/generic/hgcd2.c#l44
+/// OPT: Try the Egyptian division method from GMP.
 #[allow(clippy::cognitive_complexity)]
 fn div1(a: u64, b: u64) -> u64 {
     debug_assert!(a > b);
@@ -117,13 +120,17 @@ fn lehmer_small(mut r0: u64, mut r1: u64) -> (u64, u64, u64, u64, bool) {
 
 /// Compute the Lehmer update matrix for a0 and a1 such that the matrix is valid
 /// for any two large integers starting with a0 and a1.
+/// See also `mpn_hgcd2` in GMP, but ours handles the double precision bit
+/// separately in lehmer_double.
+///    https://gmplib.org/repo/gmp-6.1/file/tip/mpn/generic/hgcd2.c#l226
 fn lehmer_loop(a0: u64, mut a1: u64) -> (u64, u64, u64, u64, bool) {
     const LIMIT: u64 = 1u64 << 32;
     debug_assert!(a0 >= 1u64 << 63);
     debug_assert!(a0 >= a1);
 
-    // The cofactors u and v never exceed 32 bit. We can pack them in a single
-    // 64 bit variable.
+    // Here we do something original: The cofactors undergo identical
+    // operations which makes them a candidate for SIMD instructions.
+    // They are also never exceed 32 bit, so we can SWAR them in a single u64.
     let mut k0 = 1u64 << 32; // u0 = 1, v0 = 0
     let mut k1 = 1u64; // u1 = 0, v1 = 1
     let mut even = true;
@@ -225,7 +232,18 @@ fn lehmer_loop(a0: u64, mut a1: u64) -> (u64, u64, u64, u64, bool) {
     }
 }
 
-/// Compute the Lehmer update matrix using double words
+/// Compute the Lehmer update matrix in full 64 bit precision.
+/// Jebelean solves this by starting in double-precission followed
+/// by single precision once values are small enough.
+/// Cohen instead runs a single precision round, refreshes the r0 and r1
+/// values and continues with another single precision round on top.
+/// Our approach is similar to Cohen, but instead doing the second round
+/// on the same matrix, we start we a fresh matrix and multiply both in the
+/// end. This requires 8 additional multiplications, but allows us to use
+/// the tighter stopping conditions from Jebelean. It also seems the simplest
+/// out of these solutions.
+/// OPT: We can update r0 and r1 in place. This won't remove the partially
+/// redundant call to lehmer_update, but it reduces memory usage.
 fn lehmer_double(mut r0: U256, mut r1: U256) -> (u64, u64, u64, u64, bool) {
     debug_assert!(r0 >= r1);
     if r0.bits() < 64 {
@@ -284,6 +302,8 @@ pub fn gcd(mut r0: U256, mut r1: U256) -> U256 {
     r0
 }
 
+// See also mpn_gcdext_lehmer_n in GMP.
+// https://gmplib.org/repo/gmp-6.1/file/tip/mpn/generic/gcdext_lehmer.c#l146
 pub fn gcd_extended(mut r0: U256, mut r1: U256) -> (U256, U256, U256, bool) {
     let swapped = r1 > r0;
     if swapped {
