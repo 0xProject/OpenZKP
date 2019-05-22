@@ -132,6 +132,7 @@ fn lehmer_unroll(a2: u64, a3: &mut u64, k2: u64, k3: &mut u64) {
 #[allow(clippy::cognitive_complexity)]
 fn lehmer_loop(a0: u64, mut a1: u64) -> (u64, u64, u64, u64, bool) {
     const LIMIT: u64 = 1u64 << 32;
+    debug_assert!(a0 >= 1u64 << 63);
     debug_assert!(a0 >= a1);
 
     // The cofactors u and v never exceed 32 bit. We can pack them in a single
@@ -427,18 +428,50 @@ mod tests {
         );
     }
 
+    #[test]
+    fn test_lehmer_loop() {
+        assert_eq!(lehmer_loop(1u64 << 63, 0), (1, 0, 0, 1, true));
+        assert_eq!(
+            // Accumulates the first 18 quotients
+            lehmer_loop(16194659139127649777, 14535145444257436950),
+            (320831736, 357461893, 1018828859, 1135151083, true)
+        );
+        assert_eq!(
+            // Accumulates the first 27 coefficients
+            lehmer_loop(
+                15267531864828975732,
+                6325623274722585764,
+            ),
+            (
+                88810257, 214352542, 774927313, 1870365485, false
+            )
+        );
+    }
+
     #[quickcheck]
-    fn test_lehmer_loop(a: u64, b: u64) -> bool {
+    fn test_lehmer_loop_match_gcd(mut a: u64, mut b: u64) -> bool {
         const LIMIT: u64 = 1u64 << 32;
+
+        // Prepare valid inputs
+        a |= 1u64 << 63;
+        if b > a {
+            std::mem::swap(&mut a, &mut b)
+        }
+
+        // Call the function under test
         let q = lehmer_loop(a, b);
+
+        // Verify outputs
         assert!(q.0 < LIMIT);
         assert!(q.1 < LIMIT);
         assert!(q.2 < LIMIT);
         assert!(q.3 < LIMIT);
-        if q != (1, 0, 0, 1, false) {
+        if q != (1, 0, 0, 1, true) {
             assert!(q.0 <= q.2);
             assert!(q.2 <= q.3);
             assert!(q.1 <= q.3);
+        } else {
+            return true;
         }
 
         // Compare with simple GCD
@@ -451,9 +484,15 @@ mod tests {
         let mut e = true;
         while a1 > 0 {
             let r = a0 / a1;
-            let t = a0 - r * a1; a0 = a1; a1 = t;
-            let t = s0 + r * s1; s0 = s1; s1 = t;
-            let t = t0 + r * t1; t0 = t1; t1 = t;
+            let t = a0 - r * a1;
+            a0 = a1;
+            a1 = t;
+            let t = s0 + r * s1;
+            s0 = s1;
+            s1 = t;
+            let t = t0 + r * t1;
+            t0 = t1;
+            t1 = t;
             e = !e;
             if q == (s0, t0, s1, t1, e) {
                 return true;
