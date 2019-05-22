@@ -3,7 +3,7 @@ use hex_literal::*;
 use starkcrypto::curve::Affine;
 use starkcrypto::ecdsa::{private_to_public, sign, verify};
 use starkcrypto::field::FieldElement;
-use starkcrypto::gcd::gcd_lehmer;
+use starkcrypto::gcd::gcd;
 use starkcrypto::jacobian::Jacobian;
 use starkcrypto::pedersen::hash;
 use starkcrypto::u256::U256;
@@ -71,44 +71,8 @@ fn u256_invmod(crit: &mut Criterion) {
         0xd82120c54277c73e,
         0x07717a21e77894e8,
     );
-    crit.bench_function("U256 invmod via Lemher", move |bench| {
-        bench.iter(|| black_box(&n).invmod_lehmer(black_box(&m)))
-    });
-}
-
-fn u256_invmod_Lemher(crit: &mut Criterion) {
-    let m = U256::new(
-        0x0000000000000001,
-        0x0000000000000000,
-        0x0000000000000000,
-        0x0800000000000011,
-    );
-    let n = U256::new(
-        0x1717f47973471ed5,
-        0xe106229070982941,
-        0xd82120c54277c73e,
-        0x07717a21e77894e8,
-    );
     crit.bench_function("U256 invmod", move |bench| {
         bench.iter(|| black_box(&n).invmod(black_box(&m)))
-    });
-}
-
-fn u256_invmod_Euclid(crit: &mut Criterion) {
-    let m = U256::new(
-        0x0000000000000001,
-        0x0000000000000000,
-        0x0000000000000000,
-        0x0800000000000011,
-    );
-    let n = U256::new(
-        0x1717f47973471ed5,
-        0xe106229070982941,
-        0xd82120c54277c73e,
-        0x07717a21e77894e8,
-    );
-    crit.bench_function("U256 invmod via Euclid GCD", move |bench| {
-        bench.iter(|| black_box(&n).invmod_euclid(black_box(&m)))
     });
 }
 
@@ -181,18 +145,6 @@ fn field_inv(crit: &mut Criterion) {
     crit.bench_function("Field inv", move |bench| {
         bench.iter(|| {
             black_box(black_box(&a).clone().inv());
-        })
-    });
-}
-
-fn field_inv_lehmer(crit: &mut Criterion) {
-    let a = FieldElement::new(&[
-        0x0f3855f5, 0x37862eb2, 0x275b919f, 0x325329cb, 0xe968e6a2, 0xa2ceee5c, 0xd5f1d547,
-        0x07211989,
-    ]);
-    crit.bench_function("Field inv Lehmer", move |bench| {
-        bench.iter(|| {
-            black_box(black_box(&a).clone().inv_lehmer());
         })
     });
 }
@@ -439,37 +391,28 @@ fn ecdsa_verify(crit: &mut Criterion) {
     });
 }
 
-// fn criterion_benchmark(c: &mut Criterion) {
-//     u256_add(c);
-//     u256_mul(c);
-//     u256_invmod256(c);
-//     u256_invmod(c);
-//     u256_divrem(c);
-//     u256_mulmod(c);
-//     field_add(c);
-//     field_mul(c);
-//     field_inv(c);
-//     curve_add(c);
-//     curve_dbl(c);
-//     curve_mul(c);
-//     jacobian_add(c);
-//     jacobian_add_affine(c);
-//     jacobian_dbl(c);
-//     jacobian_mul(c);
-//     jacobian_mul_affine(c);
-//     wnaf_mul_affine(c);
-//     pedersen_hash(c);
-//     ecdsa_sign(c);
-//     ecdsa_verify(c);
-// }
-
 fn criterion_benchmark(c: &mut Criterion) {
-    //u256_invmod(c);
-    //u256_invmod_Lemher(c);
-    //u256_invmod_Euclid(c);
+    u256_add(c);
+    u256_mul(c);
+    u256_invmod256(c);
+    u256_invmod(c);
+    u256_divrem(c);
+    u256_mulmod(c);
+    field_add(c);
+    field_mul(c);
     field_inv(c);
-    field_inv_lehmer(c);
-    //gcd_speed(c);
+    curve_add(c);
+    curve_dbl(c);
+    curve_mul(c);
+    jacobian_add(c);
+    jacobian_add_affine(c);
+    jacobian_dbl(c);
+    jacobian_mul(c);
+    jacobian_mul_affine(c);
+    wnaf_mul_affine(c);
+    pedersen_hash(c);
+    ecdsa_sign(c);
+    ecdsa_verify(c);
 }
 
 criterion_group!(benches, criterion_benchmark);

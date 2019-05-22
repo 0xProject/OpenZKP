@@ -52,10 +52,6 @@ impl FieldElement {
         inv_redc(&self.0).map(FieldElement)
     }
 
-    pub fn inv_lehmer(&self) -> Option<FieldElement> {
-        (&self.0).invmod_lehmer(&MODULUS).map(FieldElement)
-    }
-
     #[inline(always)]
     pub fn double(&self) -> FieldElement {
         // TODO: Optimize

@@ -52,11 +52,9 @@ fn criterion_benchmark(c: &mut Criterion) {
         "Field inv",
         vec![
             Fun::new("starkcrypto", starkcrypto_field_inv),
-            //Fun::new("starkcrypto euclid", starkcrypto_field_inv_euclid),
-            Fun::new("starkcrypto lehmer", starkcrypto_field_inv_lehmer),
             Fun::new("matter", matter_field_inv),
             Fun::new("dalek field", dalek_field_inv),
-            //Fun::new("dalek scalar", dalek_scalar_inv),
+            Fun::new("dalek scalar", dalek_scalar_inv),
             Fun::new("gmp", gmp_field_inv),
         ],
         (),

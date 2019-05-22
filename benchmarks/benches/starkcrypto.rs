@@ -42,12 +42,3 @@ pub fn starkcrypto_field_inv(bench: &mut Bencher, _i: &()) {
         black_box(black_box(&a).inv());
     })
 }
-
-pub fn starkcrypto_field_inv_lehmer(bench: &mut Bencher, _i: &()) {
-    let a = FieldElement::from(u256h!(
-        "03d937c035c878245caf64531a5756109c53068da139362728feb561405371cb"
-    ));
-    bench.iter(|| {
-        black_box(black_box(&a).inv_lehmer());
-    })
-}

@@ -1,5 +1,5 @@
 use crate::division::{divrem_nby1, divrem_nbym};
-use crate::gcd::{gcd_lehmer, inv_lehmer};
+use crate::gcd::{inv_mod};
 use crate::utils::{adc, div_2_1, mac, sbb};
 use crate::{commutative_binop, noncommutative_binop};
 use hex_literal::*;
@@ -364,56 +364,7 @@ impl U256 {
 
     // Computes the inverse modulo a given modulus
     pub fn invmod(&self, modulus: &U256) -> Option<U256> {
-        // Handbook of Applied Cryptography Algorithm 14.61:
-        // Binary Extended GCD
-        // See note 14.64 on application to modular inverse.
-        // The algorithm is modified to work with non-negative numbers.
-        // TODO: Constant time algorithm. (Based on fermat's little theorem or
-        // constant time Euclids.)
-        // TODO: Lehmer's algorithm or other fast GCD
-        // TODO: Reduce number of limbs on u and v as computation progresses
-        let mut u = self.clone();
-        let mut v = modulus.clone();
-        let mut a = U256::ONE;
-        let mut c = U256::ZERO;
-        while u != U256::ZERO {
-            while u.is_even() {
-                u >>= 1;
-                if a.is_odd() {
-                    a += modulus;
-                }
-                a >>= 1;
-            }
-            while v.is_even() {
-                v >>= 1;
-                if c.is_odd() {
-                    c += modulus;
-                }
-                c >>= 1;
-            }
-            if u >= v {
-                if a < c {
-                    a += modulus;
-                }
-                u -= &v;
-                a -= &c;
-            } else {
-                if c < a {
-                    c += modulus;
-                }
-                v -= &u;
-                c -= &a;
-            }
-        }
-        if v == U256::ONE {
-            Some(c)
-        } else {
-            None
-        }
-    }
-
-    pub fn invmod_lehmer(&self, modulus: &U256) -> Option<U256> {
-        inv_lehmer(modulus, self)
+        inv_mod(modulus, self)
     }
 
     pub fn get_word(&self, which: usize) -> u64 {
