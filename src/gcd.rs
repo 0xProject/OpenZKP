@@ -33,7 +33,7 @@ fn mat_mul(a: &mut U256, b: &mut U256, (q00, q01, q10, q11): (u64, u64, u64, u64
     b.c3 = bi;
 }
 
-// Applies the lehmer matrix to the variables.
+// Applies the lehmer matrix to the variable pair.
 fn lehmer_update(
     a0: &mut U256,
     a1: &mut U256,
@@ -49,7 +49,6 @@ fn lehmer_update(
 
 /// Division optimized for small values
 /// Requires a > b > 0. Returns a / b.
-#[inline(always)]
 #[allow(clippy::cognitive_complexity)]
 fn div1(a: u64, b: u64) -> u64 {
     debug_assert!(a > b);
@@ -87,7 +86,7 @@ fn lehmer_unroll(a2: u64, a3: &mut u64, k2: u64, k3: &mut u64) {
 /// Compute the Lehmer update matrix for small values.
 /// This is essentialy Euclids extended GCD algorithm for 64 bits.
 /// OPT: Would this be faster using extended binary gcd?
-#[inline]
+// #[inline]
 fn lehmer_small(mut r0: u64, mut r1: u64) -> (u64, u64, u64, u64, bool) {
     debug_assert!(r0 >= r1);
     if r1 == 0u64 {
