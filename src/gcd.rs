@@ -325,8 +325,11 @@ fn mat_mul(
 
 #[rustfmt::skip]
 pub fn gcd_lehmer(mut r0: U256, mut r1: U256) -> (U256, U256, U256, bool) {
+    let swapped = r1 > r0;
+    if swapped {
+        std::mem::swap(&mut r0, &mut r1);
+    }
     debug_assert!(r0 >= r1);
-    // TODO: Support r1 >= r0
     let mut s0 = U256::ONE;
     let mut s1 = U256::ZERO;
     let mut t0 = U256::ZERO;
@@ -357,6 +360,10 @@ pub fn gcd_lehmer(mut r0: U256, mut r1: U256) -> (U256, U256, U256, bool) {
     } else {
         // s negative
         s0 = U256::ZERO - s0;
+    }
+    if swapped {
+        std::mem::swap(&mut s0, &mut t0);
+        even = !even;
     }
     (r0, s0, t0, even)
 }
