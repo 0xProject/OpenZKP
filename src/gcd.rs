@@ -65,6 +65,25 @@ fn div1(a: u64, b: u64) -> u64 {
     a / b
 }
 
+#[inline(always)]
+#[allow(clippy::cognitive_complexity)]
+fn lehmer_unroll(a2: u64, a3: &mut u64, k2: u64, k3: &mut u64) {
+    unroll! {
+        for _i in 0..15 {
+            if *a3 < a2 {
+                return;
+            }
+            *a3 -= a2;
+            *k3 += k2;
+        }
+    }
+    if *a3 >= a2 {
+        let q = *a3 / a2;
+        *a3 -= q * a2;
+        *k3 += q * k2;
+    }
+}
+
 /// Division optimized for small values
 /// Requires a > b > 0. Returns a / b.
 #[inline(always)]
@@ -88,29 +107,13 @@ fn div_update(r0: &mut u64, r1: u64, u0: &mut u64, u1: u64, v0: &mut u64, v1: u6
     q
 }
 
-#[inline(always)]
-#[allow(clippy::cognitive_complexity)]
-fn lehmer_unroll(a2: u64, a3: &mut u64, k2: u64, k3: &mut u64) {
-    unroll! {
-        for _i in 0..15 {
-            if *a3 < a2 {
-                return;
-            }
-            *a3 -= a2;
-            *k3 += k2;
-        }
-    }
-    if *a3 >= a2 {
-        let q = *a3 / a2;
-        *a3 -= q * a2;
-        *k3 += q * k2;
-    }
-}
+
 /// Compute the Lehmer update matrix for small values.
 /// This is essentialy Euclids extended GCD algorithm for 64 bits.
 /// OPT: Would this be faster using extended binary gcd?
 #[inline]
 fn lehmer_small(mut r0: u64, mut r1: u64) -> (u64, u64, u64, u64, bool) {
+    debug_assert!(r0 >= r1);
     if r1 == 0u64 {
         return (1, 0, 0, 1, true);
     }
@@ -118,9 +121,7 @@ fn lehmer_small(mut r0: u64, mut r1: u64) -> (u64, u64, u64, u64, bool) {
     let mut q01 = 0u64;
     let mut q10 = 0u64;
     let mut q11 = 1u64;
-    if r0 >= r1 {
-        div_update(&mut r0, r1, &mut q00, q10, &mut q01, q11);
-    }
+    div_update(&mut r0, r1, &mut q00, q10, &mut q01, q11);
     loop {
         // Loop is unrolled once to avoid swapping variables and tracking parity.
         if r0 == 0u64 {
@@ -248,6 +249,8 @@ fn lehmer_loop(a0: u64, mut a1: u64) -> (u64, u64, u64, u64, bool) {
 fn lehmer_double(mut r0: U256, mut r1: U256) -> (u64, u64, u64, u64, bool) {
     debug_assert!(r0 >= r1);
     if r0.bits() < 64 {
+        debug_assert!(r1.bits() < 64);
+        debug_assert!(r0.c0 >= r1.c0);
         return lehmer_small(r0.c0, r1.c0);
     }
     let s = r0.leading_zeros();
@@ -399,25 +402,24 @@ mod tests {
     #[test]
     fn test_lehmer_small() {
         assert_eq!(lehmer_small(0, 0), (1, 0, 0, 1, true));
-        assert_eq!(lehmer_small(0, 1), (0, 1, 1, 0, false));
         assert_eq!(
-            lehmer_small(5818365597666026993, 14535145444257436950),
+            lehmer_small(14535145444257436950, 5818365597666026993),
             (
-                947685836737753349,
                 379355176803460069,
-                2076449349179633850,
+                947685836737753349,
                 831195085380860999,
-                true
+                2076449349179633850,
+                false
             )
         );
         assert_eq!(
-            lehmer_small(10841422679839906593, 15507080595343815048),
+            lehmer_small(15507080595343815048, 10841422679839906593),
             (
-                57434639988632077,
                 40154122160696118,
-                5169026865114605016,
+                57434639988632077,
                 3613807559946635531,
-                false
+                5169026865114605016,
+                true
             )
         );
     }
