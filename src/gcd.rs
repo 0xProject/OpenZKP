@@ -71,12 +71,12 @@ fn div1(a: u64, b: u64) -> u64 {
 #[allow(clippy::cognitive_complexity)]
 fn lehmer_unroll(a2: u64, a3: &mut u64, k2: u64, k3: &mut u64) {
     unroll! {
-        for _i in 0..15 {
+        for _i in 0..16 {
+            *a3 -= a2;
+            *k3 += k2;
             if *a3 < a2 {
                 return;
             }
-            *a3 -= a2;
-            *k3 += k2;
         }
     }
     if *a3 >= a2 {
@@ -164,11 +164,11 @@ fn lehmer_loop(a0: u64, mut a1: u64) -> (u64, u64, u64, u64, bool) {
     while a3 >= LIMIT {
         a1 = a2;
         a2 = a3;
-        a3 = a1 - a2;
+        a3 = a1;
         k0 = k1;
         k1 = k2;
         k2 = k3;
-        k3 += k1;
+        k3 = k1;
         lehmer_unroll(a2, &mut a3, k2, &mut k3);
         if a3 < LIMIT {
             even = false;
@@ -176,11 +176,11 @@ fn lehmer_loop(a0: u64, mut a1: u64) -> (u64, u64, u64, u64, bool) {
         }
         a1 = a2;
         a2 = a3;
-        a3 = a1 - a2;
+        a3 = a1;
         k0 = k1;
         k1 = k2;
         k2 = k3;
-        k3 += k1;
+        k3 = k1;
         lehmer_unroll(a2, &mut a3, k2, &mut k3);
     }
     // Unpack k into cofactors u and v
