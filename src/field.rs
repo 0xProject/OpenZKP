@@ -21,6 +21,9 @@ pub struct FieldElement(pub U256);
 impl FieldElement {
     pub const ZERO: FieldElement = FieldElement(U256::ZERO);
     pub const ONE: FieldElement = FieldElement(R1);
+    pub const NEGATIVE_ONE: FieldElement = FieldElement(u256h!(
+        "0000000000000220000000000000000000000000000000000000000000000020"
+    ));
 
     pub const fn from_montgomery(n: U256) -> Self {
         FieldElement(n)
@@ -72,6 +75,24 @@ impl FieldElement {
     #[inline(always)]
     pub fn neg_assign(&mut self) {
         *self = self.neg()
+    }
+
+    pub fn pow(&self, exponent: U256) -> Option<FieldElement> {
+        if self.is_zero() && exponent.is_zero() {
+            None
+        } else {
+            let mut result = FieldElement::ONE;
+            let mut remaining_exponent = exponent;
+            let mut square = self.clone();
+            while !remaining_exponent.is_zero() {
+                if remaining_exponent.is_odd() {
+                    result *= &square;
+                }
+                remaining_exponent >>= 1;
+                square = square.square();
+            }
+            Some(result)
+        }
     }
 }
 
@@ -148,6 +169,14 @@ impl DivAssign<&FieldElement> for FieldElement {
     }
 }
 
+impl std::iter::Product for FieldElement {
+    fn product<I: Iterator<Item = FieldElement>>(iter: I) -> FieldElement {
+        iter.fold(FieldElement::ONE, Mul::mul)
+    }
+}
+
+// TODO: Implement Sum, Successors, ... for FieldElement.
+
 commutative_binop!(FieldElement, Add, add, AddAssign, add_assign);
 commutative_binop!(FieldElement, Mul, mul, MulAssign, mul_assign);
 noncommutative_binop!(FieldElement, Sub, sub, SubAssign, sub_assign);
@@ -167,7 +196,16 @@ impl Arbitrary for FieldElement {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use itertools::repeat_n;
     use quickcheck_macros::quickcheck;
+
+    #[test]
+    fn negative_one_is_additive_inverse_of_one() {
+        assert_eq!(
+            FieldElement::ONE + FieldElement::NEGATIVE_ONE,
+            FieldElement::ZERO
+        );
+    }
 
     #[rustfmt::skip]
     #[test]
@@ -212,49 +250,41 @@ mod tests {
     }
 
     #[quickcheck]
-    #[test]
     fn add_identity(a: FieldElement) -> bool {
         &a + FieldElement::ZERO == a
     }
 
     #[quickcheck]
-    #[test]
     fn mul_identity(a: FieldElement) -> bool {
         &a * FieldElement::ONE == a
     }
 
     #[quickcheck]
-    #[test]
     fn commutative_add(a: FieldElement, b: FieldElement) -> bool {
         &a + &b == b + a
     }
 
     #[quickcheck]
-    #[test]
     fn commutative_mul(a: FieldElement, b: FieldElement) -> bool {
         &a * &b == b * a
     }
 
     #[quickcheck]
-    #[test]
     fn associative_add(a: FieldElement, b: FieldElement, c: FieldElement) -> bool {
         &a + (&b + &c) == (a + b) + c
     }
 
     #[quickcheck]
-    #[test]
     fn associative_mul(a: FieldElement, b: FieldElement, c: FieldElement) -> bool {
         &a * (&b * &c) == (a * b) * c
     }
 
     #[quickcheck]
-    #[test]
     fn inverse_add(a: FieldElement) -> bool {
         &a + a.neg() == FieldElement::ZERO
     }
 
     #[quickcheck]
-    #[test]
     fn inverse_mul(a: FieldElement) -> bool {
         match a.inv() {
             None => a == FieldElement::ZERO,
@@ -263,8 +293,44 @@ mod tests {
     }
 
     #[quickcheck]
-    #[test]
     fn distributivity(a: FieldElement, b: FieldElement, c: FieldElement) -> bool {
         &a * (&b + &c) == (&a * b) + (a * c)
+    }
+
+    #[quickcheck]
+    fn pow_0(a: FieldElement) -> bool {
+        match a.pow(U256::from(0u128)) {
+            None => a.is_zero(),
+            Some(result) => result == FieldElement::ONE,
+        }
+    }
+
+    #[quickcheck]
+    fn pow_1(a: FieldElement) -> bool {
+        match a.pow(U256::from(1u128)) {
+            None => false,
+            Some(result) => result == a,
+        }
+    }
+
+    #[quickcheck]
+    fn pow_2(a: FieldElement) -> bool {
+        match a.pow(U256::from(2u128)) {
+            None => false,
+            Some(result) => result == a.square(),
+        }
+    }
+
+    #[quickcheck]
+    fn pow_n(a: FieldElement, n: usize) -> bool {
+        match a.pow(U256::from(n as u128)) {
+            None => a.is_zero() && n == 0,
+            Some(result) => result == repeat_n(a, n).product(),
+        }
+    }
+
+    #[quickcheck]
+    fn fermats_little_theorem(a: FieldElement) -> bool {
+        a.pow(MODULUS).unwrap() == a
     }
 }

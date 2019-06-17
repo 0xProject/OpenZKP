@@ -215,7 +215,6 @@ mod tests {
     }
 
     #[quickcheck]
-    #[test]
     fn div_3by2_correct(q: u64, d0: u64, d1: u64) -> bool {
         let d1 = d1 | (1 << 63);
         let n = U256::new(d0, d1, 0, 0) * &U256::from(q);

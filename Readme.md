@@ -59,13 +59,13 @@ Note: The modulus is always assumed to be 256bit or less.
     provided.
 -   Compiler time known fields.
     The compiler can compute constants, for example for Montgomery
-    rerpesentation. The field parameters should be inlined.
+    representation. The field parameters should be inlined.
 -   Statically runtime known fields.
     Modulus is not known during compilation (but it's size is). Element
     membership of a particular field is known at compile time. The field
     parameters should statically allocated and the pointers inlined.
 -   Dynamically runtime known fields.
-    Modulus is not known during compilation (but it's size is). Element
+    Modulus is not known during compilation (but its size is). Element
     membership of a particular field is not known at compile time. The field
     element should carry a pointer to the field parameters.
 
