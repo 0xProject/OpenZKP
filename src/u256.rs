@@ -367,26 +367,6 @@ impl U256 {
     pub fn invmod(&self, modulus: &U256) -> Option<U256> {
         inv_mod(modulus, self)
     }
-
-    pub fn get_word(&self, which: usize) -> u64 {
-        if which <= 64 {
-            self.c0
-        } else if which < 128 {
-            (self.c1 << (64 - (which % 64))) | (self.c0 >> (which % 64))
-        } else if which == 128 {
-            self.c1
-        } else if which < 192 {
-            (self.c2 << (64 - (which % 64))) | (self.c1 >> (which % 64))
-        } else if which == 192 {
-            self.c2
-        } else if which < 256 {
-            (self.c3 << (64 - (which % 64))) | (self.c2 >> (which % 64))
-        } else if which == 256 {
-            self.c3
-        } else {
-            0
-        }
-    }
 }
 
 impl From<&U256> for u64 {
