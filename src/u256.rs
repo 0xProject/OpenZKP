@@ -706,7 +706,7 @@ impl Mul<u64> for &U256 {
 impl Mul<U256> for u64 {
     type Output = U256;
     #[inline(always)]
-    fn mul(self, /* mut */ rhs: U256) -> U256 {
+    fn mul(self, rhs: U256) -> U256 {
         rhs.mul(self)
     }
 }
@@ -719,61 +719,62 @@ impl Mul<&U256> for u64 {
     }
 }
 
-impl Mul<u128> for &U256 {
-    type Output = U256;
+impl MulAssign<u128> for U256 {
 
-    // We need addition to implement multiplication
-    #[allow(clippy::suspicious_arithmetic_impl)]
+    // We need `>>` to implement mul
+    #[allow(clippy::suspicious_op_assign_impl)] 
     #[inline(always)]
-    fn mul(self, rhs: u128) -> U256 {
-        // TODO: Overload to Mul<u128> for U256
-        let hold = self.clone();
-        let part1 = (&hold).mul(rhs as u64);
-        let part2 = hold.mul((rhs >> 64) as u64) << 64;
-        part1 + part2
+    fn mul_assign(&mut self, rhs: u128) {
+        let lo = rhs as u64;
+        let hi = (rhs >> 64) as u64;
+        let (r0, carry) = mac(0, self.c0, lo, 0);
+        let (r1, carry) = mac(0, self.c1, lo, carry);
+        let (r2, carry) = mac(0, self.c2, lo, carry);
+        let (r3, _carry) = mac(0, self.c3, lo, carry);
+        let (r1, carry) = mac(r1, self.c0, hi, 0);
+        let (r2, carry) = mac(r2, self.c1, hi, carry);
+        let (r3, _carry) = mac(r3, self.c2, hi, carry);
+        self.c0 = r0;
+        self.c1 = r1;
+        self.c2 = r2;
+        self.c3 = r3;
     }
 }
 
 impl Mul<u128> for U256 {
     type Output = U256;
 
-    // We need addition to implement multiplication
-    #[allow(clippy::suspicious_arithmetic_impl)]
+    #[inline(always)]
+    fn mul(mut self, rhs: u128) -> U256 {
+        self.mul_assign(rhs);
+        self
+    }
+}
+
+impl Mul<u128> for &U256 {
+    type Output = U256;
+
     #[inline(always)]
     fn mul(self, rhs: u128) -> U256 {
-        // TODO: Implement in-place and using unrolled mac
-        let hold = self.clone();
-        let part1 = (&hold).mul(rhs as u64);
-        let part2 = hold.mul((rhs >> 64) as u64) << 64;
-        part1 + part2
+        self.clone().mul(rhs)
     }
 }
 
 impl Mul<U256> for u128 {
     type Output = U256;
 
-    // We need addition to implement multiplication
-    #[allow(clippy::suspicious_arithmetic_impl)]
     #[inline(always)]
-    fn mul(self, /* mut */ rhs: U256) -> U256 {
-        // TODO: Overload to Mul<u128> for U256
-        let part1 = (&rhs).mul(self as u64);
-        let part2 = rhs.mul((self >> 64) as u64) << 64;
-        part1 + part2
+    fn mul(self, rhs: U256) -> U256 {
+        rhs.mul(self)
     }
 }
 
 impl Mul<&U256> for u128 {
     type Output = U256;
 
-    // We need addition to implement multiplication
-    #[allow(clippy::suspicious_arithmetic_impl)]
     #[inline(always)]
     fn mul(self, rhs: &U256) -> U256 {
-        // TODO: Overload to Mul<u128> for U256
-        let part1 = (&rhs).mul(self as u64);
-        let part2 = rhs.mul((self >> 64) as u64) << 64;
-        part1 + part2
+        rhs.mul(self)
     }
 }
 
