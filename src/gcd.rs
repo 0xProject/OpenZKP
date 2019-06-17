@@ -51,27 +51,33 @@ fn lehmer_update(
 /// Requires a > b > 0. Returns a / b.
 /// See also `div1` in GMPs Lehmer implementation.
 /// https://gmplib.org/repo/gmp-6.1/file/tip/mpn/generic/hgcd2.c#l44
-/// OPT: Try the Egyptian division method from GMP.
 #[allow(clippy::cognitive_complexity)]
-fn div1(a: u64, b: u64) -> u64 {
+fn div1(mut a: u64, b: u64) -> u64 {
     debug_assert!(a > b);
-    let mut r = a;
+    debug_assert!(b > 0);
     unroll! {
         for i in 1..20 {
-            r -= b;
-            if r < b {
+            a -= b;
+            if a < b {
                 return i as u64
             }
         }
     }
-    a / b
+    19 + a / b
 }
 
+// Single step of the extended Euclid's algorithm for u64.
+// Equivalent to the following, but faster:
+//    let q = *a3 / a2;
+//    *a3 -= q * a2;
+//    *k3 += q * k2;
 #[inline(always)]
 #[allow(clippy::cognitive_complexity)]
 fn lehmer_unroll(a2: u64, a3: &mut u64, k2: u64, k3: &mut u64) {
+    debug_assert!(a2 < *a3);
+    debug_assert!(a2 > 0);
     unroll! {
-        for _i in 0..16 {
+        for i in 1..17 {
             *a3 -= a2;
             *k3 += k2;
             if *a3 < a2 {
@@ -79,17 +85,14 @@ fn lehmer_unroll(a2: u64, a3: &mut u64, k2: u64, k3: &mut u64) {
             }
         }
     }
-    if *a3 >= a2 {
-        let q = *a3 / a2;
-        *a3 -= q * a2;
-        *k3 += q * k2;
-    }
+    let q = *a3 / a2;
+    *a3 -= q * a2;
+    *k3 += q * k2;
 }
 
 /// Compute the Lehmer update matrix for small values.
 /// This is essentialy Euclids extended GCD algorithm for 64 bits.
 /// OPT: Would this be faster using extended binary gcd?
-// #[inline]
 fn lehmer_small(mut r0: u64, mut r1: u64) -> (u64, u64, u64, u64, bool) {
     debug_assert!(r0 >= r1);
     if r1 == 0u64 {
@@ -119,7 +122,7 @@ fn lehmer_small(mut r0: u64, mut r1: u64) -> (u64, u64, u64, u64, bool) {
 }
 
 /// Compute the Lehmer update matrix for a0 and a1 such that the matrix is valid
-/// for any two large integers starting with a0 and a1.
+/// for any two large integers starting with the bits of a0 and a1.
 /// See also `mpn_hgcd2` in GMP, but ours handles the double precision bit
 /// separately in lehmer_double.
 ///    https://gmplib.org/repo/gmp-6.1/file/tip/mpn/generic/hgcd2.c#l226
@@ -280,6 +283,9 @@ fn lehmer_double(mut r0: U256, mut r1: U256) -> (u64, u64, u64, u64, bool) {
     )
 }
 
+// Lehmer's GCD algorithms.
+// See `gcd_extended` for documentation. This version maintain
+// full precission cofactors.
 pub fn gcd(mut r0: U256, mut r1: U256) -> U256 {
     if r1 > r0 {
         std::mem::swap(&mut r0, &mut r1);
@@ -302,6 +308,14 @@ pub fn gcd(mut r0: U256, mut r1: U256) -> U256 {
     r0
 }
 
+// Lehmer's extended GCD.
+// A variation of Euclids algorithm where repeated 64-bit approximations are
+// used to make rapid progress on.
+// See Jebelean (1994) "A Double-Digit Lehmer-Euclid Algorithm for Finding the GCD of Long Integers".
+// The function `lehmer_double` takes two `U256`'s and returns a 64-bit matrix.
+// The function `lehmer_update` updates state variables using this matrix, if
+// the matrix makes no progress (because 64 bit precision is not enough) a full
+// precision Euclid step is done, but this happens rarely.
 // See also mpn_gcdext_lehmer_n in GMP.
 // https://gmplib.org/repo/gmp-6.1/file/tip/mpn/generic/gcdext_lehmer.c#l146
 pub fn gcd_extended(mut r0: U256, mut r1: U256) -> (U256, U256, U256, bool) {
@@ -354,6 +368,18 @@ pub fn gcd_extended(mut r0: U256, mut r1: U256) -> (U256, U256, U256, bool) {
     (r0, s0, t0, even)
 }
 
+// Modular inversion.
+// It uses the Bezout identity
+//    a * modulus + b * num = gcd(modulus, num)
+// where `a` and `b` are the cofactors from the extended Euclidean algorithm.
+// A modular inverse only exists if `modulus` and `num` are coprime, in which
+// case `gcd(modulus, num)` is one. Reducing both sides by the modulus then
+// results in the equation `b * num = 1 (mod modulus)`. In other words, the
+// cofactor `b` is the modular inverse of `num`.
+// It differs from `gcd_extended` in that it only computes the required
+// cofactor, and returns `None` if the GCD is not one (i.e. when `num` does
+// not have an inverse).
+// For the algorithm see `gcd_extended`.
 pub fn inv_mod(modulus: &U256, num: &U256) -> Option<U256> {
     let mut r0 = modulus.clone();
     let mut r1 = num.clone();
