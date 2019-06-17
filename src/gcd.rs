@@ -418,6 +418,7 @@ pub fn inv_mod(modulus: &U256, num: &U256) -> Option<U256> {
 
 #[cfg(test)]
 mod tests {
+    // We don't mind large number litterals here.
     #![allow(clippy::unreadable_litteral)]
     use super::*;
     use crate::field::{FieldElement, MODULUS};
@@ -476,17 +477,17 @@ mod tests {
         }
 
         // Call the function under test
-        let q = lehmer_loop(a, b);
+        let update_matrix = lehmer_loop(a, b);
 
         // Verify outputs
-        assert!(q.0 < LIMIT);
-        assert!(q.1 < LIMIT);
-        assert!(q.2 < LIMIT);
-        assert!(q.3 < LIMIT);
-        if q != (1, 0, 0, 1, true) {
-            assert!(q.0 <= q.2);
-            assert!(q.2 <= q.3);
-            assert!(q.1 <= q.3);
+        assert!(update_matrix.0 < LIMIT);
+        assert!(update_matrix.1 < LIMIT);
+        assert!(update_matrix.2 < LIMIT);
+        assert!(update_matrix.3 < LIMIT);
+        if update_matrix != (1, 0, 0, 1, true) {
+            assert!(update_matrix.0 <= update_matrix.2);
+            assert!(update_matrix.2 <= update_matrix.3);
+            assert!(update_matrix.1 <= update_matrix.3);
         } else {
             return true;
         }
@@ -498,7 +499,7 @@ mod tests {
         let mut s1 = 0;
         let mut t0 = 0;
         let mut t1 = 1;
-        let mut e = true;
+        let mut even = true;
         while a1 > 0 {
             let r = a0 / a1;
             let t = a0 - r * a1;
@@ -510,8 +511,8 @@ mod tests {
             let t = t0 + r * t1;
             t0 = t1;
             t1 = t;
-            e = !e;
-            if q == (s0, t0, s1, t1, e) {
+            even = !even;
+            if update_matrix == (s0, t0, s1, t1, even) {
                 return true;
             }
         }

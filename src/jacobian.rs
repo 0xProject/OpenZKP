@@ -1,9 +1,7 @@
-use crate::curve::{Affine, BETA, ORDER};
+use crate::curve::Affine;
 use crate::field::FieldElement;
 use crate::u256::U256;
-use crate::u256h;
 use crate::{commutative_binop, curve_operations, noncommutative_binop};
-use hex_literal::*;
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 // See http://www.hyperelliptic.org/EFD/g1p/auto-shortw-jacobian.html
@@ -133,6 +131,10 @@ impl Neg for &Jacobian {
 }
 
 impl AddAssign<&Jacobian> for Jacobian {
+    // We want to use the variable naming convention from the source
+    #[allow(clippy::many_single_char_names)]
+    // We need multiplications to implement addition
+    #[allow(clippy::suspicious_op_assign_impl)]
     fn add_assign(&mut self, rhs: &Jacobian) {
         if rhs.z == FieldElement::ZERO {
             return;
@@ -169,6 +171,10 @@ impl AddAssign<&Jacobian> for Jacobian {
 }
 
 impl AddAssign<&Affine> for Jacobian {
+    // We want to use the variable naming convention from the source
+    #[allow(clippy::many_single_char_names)]
+    // We need multiplications to implement addition
+    #[allow(clippy::suspicious_op_assign_impl)]
     fn add_assign(&mut self, rhs: &Affine) {
         match rhs {
             Affine::Zero => { /* Do nothing */ }
@@ -243,6 +249,9 @@ impl Arbitrary for Jacobian {
 mod tests {
     use super::*;
     use quickcheck_macros::quickcheck;
+    use crate::curve::ORDER;
+    use crate::u256h;
+    use hex_literal::*;
 
     #[test]
     fn test_add() {

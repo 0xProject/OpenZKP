@@ -1,5 +1,5 @@
 use crate::division::{divrem_nby1, divrem_nbym};
-use crate::gcd::{inv_mod};
+use crate::gcd::inv_mod;
 use crate::utils::{adc, div_2_1, mac, sbb};
 use crate::{commutative_binop, noncommutative_binop};
 use hex_literal::*;
@@ -130,7 +130,7 @@ impl U256 {
                 return Err(ParseError::Overflow);
             }
             result *= U256::from(10u64);
-            let digit = U256::from(u64::from_str_radix(&s[i..i + 1], 10)?);
+            let digit = U256::from(u64::from_str_radix(&s[i..=i], 10)?);
             if &result + &digit < result {
                 return Err(ParseError::Overflow);
             }
@@ -139,16 +139,17 @@ impl U256 {
         Ok(result)
     }
 
-    pub fn to_decimal_str(mut self) -> String {
-        if self == U256::ZERO {
+    pub fn to_decimal_str(&self) -> String {
+        if *self == U256::ZERO {
             return "0".to_string();
         }
         let mut result = String::new();
-        while self > U256::ZERO {
+        let mut copy = self.clone();
+        while copy > U256::ZERO {
             // OPT: Convert 19 digits at a time using u64.
-            let digit = (&self % U256::from(10u64)).c0;
+            let digit = (&copy % U256::from(10u64)).c0;
             result.push_str(&digit.to_string());
-            self /= U256::from(10u64);
+            copy /= U256::from(10u64);
         }
         // Reverse digits
         // Note: Chars are safe here instead of graphemes, because all graphemes
@@ -739,11 +740,14 @@ impl Mul<&U256> for u64 {
     }
 }
 
-//Adding 128 bit multplications
 impl Mul<u128> for &U256 {
     type Output = U256;
+
+    // We need addition to implement multiplication
+    #[allow(clippy::suspicious_arithmetic_impl)]
     #[inline(always)]
     fn mul(self, rhs: u128) -> U256 {
+        // TODO: Overload to Mul<u128> for U256
         let hold = self.clone();
         let part1 = (&hold).mul(rhs as u64);
         let part2 = hold.mul((rhs >> 64) as u64) << 64;
@@ -753,8 +757,12 @@ impl Mul<u128> for &U256 {
 
 impl Mul<u128> for U256 {
     type Output = U256;
+
+    // We need addition to implement multiplication
+    #[allow(clippy::suspicious_arithmetic_impl)]
     #[inline(always)]
     fn mul(self, rhs: u128) -> U256 {
+        // TODO: Implement in-place and using unrolled mac
         let hold = self.clone();
         let part1 = (&hold).mul(rhs as u64);
         let part2 = hold.mul((rhs >> 64) as u64) << 64;
@@ -764,8 +772,12 @@ impl Mul<u128> for U256 {
 
 impl Mul<U256> for u128 {
     type Output = U256;
+
+    // We need addition to implement multiplication
+    #[allow(clippy::suspicious_arithmetic_impl)]
     #[inline(always)]
     fn mul(self, /* mut */ rhs: U256) -> U256 {
+        // TODO: Overload to Mul<u128> for U256
         let part1 = (&rhs).mul(self as u64);
         let part2 = rhs.mul((self >> 64) as u64) << 64;
         part1 + part2
@@ -774,8 +786,12 @@ impl Mul<U256> for u128 {
 
 impl Mul<&U256> for u128 {
     type Output = U256;
+
+    // We need addition to implement multiplication
+    #[allow(clippy::suspicious_arithmetic_impl)]
     #[inline(always)]
     fn mul(self, rhs: &U256) -> U256 {
+        // TODO: Overload to Mul<u128> for U256
         let part1 = (&rhs).mul(self as u64);
         let part2 = rhs.mul((self >> 64) as u64) << 64;
         part1 + part2
