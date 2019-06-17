@@ -387,27 +387,6 @@ impl U256 {
             0
         }
     }
-    pub fn get_double_word(&self, which: usize) -> u128 {
-        if which <= 128 {
-            (u128::from(self.c1) << 64) | u128::from(self.c0)
-        } else if which < 192 {
-            let part0 = u128::from(self.c1 >> (which % 64));
-            let part1 = (u128::from(self.c2)) << (64 - which % 64);
-            let part2 = u128::from(self.c3) << (128 - (which % 64));
-            part0 | part1 | part2
-        } else if which == 192 {
-            (u128::from(self.c2) << 64) | u128::from(self.c1)
-        } else if which < 256 {
-            let part0 = u128::from(self.c1 >> (which % 64));
-            let part1 = (u128::from(self.c2)) << (64 - which % 64);
-            let part2 = u128::from(self.c3) << (128 - (which % 64));
-            part0 | part1 | part2
-        } else if which == 256 {
-            (u128::from(self.c3) << 64) | u128::from(self.c2)
-        } else {
-            0
-        }
-    }
 }
 
 impl From<&U256> for u64 {
