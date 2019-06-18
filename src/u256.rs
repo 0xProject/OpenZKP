@@ -1,5 +1,6 @@
 use crate::division::{divrem_nby1, divrem_nbym};
 use crate::gcd::inv_mod;
+use crate::u256h;
 use crate::utils::{adc, div_2_1, mac, sbb};
 use crate::{commutative_binop, noncommutative_binop};
 use hex_literal::*;

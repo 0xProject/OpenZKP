@@ -57,7 +57,8 @@ impl Reversable for usize {
 //This struct contains two evaluation systems which allow diffrent functionality, first it contains a default function which directly evaluates the constraint funciton
 //Second it constains a function desgined to be used as the core of a loop on precomputed values to get the C function.
 //If the proof system wants to used a looped eval for speedup it can set the loop bool to true, otherwise the system will preform all computation directly
- #[allow(clippy::type_complexity)] pub struct Constraint<'a> {
+#[allow(clippy::type_complexity)]
+pub struct Constraint<'a> {
     pub NCONSTRAINTS: usize,
     pub eval: &'a Fn(
         &FieldElement,
@@ -77,7 +78,8 @@ impl Reversable for usize {
 }
 
 impl<'a> Constraint<'a> {
- #[allow(clippy::type_complexity)]     pub fn new(
+    #[allow(clippy::type_complexity)]
+    pub fn new(
         NCONSTRAINTS: usize,
         eval: &'a Fn(
             &FieldElement,
@@ -86,7 +88,7 @@ impl<'a> Constraint<'a> {
             FieldElement,
             &[FieldElement],
         ) -> FieldElement,
-       eval_loop: Option<
+        eval_loop: Option<
             &'a Fn(&[&[FieldElement]], &[FieldElement], u64, &FieldElement) -> Vec<FieldElement>,
         >,
     ) -> Self {
@@ -98,7 +100,8 @@ impl<'a> Constraint<'a> {
     }
 }
 
-#[allow(clippy::cognitive_complexity)] pub fn stark_proof(
+#[allow(clippy::cognitive_complexity)]
+pub fn stark_proof(
     trace: &TraceTable,
     constraints: &Constraint,
     claim_index: u64,
@@ -138,7 +141,8 @@ impl<'a> Constraint<'a> {
 
     let mut LDEn = vec![vec![FieldElement::ZERO; eval_x.len()]; trace.COLS];
     //OPT - Use some system to make this occur inline instead of storing then processing
-    #[allow(clippy::type_complexity)] let ret: Vec<(usize, Vec<(usize, Vec<FieldElement>)>)> = (0..(beta as usize))
+    #[allow(clippy::type_complexity)]
+    let ret: Vec<(usize, Vec<(usize, Vec<FieldElement>)>)> = (0..(beta as usize))
         .into_par_iter()
         .map(|j| {
             (
@@ -156,23 +160,25 @@ impl<'a> Constraint<'a> {
                         )
                     })
                     .collect(),
-            ) 
+            )
         })
         .collect();
 
     for j_element in ret {
         for x_element in j_element.1 {
             for i in 0..trace_len {
-                LDEn[x_element.0][((i * beta + (j_element.0 as u64)) % (eval_domain_size)) as usize] =
+                LDEn[x_element.0]
+                    [((i * beta + (j_element.0 as u64)) % (eval_domain_size)) as usize] =
                     x_element.1[i as usize].clone();
             }
         }
     }
 
     let mut leaves = Vec::with_capacity(eval_domain_size as usize);
-    (0..(eval_domain_size as usize)).into_par_iter().map( |i| {
-        leaf_list(i as u64, &LDEn)
-    }).collect_into_vec(&mut leaves);
+    (0..(eval_domain_size as usize))
+        .into_par_iter()
+        .map(|i| leaf_list(i as u64, &LDEn))
+        .collect_into_vec(&mut leaves);
 
     let leaf_pointer: Vec<&[U256]> = leaves.iter().map(|x| x.as_slice()).collect();
     let tree = make_tree(leaf_pointer.as_slice());
@@ -216,16 +222,17 @@ impl<'a> Constraint<'a> {
         }
     }
     let mut c_leaves = Vec::with_capacity(eval_domain_size as usize);
-    (0..(eval_domain_size as usize)).into_par_iter().map( |i| {
-        leaf_single(i as u64, &CC)
-    }).collect_into_vec(&mut c_leaves);
+    (0..(eval_domain_size as usize))
+        .into_par_iter()
+        .map(|i| leaf_single(i as u64, &CC))
+        .collect_into_vec(&mut c_leaves);
 
     let c_tree = make_tree(c_leaves.as_slice());
     proof.write(&c_tree[1]);
     let oods_point = proof.element();
     let oods_point_g = &oods_point * &g;
     let mut oods_values = Vec::with_capacity(2 * trace.COLS + 1);
-    for item in TPn.iter(){
+    for item in TPn.iter() {
         let mut evaled = eval_poly(oods_point.clone(), item.as_slice());
         oods_values.push(evaled.clone());
         evaled = eval_poly(oods_point_g.clone(), item.as_slice());
@@ -255,37 +262,45 @@ impl<'a> Constraint<'a> {
     let mut x_oods_cycle: Vec<FieldElement> = Vec::with_capacity(eval_domain_size as usize);
     let mut x_oods_cycle_g: Vec<FieldElement> = Vec::with_capacity(eval_domain_size as usize);
 
-    eval_x.par_iter().map(|i| i*&x).collect_into_vec(&mut x_omega_cycle);
-    x_omega_cycle.par_iter().map(|i| {
-        (i - &oods_point, i - &oods_point * &g)
-    }).unzip_into_vecs(&mut x_oods_cycle, &mut x_oods_cycle_g);
+    eval_x
+        .par_iter()
+        .map(|i| i * &x)
+        .collect_into_vec(&mut x_omega_cycle);
+    x_omega_cycle
+        .par_iter()
+        .map(|i| (i - &oods_point, i - &oods_point * &g))
+        .unzip_into_vecs(&mut x_oods_cycle, &mut x_oods_cycle_g);
 
     let pool = vec![&x_oods_cycle, &x_oods_cycle_g];
 
     let mut held = Vec::with_capacity(3);
-    pool.par_iter().map(|i| {
-        invert_batch(i)
-    }).collect_into_vec(&mut held);
+    pool.par_iter()
+        .map(|i| invert_batch(i))
+        .collect_into_vec(&mut held);
 
     x_oods_cycle_g = held.pop().unwrap();
-    x_oods_cycle =  held.pop().unwrap();
+    x_oods_cycle = held.pop().unwrap();
 
-    (0..(eval_domain_size as usize)).into_par_iter().map( |i|  {
-        let A = &x_oods_cycle[i as usize];
-        let B = &x_oods_cycle_g[i as usize];
-        let mut r = FieldElement::ZERO;
+    (0..(eval_domain_size as usize))
+        .into_par_iter()
+        .map(|i| {
+            let A = &x_oods_cycle[i as usize];
+            let B = &x_oods_cycle_g[i as usize];
+            let mut r = FieldElement::ZERO;
 
-        for x in 0..trace.COLS {
-            r += &oods_coeffiecnts[2 * x] * (&LDEn[x][i as usize] - &oods_values[2 * x]) * A;
-            r +=
-                &oods_coeffiecnts[2 * x + 1] * (&LDEn[x][i as usize] - &oods_values[2 * x + 1]) * B;
-        }
-        r += &oods_coeffiecnts[oods_coeffiecnts.len() - 1]
-            * (&CC[i as usize] - &oods_values[oods_values.len() - 1])
-            * A;
+            for x in 0..trace.COLS {
+                r += &oods_coeffiecnts[2 * x] * (&LDEn[x][i as usize] - &oods_values[2 * x]) * A;
+                r += &oods_coeffiecnts[2 * x + 1]
+                    * (&LDEn[x][i as usize] - &oods_values[2 * x + 1])
+                    * B;
+            }
+            r += &oods_coeffiecnts[oods_coeffiecnts.len() - 1]
+                * (&CC[i as usize] - &oods_values[oods_values.len() - 1])
+                * A;
 
-        r
-    }).collect_into_vec(&mut CO);
+            r
+        })
+        .collect_into_vec(&mut CO);
     //Fri Layers
     let mut fri = Vec::with_capacity(64 - (eval_domain_size.leading_zeros() as usize)); //Since Eval domain size is power of two this is a log_2
     fri.push(CO);
@@ -358,7 +373,8 @@ impl<'a> Constraint<'a> {
     for index in query_indices.iter() {
         for x in 0..trace.COLS {
             proof.write_element(
-                &LDEn[x as usize][(index.clone()).bit_reverse() >> ((LDEn[x].len().leading_zeros()) + 1) as usize],
+                &LDEn[x as usize][(index.clone()).bit_reverse()
+                    >> ((LDEn[x].len().leading_zeros()) + 1) as usize],
             );
         }
     }
@@ -378,10 +394,13 @@ impl<'a> Constraint<'a> {
         proof.write(x);
     }
 
-    let fri_indices: Vec<usize> = query_indices.iter().map(|x| x / ((beta/2) as usize)).collect();
+    let fri_indices: Vec<usize> = query_indices
+        .iter()
+        .map(|x| x / ((beta / 2) as usize))
+        .collect();
     for i in fri_indices.iter() {
-        for j in 0..((beta/2) as usize) {
-            let n = i * ((beta/2) as usize) + j;
+        for j in 0..((beta / 2) as usize) {
+            let n = i * ((beta / 2) as usize) + j;
             if query_indices.binary_search(&n).is_ok() {
                 continue;
             } else {
@@ -440,15 +459,18 @@ fn fri_layer(
     let n = previous.len() as u64;
     let s = eval_domain_size / n;
     let mut next = vec![FieldElement::ZERO; (n / 2) as usize];
-    (0..(n as usize) / 2).into_par_iter().map( |i| {
-        let j = (n / 2 + (i as u64)) % n;
-        let m = eval_x.len() as u64;
-        let ind = ((m - (i as u64)) * s) % m;
-        let x_inv = &eval_x[ind as usize];
-        let a = &previous[i as usize];
-        let b = &previous[j as usize];
-        (a + b) + evaluation_point * x_inv * (a - b)
-    }).collect_into_vec(&mut next);
+    (0..(n as usize) / 2)
+        .into_par_iter()
+        .map(|i| {
+            let j = (n / 2 + (i as u64)) % n;
+            let m = eval_x.len() as u64;
+            let ind = ((m - (i as u64)) * s) % m;
+            let x_inv = &eval_x[ind as usize];
+            let a = &previous[i as usize];
+            let b = &previous[j as usize];
+            (a + b) + evaluation_point * x_inv * (a - b)
+        })
+        .collect_into_vec(&mut next);
     next
 }
 
@@ -501,7 +523,8 @@ fn pow_find_nonce(pow_bits: u32, proof: &Channel) -> u64 {
     0
 }
 //TODO - Make tests compatible with the proof of work values from this function
-#[allow(dead_code)] fn pow_find_nonce_threaded(pow_bits: u32, proof: &Channel) -> u64 {
+#[allow(dead_code)]
+fn pow_find_nonce_threaded(pow_bits: u32, proof: &Channel) -> u64 {
     let mut seed = vec![01_u8, 35_u8, 69_u8, 103_u8, 137_u8, 171_u8, 205_u8, 237_u8];
     seed.extend_from_slice(&proof.digest);
     for byte in pow_bits.to_be_bytes().iter() {
@@ -526,7 +549,7 @@ fn pow_find_nonce(pow_bits: u32, proof: &Channel) -> u64 {
             sha3.finalize(&mut res);
             let final_int = U256::from_bytes_be(&res);
             if final_int.leading_zeros() == pow_bits as usize {
-                final_int < test_value 
+                final_int < test_value
             } else {
                 false
             }
@@ -567,6 +590,7 @@ mod tests {
     use crate::field::*;
     use crate::u256::U256;
     use crate::u256h;
+    use hex_literal::*;
 
     #[test]
     fn fib_abstraction_test() {

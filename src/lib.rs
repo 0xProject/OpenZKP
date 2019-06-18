@@ -1,9 +1,6 @@
 // TODO: #![deny(warnings, missing_docs)]
 #![warn(clippy::all)]
-#[macro_use]
-extern crate hex_literal;
-#[macro_use]
-pub mod u256;
+
 pub mod binops;
 pub mod channel;
 pub mod curve;

@@ -1,5 +1,7 @@
 use crate::field::*;
 use crate::u256::U256;
+use crate::u256h;
+use hex_literal::*;
 use tiny_keccak::Keccak;
 
 #[derive(PartialEq, Eq, Clone, Default)]
