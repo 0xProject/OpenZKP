@@ -3,11 +3,13 @@ use hex_literal::*;
 use starkcrypto::curve::Affine;
 use starkcrypto::ecdsa::{private_to_public, sign, verify};
 use starkcrypto::fft::fft_cofactor;
+use starkcrypto::fibonacci::*;
 use starkcrypto::field::FieldElement;
 use starkcrypto::gcd::gcd;
 use starkcrypto::jacobian::Jacobian;
 use starkcrypto::merkle::*;
 use starkcrypto::pedersen::hash;
+use starkcrypto::proofs::*;
 use starkcrypto::square_root::square_root;
 use starkcrypto::u256::U256;
 use starkcrypto::u256h;
@@ -414,7 +416,7 @@ fn merkle_proof_make(crit: &mut Criterion) {
         leaves.push(U256::from((i + 10).pow(3)));
     }
     crit.bench_function("Making depth 6 Merkle Tree", move |bench| {
-        bench.iter(|| black_box(make_tree(leaves.clone())))
+        bench.iter(|| black_box(make_tree(leaves.as_slice())))
     });
 }
 
@@ -455,6 +457,36 @@ fn fft_timing(crit: &mut Criterion) {
         bench.iter(|| black_box(fft_cofactor(root.clone(), &vector, cofactor.clone())))
     });
 }
+fn fib_proof_make(crit: &mut Criterion) {
+    let witness = FieldElement::from(u256h!(
+        "00000000000000000000000000000000000000000000000000000000cafebabe"
+    ));
+
+    crit.bench_function("Making a Fibonacci Proof", move |bench| {
+        bench.iter(|| black_box(fib_proof(witness.clone())))
+    });
+}
+fn abstracted_fib_proof_make(crit: &mut Criterion) {
+    let claim_index = 1000_u64;
+    let claim_fib = FieldElement::from(u256h!(
+        "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
+    ));
+    let witness = FieldElement::from(u256h!(
+        "00000000000000000000000000000000000000000000000000000000cafebabe"
+    ));
+
+    crit.bench_function("Making an abstracted Fibonacci proof", move |bench| {
+        bench.iter(|| {
+            black_box(stark_proof(
+                &get_trace_table(1024, witness.clone()),
+                &get_constraint(),
+                claim_index,
+                claim_fib.clone(),
+                2_u64.pow(4),
+            ))
+        })
+    });
+}
 
 fn criterion_benchmark(c: &mut Criterion) {
     u256_add(c);
@@ -485,4 +517,9 @@ fn criterion_benchmark(c: &mut Criterion) {
 }
 
 criterion_group!(benches, criterion_benchmark);
-criterion_main!(benches);
+criterion_group! {
+   name = slow_benches;
+   config = Criterion::default().sample_size(20);
+   targets = fib_proof_make, abstracted_fib_proof_make
+}
+criterion_main!(benches, slow_benches);

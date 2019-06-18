@@ -4,32 +4,16 @@ use crate::u256::U256;
 pub fn fft(root: FieldElement, vector: &[FieldElement]) -> Vec<FieldElement> {
     //debug_assert(root.pow(vector.len()) == FieldElement::ONE); //Todo - Add a pow method to field element
 
-    let mut vector_type = (vector.clone()).to_vec();
-    let n = vector_type.len();
-
-    if n == 1 {
-        return vector_type;
+    let mut data = (vector.to_vec()).clone();
+    let mut temp = FieldElement::ONE;
+    let mut pow_table = Vec::with_capacity(vector.len());
+    for _i in 0..(vector.len() / 2) {
+        pow_table.push(temp.clone());
+        temp *= &root;
     }
 
-    let mut even = Vec::with_capacity(n / 2);
-    let mut odd = Vec::with_capacity(n / 2);
-    for index in (0..n).step_by(2) {
-        even.push(vector_type[index].clone());
-        odd.push(vector_type[index + 1].clone());
-    }
-
-    even = fft((&root).square(), &(even.as_slice()));
-    odd = fft((&root).square(), &(odd.as_slice()));
-    let mut power = FieldElement::ONE;
-    for (even, odd) in even.iter_mut().zip(odd.iter_mut()) {
-        *odd *= &power;
-        let temp = even.clone(); //OPT - Check if this is compiled away
-        *even += odd.clone();
-        *odd = temp - odd.clone();
-        power *= &root;
-    }
-    (even).append(&mut odd);
-    even
+    fft_inplace(data.as_mut_slice(), pow_table.as_slice());
+    data
 }
 
 //We can implement this function using an option for the cofactor input, depending on what we want
@@ -38,8 +22,7 @@ pub fn fft_cofactor(
     vector: &[FieldElement],
     cofactor: FieldElement,
 ) -> Vec<FieldElement> {
-    let mut vector_type = (vector.clone()).to_vec();
-    let n = vector_type.len();
+    let mut vector_type = vector.to_vec();
 
     let mut c = FieldElement::ONE;
 
@@ -76,6 +59,46 @@ pub fn ifft_cofactor(
         c *= &cofactor_inv;
     }
     r
+}
+//Using the Radix-2 algoritim
+pub fn fft_inplace(vector: &mut [FieldElement], pow_table: &[FieldElement]) {
+    let n = vector.len();
+    let level = 64 - n.leading_zeros() - 1;
+    debug_assert_eq!(1 << level, n);
+
+    for i in 0..n {
+        let j = reverse(i as u64, level as usize);
+        if j > i {
+            vector.swap(j, i) //.swap is unsafe when i == j but this is impossible here TODO - potentially implement pure safe version
+        }
+    }
+    let mut size = 2;
+    while size <= n {
+        let halfstep = size / 2;
+        let tablestep = n / size;
+        for i in (0..n).step_by(size) {
+            let mut k = 0;
+            for j in i..(i + halfstep) {
+                let l = j + halfstep;
+                let left = vector[j].clone();
+                let right = &vector[l] * &pow_table[k];
+                vector[l] = &left - &right;
+                vector[j] = left + right;
+                k += tablestep;
+            }
+        }
+        size *= 2;
+    }
+}
+
+fn reverse(x: u64, bits: usize) -> usize {
+    let mut x_hold = x;
+    let mut y = 0;
+    for _i in 0..bits {
+        y = (y << 1) | (x_hold & 1);
+        x_hold >>= 1;
+    }
+    y as usize
 }
 
 #[cfg(test)]

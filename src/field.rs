@@ -24,6 +24,9 @@ impl FieldElement {
     pub const NEGATIVE_ONE: FieldElement = FieldElement(u256h!(
         "0000000000000220000000000000000000000000000000000000000000000020"
     ));
+    pub const GENERATOR: FieldElement = FieldElement(u256h!(
+        "07fffffffffff9b0ffffffffffffffffffffffffffffffffffffffffffffffa1"
+    )); //The mont transformed 3
 
     pub const fn from_montgomery(n: U256) -> Self {
         FieldElement(n)
@@ -94,6 +97,34 @@ impl FieldElement {
             Some(result)
         }
     }
+    pub fn root(n: U256) -> Option<FieldElement> {
+        if n.is_zero() {
+            return Some(FieldElement::ONE);
+        }
+        let (q, rem) = (MODULUS - U256::ONE).divrem(&n).unwrap();
+        if rem != U256::ZERO {
+            return None;
+        }
+        FieldElement::GENERATOR.pow(q)
+    }
+}
+
+pub fn invert_batch(to_be_inverted: &[FieldElement]) -> Vec<FieldElement> {
+    let mut res = Vec::with_capacity(to_be_inverted.len());
+    for item in to_be_inverted.iter() {
+        res.push(item.clone())
+    }
+
+    for x in 1..res.len() {
+        res[x] *= res[x - 1].clone();
+    }
+    let mut inv = res[res.len() - 1].inv().unwrap(); //TODO: Enforce check to prevent uninvertable elements
+    for x in (1..res.len()).rev() {
+        res[x] = &res[x - 1] * &inv;
+        inv *= to_be_inverted[x].clone();
+    }
+    res[0] = inv;
+    res.to_vec()
 }
 
 impl From<U256> for FieldElement {
@@ -247,6 +278,50 @@ mod tests {
         let b = FieldElement::new(&[0xf3a5912a, 0x62f3d853, 0x748c8465, 0x5f9b78d9, 0x8d66de24, 0xcf8479c5, 0x08cc1bb0, 0x06566f2f]);
         let c = FieldElement::new(&[0x4fb2a90b, 0x301e1830, 0x97593d1a, 0x97e53783, 0xbf27c713, 0x1bed3220, 0x9a076875, 0x02a40705]);
         assert_eq!(a / b, c);
+    }
+    #[test]
+    fn test_batch_inv() {
+        let a = FieldElement::new(&[
+            0x7d14253b, 0xef060e37, 0x98d1486f, 0x8700b80a, 0x0a83500d, 0x961ed57d, 0x68cc0469,
+            0x02945916,
+        ]);
+        let b = FieldElement::new(&[
+            0xf3a5912a, 0x62f3d853, 0x748c8465, 0x5f9b78d9, 0x8d66de24, 0xcf8479c5, 0x08cc1bb0,
+            0x06566f2f,
+        ]);
+        let c = FieldElement::new(&[
+            0x4fb2a90b, 0x301e1830, 0x97593d1a, 0x97e53783, 0xbf27c713, 0x1bed3220, 0x9a076875,
+            0x02a40705,
+        ]);
+        let d = FieldElement::new(&[
+            0x7d14353b, 0xef060e37, 0x98d1486f, 0x8700b80a, 0x0a83500d, 0x961ed57d, 0x68cc0469,
+            0x02945916,
+        ]);
+        let e = FieldElement::new(&[
+            0xf3a5912a, 0x74f3d853, 0x748c8465, 0x5f9b78d9, 0x8d66de24, 0xcf8479c5, 0x08cc1bb0,
+            0x06566f2f,
+        ]);
+        let f = FieldElement::new(&[
+            0x4fb2a9bb, 0x301e1830, 0x97593d1a, 0x97e56783, 0xbf27c713, 0x1bed3220, 0x9a076875,
+            0x02a40705,
+        ]);
+
+        let to_be_inverted = vec![
+            a.clone(),
+            b.clone(),
+            c.clone(),
+            d.clone(),
+            e.clone(),
+            f.clone(),
+        ];
+        let ret = invert_batch(to_be_inverted.as_slice());
+
+        assert_eq!(ret[0], a.inv().unwrap());
+        assert_eq!(ret[1], b.inv().unwrap());
+        assert_eq!(ret[2], c.inv().unwrap());
+        assert_eq!(ret[3], d.inv().unwrap());
+        assert_eq!(ret[4], e.inv().unwrap());
+        assert_eq!(ret[5], f.inv().unwrap());
     }
 
     #[quickcheck]

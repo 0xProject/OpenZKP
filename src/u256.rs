@@ -1,5 +1,6 @@
 use crate::division::{divrem_nby1, divrem_nbym};
 use crate::gcd::inv_mod;
+use crate::u256h;
 use crate::utils::{adc, div_2_1, mac, sbb};
 use crate::{commutative_binop, noncommutative_binop};
 use hex_literal::*;
@@ -356,6 +357,24 @@ impl U256 {
     // Computes the inverse modulo a given modulus
     pub fn invmod(&self, modulus: &U256) -> Option<U256> {
         inv_mod(modulus, self)
+    }
+
+    pub fn pow(&self, exponent: u64) -> Option<U256> {
+        if self.is_zero() && (exponent == 0) {
+            None
+        } else {
+            let mut result = U256::ONE;
+            let mut remaining_exponent = exponent;
+            let mut square = self.clone();
+            while remaining_exponent > 0 {
+                if remaining_exponent % 2 == 1 {
+                    result *= &square;
+                }
+                remaining_exponent >>= 1;
+                square *= square.clone(); //OPT - eleminate .clone()
+            }
+            Some(result)
+        }
     }
 }
 
