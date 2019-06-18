@@ -400,6 +400,24 @@ impl U256 {
             None
         }
     }
+
+    pub fn pow(&self, exponent: u64) -> Option<U256> {
+        if self.is_zero() && (exponent == 0) {
+            None
+        } else {
+            let mut result = U256::ONE;
+            let mut remaining_exponent = exponent;
+            let mut square = self.clone();
+            while remaining_exponent > 0 {
+                if remaining_exponent % 2 == 1 {
+                    result *= &square;
+                }
+                remaining_exponent >>= 1;
+                square *= square.clone(); //OPT - eleminate .clone()
+            }
+            Some(result)
+        }
+    }
 }
 
 impl From<&U256> for u64 {
