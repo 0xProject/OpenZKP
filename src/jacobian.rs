@@ -131,6 +131,10 @@ impl Neg for &Jacobian {
 }
 
 impl AddAssign<&Jacobian> for Jacobian {
+    // We want to use the variable naming convention from the source
+    #[allow(clippy::many_single_char_names)]
+    // We need multiplications to implement addition
+    #[allow(clippy::suspicious_op_assign_impl)]
     fn add_assign(&mut self, rhs: &Jacobian) {
         if rhs.z == FieldElement::ZERO {
             return;
@@ -167,6 +171,10 @@ impl AddAssign<&Jacobian> for Jacobian {
 }
 
 impl AddAssign<&Affine> for Jacobian {
+    // We want to use the variable naming convention from the source
+    #[allow(clippy::many_single_char_names)]
+    // We need multiplications to implement addition
+    #[allow(clippy::suspicious_op_assign_impl)]
     fn add_assign(&mut self, rhs: &Affine) {
         match rhs {
             Affine::Zero => { /* Do nothing */ }
@@ -243,6 +251,7 @@ mod tests {
     use crate::curve::ORDER;
     use crate::u256h;
     use quickcheck_macros::quickcheck;
+    use hex_literal::*;
 
     #[test]
     fn test_add() {

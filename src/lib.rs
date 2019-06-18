@@ -1,16 +1,12 @@
 // TODO: #![deny(warnings, missing_docs)]
 #![warn(clippy::all)]
-#![feature(const_fn)]
-#[macro_use]
-extern crate hex_literal;
-#[macro_use]
-pub mod u256;
 pub mod binops;
 pub mod curve;
 mod division;
 pub mod ecdsa;
 pub mod fft;
 pub mod field;
+pub mod gcd;
 pub mod jacobian;
 pub mod merkle;
 pub mod montgomery;
@@ -18,6 +14,7 @@ pub mod orders;
 pub mod pedersen;
 mod pedersen_points;
 pub mod square_root;
+pub mod u256;
 mod utils;
 pub mod wnaf;
 use curve::Affine;

@@ -1,7 +1,9 @@
 use crate::curve::{Affine, ORDER};
 use crate::field::FieldElement;
 use crate::u256::U256;
+use crate::u256h;
 use crate::wnaf::{base_mul, double_base_mul, window_table_affine};
+use hex_literal::*;
 use lazy_static::*;
 use tiny_keccak::sha3_256;
 

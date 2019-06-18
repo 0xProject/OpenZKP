@@ -1,4 +1,5 @@
 use crate::division::{divrem_nby1, divrem_nbym};
+use crate::gcd::inv_mod;
 use crate::utils::{adc, div_2_1, mac, sbb};
 use crate::{commutative_binop, noncommutative_binop};
 use hex_literal::*;
@@ -119,7 +120,7 @@ impl U256 {
                 return Err(ParseError::Overflow);
             }
             result *= U256::from(10u64);
-            let digit = U256::from(u64::from_str_radix(&s[i..i + 1], 10)?);
+            let digit = U256::from(u64::from_str_radix(&s[i..=i], 10)?);
             if &result + &digit < result {
                 return Err(ParseError::Overflow);
             }
@@ -128,16 +129,17 @@ impl U256 {
         Ok(result)
     }
 
-    pub fn to_decimal_str(mut self) -> String {
-        if self == U256::ZERO {
+    pub fn to_decimal_str(&self) -> String {
+        if *self == U256::ZERO {
             return "0".to_string();
         }
         let mut result = String::new();
-        while self > U256::ZERO {
+        let mut copy = self.clone();
+        while copy > U256::ZERO {
             // OPT: Convert 19 digits at a time using u64.
-            let digit = (&self % U256::from(10u64)).c0;
+            let digit = (&copy % U256::from(10u64)).c0;
             result.push_str(&digit.to_string());
-            self /= U256::from(10u64);
+            copy /= U256::from(10u64);
         }
         // Reverse digits
         // Note: Chars are safe here instead of graphemes, because all graphemes
@@ -353,52 +355,7 @@ impl U256 {
 
     // Computes the inverse modulo a given modulus
     pub fn invmod(&self, modulus: &U256) -> Option<U256> {
-        // Handbook of Applied Cryptography Algorithm 14.61:
-        // Binary Extended GCD
-        // See note 14.64 on application to modular inverse.
-        // The algorithm is modified to work with non-negative numbers.
-        // TODO: Constant time algorithm. (Based on fermat's little theorem or
-        // constant time Euclids.)
-        // TODO: Lehmer's algorithm or other fast GCD
-        // TODO: Reduce number of limbs on u and v as computation progresses
-        let mut u = self.clone();
-        let mut v = modulus.clone();
-        let mut a = U256::ONE;
-        let mut c = U256::ZERO;
-        while u != U256::ZERO {
-            while u.is_even() {
-                u >>= 1;
-                if a.is_odd() {
-                    a += modulus;
-                }
-                a >>= 1;
-            }
-            while v.is_even() {
-                v >>= 1;
-                if c.is_odd() {
-                    c += modulus;
-                }
-                c >>= 1;
-            }
-            if u >= v {
-                if a < c {
-                    a += modulus;
-                }
-                u -= &v;
-                a -= &c;
-            } else {
-                if c < a {
-                    c += modulus;
-                }
-                v -= &u;
-                c -= &a;
-            }
-        }
-        if v == U256::ONE {
-            Some(c)
-        } else {
-            None
-        }
+        inv_mod(modulus, self)
     }
 }
 
@@ -714,13 +671,71 @@ impl Mul<u64> for &U256 {
 impl Mul<U256> for u64 {
     type Output = U256;
     #[inline(always)]
-    fn mul(self, /* mut */ rhs: U256) -> U256 {
+    fn mul(self, rhs: U256) -> U256 {
         rhs.mul(self)
     }
 }
 
 impl Mul<&U256> for u64 {
     type Output = U256;
+    #[inline(always)]
+    fn mul(self, rhs: &U256) -> U256 {
+        rhs.mul(self)
+    }
+}
+
+impl MulAssign<u128> for U256 {
+    // We need `>>` to implement mul
+    #[allow(clippy::suspicious_op_assign_impl)]
+    #[inline(always)]
+    fn mul_assign(&mut self, rhs: u128) {
+        let lo = rhs as u64;
+        let hi = (rhs >> 64) as u64;
+        let (r0, carry) = mac(0, self.c0, lo, 0);
+        let (r1, carry) = mac(0, self.c1, lo, carry);
+        let (r2, carry) = mac(0, self.c2, lo, carry);
+        let (r3, _carry) = mac(0, self.c3, lo, carry);
+        let (r1, carry) = mac(r1, self.c0, hi, 0);
+        let (r2, carry) = mac(r2, self.c1, hi, carry);
+        let (r3, _carry) = mac(r3, self.c2, hi, carry);
+        self.c0 = r0;
+        self.c1 = r1;
+        self.c2 = r2;
+        self.c3 = r3;
+    }
+}
+
+impl Mul<u128> for U256 {
+    type Output = U256;
+
+    #[inline(always)]
+    fn mul(mut self, rhs: u128) -> U256 {
+        self.mul_assign(rhs);
+        self
+    }
+}
+
+impl Mul<u128> for &U256 {
+    type Output = U256;
+
+    #[inline(always)]
+    fn mul(self, rhs: u128) -> U256 {
+        self.clone().mul(rhs)
+    }
+}
+
+impl Mul<U256> for u128 {
+    type Output = U256;
+
+    #[inline(always)]
+    fn mul(self, rhs: U256) -> U256 {
+        rhs.mul(self)
+    }
+}
+
+impl Mul<&U256> for u128 {
+    type Output = U256;
+
     #[inline(always)]
     fn mul(self, rhs: &U256) -> U256 {
         rhs.mul(self)
