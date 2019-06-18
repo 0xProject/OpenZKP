@@ -1,6 +1,8 @@
 use crate::field::MODULUS;
 use crate::u256::U256;
+use crate::u256h;
 use crate::utils::{adc, mac};
+use hex_literal::*;
 use std::cmp::Ordering;
 
 // M64 = -MODULUS^(-1) mod 2^64

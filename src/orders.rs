@@ -14,15 +14,15 @@ pub struct MakerMessage<T> {
 
 pub fn hash_maker(message: &MakerMessage<U256>) -> U256 {
     let mut packed = U256::ZERO;
-    packed += &U256::from(message.vault_a as u64);
+    packed += &U256::from(u64::from(message.vault_a));
     packed <<= 31;
-    packed += &U256::from(message.vault_b as u64);
+    packed += &U256::from(u64::from(message.vault_b));
     packed <<= 63;
-    packed += &U256::from(message.amount_a as u64);
+    packed += &U256::from(message.amount_a);
     packed <<= 63;
-    packed += &U256::from(message.amount_b as u64);
+    packed += &U256::from(message.amount_b);
     packed <<= 31;
-    packed += &U256::from(message.trade_id as u64);
+    packed += &U256::from(u64::from(message.trade_id));
     hash(&[
         hash(&[message.token_a.clone(), message.token_b.clone()]),
         packed,
@@ -31,14 +31,16 @@ pub fn hash_maker(message: &MakerMessage<U256>) -> U256 {
 
 pub fn hash_taker(maker_hash: &U256, vault_a: u32, vault_b: u32) -> U256 {
     hash(&[
-        hash(&[maker_hash.clone(), U256::from(vault_a as u64)]),
-        U256::from(vault_b as u64),
+        hash(&[maker_hash.clone(), U256::from(u64::from(vault_a))]),
+        U256::from(u64::from(vault_b)),
     ])
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::u256h;
+    use hex_literal::*;
 
     #[test]
     fn test_hash_maker() {

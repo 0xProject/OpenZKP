@@ -1,6 +1,8 @@
 use crate::montgomery::*;
 use crate::u256::U256;
+use crate::u256h;
 use crate::{commutative_binop, noncommutative_binop};
+use hex_literal::*;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 // TODO: Implement Serde

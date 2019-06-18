@@ -5,6 +5,7 @@ use starkcrypto::ecdsa::{private_to_public, sign, verify};
 use starkcrypto::fft::fft_cofactor;
 use starkcrypto::fibonacci::*;
 use starkcrypto::field::FieldElement;
+use starkcrypto::gcd::gcd;
 use starkcrypto::jacobian::Jacobian;
 use starkcrypto::merkle::*;
 use starkcrypto::pedersen::hash;
