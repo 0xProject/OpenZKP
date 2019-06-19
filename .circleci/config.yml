@@ -35,12 +35,12 @@ jobs:
       - run:
           name: Benchmark
           command: |
-            if [[ "$CIRCLE_BRANCH" == "master" ]]
-            then
-              RUST_BACKTRACE=1 cargo bench --bench benchmark -- -- --save-baseline master
-            else
-              RUST_BACKTRACE=1 cargo bench --bench benchmark -- -- --baseline master
-            fi
+            # if [[ "$CIRCLE_BRANCH" == "master" ]]
+            # then
+              RUST_BACKTRACE=1 cargo bench --bench benchmark -- --save-baseline master
+            #else
+            #  RUST_BACKTRACE=1 cargo bench --bench benchmark -- --baseline master
+            #fi
       # TODO: Coverage
       - save_cache:
           key: project-cache
