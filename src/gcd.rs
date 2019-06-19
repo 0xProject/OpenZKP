@@ -1,9 +1,33 @@
 use crate::u256::U256;
 use crunchy::unroll;
 
-// Simulataneously computes
-//   a' = q00 a - q01 b
-//   b' = q11 b - q10 a
+/// Lehmer update matrix
+///
+/// Signs are implicit, the boolean `.4` encodes which of two sign
+/// patterns applies. The signs and layout of the matrix are:
+///
+/// ```text
+///     true          false
+///  [ .0  -.1]    [-.0   .1]
+///  [-.2   .3]    [ .2  -.3]
+/// ```
+///
+#[derive(PartialEq, Eq, Clone, Debug)]
+struct Matrix(u64, u64, u64, u64, bool);
+
+impl Matrix {
+    const IDENTITY: Matrix = Matrix(1, 0, 0, 1, true);
+}
+
+/// Computes a double linear combination efficiently in place.
+///
+/// Simulataneously computes
+/// 
+/// ```text
+///   a' = q00 a - q01 b
+///   b' = q11 b - q10 a
+/// ```
+// We want to keep spaces to align arguments
 #[rustfmt::skip]
 fn mat_mul(a: &mut U256, b: &mut U256, (q00, q01, q10, q11): (u64, u64, u64, u64)) {
     use crate::utils::{mac, msb};
@@ -33,22 +57,21 @@ fn mat_mul(a: &mut U256, b: &mut U256, (q00, q01, q10, q11): (u64, u64, u64, u64
     b.c3 = bi;
 }
 
-// Applies the lehmer matrix to the variable pair.
-fn lehmer_update(
-    a0: &mut U256,
-    a1: &mut U256,
-    (q00, q01, q10, q11, even): (u64, u64, u64, u64, bool),
-) {
-    if even {
-        mat_mul(a0, a1, (q00, q01, q10, q11));
+/// Applies the Lehmer update matrix to the variable pair in place.
+fn lehmer_update(a0: &mut U256, a1: &mut U256, Matrix(q00, q01, q10, q11, even): &Matrix) {
+    if *even {
+        mat_mul(a0, a1, (*q00, *q01, *q10, *q11));
     } else {
-        mat_mul(a0, a1, (q10, q11, q00, q01));
+        mat_mul(a0, a1, (*q10, *q11, *q00, *q01));
         std::mem::swap(a0, a1);
     }
 }
 
 /// Division optimized for small values
-/// Requires a > b > 0. Returns a / b.
+///
+/// Requires a > b > 0.
+/// Returns a / b.
+///
 /// See also `div1` in GMPs Lehmer implementation.
 /// https://gmplib.org/repo/gmp-6.1/file/tip/mpn/generic/hgcd2.c#l44
 #[allow(clippy::cognitive_complexity)]
@@ -66,12 +89,22 @@ fn div1(mut a: u64, b: u64) -> u64 {
     19 + a / b
 }
 
-// Single step of the extended Euclid's algorithm for u64.
-// Equivalent to the following, but faster:
-//    let q = *a3 / a2;
-//    *a3 -= q * a2;
-//    *k3 += q * k2;
+/// Single step of the extended Euclid's algorithm for u64.
+///
+/// Equivalent to the following, but faster for small `q`:
+///
+/// ```text
+/// let q = *a3 / a2;
+/// *a3 -= q * a2;
+/// *k3 += q * k2;
+/// ```
+///
+/// NOTE: This routine is critical for the performance of
+///       Lehmer GCD computations.
+///
+// Performance is 40% better with forced inlining.
 #[inline(always)]
+// Clippy operates on the unrolled code, giving a false positive.
 #[allow(clippy::cognitive_complexity)]
 fn lehmer_unroll(a2: u64, a3: &mut u64, k2: u64, k3: &mut u64) {
     debug_assert!(a2 < *a3);
@@ -91,12 +124,13 @@ fn lehmer_unroll(a2: u64, a3: &mut u64, k2: u64, k3: &mut u64) {
 }
 
 /// Compute the Lehmer update matrix for small values.
+///
 /// This is essentialy Euclids extended GCD algorithm for 64 bits.
-/// OPT: Would this be faster using extended binary gcd?
-fn lehmer_small(mut r0: u64, mut r1: u64) -> (u64, u64, u64, u64, bool) {
+// OPT: Would this be faster using extended binary gcd?
+fn lehmer_small(mut r0: u64, mut r1: u64) -> Matrix {
     debug_assert!(r0 >= r1);
     if r1 == 0u64 {
-        return (1, 0, 0, 1, true);
+        return Matrix::IDENTITY;
     }
     let mut q00 = 1u64;
     let mut q01 = 0u64;
@@ -109,24 +143,27 @@ fn lehmer_small(mut r0: u64, mut r1: u64) -> (u64, u64, u64, u64, bool) {
         q00 += q * q10;
         q01 += q * q11;
         if r0 == 0u64 {
-            return (q10, q11, q00, q01, false);
+            return Matrix(q10, q11, q00, q01, false);
         }
         let q = div1(r1, r0);
         r1 -= q * r0;
         q10 += q * q00;
         q11 += q * q01;
         if r1 == 0u64 {
-            return (q00, q01, q10, q11, true);
+            return Matrix(q00, q01, q10, q11, true);
         }
     }
 }
 
+/// Compute the largest valid Lehmer update matrix for a prefix.
+///
 /// Compute the Lehmer update matrix for a0 and a1 such that the matrix is valid
 /// for any two large integers starting with the bits of a0 and a1.
+///
 /// See also `mpn_hgcd2` in GMP, but ours handles the double precision bit
 /// separately in lehmer_double.
 ///    https://gmplib.org/repo/gmp-6.1/file/tip/mpn/generic/hgcd2.c#l226
-fn lehmer_loop(a0: u64, mut a1: u64) -> (u64, u64, u64, u64, bool) {
+fn lehmer_loop(a0: u64, mut a1: u64) -> Matrix {
     const LIMIT: u64 = 1u64 << 32;
     debug_assert!(a0 >= 1u64 << 63);
     debug_assert!(a0 >= a1);
@@ -138,7 +175,7 @@ fn lehmer_loop(a0: u64, mut a1: u64) -> (u64, u64, u64, u64, bool) {
     let mut k1 = 1u64; // u1 = 0, v1 = 1
     let mut even = true;
     if a1 < LIMIT {
-        return (1, 0, 0, 1, true);
+        return Matrix::IDENTITY;
     }
 
     // Compute a2
@@ -151,9 +188,9 @@ fn lehmer_loop(a0: u64, mut a1: u64) -> (u64, u64, u64, u64, bool) {
 
         // Test i + 1 (odd)
         if a2 >= v2 && a1 - a2 >= u2 {
-            return (0, 1, u2, v2, false);
+            return Matrix(0, 1, u2, v2, false);
         } else {
-            return (1, 0, 0, 1, true);
+            return Matrix::IDENTITY;
         }
     }
 
@@ -207,14 +244,14 @@ fn lehmer_loop(a0: u64, mut a1: u64) -> (u64, u64, u64, u64, bool) {
             // Test i + 2 (even)
             if a3 >= u3 && a2 - a3 >= v3 + v2 {
                 // Correct value is i + 2
-                (u2, v2, u3, v3, true)
+                Matrix(u2, v2, u3, v3, true)
             } else {
                 // Correct value is i + 1
-                (u1, v1, u2, v2, false)
+                Matrix(u1, v1, u2, v2, false)
             }
         } else {
             // Correct value is i
-            (u0, v0, u1, v1, true)
+            Matrix(u0, v0, u1, v1, true)
         }
     } else {
         // Test i + 1 (even)
@@ -223,19 +260,20 @@ fn lehmer_loop(a0: u64, mut a1: u64) -> (u64, u64, u64, u64, bool) {
             // Test i + 2 (odd)
             if a3 >= v3 && a2 - a3 >= u3 + u2 {
                 // Correct value is i + 2
-                (u2, v2, u3, v3, false)
+                Matrix(u2, v2, u3, v3, false)
             } else {
                 // Correct value is i + 1
-                (u1, v1, u2, v2, true)
+                Matrix(u1, v1, u2, v2, true)
             }
         } else {
             // Correct value is i
-            (u0, v0, u1, v1, false)
+            Matrix(u0, v0, u1, v1, false)
         }
     }
 }
 
 /// Compute the Lehmer update matrix in full 64 bit precision.
+///
 /// Jebelean solves this by starting in double-precission followed
 /// by single precision once values are small enough.
 /// Cohen instead runs a single precision round, refreshes the r0 and r1
@@ -245,9 +283,10 @@ fn lehmer_loop(a0: u64, mut a1: u64) -> (u64, u64, u64, u64, bool) {
 /// end. This requires 8 additional multiplications, but allows us to use
 /// the tighter stopping conditions from Jebelean. It also seems the simplest
 /// out of these solutions.
-/// OPT: We can update r0 and r1 in place. This won't remove the partially
-/// redundant call to lehmer_update, but it reduces memory usage.
-fn lehmer_double(mut r0: U256, mut r1: U256) -> (u64, u64, u64, u64, bool) {
+///
+// OPT: We can update r0 and r1 in place. This won't remove the partially
+// redundant call to lehmer_update, but it reduces memory usage.
+fn lehmer_double(mut r0: U256, mut r1: U256) -> Matrix {
     debug_assert!(r0 >= r1);
     if r0.bits() < 64 {
         debug_assert!(r1.bits() < 64);
@@ -258,7 +297,7 @@ fn lehmer_double(mut r0: U256, mut r1: U256) -> (u64, u64, u64, u64, bool) {
     let r0s = r0.clone() << s;
     let r1s = r1.clone() << s;
     let q = lehmer_loop(r0s.c3, r1s.c3);
-    if q.2 == 0u64 {
+    if q == Matrix::IDENTITY {
         return q;
     }
     // We can return q here and have a perfectly valid single-word Lehmer GCD.
@@ -267,14 +306,14 @@ fn lehmer_double(mut r0: U256, mut r1: U256) -> (u64, u64, u64, u64, bool) {
     // Recompute r0 and r1 and take the high bits.
     // OPT: This does not need full precision.
     // OPT: Can we reuse the shifted variables here?
-    lehmer_update(&mut r0, &mut r1, q);
+    lehmer_update(&mut r0, &mut r1, &q);
     let s = r0.leading_zeros();
     let r0s = r0.clone() << s;
     let r1s = r1.clone() << s;
     let qn = lehmer_loop(r0s.c3, r1s.c3);
 
     // Multiply matrices qn * q
-    (
+    Matrix(
         qn.0 * q.0 + qn.1 * q.2,
         qn.0 * q.1 + qn.1 * q.3,
         qn.2 * q.0 + qn.3 * q.2,
@@ -283,9 +322,10 @@ fn lehmer_double(mut r0: U256, mut r1: U256) -> (u64, u64, u64, u64, bool) {
     )
 }
 
-// Lehmer's GCD algorithms.
-// See `gcd_extended` for documentation. This version maintain
-// full precission cofactors.
+//// Lehmer's GCD algorithms.
+///
+/// See `gcd_extended` for documentation. This version maintains
+/// full precission cofactors.
 pub fn gcd(mut r0: U256, mut r1: U256) -> U256 {
     if r1 > r0 {
         std::mem::swap(&mut r0, &mut r1);
@@ -293,8 +333,8 @@ pub fn gcd(mut r0: U256, mut r1: U256) -> U256 {
     debug_assert!(r0 >= r1);
     while r1 != U256::ZERO {
         let q = lehmer_double(r0.clone(), r1.clone());
-        if q.2 != 0u64 {
-            lehmer_update(&mut r0, &mut r1, q);
+        if q != Matrix::IDENTITY {
+            lehmer_update(&mut r0, &mut r1, &q);
         } else {
             // Do a full precision Euclid step. q is at least a halfword.
             // This should happen zero or one time, seldom more.
@@ -308,16 +348,22 @@ pub fn gcd(mut r0: U256, mut r1: U256) -> U256 {
     r0
 }
 
-// Lehmer's extended GCD.
-// A variation of Euclids algorithm where repeated 64-bit approximations are
-// used to make rapid progress on.
-// See Jebelean (1994) "A Double-Digit Lehmer-Euclid Algorithm for Finding the GCD of Long Integers".
-// The function `lehmer_double` takes two `U256`'s and returns a 64-bit matrix.
-// The function `lehmer_update` updates state variables using this matrix, if
-// the matrix makes no progress (because 64 bit precision is not enough) a full
-// precision Euclid step is done, but this happens rarely.
-// See also mpn_gcdext_lehmer_n in GMP.
-// https://gmplib.org/repo/gmp-6.1/file/tip/mpn/generic/gcdext_lehmer.c#l146
+/// Lehmer's extended GCD.
+///
+/// A variation of Euclids algorithm where repeated 64-bit approximations are
+/// used to make rapid progress on.
+///
+/// See Jebelean (1994) "A Double-Digit Lehmer-Euclid Algorithm for Finding the
+/// GCD of Long Integers".
+///
+/// The function `lehmer_double` takes two `U256`'s and returns a 64-bit matrix.
+///
+/// The function `lehmer_update` updates state variables using this matrix. If
+/// the matrix makes no progress (because 64 bit precision is not enough) a full
+/// precision Euclid step is done, but this happens rarely.
+///
+/// See also mpn_gcdext_lehmer_n in GMP.
+/// https://gmplib.org/repo/gmp-6.1/file/tip/mpn/generic/gcdext_lehmer.c#l146
 pub fn gcd_extended(mut r0: U256, mut r1: U256) -> (U256, U256, U256, bool) {
     let swapped = r1 > r0;
     if swapped {
@@ -331,10 +377,10 @@ pub fn gcd_extended(mut r0: U256, mut r1: U256) -> (U256, U256, U256, bool) {
     let mut even = true;
     while r1 != U256::ZERO {
         let q = lehmer_double(r0.clone(), r1.clone());
-        if q.2 != 0u64 {
-            lehmer_update(&mut r0, &mut r1, q);
-            lehmer_update(&mut s0, &mut s1, q);
-            lehmer_update(&mut t0, &mut t1, q);
+        if q != Matrix::IDENTITY {
+            lehmer_update(&mut r0, &mut r1, &q);
+            lehmer_update(&mut s0, &mut s1, &q);
+            lehmer_update(&mut t0, &mut t1, &q);
             even ^= !q.4;
         } else {
             // Do a full precision Euclid step. q is at least a halfword.
@@ -368,18 +414,23 @@ pub fn gcd_extended(mut r0: U256, mut r1: U256) -> (U256, U256, U256, bool) {
     (r0, s0, t0, even)
 }
 
-// Modular inversion.
-// It uses the Bezout identity
-//    a * modulus + b * num = gcd(modulus, num)
-// where `a` and `b` are the cofactors from the extended Euclidean algorithm.
-// A modular inverse only exists if `modulus` and `num` are coprime, in which
-// case `gcd(modulus, num)` is one. Reducing both sides by the modulus then
-// results in the equation `b * num = 1 (mod modulus)`. In other words, the
-// cofactor `b` is the modular inverse of `num`.
-// It differs from `gcd_extended` in that it only computes the required
-// cofactor, and returns `None` if the GCD is not one (i.e. when `num` does
-// not have an inverse).
-// For the algorithm see `gcd_extended`.
+/// Modular inversion using extended GCD.
+///
+/// It uses the Bezout identity
+///
+/// ```text
+///    a * modulus + b * num = gcd(modulus, num)
+/// ````
+///
+/// where `a` and `b` are the cofactors from the extended Euclidean algorithm.
+/// A modular inverse only exists if `modulus` and `num` are coprime, in which
+/// case `gcd(modulus, num)` is one. Reducing both sides by the modulus then
+/// results in the equation `b * num = 1 (mod modulus)`. In other words, the
+/// cofactor `b` is the modular inverse of `num`.
+///
+/// It differs from `gcd_extended` in that it only computes the required
+/// cofactor, and returns `None` if the GCD is not one (i.e. when `num` does
+/// not have an inverse).
 pub fn inv_mod(modulus: &U256, num: &U256) -> Option<U256> {
     let mut r0 = modulus.clone();
     let mut r1 = num.clone();
@@ -391,9 +442,9 @@ pub fn inv_mod(modulus: &U256, num: &U256) -> Option<U256> {
     let mut even = true;
     while r1 != U256::ZERO {
         let q = lehmer_double(r0.clone(), r1.clone());
-        if q.2 != 0u64 {
-            lehmer_update(&mut r0, &mut r1, q);
-            lehmer_update(&mut t0, &mut t1, q);
+        if q != Matrix::IDENTITY {
+            lehmer_update(&mut r0, &mut r1, &q);
+            lehmer_update(&mut t0, &mut t1, &q);
             even ^= !q.4;
         } else {
             // Do a full precision Euclid step. q is at least a halfword.
@@ -428,10 +479,10 @@ mod tests {
 
     #[test]
     fn test_lehmer_small() {
-        assert_eq!(lehmer_small(0, 0), (1, 0, 0, 1, true));
+        assert_eq!(lehmer_small(0, 0), Matrix::IDENTITY);
         assert_eq!(
             lehmer_small(14535145444257436950, 5818365597666026993),
-            (
+            Matrix(
                 379355176803460069,
                 947685836737753349,
                 831195085380860999,
@@ -441,7 +492,7 @@ mod tests {
         );
         assert_eq!(
             lehmer_small(15507080595343815048, 10841422679839906593),
-            (
+            Matrix(
                 40154122160696118,
                 57434639988632077,
                 3613807559946635531,
@@ -453,16 +504,16 @@ mod tests {
 
     #[test]
     fn test_lehmer_loop() {
-        assert_eq!(lehmer_loop(1u64 << 63, 0), (1, 0, 0, 1, true));
+        assert_eq!(lehmer_loop(1u64 << 63, 0), Matrix::IDENTITY);
         assert_eq!(
             // Accumulates the first 18 quotients
             lehmer_loop(16194659139127649777, 14535145444257436950),
-            (320831736, 357461893, 1018828859, 1135151083, true)
+            Matrix(320831736, 357461893, 1018828859, 1135151083, true)
         );
         assert_eq!(
             // Accumulates the first 27 coefficients
             lehmer_loop(15267531864828975732, 6325623274722585764,),
-            (88810257, 214352542, 774927313, 1870365485, false)
+            Matrix(88810257, 214352542, 774927313, 1870365485, false)
         );
     }
 
@@ -484,7 +535,7 @@ mod tests {
         assert!(update_matrix.1 < LIMIT);
         assert!(update_matrix.2 < LIMIT);
         assert!(update_matrix.3 < LIMIT);
-        if update_matrix != (1, 0, 0, 1, true) {
+        if update_matrix != Matrix::IDENTITY {
             assert!(update_matrix.0 <= update_matrix.2);
             assert!(update_matrix.2 <= update_matrix.3);
             assert!(update_matrix.1 <= update_matrix.3);
@@ -512,7 +563,7 @@ mod tests {
             t0 = t1;
             t1 = t;
             even = !even;
-            if update_matrix == (s0, t0, s1, t1, even) {
+            if update_matrix == Matrix(s0, t0, s1, t1, even) {
                 return true;
             }
         }
@@ -538,14 +589,14 @@ mod tests {
 
     #[test]
     fn test_lehmer_double() {
-        assert_eq!(lehmer_double(U256::ZERO, U256::ZERO), (1, 0, 0, 1, true));
+        assert_eq!(lehmer_double(U256::ZERO, U256::ZERO), Matrix::IDENTITY);
         assert_eq!(
             // Aggegrates the first 34 quotients
             lehmer_double(
                 u256h!("518a5cc4c55ac5b050a0831b65e827e5e39fd4515e4e094961c61509e7870814"),
                 u256h!("018a5cc4c55ac5b050a0831b65e827e5e39fd4515e4e094961c61509e7870814")
             ),
-            (
+            Matrix(
                 2927556694930003,
                 154961230633081597,
                 3017020641586254,
