@@ -17,8 +17,8 @@ fn is_quadratic_residue(a: &FieldElement) -> bool {
     }
 }
 
-// 3 is the smallest quadratic nonresidue in the finite field.
-const QUADRATIC_NONRESIDUE: FieldElement = FieldElement(U256::new(3, 0, 0, 0));
+// The generator, 3, is the smallest quadratic nonresidue in the finite field.
+const QUADRATIC_NONRESIDUE: FieldElement = FieldElement::GENERATOR;
 
 // These two constants are chosen so that 1 + SIGNIFICAND << BINARY_EXPONENT == MODULUS.
 const BINARY_EXPONENT: usize = 3 * 4 * 16;
@@ -72,11 +72,22 @@ mod tests {
     }
 
     #[test]
+    fn quadratic_nonresidue_is_three() {
+        assert_eq!(QUADRATIC_NONRESIDUE, FieldElement::from(U256::from(3u128)));
+    }
+
+    #[test]
     fn quadratic_nonresidue_is_as_claimed() {
-        assert!(is_quadratic_residue(&FieldElement(U256::new(0, 0, 0, 0))));
-        assert!(is_quadratic_residue(&FieldElement(U256::new(1, 0, 0, 0))));
-        assert!(is_quadratic_residue(&FieldElement(U256::new(2, 0, 0, 0))));
         assert!(!is_quadratic_residue(&QUADRATIC_NONRESIDUE));
+    }
+
+    #[test]
+    fn quadratic_nonresidue_is_smallest() {
+        let mut i = 0u128;
+        while U256::from(i) < QUADRATIC_NONRESIDUE.into() {
+            assert!(is_quadratic_residue(&FieldElement::from(U256::from(i))));
+            i += 1;
+        }
     }
 
     #[quickcheck]
