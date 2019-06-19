@@ -22,8 +22,8 @@ jobs:
       - run:
           name: Linting
           command: |
-            cargo fmt -- --check
-            cargo clippy --all
+            cargo fmt  --all -- --check
+            cargo clippy --all --all-targets
       - run:
           name: Build all targets
           command: RUST_BACKTRACE=1 cargo build --all --all-targets
