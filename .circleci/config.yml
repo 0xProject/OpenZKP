@@ -17,24 +17,25 @@ jobs:
           name: Setup build environment
           command: |
             sudo apt-get update
-            rustup component add rustfmt
-            rustup component add clippy
+            rustup component add rustfmt clippy
           no_output_timeout: 1800s
       - run:
-          name: Format
+          name: Linting
           command: |
             cargo fmt -- --check
-      - run:
-          name: Clippy
-          command: |
             cargo clippy --all
       - run:
-          name: Test in debug mode
-          command: RUST_BACKTRACE=1 cargo test
+          name: Build all targets
+          command: RUST_BACKTRACE=1 cargo build --all --all-targets
       - run:
-          name: Test in release mode
-          command: RUST_BACKTRACE=1 cargo test --release
-      # TODO: Benchmark
+          name: Test in debug mode
+          command: |
+            RUST_BACKTRACE=1 cargo test --all -- --nocapture
+            RUST_BACKTRACE=1 cargo test --release -- --nocapture
+      - run:
+          name: Benchmark
+          command: |
+            RUST_BACKTRACE=1 cargo bench -- --baseline master
       # TODO: Coverage
       - save_cache:
           key: project-cache
