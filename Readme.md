@@ -2,6 +2,12 @@
 
 NOTE: Modular inversion is not constant time.
 
+## Testing
+
+See CircleCI documentation on how to [run tests locally][cci-local].
+
+[cci-local]: https://circleci.com/docs/2.0/local-cli/
+
 ## Benchmark
 
 Checkout master branch:

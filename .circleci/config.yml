@@ -1,4 +1,4 @@
-version: 2.1
+version: 2
 jobs:
   build:
     docker:
@@ -35,7 +35,7 @@ jobs:
       # TODO: Benchmark
       # TODO: Coverage
 workflows:
-  version: 2.1
+  version: 2
   build:
     jobs:
       - build
