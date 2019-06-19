@@ -15,6 +15,10 @@ use crunchy::unroll;
 #[derive(PartialEq,Eq,Clone,Debug)]
 struct Matrix(u64, u64, u64, u64, bool);
 
+impl Matrix {
+    const IDENTITY: Matrix = Matrix(1, 0, 0, 1, true);
+}
+
 // Simulataneously computes
 //   a' = q00 a - q01 b
 //   b' = q11 b - q10 a
@@ -110,7 +114,7 @@ fn lehmer_unroll(a2: u64, a3: &mut u64, k2: u64, k3: &mut u64) {
 fn lehmer_small(mut r0: u64, mut r1: u64) -> Matrix {
     debug_assert!(r0 >= r1);
     if r1 == 0u64 {
-        return Matrix(1, 0, 0, 1, true);
+        return Matrix::IDENTITY;
     }
     let mut q00 = 1u64;
     let mut q01 = 0u64;
@@ -152,7 +156,7 @@ fn lehmer_loop(a0: u64, mut a1: u64) -> Matrix {
     let mut k1 = 1u64; // u1 = 0, v1 = 1
     let mut even = true;
     if a1 < LIMIT {
-        return Matrix(1, 0, 0, 1, true);
+        return Matrix::IDENTITY;
     }
 
     // Compute a2
@@ -167,7 +171,7 @@ fn lehmer_loop(a0: u64, mut a1: u64) -> Matrix {
         if a2 >= v2 && a1 - a2 >= u2 {
             return Matrix(0, 1, u2, v2, false);
         } else {
-            return Matrix(1, 0, 0, 1, true);
+            return Matrix::IDENTITY;
         }
     }
 
@@ -272,7 +276,7 @@ fn lehmer_double(mut r0: U256, mut r1: U256) -> Matrix {
     let r0s = r0.clone() << s;
     let r1s = r1.clone() << s;
     let q = lehmer_loop(r0s.c3, r1s.c3);
-    if q.2 == 0u64 {
+    if q == Matrix::IDENTITY {
         return q;
     }
     // We can return q here and have a perfectly valid single-word Lehmer GCD.
@@ -307,7 +311,7 @@ pub fn gcd(mut r0: U256, mut r1: U256) -> U256 {
     debug_assert!(r0 >= r1);
     while r1 != U256::ZERO {
         let q = lehmer_double(r0.clone(), r1.clone());
-        if q.2 != 0u64 {
+        if q != Matrix::IDENTITY {
             lehmer_update(&mut r0, &mut r1, &q);
         } else {
             // Do a full precision Euclid step. q is at least a halfword.
@@ -345,7 +349,7 @@ pub fn gcd_extended(mut r0: U256, mut r1: U256) -> (U256, U256, U256, bool) {
     let mut even = true;
     while r1 != U256::ZERO {
         let q = lehmer_double(r0.clone(), r1.clone());
-        if q.2 != 0u64 {
+        if q != Matrix::IDENTITY {
             lehmer_update(&mut r0, &mut r1, &q);
             lehmer_update(&mut s0, &mut s1, &q);
             lehmer_update(&mut t0, &mut t1, &q);
@@ -405,7 +409,7 @@ pub fn inv_mod(modulus: &U256, num: &U256) -> Option<U256> {
     let mut even = true;
     while r1 != U256::ZERO {
         let q = lehmer_double(r0.clone(), r1.clone());
-        if q.2 != 0u64 {
+        if q != Matrix::IDENTITY {
             lehmer_update(&mut r0, &mut r1, &q);
             lehmer_update(&mut t0, &mut t1, &q);
             even ^= !q.4;
@@ -442,7 +446,7 @@ mod tests {
 
     #[test]
     fn test_lehmer_small() {
-        assert_eq!(lehmer_small(0, 0), Matrix(1, 0, 0, 1, true));
+        assert_eq!(lehmer_small(0, 0), Matrix::IDENTITY);
         assert_eq!(
             lehmer_small(14535145444257436950, 5818365597666026993),
             Matrix(
@@ -467,7 +471,7 @@ mod tests {
 
     #[test]
     fn test_lehmer_loop() {
-        assert_eq!(lehmer_loop(1u64 << 63, 0), Matrix(1, 0, 0, 1, true));
+        assert_eq!(lehmer_loop(1u64 << 63, 0), Matrix::IDENTITY);
         assert_eq!(
             // Accumulates the first 18 quotients
             lehmer_loop(16194659139127649777, 14535145444257436950),
@@ -498,7 +502,7 @@ mod tests {
         assert!(update_matrix.1 < LIMIT);
         assert!(update_matrix.2 < LIMIT);
         assert!(update_matrix.3 < LIMIT);
-        if update_matrix != Matrix(1, 0, 0, 1, true) {
+        if update_matrix != Matrix::IDENTITY {
             assert!(update_matrix.0 <= update_matrix.2);
             assert!(update_matrix.2 <= update_matrix.3);
             assert!(update_matrix.1 <= update_matrix.3);
@@ -552,7 +556,7 @@ mod tests {
 
     #[test]
     fn test_lehmer_double() {
-        assert_eq!(lehmer_double(U256::ZERO, U256::ZERO), Matrix(1, 0, 0, 1, true));
+        assert_eq!(lehmer_double(U256::ZERO, U256::ZERO), Matrix::IDENTITY);
         assert_eq!(
             // Aggegrates the first 34 quotients
             lehmer_double(
