@@ -5,6 +5,8 @@ jobs:
       - image: circleci/rust:latest
     steps:
       - checkout
+      - restore_cache:
+          key: project-cache
       - run:
           name: Version information
           command: |
@@ -27,13 +29,18 @@ jobs:
           command: |
             cargo clippy --all
       - run:
-          name: Test
+          name: Test in debug mode
           command: RUST_BACKTRACE=1 cargo test
       - run:
           name: Test in release mode
           command: RUST_BACKTRACE=1 cargo test --release
       # TODO: Benchmark
       # TODO: Coverage
+      - save_cache:
+          key: project-cache
+          paths:
+            - "~/.cargo"
+            - "./target"
 workflows:
   version: 2
   build:
