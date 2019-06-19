@@ -501,7 +501,7 @@ mod tests {
     use hex_literal::*;
 
     #[test]
-    fn fib_abstraction_test() {
+    fn fib_test_1024_python_witness() {
         let claim_index = 1000_u64;
         let claim_fib = FieldElement::from(u256h!(
             "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
@@ -509,7 +509,7 @@ mod tests {
         let witness = FieldElement::from(u256h!(
             "00000000000000000000000000000000000000000000000000000000cafebabe"
         ));
-        let correct_proof = fib_proof(witness.clone());
+        let correct_proof = vec![24_u8, 90_u8, 177_u8, 223_u8, 130_u8, 180_u8, 70_u8, 66_u8, 6_u8, 202_u8, 229_u8, 135_u8, 97_u8, 196_u8, 171_u8, 104_u8, 115_u8, 50_u8, 47_u8, 208_u8, 247_u8, 126_u8, 233_u8, 228_u8, 232_u8, 228_u8, 121_u8, 231_u8, 161_u8, 241_u8, 135_u8, 7_u8];
         let potential_proof = stark_proof(
             &get_trace_table(1024, witness),
             &get_constraint(),
@@ -517,7 +517,48 @@ mod tests {
             claim_fib,
             2_u64.pow(4),
         );
+        assert_eq!(correct_proof, potential_proof.digest);
+    }
 
-        assert_eq!(correct_proof.digest, potential_proof.digest);
+    #[test]
+    fn fib_test_1024_changed_witness() {
+        let claim_index = 1000_u64;
+        let claim_fib = FieldElement::from(u256h!(
+            "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
+        ));
+        let witness = FieldElement::from(u256h!(
+            "00000000000000000000000000000000000000000000000f00dbabe0cafebabe"
+        ));
+        let correct_proof = vec![213_u8, 169_u8, 29_u8, 107_u8, 162_u8, 109_u8, 16_u8, 94_u8, 96_u8, 173_u8, 194_u8, 66_u8, 6_u8, 216_u8, 124_u8, 142_u8, 224_u8, 91_u8, 17_u8, 168_u8, 103_u8, 74_u8, 6_u8, 76_u8, 144_u8, 203_u8, 169_u8, 100_u8, 112_u8, 87_u8, 57_u8, 85_u8];
+        let potential_proof = stark_proof(
+            &get_trace_table(1024, witness),
+            &get_constraint(),
+            claim_index,
+            claim_fib,
+            2_u64.pow(5),
+        );
+
+        assert_eq!(correct_proof, potential_proof.digest);
+    }
+
+    #[test]
+    fn fib_test_4096() {
+        let claim_index = 4000_u64;
+        let claim_fib = FieldElement::from(u256h!(
+            "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
+        ));
+        let witness = FieldElement::from(u256h!(
+            "00000000000000000000000000000000000000000000000f00dbabe0cafebabe"
+        ));
+        let correct_proof = vec![0_u8, 100_u8, 147_u8, 194_u8, 73_u8, 151_u8, 50_u8, 59_u8, 22_u8, 27_u8, 92_u8, 162_u8, 15_u8, 190_u8, 11_u8, 45_u8, 8_u8, 38_u8, 250_u8, 143_u8, 213_u8, 110_u8, 110_u8, 175_u8, 71_u8, 248_u8, 114_u8, 237_u8, 41_u8, 191_u8, 197_u8, 203_u8];
+        let potential_proof = stark_proof(
+            &get_trace_table(4096, witness),
+            &get_constraint(),
+            claim_index,
+            claim_fib,
+            2_u64.pow(4),
+        );
+
+        assert_eq!(correct_proof, potential_proof.digest);
     }
 }
