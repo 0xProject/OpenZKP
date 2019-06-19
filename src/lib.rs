@@ -25,6 +25,7 @@ use curve::Affine;
 use field::FieldElement;
 use u256::U256;
 pub mod proofs;
+pub mod proof_of_work;
 
 fn from_bytes(bytes: &[u8; 32]) -> U256 {
     U256::from_bytes_be(bytes)

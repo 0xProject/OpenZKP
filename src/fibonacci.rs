@@ -11,25 +11,10 @@ use crate::polynomial::*;
 use crate::proofs::*;
 use crate::u256::U256;
 use crate::u256h;
+use crate::utils::Reversable;
 use hex_literal::*;
 use rayon::prelude::*;
 use tiny_keccak::Keccak;
-
-trait Reversable {
-    fn bit_reverse(self) -> Self;
-}
-impl Reversable for u64 {
-    fn bit_reverse(self) -> Self {
-        let bits = 64;
-        let mut x_hold = self;
-        let mut y = 0;
-        for _i in 0..bits {
-            y = (y << 1) | (x_hold & 1);
-            x_hold >>= 1;
-        }
-        y
-    }
-}
 
 pub fn get_trace_table(length: u64, witness: FieldElement) -> TraceTable {
     let mut T_0 = vec![FieldElement::ONE];
@@ -69,58 +54,9 @@ pub fn eval_whole_loop(
     let omega_trace = (&omega).pow(U256::from(trace_len)).unwrap();
     let omega_1023 = (&omega).pow(U256::from(trace_len - 1)).unwrap();
 
-    let mut x_omega_cycle: Vec<FieldElement>;
-    let mut x_trace_cycle: Vec<FieldElement>;
-    let mut x_1023_cycle: Vec<FieldElement>;
-
-    x_omega_cycle = (0..16_u64)
-        .into_par_iter()
-        .map(|i| {
-            let mut hold = Vec::with_capacity((eval_domain_size / 16) as usize);
-            hold.push(&x * &omega.pow(U256::from(i * (eval_domain_size / 16))).unwrap());
-            for j in 1..(eval_domain_size / 16) {
-                hold.push(&hold[(j - 1) as usize] * &omega);
-            }
-            hold
-        })
-        .flatten()
-        .collect();
-
-    x_trace_cycle = (0..16_u64)
-        .into_par_iter()
-        .map(|i| {
-            let mut hold = Vec::with_capacity((eval_domain_size / 16) as usize);
-            hold.push(
-                &x_trace
-                    * &omega_trace
-                        .pow(U256::from(i * (eval_domain_size / 16)))
-                        .unwrap(),
-            );
-            for j in 1..(eval_domain_size / 16) {
-                hold.push(&hold[(j - 1) as usize] * &omega_trace);
-            }
-            hold
-        })
-        .flatten()
-        .collect();
-
-    x_1023_cycle = (0..16_u64)
-        .into_par_iter()
-        .map(|i| {
-            let mut hold = Vec::with_capacity((eval_domain_size / 16) as usize);
-            hold.push(
-                &x_1023
-                    * &omega_1023
-                        .pow(U256::from(i * (eval_domain_size / 16)))
-                        .unwrap(),
-            );
-            for j in 1..(eval_domain_size / 16) {
-                hold.push(&hold[(j - 1) as usize] * &omega_1023);
-            }
-            hold
-        })
-        .flatten()
-        .collect();
+    let mut x_omega_cycle: Vec<FieldElement> = power_domain(&x, &omega, eval_domain_size as usize);
+    let mut x_trace_cycle: Vec<FieldElement> = power_domain(&x_trace, &omega_trace, eval_domain_size as usize);
+    let mut x_1023_cycle: Vec<FieldElement> = power_domain(&x_1023, &omega_1023, eval_domain_size as usize);
 
     let mut x_trace_sub_one: Vec<FieldElement> = Vec::with_capacity(eval_domain_size as usize);
     let mut x_sub_one: Vec<FieldElement> = Vec::with_capacity(eval_domain_size as usize);
