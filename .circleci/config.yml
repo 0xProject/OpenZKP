@@ -1,0 +1,41 @@
+version: 2.1
+jobs:
+  build:
+    docker:
+      - image: circleci/rust:latest
+    steps:
+      - checkout
+      - run:
+          name: Version information
+          command: |
+            rustc --version
+            cargo --version
+            rustup --version
+      - run:
+          name: Setup build environment
+          command: |
+            sudo apt-get update
+            rustup component add rustfmt
+            rustup component add clippy
+          no_output_timeout: 1800s
+      - run:
+          name: Format
+          command: |
+            cargo fmt -- --check
+      - run:
+          name: Clippy
+          command: |
+            cargo clippy --all
+      - run:
+          name: Test
+          command: RUST_BACKTRACE=1 cargo test
+      - run:
+          name: Test in release mode
+          command: RUST_BACKTRACE=1 cargo test --release
+      # TODO: Benchmark
+      # TODO: Coverage
+workflows:
+  version: 2.1
+  build:
+    jobs:
+      - build
