@@ -35,7 +35,7 @@ jobs:
       - run:
           name: Benchmark
           command: |
-            RUST_BACKTRACE=1 cargo bench -- --baseline master
+            RUST_BACKTRACE=1 cargo bench --bench benchmark -- -- --baseline master
       # TODO: Coverage
       - save_cache:
           key: project-cache
