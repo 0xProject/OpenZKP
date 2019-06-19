@@ -26,7 +26,7 @@ impl FieldElement {
     ));
     pub const GENERATOR: FieldElement = FieldElement(u256h!(
         "07fffffffffff9b0ffffffffffffffffffffffffffffffffffffffffffffffa1"
-    )); //The mont transformed 3
+    )); // 3, in montgomery form.
 
     pub const fn from_montgomery(n: U256) -> Self {
         FieldElement(n)
@@ -81,11 +81,11 @@ impl FieldElement {
     }
 
     pub fn pow(&self, exponent: U256) -> Option<FieldElement> {
-        if self.is_zero() && exponent.is_zero() {
+        let mut remaining_exponent = exponent;
+        if self.is_zero() && remaining_exponent.is_zero() {
             None
         } else {
             let mut result = FieldElement::ONE;
-            let mut remaining_exponent = exponent;
             let mut square = self.clone();
             while !remaining_exponent.is_zero() {
                 if remaining_exponent.is_odd() {
@@ -97,6 +97,7 @@ impl FieldElement {
             Some(result)
         }
     }
+
     pub fn root(n: U256) -> Option<FieldElement> {
         if n.is_zero() {
             return Some(FieldElement::ONE);
@@ -160,6 +161,12 @@ impl From<&FieldElement> for U256 {
 impl From<&[u8; 32]> for FieldElement {
     fn from(bytes: &[u8; 32]) -> Self {
         FieldElement(to_montgomery(&U256::from_bytes_be(bytes)))
+    }
+}
+
+impl From<&str> for FieldElement {
+    fn from(s: &str) -> Self {
+        FieldElement::from(U256::from_hex_str(s))
     }
 }
 
@@ -413,5 +420,18 @@ mod tests {
     #[quickcheck]
     fn fermats_little_theorem(a: FieldElement) -> bool {
         a.pow(MODULUS).unwrap() == a
+    }
+
+    #[test]
+    fn roots_of_unity() {
+        for n in 0..193 {
+            let power_of_two = U256::ONE << n;
+            assert_eq!(
+                FieldElement::root(power_of_two.clone()).unwrap()
+                    .pow(power_of_two.clone())
+                    .unwrap(),
+                FieldElement::ONE
+            );
+        }
     }
 }

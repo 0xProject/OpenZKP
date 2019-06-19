@@ -148,6 +148,15 @@ impl U256 {
         result.chars().rev().collect()
     }
 
+    pub fn from_hex_str(s: &str) -> U256 {
+        let byte_string = format!("{:0>64}", s.trim_start_matches("0x"));
+        let bytes = hex::decode(byte_string).unwrap();
+        let mut array = [0u8; 32];
+        array.copy_from_slice(&bytes[..32]);
+        U256::from_bytes_be(&array)
+    }
+
+
     #[inline(always)]
     pub const fn is_even(&self) -> bool {
         self.c0 & 1 == 0
