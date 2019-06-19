@@ -1,6 +1,19 @@
 use crate::u256::U256;
 use crunchy::unroll;
 
+/// Lehmer update matrix
+/// 
+/// Signs are implicit, the boolean `.4` encodes which of two sign
+/// patterns applies. The signs and layout of the matrix are:
+///
+/// ```
+///     true          false
+///  [ .0  -.1]    [-.0   .1]
+///  [-.2   .3]    [ .2  -.3]
+/// ```
+/// 
+struct Matrix(u64, u64, u64, u64, bool);
+
 // Simulataneously computes
 //   a' = q00 a - q01 b
 //   b' = q11 b - q10 a
