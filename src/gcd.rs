@@ -2,7 +2,7 @@ use crate::u256::U256;
 use crunchy::unroll;
 
 /// Lehmer update matrix
-/// 
+///
 /// Signs are implicit, the boolean `.4` encodes which of two sign
 /// patterns applies. The signs and layout of the matrix are:
 ///
@@ -11,8 +11,8 @@ use crunchy::unroll;
 ///  [ .0  -.1]    [-.0   .1]
 ///  [-.2   .3]    [ .2  -.3]
 /// ```
-/// 
-#[derive(PartialEq,Eq,Clone,Debug)]
+///
+#[derive(PartialEq, Eq, Clone, Debug)]
 struct Matrix(u64, u64, u64, u64, bool);
 
 impl Matrix {
@@ -58,11 +58,7 @@ fn mat_mul(a: &mut U256, b: &mut U256, (q00, q01, q10, q11): (u64, u64, u64, u64
 }
 
 /// Applies the Lehmer update matrix to the variable pair in place.
-fn lehmer_update(
-    a0: &mut U256,
-    a1: &mut U256,
-    Matrix(q00, q01, q10, q11, even): &Matrix,
-) {
+fn lehmer_update(a0: &mut U256, a1: &mut U256, Matrix(q00, q01, q10, q11, even): &Matrix) {
     if *even {
         mat_mul(a0, a1, (*q00, *q01, *q10, *q11));
     } else {
@@ -75,7 +71,7 @@ fn lehmer_update(
 ///
 /// Requires a > b > 0.
 /// Returns a / b.
-/// 
+///
 /// See also `div1` in GMPs Lehmer implementation.
 /// https://gmplib.org/repo/gmp-6.1/file/tip/mpn/generic/hgcd2.c#l44
 #[allow(clippy::cognitive_complexity)]
@@ -94,18 +90,18 @@ fn div1(mut a: u64, b: u64) -> u64 {
 }
 
 /// Single step of the extended Euclid's algorithm for u64.
-/// 
+///
 /// Equivalent to the following, but faster for small `q`:
-/// 
+///
 /// ```text
 /// let q = *a3 / a2;
 /// *a3 -= q * a2;
 /// *k3 += q * k2;
 /// ```
-/// 
+///
 /// NOTE: This routine is critical for the performance of
 ///       Lehmer GCD computations.
-/// 
+///
 // Performance is 40% better with forced inlining.
 #[inline(always)]
 // Clippy operates on the unrolled code, giving a false positive.
@@ -128,7 +124,7 @@ fn lehmer_unroll(a2: u64, a3: &mut u64, k2: u64, k3: &mut u64) {
 }
 
 /// Compute the Lehmer update matrix for small values.
-/// 
+///
 /// This is essentialy Euclids extended GCD algorithm for 64 bits.
 // OPT: Would this be faster using extended binary gcd?
 fn lehmer_small(mut r0: u64, mut r1: u64) -> Matrix {
@@ -160,10 +156,10 @@ fn lehmer_small(mut r0: u64, mut r1: u64) -> Matrix {
 }
 
 /// Compute the largest valid Lehmer update matrix for a prefix.
-/// 
+///
 /// Compute the Lehmer update matrix for a0 and a1 such that the matrix is valid
 /// for any two large integers starting with the bits of a0 and a1.
-/// 
+///
 /// See also `mpn_hgcd2` in GMP, but ours handles the double precision bit
 /// separately in lehmer_double.
 ///    https://gmplib.org/repo/gmp-6.1/file/tip/mpn/generic/hgcd2.c#l226
@@ -277,7 +273,7 @@ fn lehmer_loop(a0: u64, mut a1: u64) -> Matrix {
 }
 
 /// Compute the Lehmer update matrix in full 64 bit precision.
-/// 
+///
 /// Jebelean solves this by starting in double-precission followed
 /// by single precision once values are small enough.
 /// Cohen instead runs a single precision round, refreshes the r0 and r1
@@ -287,7 +283,7 @@ fn lehmer_loop(a0: u64, mut a1: u64) -> Matrix {
 /// end. This requires 8 additional multiplications, but allows us to use
 /// the tighter stopping conditions from Jebelean. It also seems the simplest
 /// out of these solutions.
-/// 
+///
 // OPT: We can update r0 and r1 in place. This won't remove the partially
 // redundant call to lehmer_update, but it reduces memory usage.
 fn lehmer_double(mut r0: U256, mut r1: U256) -> Matrix {
@@ -353,19 +349,19 @@ pub fn gcd(mut r0: U256, mut r1: U256) -> U256 {
 }
 
 /// Lehmer's extended GCD.
-/// 
+///
 /// A variation of Euclids algorithm where repeated 64-bit approximations are
 /// used to make rapid progress on.
-/// 
+///
 /// See Jebelean (1994) "A Double-Digit Lehmer-Euclid Algorithm for Finding the
 /// GCD of Long Integers".
-/// 
+///
 /// The function `lehmer_double` takes two `U256`'s and returns a 64-bit matrix.
-/// 
+///
 /// The function `lehmer_update` updates state variables using this matrix. If
 /// the matrix makes no progress (because 64 bit precision is not enough) a full
 /// precision Euclid step is done, but this happens rarely.
-/// 
+///
 /// See also mpn_gcdext_lehmer_n in GMP.
 /// https://gmplib.org/repo/gmp-6.1/file/tip/mpn/generic/gcdext_lehmer.c#l146
 pub fn gcd_extended(mut r0: U256, mut r1: U256) -> (U256, U256, U256, bool) {
@@ -419,13 +415,13 @@ pub fn gcd_extended(mut r0: U256, mut r1: U256) -> (U256, U256, U256, bool) {
 }
 
 /// Modular inversion using extended GCD.
-/// 
+///
 /// It uses the Bezout identity
-/// 
+///
 /// ```text
 ///    a * modulus + b * num = gcd(modulus, num)
 /// ````
-/// 
+///
 /// where `a` and `b` are the cofactors from the extended Euclidean algorithm.
 /// A modular inverse only exists if `modulus` and `num` are coprime, in which
 /// case `gcd(modulus, num)` is one. Reducing both sides by the modulus then
