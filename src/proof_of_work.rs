@@ -90,3 +90,29 @@ pub fn pow_verfiy(n: u64, pow_bits: u32, proof: &Channel) -> bool {
     let final_int = U256::from_bytes_be(&res);
     final_int < test_value
 }
+
+#[cfg(test)]
+
+mod tests {
+    use super::*;
+    use crate::channel::*;
+    use crate::fibonacci::*;
+    use crate::field::*;
+    use crate::u256::U256;
+    use crate::u256h;
+    use hex_literal::*;
+
+    #[test]
+    fn proof_of_work_test() {
+        let rand_source = Channel::new(vec![01_u8, 35_u8, 69_u8, 103_u8, 137_u8, 171_u8, 205_u8, 237_u8].as_slice());
+        let work = pow_find_nonce(15, &rand_source);
+        assert!(pow_verfiy(work, 15, &rand_source));
+    }
+
+    #[test]
+    fn threaded_proof_of_work_test() {
+        let rand_source = Channel::new(vec![01_u8, 35_u8, 69_u8, 103_u8, 137_u8, 171_u8, 205_u8, 237_u8].as_slice());
+        let work = pow_find_nonce_threaded(15, &rand_source);
+        assert!(pow_verfiy(work, 15, &rand_source));
+    }
+}
