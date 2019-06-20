@@ -113,7 +113,7 @@ pub fn invert_batch(to_be_inverted: &[FieldElement]) -> Vec<FieldElement> {
     let n = to_be_inverted.len();
     let mut inverses = cumulative_product(to_be_inverted);
 
-    //TODO: Enforce check to prevent uninvertable elements
+    // TODO: Enforce check to prevent uninvertable elements.
     let mut inverse = inverses[n - 1].inv().unwrap();
     for i in (1..n).rev() {
         inverses[i] = &inverses[i - 1] * &inverse;

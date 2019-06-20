@@ -1,4 +1,4 @@
-// TODO: #![deny(warnings, missing_docs)]
+// TODO: #![deny(missing_docs)]
 #![warn(clippy::all)]
 #![cfg_attr(feature = "strict", deny(warnings))]
 
