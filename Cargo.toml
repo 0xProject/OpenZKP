@@ -38,7 +38,7 @@ debug = true # Debug symbols are required for profiling. Remove for production!
 
 # TODO: Make sure it doesn't hurt wasm
 [build]
-rustflags = ["-C target-cpu=native"]
+rustflags = ["-C target-cpu=native", "-Dwarnings"]
 
 [features]
 # Treat warnings as a build error.
