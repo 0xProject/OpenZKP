@@ -1,5 +1,7 @@
 use crate::field::{FieldElement, MODULUS};
 use crate::u256::U256;
+use crate::u256h;
+use hex_literal::*;
 
 pub fn square_root(a: &FieldElement) -> Option<FieldElement> {
     if is_quadratic_residue(a) {
@@ -20,6 +22,11 @@ fn is_quadratic_residue(a: &FieldElement) -> bool {
 // These two constants are chosen so that 1 + SIGNIFICAND << BINARY_EXPONENT == MODULUS.
 const BINARY_EXPONENT: usize = 3 * 4 * 16;
 const SIGNIFICAND: U256 = U256::new(0x0800000000000011u64, 0, 0, 0);
+// The starting value of c in the Tonelli Shanks algorithm. We are using 3, a generator, as the
+// quadratic nonresidue the algorithm requires.
+const INITIAL_C: FieldElement = FieldElement(u256h!(
+    "07222e32c47afc260a35c5be60505574aaada25731fe3be94106bccd64a2bdd8"
+));
 
 // What about using algorithm 3.39 instead?
 fn tonelli_shanks(a: &FieldElement) -> FieldElement {
@@ -32,12 +39,8 @@ fn tonelli_shanks(a: &FieldElement) -> FieldElement {
         return FieldElement::ZERO;
     }
 
-    // OPT: Good candidate for an addition chain. Declare constant values as such once
-    // conditionals are allowed inside const fn's: https://github.com/rust-lang/rust/issues/49146
-    // Note that we are using FieldElement::GENERATOR as the quadratic nonresidue this algorithm
-    // requires.
-    let mut c: FieldElement = FieldElement::GENERATOR.pow(SIGNIFICAND).unwrap();
-    // Because a is not 0 at this point, it's safe to divide by it and exponentiate it.
+    let mut c: FieldElement = INITIAL_C;
+    // OPT: Raising a to a fixed power is a good candidate for an addition chain.
     let mut root: FieldElement = a.pow((SIGNIFICAND + U256::from(1u128)) >> 1).unwrap();
 
     for i in 1..BINARY_EXPONENT {
@@ -62,12 +65,20 @@ mod tests {
 
     #[test]
     fn binary_exponent_is_correct() {
-        assert!(BINARY_EXPONENT == (MODULUS - U256::from(1u128)).trailing_zeros());
+        assert_eq!(
+            BINARY_EXPONENT,
+            (MODULUS - U256::from(1u128)).trailing_zeros()
+        );
     }
 
     #[test]
     fn significand_is_correct() {
-        assert!(SIGNIFICAND << BINARY_EXPONENT == MODULUS - U256::from(1u128));
+        assert_eq!(SIGNIFICAND << BINARY_EXPONENT, MODULUS - U256::from(1u128));
+    }
+
+    #[test]
+    fn initial_c_is_correct() {
+        assert_eq!(INITIAL_C, FieldElement::GENERATOR.pow(SIGNIFICAND).unwrap());
     }
 
     #[quickcheck]
@@ -85,11 +96,14 @@ mod tests {
 
     #[test]
     fn square_root_of_zero() {
-        assert!(square_root(&FieldElement::ZERO).unwrap() == FieldElement::ZERO);
+        assert_eq!(
+            square_root(&FieldElement::ZERO).unwrap(),
+            FieldElement::ZERO
+        );
     }
 
     #[test]
     fn square_root_of_one() {
-        assert!(square_root(&FieldElement::ONE).unwrap() == FieldElement::ONE);
+        assert_eq!(square_root(&FieldElement::ONE).unwrap(), FieldElement::ONE);
     }
 }
