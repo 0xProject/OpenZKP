@@ -20,10 +20,18 @@ pub const SHIFT_POINT: Affine = Affine::Point {
 pub const N_ELEMENT_BITS: usize = 252;
 
 pub fn hash(elements: &[U256]) -> U256 {
+    hash_impl(elements, 2)
+}
+
+pub fn old_hash(elements: &[U256]) -> U256 {
+    hash_impl(elements, 1)
+}
+
+fn hash_impl(elements: &[U256], offset: usize) -> U256 {
     let mut result = Jacobian::from(SHIFT_POINT);
     for (i, element) in elements.iter().enumerate() {
         assert!(element.bits() <= N_ELEMENT_BITS);
-        let start = 2 + i * N_ELEMENT_BITS;
+        let start = offset + i * N_ELEMENT_BITS;
         let end = start + N_ELEMENT_BITS;
         for (j, point) in PEDERSEN_POINTS[start..end].iter().enumerate() {
             if element.bit(j) {
@@ -43,6 +51,16 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_hash_0_0() {
+        let elements = [U256::from(0u128), U256::from(0u128)];
+        let result: U256 = match SHIFT_POINT {
+            Affine::Zero => panic!(),
+            Affine::Point { x, .. } => x.into(),
+        };
+        assert_eq!(hash(&elements), result);
+    }
+
+    #[test]
     fn test_hash_1() {
         let elements = [
             u256h!("03d937c035c878245caf64531a5756109c53068da139362728feb561405371cb"),
@@ -60,5 +78,35 @@ mod tests {
         ];
         let result = u256h!("00ffb73f24fb724b208e8efeee07b826a537cae03691c35e679c7c61d776702d");
         assert_eq!(hash(&elements), result);
+    }
+
+    #[test]
+    fn test_old_hash_0_0() {
+        let elements = [U256::from(0u128), U256::from(0u128)];
+        let result: U256 = match SHIFT_POINT {
+            Affine::Zero => panic!(),
+            Affine::Point { x, .. } => x.into(),
+        };
+        assert_eq!(old_hash(&elements), result);
+    }
+
+    #[test]
+    fn test_old_hash_1() {
+        let elements = [
+            u256h!("03d937c035c878245caf64531a5756109c53068da139362728feb561405371cb"),
+            u256h!("0208a0a10250e382e1e4bbe2880906c2791bf6275695e02fbbc6aeff9cd8b31a")
+        ];
+        let result = u256h!("04ca8b43f335f519a7f70e3481b99e09102a2cb69a0d210d2d85c9d4405f5594");
+        assert_eq!(old_hash(&elements), result);
+    }
+
+    #[test]
+    fn test_old_hash_2() {
+        let elements = [
+            u256h!("058f580910a6ca59b28927c08fe6c43e2e303ca384badc365795fc645d479d45"),
+            u256h!("078734f65a067be9bdb39de18434d71e79f7b6466a4b66bbd979ab9e7515fe0b"),
+        ];
+        let result = u256h!("041c95a8d5019cbcbf9e9dd3c282ee1b5a492e1ed9b3f8c7c45ff591fa499a2c");
+        assert_eq!(old_hash(&elements), result);
     }
 }
