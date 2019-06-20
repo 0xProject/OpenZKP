@@ -33,18 +33,18 @@ impl TraceTable {
 pub struct Constraint<'a> {
     pub NCONSTRAINTS: usize,
     pub eval: &'a Fn(
-        &FieldElement,      //X point
-        &[&[FieldElement]], //Polynomials
-        u64,                //Claim Index
-        FieldElement,       //Claim
-        &[FieldElement],    //Constraint_coefficents
+        &FieldElement,      // X point
+        &[&[FieldElement]], // Polynomials
+        u64,                // Claim Index
+        FieldElement,       // Claim
+        &[FieldElement],    // Constraint_coefficents
     ) -> FieldElement,
     pub eval_loop: Option<
         &'a Fn(
-            &[&[FieldElement]], //Evaluated polynomials (LDEn)
-            &[FieldElement],    //Constraint Coefficents
-            u64,                //Claim index
-            &FieldElement,      //Claim
+            &[&[FieldElement]], // Evaluated polynomials (LDEn)
+            &[FieldElement],    // Constraint Coefficents
+            u64,                // Claim index
+            &FieldElement,      // Claim
         ) -> Vec<FieldElement>,
     >,
 }
