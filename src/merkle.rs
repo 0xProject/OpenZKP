@@ -209,7 +209,6 @@ pub fn verify(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hex::*;
     use hex_literal::*;
 
     #[test]
@@ -222,7 +221,6 @@ mod tests {
         }
 
         let tree = make_tree_threaded(leaves.as_slice());
-        let dirrect_tree = make_tree(leaves.as_slice());
 
         assert_eq!(
             tree[1].clone(),

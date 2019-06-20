@@ -8,7 +8,6 @@ use crate::proof_of_work::*;
 use crate::u256::U256;
 use crate::utils::Reversible;
 use rayon::prelude::*;
-use tiny_keccak::Keccak;
 
 pub struct TraceTable {
     pub ROWS: usize,
