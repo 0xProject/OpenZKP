@@ -22,7 +22,7 @@ jobs:
       - run:
           name: Linting
           command: |
-            cargo fmt  --all -- --check
+            cargo +nightly fmt  --all -- --check
             cargo clippy --all --all-targets
       - run:
           name: Build all targets
