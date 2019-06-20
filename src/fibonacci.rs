@@ -672,7 +672,8 @@ pub fn fib_proof(witness: FieldElement) -> Channel {
         }
         0
     };
-    proof.write(&pow_find_nonce(12).to_be_bytes());
+    let nonce = pow_find_nonce(12);
+    proof.write(&nonce.to_be_bytes());
 
     let num_queries = 20;
     let mut query_indices = Vec::with_capacity(num_queries + 3);
