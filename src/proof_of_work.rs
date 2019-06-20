@@ -1,8 +1,8 @@
 use crate::channel::*;
 use crate::u256::*;
+use hex_literal::*;
 use rayon::prelude::*;
 use tiny_keccak::Keccak;
-use hex_literal::*;
 
 pub fn pow_find_nonce(pow_bits: u32, proof: &Channel) -> u64 {
     let mut seed = hex!("0123456789abcded").to_vec();
@@ -98,18 +98,14 @@ mod tests {
 
     #[test]
     fn proof_of_work_test() {
-        let rand_source = Channel::new(
-                hex!("0123456789abcded").to_vec().as_slice(),
-        );
+        let rand_source = Channel::new(hex!("0123456789abcded").to_vec().as_slice());
         let work = pow_find_nonce(15, &rand_source);
         assert!(pow_verify(work, 15, &rand_source));
     }
 
     #[test]
     fn threaded_proof_of_work_test() {
-        let rand_source = Channel::new(
-           hex!("0123456789abcded").to_vec().as_slice(),
-        );
+        let rand_source = Channel::new(hex!("0123456789abcded").to_vec().as_slice());
         let work = pow_find_nonce_threaded(15, &rand_source);
         assert!(pow_verify(work, 15, &rand_source));
     }
