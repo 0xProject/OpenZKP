@@ -1,0 +1,15 @@
+# Facebook Libra's defaults
+edition = "2018"
+# Disabled: comment_width = 100
+merge_imports = true
+use_field_init_shorthand = true
+wrap_comments = true
+
+# More optional lints
+condense_wildcard_suffixes = true
+format_strings = true
+format_macro_matchers = true
+format_macro_bodies = true
+force_multiline_blocks = true
+space_after_colon = true
+struct_field_align_threshold = 20
