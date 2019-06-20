@@ -37,8 +37,8 @@ pub fn eval_whole_loop(
     claim_index: u64,
     claim_fib: &FieldElement,
 ) -> Vec<FieldElement> {
-    let eval_domain_size = LDEn[0].len() as u64;
     let eval_domain_size_usize = LDEn[0].len();
+    let eval_domain_size = eval_domain_size_usize as u64;
     let beta = 2_u64.pow(4);
     let trace_len = eval_domain_size / beta;
 
@@ -84,7 +84,7 @@ pub fn eval_whole_loop(
     x_sub_one = held.pop().unwrap();
     x_trace_sub_one = held.pop().unwrap();
 
-    (0..(eval_domain_size_usize))
+    (0..eval_domain_size_usize)
         .into_par_iter()
         .map(|i| {
             let j = ((i as u64) + beta) % eval_domain_size;

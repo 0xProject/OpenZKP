@@ -170,7 +170,7 @@ pub fn stark_proof(
             CC = vec![FieldElement::ZERO; eval_domain_size as usize];
             for i in 0..eval_domain_size {
                 CC[i as usize] = (constraints.eval)(
-                    // This will preform the polynomial evaluation on each step
+                    // This will perform the polynomial evaluation on each step
                     &x,
                     sliced_poly.as_slice(),
                     claim_index,
@@ -263,8 +263,8 @@ pub fn stark_proof(
         })
         .collect_into_vec(&mut CO);
     // Fri Layers
+    debug_assert!(eval_domain_size.is_power_of_two());
     let mut fri = Vec::with_capacity(64 - (eval_domain_size.leading_zeros() as usize));
-    // Since Eval domain size is power of two this is a log_2
     fri.push(CO);
     let fri_tree_1 = fri_tree(&(fri[0].as_slice()), 8);
     proof.write(&fri_tree_1[1]);
@@ -319,7 +319,6 @@ pub fn stark_proof(
     debug_assert!(pow_verify(proof_of_work, 12, &proof));
     proof.write(&proof_of_work.to_be_bytes());
 
-    // Security parameter number of queries is at 20
     let num_queries = 20;
     let query_indices = get_indices(
         num_queries,
@@ -460,7 +459,7 @@ fn get_indices(num: usize, bits: u32, proof: &mut Channel) -> Vec<usize> {
         query_indices.push((val.c0 & (2_u64.pow(bits) - 1)) as usize);
     }
     query_indices.truncate(num);
-    (&mut query_indices).sort_unstable(); // Fast in-place sort that doesn't preserve the order of equal elements.
+    (&mut query_indices).sort_unstable();
     query_indices
 }
 
