@@ -2,9 +2,10 @@ use crate::channel::*;
 use crate::u256::*;
 use rayon::prelude::*;
 use tiny_keccak::Keccak;
+use hex_literal::*;
 
 pub fn pow_find_nonce(pow_bits: u32, proof: &Channel) -> u64 {
-    let mut seed = vec![01_u8, 35_u8, 69_u8, 103_u8, 137_u8, 171_u8, 205_u8, 237_u8];
+    let mut seed = hex!("0123456789abcded").to_vec();
     seed.extend_from_slice(&proof.digest);
     for byte in pow_bits.to_be_bytes().iter() {
         if *byte > 0 {
@@ -35,7 +36,7 @@ pub fn pow_find_nonce(pow_bits: u32, proof: &Channel) -> u64 {
 
 //TODO - Make tests compatible with the proof of work values from this function
 pub fn pow_find_nonce_threaded(pow_bits: u32, proof: &Channel) -> u64 {
-    let mut seed = vec![01_u8, 35_u8, 69_u8, 103_u8, 137_u8, 171_u8, 205_u8, 237_u8];
+    let mut seed = hex!("0123456789abcded").to_vec();
     seed.extend_from_slice(&proof.digest);
     for byte in pow_bits.to_be_bytes().iter() {
         if *byte > 0 {
@@ -68,7 +69,7 @@ pub fn pow_find_nonce_threaded(pow_bits: u32, proof: &Channel) -> u64 {
 }
 
 pub fn pow_verfiy(n: u64, pow_bits: u32, proof: &Channel) -> bool {
-    let mut seed = vec![01_u8, 35_u8, 69_u8, 103_u8, 137_u8, 171_u8, 205_u8, 237_u8];
+    let mut seed = hex!("0123456789abcded").to_vec();
     seed.extend_from_slice(&proof.digest);
     for byte in pow_bits.to_be_bytes().iter() {
         if *byte > 0 {
@@ -89,4 +90,33 @@ pub fn pow_verfiy(n: u64, pow_bits: u32, proof: &Channel) -> bool {
     sha3.finalize(&mut res);
     let final_int = U256::from_bytes_be(&res);
     final_int < test_value
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::channel::*;
+    use crate::fibonacci::*;
+    use crate::field::*;
+    use crate::u256::U256;
+    use crate::u256h;
+    use hex_literal::*;
+
+    #[test]
+    fn proof_of_work_test() {
+        let rand_source = Channel::new(
+                hex!("0123456789abcded").to_vec().as_slice(),
+        );
+        let work = pow_find_nonce(15, &rand_source);
+        assert!(pow_verfiy(work, 15, &rand_source));
+    }
+
+    #[test]
+    fn threaded_proof_of_work_test() {
+        let rand_source = Channel::new(
+           hex!("0123456789abcded").to_vec().as_slice(),
+        );
+        let work = pow_find_nonce_threaded(15, &rand_source);
+        assert!(pow_verfiy(work, 15, &rand_source));
+    }
 }

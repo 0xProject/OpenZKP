@@ -33,18 +33,18 @@ impl TraceTable {
 pub struct Constraint<'a> {
     pub NCONSTRAINTS: usize,
     pub eval: &'a Fn(
-        &FieldElement,
-        &[&[FieldElement]],
-        u64,
-        FieldElement,
-        &[FieldElement],
-    ) -> FieldElement, //x point, polynomials, claim index, claim, constraint_coefficents
+        &FieldElement,      // X point
+        &[&[FieldElement]], // Polynomials
+        u64,                // Claim Index
+        FieldElement,       // Claim
+        &[FieldElement],    // Constraint_coefficents
+    ) -> FieldElement,
     pub eval_loop: Option<
         &'a Fn(
-            &[&[FieldElement]], //Evaluated polynomials (LDEn)
-            &[FieldElement],    //Constraint Coefficents
-            u64,                //Claim index
-            &FieldElement,      //Claim
+            &[&[FieldElement]], // Evaluated polynomials (LDEn)
+            &[FieldElement],    // Constraint Coefficents
+            u64,                // Claim index
+            &FieldElement,      // Claim
         ) -> Vec<FieldElement>,
     >,
 }
@@ -86,7 +86,7 @@ pub fn stark_proof(
     let eval_domain_size = trace_len * beta;
     let gen = FieldElement::GENERATOR;
 
-    let mut eval_x = power_domain(&FieldElement::ONE, &omega, eval_domain_size as usize);
+    let eval_x = power_domain(&FieldElement::ONE, &omega, eval_domain_size as usize);
 
     let mut TPn = vec![Vec::new(); trace.COLS];
     (0..trace.COLS)
@@ -100,13 +100,8 @@ pub fn stark_proof(
         })
         .collect_into_vec(&mut TPn);
 
-    // debug_assert_eq!(
-    //     eval_poly(trace_x[1000].clone(), TPn[0].as_slice()),
-    //     trace.elements[1000_usize * trace.COLS]
-    // );
-
     let mut LDEn = vec![vec![FieldElement::ZERO; eval_x.len()]; trace.COLS];
-    //OPT - Use some system to make this occur inline instead of storing then processing
+    // OPT - Use some system to make this occur inline instead of storing then processing
     #[allow(clippy::type_complexity)]
     let ret: Vec<(usize, Vec<(usize, Vec<FieldElement>)>)> = (0..(beta as usize))
         .into_par_iter()
@@ -211,7 +206,7 @@ pub fn stark_proof(
         claim_index,
         claim_value.clone(),
         constraint_coefficients.as_slice(),
-    )); //Gets eval_C of the oods point via direct computation
+    )); // Gets eval_C of the oods point via direct computation
 
     for v in oods_values.iter() {
         proof.write_element(v);
@@ -267,8 +262,9 @@ pub fn stark_proof(
             r
         })
         .collect_into_vec(&mut CO);
-    //Fri Layers
-    let mut fri = Vec::with_capacity(64 - (eval_domain_size.leading_zeros() as usize)); //Since Eval domain size is power of two this is a log_2
+    // Fri Layers
+    let mut fri = Vec::with_capacity(64 - (eval_domain_size.leading_zeros() as usize));
+    // Since Eval domain size is power of two this is a log_2
     fri.push(CO);
     let fri_tree_1 = fri_tree(&(fri[0].as_slice()), 8);
     proof.write(&fri_tree_1[1]);
@@ -318,12 +314,12 @@ pub fn stark_proof(
     last_layer_coefficents.truncate(last_layer_degree_bound as usize);
     proof.write_element_list(last_layer_coefficents.as_slice());
     debug_assert_eq!(last_layer_coefficents.len() as u64, last_layer_degree_bound);
-    //Security paramter proof of work is at 12 bits
+    // Security paramter proof of work is at 12 bits
     let proof_of_work = pow_find_nonce(12, &proof);
     debug_assert!(pow_verfiy(proof_of_work, 12, &proof));
     proof.write(&proof_of_work.to_be_bytes());
 
-    //Security paramter number of queries is at 20
+    // Security paramter number of queries is at 20
     let num_queries = 20;
     let query_indices = get_indices(
         num_queries,
@@ -468,24 +464,22 @@ fn get_indices(num: usize, bits: u32, proof: &mut Channel) -> Vec<usize> {
     query_indices
 }
 
-pub fn power_domain(
-    base: &FieldElement,
-    step: &FieldElement,
-    len: usize,
-) -> Vec<FieldElement> {
-    const parallelization : usize = 16_usize; //OPT - Set based on the cores available and how well the work is spread
-    let step_len = (len / parallelization);
-    (0..parallelization)
+pub fn power_domain(base: &FieldElement, step: &FieldElement, len: usize) -> Vec<FieldElement> {
+    const PARALLELIZATION: usize = 16_usize;
+    // OPT - Set based on the cores available and how well the work is spread
+    let step_len = len / PARALLELIZATION;
+    (0..PARALLELIZATION)
         .into_par_iter()
         .map(|i| {
-            let mut hold = Vec::with_capacity(step_len); //OPT - Avoid temporary vectors
+            let mut hold = Vec::with_capacity(step_len);
+            // OPT - Avoid temporary vectors
             hold.push(base * step.pow(U256::from((i * step_len) as u64)).unwrap());
             for j in 1..(step_len) {
-                hold.push(&hold[(j - 1) as usize] * step);
+                hold.push(&hold[j - 1] * step);
             }
             hold
         })
-        .flatten() 
+        .flatten()
         .collect()
 }
 
@@ -501,7 +495,7 @@ mod tests {
     use hex_literal::*;
 
     #[test]
-    fn fib_abstraction_test() {
+    fn fib_test_1024_python_witness() {
         let claim_index = 1000_u64;
         let claim_fib = FieldElement::from(u256h!(
             "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
@@ -509,15 +503,54 @@ mod tests {
         let witness = FieldElement::from(u256h!(
             "00000000000000000000000000000000000000000000000000000000cafebabe"
         ));
-        let correct_proof = fib_proof(witness.clone());
-        let potential_proof = stark_proof(
+        let expected = hex!("185ab1df82b4464206cae58761c4ab6873322fd0f77ee9e4e8e479e7a1f18707");
+        let actual = stark_proof(
             &get_trace_table(1024, witness),
             &get_constraint(),
             claim_index,
             claim_fib,
             2_u64.pow(4),
         );
+        assert_eq!(actual.digest, expected);
+    }
 
-        assert_eq!(correct_proof.digest, potential_proof.digest);
+    #[test]
+    fn fib_test_1024_changed_witness() {
+        let claim_index = 1000_u64;
+        let claim_fib = FieldElement::from(u256h!(
+            "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
+        ));
+        let witness = FieldElement::from(u256h!(
+            "00000000000000000000000000000000000000000000000f00dbabe0cafebabe"
+        ));
+        let expected = hex!("d5a91d6ba26d105e60adc24206d87c8ee05b11a8674a064c90cba96470573955");
+        let actual = stark_proof(
+            &get_trace_table(1024, witness),
+            &get_constraint(),
+            claim_index,
+            claim_fib,
+            2_u64.pow(5),
+        );
+        assert_eq!(actual.digest, expected);
+    }
+
+    #[test]
+    fn fib_test_4096() {
+        let claim_index = 4000_u64;
+        let claim_fib = FieldElement::from(u256h!(
+            "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
+        ));
+        let witness = FieldElement::from(u256h!(
+            "00000000000000000000000000000000000000000000000f00dbabe0cafebabe"
+        ));
+        let expected = hex!("006493c24997323b161b5ca20fbe0b2d0826fa8fd56e6eaf47f872ed29bfc5cb");
+        let actual = stark_proof(
+            &get_trace_table(4096, witness),
+            &get_constraint(),
+            claim_index,
+            claim_fib,
+            2_u64.pow(4),
+        );
+        assert_eq!(actual.digest, expected);
     }
 }

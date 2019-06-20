@@ -8,7 +8,7 @@ pub const fn adc(a: u64, b: u64, carry: u64) -> (u64, u64) {
 /// Compute a - (b + borrow), returning the result and the new borrow.
 #[inline(always)]
 pub const fn sbb(a: u64, b: u64, borrow: u64) -> (u64, u64) {
-    // TODO: Whreversed this shift on borrow?
+    // TODO: Why this shift on borrow?
     let ret = (a as u128).wrapping_sub((b as u128) + ((borrow >> 63) as u128));
     (ret as u64, (ret >> 64) as u64)
 }
@@ -24,7 +24,7 @@ pub const fn mac(a: u64, b: u64, c: u64, carry: u64) -> (u64, u64) {
 #[inline(always)]
 pub const fn msb(a: u64, b: u64, c: u64, borrow: u64) -> (u64, u64) {
     let ret = (a as u128).wrapping_sub((b as u128) * (c as u128) + (borrow as u128));
-    (ret as u64, 0u64.wrapping_sub((ret >> 64) as u64)) // TODO: Whreversed is this wrapping_sub required?
+    (ret as u64, 0u64.wrapping_sub((ret >> 64) as u64)) // TODO: Why is this wrapping_sub required?
 }
 
 /// Compute <hi, lo> / d, returning the quotient and the remainder.
@@ -44,29 +44,27 @@ pub trait Reversable {
 
 impl Reversable for u64 {
     fn bit_reverse(mut self) -> Self {
-        const bits : u64 = 64;
-        debug_assert_eq!(1_usize.leading_zeros() as u64, bits - 1);
-        let mut x_hold = self;
+        const BITS: usize = 64;
+        debug_assert_eq!(1_u64.leading_zeros() as usize , BITS - 1);
         let mut reversed = 0;
-        for _i in 0..bits {
+        for _i in 0..BITS {
             reversed <<= 1;
-            reversed |= x_hold & 1;
-            x_hold >>= 1;
+            reversed |= self & 1;
+            self >>= 1;
         }
         reversed
     }
 }
 
 impl Reversable for usize {
-    fn bit_reverse(self) -> Self {
-        const bits : u64 = 64;
-        debug_assert_eq!(1_usize.leading_zeros() as u64, bits - 1);
-        let mut x_hold = self;
+    fn bit_reverse(mut self) -> Self {
+        const BITS: usize = 64;
+        debug_assert_eq!(1_usize.leading_zeros() as usize, BITS - 1);
         let mut reversed = 0;
-        for _i in 0..bits {
+        for _i in 0..BITS {
             reversed <<= 1;
-            reversed |= x_hold & 1;
-            x_hold >>= 1;
+            reversed |= self & 1;
+            self >>= 1;
         }
         reversed
     }
