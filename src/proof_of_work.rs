@@ -114,7 +114,7 @@ mod tests {
     #[test]
     fn threaded_proof_of_work_test() {
         let rand_source = Channel::new(
-            vec![01_u8, 35_u8, 69_u8, 103_u8, 137_u8, 171_u8, 205_u8, 237_u8].as_slice(),
+           hex!("0123456789abcded").to_vec().as_slice(),
         );
         let work = pow_find_nonce_threaded(15, &rand_source);
         assert!(pow_verfiy(work, 15, &rand_source));
