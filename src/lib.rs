@@ -25,6 +25,7 @@ pub mod wnaf;
 use curve::Affine;
 use field::FieldElement;
 use u256::U256;
+pub mod proof_of_work;
 pub mod proofs;
 
 fn from_bytes(bytes: &[u8; 32]) -> U256 {

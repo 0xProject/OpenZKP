@@ -37,3 +37,35 @@ pub const fn div_2_1(lo: u64, hi: u64, d: u64) -> (u64, u64) {
     let r = n % (d as u128);
     (q as u64, r as u64)
 }
+
+pub trait Reversible {
+    fn bit_reverse(self) -> Self;
+}
+
+impl Reversible for u64 {
+    fn bit_reverse(mut self) -> Self {
+        const BITS: usize = 64;
+        debug_assert_eq!(1_u64.leading_zeros() as usize , BITS - 1);
+        let mut reversed = 0;
+        for _i in 0..BITS {
+            reversed <<= 1;
+            reversed |= self & 1;
+            self >>= 1;
+        }
+        reversed
+    }
+}
+
+impl Reversible for usize {
+    fn bit_reverse(mut self) -> Self {
+        const BITS: usize = 64;
+        debug_assert_eq!(1_usize.leading_zeros() as usize, BITS - 1);
+        let mut reversed = 0;
+        for _i in 0..BITS {
+            reversed <<= 1;
+            reversed |= self & 1;
+            self >>= 1;
+        }
+        reversed
+    }
+}

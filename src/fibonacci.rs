@@ -1,4 +1,4 @@
-#![allow(non_snake_case)] //TODO - Migrate to Choose naming system which the rust complier doesn't complain about
+#![allow(non_snake_case)] // TODO - Migrate to Choose naming system which the rust complier doesn't complain about
 #![allow(clippy::type_complexity)]
 #![allow(clippy::cognitive_complexity)]
 #![allow(clippy::zero_prefixed_literal)]
@@ -11,25 +11,10 @@ use crate::polynomial::*;
 use crate::proofs::*;
 use crate::u256::U256;
 use crate::u256h;
+use crate::utils::Reversible;
 use hex_literal::*;
 use rayon::prelude::*;
 use tiny_keccak::Keccak;
-
-trait Reversable {
-    fn bit_reverse(self) -> Self;
-}
-impl Reversable for u64 {
-    fn bit_reverse(self) -> Self {
-        let bits = 64;
-        let mut x_hold = self;
-        let mut y = 0;
-        for _i in 0..bits {
-            y = (y << 1) | (x_hold & 1);
-            x_hold >>= 1;
-        }
-        y
-    }
-}
 
 pub fn get_trace_table(length: u64, witness: FieldElement) -> TraceTable {
     let mut T_0 = vec![FieldElement::ONE];
@@ -52,7 +37,8 @@ pub fn eval_whole_loop(
     claim_index: u64,
     claim_fib: &FieldElement,
 ) -> Vec<FieldElement> {
-    let eval_domain_size = LDEn[0].len() as u64;
+    let eval_domain_size_usize = LDEn[0].len();
+    let eval_domain_size = eval_domain_size_usize as u64;
     let beta = 2_u64.pow(4);
     let trace_len = eval_domain_size / beta;
 
@@ -60,7 +46,7 @@ pub fn eval_whole_loop(
     let g = omega.pow(U256::from(beta)).unwrap();
     let gen = FieldElement::GENERATOR;
 
-    let mut CC = Vec::with_capacity(eval_domain_size as usize);
+    let mut CC = Vec::with_capacity(eval_domain_size_usize);
     let g_trace = g.pow(U256::from(trace_len - 1)).unwrap();
     let g_claim = g.pow(U256::from(claim_index)).unwrap();
     let x = gen.clone();
@@ -69,62 +55,13 @@ pub fn eval_whole_loop(
     let omega_trace = (&omega).pow(U256::from(trace_len)).unwrap();
     let omega_1023 = (&omega).pow(U256::from(trace_len - 1)).unwrap();
 
-    let mut x_omega_cycle: Vec<FieldElement>;
-    let mut x_trace_cycle: Vec<FieldElement>;
-    let mut x_1023_cycle: Vec<FieldElement>;
+    let x_omega_cycle = geometric_series(&x, &omega, eval_domain_size_usize);
+    let x_trace_cycle = geometric_series(&x_trace, &omega_trace, eval_domain_size_usize);
+    let x_1023_cycle = geometric_series(&x_1023, &omega_1023, eval_domain_size_usize);
 
-    x_omega_cycle = (0..16_u64)
-        .into_par_iter()
-        .map(|i| {
-            let mut hold = Vec::with_capacity((eval_domain_size / 16) as usize);
-            hold.push(&x * &omega.pow(U256::from(i * (eval_domain_size / 16))).unwrap());
-            for j in 1..(eval_domain_size / 16) {
-                hold.push(&hold[(j - 1) as usize] * &omega);
-            }
-            hold
-        })
-        .flatten()
-        .collect();
-
-    x_trace_cycle = (0..16_u64)
-        .into_par_iter()
-        .map(|i| {
-            let mut hold = Vec::with_capacity((eval_domain_size / 16) as usize);
-            hold.push(
-                &x_trace
-                    * &omega_trace
-                        .pow(U256::from(i * (eval_domain_size / 16)))
-                        .unwrap(),
-            );
-            for j in 1..(eval_domain_size / 16) {
-                hold.push(&hold[(j - 1) as usize] * &omega_trace);
-            }
-            hold
-        })
-        .flatten()
-        .collect();
-
-    x_1023_cycle = (0..16_u64)
-        .into_par_iter()
-        .map(|i| {
-            let mut hold = Vec::with_capacity((eval_domain_size / 16) as usize);
-            hold.push(
-                &x_1023
-                    * &omega_1023
-                        .pow(U256::from(i * (eval_domain_size / 16)))
-                        .unwrap(),
-            );
-            for j in 1..(eval_domain_size / 16) {
-                hold.push(&hold[(j - 1) as usize] * &omega_1023);
-            }
-            hold
-        })
-        .flatten()
-        .collect();
-
-    let mut x_trace_sub_one: Vec<FieldElement> = Vec::with_capacity(eval_domain_size as usize);
-    let mut x_sub_one: Vec<FieldElement> = Vec::with_capacity(eval_domain_size as usize);
-    let mut x_g_claim_cycle: Vec<FieldElement> = Vec::with_capacity(eval_domain_size as usize);
+    let mut x_trace_sub_one: Vec<FieldElement> = Vec::with_capacity(eval_domain_size_usize);
+    let mut x_sub_one: Vec<FieldElement> = Vec::with_capacity(eval_domain_size_usize);
+    let mut x_g_claim_cycle: Vec<FieldElement> = Vec::with_capacity(eval_domain_size_usize);
 
     x_omega_cycle
         .par_iter()
@@ -147,7 +84,7 @@ pub fn eval_whole_loop(
     x_sub_one = held.pop().unwrap();
     x_trace_sub_one = held.pop().unwrap();
 
-    (0..(eval_domain_size as usize))
+    (0..eval_domain_size_usize)
         .into_par_iter()
         .map(|i| {
             let j = ((i as u64) + beta) % eval_domain_size;
@@ -287,6 +224,7 @@ pub fn fib_proof(witness: FieldElement) -> Channel {
         "0659d83946a03edd72406af6711825f5653d9e35dc125289a206c054ec89c4f1"
     ));
     let eval_domain_size = trace_len * beta;
+    let eval_domain_size_usize = eval_domain_size as usize;
 
     let gen = FieldElement::from(U256::from(3_u64));
     let mut trace_x = Vec::with_capacity(trace_len as usize);
@@ -340,7 +278,6 @@ pub fn fib_proof(witness: FieldElement) -> Channel {
         }
     }
 
-    //TODO - Add a non experimental bit reverse function
     let leaf = |i: u64| -> Vec<U256> {
         vec![
             LDE0[(i.bit_reverse() >> 50) as usize].0.clone(),
@@ -348,7 +285,7 @@ pub fn fib_proof(witness: FieldElement) -> Channel {
         ]
     };
 
-    let mut leaves = Vec::with_capacity(eval_domain_size as usize);
+    let mut leaves = Vec::with_capacity(eval_domain_size_usize);
     for i in 0..eval_domain_size {
         leaves.push(leaf(i));
     }
@@ -447,7 +384,7 @@ pub fn fib_proof(witness: FieldElement) -> Channel {
         r
     };
 
-    let mut CC = vec![FieldElement::ZERO; eval_domain_size as usize];
+    let mut CC = vec![FieldElement::ZERO; eval_domain_size_usize];
     let g_trace = g.pow(U256::from(trace_len - 1)).unwrap();
     let g_claim = g.pow(U256::from(claim_index)).unwrap();
     let x = gen.clone();
@@ -457,15 +394,15 @@ pub fn fib_proof(witness: FieldElement) -> Channel {
     let omega_1023 = (&omega).pow(U256::from(1023_u64)).unwrap();
 
     let mut x = gen.clone();
-    let mut x_omega_cycle = Vec::with_capacity(eval_domain_size as usize);
-    let mut x_trace_cycle = Vec::with_capacity(eval_domain_size as usize);
-    let mut x_1023_cycle = Vec::with_capacity(eval_domain_size as usize);
+    let mut x_omega_cycle = Vec::with_capacity(eval_domain_size_usize);
+    let mut x_trace_cycle = Vec::with_capacity(eval_domain_size_usize);
+    let mut x_1023_cycle = Vec::with_capacity(eval_domain_size_usize);
 
-    let mut x_trace_sub_one: Vec<FieldElement> = Vec::with_capacity(eval_domain_size as usize);
-    let mut x_sub_one: Vec<FieldElement> = Vec::with_capacity(eval_domain_size as usize);
-    let mut x_g_claim_cycle: Vec<FieldElement> = Vec::with_capacity(eval_domain_size as usize);
+    let mut x_trace_sub_one: Vec<FieldElement> = Vec::with_capacity(eval_domain_size_usize);
+    let mut x_sub_one: Vec<FieldElement> = Vec::with_capacity(eval_domain_size_usize);
+    let mut x_g_claim_cycle: Vec<FieldElement> = Vec::with_capacity(eval_domain_size_usize);
 
-    for _i in 0..(eval_domain_size as usize) {
+    for _i in 0..(eval_domain_size_usize) {
         x_omega_cycle.push(x.clone());
         x_trace_cycle.push(x_trace.clone());
         x_1023_cycle.push(x_1023.clone());
@@ -516,7 +453,7 @@ pub fn fib_proof(witness: FieldElement) -> Channel {
     }
 
     let leaf_constraint = |i: u64| -> U256 { CC[(i.bit_reverse() >> 50) as usize].0.clone() };
-    let mut leaves_con = Vec::with_capacity(eval_domain_size as usize);
+    let mut leaves_con = Vec::with_capacity(eval_domain_size_usize);
     for i in 0..eval_domain_size {
         leaves_con.push(leaf_constraint(i));
     }
@@ -551,13 +488,13 @@ pub fn fib_proof(witness: FieldElement) -> Channel {
         r
     };
 
-    let mut CO = vec![FieldElement::ZERO; eval_domain_size as usize];
+    let mut CO = vec![FieldElement::ZERO; eval_domain_size_usize];
 
     let mut x = gen.clone();
-    let mut x_omega_cycle = Vec::with_capacity(eval_domain_size as usize);
-    let mut x_oods_cycle: Vec<FieldElement> = Vec::with_capacity(eval_domain_size as usize);
-    let mut x_oods_cycle_g: Vec<FieldElement> = Vec::with_capacity(eval_domain_size as usize);
-    for _i in 0..(eval_domain_size as usize) {
+    let mut x_omega_cycle = Vec::with_capacity(eval_domain_size_usize);
+    let mut x_oods_cycle: Vec<FieldElement> = Vec::with_capacity(eval_domain_size_usize);
+    let mut x_oods_cycle_g: Vec<FieldElement> = Vec::with_capacity(eval_domain_size_usize);
+    for _i in 0..(eval_domain_size_usize) {
         x_omega_cycle.push(x.clone());
         x_oods_cycle.push(&x - &oods_point);
         x_oods_cycle_g.push(&x - &oods_point * &g);
@@ -599,7 +536,7 @@ pub fn fib_proof(witness: FieldElement) -> Channel {
         };
     let fri_tree = |layer: &[FieldElement], coset_size: u64| -> Vec<[u8; 32]> {
         let n = layer.len();
-        let bits = 64 - (n as u64).leading_zeros(); //Floored base 2 log
+        let bits = 64 - (n as u64).leading_zeros(); // Floored base 2 log
         let mut internal_leaves = Vec::new();
         for i in (0..n).step_by(coset_size as usize) {
             let mut internal_leaf = Vec::new();
@@ -666,7 +603,7 @@ pub fn fib_proof(witness: FieldElement) -> Channel {
             sha3.finalize(&mut res);
             let final_int = U256::from_bytes_be(&res);
             if final_int.leading_zeros() == pow_bits as usize && final_int < test_value {
-                //Only do the large int compare if the quick logs match
+                // Only do the large int compare if the quick logs match
                 return n as u64;
             }
         }
@@ -685,7 +622,7 @@ pub fn fib_proof(witness: FieldElement) -> Channel {
         query_indices.push((val.c0 & (2_u64.pow(14) - 1)) as usize);
     }
     query_indices.truncate(num_queries);
-    (&mut query_indices).sort_unstable(); //Fast inplace sort that doesn't preserve the order of equal elements.
+    (&mut query_indices).sort_unstable(); // Fast inplace sort that doesn't preserve the order of equal elements.
 
     for index in query_indices.iter() {
         proof.write_element(&LDE0[((*index as u64).bit_reverse() >> 50) as usize]);
@@ -764,6 +701,7 @@ mod tests {
             "0659d83946a03edd72406af6711825f5653d9e35dc125289a206c054ec89c4f1"
         ));
         let eval_domain_size = trace_len * beta;
+        let eval_domain_size_usize = eval_domain_size as usize;
 
         assert_eq!(
             omega.pow(U256::from(eval_domain_size)).unwrap(),
@@ -850,7 +788,6 @@ mod tests {
             LDE1[13644]
         );
 
-        //TODO - Add a non experimental bit reverse function
         let leaf = |i: u64| -> Vec<U256> {
             vec![
                 LDE0[(i.bit_reverse() >> 50) as usize].0.clone(),
@@ -867,7 +804,7 @@ mod tests {
             u256h!("03dbc6c47df0606997c2cefb20c4277caf2b76bca1d31c13432f71cdd93b3718")
         );
 
-        let mut leaves = Vec::with_capacity(eval_domain_size as usize);
+        let mut leaves = Vec::with_capacity(eval_domain_size_usize);
         for i in 0..eval_domain_size {
             leaves.push(leaf(i));
         }
@@ -884,10 +821,6 @@ mod tests {
         let test_hex_input = hex!(
             "00000000000003e805a80444b56a9b6a5f2b99f0fd92ef6a065d662e5c5cf944be0008796f4a7c12"
         );
-
-        // for (byte_1, byte_2) in (public_input.iter()).zip(test_hex_input.iter()){
-        //     assert_eq!(byte_1,byte_2);
-        // }
 
         let mut proof = Channel::new(&public_input.as_slice());
         assert_eq!(
@@ -993,7 +926,7 @@ mod tests {
             u256h!("02e7cbb3fc164554f931e769b21e990d039b64385782b92955c33a6acff58956")
         );
 
-        let mut CC = vec![FieldElement::ZERO; eval_domain_size as usize];
+        let mut CC = vec![FieldElement::ZERO; eval_domain_size_usize];
         let mut g_trace = g.pow(U256::from(trace_len - 1)).unwrap();
         let mut g_claim = g.pow(U256::from(claim_index)).unwrap();
         let mut x = gen.clone();
@@ -1003,15 +936,15 @@ mod tests {
         let mut omega_1023 = (&omega).pow(U256::from(1023_u64)).unwrap();
 
         let mut x = gen.clone();
-        let mut x_omega_cycle = Vec::with_capacity(eval_domain_size as usize);
-        let mut x_trace_cycle = Vec::with_capacity(eval_domain_size as usize);
-        let mut x_1023_cycle = Vec::with_capacity(eval_domain_size as usize);
+        let mut x_omega_cycle = Vec::with_capacity(eval_domain_size_usize);
+        let mut x_trace_cycle = Vec::with_capacity(eval_domain_size_usize);
+        let mut x_1023_cycle = Vec::with_capacity(eval_domain_size_usize);
 
-        let mut x_trace_sub_one: Vec<FieldElement> = Vec::with_capacity(eval_domain_size as usize);
-        let mut x_sub_one: Vec<FieldElement> = Vec::with_capacity(eval_domain_size as usize);
-        let mut x_g_claim_cycle: Vec<FieldElement> = Vec::with_capacity(eval_domain_size as usize);
+        let mut x_trace_sub_one: Vec<FieldElement> = Vec::with_capacity(eval_domain_size_usize);
+        let mut x_sub_one: Vec<FieldElement> = Vec::with_capacity(eval_domain_size_usize);
+        let mut x_g_claim_cycle: Vec<FieldElement> = Vec::with_capacity(eval_domain_size_usize);
 
-        for i in 0..(eval_domain_size as usize) {
+        for i in 0..(eval_domain_size_usize) {
             x_omega_cycle.push(x.clone());
             x_trace_cycle.push(x_trace.clone());
             x_1023_cycle.push(x_1023.clone());
@@ -1063,7 +996,7 @@ mod tests {
         assert_eq!(CC[123].clone(), eval_C(eval_offset_x[123].clone()));
 
         let leaf_constraint = |i: u64| -> U256 { CC[(i.bit_reverse() >> 50) as usize].0.clone() };
-        let mut leaves_con = Vec::with_capacity(eval_domain_size as usize);
+        let mut leaves_con = Vec::with_capacity(eval_domain_size_usize);
         for i in 0..eval_domain_size {
             leaves_con.push(leaf_constraint(i));
         }
@@ -1074,7 +1007,6 @@ mod tests {
         );
 
         proof.write(&ctree[1]);
-        //assert!(false);
         let oods_point = proof.element();
         assert_eq!(
             U256::from(oods_point.clone()),
@@ -1117,11 +1049,11 @@ mod tests {
             u256h!("0362a57323b84f8eed48f0d0e68fe2282cd7333c46778f4bfb307f4317acea58")
         );
 
-        let mut CO = vec![FieldElement::ZERO; eval_domain_size as usize];
+        let mut CO = vec![FieldElement::ZERO; eval_domain_size_usize];
 
-        let mut x_oods_cycle: Vec<FieldElement> = Vec::with_capacity(eval_domain_size as usize);
-        let mut x_oods_cycle_g: Vec<FieldElement> = Vec::with_capacity(eval_domain_size as usize);
-        for i in 0..(eval_domain_size as usize) {
+        let mut x_oods_cycle: Vec<FieldElement> = Vec::with_capacity(eval_domain_size_usize);
+        let mut x_oods_cycle_g: Vec<FieldElement> = Vec::with_capacity(eval_domain_size_usize);
+        for i in 0..(eval_domain_size_usize) {
             x_omega_cycle.push(x_omega_cycle[i].clone());
             x_oods_cycle.push((&x_omega_cycle[i] - &oods_point));
             x_oods_cycle_g.push((&x_omega_cycle[i] - &oods_point * &g));
@@ -1168,7 +1100,7 @@ mod tests {
             };
         let fri_tree = |layer: &[FieldElement], coset_size: u64| -> Vec<[u8; 32]> {
             let n = layer.len();
-            let bits = 64 - (n as u64).leading_zeros(); //Floored base 2 log
+            let bits = 64 - (n as u64).leading_zeros(); // Floored base 2 log
             let mut internal_leaves = Vec::new();
             for i in (0..n).step_by(coset_size as usize) {
                 let mut internal_leaf = Vec::new();
@@ -1259,7 +1191,7 @@ mod tests {
                 let final_int = U256::from_bytes_be(&res);
                 if final_int.leading_zeros() == pow_bits as usize {
                     if final_int < test_value {
-                        //Only do the large int compare if the quick logs match
+                        // Only do the large int compare if the quick logs match
                         return n as u64;
                     }
                 }
@@ -1283,7 +1215,7 @@ mod tests {
         }
         query_indices.truncate(num_queries);
         assert_eq!(query_indices[19], 11541);
-        (&mut query_indices).sort_unstable(); //Fast inplace sort that doesn't preserve the order of equal elements.
+        (&mut query_indices).sort_unstable(); // Fast inplace sort that doesn't preserve the order of equal elements.
 
         for index in query_indices.iter() {
             proof.write_element(&LDE0[((*index as u64).bit_reverse() >> 50) as usize]);

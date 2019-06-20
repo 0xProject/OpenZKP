@@ -1,5 +1,3 @@
-//TODO - Implement hashable type and eleminate the extra vec functions
-
 use crate::u256::U256;
 use rayon::prelude::*;
 use tiny_keccak::Keccak;
@@ -21,11 +19,6 @@ impl Hashable for &[U256] {
 }
 
 fn mask(data: &mut [u8; 32]) {
-    //  #[allow(clippy::needless_range_loop)]   for i in 0..32 { //Note : It's fairly hard to remove this because an enumerated iterator borows the array so the inner loop can't pass the borrow check when overwriting
-    //         if i > 19 {
-    //             data[i] = 0 as u8;
-    //         }
-    //     }
     for d in data[20..].iter_mut() {
         *d = 0 as u8;
     }
@@ -230,11 +223,7 @@ mod tests {
 
         let tree = make_tree_threaded(leaves.as_slice());
         let dirrect_tree = make_tree(leaves.as_slice());
-        // Value from python masked mode
-        for (i, x) in tree.iter().enumerate() {
-            println!("{} : {}", i, encode(x));
-            println!("Real: {}", encode(dirrect_tree[i]))
-        }
+
         assert_eq!(
             tree[1].clone(),
             hex!("fd112f44bc944f33e2567f86eea202350913b11c000000000000000000000000")

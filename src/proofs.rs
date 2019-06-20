@@ -1,12 +1,12 @@
-#![allow(non_snake_case)] //TODO - Migrate to naming system which the rust complier doesn't complain about
-#![allow(clippy::zero_prefixed_literal)]
-
+#![allow(non_snake_case)] // TODO - Migrate to naming system which the rust complier doesn't complain about
 use crate::channel::*;
 use crate::fft::*;
 use crate::field::*;
 use crate::merkle::*;
 use crate::polynomial::*;
+use crate::proof_of_work::*;
 use crate::u256::U256;
+use crate::utils::Reversible;
 use rayon::prelude::*;
 use tiny_keccak::Keccak;
 
@@ -26,53 +26,25 @@ impl TraceTable {
     }
 }
 
-trait Reversable {
-    fn bit_reverse(self) -> Self;
-}
-impl Reversable for u64 {
-    fn bit_reverse(self) -> Self {
-        let bits = 64;
-        let mut x_hold = self;
-        let mut y = 0;
-        for _i in 0..bits {
-            y = (y << 1) | (x_hold & 1);
-            x_hold >>= 1;
-        }
-        y
-    }
-}
-impl Reversable for usize {
-    fn bit_reverse(self) -> Self {
-        let bits = 64;
-        let mut x_hold = self;
-        let mut y = 0;
-        for _i in 0..bits {
-            y = (y << 1) | (x_hold & 1);
-            x_hold >>= 1;
-        }
-        y
-    }
-}
-
-//This struct contains two evaluation systems which allow diffrent functionality, first it contains a default function which directly evaluates the constraint funciton
-//Second it constains a function desgined to be used as the core of a loop on precomputed values to get the C function.
-//If the proof system wants to used a looped eval for speedup it can set the loop bool to true, otherwise the system will preform all computation directly
+// This struct contains two evaluation systems which allow different functionality, first it contains a default function which directly evaluates the constraint function
+// Second it contains a function designed to be used as the core of a loop on precomputed values to get the C function.
+// If the proof system wants to used a looped eval for speedup it can set the loop bool to true, otherwise the system will preform all computation directly
 #[allow(clippy::type_complexity)]
 pub struct Constraint<'a> {
     pub NCONSTRAINTS: usize,
     pub eval: &'a Fn(
-        &FieldElement,
-        &[&[FieldElement]],
-        u64,
-        FieldElement,
-        &[FieldElement],
-    ) -> FieldElement, //x point, polynomials, claim index, claim, constraint_coefficents
+        &FieldElement,      // X point
+        &[&[FieldElement]], // Polynomials
+        u64,                // Claim Index
+        FieldElement,       // Claim
+        &[FieldElement],    // Constraint_coefficient
+    ) -> FieldElement,
     pub eval_loop: Option<
         &'a Fn(
-            &[&[FieldElement]], //Evaluated polynomials (LDEn)
-            &[FieldElement],    //Constraint Coefficents
-            u64,                //Claim index
-            &FieldElement,      //Claim
+            &[&[FieldElement]], // Evaluated polynomials (LDEn)
+            &[FieldElement],    // Constraint Coefficents
+            u64,                // Claim index
+            &FieldElement,      // Claim
         ) -> Vec<FieldElement>,
     >,
 }
@@ -114,13 +86,7 @@ pub fn stark_proof(
     let eval_domain_size = trace_len * beta;
     let gen = FieldElement::GENERATOR;
 
-    let mut eval_x = Vec::with_capacity((eval_domain_size) as usize);
-
-    let mut hold = FieldElement::ONE;
-    for _i in 0..(eval_domain_size) {
-        eval_x.push(hold.clone());
-        hold *= &omega
-    }
+    let eval_x = geometric_series(&FieldElement::ONE, &omega, eval_domain_size as usize);
 
     let mut TPn = vec![Vec::new(); trace.COLS];
     (0..trace.COLS)
@@ -134,13 +100,8 @@ pub fn stark_proof(
         })
         .collect_into_vec(&mut TPn);
 
-    // debug_assert_eq!(
-    //     eval_poly(trace_x[1000].clone(), TPn[0].as_slice()),
-    //     trace.elements[1000_usize * trace.COLS]
-    // );
-
     let mut LDEn = vec![vec![FieldElement::ZERO; eval_x.len()]; trace.COLS];
-    //OPT - Use some system to make this occur inline instead of storing then processing
+    // OPT - Use some system to make this occur inline instead of storing then processing
     #[allow(clippy::type_complexity)]
     let ret: Vec<(usize, Vec<(usize, Vec<FieldElement>)>)> = (0..(beta as usize))
         .into_par_iter()
@@ -209,7 +170,7 @@ pub fn stark_proof(
             CC = vec![FieldElement::ZERO; eval_domain_size as usize];
             for i in 0..eval_domain_size {
                 CC[i as usize] = (constraints.eval)(
-                    //This will preform the polynomial evaluation on each step
+                    // This will perform the polynomial evaluation on each step
                     &x,
                     sliced_poly.as_slice(),
                     claim_index,
@@ -245,15 +206,15 @@ pub fn stark_proof(
         claim_index,
         claim_value.clone(),
         constraint_coefficients.as_slice(),
-    )); //Gets eval_C of the oods point via direct computation
+    )); // Gets eval_C of the oods point via direct computation
 
     for v in oods_values.iter() {
         proof.write_element(v);
     }
 
-    let mut oods_coeffiecnts = Vec::with_capacity(2 * trace.COLS + 1);
+    let mut oods_coefficients = Vec::with_capacity(2 * trace.COLS + 1);
     for _i in 0..=2 * trace.COLS {
-        oods_coeffiecnts.push(proof.element());
+        oods_coefficients.push(proof.element());
     }
 
     let mut CO = Vec::with_capacity(eval_domain_size as usize);
@@ -289,20 +250,21 @@ pub fn stark_proof(
             let mut r = FieldElement::ZERO;
 
             for x in 0..trace.COLS {
-                r += &oods_coeffiecnts[2 * x] * (&LDEn[x][i as usize] - &oods_values[2 * x]) * A;
-                r += &oods_coeffiecnts[2 * x + 1]
+                r += &oods_coefficients[2 * x] * (&LDEn[x][i as usize] - &oods_values[2 * x]) * A;
+                r += &oods_coefficients[2 * x + 1]
                     * (&LDEn[x][i as usize] - &oods_values[2 * x + 1])
                     * B;
             }
-            r += &oods_coeffiecnts[oods_coeffiecnts.len() - 1]
+            r += &oods_coefficients[oods_coefficients.len() - 1]
                 * (&CC[i as usize] - &oods_values[oods_values.len() - 1])
                 * A;
 
             r
         })
         .collect_into_vec(&mut CO);
-    //Fri Layers
-    let mut fri = Vec::with_capacity(64 - (eval_domain_size.leading_zeros() as usize)); //Since Eval domain size is power of two this is a log_2
+    // Fri Layers
+    debug_assert!(eval_domain_size.is_power_of_two());
+    let mut fri = Vec::with_capacity(64 - (eval_domain_size.leading_zeros() as usize));
     fri.push(CO);
     let fri_tree_1 = fri_tree(&(fri[0].as_slice()), 8);
     proof.write(&fri_tree_1[1]);
@@ -345,30 +307,24 @@ pub fn stark_proof(
     ));
     // Five fri layers have reduced the size of the evaluation domain and polynomail by 32x
     let last_layer_degree_bound = trace_len / 32;
-    let mut last_layer_coefficents = ifft(
+    let mut last_layer_coefficient = ifft(
         FieldElement::root(U256::from(fri[5].len() as u64)).unwrap(),
         &(fri[5].as_slice()),
     );
-    last_layer_coefficents.truncate(last_layer_degree_bound as usize);
-    proof.write_element_list(last_layer_coefficents.as_slice());
-    debug_assert_eq!(last_layer_coefficents.len() as u64, last_layer_degree_bound);
-    //Security paramter proof of work is at 12 bits
+    last_layer_coefficient.truncate(last_layer_degree_bound as usize);
+    proof.write_element_list(last_layer_coefficient.as_slice());
+    debug_assert_eq!(last_layer_coefficient.len() as u64, last_layer_degree_bound);
+    // Security parameter proof of work is at 12 bits
     let proof_of_work = pow_find_nonce(12, &proof);
-    debug_assert!(pow_verfiy(proof_of_work, 12, &proof));
+    debug_assert!(pow_verify(proof_of_work, 12, &proof));
     proof.write(&proof_of_work.to_be_bytes());
 
-    //Security paramter number of queries is at 20
     let num_queries = 20;
-    let mut query_indices = Vec::with_capacity(num_queries + 3);
-    while query_indices.len() < num_queries {
-        let val = U256::from_bytes_be(&proof.bytes());
-        query_indices.push(((val.clone() >> (0x100 - 0x040)).c0 & (2_u64.pow(14) - 1)) as usize);
-        query_indices.push(((val.clone() >> (0x100 - 0x080)).c0 & (2_u64.pow(14) - 1)) as usize);
-        query_indices.push(((val.clone() >> (0x100 - 0x0C0)).c0 & (2_u64.pow(14) - 1)) as usize);
-        query_indices.push((val.c0 & (2_u64.pow(14) - 1)) as usize);
-    }
-    query_indices.truncate(num_queries);
-    (&mut query_indices).sort_unstable(); //Fast inplace sort that doesn't preserve the order of equal elements.
+    let query_indices = get_indices(
+        num_queries,
+        (64 - eval_domain_size.leading_zeros() - 1) as u32,
+        &mut proof,
+    );
 
     for index in query_indices.iter() {
         for x in 0..trace.COLS {
@@ -476,7 +432,7 @@ fn fri_layer(
 
 fn fri_tree(layer: &[FieldElement], coset_size: u64) -> Vec<[u8; 32]> {
     let n = layer.len();
-    let bits = 64 - (n as u64).leading_zeros(); //Floored base 2 log
+    let bits = 64 - (n as u64).leading_zeros(); // Floored base 2 log
     let mut internal_leaves = Vec::new();
     for i in (0..n).step_by(coset_size as usize) {
         let mut internal_leaf = Vec::with_capacity(coset_size as usize);
@@ -493,92 +449,37 @@ fn fri_tree(layer: &[FieldElement], coset_size: u64) -> Vec<[u8; 32]> {
     make_tree(leaf_pointer.as_slice())
 }
 
-fn pow_find_nonce(pow_bits: u32, proof: &Channel) -> u64 {
-    let mut seed = vec![01_u8, 35_u8, 69_u8, 103_u8, 137_u8, 171_u8, 205_u8, 237_u8];
-    seed.extend_from_slice(&proof.digest);
-    for byte in pow_bits.to_be_bytes().iter() {
-        if *byte > 0 {
-            seed.push(*byte);
-            break;
-        }
+fn get_indices(num: usize, bits: u32, proof: &mut Channel) -> Vec<usize> {
+    let mut query_indices = Vec::with_capacity(num + 3);
+    while query_indices.len() < num {
+        let val = U256::from_bytes_be(&proof.bytes());
+        query_indices.push(((val.clone() >> (0x100 - 0x040)).c0 & (2_u64.pow(bits) - 1)) as usize);
+        query_indices.push(((val.clone() >> (0x100 - 0x080)).c0 & (2_u64.pow(bits) - 1)) as usize);
+        query_indices.push(((val.clone() >> (0x100 - 0x0C0)).c0 & (2_u64.pow(bits) - 1)) as usize);
+        query_indices.push((val.c0 & (2_u64.pow(bits) - 1)) as usize);
     }
-    let mut seed_res = [0_u8; 32];
-    let mut sha3 = Keccak::new_keccak256();
-    sha3.update(&seed);
-    sha3.finalize(&mut seed_res);
-
-    let test_value = U256::from(2_u64).pow(u64::from(256 - pow_bits)).unwrap();
-    for n in 0..(u64::max_value() as usize) {
-        let mut sha3 = Keccak::new_keccak256();
-        let mut res = [0; 32];
-        sha3.update(&seed_res);
-        sha3.update(&(n.to_be_bytes()));
-        sha3.finalize(&mut res);
-        let final_int = U256::from_bytes_be(&res);
-        if final_int.leading_zeros() == pow_bits as usize && final_int < test_value {
-            //Only do the large int compare if the quick logs match
-            return n as u64;
-        }
-    }
-    0
+    query_indices.truncate(num);
+    (&mut query_indices).sort_unstable();
+    query_indices
 }
-//TODO - Make tests compatible with the proof of work values from this function
-#[allow(dead_code)]
-fn pow_find_nonce_threaded(pow_bits: u32, proof: &Channel) -> u64 {
-    let mut seed = vec![01_u8, 35_u8, 69_u8, 103_u8, 137_u8, 171_u8, 205_u8, 237_u8];
-    seed.extend_from_slice(&proof.digest);
-    for byte in pow_bits.to_be_bytes().iter() {
-        if *byte > 0 {
-            seed.push(*byte);
-            break;
-        }
-    }
-    let mut seed_res = [0_u8; 32];
-    let mut sha3 = Keccak::new_keccak256();
-    sha3.update(&seed);
-    sha3.finalize(&mut seed_res);
 
-    let test_value = U256::from(2_u64).pow(u64::from(256 - pow_bits)).unwrap();
-    let ret = (0..(u64::max_value() as usize))
+pub fn geometric_series(base: &FieldElement, step: &FieldElement, len: usize) -> Vec<FieldElement> {
+    const PARALLELIZATION: usize = 16_usize;
+    // OPT - Set based on the cores available and how well the work is spread
+    let step_len = len / PARALLELIZATION;
+    (0..PARALLELIZATION)
         .into_par_iter()
-        .find_any(|n| -> bool {
-            let mut sha3 = Keccak::new_keccak256();
-            let mut res = [0; 32];
-            sha3.update(&seed_res);
-            sha3.update(&(n.to_be_bytes()));
-            sha3.finalize(&mut res);
-            let final_int = U256::from_bytes_be(&res);
-            if final_int.leading_zeros() == pow_bits as usize {
-                final_int < test_value
-            } else {
-                false
+        .map(|i| {
+            let mut hold = Vec::with_capacity(step_len);
+            // OPT - Avoid temporary vectors
+            hold.push(base * step.pow(U256::from((i * step_len) as u64)).unwrap());
+            for j in 1..(step_len) {
+                hold.push(&hold[j - 1] * step);
             }
-        });
-    ret.unwrap() as u64
-}
-
-fn pow_verfiy(n: u64, pow_bits: u32, proof: &Channel) -> bool {
-    let mut seed = vec![01_u8, 35_u8, 69_u8, 103_u8, 137_u8, 171_u8, 205_u8, 237_u8];
-    seed.extend_from_slice(&proof.digest);
-    for byte in pow_bits.to_be_bytes().iter() {
-        if *byte > 0 {
-            seed.push(*byte);
-            break;
-        }
-    }
-    let mut seed_res = [0_u8; 32];
-    let mut sha3 = Keccak::new_keccak256();
-    sha3.update(&seed);
-    sha3.finalize(&mut seed_res);
-
-    let test_value = U256::from(2_u64).pow(u64::from(256 - pow_bits)).unwrap();
-    let mut sha3 = Keccak::new_keccak256();
-    let mut res = [0; 32];
-    sha3.update(&seed_res);
-    sha3.update(&(n.to_be_bytes()));
-    sha3.finalize(&mut res);
-    let final_int = U256::from_bytes_be(&res);
-    final_int < test_value
+            hold
+        })
+        .flatten()
+        .collect()
 }
 
 #[cfg(test)]
@@ -593,7 +494,7 @@ mod tests {
     use hex_literal::*;
 
     #[test]
-    fn fib_abstraction_test() {
+    fn fib_test_1024_python_witness() {
         let claim_index = 1000_u64;
         let claim_fib = FieldElement::from(u256h!(
             "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
@@ -601,15 +502,54 @@ mod tests {
         let witness = FieldElement::from(u256h!(
             "00000000000000000000000000000000000000000000000000000000cafebabe"
         ));
-        let correct_proof = fib_proof(witness.clone());
-        let potential_proof = stark_proof(
+        let expected = hex!("185ab1df82b4464206cae58761c4ab6873322fd0f77ee9e4e8e479e7a1f18707");
+        let actual = stark_proof(
             &get_trace_table(1024, witness),
             &get_constraint(),
             claim_index,
             claim_fib,
             2_u64.pow(4),
         );
+        assert_eq!(actual.digest, expected);
+    }
 
-        assert_eq!(correct_proof.digest, potential_proof.digest);
+    #[test]
+    fn fib_test_1024_changed_witness() {
+        let claim_index = 1000_u64;
+        let claim_fib = FieldElement::from(u256h!(
+            "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
+        ));
+        let witness = FieldElement::from(u256h!(
+            "00000000000000000000000000000000000000000000000f00dbabe0cafebabe"
+        ));
+        let expected = hex!("d5a91d6ba26d105e60adc24206d87c8ee05b11a8674a064c90cba96470573955");
+        let actual = stark_proof(
+            &get_trace_table(1024, witness),
+            &get_constraint(),
+            claim_index,
+            claim_fib,
+            2_u64.pow(5),
+        );
+        assert_eq!(actual.digest, expected);
+    }
+
+    #[test]
+    fn fib_test_4096() {
+        let claim_index = 4000_u64;
+        let claim_fib = FieldElement::from(u256h!(
+            "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
+        ));
+        let witness = FieldElement::from(u256h!(
+            "00000000000000000000000000000000000000000000000f00dbabe0cafebabe"
+        ));
+        let expected = hex!("006493c24997323b161b5ca20fbe0b2d0826fa8fd56e6eaf47f872ed29bfc5cb");
+        let actual = stark_proof(
+            &get_trace_table(4096, witness),
+            &get_constraint(),
+            claim_index,
+            claim_fib,
+            2_u64.pow(4),
+        );
+        assert_eq!(actual.digest, expected);
     }
 }
