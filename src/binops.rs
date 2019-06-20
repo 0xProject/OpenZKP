@@ -15,6 +15,7 @@ macro_rules! commutative_binop {
         // Note: a value is wasted
         impl $trait<$type> for $type {
             type Output = $type;
+
             #[inline(always)]
             fn $trait_fn(self, rhs: $type) -> $type {
                 self.$trait_fn(&rhs)
@@ -24,6 +25,7 @@ macro_rules! commutative_binop {
         // Value <op> reference
         impl $trait<&$type> for $type {
             type Output = $type;
+
             #[inline(always)]
             fn $trait_fn(mut self, rhs: &$type) -> $type {
                 self.$inplace_fn(rhs);
@@ -34,6 +36,7 @@ macro_rules! commutative_binop {
         // Reference <op> value
         impl $trait<$type> for &$type {
             type Output = $type;
+
             #[inline(always)]
             fn $trait_fn(self, rhs: $type) -> $type {
                 rhs.$trait_fn(self)
@@ -44,6 +47,7 @@ macro_rules! commutative_binop {
         // Note: a clone is necessary
         impl $trait<&$type> for &$type {
             type Output = $type;
+
             #[inline(always)]
             fn $trait_fn(self, rhs: &$type) -> $type {
                 self.clone().$trait_fn(rhs)
@@ -70,6 +74,7 @@ macro_rules! noncommutative_binop {
         // Note: a value is wasted
         impl $trait<$type> for $type {
             type Output = $type;
+
             #[inline(always)]
             fn $trait_fn(self, rhs: $type) -> $type {
                 self.$trait_fn(&rhs)
@@ -79,6 +84,7 @@ macro_rules! noncommutative_binop {
         // Value <op> reference
         impl $trait<&$type> for $type {
             type Output = $type;
+
             #[inline(always)]
             fn $trait_fn(mut self, rhs: &$type) -> $type {
                 self.$inplace_fn(rhs);
@@ -90,6 +96,7 @@ macro_rules! noncommutative_binop {
         // Note: a clone is necessary
         impl $trait<$type> for &$type {
             type Output = $type;
+
             #[inline(always)]
             fn $trait_fn(self, rhs: $type) -> $type {
                 // TODO: Use places-reversed version of in-place operator instead.
@@ -101,6 +108,7 @@ macro_rules! noncommutative_binop {
         // Note: a clone is necessary
         impl $trait<&$type> for &$type {
             type Output = $type;
+
             #[inline(always)]
             fn $trait_fn(self, rhs: &$type) -> $type {
                 self.clone().$trait_fn(rhs)

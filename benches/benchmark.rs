@@ -1,19 +1,20 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use hex_literal::*;
-use starkcrypto::curve::Affine;
-use starkcrypto::ecdsa::{private_to_public, sign, verify};
-use starkcrypto::fft::fft_cofactor;
-use starkcrypto::fibonacci::*;
-use starkcrypto::field::FieldElement;
-use starkcrypto::gcd::gcd;
-use starkcrypto::jacobian::Jacobian;
-use starkcrypto::merkle::*;
-use starkcrypto::pedersen::hash;
-use starkcrypto::proofs::*;
-use starkcrypto::square_root::square_root;
-use starkcrypto::u256::U256;
-use starkcrypto::u256h;
-use starkcrypto::wnaf;
+use starkcrypto::{
+    curve::Affine,
+    ecdsa::{private_to_public, sign, verify},
+    fft::fft_cofactor,
+    fibonacci::*,
+    field::FieldElement,
+    gcd::gcd,
+    jacobian::Jacobian,
+    merkle::*,
+    pedersen::hash,
+    proofs::*,
+    square_root::square_root,
+    u256::U256,
+    u256h, wnaf,
+};
 
 fn u256_add(crit: &mut Criterion) {
     let a = U256::new(

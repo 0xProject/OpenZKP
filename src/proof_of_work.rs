@@ -1,5 +1,4 @@
-use crate::channel::*;
-use crate::u256::*;
+use crate::{channel::*, u256::*};
 use hex_literal::*;
 use rayon::prelude::*;
 use tiny_keccak::Keccak;

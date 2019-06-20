@@ -1,8 +1,8 @@
-use crate::field::FieldElement;
-use crate::u256::U256;
+use crate::{field::FieldElement, u256::U256};
 
 pub fn fft(root: FieldElement, vector: &[FieldElement]) -> Vec<FieldElement> {
-    //debug_assert(root.pow(vector.len()) == FieldElement::ONE); //Todo - Add a pow method to field element
+    // debug_assert(root.pow(vector.len()) == FieldElement::ONE); //Todo - Add a pow
+    // method to field element
 
     let mut data = (vector.to_vec()).clone();
     let mut temp = FieldElement::ONE;
@@ -16,7 +16,8 @@ pub fn fft(root: FieldElement, vector: &[FieldElement]) -> Vec<FieldElement> {
     data
 }
 
-//We can implement this function using an option for the cofactor input, depending on what we want
+// We can implement this function using an option for the cofactor input,
+// depending on what we want
 pub fn fft_cofactor(
     root: FieldElement,
     vector: &[FieldElement],
@@ -51,7 +52,8 @@ pub fn ifft_cofactor(
     let s = len_el.inv().unwrap();
     r = r.into_iter().map(|e| &s * e).collect();
 
-    //The inv fft will give the cofactor transformed vector so we remove the transform.
+    // The inv fft will give the cofactor transformed vector so we remove the
+    // transform.
     let mut c = FieldElement::ONE;
     let cofactor_inv = cofactor.inv().unwrap();
     for element in r.iter_mut() {
@@ -60,7 +62,7 @@ pub fn ifft_cofactor(
     }
     r
 }
-//Using the Radix-2 algoritim
+// Using the Radix-2 algoritim
 pub fn fft_inplace(vector: &mut [FieldElement], pow_table: &[FieldElement]) {
     let n = vector.len();
     let level = 64 - n.leading_zeros() - 1;
@@ -104,9 +106,7 @@ fn reverse(x: u64, bits: usize) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::field::FieldElement;
-    use crate::u256::U256;
-    use crate::u256h;
+    use crate::{field::FieldElement, u256::U256, u256h};
     use hex_literal::*;
 
     #[test]

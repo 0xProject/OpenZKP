@@ -1,17 +1,13 @@
-#![allow(non_snake_case)] // TODO - Migrate to Choose naming system which the rust complier doesn't complain about
+#![allow(non_snake_case)] // TODO - Migrate to Choose naming system which the rust complier doesn't
+                          // complain about
 #![allow(clippy::type_complexity)]
 #![allow(clippy::cognitive_complexity)]
 #![allow(clippy::zero_prefixed_literal)]
 
-use crate::channel::*;
-use crate::fft::*;
-use crate::field::*;
-use crate::merkle::*;
-use crate::polynomial::*;
-use crate::proofs::*;
-use crate::u256::U256;
-use crate::u256h;
-use crate::utils::Reversible;
+use crate::{
+    channel::*, fft::*, field::*, merkle::*, polynomial::*, proofs::*, u256::U256, u256h,
+    utils::Reversible,
+};
 use hex_literal::*;
 use rayon::prelude::*;
 use tiny_keccak::Keccak;
@@ -679,8 +675,7 @@ pub fn fib_proof(witness: FieldElement) -> Channel {
 
 mod tests {
     use super::*;
-    use crate::u256::U256;
-    use crate::u256h;
+    use crate::{u256::U256, u256h};
     use tiny_keccak::Keccak;
 
     #[test]

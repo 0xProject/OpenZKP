@@ -11,8 +11,7 @@ pub fn eval_poly(x: FieldElement, coefficients: &[FieldElement]) -> FieldElement
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::u256::*;
-    use crate::u256h;
+    use crate::{u256::*, u256h};
     use hex_literal::*;
 
     #[test]

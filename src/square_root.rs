@@ -1,6 +1,8 @@
-use crate::field::{FieldElement, MODULUS};
-use crate::u256::U256;
-use crate::u256h;
+use crate::{
+    field::{FieldElement, MODULUS},
+    u256::U256,
+    u256h,
+};
 use hex_literal::*;
 
 pub fn square_root(a: &FieldElement) -> Option<FieldElement> {
@@ -19,11 +21,12 @@ fn is_quadratic_residue(a: &FieldElement) -> bool {
     }
 }
 
-// These two constants are chosen so that 1 + SIGNIFICAND << BINARY_EXPONENT == MODULUS.
+// These two constants are chosen so that 1 + SIGNIFICAND << BINARY_EXPONENT ==
+// MODULUS.
 const BINARY_EXPONENT: usize = 3 * 4 * 16;
 const SIGNIFICAND: U256 = U256::new(0x0800000000000011u64, 0, 0, 0);
-// The starting value of c in the Tonelli Shanks algorithm. We are using 3, a generator, as the
-// quadratic nonresidue the algorithm requires.
+// The starting value of c in the Tonelli Shanks algorithm. We are using 3, a
+// generator, as the quadratic nonresidue the algorithm requires.
 const INITIAL_C: FieldElement = FieldElement(u256h!(
     "07222e32c47afc260a35c5be60505574aaada25731fe3be94106bccd64a2bdd8"
 ));

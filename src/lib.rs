@@ -74,12 +74,12 @@ pub type MakerMessage = orders::MakerMessage<[u8; 32]>;
 
 pub fn maker_hash(message: &MakerMessage) -> [u8; 32] {
     let m = orders::MakerMessage {
-        vault_a: message.vault_a,
-        vault_b: message.vault_b,
+        vault_a:  message.vault_a,
+        vault_b:  message.vault_b,
         amount_a: message.amount_a,
         amount_b: message.amount_b,
-        token_a: from_bytes(&message.token_a),
-        token_b: from_bytes(&message.token_b),
+        token_a:  from_bytes(&message.token_a),
+        token_b:  from_bytes(&message.token_b),
         trade_id: message.trade_id,
     };
     let h = orders::hash_maker(&m);

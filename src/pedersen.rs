@@ -1,9 +1,7 @@
-use crate::curve::Affine;
-use crate::field::FieldElement;
-use crate::jacobian::Jacobian;
-use crate::pedersen_points::PEDERSEN_POINTS;
-use crate::u256::U256;
-use crate::u256h;
+use crate::{
+    curve::Affine, field::FieldElement, jacobian::Jacobian, pedersen_points::PEDERSEN_POINTS,
+    u256::U256, u256h,
+};
 use hex_literal::*;
 
 // x = 0x049ee3eba8c1600700ee1b87eb599f16716b0b1022947733551fde4050ca6804

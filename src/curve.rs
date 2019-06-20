@@ -1,7 +1,4 @@
-use crate::field::FieldElement;
-use crate::u256::U256;
-use crate::u256h;
-use crate::{commutative_binop, noncommutative_binop};
+use crate::{commutative_binop, field::FieldElement, noncommutative_binop, u256::U256, u256h};
 use hex_literal::*;
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
@@ -75,13 +72,16 @@ impl Default for Affine {
 
 impl Neg for &Affine {
     type Output = Affine;
+
     fn neg(self) -> Self::Output {
         match self {
             Affine::Zero => Affine::Zero,
-            Affine::Point { x, y } => Affine::Point {
-                x: x.clone(),
-                y: y.neg(),
-            },
+            Affine::Point { x, y } => {
+                Affine::Point {
+                    x: x.clone(),
+                    y: y.neg(),
+                }
+            }
         }
     }
 }
@@ -90,23 +90,25 @@ impl AddAssign<&Affine> for Affine {
     fn add_assign(&mut self, rhs: &Affine) {
         match self {
             Affine::Zero => *self = rhs.clone(),
-            Affine::Point { x: ax, y: ay } => match rhs {
-                Affine::Zero => {}
-                Affine::Point { x: bx, y: by } => {
-                    if ax == bx {
-                        if ay == by {
-                            self.double_assign()
+            Affine::Point { x: ax, y: ay } => {
+                match rhs {
+                    Affine::Zero => {}
+                    Affine::Point { x: bx, y: by } => {
+                        if ax == bx {
+                            if ay == by {
+                                self.double_assign()
+                            } else {
+                                *self = Affine::Zero
+                            }
                         } else {
-                            *self = Affine::Zero
+                            let m = (&*ay - by) / (&*ax - bx);
+                            let x = &m * &m - &*ax - &*bx;
+                            *ay = m * (&*ax - &x) - &*ay;
+                            *ax = x;
                         }
-                    } else {
-                        let m = (&*ay - by) / (&*ax - bx);
-                        let x = &m * &m - &*ax - &*bx;
-                        *ay = m * (&*ax - &x) - &*ay;
-                        *ax = x;
                     }
                 }
-            },
+            }
         }
     }
 }
@@ -123,6 +125,7 @@ macro_rules! curve_operations {
 
         impl Mul<&U256> for &$type {
             type Output = $type;
+
             fn mul(self, scalar: &U256) -> $type {
                 // OPT: Use WNAF
                 let mut r = self.clone();
@@ -150,6 +153,7 @@ macro_rules! curve_operations {
 
         impl Mul<U256> for $type {
             type Output = Self;
+
             fn mul(self, scalar: U256) -> $type {
                 &self * &scalar
             }
@@ -157,6 +161,7 @@ macro_rules! curve_operations {
 
         impl Mul<&U256> for $type {
             type Output = Self;
+
             fn mul(self, scalar: &U256) -> $type {
                 &self * scalar
             }
@@ -164,6 +169,7 @@ macro_rules! curve_operations {
 
         impl Mul<U256> for &$type {
             type Output = $type;
+
             fn mul(self, scalar: U256) -> $type {
                 self * &scalar
             }

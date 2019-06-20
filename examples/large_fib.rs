@@ -1,12 +1,7 @@
 use hex_literal::*;
 use rayon::prelude;
-use starkcrypto::fibonacci::*;
-use starkcrypto::field::FieldElement;
-use starkcrypto::proofs::*;
-use starkcrypto::u256::*;
-use starkcrypto::u256h;
-use std::env;
-use std::time::Instant;
+use starkcrypto::{fibonacci::*, field::FieldElement, proofs::*, u256::*, u256h};
+use std::{env, time::Instant};
 
 fn main() {
     let args: Vec<String> = env::args().collect();

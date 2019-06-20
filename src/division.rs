@@ -147,8 +147,7 @@ pub fn divrem_nbym(numerator: &mut [u64], divisor: &mut [u64]) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::u256::U256;
-    use crate::u256h;
+    use crate::{u256::U256, u256h};
     use hex_literal::*;
     use quickcheck_macros::quickcheck;
 

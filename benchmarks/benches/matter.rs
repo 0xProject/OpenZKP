@@ -1,6 +1,5 @@
 use criterion::{black_box, Bencher};
-use matter::Field;
-use matter::Fp;
+use matter::{Field, Fp};
 
 pub fn matter_field_mul(bench: &mut Bencher, _i: &()) {
     let a =

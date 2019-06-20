@@ -1,7 +1,7 @@
-use crate::curve::Affine;
-use crate::field::FieldElement;
-use crate::u256::U256;
-use crate::{commutative_binop, curve_operations, noncommutative_binop};
+use crate::{
+    commutative_binop, curve::Affine, curve_operations, field::FieldElement, noncommutative_binop,
+    u256::U256,
+};
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 // See http://www.hyperelliptic.org/EFD/g1p/auto-shortw-jacobian.html
@@ -83,11 +83,13 @@ impl From<&Affine> for Jacobian {
     fn from(other: &Affine) -> Jacobian {
         match other {
             Affine::Zero => Jacobian::ZERO,
-            Affine::Point { x, y } => Jacobian {
-                x: x.clone(),
-                y: y.clone(),
-                z: FieldElement::ONE,
-            },
+            Affine::Point { x, y } => {
+                Jacobian {
+                    x: x.clone(),
+                    y: y.clone(),
+                    z: FieldElement::ONE,
+                }
+            }
         }
     }
 }
@@ -96,11 +98,13 @@ impl From<Affine> for Jacobian {
     fn from(other: Affine) -> Jacobian {
         match other {
             Affine::Zero => Jacobian::ZERO,
-            Affine::Point { x, y } => Jacobian {
-                x,
-                y,
-                z: FieldElement::ONE,
-            },
+            Affine::Point { x, y } => {
+                Jacobian {
+                    x,
+                    y,
+                    z: FieldElement::ONE,
+                }
+            }
         }
     }
 }
@@ -123,6 +127,7 @@ impl From<&Jacobian> for Affine {
 
 impl Neg for &Jacobian {
     type Output = Jacobian;
+
     fn neg(self) -> Jacobian {
         let mut r = self.clone();
         r.neg_assign();
@@ -214,6 +219,7 @@ impl AddAssign<&Affine> for Jacobian {
 // TODO: Various Add implementations mixing Affine and Jacobian values and refs.
 impl Add<&Affine> for &Jacobian {
     type Output = Jacobian;
+
     fn add(self, rhs: &Affine) -> Jacobian {
         let mut r = self.clone();
         r += rhs;

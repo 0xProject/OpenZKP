@@ -57,9 +57,9 @@ pub fn hash_node(left_node: &[u8; 32], right_node: &[u8; 32]) -> [u8; 32] {
 
 pub fn make_tree_direct<T: Hashable>(leaves: &[T]) -> Vec<[u8; 32]> {
     let n = leaves.len() as u64;
-    let depth = 64 - n.leading_zeros() - 1; //Log_2 of n
+    let depth = 64 - n.leading_zeros() - 1; // Log_2 of n
 
-    let mut tree = vec![[0; 32]; 2 * n as usize]; //Get my vector heap for end results
+    let mut tree = vec![[0; 32]; 2 * n as usize]; // Get my vector heap for end results
     for i in 0..n {
         tree[(2_u64.pow(depth) + i) as usize] = leaves[(i) as usize].hash();
     }
@@ -77,7 +77,7 @@ pub fn make_tree<T: Hashable + std::marker::Sync>(leaves: &[T]) -> Vec<[u8; 32]>
     }
 }
 
-pub const THREADS_MAX: usize = 16; //TODO - Figure out how many threads is opt
+pub const THREADS_MAX: usize = 16; // TODO - Figure out how many threads is opt
 
 pub fn make_tree_threaded<T: Hashable + std::marker::Sync>(leaves: &[T]) -> Vec<[u8; 32]> {
     let threads = THREADS_MAX;
@@ -110,13 +110,14 @@ pub fn make_tree_threaded<T: Hashable + std::marker::Sync>(leaves: &[T]) -> Vec<
         layers.push(hold);
     }
 
-    layers.push(vec![[0; 32]]); //TODO - This logic puts the root at the top, but the previous didn't, either add another hash comp or change the rest of the code to match
+    layers.push(vec![[0; 32]]); // TODO - This logic puts the root at the top, but the previous didn't, either
+                                // add another hash comp or change the rest of the code to match
 
     layers.into_iter().rev().flatten().collect()
 }
 
 pub fn proof(tree: &[[u8; 32]], indices: &[usize]) -> Vec<[u8; 32]> {
-    let depth = 64 - (tree.len() as u64).leading_zeros() - 1; //Log base 2 - 1
+    let depth = 64 - (tree.len() as u64).leading_zeros() - 1; // Log base 2 - 1
     let num_leaves = 2_u64.pow(depth);
     let num_nodes = 2 * num_leaves;
     let mut known = vec![false; (num_nodes + 1) as usize];
@@ -150,7 +151,7 @@ pub fn verify(
     mut decommitment: Vec<[u8; 32]>,
 ) -> bool {
     let mut queue = Vec::with_capacity(values.len());
-    values.sort_by(|a, b| b.0.cmp(&a.0)); //Sorts the list by index
+    values.sort_by(|a, b| b.0.cmp(&a.0)); // Sorts the list by index
     for leaf in values.iter() {
         let tree_index = 2_u64.pow(depth) + leaf.0;
         queue.push((tree_index, hash_leaf(&leaf.1)));
@@ -162,7 +163,7 @@ pub fn verify(
             break;
         }
 
-        let (index, data_hash) = queue.remove(0); //Debug check that this is doing it right
+        let (index, data_hash) = queue.remove(0); // Debug check that this is doing it right
 
         if index == 1 {
             return data_hash == root;

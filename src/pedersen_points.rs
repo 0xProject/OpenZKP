@@ -1,7 +1,4 @@
-use crate::curve::Affine;
-use crate::field::FieldElement;
-use crate::u256::U256;
-use crate::u256h;
+use crate::{curve::Affine, field::FieldElement, u256::U256, u256h};
 use hex_literal::*;
 
 pub const PEDERSEN_POINTS: [Affine; 506] = [

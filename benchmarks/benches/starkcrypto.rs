@@ -1,9 +1,11 @@
 use criterion::{black_box, Bencher};
 use hex_literal::*;
-use starkcrypto::ecdsa::{private_to_public, sign, verify};
-use starkcrypto::field::FieldElement;
-use starkcrypto::u256::U256;
-use starkcrypto::u256h;
+use starkcrypto::{
+    ecdsa::{private_to_public, sign, verify},
+    field::FieldElement,
+    u256::U256,
+    u256h,
+};
 
 pub fn starkcrypto_verify(bench: &mut Bencher, _i: &()) {
     let message_hash = u256h!("03d937c035c878245caf64531a5756109c53068da139362728feb561405371cb");
