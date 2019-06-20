@@ -33,12 +33,12 @@ impl TraceTable {
 pub struct Constraint<'a> {
     pub NCONSTRAINTS: usize,
     pub eval: &'a Fn(
-        &FieldElement,
-        &[&[FieldElement]],
-        u64,
-        FieldElement,
-        &[FieldElement],
-    ) -> FieldElement, //x point, polynomials, claim index, claim, constraint_coefficents
+        &FieldElement,      //X point
+        &[&[FieldElement]], //Polynomials
+        u64,                //Claim Index
+        FieldElement,       //Claim
+        &[FieldElement],    //Constraint_coefficents
+    ) -> FieldElement,
     pub eval_loop: Option<
         &'a Fn(
             &[&[FieldElement]], //Evaluated polynomials (LDEn)
@@ -86,7 +86,7 @@ pub fn stark_proof(
     let eval_domain_size = trace_len * beta;
     let gen = FieldElement::GENERATOR;
 
-    let mut eval_x = power_domain(&FieldElement::ONE, &omega, eval_domain_size as usize);
+    let eval_x = power_domain(&FieldElement::ONE, &omega, eval_domain_size as usize);
 
     let mut TPn = vec![Vec::new(); trace.COLS];
     (0..trace.COLS)
@@ -100,13 +100,8 @@ pub fn stark_proof(
         })
         .collect_into_vec(&mut TPn);
 
-    // debug_assert_eq!(
-    //     eval_poly(trace_x[1000].clone(), TPn[0].as_slice()),
-    //     trace.elements[1000_usize * trace.COLS]
-    // );
-
     let mut LDEn = vec![vec![FieldElement::ZERO; eval_x.len()]; trace.COLS];
-    //OPT - Use some system to make this occur inline instead of storing then processing
+    // OPT - Use some system to make this occur inline instead of storing then processing
     #[allow(clippy::type_complexity)]
     let ret: Vec<(usize, Vec<(usize, Vec<FieldElement>)>)> = (0..(beta as usize))
         .into_par_iter()
@@ -211,7 +206,7 @@ pub fn stark_proof(
         claim_index,
         claim_value.clone(),
         constraint_coefficients.as_slice(),
-    )); //Gets eval_C of the oods point via direct computation
+    )); // Gets eval_C of the oods point via direct computation
 
     for v in oods_values.iter() {
         proof.write_element(v);
@@ -267,8 +262,9 @@ pub fn stark_proof(
             r
         })
         .collect_into_vec(&mut CO);
-    //Fri Layers
-    let mut fri = Vec::with_capacity(64 - (eval_domain_size.leading_zeros() as usize)); //Since Eval domain size is power of two this is a log_2
+    // Fri Layers
+    let mut fri = Vec::with_capacity(64 - (eval_domain_size.leading_zeros() as usize));
+    // Since Eval domain size is power of two this is a log_2
     fri.push(CO);
     let fri_tree_1 = fri_tree(&(fri[0].as_slice()), 8);
     proof.write(&fri_tree_1[1]);
@@ -318,12 +314,12 @@ pub fn stark_proof(
     last_layer_coefficents.truncate(last_layer_degree_bound as usize);
     proof.write_element_list(last_layer_coefficents.as_slice());
     debug_assert_eq!(last_layer_coefficents.len() as u64, last_layer_degree_bound);
-    //Security paramter proof of work is at 12 bits
+    // Security paramter proof of work is at 12 bits
     let proof_of_work = pow_find_nonce(12, &proof);
     debug_assert!(pow_verfiy(proof_of_work, 12, &proof));
     proof.write(&proof_of_work.to_be_bytes());
 
-    //Security paramter number of queries is at 20
+    // Security paramter number of queries is at 20
     let num_queries = 20;
     let query_indices = get_indices(
         num_queries,
@@ -469,15 +465,17 @@ fn get_indices(num: usize, bits: u32, proof: &mut Channel) -> Vec<usize> {
 }
 
 pub fn power_domain(base: &FieldElement, step: &FieldElement, len: usize) -> Vec<FieldElement> {
-    const parallelization: usize = 16_usize; //OPT - Set based on the cores available and how well the work is spread
-    let step_len = (len / parallelization);
-    (0..parallelization)
+    const PARALLELIZATION: usize = 16_usize;
+    // OPT - Set based on the cores available and how well the work is spread
+    let step_len = len / PARALLELIZATION;
+    (0..PARALLELIZATION)
         .into_par_iter()
         .map(|i| {
-            let mut hold = Vec::with_capacity(step_len); //OPT - Avoid temporary vectors
+            let mut hold = Vec::with_capacity(step_len);
+            // OPT - Avoid temporary vectors
             hold.push(base * step.pow(U256::from((i * step_len) as u64)).unwrap());
             for j in 1..(step_len) {
-                hold.push(&hold[(j - 1) as usize] * step);
+                hold.push(&hold[j - 1] * step);
             }
             hold
         })

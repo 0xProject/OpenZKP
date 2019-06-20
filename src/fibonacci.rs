@@ -55,9 +55,9 @@ pub fn eval_whole_loop(
     let omega_trace = (&omega).pow(U256::from(trace_len)).unwrap();
     let omega_1023 = (&omega).pow(U256::from(trace_len - 1)).unwrap();
 
-    let mut x_omega_cycle = power_domain(&x, &omega, eval_domain_size_usize);
-    let mut x_trace_cycle = power_domain(&x_trace, &omega_trace, eval_domain_size_usize);
-    let mut x_1023_cycle = power_domain(&x_1023, &omega_1023, eval_domain_size_usize);
+    let x_omega_cycle = power_domain(&x, &omega, eval_domain_size_usize);
+    let x_trace_cycle = power_domain(&x_trace, &omega_trace, eval_domain_size_usize);
+    let x_1023_cycle = power_domain(&x_1023, &omega_1023, eval_domain_size_usize);
 
     let mut x_trace_sub_one: Vec<FieldElement> = Vec::with_capacity(eval_domain_size_usize);
     let mut x_sub_one: Vec<FieldElement> = Vec::with_capacity(eval_domain_size_usize);
