@@ -22,7 +22,7 @@ fn main() {
         &get_constraint(),
         claim_index,
         claim_fib,
-        2_u64.pow(4),
+        ProofParams::new(2_u64.pow(5), 12, 20, vec![0, 3, 2]),
     );
     let duration = start.elapsed();
     println!("{:?}", potential_proof.digest);

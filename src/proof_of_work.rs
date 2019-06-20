@@ -4,7 +4,7 @@ use rayon::prelude::*;
 use tiny_keccak::Keccak;
 use hex_literal::*;
 
-pub fn pow_find_nonce(pow_bits: u32, proof: &Channel) -> u64 {
+pub fn pow_find_nonce(pow_bits: u64, proof: &Channel) -> u64 {
     let mut seed = hex!("0123456789abcded").to_vec();
     seed.extend_from_slice(&proof.digest);
     for byte in pow_bits.to_be_bytes().iter() {
@@ -35,7 +35,7 @@ pub fn pow_find_nonce(pow_bits: u32, proof: &Channel) -> u64 {
 }
 
 // TODO - Make tests compatible with the proof of work values from this function
-pub fn pow_find_nonce_threaded(pow_bits: u32, proof: &Channel) -> u64 {
+pub fn pow_find_nonce_threaded(pow_bits: u64, proof: &Channel) -> u64 {
     let mut seed = hex!("0123456789abcded").to_vec();
     seed.extend_from_slice(&proof.digest);
     for byte in pow_bits.to_be_bytes().iter() {
@@ -68,7 +68,7 @@ pub fn pow_find_nonce_threaded(pow_bits: u32, proof: &Channel) -> u64 {
     ret.unwrap() as u64
 }
 
-pub fn pow_verify(n: u64, pow_bits: u32, proof: &Channel) -> bool {
+pub fn pow_verify(n: u64, pow_bits: u64, proof: &Channel) -> bool {
     let mut seed = hex!("0123456789abcded").to_vec();
     seed.extend_from_slice(&proof.digest);
     for byte in pow_bits.to_be_bytes().iter() {

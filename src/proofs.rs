@@ -26,6 +26,24 @@ impl TraceTable {
     }
 }
 
+pub struct ProofParams {
+    pub beta: u64,
+    pub pow_bits: u64,
+    pub queries : usize,
+    pub fri_layout : Vec<u64>
+}
+
+impl ProofParams {
+    pub fn new(beta: u64, pow_bits: u64, queries : usize, fri_layout : Vec<u64>) -> Self {
+        Self {
+            beta,
+            pow_bits,
+            queries,
+            fri_layout
+        }
+    }
+}
+
 // This struct contains two evaluation systems which allow different functionality, first it contains a default function which directly evaluates the constraint function
 // Second it contains a function designed to be used as the core of a loop on precomputed values to get the C function.
 // If the proof system wants to used a looped eval for speedup it can set the loop bool to true, otherwise the system will preform all computation directly
@@ -78,8 +96,9 @@ pub fn stark_proof(
     constraints: &Constraint,
     claim_index: u64,
     claim_value: FieldElement,
-    beta: u64,
+    params: ProofParams,
 ) -> Channel {
+    let beta = params.beta;
     let trace_len = (trace.elements.len() / trace.COLS) as u64;
     let omega = FieldElement::root(U256::from(trace_len * beta)).unwrap();
     let g = omega.pow(U256::from(beta)).unwrap();
@@ -314,12 +333,12 @@ pub fn stark_proof(
     last_layer_coefficient.truncate(last_layer_degree_bound as usize);
     proof.write_element_list(last_layer_coefficient.as_slice());
     debug_assert_eq!(last_layer_coefficient.len() as u64, last_layer_degree_bound);
-    // Security parameter proof of work is at 12 bits
-    let proof_of_work = pow_find_nonce(12, &proof);
+
+    let proof_of_work = pow_find_nonce(params.pow_bits, &proof);
     debug_assert!(pow_verify(proof_of_work, 12, &proof));
     proof.write(&proof_of_work.to_be_bytes());
 
-    let num_queries = 20;
+    let num_queries = params.queries;
     let query_indices = get_indices(
         num_queries,
         (64 - eval_domain_size.leading_zeros() - 1) as u32,
@@ -508,7 +527,7 @@ mod tests {
             &get_constraint(),
             claim_index,
             claim_fib,
-            2_u64.pow(4),
+            ProofParams::new(2_u64.pow(4), 12, 20, vec![0, 3, 2]),
         );
         assert_eq!(actual.digest, expected);
     }
@@ -528,7 +547,7 @@ mod tests {
             &get_constraint(),
             claim_index,
             claim_fib,
-            2_u64.pow(5),
+            ProofParams::new(2_u64.pow(5), 12, 20, vec![]),
         );
         assert_eq!(actual.digest, expected);
     }
@@ -548,7 +567,7 @@ mod tests {
             &get_constraint(),
             claim_index,
             claim_fib,
-            2_u64.pow(4),
+            ProofParams::new(2_u64.pow(4), 12, 20, vec![0, 3 , 2]),
         );
         assert_eq!(actual.digest, expected);
     }
