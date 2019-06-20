@@ -4,8 +4,8 @@ use crate::fft::*;
 use crate::field::*;
 use crate::merkle::*;
 use crate::polynomial::*;
-use crate::u256::U256;
 use crate::proof_of_work::*;
+use crate::u256::U256;
 use crate::utils::Reversable;
 use rayon::prelude::*;
 use tiny_keccak::Keccak;
@@ -325,7 +325,11 @@ pub fn stark_proof(
 
     //Security paramter number of queries is at 20
     let num_queries = 20;
-    let query_indices = get_indices(num_queries, (64 - eval_domain_size.leading_zeros() - 1) as u32, &mut proof);
+    let query_indices = get_indices(
+        num_queries,
+        (64 - eval_domain_size.leading_zeros() - 1) as u32,
+        &mut proof,
+    );
 
     for index in query_indices.iter() {
         for x in 0..trace.COLS {
@@ -450,35 +454,39 @@ fn fri_tree(layer: &[FieldElement], coset_size: u64) -> Vec<[u8; 32]> {
     make_tree(leaf_pointer.as_slice())
 }
 
-fn get_indices(num : usize, bits : u32, proof : &mut Channel) -> Vec<usize> {
+fn get_indices(num: usize, bits: u32, proof: &mut Channel) -> Vec<usize> {
     let mut query_indices = Vec::with_capacity(num + 3);
     while query_indices.len() < num {
         let val = U256::from_bytes_be(&proof.bytes());
         query_indices.push(((val.clone() >> (0x100 - 0x040)).c0 & (2_u64.pow(bits) - 1)) as usize);
         query_indices.push(((val.clone() >> (0x100 - 0x080)).c0 & (2_u64.pow(bits) - 1)) as usize);
         query_indices.push(((val.clone() >> (0x100 - 0x0C0)).c0 & (2_u64.pow(bits) - 1)) as usize);
-        query_indices.push((val.c0 & (2_u64.pow(bits)-1)) as usize);
+        query_indices.push((val.c0 & (2_u64.pow(bits) - 1)) as usize);
     }
     query_indices.truncate(num);
     (&mut query_indices).sort_unstable(); //Fast inplace sort that doesn't preserve the order of equal elements.
     query_indices
 }
 
-pub fn power_domain(base : &FieldElement, step : &FieldElement, len: usize) -> Vec<FieldElement> {
-    let div = 16_u64; //OPT - Set based on the cores avaible and how well the work is spread
-    let step_len = (len as u64 /div) as u64;
-    (0..div)
-    .into_par_iter()
-    .map(|i| {
-        let mut hold = Vec::with_capacity((step_len) as usize);
-        hold.push(base * step.pow(U256::from(i * (step_len))).unwrap());
-        for j in 1..(step_len) {
-            hold.push(&hold[(j - 1) as usize] * step);
-        }
-        hold
-    })
-    .flatten()
-    .collect()
+pub fn power_domain(
+    base: &FieldElement,
+    step: &FieldElement,
+    len: usize,
+) -> Vec<FieldElement> {
+    const parallelization : usize = 16_usize; //OPT - Set based on the cores available and how well the work is spread
+    let step_len = (len / parallelization);
+    (0..parallelization)
+        .into_par_iter()
+        .map(|i| {
+            let mut hold = Vec::with_capacity(step_len); //OPT - Avoid temporary vectors
+            hold.push(base * step.pow(U256::from((i * step_len) as u64)).unwrap());
+            for j in 1..(step_len) {
+                hold.push(&hold[(j - 1) as usize] * step);
+            }
+            hold
+        })
+        .flatten() 
+        .collect()
 }
 
 #[cfg(test)]

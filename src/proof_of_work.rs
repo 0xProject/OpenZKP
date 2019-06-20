@@ -1,7 +1,7 @@
-use tiny_keccak::Keccak;
-use rayon::prelude::*;
 use crate::channel::*;
 use crate::u256::*;
+use rayon::prelude::*;
+use tiny_keccak::Keccak;
 
 pub fn pow_find_nonce(pow_bits: u32, proof: &Channel) -> u64 {
     let mut seed = vec![01_u8, 35_u8, 69_u8, 103_u8, 137_u8, 171_u8, 205_u8, 237_u8];

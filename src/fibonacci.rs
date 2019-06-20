@@ -38,6 +38,7 @@ pub fn eval_whole_loop(
     claim_fib: &FieldElement,
 ) -> Vec<FieldElement> {
     let eval_domain_size = LDEn[0].len() as u64;
+    let eval_domain_size_usize = LDEn[0].len();
     let beta = 2_u64.pow(4);
     let trace_len = eval_domain_size / beta;
 
@@ -45,7 +46,7 @@ pub fn eval_whole_loop(
     let g = omega.pow(U256::from(beta)).unwrap();
     let gen = FieldElement::GENERATOR;
 
-    let mut CC = Vec::with_capacity(eval_domain_size as usize);
+    let mut CC = Vec::with_capacity(eval_domain_size_usize);
     let g_trace = g.pow(U256::from(trace_len - 1)).unwrap();
     let g_claim = g.pow(U256::from(claim_index)).unwrap();
     let x = gen.clone();
@@ -54,13 +55,13 @@ pub fn eval_whole_loop(
     let omega_trace = (&omega).pow(U256::from(trace_len)).unwrap();
     let omega_1023 = (&omega).pow(U256::from(trace_len - 1)).unwrap();
 
-    let mut x_omega_cycle: Vec<FieldElement> = power_domain(&x, &omega, eval_domain_size as usize);
-    let mut x_trace_cycle: Vec<FieldElement> = power_domain(&x_trace, &omega_trace, eval_domain_size as usize);
-    let mut x_1023_cycle: Vec<FieldElement> = power_domain(&x_1023, &omega_1023, eval_domain_size as usize);
+    let mut x_omega_cycle = power_domain(&x, &omega, eval_domain_size_usize);
+    let mut x_trace_cycle = power_domain(&x_trace, &omega_trace, eval_domain_size_usize);
+    let mut x_1023_cycle = power_domain(&x_1023, &omega_1023, eval_domain_size_usize);
 
-    let mut x_trace_sub_one: Vec<FieldElement> = Vec::with_capacity(eval_domain_size as usize);
-    let mut x_sub_one: Vec<FieldElement> = Vec::with_capacity(eval_domain_size as usize);
-    let mut x_g_claim_cycle: Vec<FieldElement> = Vec::with_capacity(eval_domain_size as usize);
+    let mut x_trace_sub_one: Vec<FieldElement> = Vec::with_capacity(eval_domain_size_usize);
+    let mut x_sub_one: Vec<FieldElement> = Vec::with_capacity(eval_domain_size_usize);
+    let mut x_g_claim_cycle: Vec<FieldElement> = Vec::with_capacity(eval_domain_size_usize);
 
     x_omega_cycle
         .par_iter()
@@ -83,7 +84,7 @@ pub fn eval_whole_loop(
     x_sub_one = held.pop().unwrap();
     x_trace_sub_one = held.pop().unwrap();
 
-    (0..(eval_domain_size as usize))
+    (0..(eval_domain_size_usize))
         .into_par_iter()
         .map(|i| {
             let j = ((i as u64) + beta) % eval_domain_size;
@@ -223,6 +224,7 @@ pub fn fib_proof(witness: FieldElement) -> Channel {
         "0659d83946a03edd72406af6711825f5653d9e35dc125289a206c054ec89c4f1"
     ));
     let eval_domain_size = trace_len * beta;
+    let eval_domain_size_usize = eval_domain_size as usize;
 
     let gen = FieldElement::from(U256::from(3_u64));
     let mut trace_x = Vec::with_capacity(trace_len as usize);
@@ -284,7 +286,7 @@ pub fn fib_proof(witness: FieldElement) -> Channel {
         ]
     };
 
-    let mut leaves = Vec::with_capacity(eval_domain_size as usize);
+    let mut leaves = Vec::with_capacity(eval_domain_size_usize);
     for i in 0..eval_domain_size {
         leaves.push(leaf(i));
     }
@@ -383,7 +385,7 @@ pub fn fib_proof(witness: FieldElement) -> Channel {
         r
     };
 
-    let mut CC = vec![FieldElement::ZERO; eval_domain_size as usize];
+    let mut CC = vec![FieldElement::ZERO; eval_domain_size_usize];
     let g_trace = g.pow(U256::from(trace_len - 1)).unwrap();
     let g_claim = g.pow(U256::from(claim_index)).unwrap();
     let x = gen.clone();
@@ -393,15 +395,15 @@ pub fn fib_proof(witness: FieldElement) -> Channel {
     let omega_1023 = (&omega).pow(U256::from(1023_u64)).unwrap();
 
     let mut x = gen.clone();
-    let mut x_omega_cycle = Vec::with_capacity(eval_domain_size as usize);
-    let mut x_trace_cycle = Vec::with_capacity(eval_domain_size as usize);
-    let mut x_1023_cycle = Vec::with_capacity(eval_domain_size as usize);
+    let mut x_omega_cycle = Vec::with_capacity(eval_domain_size_usize);
+    let mut x_trace_cycle = Vec::with_capacity(eval_domain_size_usize);
+    let mut x_1023_cycle = Vec::with_capacity(eval_domain_size_usize);
 
-    let mut x_trace_sub_one: Vec<FieldElement> = Vec::with_capacity(eval_domain_size as usize);
-    let mut x_sub_one: Vec<FieldElement> = Vec::with_capacity(eval_domain_size as usize);
-    let mut x_g_claim_cycle: Vec<FieldElement> = Vec::with_capacity(eval_domain_size as usize);
+    let mut x_trace_sub_one: Vec<FieldElement> = Vec::with_capacity(eval_domain_size_usize);
+    let mut x_sub_one: Vec<FieldElement> = Vec::with_capacity(eval_domain_size_usize);
+    let mut x_g_claim_cycle: Vec<FieldElement> = Vec::with_capacity(eval_domain_size_usize);
 
-    for _i in 0..(eval_domain_size as usize) {
+    for _i in 0..(eval_domain_size_usize) {
         x_omega_cycle.push(x.clone());
         x_trace_cycle.push(x_trace.clone());
         x_1023_cycle.push(x_1023.clone());
@@ -452,7 +454,7 @@ pub fn fib_proof(witness: FieldElement) -> Channel {
     }
 
     let leaf_constraint = |i: u64| -> U256 { CC[(i.bit_reverse() >> 50) as usize].0.clone() };
-    let mut leaves_con = Vec::with_capacity(eval_domain_size as usize);
+    let mut leaves_con = Vec::with_capacity(eval_domain_size_usize);
     for i in 0..eval_domain_size {
         leaves_con.push(leaf_constraint(i));
     }
@@ -487,13 +489,13 @@ pub fn fib_proof(witness: FieldElement) -> Channel {
         r
     };
 
-    let mut CO = vec![FieldElement::ZERO; eval_domain_size as usize];
+    let mut CO = vec![FieldElement::ZERO; eval_domain_size_usize];
 
     let mut x = gen.clone();
-    let mut x_omega_cycle = Vec::with_capacity(eval_domain_size as usize);
-    let mut x_oods_cycle: Vec<FieldElement> = Vec::with_capacity(eval_domain_size as usize);
-    let mut x_oods_cycle_g: Vec<FieldElement> = Vec::with_capacity(eval_domain_size as usize);
-    for _i in 0..(eval_domain_size as usize) {
+    let mut x_omega_cycle = Vec::with_capacity(eval_domain_size_usize);
+    let mut x_oods_cycle: Vec<FieldElement> = Vec::with_capacity(eval_domain_size_usize);
+    let mut x_oods_cycle_g: Vec<FieldElement> = Vec::with_capacity(eval_domain_size_usize);
+    for _i in 0..(eval_domain_size_usize) {
         x_omega_cycle.push(x.clone());
         x_oods_cycle.push(&x - &oods_point);
         x_oods_cycle_g.push(&x - &oods_point * &g);
@@ -802,7 +804,7 @@ mod tests {
             u256h!("03dbc6c47df0606997c2cefb20c4277caf2b76bca1d31c13432f71cdd93b3718")
         );
 
-        let mut leaves = Vec::with_capacity(eval_domain_size as usize);
+        let mut leaves = Vec::with_capacity(eval_domain_size_usize);
         for i in 0..eval_domain_size {
             leaves.push(leaf(i));
         }
@@ -928,7 +930,7 @@ mod tests {
             u256h!("02e7cbb3fc164554f931e769b21e990d039b64385782b92955c33a6acff58956")
         );
 
-        let mut CC = vec![FieldElement::ZERO; eval_domain_size as usize];
+        let mut CC = vec![FieldElement::ZERO; eval_domain_size_usize];
         let mut g_trace = g.pow(U256::from(trace_len - 1)).unwrap();
         let mut g_claim = g.pow(U256::from(claim_index)).unwrap();
         let mut x = gen.clone();
@@ -938,15 +940,15 @@ mod tests {
         let mut omega_1023 = (&omega).pow(U256::from(1023_u64)).unwrap();
 
         let mut x = gen.clone();
-        let mut x_omega_cycle = Vec::with_capacity(eval_domain_size as usize);
-        let mut x_trace_cycle = Vec::with_capacity(eval_domain_size as usize);
-        let mut x_1023_cycle = Vec::with_capacity(eval_domain_size as usize);
+        let mut x_omega_cycle = Vec::with_capacity(eval_domain_size_usize);
+        let mut x_trace_cycle = Vec::with_capacity(eval_domain_size_usize);
+        let mut x_1023_cycle = Vec::with_capacity(eval_domain_size_usize);
 
-        let mut x_trace_sub_one: Vec<FieldElement> = Vec::with_capacity(eval_domain_size as usize);
-        let mut x_sub_one: Vec<FieldElement> = Vec::with_capacity(eval_domain_size as usize);
-        let mut x_g_claim_cycle: Vec<FieldElement> = Vec::with_capacity(eval_domain_size as usize);
+        let mut x_trace_sub_one: Vec<FieldElement> = Vec::with_capacity(eval_domain_size_usize);
+        let mut x_sub_one: Vec<FieldElement> = Vec::with_capacity(eval_domain_size_usize);
+        let mut x_g_claim_cycle: Vec<FieldElement> = Vec::with_capacity(eval_domain_size_usize);
 
-        for i in 0..(eval_domain_size as usize) {
+        for i in 0..(eval_domain_size_usize) {
             x_omega_cycle.push(x.clone());
             x_trace_cycle.push(x_trace.clone());
             x_1023_cycle.push(x_1023.clone());
@@ -998,7 +1000,7 @@ mod tests {
         assert_eq!(CC[123].clone(), eval_C(eval_offset_x[123].clone()));
 
         let leaf_constraint = |i: u64| -> U256 { CC[(i.bit_reverse() >> 50) as usize].0.clone() };
-        let mut leaves_con = Vec::with_capacity(eval_domain_size as usize);
+        let mut leaves_con = Vec::with_capacity(eval_domain_size_usize);
         for i in 0..eval_domain_size {
             leaves_con.push(leaf_constraint(i));
         }
@@ -1052,11 +1054,11 @@ mod tests {
             u256h!("0362a57323b84f8eed48f0d0e68fe2282cd7333c46778f4bfb307f4317acea58")
         );
 
-        let mut CO = vec![FieldElement::ZERO; eval_domain_size as usize];
+        let mut CO = vec![FieldElement::ZERO; eval_domain_size_usize];
 
-        let mut x_oods_cycle: Vec<FieldElement> = Vec::with_capacity(eval_domain_size as usize);
-        let mut x_oods_cycle_g: Vec<FieldElement> = Vec::with_capacity(eval_domain_size as usize);
-        for i in 0..(eval_domain_size as usize) {
+        let mut x_oods_cycle: Vec<FieldElement> = Vec::with_capacity(eval_domain_size_usize);
+        let mut x_oods_cycle_g: Vec<FieldElement> = Vec::with_capacity(eval_domain_size_usize);
+        for i in 0..(eval_domain_size_usize) {
             x_omega_cycle.push(x_omega_cycle[i].clone());
             x_oods_cycle.push((&x_omega_cycle[i] - &oods_point));
             x_oods_cycle_g.push((&x_omega_cycle[i] - &oods_point * &g));

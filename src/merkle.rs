@@ -223,7 +223,7 @@ mod tests {
 
         let tree = make_tree_threaded(leaves.as_slice());
         let dirrect_tree = make_tree(leaves.as_slice());
- 
+
         assert_eq!(
             tree[1].clone(),
             hex!("fd112f44bc944f33e2567f86eea202350913b11c000000000000000000000000")
