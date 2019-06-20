@@ -468,12 +468,8 @@ fn get_indices(num: usize, bits: u32, proof: &mut Channel) -> Vec<usize> {
     query_indices
 }
 
-pub fn power_domain(
-    base: &FieldElement,
-    step: &FieldElement,
-    len: usize,
-) -> Vec<FieldElement> {
-    const parallelization : usize = 16_usize; //OPT - Set based on the cores available and how well the work is spread
+pub fn power_domain(base: &FieldElement, step: &FieldElement, len: usize) -> Vec<FieldElement> {
+    const parallelization: usize = 16_usize; //OPT - Set based on the cores available and how well the work is spread
     let step_len = (len / parallelization);
     (0..parallelization)
         .into_par_iter()
@@ -485,7 +481,7 @@ pub fn power_domain(
             }
             hold
         })
-        .flatten() 
+        .flatten()
         .collect()
 }
 
@@ -509,15 +505,15 @@ mod tests {
         let witness = FieldElement::from(u256h!(
             "00000000000000000000000000000000000000000000000000000000cafebabe"
         ));
-        let correct_proof = vec![24_u8, 90_u8, 177_u8, 223_u8, 130_u8, 180_u8, 70_u8, 66_u8, 6_u8, 202_u8, 229_u8, 135_u8, 97_u8, 196_u8, 171_u8, 104_u8, 115_u8, 50_u8, 47_u8, 208_u8, 247_u8, 126_u8, 233_u8, 228_u8, 232_u8, 228_u8, 121_u8, 231_u8, 161_u8, 241_u8, 135_u8, 7_u8];
-        let potential_proof = stark_proof(
+        let expected = hex!("185ab1df82b4464206cae58761c4ab6873322fd0f77ee9e4e8e479e7a1f18707");
+        let actual = stark_proof(
             &get_trace_table(1024, witness),
             &get_constraint(),
             claim_index,
             claim_fib,
             2_u64.pow(4),
         );
-        assert_eq!(correct_proof, potential_proof.digest);
+        assert_eq!(actual.digest, expected);
     }
 
     #[test]
@@ -529,16 +525,15 @@ mod tests {
         let witness = FieldElement::from(u256h!(
             "00000000000000000000000000000000000000000000000f00dbabe0cafebabe"
         ));
-        let correct_proof = vec![213_u8, 169_u8, 29_u8, 107_u8, 162_u8, 109_u8, 16_u8, 94_u8, 96_u8, 173_u8, 194_u8, 66_u8, 6_u8, 216_u8, 124_u8, 142_u8, 224_u8, 91_u8, 17_u8, 168_u8, 103_u8, 74_u8, 6_u8, 76_u8, 144_u8, 203_u8, 169_u8, 100_u8, 112_u8, 87_u8, 57_u8, 85_u8];
-        let potential_proof = stark_proof(
+        let expected = hex!("d5a91d6ba26d105e60adc24206d87c8ee05b11a8674a064c90cba96470573955");
+        let actual = stark_proof(
             &get_trace_table(1024, witness),
             &get_constraint(),
             claim_index,
             claim_fib,
             2_u64.pow(5),
         );
-
-        assert_eq!(correct_proof, potential_proof.digest);
+        assert_eq!(actual.digest, expected);
     }
 
     #[test]
@@ -550,15 +545,14 @@ mod tests {
         let witness = FieldElement::from(u256h!(
             "00000000000000000000000000000000000000000000000f00dbabe0cafebabe"
         ));
-        let correct_proof = vec![0_u8, 100_u8, 147_u8, 194_u8, 73_u8, 151_u8, 50_u8, 59_u8, 22_u8, 27_u8, 92_u8, 162_u8, 15_u8, 190_u8, 11_u8, 45_u8, 8_u8, 38_u8, 250_u8, 143_u8, 213_u8, 110_u8, 110_u8, 175_u8, 71_u8, 248_u8, 114_u8, 237_u8, 41_u8, 191_u8, 197_u8, 203_u8];
-        let potential_proof = stark_proof(
+        let expected = hex!("006493c24997323b161b5ca20fbe0b2d0826fa8fd56e6eaf47f872ed29bfc5cb");
+        let actual = stark_proof(
             &get_trace_table(4096, witness),
             &get_constraint(),
             claim_index,
             claim_fib,
             2_u64.pow(4),
         );
-
-        assert_eq!(correct_proof, potential_proof.digest);
+        assert_eq!(actual.digest, expected);
     }
 }
