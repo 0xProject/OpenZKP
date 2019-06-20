@@ -17,9 +17,6 @@ fn is_quadratic_residue(a: &FieldElement) -> bool {
     }
 }
 
-// The generator, 3, is the smallest quadratic nonresidue in the finite field.
-const QUADRATIC_NONRESIDUE: FieldElement = FieldElement::GENERATOR;
-
 // These two constants are chosen so that 1 + SIGNIFICAND << BINARY_EXPONENT == MODULUS.
 const BINARY_EXPONENT: usize = 3 * 4 * 16;
 const SIGNIFICAND: U256 = U256::new(0x0800000000000011u64, 0, 0, 0);
@@ -37,7 +34,9 @@ fn tonelli_shanks(a: &FieldElement) -> FieldElement {
 
     // OPT: Good candidate for an addition chain. Declare constant values as such once
     // conditionals are allowed inside const fn's: https://github.com/rust-lang/rust/issues/49146
-    let mut c: FieldElement = QUADRATIC_NONRESIDUE.pow(SIGNIFICAND).unwrap();
+    // Note that we are using FieldElement::GENERATOR as the quadratic nonresidue this algorithm
+    // requires.
+    let mut c: FieldElement = FieldElement::GENERATOR.pow(SIGNIFICAND).unwrap();
     // Because a is not 0 at this point, it's safe to divide by it and exponentiate it.
     let mut root: FieldElement = a.pow((SIGNIFICAND + U256::from(1u128)) >> 1).unwrap();
 
@@ -69,25 +68,6 @@ mod tests {
     #[test]
     fn significand_is_correct() {
         assert!(SIGNIFICAND << BINARY_EXPONENT == MODULUS - U256::from(1u128));
-    }
-
-    #[test]
-    fn quadratic_nonresidue_is_three() {
-        assert_eq!(QUADRATIC_NONRESIDUE, FieldElement::from(U256::from(3u128)));
-    }
-
-    #[test]
-    fn quadratic_nonresidue_is_as_claimed() {
-        assert!(!is_quadratic_residue(&QUADRATIC_NONRESIDUE));
-    }
-
-    #[test]
-    fn quadratic_nonresidue_is_smallest() {
-        let mut i = 0u128;
-        while U256::from(i) < QUADRATIC_NONRESIDUE.into() {
-            assert!(is_quadratic_residue(&FieldElement::from(U256::from(i))));
-            i += 1;
-        }
     }
 
     #[quickcheck]
