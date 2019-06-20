@@ -30,7 +30,7 @@ jobs:
           name: Build all targets
           command: RUST_BACKTRACE=1 cargo build --all --all-targets --features strict
       - run:
-          name: Test in debug mode
+          name: Test in debug and release mode
           command: |
             RUST_BACKTRACE=1 cargo test --all -- --nocapture
             RUST_BACKTRACE=1 cargo test --release -- --nocapture
