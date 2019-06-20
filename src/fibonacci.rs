@@ -701,6 +701,7 @@ mod tests {
             "0659d83946a03edd72406af6711825f5653d9e35dc125289a206c054ec89c4f1"
         ));
         let eval_domain_size = trace_len * beta;
+        let eval_domain_size_usize = eval_domain_size as usize;
 
         assert_eq!(
             omega.pow(U256::from(eval_domain_size)).unwrap(),
