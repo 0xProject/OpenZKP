@@ -209,7 +209,6 @@ pub fn verify(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hex::*;
     use hex_literal::*;
 
     #[test]
@@ -222,7 +221,6 @@ mod tests {
         }
 
         let tree = make_tree_threaded(leaves.as_slice());
-        let dirrect_tree = make_tree(leaves.as_slice());
 
         assert_eq!(
             tree[1].clone(),
@@ -233,8 +231,8 @@ mod tests {
             (11, leaves[11].clone()),
             (14, leaves[14].clone()),
         ];
-        let mut indices = vec![1, 11, 14];
-        let mut decommitment = proof(tree.as_slice(), &indices);
+        let indices = vec![1, 11, 14];
+        let decommitment = proof(tree.as_slice(), &indices);
         let non_root = hex!("ed112f44bc944f33e2567f86eea202350913b11c000000000000000000000000");
 
         assert!(verify(

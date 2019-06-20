@@ -679,15 +679,8 @@ pub fn fib_proof(witness: FieldElement) -> Channel {
 
 mod tests {
     use super::*;
-    use crate::channel::*;
-    use crate::fft::*;
-    use crate::field::*;
-    use crate::merkle::*;
-    use crate::montgomery::*;
-    use crate::polynomial::*;
     use crate::u256::U256;
     use crate::u256h;
-    use hex_literal::*;
     use tiny_keccak::Keccak;
 
     #[test]
@@ -752,8 +745,8 @@ mod tests {
         }
         assert_eq!(T_0[1000], claim_fib);
 
-        let mut TP0 = ifft(g.clone(), &T_0.as_slice());
-        let mut TP1 = ifft(g.clone(), &T_1.as_slice());
+        let TP0 = ifft(g.clone(), &T_0.as_slice());
+        let TP1 = ifft(g.clone(), &T_1.as_slice());
 
         assert_eq!(eval_poly(trace_x[1000].clone(), &TP0.as_slice()), T_0[1000]);
 
@@ -816,11 +809,8 @@ mod tests {
             hex!("018dc61f748b1a6c440827876f30f63cb6c4c188000000000000000000000000")
         );
 
-        let mut public_input = ([claim_index.to_be_bytes()].concat());
+        let mut public_input = [claim_index.to_be_bytes()].concat();
         public_input.extend_from_slice(&claim_fib.0.to_bytes_be());
-        let test_hex_input = hex!(
-            "00000000000003e805a80444b56a9b6a5f2b99f0fd92ef6a065d662e5c5cf944be0008796f4a7c12"
-        );
 
         let mut proof = Channel::new(&public_input.as_slice());
         assert_eq!(
@@ -838,7 +828,7 @@ mod tests {
         );
 
         let mut constraint_coefficients = Vec::with_capacity(8);
-        for i in 0..8 {
+        for _ in 0..8 {
             constraint_coefficients.push(proof.element());
         }
 
@@ -927,13 +917,13 @@ mod tests {
         );
 
         let mut CC = vec![FieldElement::ZERO; eval_domain_size_usize];
-        let mut g_trace = g.pow(U256::from(trace_len - 1)).unwrap();
-        let mut g_claim = g.pow(U256::from(claim_index)).unwrap();
-        let mut x = gen.clone();
+        let g_trace = g.pow(U256::from(trace_len - 1)).unwrap();
+        let g_claim = g.pow(U256::from(claim_index)).unwrap();
+        let x = gen.clone();
         let mut x_trace = (&x).pow(U256::from(trace_len)).unwrap();
         let mut x_1023 = (&x).pow(U256::from(1023_u64)).unwrap();
-        let mut omega_trace = (&omega).pow(U256::from(trace_len)).unwrap();
-        let mut omega_1023 = (&omega).pow(U256::from(1023_u64)).unwrap();
+        let omega_trace = (&omega).pow(U256::from(trace_len)).unwrap();
+        let omega_1023 = (&omega).pow(U256::from(1023_u64)).unwrap();
 
         let mut x = gen.clone();
         let mut x_omega_cycle = Vec::with_capacity(eval_domain_size_usize);
@@ -944,7 +934,7 @@ mod tests {
         let mut x_sub_one: Vec<FieldElement> = Vec::with_capacity(eval_domain_size_usize);
         let mut x_g_claim_cycle: Vec<FieldElement> = Vec::with_capacity(eval_domain_size_usize);
 
-        for i in 0..(eval_domain_size_usize) {
+        for _ in 0..(eval_domain_size_usize) {
             x_omega_cycle.push(x.clone());
             x_trace_cycle.push(x_trace.clone());
             x_1023_cycle.push(x_1023.clone());
@@ -1029,7 +1019,7 @@ mod tests {
         );
 
         let mut oods_coefficients = Vec::with_capacity(5);
-        for i in 0..5 {
+        for _ in 0..5 {
             oods_coefficients.push(proof.element());
         }
 
@@ -1055,17 +1045,14 @@ mod tests {
         let mut x_oods_cycle_g: Vec<FieldElement> = Vec::with_capacity(eval_domain_size_usize);
         for i in 0..(eval_domain_size_usize) {
             x_omega_cycle.push(x_omega_cycle[i].clone());
-            x_oods_cycle.push((&x_omega_cycle[i] - &oods_point));
-            x_oods_cycle_g.push((&x_omega_cycle[i] - &oods_point * &g));
+            x_oods_cycle.push(&x_omega_cycle[i] - &oods_point);
+            x_oods_cycle_g.push(&x_omega_cycle[i] - &oods_point * &g);
         }
 
-        let mut x = &x_omega_cycle[0];
         x_oods_cycle = invert_batch(x_oods_cycle.as_slice());
         x_oods_cycle_g = invert_batch(x_oods_cycle_g.as_slice());
 
         for i in 0..eval_domain_size {
-            let j = (i + beta) % eval_domain_size;
-
             let A = FieldElement::ONE * &x_oods_cycle[i as usize];
             let B = FieldElement::ONE * &x_oods_cycle_g[i as usize];
             let mut r = FieldElement::ZERO;
@@ -1076,7 +1063,6 @@ mod tests {
             r += &oods_coefficients[4] * (&CC[i as usize] - &oods_values[4]) * &A;
 
             CO[i as usize] = r;
-            x = &x_omega_cycle[i as usize];
         }
 
         assert_eq!(CO[4321].clone(), oods(&eval_offset_x[4321]));
@@ -1198,8 +1184,9 @@ mod tests {
             }
             0
         };
-        assert_eq!(pow_find_nonce(12), 3465);
-        proof.write(&pow_find_nonce(12).to_be_bytes());
+        let nonce = pow_find_nonce(12);
+        assert_eq!(nonce, 3465);
+        proof.write(&nonce.to_be_bytes());
 
         let num_queries = 20;
         let mut query_indices = Vec::with_capacity(num_queries + 3);

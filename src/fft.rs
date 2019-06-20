@@ -105,7 +105,6 @@ fn reverse(x: u64, bits: usize) -> usize {
 mod tests {
     use super::*;
     use crate::field::FieldElement;
-    use crate::montgomery::*;
     use crate::u256::U256;
     use crate::u256h;
     use hex_literal::*;
@@ -118,7 +117,7 @@ mod tests {
         let cofactor = FieldElement::from(u256h!(
             "07696b8ff70e8e9285c76bef95d3ad76cdb29e213e4b5d9a9cd0afbd7cb29b5c"
         ));
-        let mut vector = [
+        let vector = [
             FieldElement::from(u256h!(
                 "008ee28fdbe9f1a7983bc1b600dfb9177c2d82d825023022ab4965d999bd3faf"
             )),

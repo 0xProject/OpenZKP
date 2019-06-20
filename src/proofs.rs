@@ -8,7 +8,6 @@ use crate::proof_of_work::*;
 use crate::u256::U256;
 use crate::utils::Reversible;
 use rayon::prelude::*;
-use tiny_keccak::Keccak;
 
 pub struct TraceTable {
     pub ROWS: usize,
@@ -486,9 +485,7 @@ pub fn geometric_series(base: &FieldElement, step: &FieldElement, len: usize) ->
 
 mod tests {
     use super::*;
-    use crate::channel::*;
     use crate::fibonacci::*;
-    use crate::field::*;
     use crate::u256::U256;
     use crate::u256h;
     use hex_literal::*;

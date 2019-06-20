@@ -26,7 +26,7 @@ jobs:
             cargo clippy --all --all-targets
       - run:
           name: Build all targets
-          command: RUST_BACKTRACE=1 cargo build --all --all-targets
+          command: RUST_BACKTRACE=1 cargo build --all --all-targets --features strict
       - run:
           name: Test in debug mode
           command: |
