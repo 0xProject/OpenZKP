@@ -20,5 +20,5 @@ reorder_impl_items = true
 space_after_colon = true
 format_code_in_doc_comments = true
 overflow_delimited_expr = true
-blank_lines_lower_bound = 1
+blank_lines_lower_bound = 0
 normalize_doc_attributes = true
