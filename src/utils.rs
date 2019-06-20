@@ -44,7 +44,7 @@ pub trait Reversable {
 
 impl Reversable for u64 {
     fn bit_reverse(mut self) -> Self {
-        const bits : u64 = 64;
+        let bits = self.leading_zeros() + 1;
         let mut x_hold = self;
         let mut reversed = 0;
         for _i in 0..bits {
