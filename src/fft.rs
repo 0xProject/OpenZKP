@@ -1,7 +1,7 @@
 use crate::field::FieldElement;
 use crate::u256::U256;
 
-pub fn fft(root: FieldElement, vector: &[FieldElement]) -> Vec<FieldElement> {
+pub fn fft(_: FieldElement, vector: &[FieldElement]) -> Vec<FieldElement> {
     let mut data = (vector.to_vec()).clone();
     bit_reversal_fft(data.as_mut_slice());
     bit_reversal_permute(data.as_mut_slice());
@@ -11,14 +11,14 @@ pub fn fft(root: FieldElement, vector: &[FieldElement]) -> Vec<FieldElement> {
 pub fn bit_reversal_fft(coefficients: &mut [FieldElement]) {
     debug_assert!(coefficients.len().is_power_of_two());
     let n_elements = coefficients.len();
-    for layer in (0..n_elements.trailing_zeros()) {
+    for layer in 0..n_elements.trailing_zeros() {
         let n_blocks = 1 << layer;
         let mut twiddle_factor = FieldElement::ONE;
         let block_size = n_elements / n_blocks / 2;
         let twiddle_factor_update = FieldElement::root(U256::from(2 * n_blocks as u128)).unwrap();
         for block in 0..n_blocks {
             let block_start = 2 * reverse(block as u64, layer as usize) * block_size;
-            for i in (block_start..block_start + block_size) {
+            for i in block_start..block_start + block_size {
                 let j = i + block_size;
                 let left = coefficients[i].clone();
                 let right = &coefficients[j] * &twiddle_factor;
@@ -33,14 +33,14 @@ pub fn bit_reversal_fft(coefficients: &mut [FieldElement]) {
 pub fn bit_reversal_ifft(coefficients: &mut [FieldElement]) {
     debug_assert!(coefficients.len().is_power_of_two());
     let n_elements = coefficients.len();
-    for layer in (0..n_elements.trailing_zeros()) {
+    for layer in 0..n_elements.trailing_zeros() {
         let n_blocks = 1 << layer;
         let mut twiddle_factor = FieldElement::ONE;
         let block_size = n_elements / n_blocks / 2;
         let twiddle_factor_update = FieldElement::root(U256::from(2 * n_blocks as u128)).unwrap().inv().unwrap();
         for block in 0..n_blocks {
             let block_start = 2 * reverse(block as u64, layer as usize) * block_size;
-            for i in (block_start..block_start + block_size) {
+            for i in block_start..block_start + block_size {
                 let j = i + block_size;
                 let left = coefficients[i].clone();
                 let right = &coefficients[j] * &twiddle_factor;
@@ -70,7 +70,7 @@ pub fn fft_cofactor(
     fft(root, &vector_type)
 }
 
-pub fn ifft(root: FieldElement, vector: &[FieldElement]) -> Vec<FieldElement> {
+pub fn ifft(_: FieldElement, vector: &[FieldElement]) -> Vec<FieldElement> {
     let mut r = (vector.to_vec()).clone();
     bit_reversal_ifft(r.as_mut_slice());
     bit_reversal_permute(r.as_mut_slice());
@@ -106,7 +106,6 @@ pub fn reverse(x: u64, bits: usize) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::montgomery::*;
     use crate::polynomial::eval_poly;
     use crate::u256h;
     use quickcheck_macros::quickcheck;
@@ -270,47 +269,6 @@ mod tests {
             U256::from(&res[7]),
             u256h!("034738bd5956b1df55369cdc211109fd67e6ffd2ffbb08e856b1b4d1b1a2c6ae")
         );
-    }
-
-    #[test]
-    fn ifft_test() {
-        let root = FieldElement::from(u256h!(
-            "063365fe0de874d9c90adb1e2f9c676e98c62155e4412e873ada5e1dee6feebb"
-        ));
-        let cofactor = FieldElement::from(u256h!(
-            "07696b8ff70e8e9285c76bef95d3ad76cdb29e213e4b5d9a9cd0afbd7cb29b5c"
-        ));
-        let vector = [
-            FieldElement::from(u256h!(
-                "008ee28fdbe9f1a7983bc1b600dfb9177c2d82d825023022ab4965d999bd3faf"
-            )),
-            FieldElement::from(u256h!(
-                "037fa3db272cc54444894042223dcf260e1d1ec73fa9baea0e4572817fdf5751"
-            )),
-            FieldElement::from(u256h!(
-                "054483fc9bcc150b421fae26530f8d3d2e97cf1918f534e67ef593038f683241"
-            )),
-            FieldElement::from(u256h!(
-                "005b695b9001e5e62549557c48a23fd7f1706c1acdae093909d81451cd455b43"
-            )),
-            FieldElement::from(u256h!(
-                "025079cb6cb547b63b67614dd2c78474c8a7b17b3bc53f7f7276984b6b67b18a"
-            )),
-            FieldElement::from(u256h!(
-                "044729b25360c0025d244d31a5f144917e59f728a3d03dd4685c634d2b0e7cda"
-            )),
-            FieldElement::from(u256h!(
-                "079b0e14d0bae81ff4fe55328fb09c4117bcd961cb60581eb6f2a770a42240ed"
-            )),
-            FieldElement::from(u256h!(
-                "06c0926a786abb30b8f6e0eb9ef2278b910862717ed4beb35121d4741717e0e0"
-            )),
-        ];
-
-        let mut res = fft(root.clone(), &vector);
-        let mut res_inv = ifft(root.clone(), &(res.as_slice()));
-
-        assert_eq!(vector.to_vec(), res_inv);
     }
 
     #[quickcheck]
