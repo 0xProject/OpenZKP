@@ -26,8 +26,8 @@ impl TraceTable {
     }
 }
 
-// This struct contains two evaluation systems which allow diffrent functionality, first it contains a default function which directly evaluates the constraint funciton
-// Second it constains a function desgined to be used as the core of a loop on precomputed values to get the C function.
+// This struct contains two evaluation systems which allow different functionality, first it contains a default function which directly evaluates the constraint function
+// Second it contains a function designed to be used as the core of a loop on precomputed values to get the C function.
 // If the proof system wants to used a looped eval for speedup it can set the loop bool to true, otherwise the system will preform all computation directly
 #[allow(clippy::type_complexity)]
 pub struct Constraint<'a> {
