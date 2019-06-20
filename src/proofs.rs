@@ -1,4 +1,4 @@
-#![allow(non_snake_case)] //TODO - Migrate to naming system which the rust complier doesn't complain about
+#![allow(non_snake_case)] // TODO - Migrate to naming system which the rust complier doesn't complain about
 use crate::channel::*;
 use crate::fft::*;
 use crate::field::*;
@@ -6,7 +6,7 @@ use crate::merkle::*;
 use crate::polynomial::*;
 use crate::proof_of_work::*;
 use crate::u256::U256;
-use crate::utils::Reversable;
+use crate::utils::Reversible;
 use rayon::prelude::*;
 use tiny_keccak::Keccak;
 
@@ -26,9 +26,9 @@ impl TraceTable {
     }
 }
 
-//This struct contains two evaluation systems which allow diffrent functionality, first it contains a default function which directly evaluates the constraint funciton
-//Second it constains a function desgined to be used as the core of a loop on precomputed values to get the C function.
-//If the proof system wants to used a looped eval for speedup it can set the loop bool to true, otherwise the system will preform all computation directly
+// This struct contains two evaluation systems which allow diffrent functionality, first it contains a default function which directly evaluates the constraint funciton
+// Second it constains a function desgined to be used as the core of a loop on precomputed values to get the C function.
+// If the proof system wants to used a looped eval for speedup it can set the loop bool to true, otherwise the system will preform all computation directly
 #[allow(clippy::type_complexity)]
 pub struct Constraint<'a> {
     pub NCONSTRAINTS: usize,
@@ -170,7 +170,7 @@ pub fn stark_proof(
             CC = vec![FieldElement::ZERO; eval_domain_size as usize];
             for i in 0..eval_domain_size {
                 CC[i as usize] = (constraints.eval)(
-                    //This will preform the polynomial evaluation on each step
+                    // This will preform the polynomial evaluation on each step
                     &x,
                     sliced_poly.as_slice(),
                     claim_index,
@@ -433,7 +433,7 @@ fn fri_layer(
 
 fn fri_tree(layer: &[FieldElement], coset_size: u64) -> Vec<[u8; 32]> {
     let n = layer.len();
-    let bits = 64 - (n as u64).leading_zeros(); //Floored base 2 log
+    let bits = 64 - (n as u64).leading_zeros(); // Floored base 2 log
     let mut internal_leaves = Vec::new();
     for i in (0..n).step_by(coset_size as usize) {
         let mut internal_leaf = Vec::with_capacity(coset_size as usize);
@@ -460,7 +460,7 @@ fn get_indices(num: usize, bits: u32, proof: &mut Channel) -> Vec<usize> {
         query_indices.push((val.c0 & (2_u64.pow(bits) - 1)) as usize);
     }
     query_indices.truncate(num);
-    (&mut query_indices).sort_unstable(); //Fast inplace sort that doesn't preserve the order of equal elements.
+    (&mut query_indices).sort_unstable(); // Fast inplace sort that doesn't preserve the order of equal elements.
     query_indices
 }
 

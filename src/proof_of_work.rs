@@ -27,14 +27,14 @@ pub fn pow_find_nonce(pow_bits: u32, proof: &Channel) -> u64 {
         sha3.finalize(&mut res);
         let final_int = U256::from_bytes_be(&res);
         if final_int.leading_zeros() == pow_bits as usize && final_int < test_value {
-            //Only do the large int compare if the quick logs match
+            // Only do the large int compare if the quick logs match
             return n as u64;
         }
     }
     0
 }
 
-//TODO - Make tests compatible with the proof of work values from this function
+// TODO - Make tests compatible with the proof of work values from this function
 pub fn pow_find_nonce_threaded(pow_bits: u32, proof: &Channel) -> u64 {
     let mut seed = hex!("0123456789abcded").to_vec();
     seed.extend_from_slice(&proof.digest);

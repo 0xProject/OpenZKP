@@ -1,4 +1,4 @@
-#![allow(non_snake_case)] //TODO - Migrate to Choose naming system which the rust complier doesn't complain about
+#![allow(non_snake_case)] // TODO - Migrate to Choose naming system which the rust complier doesn't complain about
 #![allow(clippy::type_complexity)]
 #![allow(clippy::cognitive_complexity)]
 #![allow(clippy::zero_prefixed_literal)]
@@ -11,7 +11,7 @@ use crate::polynomial::*;
 use crate::proofs::*;
 use crate::u256::U256;
 use crate::u256h;
-use crate::utils::Reversable;
+use crate::utils::Reversible;
 use hex_literal::*;
 use rayon::prelude::*;
 use tiny_keccak::Keccak;
@@ -278,7 +278,6 @@ pub fn fib_proof(witness: FieldElement) -> Channel {
         }
     }
 
-    //TODO - Add a non experimental bit reverse function
     let leaf = |i: u64| -> Vec<U256> {
         vec![
             LDE0[(i.bit_reverse() >> 50) as usize].0.clone(),
@@ -537,7 +536,7 @@ pub fn fib_proof(witness: FieldElement) -> Channel {
         };
     let fri_tree = |layer: &[FieldElement], coset_size: u64| -> Vec<[u8; 32]> {
         let n = layer.len();
-        let bits = 64 - (n as u64).leading_zeros(); //Floored base 2 log
+        let bits = 64 - (n as u64).leading_zeros(); // Floored base 2 log
         let mut internal_leaves = Vec::new();
         for i in (0..n).step_by(coset_size as usize) {
             let mut internal_leaf = Vec::new();
@@ -604,7 +603,7 @@ pub fn fib_proof(witness: FieldElement) -> Channel {
             sha3.finalize(&mut res);
             let final_int = U256::from_bytes_be(&res);
             if final_int.leading_zeros() == pow_bits as usize && final_int < test_value {
-                //Only do the large int compare if the quick logs match
+                // Only do the large int compare if the quick logs match
                 return n as u64;
             }
         }
@@ -622,7 +621,7 @@ pub fn fib_proof(witness: FieldElement) -> Channel {
         query_indices.push((val.c0 & (2_u64.pow(14) - 1)) as usize);
     }
     query_indices.truncate(num_queries);
-    (&mut query_indices).sort_unstable(); //Fast inplace sort that doesn't preserve the order of equal elements.
+    (&mut query_indices).sort_unstable(); // Fast inplace sort that doesn't preserve the order of equal elements.
 
     for index in query_indices.iter() {
         proof.write_element(&LDE0[((*index as u64).bit_reverse() >> 50) as usize]);
@@ -788,7 +787,6 @@ mod tests {
             LDE1[13644]
         );
 
-        //TODO - Add a non experimental bit reverse function
         let leaf = |i: u64| -> Vec<U256> {
             vec![
                 LDE0[(i.bit_reverse() >> 50) as usize].0.clone(),
@@ -822,10 +820,6 @@ mod tests {
         let test_hex_input = hex!(
             "00000000000003e805a80444b56a9b6a5f2b99f0fd92ef6a065d662e5c5cf944be0008796f4a7c12"
         );
-
-        // for (byte_1, byte_2) in (public_input.iter()).zip(test_hex_input.iter()){
-        //     assert_eq!(byte_1,byte_2);
-        // }
 
         let mut proof = Channel::new(&public_input.as_slice());
         assert_eq!(
@@ -1012,7 +1006,6 @@ mod tests {
         );
 
         proof.write(&ctree[1]);
-        //assert!(false);
         let oods_point = proof.element();
         assert_eq!(
             U256::from(oods_point.clone()),
@@ -1106,7 +1099,7 @@ mod tests {
             };
         let fri_tree = |layer: &[FieldElement], coset_size: u64| -> Vec<[u8; 32]> {
             let n = layer.len();
-            let bits = 64 - (n as u64).leading_zeros(); //Floored base 2 log
+            let bits = 64 - (n as u64).leading_zeros(); // Floored base 2 log
             let mut internal_leaves = Vec::new();
             for i in (0..n).step_by(coset_size as usize) {
                 let mut internal_leaf = Vec::new();
@@ -1197,7 +1190,7 @@ mod tests {
                 let final_int = U256::from_bytes_be(&res);
                 if final_int.leading_zeros() == pow_bits as usize {
                     if final_int < test_value {
-                        //Only do the large int compare if the quick logs match
+                        // Only do the large int compare if the quick logs match
                         return n as u64;
                     }
                 }
@@ -1221,7 +1214,7 @@ mod tests {
         }
         query_indices.truncate(num_queries);
         assert_eq!(query_indices[19], 11541);
-        (&mut query_indices).sort_unstable(); //Fast inplace sort that doesn't preserve the order of equal elements.
+        (&mut query_indices).sort_unstable(); // Fast inplace sort that doesn't preserve the order of equal elements.
 
         for index in query_indices.iter() {
             proof.write_element(&LDE0[((*index as u64).bit_reverse() >> 50) as usize]);

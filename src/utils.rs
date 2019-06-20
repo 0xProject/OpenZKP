@@ -38,11 +38,11 @@ pub const fn div_2_1(lo: u64, hi: u64, d: u64) -> (u64, u64) {
     (q as u64, r as u64)
 }
 
-pub trait Reversable {
+pub trait Reversible {
     fn bit_reverse(self) -> Self;
 }
 
-impl Reversable for u64 {
+impl Reversible for u64 {
     fn bit_reverse(mut self) -> Self {
         const BITS: usize = 64;
         debug_assert_eq!(1_u64.leading_zeros() as usize , BITS - 1);
@@ -56,7 +56,7 @@ impl Reversable for u64 {
     }
 }
 
-impl Reversable for usize {
+impl Reversible for usize {
     fn bit_reverse(mut self) -> Self {
         const BITS: usize = 64;
         debug_assert_eq!(1_usize.leading_zeros() as usize, BITS - 1);
