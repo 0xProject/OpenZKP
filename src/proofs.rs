@@ -86,7 +86,7 @@ pub fn stark_proof(
     let eval_domain_size = trace_len * beta;
     let gen = FieldElement::GENERATOR;
 
-    let eval_x = power_domain(&FieldElement::ONE, &omega, eval_domain_size as usize);
+    let eval_x = geometric_series(&FieldElement::ONE, &omega, eval_domain_size as usize);
 
     let mut TPn = vec![Vec::new(); trace.COLS];
     (0..trace.COLS)
@@ -464,7 +464,7 @@ fn get_indices(num: usize, bits: u32, proof: &mut Channel) -> Vec<usize> {
     query_indices
 }
 
-pub fn power_domain(base: &FieldElement, step: &FieldElement, len: usize) -> Vec<FieldElement> {
+pub fn geometric_series(base: &FieldElement, step: &FieldElement, len: usize) -> Vec<FieldElement> {
     const PARALLELIZATION: usize = 16_usize;
     // OPT - Set based on the cores available and how well the work is spread
     let step_len = len / PARALLELIZATION;
