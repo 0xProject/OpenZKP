@@ -1,6 +1,4 @@
 use crate::field::FieldElement;
-use crate::u256h;
-use hex_literal::*;
 
 pub fn eval_poly(x: FieldElement, coefficients: &[FieldElement]) -> FieldElement {
     let mut b = FieldElement::ZERO;
@@ -15,6 +13,7 @@ mod tests {
     use super::*;
     use crate::u256::*;
     use crate::u256h;
+    use hex_literal::*;
 
     #[test]
     fn poly_eval_test() {

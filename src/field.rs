@@ -110,21 +110,27 @@ impl FieldElement {
 }
 
 pub fn invert_batch(to_be_inverted: &[FieldElement]) -> Vec<FieldElement> {
-    let mut res = Vec::with_capacity(to_be_inverted.len());
-    for item in to_be_inverted.iter() {
-        res.push(item.clone())
-    }
+    let n = to_be_inverted.len();
+    let mut inverses = cumulative_product(to_be_inverted);
 
-    for x in 1..res.len() {
-        res[x] *= res[x - 1].clone();
+    // TODO: Enforce check to prevent uninvertable elements.
+    let mut inverse = inverses[n - 1].inv().unwrap();
+    for i in (1..n).rev() {
+        inverses[i] = &inverses[i - 1] * &inverse;
+        inverse *= &to_be_inverted[i];
     }
-    let mut inv = res[res.len() - 1].inv().unwrap(); //TODO: Enforce check to prevent uninvertable elements
-    for x in (1..res.len()).rev() {
-        res[x] = &res[x - 1] * &inv;
-        inv *= to_be_inverted[x].clone();
-    }
-    res[0] = inv;
-    res.to_vec()
+    inverses[0] = inverse;
+    inverses
+}
+
+fn cumulative_product(elements: &[FieldElement]) -> Vec<FieldElement> {
+    elements
+        .iter()
+        .scan(FieldElement::ONE, |running_product, x| {
+            *running_product *= x;
+            Some(running_product.clone())
+        })
+        .collect()
 }
 
 impl From<U256> for FieldElement {
