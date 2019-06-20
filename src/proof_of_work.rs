@@ -68,7 +68,7 @@ pub fn pow_find_nonce_threaded(pow_bits: u32, proof: &Channel) -> u64 {
     ret.unwrap() as u64
 }
 
-pub fn pow_verfiy(n: u64, pow_bits: u32, proof: &Channel) -> bool {
+pub fn pow_verify(n: u64, pow_bits: u32, proof: &Channel) -> bool {
     let mut seed = hex!("0123456789abcded").to_vec();
     seed.extend_from_slice(&proof.digest);
     for byte in pow_bits.to_be_bytes().iter() {
@@ -108,7 +108,7 @@ mod tests {
                 hex!("0123456789abcded").to_vec().as_slice(),
         );
         let work = pow_find_nonce(15, &rand_source);
-        assert!(pow_verfiy(work, 15, &rand_source));
+        assert!(pow_verify(work, 15, &rand_source));
     }
 
     #[test]
@@ -117,6 +117,6 @@ mod tests {
            hex!("0123456789abcded").to_vec().as_slice(),
         );
         let work = pow_find_nonce_threaded(15, &rand_source);
-        assert!(pow_verfiy(work, 15, &rand_source));
+        assert!(pow_verify(work, 15, &rand_source));
     }
 }

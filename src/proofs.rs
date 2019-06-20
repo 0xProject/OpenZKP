@@ -37,7 +37,7 @@ pub struct Constraint<'a> {
         &[&[FieldElement]], // Polynomials
         u64,                // Claim Index
         FieldElement,       // Claim
-        &[FieldElement],    // Constraint_coefficents
+        &[FieldElement],    // Constraint_coefficient
     ) -> FieldElement,
     pub eval_loop: Option<
         &'a Fn(
@@ -212,9 +212,9 @@ pub fn stark_proof(
         proof.write_element(v);
     }
 
-    let mut oods_coeffiecnts = Vec::with_capacity(2 * trace.COLS + 1);
+    let mut oods_coefficients = Vec::with_capacity(2 * trace.COLS + 1);
     for _i in 0..=2 * trace.COLS {
-        oods_coeffiecnts.push(proof.element());
+        oods_coefficients.push(proof.element());
     }
 
     let mut CO = Vec::with_capacity(eval_domain_size as usize);
@@ -250,12 +250,12 @@ pub fn stark_proof(
             let mut r = FieldElement::ZERO;
 
             for x in 0..trace.COLS {
-                r += &oods_coeffiecnts[2 * x] * (&LDEn[x][i as usize] - &oods_values[2 * x]) * A;
-                r += &oods_coeffiecnts[2 * x + 1]
+                r += &oods_coefficients[2 * x] * (&LDEn[x][i as usize] - &oods_values[2 * x]) * A;
+                r += &oods_coefficients[2 * x + 1]
                     * (&LDEn[x][i as usize] - &oods_values[2 * x + 1])
                     * B;
             }
-            r += &oods_coeffiecnts[oods_coeffiecnts.len() - 1]
+            r += &oods_coefficients[oods_coefficients.len() - 1]
                 * (&CC[i as usize] - &oods_values[oods_values.len() - 1])
                 * A;
 
@@ -307,19 +307,19 @@ pub fn stark_proof(
     ));
     // Five fri layers have reduced the size of the evaluation domain and polynomail by 32x
     let last_layer_degree_bound = trace_len / 32;
-    let mut last_layer_coefficents = ifft(
+    let mut last_layer_coefficient = ifft(
         FieldElement::root(U256::from(fri[5].len() as u64)).unwrap(),
         &(fri[5].as_slice()),
     );
-    last_layer_coefficents.truncate(last_layer_degree_bound as usize);
-    proof.write_element_list(last_layer_coefficents.as_slice());
-    debug_assert_eq!(last_layer_coefficents.len() as u64, last_layer_degree_bound);
-    // Security paramter proof of work is at 12 bits
+    last_layer_coefficient.truncate(last_layer_degree_bound as usize);
+    proof.write_element_list(last_layer_coefficient.as_slice());
+    debug_assert_eq!(last_layer_coefficient.len() as u64, last_layer_degree_bound);
+    // Security parameter proof of work is at 12 bits
     let proof_of_work = pow_find_nonce(12, &proof);
-    debug_assert!(pow_verfiy(proof_of_work, 12, &proof));
+    debug_assert!(pow_verify(proof_of_work, 12, &proof));
     proof.write(&proof_of_work.to_be_bytes());
 
-    // Security paramter number of queries is at 20
+    // Security parameter number of queries is at 20
     let num_queries = 20;
     let query_indices = get_indices(
         num_queries,
@@ -460,7 +460,7 @@ fn get_indices(num: usize, bits: u32, proof: &mut Channel) -> Vec<usize> {
         query_indices.push((val.c0 & (2_u64.pow(bits) - 1)) as usize);
     }
     query_indices.truncate(num);
-    (&mut query_indices).sort_unstable(); // Fast inplace sort that doesn't preserve the order of equal elements.
+    (&mut query_indices).sort_unstable(); // Fast in-place sort that doesn't preserve the order of equal elements.
     query_indices
 }
 
