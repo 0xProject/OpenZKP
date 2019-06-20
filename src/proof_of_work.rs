@@ -92,7 +92,6 @@ pub fn pow_verfiy(n: u64, pow_bits: u32, proof: &Channel) -> bool {
 }
 
 #[cfg(test)]
-
 mod tests {
     use super::*;
     use crate::channel::*;
