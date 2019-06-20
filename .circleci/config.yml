@@ -18,6 +18,8 @@ jobs:
           command: |
             sudo apt-get update
             rustup component add rustfmt clippy
+            rustup toolchain install nightly
+            rustup component add rustfmt --toolchain nightly
           no_output_timeout: 1800s
       - run:
           name: Linting
