@@ -679,15 +679,8 @@ pub fn fib_proof(witness: FieldElement) -> Channel {
 
 mod tests {
     use super::*;
-    use crate::channel::*;
-    use crate::fft::*;
-    use crate::field::*;
-    use crate::merkle::*;
-    use crate::montgomery::*;
-    use crate::polynomial::*;
     use crate::u256::U256;
     use crate::u256h;
-    use hex_literal::*;
     use tiny_keccak::Keccak;
 
     #[test]
@@ -816,7 +809,7 @@ mod tests {
             hex!("018dc61f748b1a6c440827876f30f63cb6c4c188000000000000000000000000")
         );
 
-        let mut public_input = ([claim_index.to_be_bytes()].concat());
+        let mut public_input = [claim_index.to_be_bytes()].concat();
         public_input.extend_from_slice(&claim_fib.0.to_bytes_be());
         let test_hex_input = hex!(
             "00000000000003e805a80444b56a9b6a5f2b99f0fd92ef6a065d662e5c5cf944be0008796f4a7c12"
@@ -1055,8 +1048,8 @@ mod tests {
         let mut x_oods_cycle_g: Vec<FieldElement> = Vec::with_capacity(eval_domain_size_usize);
         for i in 0..(eval_domain_size_usize) {
             x_omega_cycle.push(x_omega_cycle[i].clone());
-            x_oods_cycle.push((&x_omega_cycle[i] - &oods_point));
-            x_oods_cycle_g.push((&x_omega_cycle[i] - &oods_point * &g));
+            x_oods_cycle.push(&x_omega_cycle[i] - &oods_point);
+            x_oods_cycle_g.push(&x_omega_cycle[i] - &oods_point * &g);
         }
 
         let mut x = &x_omega_cycle[0];

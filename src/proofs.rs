@@ -486,9 +486,7 @@ pub fn geometric_series(base: &FieldElement, step: &FieldElement, len: usize) ->
 
 mod tests {
     use super::*;
-    use crate::channel::*;
     use crate::fibonacci::*;
-    use crate::field::*;
     use crate::u256::U256;
     use crate::u256h;
     use hex_literal::*;

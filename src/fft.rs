@@ -105,7 +105,6 @@ fn reverse(x: u64, bits: usize) -> usize {
 mod tests {
     use super::*;
     use crate::field::FieldElement;
-    use crate::montgomery::*;
     use crate::u256::U256;
     use crate::u256h;
     use hex_literal::*;
