@@ -87,22 +87,18 @@ impl FieldElement {
         *self = self.neg()
     }
 
-    pub fn pow(&self, exponent: U256) -> Option<FieldElement> {
+    pub fn pow(&self, exponent: U256) -> FieldElement {
+        let mut result = FieldElement::ONE;
+        let mut square = self.clone();
         let mut remaining_exponent = exponent;
-        if self.is_zero() && remaining_exponent.is_zero() {
-            None
-        } else {
-            let mut result = FieldElement::ONE;
-            let mut square = self.clone();
-            while !remaining_exponent.is_zero() {
-                if remaining_exponent.is_odd() {
-                    result *= &square;
-                }
-                remaining_exponent >>= 1;
-                square = square.square();
+        while !remaining_exponent.is_zero() {
+            if remaining_exponent.is_odd() {
+                result *= &square;
             }
-            Some(result)
+            remaining_exponent >>= 1;
+            square = square.square();
         }
+        result
     }
 
     // OPT: replace this with a constant array of roots of unity.
@@ -114,7 +110,7 @@ impl FieldElement {
         if rem != U256::ZERO {
             return None;
         }
-        FieldElement::GENERATOR.pow(q)
+        Some(FieldElement::GENERATOR.pow(q))
     }
 }
 
@@ -392,39 +388,27 @@ mod tests {
 
     #[quickcheck]
     fn pow_0(a: FieldElement) -> bool {
-        match a.pow(U256::from(0u128)) {
-            None => a.is_zero(),
-            Some(result) => result == FieldElement::ONE,
-        }
+        a.pow(U256::from(0u128)) == FieldElement::ONE
     }
 
     #[quickcheck]
     fn pow_1(a: FieldElement) -> bool {
-        match a.pow(U256::from(1u128)) {
-            None => false,
-            Some(result) => result == a,
-        }
+        a.pow(U256::from(1u128)) == a
     }
 
     #[quickcheck]
     fn pow_2(a: FieldElement) -> bool {
-        match a.pow(U256::from(2u128)) {
-            None => false,
-            Some(result) => result == a.square(),
-        }
+        a.pow(U256::from(2u128)) == a.square()
     }
 
     #[quickcheck]
     fn pow_n(a: FieldElement, n: usize) -> bool {
-        match a.pow(U256::from(n as u128)) {
-            None => a.is_zero() && n == 0,
-            Some(result) => result == repeat_n(a, n).product(),
-        }
+        a.pow(U256::from(n as u128)) == repeat_n(a, n).product()
     }
 
     #[quickcheck]
     fn fermats_little_theorem(a: FieldElement) -> bool {
-        a.pow(MODULUS).unwrap() == a
+        a.pow(MODULUS) == a
     }
 
     #[test]
@@ -455,7 +439,7 @@ mod tests {
         let powers_of_two = (0..193).map(|n| U256::ONE << n);
         for n in powers_of_two {
             let root_of_unity = FieldElement::root(n.clone()).unwrap();
-            assert_eq!(root_of_unity.pow(n).unwrap(), FieldElement::ONE);
+            assert_eq!(root_of_unity.pow(n), FieldElement::ONE);
         }
     }
 }

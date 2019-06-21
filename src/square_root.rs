@@ -15,10 +15,7 @@ pub fn square_root(a: &FieldElement) -> Option<FieldElement> {
 
 // Returns the result of (a/p) != -1, where (a/p) is the Legendre symbol.
 fn is_quadratic_residue(a: &FieldElement) -> bool {
-    match a.pow(MODULUS >> 1) {
-        None => panic!(),
-        Some(value) => value != FieldElement::NEGATIVE_ONE,
-    }
+    a.pow(MODULUS >> 1) != FieldElement::NEGATIVE_ONE
 }
 
 // These two constants are chosen so that 1 + SIGNIFICAND << BINARY_EXPONENT ==
@@ -44,13 +41,11 @@ fn tonelli_shanks(a: &FieldElement) -> FieldElement {
 
     let mut c: FieldElement = INITIAL_C;
     // OPT: Raising a to a fixed power is a good candidate for an addition chain.
-    let mut root: FieldElement = a.pow((SIGNIFICAND + U256::from(1u128)) >> 1).unwrap();
+    let mut root: FieldElement = a.pow((SIGNIFICAND + U256::from(1u128)) >> 1);
 
     for i in 1..BINARY_EXPONENT {
         // OPT: Precompute the inverse of a.
-        if (root.square() / a)
-            .pow(U256::from(1u128) << (BINARY_EXPONENT - i - 1))
-            .unwrap()
+        if (root.square() / a).pow(U256::from(1u128) << (BINARY_EXPONENT - i - 1))
             == FieldElement::NEGATIVE_ONE
         {
             root *= &c;
@@ -81,7 +76,7 @@ mod tests {
 
     #[test]
     fn initial_c_is_correct() {
-        assert_eq!(INITIAL_C, FieldElement::GENERATOR.pow(SIGNIFICAND).unwrap());
+        assert_eq!(INITIAL_C, FieldElement::GENERATOR.pow(SIGNIFICAND));
     }
 
     #[quickcheck]
