@@ -28,7 +28,7 @@ jobs:
             cargo clippy --all --all-targets
       - run:
           name: Build all targets
-          command: RUST_BACKTRACE=1 cargo build --all --all-targets --features strict
+          command: RUST_BACKTRACE=1 RUSTFLAGS="-Dwarnings" cargo build --all --all-targets --features strict
       - run:
           name: Test in debug and release mode
           command: |
