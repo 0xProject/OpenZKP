@@ -1,5 +1,6 @@
 use crate::field::FieldElement;
 use crate::u256::U256;
+use crate::utils::Reversible;
 
 pub fn fft(_: FieldElement, vector: &[FieldElement]) -> Vec<FieldElement> {
     let mut data = (vector.to_vec()).clone();
@@ -17,7 +18,7 @@ pub fn bit_reversal_fft(coefficients: &mut [FieldElement]) {
         let block_size = n_elements / n_blocks / 2;
         let twiddle_factor_update = FieldElement::root(U256::from(2 * n_blocks as u128)).unwrap();
         for block in 0..n_blocks {
-            let block_start = 2 * reverse(block as u64, layer as usize) * block_size;
+            let block_start = 2 * reverse(block as u64, layer) as usize * block_size;
             for i in block_start..block_start + block_size {
                 let j = i + block_size;
                 let left = coefficients[i].clone();
@@ -37,9 +38,12 @@ pub fn bit_reversal_ifft(coefficients: &mut [FieldElement]) {
         let n_blocks = 1 << layer;
         let mut twiddle_factor = FieldElement::ONE;
         let block_size = n_elements / n_blocks / 2;
-        let twiddle_factor_update = FieldElement::root(U256::from(2 * n_blocks as u128)).unwrap().inv().unwrap();
+        let twiddle_factor_update = FieldElement::root(U256::from(2 * n_blocks as u128))
+            .unwrap()
+            .inv()
+            .unwrap();
         for block in 0..n_blocks {
-            let block_start = 2 * reverse(block as u64, layer as usize) * block_size;
+            let block_start = 2 * reverse(block as u64, layer) as usize * block_size;
             for i in block_start..block_start + block_size {
                 let j = i + block_size;
                 let left = coefficients[i].clone();
@@ -80,27 +84,24 @@ pub fn ifft(_: FieldElement, vector: &[FieldElement]) -> Vec<FieldElement> {
 }
 
 fn bit_reversal_permute<T>(v: &mut [T]) {
-    let n = v.len();
-    let level = 64 - n.leading_zeros() - 1;
-    debug_assert_eq!(1 << level, n);
+    let n = v.len() as u64;
+    let n_bits = 63 - n.leading_zeros();
+    debug_assert_eq!(1 << n_bits, n);
 
-    for i in 0..v.len() {
-        let j = reverse(i as u64, level as usize);
+    for i in 0..n {
+        let j = reverse(i, n_bits);
         if j > i {
             // TODO - potentially implement pure safe version
-            v.swap(j, i) // swap is unsafe when i == j but this is impossible here
+            v.swap(j as usize, i as usize) // swap is unsafe when i == j but this is impossible here
         }
     }
 }
 
-pub fn reverse(x: u64, bits: usize) -> usize {
-    let mut x_hold = x;
-    let mut y = 0;
-    for _i in 0..bits {
-        y = (y << 1) | (x_hold & 1);
-        x_hold >>= 1;
+fn reverse(x: u64, bits: u32) -> u64 {
+    if bits == 0 {
+        return 0u64;
     }
-    y as usize
+    x.bit_reverse() >> (64 - bits)
 }
 
 #[cfg(test)]
@@ -108,19 +109,19 @@ mod tests {
     use super::*;
     use crate::polynomial::eval_poly;
     use crate::u256h;
-    use quickcheck_macros::quickcheck;
     use hex_literal::*;
+    use quickcheck_macros::quickcheck;
 
     #[test]
     fn fft_one_element_test() {
-        let v = vec![FieldElement::from("435767")];
+        let v = vec![FieldElement::from_hex_str("435767")];
         assert_eq!(fft(FieldElement::ONE, &v), v);
     }
 
     #[test]
     fn fft_two_element_test() {
-        let a = FieldElement::from("435767");
-        let b = FieldElement::from("123430");
+        let a = FieldElement::from_hex_str("435767");
+        let b = FieldElement::from_hex_str("123430");
         let v = vec![a.clone(), b.clone()];
         assert_eq!(fft(FieldElement::ONE, &v), vec![&a + &b, &a - &b]);
     }
@@ -128,13 +129,21 @@ mod tests {
     #[test]
     fn fft_four_element_test() {
         let coefficients = vec![
-            FieldElement::from("4357670"),
-            FieldElement::from("1353542"),
-            FieldElement::from("3123423"),
-            FieldElement::from("9986432"),
+            FieldElement::from_hex_str("4357670"),
+            FieldElement::from_hex_str("1353542"),
+            FieldElement::from_hex_str("3123423"),
+            FieldElement::from_hex_str("9986432"),
         ];
         let polynomial_values: Vec<FieldElement> = (0..4u64)
-            .map(|i| eval_poly(FieldElement::root(U256::from(4u64)).unwrap().pow(U256::from(i)).unwrap(), &coefficients))
+            .map(|i| {
+                eval_poly(
+                    FieldElement::root(U256::from(4u64))
+                        .unwrap()
+                        .pow(U256::from(i))
+                        .unwrap(),
+                    &coefficients,
+                )
+            })
             .collect();
 
         assert_eq!(fft(FieldElement::ONE, &coefficients), polynomial_values);
@@ -143,18 +152,23 @@ mod tests {
     #[test]
     fn fft_eight_element_test() {
         let coefficients = vec![
-            FieldElement::from("4357670"),
-            FieldElement::from("1353542"),
-            FieldElement::from("3123423"),
-            FieldElement::from("9986432"),
-            FieldElement::from("43576702"),
-            FieldElement::from("23452346"),
-            FieldElement::from("31234230"),
-            FieldElement::from("99864321"),
+            FieldElement::from_hex_str("4357670"),
+            FieldElement::from_hex_str("1353542"),
+            FieldElement::from_hex_str("3123423"),
+            FieldElement::from_hex_str("9986432"),
+            FieldElement::from_hex_str("43576702"),
+            FieldElement::from_hex_str("23452346"),
+            FieldElement::from_hex_str("31234230"),
+            FieldElement::from_hex_str("99864321"),
         ];
         let eighth_root_of_unity = FieldElement::root(U256::from(8u64)).unwrap();
         let polynomial_values: Vec<FieldElement> = (0..8u64)
-            .map(|i| eval_poly(eighth_root_of_unity.pow(U256::from(i)).unwrap(), &coefficients))
+            .map(|i| {
+                eval_poly(
+                    eighth_root_of_unity.pow(U256::from(i)).unwrap(),
+                    &coefficients,
+                )
+            })
             .collect();
 
         assert_eq!(fft(FieldElement::ONE, &coefficients), polynomial_values);
@@ -199,7 +213,10 @@ mod tests {
 
         assert_eq!(root.pow(U256::from(8u64)).unwrap(), FieldElement::ONE);
         for (i, x) in fft(root.clone(), &vector).into_iter().enumerate() {
-            assert_eq!(x, eval_poly(root.clone().pow(U256::from(i as u64)).unwrap(), &vector));
+            assert_eq!(
+                x,
+                eval_poly(root.clone().pow(U256::from(i as u64)).unwrap(), &vector)
+            );
         }
 
         assert_eq!(

@@ -156,7 +156,6 @@ impl U256 {
         U256::from_bytes_be(&array)
     }
 
-
     #[inline(always)]
     pub const fn is_even(&self) -> bool {
         self.c0 & 1 == 0
@@ -823,7 +822,6 @@ mod tests {
     }
 
     #[quickcheck]
-    #[test]
     fn test_decimal_to_from(n: U256) -> bool {
         let decimal = n.clone().to_decimal_str();
         let m = U256::from_decimal_str(&decimal).unwrap();

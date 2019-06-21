@@ -32,6 +32,10 @@ impl FieldElement {
         FieldElement(n)
     }
 
+    pub fn from_hex_str(s: &str) -> Self {
+        FieldElement::from(U256::from_hex_str(s))
+    }
+
     #[allow(clippy::cast_lossless)]
     pub fn new(limbs: &[u32; 8]) -> Self {
         let mut bu = U256::new(
@@ -51,6 +55,11 @@ impl FieldElement {
     #[inline(always)]
     pub fn is_zero(&self) -> bool {
         self.0 == U256::ZERO
+    }
+
+    #[inline(always)]
+    pub fn is_one(&self) -> bool {
+        self.0 == R1
     }
 
     #[inline(always)]
@@ -98,6 +107,7 @@ impl FieldElement {
         }
     }
 
+    // OPT: replace this with a constant array of roots of unity.
     pub fn root(n: U256) -> Option<FieldElement> {
         if n.is_zero() {
             return Some(FieldElement::ONE);
@@ -161,12 +171,6 @@ impl From<&FieldElement> for U256 {
 impl From<&[u8; 32]> for FieldElement {
     fn from(bytes: &[u8; 32]) -> Self {
         FieldElement(to_montgomery(&U256::from_bytes_be(bytes)))
-    }
-}
-
-impl From<&str> for FieldElement {
-    fn from(s: &str) -> Self {
-        FieldElement::from(U256::from_hex_str(s))
     }
 }
 
@@ -423,15 +427,34 @@ mod tests {
     }
 
     #[test]
-    fn roots_of_unity() {
-        for n in 0..193 {
-            let power_of_two = U256::ONE << n;
-            assert_eq!(
-                FieldElement::root(power_of_two.clone()).unwrap()
-                    .pow(power_of_two.clone())
-                    .unwrap(),
-                FieldElement::ONE
-            );
+    fn zeroth_root_of_unity() {
+        assert_eq!(
+            FieldElement::root(U256::from(0u64)).unwrap(),
+            FieldElement::ONE
+        );
+    }
+
+    #[test]
+    fn roots_of_unity_squared() {
+        let powers_of_two = (0..193).map(|n| U256::ONE << n);
+        let roots_of_unity: Vec<_> = powers_of_two
+            .clone()
+            .map(|n| FieldElement::root(n).unwrap())
+            .collect();
+
+        for (smaller_root, larger_root) in roots_of_unity[1..].iter().zip(roots_of_unity.as_slice())
+        {
+            assert_eq!(smaller_root.square(), *larger_root);
+            assert!(!smaller_root.is_one());
+        }
+    }
+
+    #[test]
+    fn root_of_unity_definition() {
+        let powers_of_two = (0..193).map(|n| U256::ONE << n);
+        for n in powers_of_two {
+            let root_of_unity = FieldElement::root(n.clone()).unwrap();
+            assert_eq!(root_of_unity.pow(n).unwrap(), FieldElement::ONE);
         }
     }
 }
