@@ -1,6 +1,6 @@
 use hex_literal::*;
 use starkcrypto::{fibonacci::*, field::FieldElement, proofs::*, u256::*, u256h};
-use std::{env, time::Instant};
+use std::time::Instant;
 
 fn main() {
     let claim_index = 1000_u64;

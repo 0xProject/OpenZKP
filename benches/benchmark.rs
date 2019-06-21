@@ -6,7 +6,6 @@ use starkcrypto::{
     fft::fft_cofactor,
     fibonacci::*,
     field::FieldElement,
-    gcd::gcd,
     jacobian::Jacobian,
     merkle::*,
     pedersen::hash,

@@ -1,5 +1,4 @@
 use hex_literal::*;
-use rayon::prelude;
 use starkcrypto::{fibonacci::*, field::FieldElement, proofs::*, u256::*, u256h};
 use std::{env, time::Instant};
 

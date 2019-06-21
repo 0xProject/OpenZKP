@@ -32,6 +32,6 @@ pub fn gmp_field_inv(bench: &mut Bencher, _i: &()) {
     )
     .unwrap();
     bench.iter(|| {
-        black_box(black_box(&a).clone().invert(&m));
+        black_box(black_box(&a).clone().invert(&m)).unwrap();
     })
 }
