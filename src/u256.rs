@@ -382,7 +382,8 @@ impl U256 {
                     result *= &square;
                 }
                 remaining_exponent >>= 1;
-                square *= square.clone(); // OPT - eleminate .clone()
+                // OPT - eliminate .clone()
+                square *= square.clone();
             }
             Some(result)
         }

@@ -305,7 +305,7 @@ pub fn stark_proof(
         eval_domain_size,
         eval_x.as_slice(),
     ));
-    // Five fri layers have reduced the size of the evaluation domain and polynomail
+    // Five fri layers have reduced the size of the evaluation domain and polynomial
     // by 32x
     let last_layer_degree_bound = trace_len / 32;
     let mut last_layer_coefficient = ifft(
