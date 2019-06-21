@@ -38,6 +38,25 @@ pub fn ifft(a: &[FieldElement]) -> Vec<FieldElement> {
     result
 }
 
+pub fn bit_reversal_fft_interpolate(
+    a: &[FieldElement],
+    beta: u64,
+    cofactor: FieldElement,
+) -> Vec<FieldElement> {
+    let mut result = vec![FieldElement::ZERO; a.len() * beta as usize];
+    result[..a.len()].clone_from_slice(a);
+
+    let mut c = FieldElement::ONE;
+    for element in result.iter_mut() {
+        *element *= &c;
+        c *= &cofactor;
+    }
+
+    let root = FieldElement::root(U256::from(result.len() as u64)).unwrap();
+    bit_reversal_fft(result.as_mut_slice(), root);
+    result
+}
+
 fn bit_reversal_fft(coefficients: &mut [FieldElement], root: FieldElement) {
     let n_elements = coefficients.len();
     debug_assert!(n_elements.is_power_of_two());
