@@ -218,8 +218,8 @@ mod tests {
     use crate::polynomial::*;
     use crate::u256::U256;
     use crate::u256h;
-    use hex_literal::*;
     use crate::utils::Reversible;
+    use hex_literal::*;
     use tiny_keccak::Keccak;
 
     #[test]

@@ -285,8 +285,8 @@ pub fn stark_proof(
     let mut fri = Vec::with_capacity(64 - (eval_domain_size.leading_zeros() as usize));
     fri.push(CO);
     let mut halvings = 0;
-    let mut fri_const = params.beta/2;
-    let mut fri_trees : Vec<Vec<[u8; 32]>> = Vec::with_capacity(params.fri_layout.len());
+    let mut fri_const = params.beta / 2;
+    let mut fri_trees: Vec<Vec<[u8; 32]>> = Vec::with_capacity(params.fri_layout.len());
     let mut eval_point = FieldElement::ONE;
     for x in params.fri_layout.as_slice()[..(params.fri_layout.len() - 1)].iter() {
         if *x != 0 {
@@ -294,7 +294,7 @@ pub fn stark_proof(
         }
         for _ in 0..*x {
             fri.push(fri_layer(
-                &fri[fri.len()-1].as_slice(),
+                &fri[fri.len() - 1].as_slice(),
                 &eval_point,
                 eval_domain_size,
                 eval_x.as_slice(),
@@ -313,7 +313,7 @@ pub fn stark_proof(
     let mut eval_point = proof.element();
     for _ in 0..params.fri_layout[params.fri_layout.len() - 1] {
         fri.push(fri_layer(
-            &fri[fri.len() -1].as_slice(),
+            &fri[fri.len() - 1].as_slice(),
             &eval_point,
             eval_domain_size,
             eval_x.as_slice(),
@@ -369,10 +369,13 @@ pub fn stark_proof(
         .iter()
         .map(|x| x / ((beta / 2) as usize))
         .collect();
-    
+
     let mut current_fri = 0;
     let mut previous_indicies = query_indices.clone();
-    for (k, x) in params.fri_layout.as_slice()[..(params.fri_layout.len() -1)].iter().enumerate() {
+    for (k, x) in params.fri_layout.as_slice()[..(params.fri_layout.len() - 1)]
+        .iter()
+        .enumerate()
+    {
         current_fri += *x;
         for i in fri_indices.iter() {
             for j in 0..((beta / 2_u64.pow(k as u32 + 1)) as usize) {
@@ -381,7 +384,11 @@ pub fn stark_proof(
                 if previous_indicies.binary_search(&n).is_ok() {
                     continue;
                 } else {
-                    proof.write_element(&fri[current_fri][((n as u64).bit_reverse() >> (u64::from(fri[current_fri].len().leading_zeros() +1))) as usize]);
+                    proof.write_element(
+                        &fri[current_fri][((n as u64).bit_reverse()
+                            >> (u64::from(fri[current_fri].len().leading_zeros() + 1)))
+                            as usize],
+                    );
                 }
             }
         }
