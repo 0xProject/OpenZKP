@@ -22,6 +22,12 @@ jobs:
             rustup component add rustfmt --toolchain nightly
           no_output_timeout: 1800s
       - run:
+          name: Clean build
+          command: |
+            # TODO: Use -Z cache-messages instead
+            cargo clean -p starkcrypto
+            cargo clean -p benchmarks
+      - run:
           name: Linting
           command: |
             cargo +nightly fmt  --all -- --check
