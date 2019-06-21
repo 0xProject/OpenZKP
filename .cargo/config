@@ -1,3 +1,4 @@
 [alias]
 tr = "test --release"
+bt = "build --tests"
 bs = "build --tests --features strict"

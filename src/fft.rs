@@ -139,8 +139,7 @@ mod tests {
                 eval_poly(
                     FieldElement::root(U256::from(4u64))
                         .unwrap()
-                        .pow(U256::from(i))
-                        .unwrap(),
+                        .pow(U256::from(i)),
                     &coefficients,
                 )
             })
@@ -163,12 +162,7 @@ mod tests {
         ];
         let eighth_root_of_unity = FieldElement::root(U256::from(8u64)).unwrap();
         let polynomial_values: Vec<FieldElement> = (0..8u64)
-            .map(|i| {
-                eval_poly(
-                    eighth_root_of_unity.pow(U256::from(i)).unwrap(),
-                    &coefficients,
-                )
-            })
+            .map(|i| eval_poly(eighth_root_of_unity.pow(U256::from(i)), &coefficients))
             .collect();
 
         assert_eq!(fft(FieldElement::ONE, &coefficients), polynomial_values);
@@ -211,11 +205,11 @@ mod tests {
 
         let mut res = fft(root.clone(), &vector);
 
-        assert_eq!(root.pow(U256::from(8u64)).unwrap(), FieldElement::ONE);
+        assert_eq!(root.pow(U256::from(8u64)), FieldElement::ONE);
         for (i, x) in fft(root.clone(), &vector).into_iter().enumerate() {
             assert_eq!(
                 x,
-                eval_poly(root.clone().pow(U256::from(i as u64)).unwrap(), &vector)
+                eval_poly(root.clone().pow(U256::from(i as u64)), &vector)
             );
         }
 

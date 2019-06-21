@@ -81,7 +81,7 @@ pub fn stark_proof(
 ) -> Channel {
     let trace_len = (trace.elements.len() / trace.COLS) as u64;
     let omega = FieldElement::root(U256::from(trace_len * beta)).unwrap();
-    let g = omega.pow(U256::from(beta)).unwrap();
+    let g = omega.pow(U256::from(beta));
     let eval_domain_size = trace_len * beta;
     let gen = FieldElement::GENERATOR;
 
@@ -115,7 +115,7 @@ pub fn stark_proof(
                             fft_cofactor(
                                 g.clone(),
                                 TPn[x].as_slice(),
-                                &gen * (&omega.pow(U256::from(j as u64)).unwrap()),
+                                &gen * (&omega.pow(U256::from(j as u64))),
                             ),
                         )
                     })
@@ -471,7 +471,7 @@ pub fn geometric_series(base: &FieldElement, step: &FieldElement, len: usize) ->
         .par_chunks_mut(step_len)
         .enumerate()
         .for_each(|(i, slice)| {
-            let mut hold = base * step.pow(U256::from((i * step_len) as u64)).unwrap();
+            let mut hold = base * step.pow(U256::from((i * step_len) as u64));
             for element in slice.iter_mut() {
                 *element = hold.clone();
                 hold *= step;
