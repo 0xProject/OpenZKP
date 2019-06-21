@@ -3,6 +3,80 @@ use hex_literal::*;
 use rayon::prelude::*;
 use tiny_keccak::Keccak;
 
+pub trait ChannelReadable<T> {
+    fn read(&mut self) -> T;
+}
+
+impl ChannelReadable<[u8; 32]> for Channel {
+    fn read(&mut self) -> [u8; 32] {
+        self.bytes()
+    }
+}
+
+impl ChannelReadable<FieldElement> for Channel {
+    fn read(&mut self) -> FieldElement {
+        loop {
+            let mut res: [u8; 32] = [0; 32];
+            let zero = [0_u8; 24];
+            let mut sha3 = Keccak::new_keccak256();
+            sha3.update(&self.digest);
+            sha3.update(&zero);
+            sha3.update(&self.counter.to_be_bytes());
+            sha3.finalize(&mut res);
+            self.counter += 1;
+            let seed = U256::from_bytes_be(&res)
+                % u256h!("1000000000000000000000000000000000000000000000000000000000000000"); //2^256
+            if seed < MODULUS {
+                return FieldElement::from(seed)
+                    / FieldElement::from(u256h!(
+                        "07fffffffffffdf0ffffffffffffffffffffffffffffffffffffffffffffffe1"
+                    ));
+            }
+        }
+    }
+}
+
+pub trait ChannelWritable<T> {
+    fn write(&mut self, data: T);
+}
+
+impl ChannelWritable<&[u8]> for Channel {
+    fn write(&mut self, data: &[u8]) {
+        self.write_bytes(data);
+    }
+}
+
+// TODO - Make into a hash type label
+impl ChannelWritable<&[u8; 32]> for Channel {
+    fn write(&mut self, data: &[u8; 32]) {
+        self.write_bytes(data);
+    }
+}
+
+impl ChannelWritable<u64> for Channel {
+    fn write(&mut self, data: u64) {
+        self.write_bytes(&data.to_be_bytes());
+    }
+}
+
+impl ChannelWritable<&[FieldElement]> for Channel {
+    fn write(&mut self, data: &[FieldElement]) {
+        let mut container = Vec::with_capacity(32 * data.len());
+        for element in data {
+            for byte in U256::to_bytes_be(&element.0).iter() {
+                container.push(byte.clone());
+            }
+        }
+        self.write_bytes(&container.as_slice());
+    }
+}
+
+impl ChannelWritable<&FieldElement> for Channel {
+    fn write(&mut self, data: &FieldElement) {
+        self.write_bytes(&data.0.to_bytes_be());
+    }
+}
+
 #[derive(PartialEq, Eq, Clone, Default)]
 pub struct Channel {
     pub digest:  [u8; 32],
@@ -24,8 +98,12 @@ impl Channel {
             proof,
         }
     }
+<<<<<<< HEAD
 
     pub fn write(&mut self, data: &[u8]) {
+=======
+    pub fn write_bytes(&mut self, data: &[u8]) {
+>>>>>>> Added traits to read and write from a channel
         self.proof.extend_from_slice(data);
         let mut res: [u8; 32] = [0; 32];
         let mut sha3 = Keccak::new_keccak256();
@@ -36,6 +114,7 @@ impl Channel {
         self.counter = 0;
     }
 
+<<<<<<< HEAD
     pub fn write_element(&mut self, data: &FieldElement) {
         self.write(&data.0.to_bytes_be());
     }
@@ -71,6 +150,8 @@ impl Channel {
         }
     }
 
+=======
+>>>>>>> Added traits to read and write from a channel
     pub fn bytes(&mut self) -> [u8; 32] {
         let mut res = [0; 32];
         let zero = [0_u8; 24];

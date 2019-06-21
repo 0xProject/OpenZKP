@@ -184,7 +184,7 @@ pub fn stark_proof(
     proof.write(&tree[1]);
     let mut constraint_coefficients = Vec::with_capacity(constraints.NCONSTRAINTS);
     for _i in 0..constraints.NCONSTRAINTS {
-        constraint_coefficients.push(proof.element());
+        constraint_coefficients.push(proof.read());
     }
 
     let mut CC;
@@ -225,7 +225,7 @@ pub fn stark_proof(
 
     let c_tree = make_tree(c_leaves.as_slice());
     proof.write(&c_tree[1]);
-    let oods_point = proof.element();
+    let oods_point: FieldElement = proof.read();
     let oods_point_g = &oods_point * &g;
     let mut oods_values = Vec::with_capacity(2 * trace.COLS + 1);
     for item in TPn.iter() {
@@ -244,12 +244,12 @@ pub fn stark_proof(
     )); // Gets eval_C of the oods point via direct computation
 
     for v in oods_values.iter() {
-        proof.write_element(v);
+        proof.write(v);
     }
 
     let mut oods_coefficients = Vec::with_capacity(2 * trace.COLS + 1);
     for _i in 0..=2 * trace.COLS {
-        oods_coefficients.push(proof.element());
+        oods_coefficients.push(proof.read());
     }
 
     let mut CO = Vec::with_capacity(eval_domain_size);
@@ -307,8 +307,14 @@ pub fn stark_proof(
     let mut halvings = 0;
     let mut fri_const = params.blowup / 4;
     for x in params.fri_layout.as_slice()[..(params.fri_layout.len() - 1)].iter() {
+<<<<<<< HEAD
         let mut eval_point = proof.element();
 
+=======
+        if *x != 0 {
+            eval_point = proof.read();
+        }
+>>>>>>> Added traits to read and write from a channel
         for _ in 0..*x {
             fri.push(fri_layer(
                 &fri[fri.len() - 1].as_slice(),
@@ -326,7 +332,12 @@ pub fn stark_proof(
         halvings += *x;
     }
 
+<<<<<<< HEAD
     let mut eval_point = proof.element();
+=======
+    // Gets the coefficient representation of the last number of fri reductions
+    let mut eval_point = proof.read();
+>>>>>>> Added traits to read and write from a channel
     for _ in 0..params.fri_layout[params.fri_layout.len() - 1] {
         fri.push(fri_layer(
             &fri[fri.len() - 1].as_slice(),
@@ -338,6 +349,7 @@ pub fn stark_proof(
     }
     halvings += params.fri_layout[params.fri_layout.len() - 1];
 
+<<<<<<< HEAD
     // Gets the coefficient representation of the last number of fri reductions
 
     let last_layer_degree_bound = trace_len / (2_usize.pow(halvings as u32));
@@ -345,10 +357,20 @@ pub fn stark_proof(
     last_layer_coefficient.truncate(last_layer_degree_bound);
     proof.write_element_list(last_layer_coefficient.as_slice());
     debug_assert_eq!(last_layer_coefficient.len(), last_layer_degree_bound);
+=======
+    let last_layer_degree_bound = trace_len / (2_u64.pow(halvings as u32));
+    let mut last_layer_coefficient = ifft(
+        FieldElement::root(U256::from(fri[halvings].len() as u64)).unwrap(),
+        &(fri[halvings].as_slice()),
+    );
+    last_layer_coefficient.truncate(last_layer_degree_bound as usize);
+    proof.write(last_layer_coefficient.as_slice());
+    debug_assert_eq!(last_layer_coefficient.len() as u64, last_layer_degree_bound);
+>>>>>>> Added traits to read and write from a channel
 
     let proof_of_work = proof.pow_find_nonce(params.pow_bits);
     debug_assert!(pow_verify(proof_of_work, params.pow_bits, &proof));
-    proof.write(&proof_of_work.to_be_bytes());
+    proof.write(proof_of_work);
 
     let num_queries = params.queries;
     let query_indices = get_indices(
@@ -358,10 +380,17 @@ pub fn stark_proof(
     );
 
     for index in query_indices.iter() {
+<<<<<<< HEAD
         for low_degree_extension in LDEn.iter() {
             proof.write_element(
                 &low_degree_extension[(index.clone()).bit_reverse()
                     >> ((low_degree_extension.len().leading_zeros()) + 1)],
+=======
+        for x in 0..trace.COLS {
+            proof.write(
+                &LDEn[x as usize][(index.clone()).bit_reverse()
+                    >> ((LDEn[x].len().leading_zeros()) + 1) as usize],
+>>>>>>> Added traits to read and write from a channel
             );
         }
     }
@@ -372,7 +401,11 @@ pub fn stark_proof(
     }
 
     for index in query_indices.iter() {
+<<<<<<< HEAD
         proof.write_element(&CC[index.clone().bit_reverse() >> ((CC.len().leading_zeros()) + 1)]);
+=======
+        proof.write(&CC[index.clone().bit_reverse() >> ((CC.len().leading_zeros()) + 1) as usize]);
+>>>>>>> Added traits to read and write from a channel
     }
     let decommitment = crate::merkle::proof(&c_tree, &(query_indices.as_slice()));
     for x in decommitment.iter() {
@@ -397,9 +430,16 @@ pub fn stark_proof(
                 if previous_indices.binary_search(&n).is_ok() {
                     continue;
                 } else {
+<<<<<<< HEAD
                     proof.write_element(
                         &fri[current_fri]
                             [(n.bit_reverse() >> (fri[current_fri].len().leading_zeros() + 1))],
+=======
+                    proof.write(
+                        &fri[current_fri][((n as u64).bit_reverse()
+                            >> (u64::from(fri[current_fri].len().leading_zeros() + 1)))
+                            as usize],
+>>>>>>> Added traits to read and write from a channel
                     );
                 }
             }
