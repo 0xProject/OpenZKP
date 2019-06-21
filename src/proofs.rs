@@ -466,19 +466,18 @@ pub fn geometric_series(base: &FieldElement, step: &FieldElement, len: usize) ->
     const PARALLELIZATION: usize = 16_usize;
     // OPT - Set based on the cores available and how well the work is spread
     let step_len = len / PARALLELIZATION;
-    (0..PARALLELIZATION)
-        .into_par_iter()
-        .map(|i| {
-            let mut hold = Vec::with_capacity(step_len);
-            // OPT - Avoid temporary vectors
-            hold.push(base * step.pow(U256::from((i * step_len) as u64)).unwrap());
-            for j in 1..(step_len) {
-                hold.push(&hold[j - 1] * step);
+    let mut range = vec![FieldElement::ZERO; len];
+    range
+        .par_chunks_mut(step_len)
+        .enumerate()
+        .for_each(|(i, slice)| {
+            let mut hold = base * step.pow(U256::from((i * step_len) as u64)).unwrap();
+            for element in slice.iter_mut() {
+                *element = hold.clone();
+                hold *= step;
             }
-            hold
-        })
-        .flatten()
-        .collect()
+        });
+    range
 }
 
 #[cfg(test)]
@@ -548,5 +547,22 @@ mod tests {
             2_u64.pow(4),
         );
         assert_eq!(actual.digest, expected);
+    }
+
+    #[test]
+    fn geometric_series_test() {
+        let base = FieldElement::from(u256h!(
+            "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
+        ));
+        let step = FieldElement::from(u256h!(
+            "00000000000000000000000000000000000000000000000f00dbabe0cafebabe"
+        ));
+
+        let domain = geometric_series(&base, &step, 32);
+        let mut hold = base.clone();
+        for item in domain {
+            assert_eq!(item, hold);
+            hold *= &step;
+        }
     }
 }
