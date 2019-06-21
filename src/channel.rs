@@ -1,7 +1,7 @@
 use crate::{field::*, u256::U256, u256h};
 use hex_literal::*;
-use tiny_keccak::Keccak;
 use rayon::prelude::*;
+use tiny_keccak::Keccak;
 
 #[derive(PartialEq, Eq, Clone, Default)]
 pub struct Channel {
