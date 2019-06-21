@@ -1,3 +1,5 @@
+// TODO Better variable names
+#![allow(clippy::many_single_char_names)]
 mod utils;
 
 use cfg_if::cfg_if;
@@ -47,7 +49,7 @@ pub fn init() {
 #[wasm_bindgen]
 pub fn nop(a: &str, b: &str) -> String {
     let elements = [from_string(a), from_string(b)];
-    let h = elements[1].clone();
+    let h = elements[1];
     to_string(&h)
 }
 

@@ -463,10 +463,10 @@ pub fn inv_mod(modulus: &U256, num: &U256) -> Option<U256> {
     }
 }
 
+// We don't mind large number literals here.
+#[allow(clippy::unreadable_literal)]
 #[cfg(test)]
 mod tests {
-    // We don't mind large number litterals here.
-    #![allow(clippy::unreadable_litteral)]
     use super::*;
     use crate::{
         field::{FieldElement, MODULUS},

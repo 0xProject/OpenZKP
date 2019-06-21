@@ -792,6 +792,8 @@ impl Arbitrary for U256 {
     }
 }
 
+// TODO: Replace literals with u256h!
+#[allow(clippy::unreadable_literal)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1086,7 +1088,7 @@ mod tests {
     fn test_divrem(a: U256, b: U256) -> bool {
         match a.divrem(&b) {
             None => b == U256::ZERO,
-            Some((q, r)) => r < b && q * &U256::from(b) + &U256::from(r) == a,
+            Some((q, r)) => r < b && q * &b + &r == a,
         }
     }
 

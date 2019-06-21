@@ -291,7 +291,7 @@ mod tests {
 
     #[quickcheck]
     fn ifft_is_inverse(v: Vec<FieldElement>) -> bool {
-        if v.len() == 0 {
+        if v.is_empty() {
             return true;
         }
         let truncated = &v[0..(1 + v.len()).next_power_of_two() / 2];

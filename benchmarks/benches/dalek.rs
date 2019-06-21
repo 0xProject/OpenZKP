@@ -1,3 +1,6 @@
+// Criterion requires the second argument to be by reference
+#![allow(clippy::trivially_copy_pass_by_ref)]
+
 use criterion::{black_box, Bencher};
 use curve25519_dalek::{
     field::FieldElement,

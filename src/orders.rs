@@ -35,6 +35,8 @@ pub fn hash_taker(maker_hash: &U256, vault_a: u32, vault_b: u32) -> U256 {
     ])
 }
 
+// TODO: Replace literals with u256h!
+#[allow(clippy::unreadable_literal)]
 #[cfg(test)]
 mod tests {
     use super::*;

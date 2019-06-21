@@ -9,12 +9,12 @@ fn main() {
         .build_global()
         .unwrap();
 
-    let claim_index = 1000000_u64;
+    let claim_index = 1_000_000_u64;
     let witness = FieldElement::from(u256h!(
         "00000000000000000000000000000000000000000000000000000000cafebabe"
     ));
-    let trace_table = get_trace_table(1048576, witness.clone());
-    let claim_fib = trace_table.elements[2000000].clone();
+    let trace_table = get_trace_table(1_048_576, witness.clone());
+    let claim_fib = trace_table.elements[2_000_000].clone();
     let start = Instant::now();
     let potential_proof = stark_proof(
         &trace_table,

@@ -240,6 +240,8 @@ impl Arbitrary for FieldElement {
     }
 }
 
+// TODO: Use u256h literals here.
+#[allow(clippy::unreadable_literal)]
 #[cfg(test)]
 mod tests {
     use super::*;

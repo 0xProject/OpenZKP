@@ -407,6 +407,8 @@ fn leaf_single(i: u64, CC: &[FieldElement]) -> U256 {
         .clone()
 }
 
+// TODO Better variable names
+#[allow(clippy::many_single_char_names)]
 fn fri_layer(
     previous: &[FieldElement],
     evaluation_point: &FieldElement,

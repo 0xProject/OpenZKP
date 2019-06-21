@@ -224,7 +224,7 @@ mod tests {
         let tree = make_tree_threaded(leaves.as_slice());
 
         assert_eq!(
-            tree[1].clone(),
+            tree[1],
             hex!("fd112f44bc944f33e2567f86eea202350913b11c000000000000000000000000")
         );
         let mut values = vec![
@@ -237,7 +237,7 @@ mod tests {
         let non_root = hex!("ed112f44bc944f33e2567f86eea202350913b11c000000000000000000000000");
 
         assert!(verify(
-            tree[1].clone(),
+            tree[1],
             depth,
             values.as_mut_slice(),
             decommitment.clone()
