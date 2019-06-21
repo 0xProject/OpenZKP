@@ -43,17 +43,17 @@ pub fn eval_whole_loop(
     let trace_len = eval_domain_size / beta;
 
     let omega = FieldElement::root(U256::from(trace_len * beta)).unwrap();
-    let g = omega.pow(U256::from(beta)).unwrap();
+    let g = omega.pow(U256::from(beta));
     let gen = FieldElement::GENERATOR;
 
     let mut CC = Vec::with_capacity(eval_domain_size_usize);
-    let g_trace = g.pow(U256::from(trace_len - 1)).unwrap();
-    let g_claim = g.pow(U256::from(claim_index)).unwrap();
+    let g_trace = g.pow(U256::from(trace_len - 1));
+    let g_claim = g.pow(U256::from(claim_index));
     let x = gen.clone();
-    let x_trace = (&x).pow(U256::from(trace_len)).unwrap();
-    let x_1023 = (&x).pow(U256::from(trace_len - 1)).unwrap();
-    let omega_trace = (&omega).pow(U256::from(trace_len)).unwrap();
-    let omega_1023 = (&omega).pow(U256::from(trace_len - 1)).unwrap();
+    let x_trace = (&x).pow(U256::from(trace_len));
+    let x_1023 = (&x).pow(U256::from(trace_len - 1));
+    let omega_trace = (&omega).pow(U256::from(trace_len));
+    let omega_1023 = (&omega).pow(U256::from(trace_len - 1));
 
     let x_omega_cycle = geometric_series(&x, &omega, eval_domain_size_usize);
     let x_trace_cycle = geometric_series(&x_trace, &omega_trace, eval_domain_size_usize);
@@ -136,20 +136,19 @@ pub fn eval_c_direct(
     let eval_P0 = |x: FieldElement| -> FieldElement { eval_poly(x, polynomials[0]) };
     let eval_P1 = |x: FieldElement| -> FieldElement { eval_poly(x, polynomials[1]) };
     let eval_C0 = |x: FieldElement| -> FieldElement {
-        ((eval_P0(&x * &g) - eval_P1(x.clone()))
-            * (&x - &g.pow(U256::from(trace_len - 1)).unwrap()))
-            / (&x.pow(U256::from(trace_len)).unwrap() - FieldElement::ONE)
+        ((eval_P0(&x * &g) - eval_P1(x.clone())) * (&x - &g.pow(U256::from(trace_len - 1))))
+            / (&x.pow(U256::from(trace_len)) - FieldElement::ONE)
     };
     let eval_C1 = |x: FieldElement| -> FieldElement {
         ((eval_P1(&x * &g) - eval_P0(x.clone()) - eval_P1(x.clone()))
-            * (&x - (&g.pow(U256::from(trace_len - 1)).unwrap())))
-            / (&x.pow(U256::from(trace_len)).unwrap() - FieldElement::ONE)
+            * (&x - (&g.pow(U256::from(trace_len - 1)))))
+            / (&x.pow(U256::from(trace_len)) - FieldElement::ONE)
     };
     let eval_C2 = |x: FieldElement| -> FieldElement {
         ((eval_P0(x.clone()) - FieldElement::ONE) * FieldElement::ONE) / (&x - FieldElement::ONE)
     };
     let eval_C3 = |x: FieldElement| -> FieldElement {
-        (eval_P0(x.clone()) - claim) / (&x - &g.pow(U256::from(claim_index)).unwrap())
+        (eval_P0(x.clone()) - claim) / (&x - &g.pow(U256::from(claim_index)))
     };
 
     let deg_adj = |degree_bound: u64,
@@ -166,25 +165,21 @@ pub fn eval_c_direct(
         r += &constraint_coefficients[0] * &eval_C0(x.clone());
         r += &constraint_coefficients[1]
             * &eval_C0(x.clone())
-            * (&x)
-                .pow(U256::from(deg_adj(
-                    composition_degree_bound,
-                    trace_len - 1,
-                    1,
-                    trace_len,
-                )))
-                .unwrap();
+            * (&x).pow(U256::from(deg_adj(
+                composition_degree_bound,
+                trace_len - 1,
+                1,
+                trace_len,
+            )));
         r += &constraint_coefficients[2] * &eval_C1(x.clone());
         r += &constraint_coefficients[3]
             * &eval_C1(x.clone())
-            * (&x)
-                .pow(U256::from(deg_adj(
-                    composition_degree_bound,
-                    trace_len - 1,
-                    1,
-                    trace_len,
-                )))
-                .unwrap();
+            * (&x).pow(U256::from(deg_adj(
+                composition_degree_bound,
+                trace_len - 1,
+                1,
+                trace_len,
+            )));
         r += &constraint_coefficients[4] * &eval_C2(x.clone());
         r += &constraint_coefficients[5]
             * &eval_C2(x.clone())
@@ -193,8 +188,7 @@ pub fn eval_c_direct(
                 trace_len - 1,
                 0,
                 1,
-            )))
-            .unwrap();
+            )));
         r += &constraint_coefficients[6] * (eval_C3.clone())(x.clone());
         r += &constraint_coefficients[7]
             * &eval_C3(x.clone())
@@ -203,8 +197,7 @@ pub fn eval_c_direct(
                 trace_len - 1,
                 0,
                 1,
-            )))
-            .unwrap();
+            )));
         r
     };
     eval_C(x.clone())
@@ -232,10 +225,10 @@ pub fn fib_proof(witness: FieldElement) -> Channel {
     let mut eval_offset_x = Vec::with_capacity((eval_domain_size) as usize);
 
     for i in 0..trace_len {
-        trace_x.push(g.pow(U256::from(i)).unwrap());
+        trace_x.push(g.pow(U256::from(i)));
     }
     for i in 0..(eval_domain_size) {
-        let hold = omega.pow(U256::from(i)).unwrap();
+        let hold = omega.pow(U256::from(i));
         eval_x.push(hold.clone());
         eval_offset_x.push(hold * &gen);
     }
@@ -262,7 +255,7 @@ pub fn fib_proof(witness: FieldElement) -> Channel {
         let mut vals = fft_cofactor(
             g.clone(),
             &(TP0.as_slice()),
-            &gen * (&omega.pow(U256::from(j)).unwrap()),
+            &gen * (&omega.pow(U256::from(j))),
         );
         for i in 0..trace_len {
             LDE0[((i * beta + j) % (eval_domain_size)) as usize] = vals[i as usize].clone();
@@ -271,7 +264,7 @@ pub fn fib_proof(witness: FieldElement) -> Channel {
         vals = fft_cofactor(
             g.clone(),
             &(TP1.as_slice()),
-            &gen * (&omega.pow(U256::from(j)).unwrap()),
+            &gen * (&omega.pow(U256::from(j))),
         );
         for i in 0..trace_len {
             LDE1[((i * beta + j) % (eval_domain_size)) as usize] = vals[i as usize].clone();
@@ -312,20 +305,19 @@ pub fn fib_proof(witness: FieldElement) -> Channel {
     let eval_P0 = |x: FieldElement| -> FieldElement { eval_poly(x, &TP0) };
     let eval_P1 = |x: FieldElement| -> FieldElement { eval_poly(x, &TP1) };
     let eval_C0 = |x: FieldElement| -> FieldElement {
-        ((eval_P0(&x * &g) - eval_P1(x.clone()))
-            * (&x - &g.pow(U256::from(trace_len - 1)).unwrap()))
-            / (&x.pow(U256::from(trace_len)).unwrap() - FieldElement::ONE)
+        ((eval_P0(&x * &g) - eval_P1(x.clone())) * (&x - &g.pow(U256::from(trace_len - 1))))
+            / (&x.pow(U256::from(trace_len)) - FieldElement::ONE)
     };
     let eval_C1 = |x: FieldElement| -> FieldElement {
         ((eval_P1(&x * &g) - eval_P0(x.clone()) - eval_P1(x.clone()))
-            * (&x - &g.pow(U256::from(trace_len - 1)).unwrap()))
-            / (&x.pow(U256::from(trace_len)).unwrap() - FieldElement::ONE)
+            * (&x - &g.pow(U256::from(trace_len - 1))))
+            / (&x.pow(U256::from(trace_len)) - FieldElement::ONE)
     };
     let eval_C2 = |x: FieldElement| -> FieldElement {
         ((eval_P0(x.clone()) - FieldElement::ONE) * FieldElement::ONE) / (&x - FieldElement::ONE)
     };
     let eval_C3 = |x: FieldElement| -> FieldElement {
-        (eval_P0(x.clone()) - claim_fib.clone()) / (&x - &g.pow(U256::from(claim_index)).unwrap())
+        (eval_P0(x.clone()) - claim_fib.clone()) / (&x - &g.pow(U256::from(claim_index)))
     };
 
     let deg_adj = |degree_bound: u64,
@@ -342,25 +334,21 @@ pub fn fib_proof(witness: FieldElement) -> Channel {
         r += &constraint_coefficients[0] * &eval_C0(x.clone());
         r += &constraint_coefficients[1]
             * &eval_C0(x.clone())
-            * (&x)
-                .pow(U256::from(deg_adj(
-                    composition_degree_bound,
-                    trace_len - 1,
-                    1,
-                    trace_len,
-                )))
-                .unwrap();
+            * (&x).pow(U256::from(deg_adj(
+                composition_degree_bound,
+                trace_len - 1,
+                1,
+                trace_len,
+            )));
         r += &constraint_coefficients[2] * &eval_C1(x.clone());
         r += &constraint_coefficients[3]
             * &eval_C1(x.clone())
-            * (&x)
-                .pow(U256::from(deg_adj(
-                    composition_degree_bound,
-                    trace_len - 1,
-                    1,
-                    trace_len,
-                )))
-                .unwrap();
+            * (&x).pow(U256::from(deg_adj(
+                composition_degree_bound,
+                trace_len - 1,
+                1,
+                trace_len,
+            )));
         r += &constraint_coefficients[4] * &eval_C2(x.clone());
         r += &constraint_coefficients[5]
             * &eval_C2(x.clone())
@@ -369,8 +357,7 @@ pub fn fib_proof(witness: FieldElement) -> Channel {
                 trace_len - 1,
                 0,
                 1,
-            )))
-            .unwrap();
+            )));
         r += &constraint_coefficients[6] * &eval_C3(x.clone());
         r += &constraint_coefficients[7]
             * &eval_C3(x.clone())
@@ -379,19 +366,18 @@ pub fn fib_proof(witness: FieldElement) -> Channel {
                 trace_len - 1,
                 0,
                 1,
-            )))
-            .unwrap();
+            )));
         r
     };
 
     let mut CC = vec![FieldElement::ZERO; eval_domain_size_usize];
-    let g_trace = g.pow(U256::from(trace_len - 1)).unwrap();
-    let g_claim = g.pow(U256::from(claim_index)).unwrap();
+    let g_trace = g.pow(U256::from(trace_len - 1));
+    let g_claim = g.pow(U256::from(claim_index));
     let x = gen.clone();
-    let mut x_trace = (&x).pow(U256::from(trace_len)).unwrap();
-    let mut x_1023 = (&x).pow(U256::from(1023_u64)).unwrap();
-    let omega_trace = (&omega).pow(U256::from(trace_len)).unwrap();
-    let omega_1023 = (&omega).pow(U256::from(1023_u64)).unwrap();
+    let mut x_trace = (&x).pow(U256::from(trace_len));
+    let mut x_1023 = (&x).pow(U256::from(1023_u64));
+    let omega_trace = (&omega).pow(U256::from(trace_len));
+    let omega_1023 = (&omega).pow(U256::from(1023_u64));
 
     let mut x = gen.clone();
     let mut x_omega_cycle = Vec::with_capacity(eval_domain_size_usize);
@@ -696,11 +682,8 @@ mod tests {
         let eval_domain_size = trace_len * beta;
         let eval_domain_size_usize = eval_domain_size as usize;
 
-        assert_eq!(
-            omega.pow(U256::from(eval_domain_size)).unwrap(),
-            FieldElement::ONE
-        );
-        assert_eq!(g.pow(U256::from(trace_len)).unwrap(), FieldElement::ONE);
+        assert_eq!(omega.pow(U256::from(eval_domain_size)), FieldElement::ONE);
+        assert_eq!(g.pow(U256::from(trace_len)), FieldElement::ONE);
 
         let gen = FieldElement::from(U256::from(3_u64));
         let mut trace_x = Vec::with_capacity(trace_len as usize);
@@ -708,10 +691,10 @@ mod tests {
         let mut eval_offset_x = Vec::with_capacity((eval_domain_size) as usize);
 
         for i in 0..trace_len {
-            trace_x.push(g.pow(U256::from(i)).unwrap());
+            trace_x.push(g.pow(U256::from(i)));
         }
         for i in 0..(eval_domain_size) {
-            let hold = omega.pow(U256::from(i)).unwrap();
+            let hold = omega.pow(U256::from(i));
             eval_x.push(hold.clone());
             eval_offset_x.push(hold * &gen);
         }
@@ -757,7 +740,7 @@ mod tests {
             let mut vals = fft_cofactor(
                 g.clone(),
                 &(TP0.as_slice()),
-                &gen * (&omega.pow(U256::from(j)).unwrap()),
+                &gen * (&omega.pow(U256::from(j))),
             );
             for i in 0..trace_len {
                 LDE0[((i * beta + j) % (eval_domain_size)) as usize] = vals[i as usize].clone();
@@ -766,7 +749,7 @@ mod tests {
             vals = fft_cofactor(
                 g.clone(),
                 &(TP1.as_slice()),
-                &gen * (&omega.pow(U256::from(j)).unwrap()),
+                &gen * (&omega.pow(U256::from(j))),
             );
             for i in 0..trace_len {
                 LDE1[((i * beta + j) % (eval_domain_size)) as usize] = vals[i as usize].clone();
@@ -835,22 +818,20 @@ mod tests {
         let eval_P0 = |x: FieldElement| -> FieldElement { eval_poly(x, &TP0) };
         let eval_P1 = |x: FieldElement| -> FieldElement { eval_poly(x, &TP1) };
         let eval_C0 = |x: FieldElement| -> FieldElement {
-            ((eval_P0(&x * &g) - eval_P1(x.clone()))
-                * (&x - &g.pow(U256::from(trace_len - 1)).unwrap()))
-                / (&x.pow(U256::from(trace_len)).unwrap() - FieldElement::ONE)
+            ((eval_P0(&x * &g) - eval_P1(x.clone())) * (&x - &g.pow(U256::from(trace_len - 1))))
+                / (&x.pow(U256::from(trace_len)) - FieldElement::ONE)
         };
         let eval_C1 = |x: FieldElement| -> FieldElement {
             ((eval_P1(&x * &g) - eval_P0(x.clone()) - eval_P1(x.clone()))
-                * (&x - &g.pow(U256::from(trace_len - 1)).unwrap()))
-                / (&x.pow(U256::from(trace_len)).unwrap() - FieldElement::ONE)
+                * (&x - &g.pow(U256::from(trace_len - 1))))
+                / (&x.pow(U256::from(trace_len)) - FieldElement::ONE)
         };
         let eval_C2 = |x: FieldElement| -> FieldElement {
             ((eval_P0(x.clone()) - FieldElement::ONE) * FieldElement::ONE)
                 / (&x - FieldElement::ONE)
         };
         let eval_C3 = |x: FieldElement| -> FieldElement {
-            (eval_P0(x.clone()) - claim_fib.clone())
-                / (&x - &g.pow(U256::from(claim_index)).unwrap())
+            (eval_P0(x.clone()) - claim_fib.clone()) / (&x - &g.pow(U256::from(claim_index)))
         };
 
         let deg_adj = |degree_bound: u64,
@@ -867,25 +848,21 @@ mod tests {
             r += &constraint_coefficients[0] * &eval_C0(x.clone());
             r += &constraint_coefficients[1]
                 * &eval_C0(x.clone())
-                * (&x)
-                    .pow(U256::from(deg_adj(
-                        composition_degree_bound,
-                        trace_len - 1,
-                        1,
-                        trace_len,
-                    )))
-                    .unwrap();
+                * (&x).pow(U256::from(deg_adj(
+                    composition_degree_bound,
+                    trace_len - 1,
+                    1,
+                    trace_len,
+                )));
             r += &constraint_coefficients[2] * &eval_C1(x.clone());
             r += &constraint_coefficients[3]
                 * &eval_C1(x.clone())
-                * (&x)
-                    .pow(U256::from(deg_adj(
-                        composition_degree_bound,
-                        trace_len - 1,
-                        1,
-                        trace_len,
-                    )))
-                    .unwrap();
+                * (&x).pow(U256::from(deg_adj(
+                    composition_degree_bound,
+                    trace_len - 1,
+                    1,
+                    trace_len,
+                )));
             r += &constraint_coefficients[4] * &eval_C2(x.clone());
             r += &constraint_coefficients[5]
                 * &eval_C2(x.clone())
@@ -894,8 +871,7 @@ mod tests {
                     trace_len - 1,
                     0,
                     1,
-                )))
-                .unwrap();
+                )));
             r += &constraint_coefficients[6] * &eval_C3(x.clone());
             r += &constraint_coefficients[7]
                 * &eval_C3(x.clone())
@@ -904,8 +880,7 @@ mod tests {
                     trace_len - 1,
                     0,
                     1,
-                )))
-                .unwrap();
+                )));
             return r;
         };
         let z = FieldElement::from(u256h!(
@@ -917,13 +892,13 @@ mod tests {
         );
 
         let mut CC = vec![FieldElement::ZERO; eval_domain_size_usize];
-        let g_trace = g.pow(U256::from(trace_len - 1)).unwrap();
-        let g_claim = g.pow(U256::from(claim_index)).unwrap();
+        let g_trace = g.pow(U256::from(trace_len - 1));
+        let g_claim = g.pow(U256::from(claim_index));
         let x = gen.clone();
-        let mut x_trace = (&x).pow(U256::from(trace_len)).unwrap();
-        let mut x_1023 = (&x).pow(U256::from(1023_u64)).unwrap();
-        let omega_trace = (&omega).pow(U256::from(trace_len)).unwrap();
-        let omega_1023 = (&omega).pow(U256::from(1023_u64)).unwrap();
+        let mut x_trace = (&x).pow(U256::from(trace_len));
+        let mut x_1023 = (&x).pow(U256::from(1023_u64));
+        let omega_trace = (&omega).pow(U256::from(trace_len));
+        let omega_1023 = (&omega).pow(U256::from(1023_u64));
 
         let mut x = gen.clone();
         let mut x_omega_cycle = Vec::with_capacity(eval_domain_size_usize);
@@ -1141,8 +1116,7 @@ mod tests {
                 FieldElement::from(u256h!(
                     "011d07d97880b4dc0234b46e6d4b9bd4a1f811a9e3bc8e32cc4074a0c13a1d0b"
                 ))
-                .pow(U256::from(42_u64))
-                .unwrap(),
+                .pow(U256::from(42_u64)),
                 &(last_layer_coefficents.as_slice())
             ),
             fri[5][42]
