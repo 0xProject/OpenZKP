@@ -4,28 +4,16 @@ use crate::pedersen::SHIFT_POINT;
 use crate::pedersen_merkle::input::{PrivateInput, PublicInput};
 use crate::pedersen_points::PEDERSEN_POINTS;
 use crate::u256::U256;
+use std::default::Default;
 
 pub fn get_trace_table(
     public_input: &PublicInput,
     private_input: &PrivateInput,
 ) -> Vec<FieldElement> {
-    let mut state = Row {
-        left: Subrow {
-            source: U256::from(0u128),
-            slope: FieldElement::ZERO,
-            point: Affine::Point {
-                x: FieldElement::ZERO,
-                y: FieldElement::ZERO,
-            },
-        },
-        right: Subrow {
-            source: U256::from(0u128),
-            slope: FieldElement::ZERO,
-            point: Affine::Point {
-                x: public_input.leaf.clone(),
-                y: FieldElement::ZERO,
-            },
-        },
+    let mut state: Row = Default::default();
+    state.right.point = Affine::Point {
+        x: public_input.leaf.clone(),
+        y: FieldElement::ZERO,
     };
 
     let mut trace_table: Vec<FieldElement> =
@@ -50,34 +38,22 @@ pub fn get_trace_table(
 }
 
 fn initialize_hash(left_source: U256, right_source: U256) -> Row {
-    Row {
-        left: Subrow {
-            source: left_source,
-            slope: FieldElement::ZERO,
-            point: Affine::Point {
-                x: FieldElement::ZERO,
-                y: FieldElement::ZERO,
-            },
-        },
-        right: Subrow {
-            source: right_source,
-            slope: FieldElement::ZERO,
-            point: SHIFT_POINT,
-        },
-    }
+    let mut state: Row = Default::default();
+    state.left.source = left_source;
+    state.right.source = right_source;
+    state
 }
 
 fn hash_next_bit(state: &Row, bit_index: usize) -> Row {
     let mut next_state = Row {
         left: Subrow {
             source: state.left.source.clone() >> 1,
-            slope: FieldElement::ZERO,
             point: state.right.point.clone(),
+            ..Default::default()
         },
         right: Subrow {
             source: state.right.source.clone() >> 1,
-            slope: FieldElement::ZERO,
-            point: Affine::Zero,
+            ..Default::default()
         },
     };
     if state.left.source.bit(0) {
@@ -114,6 +90,7 @@ fn get_subrow_trace(subrow: &Subrow) -> Vec<FieldElement> {
     ]
 }
 
+#[derive(Default)]
 struct Row {
     left: Subrow,
     right: Subrow,
@@ -123,6 +100,16 @@ struct Subrow {
     source: U256,
     slope: FieldElement,
     point: Affine,
+}
+
+impl Default for Subrow {
+    fn default() -> Self {
+        Subrow {
+            source: U256::ZERO,
+            slope: FieldElement::ZERO,
+            point: SHIFT_POINT,
+        }
+    }
 }
 
 fn get_slope(p_1: &Affine, p_2: &Affine) -> FieldElement {
@@ -141,10 +128,10 @@ fn get_coordinates(p: &Affine) -> (&FieldElement, &FieldElement) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::pedersen::old_hash;
     use crate::pedersen_merkle::input::{get_private_input, get_public_input};
     use itertools::Itertools;
     use std::iter;
-    use crate::pedersen::old_hash;
 
     #[test]
     fn trace_table_is_correct() {
