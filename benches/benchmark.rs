@@ -1,3 +1,4 @@
+#![allow(clippy::unreadable_literal)] // TODO - Switch to u256h!()
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use hex_literal::*;
 use starkcrypto::curve::Affine;
@@ -5,7 +6,6 @@ use starkcrypto::ecdsa::{private_to_public, sign, verify};
 use starkcrypto::fft::fft_cofactor;
 use starkcrypto::fibonacci::*;
 use starkcrypto::field::FieldElement;
-use starkcrypto::gcd::gcd;
 use starkcrypto::jacobian::Jacobian;
 use starkcrypto::merkle::*;
 use starkcrypto::pedersen::hash;
@@ -457,15 +457,6 @@ fn fft_timing(crit: &mut Criterion) {
         bench.iter(|| black_box(fft_cofactor(root.clone(), &vector, cofactor.clone())))
     });
 }
-fn fib_proof_make(crit: &mut Criterion) {
-    let witness = FieldElement::from(u256h!(
-        "00000000000000000000000000000000000000000000000000000000cafebabe"
-    ));
-
-    crit.bench_function("Making a Fibonacci Proof", move |bench| {
-        bench.iter(|| black_box(fib_proof(witness.clone())))
-    });
-}
 fn abstracted_fib_proof_make(crit: &mut Criterion) {
     let claim_index = 1000_u64;
     let claim_fib = FieldElement::from(u256h!(
@@ -482,7 +473,7 @@ fn abstracted_fib_proof_make(crit: &mut Criterion) {
                 &get_constraint(),
                 claim_index,
                 claim_fib.clone(),
-                2_u64.pow(4),
+                ProofParams::new(2_u64.pow(4), 12, 20, vec![0, 3, 2, 1]),
             ))
         })
     });
@@ -520,6 +511,6 @@ criterion_group!(benches, criterion_benchmark);
 criterion_group! {
    name = slow_benches;
    config = Criterion::default().sample_size(20);
-   targets = fib_proof_make, abstracted_fib_proof_make
+   targets = abstracted_fib_proof_make
 }
 criterion_main!(benches, slow_benches);

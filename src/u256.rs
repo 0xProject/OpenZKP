@@ -775,6 +775,7 @@ impl Arbitrary for U256 {
 }
 
 #[cfg(test)]
+#[allow(clippy::unreadable_literal)]
 mod tests {
     use super::*;
     use quickcheck_macros::quickcheck;
