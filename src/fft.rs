@@ -1,6 +1,4 @@
-use crate::field::FieldElement;
-use crate::u256::U256;
-use crate::utils::Reversible;
+use crate::{field::FieldElement, u256::U256, utils::Reversible};
 
 pub fn fft(_: FieldElement, vector: &[FieldElement]) -> Vec<FieldElement> {
     let mut data = (vector.to_vec()).clone();
@@ -56,7 +54,8 @@ pub fn bit_reversal_ifft(coefficients: &mut [FieldElement]) {
     }
 }
 
-//We can implement this function using an option for the cofactor input, depending on what we want
+// We can implement this function using an option for the cofactor input,
+// depending on what we want
 pub fn fft_cofactor(
     root: FieldElement,
     vector: &[FieldElement],
@@ -98,17 +97,19 @@ fn bit_reversal_permute<T>(v: &mut [T]) {
 }
 
 fn reverse(x: u64, bits: u32) -> u64 {
+    debug_assert!(bits <= 64);
+    debug_assert!(bits == 64 || x < (1u64 << bits));
     if bits == 0 {
-        return 0u64;
+        0
+    } else {
+        x.bit_reverse() >> (64 - bits)
     }
-    x.bit_reverse() >> (64 - bits)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::polynomial::eval_poly;
-    use crate::u256h;
+    use crate::{polynomial::eval_poly, u256h};
     use hex_literal::*;
     use quickcheck_macros::quickcheck;
 
@@ -284,7 +285,7 @@ mod tests {
 
     #[quickcheck]
     fn ifft_is_inverse(v: Vec<FieldElement>) -> bool {
-        if v.len() == 0 {
+        if v.is_empty() {
             return true;
         }
         let truncated = &v[0..(1 + v.len()).next_power_of_two() / 2];

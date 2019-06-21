@@ -1,7 +1,4 @@
-use crate::curve::Affine;
-use crate::field::FieldElement;
-use crate::jacobian::Jacobian;
-use crate::u256::U256;
+use crate::{curve::Affine, field::FieldElement, jacobian::Jacobian, u256::U256};
 use itertools::izip;
 
 pub fn window_table(p: &Affine, naf: &mut [Jacobian]) {
@@ -216,11 +213,12 @@ pub fn double_base_mul(nafa: &[Affine], sa: U256, pb: &Affine, sb: U256) -> Jaco
 
 // TODO: https://github.com/dalek-cryptography/curve25519-dalek/blob/8b2742cb9dae6a365915021ac7474227d610f09a/src/backend/vector/scalar_mul/vartime_double_base.rs
 
+// TODO: Replace literals with u256h!
+#[allow(clippy::unreadable_literal)]
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::field::FieldElement;
-    use crate::u256h;
+    use crate::{field::FieldElement, u256h};
     use hex_literal::*;
 
     #[test]

@@ -18,17 +18,25 @@ jobs:
           command: |
             sudo apt-get update
             rustup component add rustfmt clippy
+            rustup toolchain install nightly
+            rustup component add rustfmt --toolchain nightly
           no_output_timeout: 1800s
+      - run:
+          name: Clean build
+          command: |
+            # TODO: Use -Z cache-messages instead
+            cargo clean -p starkcrypto
+            cargo clean -p benchmarks
       - run:
           name: Linting
           command: |
-            cargo fmt  --all -- --check
-            cargo clippy --all --all-targets
+            RUSTFLAGS="-Dwarnings" cargo +nightly fmt --all -- --check
+            RUSTFLAGS="-Dwarnings" cargo clippy --all --all-targets
       - run:
           name: Build all targets
-          command: RUST_BACKTRACE=1 cargo build --all --all-targets --features strict
+          command: RUST_BACKTRACE=1 RUSTFLAGS="-Dwarnings" cargo build --all --all-targets --features strict
       - run:
-          name: Test in debug mode
+          name: Test in debug and release mode
           command: |
             RUST_BACKTRACE=1 cargo test --all -- --nocapture
             RUST_BACKTRACE=1 cargo test --release -- --nocapture

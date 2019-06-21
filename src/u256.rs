@@ -1,17 +1,21 @@
-use crate::division::{divrem_nby1, divrem_nbym};
-use crate::gcd::inv_mod;
-use crate::u256h;
-use crate::utils::{adc, div_2_1, mac, sbb};
-use crate::{commutative_binop, noncommutative_binop};
-use hex_literal::*;
-use std::cmp::Ordering;
-use std::fmt;
-use std::num::Wrapping;
-use std::ops::{
-    Add, AddAssign, BitAnd, Div, DivAssign, Mul, MulAssign, Rem, RemAssign, Shl, ShlAssign, Shr,
-    ShrAssign, Sub, SubAssign,
+use crate::{
+    commutative_binop,
+    division::{divrem_nby1, divrem_nbym},
+    gcd::inv_mod,
+    noncommutative_binop, u256h,
+    utils::{adc, div_2_1, mac, sbb},
 };
-use std::u64;
+use hex_literal::*;
+use std::{
+    cmp::Ordering,
+    fmt,
+    num::Wrapping,
+    ops::{
+        Add, AddAssign, BitAnd, Div, DivAssign, Mul, MulAssign, Rem, RemAssign, Shl, ShlAssign,
+        Shr, ShrAssign, Sub, SubAssign,
+    },
+    u64,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ParseError {
@@ -58,9 +62,9 @@ pub struct U256 {
 }
 
 impl U256 {
-    pub const ZERO: U256 = U256::new(0, 0, 0, 0);
-    pub const ONE: U256 = U256::new(1, 0, 0, 0);
     pub const MAX: U256 = U256::new(u64::MAX, u64::MAX, u64::MAX, u64::MAX);
+    pub const ONE: U256 = U256::new(1, 0, 0, 0);
+    pub const ZERO: U256 = U256::new(0, 0, 0, 0);
 
     #[inline(always)]
     pub const fn new(c0: u64, c1: u64, c2: u64, c3: u64) -> Self {
@@ -320,10 +324,9 @@ impl U256 {
         let (lo, hi) = self.mul_full(rhs);
         let mut numerator = [lo.c0, lo.c1, lo.c2, lo.c3, hi.c0, hi.c1, hi.c2, hi.c3, 0];
         if modulus.c3 > 0 {
-            divrem_nbym(
-                &mut numerator,
-                &mut [modulus.c0, modulus.c1, modulus.c2, modulus.c3],
-            );
+            divrem_nbym(&mut numerator, &mut [
+                modulus.c0, modulus.c1, modulus.c2, modulus.c3,
+            ]);
             U256::new(numerator[0], numerator[1], numerator[2], numerator[3])
         } else if modulus.c2 > 0 {
             divrem_nbym(&mut numerator, &mut [modulus.c0, modulus.c1, modulus.c2]);
@@ -379,7 +382,8 @@ impl U256 {
                     result *= &square;
                 }
                 remaining_exponent >>= 1;
-                square *= square.clone(); //OPT - eliminate .clone()
+                // OPT - eliminate .clone()
+                square *= square.clone();
             }
             Some(result)
         }
@@ -522,6 +526,7 @@ impl ShlAssign<usize> for U256 {
 
 impl Shl<usize> for U256 {
     type Output = U256;
+
     #[inline(always)]
     fn shl(mut self, rhs: usize) -> U256 {
         self <<= rhs;
@@ -589,6 +594,7 @@ impl ShrAssign<usize> for U256 {
 
 impl Shr<usize> for U256 {
     type Output = U256;
+
     #[inline(always)]
     fn shr(mut self, rhs: usize) -> U256 {
         self >>= rhs;
@@ -680,6 +686,7 @@ impl MulAssign<u64> for U256 {
 
 impl Mul<u64> for U256 {
     type Output = U256;
+
     #[inline(always)]
     fn mul(mut self, /* mut */ rhs: u64) -> U256 {
         self.mul_assign(rhs);
@@ -689,6 +696,7 @@ impl Mul<u64> for U256 {
 
 impl Mul<u64> for &U256 {
     type Output = U256;
+
     #[inline(always)]
     fn mul(self, rhs: u64) -> U256 {
         self.clone().mul(rhs)
@@ -697,6 +705,7 @@ impl Mul<u64> for &U256 {
 
 impl Mul<U256> for u64 {
     type Output = U256;
+
     #[inline(always)]
     fn mul(self, rhs: U256) -> U256 {
         rhs.mul(self)
@@ -705,6 +714,7 @@ impl Mul<U256> for u64 {
 
 impl Mul<&U256> for u64 {
     type Output = U256;
+
     #[inline(always)]
     fn mul(self, rhs: &U256) -> U256 {
         rhs.mul(self)
@@ -782,6 +792,8 @@ impl Arbitrary for U256 {
     }
 }
 
+// TODO: Replace literals with u256h!
+#[allow(clippy::unreadable_literal)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1076,7 +1088,7 @@ mod tests {
     fn test_divrem(a: U256, b: U256) -> bool {
         match a.divrem(&b) {
             None => b == U256::ZERO,
-            Some((q, r)) => r < b && q * &U256::from(b) + &U256::from(r) == a,
+            Some((q, r)) => r < b && q * &b + &r == a,
         }
     }
 

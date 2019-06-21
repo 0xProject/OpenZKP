@@ -6,13 +6,10 @@ mod secp256k1_bindings;
 mod secp256k1_native;
 mod starkcrypto;
 
-use crate::curve25519_donna::*;
-use crate::dalek::*;
-use crate::gmp::*;
-use crate::matter::*;
-use crate::secp256k1_bindings::*;
-use crate::secp256k1_native::*;
-use crate::starkcrypto::*;
+use crate::{
+    curve25519_donna::*, dalek::*, gmp::*, matter::*, secp256k1_bindings::*, secp256k1_native::*,
+    starkcrypto::*,
+};
 
 use criterion::{criterion_group, criterion_main, Criterion, Fun};
 

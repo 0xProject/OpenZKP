@@ -1,3 +1,5 @@
+// TODO Better variable names
+#![allow(clippy::many_single_char_names)]
 mod utils;
 
 use cfg_if::cfg_if;
@@ -47,7 +49,7 @@ pub fn init() {
 #[wasm_bindgen]
 pub fn nop(a: &str, b: &str) -> String {
     let elements = [from_string(a), from_string(b)];
-    let h = elements[1].clone();
+    let h = elements[1];
     to_string(&h)
 }
 
@@ -115,22 +117,22 @@ pub fn verify(message_hash: &str, signature: &JsValue, public_key: &JsValue) -> 
 fn parse_message(message: &JsValue) -> starkcrypto::MakerMessage {
     #[derive(Debug, Serialize, Deserialize)]
     struct MakerMessage {
-        vault_a: u32,
-        vault_b: u32,
+        vault_a:  u32,
+        vault_b:  u32,
         amount_a: String,
         amount_b: String,
-        token_a: String,
-        token_b: String,
+        token_a:  String,
+        token_b:  String,
         trade_id: u32,
     }
     let message: MakerMessage = message.into_serde().unwrap();
     starkcrypto::MakerMessage {
-        vault_a: message.vault_a,
-        vault_b: message.vault_b,
+        vault_a:  message.vault_a,
+        vault_b:  message.vault_b,
         amount_a: u64_from_string(&message.amount_a),
         amount_b: u64_from_string(&message.amount_b),
-        token_a: from_string(&message.token_a),
-        token_b: from_string(&message.token_b),
+        token_a:  from_string(&message.token_a),
+        token_b:  from_string(&message.token_b),
         trade_id: message.trade_id,
     }
 }
@@ -159,8 +161,8 @@ pub fn maker_sign(message: &JsValue, private_key: &str) -> JsValue {
     #[derive(Serialize, Deserialize)]
     struct Result {
         maker_msg: String,
-        r: String,
-        w: String,
+        r:         String,
+        w:         String,
     }
     let maker_msg = to_string(&maker_msg);
     let r = to_string(&r);
@@ -179,8 +181,8 @@ pub fn taker_sign(message: &JsValue, vault_a: u32, vault_b: u32, private_key: &s
     struct Result {
         maker_msg: String,
         taker_msg: String,
-        r: String,
-        w: String,
+        r:         String,
+        w:         String,
     }
     let maker_msg = to_string(&maker_msg);
     let taker_msg = to_string(&taker_msg);

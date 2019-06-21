@@ -1,17 +1,14 @@
-#![allow(non_snake_case)] // TODO - Migrate to naming system which the rust complier doesn't complain about
-use crate::channel::*;
-use crate::fft::*;
-use crate::field::*;
-use crate::merkle::*;
-use crate::polynomial::*;
-use crate::proof_of_work::*;
-use crate::u256::U256;
-use crate::utils::Reversible;
+#![allow(non_snake_case)] // TODO - Migrate to naming system which the rust complier doesn't complain
+                          // about
+use crate::{
+    channel::*, fft::*, field::*, merkle::*, polynomial::*, proof_of_work::*, u256::U256,
+    utils::Reversible,
+};
 use rayon::prelude::*;
 
 pub struct TraceTable {
-    pub ROWS: usize,
-    pub COLS: usize,
+    pub ROWS:     usize,
+    pub COLS:     usize,
     pub elements: Vec<FieldElement>,
 }
 
@@ -25,9 +22,12 @@ impl TraceTable {
     }
 }
 
-// This struct contains two evaluation systems which allow different functionality, first it contains a default function which directly evaluates the constraint function
-// Second it contains a function designed to be used as the core of a loop on precomputed values to get the C function.
-// If the proof system wants to used a looped eval for speedup it can set the loop bool to true, otherwise the system will preform all computation directly
+// This struct contains two evaluation systems which allow different
+// functionality, first it contains a default function which directly evaluates
+// the constraint function Second it contains a function designed to be used as
+// the core of a loop on precomputed values to get the C function. If the proof
+// system wants to used a looped eval for speedup it can set the loop bool to
+// true, otherwise the system will preform all computation directly
 #[allow(clippy::type_complexity)]
 pub struct Constraint<'a> {
     pub NCONSTRAINTS: usize,
@@ -100,7 +100,8 @@ pub fn stark_proof(
         .collect_into_vec(&mut TPn);
 
     let mut LDEn = vec![vec![FieldElement::ZERO; eval_x.len()]; trace.COLS];
-    // OPT - Use some system to make this occur inline instead of storing then processing
+    // OPT - Use some system to make this occur inline instead of storing then
+    // processing
     #[allow(clippy::type_complexity)]
     let ret: Vec<(usize, Vec<(usize, Vec<FieldElement>)>)> = (0..(beta as usize))
         .into_par_iter()
@@ -304,7 +305,8 @@ pub fn stark_proof(
         eval_domain_size,
         eval_x.as_slice(),
     ));
-    // Five fri layers have reduced the size of the evaluation domain and polynomail by 32x
+    // Five fri layers have reduced the size of the evaluation domain and polynomial
+    // by 32x
     let last_layer_degree_bound = trace_len / 32;
     let mut last_layer_coefficient = ifft(
         FieldElement::root(U256::from(fri[5].len() as u64)).unwrap(),
@@ -405,6 +407,8 @@ fn leaf_single(i: u64, CC: &[FieldElement]) -> U256 {
         .clone()
 }
 
+// TODO Better variable names
+#[allow(clippy::many_single_char_names)]
 fn fri_layer(
     previous: &[FieldElement],
     evaluation_point: &FieldElement,
@@ -484,9 +488,7 @@ pub fn geometric_series(base: &FieldElement, step: &FieldElement, len: usize) ->
 
 mod tests {
     use super::*;
-    use crate::fibonacci::*;
-    use crate::u256::U256;
-    use crate::u256h;
+    use crate::{fibonacci::*, u256::U256, u256h};
     use hex_literal::*;
 
     #[test]

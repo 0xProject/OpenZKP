@@ -1,7 +1,4 @@
-use crate::montgomery::*;
-use crate::u256::U256;
-use crate::u256h;
-use crate::{commutative_binop, noncommutative_binop};
+use crate::{commutative_binop, montgomery::*, noncommutative_binop, u256::U256, u256h};
 use hex_literal::*;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
@@ -19,14 +16,15 @@ pub const INVEXP: U256 = u256h!("0800000000000010fffffffffffffffffffffffffffffff
 pub struct FieldElement(pub U256);
 
 impl FieldElement {
-    pub const ZERO: FieldElement = FieldElement(U256::ZERO);
-    pub const ONE: FieldElement = FieldElement(R1);
+    pub const GENERATOR: FieldElement = FieldElement(u256h!(
+        "07fffffffffff9b0ffffffffffffffffffffffffffffffffffffffffffffffa1"
+    ));
+    // 3, in montgomery form.
     pub const NEGATIVE_ONE: FieldElement = FieldElement(u256h!(
         "0000000000000220000000000000000000000000000000000000000000000020"
     ));
-    pub const GENERATOR: FieldElement = FieldElement(u256h!(
-        "07fffffffffff9b0ffffffffffffffffffffffffffffffffffffffffffffffa1"
-    )); // 3, in montgomery form.
+    pub const ONE: FieldElement = FieldElement(R1);
+    pub const ZERO: FieldElement = FieldElement(U256::ZERO);
 
     pub const fn from_montgomery(n: U256) -> Self {
         FieldElement(n)
@@ -172,6 +170,7 @@ impl From<&[u8; 32]> for FieldElement {
 
 impl Neg for &FieldElement {
     type Output = FieldElement;
+
     #[inline(always)]
     fn neg(self) -> Self::Output {
         FieldElement(MODULUS - &self.0)
@@ -237,6 +236,8 @@ impl Arbitrary for FieldElement {
     }
 }
 
+// TODO: Use u256h literals here.
+#[allow(clippy::unreadable_literal)]
 #[cfg(test)]
 mod tests {
     use super::*;

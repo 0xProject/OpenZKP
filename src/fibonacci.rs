@@ -1,17 +1,15 @@
-#![allow(non_snake_case)] // TODO - Migrate to Choose naming system which the rust complier doesn't complain about
+// TODO - Migrate to Choose naming system which the rust complier doesn't
+// complain about
+#![allow(non_snake_case)]
+// TODO Fix these
 #![allow(clippy::type_complexity)]
 #![allow(clippy::cognitive_complexity)]
 #![allow(clippy::zero_prefixed_literal)]
 
-use crate::channel::*;
-use crate::fft::*;
-use crate::field::*;
-use crate::merkle::*;
-use crate::polynomial::*;
-use crate::proofs::*;
-use crate::u256::U256;
-use crate::u256h;
-use crate::utils::Reversible;
+use crate::{
+    channel::*, fft::*, field::*, merkle::*, polynomial::*, proofs::*, u256::U256, u256h,
+    utils::Reversible,
+};
 use hex_literal::*;
 use rayon::prelude::*;
 use tiny_keccak::Keccak;
@@ -207,6 +205,8 @@ pub fn get_constraint() -> Constraint<'static> {
     Constraint::new(20, &eval_c_direct, Some(&eval_whole_loop))
 }
 
+// TODO: Better variable names
+#[allow(clippy::many_single_char_names)]
 pub fn fib_proof(witness: FieldElement) -> Channel {
     let trace_len = 1024;
     let beta = 2_u64.pow(4);
@@ -662,11 +662,9 @@ pub fn fib_proof(witness: FieldElement) -> Channel {
 }
 
 #[cfg(test)]
-
 mod tests {
     use super::*;
-    use crate::u256::U256;
-    use crate::u256h;
+    use crate::{u256::U256, u256h};
     use tiny_keccak::Keccak;
 
     #[test]
@@ -797,12 +795,12 @@ mod tests {
 
         let mut proof = Channel::new(&public_input.as_slice());
         assert_eq!(
-            proof.digest.clone(),
+            proof.digest,
             hex!("c891a11ddbc6c425fad523a7a4aeafa505d7aa1638cfffbd5b747100bc69e367")
         );
         proof.write(&tree[1]);
         assert_eq!(
-            proof.digest.clone(),
+            proof.digest,
             hex!("b7d80385fa0c8879473cdf987ea7970bb807aec78bb91af39a1504d965ad8e92")
         );
         assert_eq!(
@@ -881,7 +879,7 @@ mod tests {
                     0,
                     1,
                 )));
-            return r;
+            r
         };
         let z = FieldElement::from(u256h!(
             "0622cc7ddb1b061b1b59a071b74754245186e9b5eb3fbf43b2defab80a8cfe46"
@@ -1141,7 +1139,7 @@ mod tests {
             sha3.update(&seed);
             sha3.finalize(&mut seed_res);
 
-            let test_value = U256::from(2_u64).pow((256 - pow_bits) as u64).unwrap();
+            let test_value = U256::from(2_u64).pow(u64::from(256 - pow_bits)).unwrap();
             for n in 0..(u64::max_value() as usize) {
                 let mut sha3 = Keccak::new_keccak256();
                 let mut res = [0; 32];
@@ -1149,11 +1147,9 @@ mod tests {
                 sha3.update(&(n.to_be_bytes()));
                 sha3.finalize(&mut res);
                 let final_int = U256::from_bytes_be(&res);
-                if final_int.leading_zeros() == pow_bits as usize {
-                    if final_int < test_value {
-                        // Only do the large int compare if the quick logs match
-                        return n as u64;
-                    }
+                if final_int.leading_zeros() == pow_bits as usize && final_int < test_value {
+                    // Only do the large int compare if the quick logs match
+                    return n as u64;
                 }
             }
             0
@@ -1172,7 +1168,14 @@ mod tests {
                 .push(((val.clone() >> (0x100 - 0x080)).c0 & (2_u64.pow(14) - 1)) as usize);
             query_indices
                 .push(((val.clone() >> (0x100 - 0x0C0)).c0 & (2_u64.pow(14) - 1)) as usize);
-            query_indices.push(((val >> (0x100 - 0x100)).c0 & (2_u64.pow(14) - 1)) as usize);
+            query_indices.push(
+                ((
+                    val
+                    // >> (0x100 - 0x100)
+                )
+                    .c0
+                    & (2_u64.pow(14) - 1)) as usize,
+            );
         }
         query_indices.truncate(num_queries);
         assert_eq!(query_indices[19], 11541);

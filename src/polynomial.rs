@@ -11,8 +11,7 @@ pub fn eval_poly(x: FieldElement, coefficients: &[FieldElement]) -> FieldElement
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::u256::*;
-    use crate::u256h;
+    use crate::{u256::*, u256h};
     use hex_literal::*;
 
     #[test]
@@ -22,7 +21,7 @@ mod tests {
         ));
         let mut coef = Vec::with_capacity(100);
         for i in 0..100 {
-            coef.push(FieldElement::from(U256::from(123456_u64 + i)));
+            coef.push(FieldElement::from(U256::from(123_456_u64 + i)));
         }
         let res = eval_poly(x, coef.as_slice());
         assert_eq!(

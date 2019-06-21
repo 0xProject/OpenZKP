@@ -11,7 +11,6 @@ use crunchy::unroll;
 ///  [ .0  -.1]    [-.0   .1]
 ///  [-.2   .3]    [ .2  -.3]
 /// ```
-///
 #[derive(PartialEq, Eq, Clone, Debug)]
 struct Matrix(u64, u64, u64, u64, bool);
 
@@ -101,7 +100,6 @@ fn div1(mut a: u64, b: u64) -> u64 {
 ///
 /// NOTE: This routine is critical for the performance of
 ///       Lehmer GCD computations.
-///
 // Performance is 40% better with forced inlining.
 #[inline(always)]
 // Clippy operates on the unrolled code, giving a false positive.
@@ -283,7 +281,6 @@ fn lehmer_loop(a0: u64, mut a1: u64) -> Matrix {
 /// end. This requires 8 additional multiplications, but allows us to use
 /// the tighter stopping conditions from Jebelean. It also seems the simplest
 /// out of these solutions.
-///
 // OPT: We can update r0 and r1 in place. This won't remove the partially
 // redundant call to lehmer_update, but it reduces memory usage.
 fn lehmer_double(mut r0: U256, mut r1: U256) -> Matrix {
@@ -323,7 +320,6 @@ fn lehmer_double(mut r0: U256, mut r1: U256) -> Matrix {
 }
 
 //// Lehmer's GCD algorithms.
-///
 /// See `gcd_extended` for documentation. This version maintains
 /// full precission cofactors.
 pub fn gcd(mut r0: U256, mut r1: U256) -> U256 {
@@ -467,13 +463,15 @@ pub fn inv_mod(modulus: &U256, num: &U256) -> Option<U256> {
     }
 }
 
+// We don't mind large number literals here.
+#[allow(clippy::unreadable_literal)]
 #[cfg(test)]
 mod tests {
-    // We don't mind large number litterals here.
-    #![allow(clippy::unreadable_litteral)]
     use super::*;
-    use crate::field::{FieldElement, MODULUS};
-    use crate::u256h;
+    use crate::{
+        field::{FieldElement, MODULUS},
+        u256h,
+    };
     use hex_literal::*;
     use quickcheck_macros::quickcheck;
 
