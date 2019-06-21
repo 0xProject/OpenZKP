@@ -45,7 +45,7 @@ pub trait Reversible {
 impl Reversible for u64 {
     fn bit_reverse(mut self) -> Self {
         const BITS: usize = 64;
-        debug_assert_eq!(1_u64.leading_zeros() as usize , BITS - 1);
+        debug_assert_eq!(1_u64.leading_zeros() as usize, BITS - 1);
         let mut reversed = 0;
         for _i in 0..BITS {
             reversed <<= 1;

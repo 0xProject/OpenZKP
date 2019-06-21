@@ -9,6 +9,8 @@ use crate::u256::U256;
 use crate::utils::Reversible;
 use rayon::prelude::*;
 use tiny_keccak::Keccak;
+use hex_literal::*;
+use crate::u256h;
 
 pub struct TraceTable {
     pub ROWS: usize,
@@ -29,17 +31,17 @@ impl TraceTable {
 pub struct ProofParams {
     pub beta: u64,
     pub pow_bits: u64,
-    pub queries : usize,
-    pub fri_layout : Vec<u64>
+    pub queries: usize,
+    pub fri_layout: Vec<usize>,
 }
 
 impl ProofParams {
-    pub fn new(beta: u64, pow_bits: u64, queries : usize, fri_layout : Vec<u64>) -> Self {
+    pub fn new(beta: u64, pow_bits: u64, queries: usize, fri_layout: Vec<usize>) -> Self {
         Self {
             beta,
             pow_bits,
             queries,
-            fri_layout
+            fri_layout,
         }
     }
 }
@@ -285,50 +287,88 @@ pub fn stark_proof(
     debug_assert!(eval_domain_size.is_power_of_two());
     let mut fri = Vec::with_capacity(64 - (eval_domain_size.leading_zeros() as usize));
     fri.push(CO);
-    let fri_tree_1 = fri_tree(&(fri[0].as_slice()), 8);
-    proof.write(&fri_tree_1[1]);
+    let mut halvings = 0;
+    let mut fri_const = params.beta/2;
+    let mut fri_trees : Vec<Vec<[u8; 32]>> = Vec::with_capacity(params.fri_layout.len());
+    let mut eval_point = FieldElement::ONE;
+    for x in params.fri_layout.as_slice()[..(params.fri_layout.len() - 1)].iter() {
+        if *x != 0 {
+            eval_point = proof.element();
+        }
+        for _ in 0..*x {
+            fri.push(fri_layer(
+                &fri[fri.len()-1].as_slice(),
+                &eval_point,
+                eval_domain_size,
+                eval_x.as_slice(),
+            ));
+            eval_point = eval_point.square();
+        }
+        let held_tree = fri_tree(&(fri[fri.len() - 1].as_slice()), fri_const);
 
+        proof.write(&held_tree[1]);
+        fri_trees.push(held_tree);
+        fri_const /= 2;
+        halvings += *x;
+    }
+    // let fri_tree_1 = fri_tree(&(fri[0].as_slice()), 8);
+    // proof.write(&fri_tree_1[1]);
+
+
+    // fri.push(fri_layer(
+    //     &fri[0].as_slice(),
+    //     &eval_point,
+    //     eval_domain_size,
+    //     eval_x.as_slice(),
+    // ));
+    // fri.push(fri_layer(
+    //     &fri[1].as_slice(),
+    //     &(eval_point.square()),
+    //     eval_domain_size,
+    //     eval_x.as_slice(),
+    // ));
+    // fri.push(fri_layer(
+    //     fri[2].as_slice(),
+    //     &(eval_point.square().square()),
+    //     eval_domain_size,
+    //     eval_x.as_slice(),
+    // ));
+    // let fri_tree_2 = fri_tree(&(fri[3].as_slice()), 4);
+
+    // proof.write(&fri_tree_2[1]);
+
+    // eval_point = proof.element();
+    // fri.push(fri_layer(
+    //     &(fri[3].as_slice()),
+    //     &eval_point,
+    //     eval_domain_size,
+    //     eval_x.as_slice(),
+    // ));
+    // fri.push(fri_layer(
+    //     &(fri[4].as_slice()),
+    //     &(eval_point.square()),
+    //     eval_domain_size,
+    //     eval_x.as_slice(),
+    // ));
+    // Five fri layers have reduced the size of the evaluation domain and polynomial by 32x
+
+    // Gets the coefficient representation of the last number of fri reductions
     let mut eval_point = proof.element();
-    fri.push(fri_layer(
-        &fri[0].as_slice(),
-        &eval_point,
-        eval_domain_size,
-        eval_x.as_slice(),
-    ));
-    fri.push(fri_layer(
-        &fri[1].as_slice(),
-        &(eval_point.square()),
-        eval_domain_size,
-        eval_x.as_slice(),
-    ));
-    fri.push(fri_layer(
-        fri[2].as_slice(),
-        &(eval_point.square().square()),
-        eval_domain_size,
-        eval_x.as_slice(),
-    ));
-    let fri_tree_2 = fri_tree(&(fri[3].as_slice()), 4);
+    for _ in 0..params.fri_layout[params.fri_layout.len() - 1] {
+        fri.push(fri_layer(
+            &fri[fri.len() -1].as_slice(),
+            &eval_point,
+            eval_domain_size,
+            eval_x.as_slice(),
+        ));
+        eval_point = eval_point.square();
+    }
+    halvings += params.fri_layout[params.fri_layout.len() - 1];
 
-    proof.write(&fri_tree_2[1]);
-
-    eval_point = proof.element();
-    fri.push(fri_layer(
-        &(fri[3].as_slice()),
-        &eval_point,
-        eval_domain_size,
-        eval_x.as_slice(),
-    ));
-    fri.push(fri_layer(
-        &(fri[4].as_slice()),
-        &(eval_point.square()),
-        eval_domain_size,
-        eval_x.as_slice(),
-    ));
-    // Five fri layers have reduced the size of the evaluation domain and polynomail by 32x
-    let last_layer_degree_bound = trace_len / 32;
+    let last_layer_degree_bound = trace_len / (2_u64.pow(halvings as u32));
     let mut last_layer_coefficient = ifft(
-        FieldElement::root(U256::from(fri[5].len() as u64)).unwrap(),
-        &(fri[5].as_slice()),
+        FieldElement::root(U256::from(fri[halvings].len() as u64)).unwrap(),
+        &(fri[halvings].as_slice()),
     );
     last_layer_coefficient.truncate(last_layer_degree_bound as usize);
     proof.write_element_list(last_layer_coefficient.as_slice());
@@ -368,40 +408,32 @@ pub fn stark_proof(
     for x in decommitment.iter() {
         proof.write(x);
     }
-
-    let fri_indices: Vec<usize> = query_indices
+    let mut fri_indices: Vec<usize> = query_indices
         .iter()
         .map(|x| x / ((beta / 2) as usize))
         .collect();
-    for i in fri_indices.iter() {
-        for j in 0..((beta / 2) as usize) {
-            let n = i * ((beta / 2) as usize) + j;
-            if query_indices.binary_search(&n).is_ok() {
-                continue;
-            } else {
-                proof.write_element(&fri[0][((n as u64).bit_reverse() >> 50) as usize]);
-            }
-        }
-    }
-    decommitment = crate::merkle::proof(&fri_tree_1, &(fri_indices.as_slice()));
-    for x in decommitment.iter() {
-        proof.write(x);
-    }
+    
+    let mut current_fri = 0;
+    let mut previous_indicies = query_indices.clone();
+    for (k, x) in params.fri_layout.as_slice()[..(params.fri_layout.len() -1)].iter().enumerate() {
+        current_fri += *x;
+        for i in fri_indices.iter() {
+            for j in 0..((beta / 2_u64.pow(k as u32 + 1)) as usize) {
+                let n = i * ((beta / 2_u64.pow(k as u32 + 1)) as usize) + j;
 
-    let fri_low_indices: Vec<usize> = query_indices.iter().map(|x| x / 32).collect();
-    for i in fri_low_indices.iter() {
-        for j in 0..4 {
-            let n = i * 4 + j;
-            if fri_indices.binary_search(&n).is_ok() {
-                continue;
-            } else {
-                proof.write_element(&fri[3][((n as u64).bit_reverse() >> 53) as usize]);
+                if previous_indicies.binary_search(&n).is_ok() {
+                    continue;
+                } else {
+                    proof.write_element(&fri[current_fri][((n as u64).bit_reverse() >> ((fri[current_fri].len().leading_zeros() +1) as u64)) as usize]);
+                }
             }
         }
-    }
-    decommitment = crate::merkle::proof(&fri_tree_2, &(fri_low_indices.as_slice()));
-    for x in decommitment.iter() {
-        proof.write(x);
+        decommitment = crate::merkle::proof(&fri_trees[k], &(fri_indices.as_slice()));
+        for x in decommitment.iter() {
+            proof.write(x);
+        }
+        previous_indicies = fri_indices.clone();
+        fri_indices = fri_indices.iter().map(|ind| ind / 4).collect();
     }
 
     proof
@@ -511,6 +543,7 @@ mod tests {
     use crate::u256::U256;
     use crate::u256h;
     use hex_literal::*;
+    use hex::*;
 
     #[test]
     fn fib_test_1024_python_witness() {
@@ -541,13 +574,13 @@ mod tests {
         let witness = FieldElement::from(u256h!(
             "00000000000000000000000000000000000000000000000f00dbabe0cafebabe"
         ));
-        let expected = hex!("d5a91d6ba26d105e60adc24206d87c8ee05b11a8674a064c90cba96470573955");
+        let expected = hex!("5c8e2f6353526e422744a8c11a7a94db1829cb2bfac78bae774b5576c88279c9");
         let actual = stark_proof(
             &get_trace_table(1024, witness),
             &get_constraint(),
             claim_index,
             claim_fib,
-            ProofParams::new(2_u64.pow(5), 12, 20, vec![]),
+            ProofParams::new(2_u64.pow(5), 12, 20, vec![0, 3, 2]),
         );
         assert_eq!(actual.digest, expected);
     }
@@ -561,13 +594,13 @@ mod tests {
         let witness = FieldElement::from(u256h!(
             "00000000000000000000000000000000000000000000000f00dbabe0cafebabe"
         ));
-        let expected = hex!("006493c24997323b161b5ca20fbe0b2d0826fa8fd56e6eaf47f872ed29bfc5cb");
+        let expected = hex!("427499a0cd50a90fe7fdf2f039f6dffd71fcc930392151d2eb0ea611c3f312b5");
         let actual = stark_proof(
             &get_trace_table(4096, witness),
             &get_constraint(),
             claim_index,
             claim_fib,
-            ProofParams::new(2_u64.pow(4), 12, 20, vec![0, 3 , 2]),
+            ProofParams::new(2_u64.pow(4), 12, 20, vec![0, 3, 2, 1]),
         );
         assert_eq!(actual.digest, expected);
     }
