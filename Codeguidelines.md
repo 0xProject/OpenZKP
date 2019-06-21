@@ -3,7 +3,8 @@
 ## Automated linting
 
 We use automated linting tools where possible and these are configured using
-`.editorconfig` and `rustfmt.toml`. Code is linted using the following three commands:
+`.editorconfig` and `rustfmt.toml`. Code is linted using the following three
+commands:
 
 ```
 RUSTFLAGS="-Dwarnings" cargo build --all --all-targets
@@ -32,24 +33,30 @@ Except,
 * Unit tests are in the same file as the code covered and not in separate files.
 * We use `quickcheck` for property based testing.
 
-In addition to the above, we use [Criterion][criterion] extensively for statistical benchmarking.
-See the section below for what is expected.
+In addition to the above, we use [Criterion][criterion] extensively for statistical
+benchmarking. See the section below for what is expected.
 
 [criterion]: https://bheisler.github.io/criterion.rs/book/index.html
 
 ## Making exceptions
 
-Sometimes clippy will give a false positive, where compliance will decrease the safety and readability of the code. In this case a localized exception is in order.
+Sometimes clippy will give a false positive, where compliance will decrease the
+safety and readability of the code. In this case a localized exception is in order.
 
-Clippy exceptions should be added on the smallest reasonable scope. Often on functions. An expection can be made for unit tests, where it is okay to disable it for all tests in the file.
+Clippy exceptions should be added on the smallest reasonable scope. Often, this
+will be a single function. An exception can be made for unit tests, where it is
+okay to disable it for all tests in the file.
 
-All exceptions need to have a comment line preceding explaining why the rule leads to false positives.
+All exceptions need to have a comment line preceding explaining why the rule leads
+to false positives.
 
 ## Testing
 
 Be liberal with `debug_assert` statements.
 
-In unit tests, the correct values are named `expected` and computed values are named `actual`. When comparing, they are ordered `actual` then `expected` like so:
+In unit tests, the correct values are named `expected` and computed values are
+named `actual`. When comparing, they are ordered `actual` then `expected` like
+so:
 
 ```rust
 let actual = square(2);
