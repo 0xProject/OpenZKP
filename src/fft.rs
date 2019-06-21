@@ -103,29 +103,29 @@ mod tests {
 
     #[test]
     fn fft_four_element_test() {
-        let coefficients = vec![
+        let v = vec![
             FieldElement::from_hex_str("4357670"),
             FieldElement::from_hex_str("1353542"),
             FieldElement::from_hex_str("3123423"),
             FieldElement::from_hex_str("9986432"),
         ];
-        let polynomial_values: Vec<FieldElement> = (0..4u64)
+        let expected: Vec<FieldElement> = (0..4u64)
             .map(|i| {
                 eval_poly(
                     FieldElement::root(U256::from(4u64))
                         .unwrap()
                         .pow(U256::from(i)),
-                    &coefficients,
+                    &v,
                 )
             })
             .collect();
 
-        assert_eq!(fft(&coefficients), polynomial_values);
+        assert_eq!(fft(&v), expected);
     }
 
     #[test]
     fn fft_eight_element_test() {
-        let coefficients = vec![
+        let v = vec![
             FieldElement::from_hex_str("4357670"),
             FieldElement::from_hex_str("1353542"),
             FieldElement::from_hex_str("3123423"),
@@ -136,11 +136,11 @@ mod tests {
             FieldElement::from_hex_str("99864321"),
         ];
         let eighth_root_of_unity = FieldElement::root(U256::from(8u64)).unwrap();
-        let polynomial_values: Vec<FieldElement> = (0..8u64)
-            .map(|i| eval_poly(eighth_root_of_unity.pow(U256::from(i)), &coefficients))
+        let expected: Vec<FieldElement> = (0..8u64)
+            .map(|i| eval_poly(eighth_root_of_unity.pow(U256::from(i)), &v))
             .collect();
 
-        assert_eq!(fft(&coefficients), polynomial_values);
+        assert_eq!(fft(&v), expected);
     }
 
     #[test]
