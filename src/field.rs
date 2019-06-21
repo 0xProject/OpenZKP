@@ -3,6 +3,9 @@ use crate::u256::U256;
 use crate::u256h;
 use crate::{commutative_binop, noncommutative_binop};
 use hex_literal::*;
+use serde::de::Visitor;
+use serde::{de, Deserialize, Deserializer};
+use std::fmt;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 // TODO: Implement Serde
@@ -229,6 +232,30 @@ commutative_binop!(FieldElement, Add, add, AddAssign, add_assign);
 commutative_binop!(FieldElement, Mul, mul, MulAssign, mul_assign);
 noncommutative_binop!(FieldElement, Sub, sub, SubAssign, sub_assign);
 noncommutative_binop!(FieldElement, Div, div, DivAssign, div_assign);
+
+impl<'de> Deserialize<'de> for FieldElement {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct FieldElementVisitor;
+        impl<'de> Visitor<'de> for FieldElementVisitor {
+            type Value = FieldElement;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("A field element in hex.")
+            }
+
+            fn visit_str<E>(self, value: &str) -> Result<FieldElement, E>
+            where
+                E: de::Error,
+            {
+                Ok(FieldElement::from(U256::from_hex_str(value)))
+            }
+        }
+        deserializer.deserialize_str(FieldElementVisitor)
+    }
+}
 
 #[cfg(test)]
 use quickcheck::{Arbitrary, Gen};

@@ -16,6 +16,7 @@ pub mod merkle;
 pub mod montgomery;
 pub mod orders;
 pub mod pedersen;
+pub mod pedersen_merkle;
 mod pedersen_points;
 pub mod polynomial;
 pub mod square_root;
