@@ -95,7 +95,7 @@ pub fn stark_proof(
             for i in (0..trace.elements.len()).step_by(trace.COLS) {
                 hold_col.push(trace.elements[x + i].clone());
             }
-            ifft(g.clone(), hold_col.as_slice())
+            ifft(hold_col.as_slice())
         })
         .collect_into_vec(&mut TPn);
 
@@ -114,7 +114,6 @@ pub fn stark_proof(
                         (
                             x,
                             fft_cofactor(
-                                g.clone(),
                                 TPn[x].as_slice(),
                                 &gen * (&omega.pow(U256::from(j as u64))),
                             ),
@@ -308,10 +307,7 @@ pub fn stark_proof(
     // Five fri layers have reduced the size of the evaluation domain and polynomial
     // by 32x
     let last_layer_degree_bound = trace_len / 32;
-    let mut last_layer_coefficient = ifft(
-        FieldElement::root(U256::from(fri[5].len() as u64)).unwrap(),
-        &(fri[5].as_slice()),
-    );
+    let mut last_layer_coefficient = ifft(&(fri[5].as_slice()));
     last_layer_coefficient.truncate(last_layer_degree_bound as usize);
     proof.write_element_list(last_layer_coefficient.as_slice());
     debug_assert_eq!(last_layer_coefficient.len() as u64, last_layer_degree_bound);
