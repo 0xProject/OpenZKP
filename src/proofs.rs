@@ -1,7 +1,7 @@
 #![allow(non_snake_case)] // TODO - Migrate to naming system which the rust complier doesn't complain
                           // about
 use crate::{
-    channel::*, fft::*, field::*, merkle::*, polynomial::*, proof_of_work::*, u256::U256,
+    channel::*, fft::*, field::*, merkle::*, polynomial::*, u256::U256,
     utils::Reversible,
 };
 use rayon::prelude::*;
@@ -346,8 +346,8 @@ pub fn stark_proof(
     proof.write_element_list(last_layer_coefficient.as_slice());
     debug_assert_eq!(last_layer_coefficient.len(), last_layer_degree_bound);
 
-    let proof_of_work = pow_find_nonce(params.pow_bits, &proof);
-    debug_assert!(pow_verify(proof_of_work, 12, &proof));
+    let proof_of_work = proof.pow_find_nonce(params.pow_bits);
+    debug_assert!(pow_verify(proof_of_work, params.pow_bits , &proof));
     proof.write(&proof_of_work.to_be_bytes());
 
     let num_queries = params.queries;
