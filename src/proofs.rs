@@ -8,9 +8,6 @@ use crate::proof_of_work::*;
 use crate::u256::U256;
 use crate::utils::Reversible;
 use rayon::prelude::*;
-use tiny_keccak::Keccak;
-use hex_literal::*;
-use crate::u256h;
 
 pub struct TraceTable {
     pub ROWS: usize,
@@ -92,7 +89,7 @@ impl<'a> Constraint<'a> {
     }
 }
 
-#[allow(clippy::cognitive_complexity)]
+#[allow(clippy::cognitive_complexity)] // TODO - Split into smaller functions
 pub fn stark_proof(
     trace: &TraceTable,
     constraints: &Constraint,
@@ -311,46 +308,6 @@ pub fn stark_proof(
         fri_const /= 2;
         halvings += *x;
     }
-    // let fri_tree_1 = fri_tree(&(fri[0].as_slice()), 8);
-    // proof.write(&fri_tree_1[1]);
-
-
-    // fri.push(fri_layer(
-    //     &fri[0].as_slice(),
-    //     &eval_point,
-    //     eval_domain_size,
-    //     eval_x.as_slice(),
-    // ));
-    // fri.push(fri_layer(
-    //     &fri[1].as_slice(),
-    //     &(eval_point.square()),
-    //     eval_domain_size,
-    //     eval_x.as_slice(),
-    // ));
-    // fri.push(fri_layer(
-    //     fri[2].as_slice(),
-    //     &(eval_point.square().square()),
-    //     eval_domain_size,
-    //     eval_x.as_slice(),
-    // ));
-    // let fri_tree_2 = fri_tree(&(fri[3].as_slice()), 4);
-
-    // proof.write(&fri_tree_2[1]);
-
-    // eval_point = proof.element();
-    // fri.push(fri_layer(
-    //     &(fri[3].as_slice()),
-    //     &eval_point,
-    //     eval_domain_size,
-    //     eval_x.as_slice(),
-    // ));
-    // fri.push(fri_layer(
-    //     &(fri[4].as_slice()),
-    //     &(eval_point.square()),
-    //     eval_domain_size,
-    //     eval_x.as_slice(),
-    // ));
-    // Five fri layers have reduced the size of the evaluation domain and polynomial by 32x
 
     // Gets the coefficient representation of the last number of fri reductions
     let mut eval_point = proof.element();
@@ -424,7 +381,7 @@ pub fn stark_proof(
                 if previous_indicies.binary_search(&n).is_ok() {
                     continue;
                 } else {
-                    proof.write_element(&fri[current_fri][((n as u64).bit_reverse() >> ((fri[current_fri].len().leading_zeros() +1) as u64)) as usize]);
+                    proof.write_element(&fri[current_fri][((n as u64).bit_reverse() >> (u64::from(fri[current_fri].len().leading_zeros() +1))) as usize]);
                 }
             }
         }
@@ -463,19 +420,19 @@ fn fri_layer(
     eval_domain_size: u64,
     eval_x: &[FieldElement],
 ) -> Vec<FieldElement> {
-    let n = previous.len() as u64;
-    let s = eval_domain_size / n;
-    let mut next = vec![FieldElement::ZERO; (n / 2) as usize];
-    (0..(n as usize) / 2)
+    let len = previous.len() as u64;
+    let s = eval_domain_size / len;
+    let mut next = vec![FieldElement::ZERO; (len / 2) as usize];
+    (0..(len as usize) / 2)
         .into_par_iter()
-        .map(|i| {
-            let j = (n / 2 + (i as u64)) % n;
+        .map(|index| {
+            let permuted_index = (len / 2 + (index as u64)) % len;
             let m = eval_x.len() as u64;
-            let ind = ((m - (i as u64)) * s) % m;
+            let ind = ((m - (index as u64)) * s) % m;
             let x_inv = &eval_x[ind as usize];
-            let a = &previous[i as usize];
-            let b = &previous[j as usize];
-            (a + b) + evaluation_point * x_inv * (a - b)
+            let value = &previous[index as usize];
+            let permuted_value = &previous[permuted_index as usize];
+            (value + permuted_value) + evaluation_point * x_inv * (value - permuted_value)
         })
         .collect_into_vec(&mut next);
     next
@@ -543,7 +500,6 @@ mod tests {
     use crate::u256::U256;
     use crate::u256h;
     use hex_literal::*;
-    use hex::*;
 
     #[test]
     fn fib_test_1024_python_witness() {

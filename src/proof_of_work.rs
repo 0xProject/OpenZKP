@@ -18,7 +18,7 @@ pub fn pow_find_nonce(pow_bits: u64, proof: &Channel) -> u64 {
     sha3.update(&seed);
     sha3.finalize(&mut seed_res);
 
-    let test_value = U256::from(2_u64).pow(u64::from(256 - pow_bits)).unwrap();
+    let test_value = U256::from(2_u64).pow(256 - pow_bits).unwrap();
     for n in 0..(u64::max_value() as usize) {
         let mut sha3 = Keccak::new_keccak256();
         let mut res = [0; 32];
@@ -49,7 +49,7 @@ pub fn pow_find_nonce_threaded(pow_bits: u64, proof: &Channel) -> u64 {
     sha3.update(&seed);
     sha3.finalize(&mut seed_res);
 
-    let test_value = U256::from(2_u64).pow(u64::from(256 - pow_bits)).unwrap();
+    let test_value = U256::from(2_u64).pow(256 - pow_bits).unwrap();
     let ret = (0..(u64::max_value() as usize))
         .into_par_iter()
         .find_any(|n| -> bool {
@@ -82,7 +82,7 @@ pub fn pow_verify(n: u64, pow_bits: u64, proof: &Channel) -> bool {
     sha3.update(&seed);
     sha3.finalize(&mut seed_res);
 
-    let test_value = U256::from(2_u64).pow(u64::from(256 - pow_bits)).unwrap();
+    let test_value = U256::from(2_u64).pow(256 - pow_bits).unwrap();
     let mut sha3 = Keccak::new_keccak256();
     let mut res = [0; 32];
     sha3.update(&seed_res);
