@@ -97,8 +97,10 @@ fn bit_reversal_permute<T>(v: &mut [T]) {
 }
 
 fn reverse(x: u64, bits: u32) -> u64 {
+    debug_assert!(bits <= 64);
+    debug_assert!(bits == 64 || x < (1u64 << bits));
     if bits == 0 {
-        0u64;
+        0
     } else {
         x.bit_reverse() >> (64 - bits)
     }
