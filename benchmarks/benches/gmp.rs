@@ -1,3 +1,6 @@
+// Criterion requires the second argument to be by reference
+#![allow(clippy::trivially_copy_pass_by_ref)]
+
 use criterion::{black_box, Bencher};
 use rug::Integer;
 
@@ -32,6 +35,6 @@ pub fn gmp_field_inv(bench: &mut Bencher, _i: &()) {
     )
     .unwrap();
     bench.iter(|| {
-        black_box(black_box(&a).clone().invert(&m));
+        black_box(black_box(&a).clone().invert(&m)).unwrap();
     })
 }

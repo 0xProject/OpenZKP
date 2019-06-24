@@ -1,5 +1,4 @@
-use crate::pedersen::hash;
-use crate::u256::U256;
+use crate::{pedersen::hash, u256::U256};
 
 #[derive(Debug)]
 pub struct MakerMessage<T> {
@@ -36,6 +35,8 @@ pub fn hash_taker(maker_hash: &U256, vault_a: u32, vault_b: u32) -> U256 {
     ])
 }
 
+// TODO: Replace literals with u256h!
+#[allow(clippy::unreadable_literal)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -57,7 +58,8 @@ mod tests {
         // --amount_a 6873058723796400 --amount_b 852209057714036
         // --token_a 168976971209324910088270776698114429107164817795147365551345596466024812576\
         // --token_b 210761264384301076547763280170970365712477797880932555831340857495337358698\
-        // --trade_id 0 --priv_key 1699550429262868952957733065396688802326540225623380427551300052767936406476
+        // --trade_id 0 --priv_key
+        // 1699550429262868952957733065396688802326540225623380427551300052767936406476
         let expected = u256h!("01921ce52df68f0185ade7572776513304bdd4a07faf6cf28cefc65a86fc496c");
         assert_eq!(result, expected);
     }

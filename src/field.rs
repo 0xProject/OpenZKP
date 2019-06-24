@@ -1,7 +1,4 @@
-use crate::montgomery::*;
-use crate::u256::U256;
-use crate::u256h;
-use crate::{commutative_binop, noncommutative_binop};
+use crate::{commutative_binop, montgomery::*, noncommutative_binop, u256::U256, u256h};
 use hex_literal::*;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
@@ -19,17 +16,22 @@ pub const INVEXP: U256 = u256h!("0800000000000010fffffffffffffffffffffffffffffff
 pub struct FieldElement(pub U256);
 
 impl FieldElement {
-    pub const ZERO: FieldElement = FieldElement(U256::ZERO);
-    pub const ONE: FieldElement = FieldElement(R1);
+    pub const GENERATOR: FieldElement = FieldElement(u256h!(
+        "07fffffffffff9b0ffffffffffffffffffffffffffffffffffffffffffffffa1"
+    ));
+    // 3, in montgomery form.
     pub const NEGATIVE_ONE: FieldElement = FieldElement(u256h!(
         "0000000000000220000000000000000000000000000000000000000000000020"
     ));
-    pub const GENERATOR: FieldElement = FieldElement(u256h!(
-        "07fffffffffff9b0ffffffffffffffffffffffffffffffffffffffffffffffa1"
-    )); //The mont transformed 3
+    pub const ONE: FieldElement = FieldElement(R1);
+    pub const ZERO: FieldElement = FieldElement(U256::ZERO);
 
     pub const fn from_montgomery(n: U256) -> Self {
         FieldElement(n)
+    }
+
+    pub fn from_hex_str(s: &str) -> Self {
+        FieldElement::from(U256::from_hex_str(s))
     }
 
     #[allow(clippy::cast_lossless)]
@@ -51,6 +53,11 @@ impl FieldElement {
     #[inline(always)]
     pub fn is_zero(&self) -> bool {
         self.0 == U256::ZERO
+    }
+
+    #[inline(always)]
+    pub fn is_one(&self) -> bool {
+        self.0 == R1
     }
 
     #[inline(always)]
@@ -80,23 +87,21 @@ impl FieldElement {
         *self = self.neg()
     }
 
-    pub fn pow(&self, exponent: U256) -> Option<FieldElement> {
-        if self.is_zero() && exponent.is_zero() {
-            None
-        } else {
-            let mut result = FieldElement::ONE;
-            let mut remaining_exponent = exponent;
-            let mut square = self.clone();
-            while !remaining_exponent.is_zero() {
-                if remaining_exponent.is_odd() {
-                    result *= &square;
-                }
-                remaining_exponent >>= 1;
-                square = square.square();
+    pub fn pow(&self, exponent: U256) -> FieldElement {
+        let mut result = FieldElement::ONE;
+        let mut square = self.clone();
+        let mut remaining_exponent = exponent;
+        while !remaining_exponent.is_zero() {
+            if remaining_exponent.is_odd() {
+                result *= &square;
             }
-            Some(result)
+            remaining_exponent >>= 1;
+            square = square.square();
         }
+        result
     }
+
+    // OPT: replace this with a constant array of roots of unity.
     pub fn root(n: U256) -> Option<FieldElement> {
         if n.is_zero() {
             return Some(FieldElement::ONE);
@@ -105,7 +110,7 @@ impl FieldElement {
         if rem != U256::ZERO {
             return None;
         }
-        FieldElement::GENERATOR.pow(q)
+        Some(FieldElement::GENERATOR.pow(q))
     }
 }
 
@@ -165,6 +170,7 @@ impl From<&[u8; 32]> for FieldElement {
 
 impl Neg for &FieldElement {
     type Output = FieldElement;
+
     #[inline(always)]
     fn neg(self) -> Self::Output {
         FieldElement(MODULUS - &self.0)
@@ -230,6 +236,8 @@ impl Arbitrary for FieldElement {
     }
 }
 
+// TODO: Use u256h literals here.
+#[allow(clippy::unreadable_literal)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -380,38 +388,58 @@ mod tests {
 
     #[quickcheck]
     fn pow_0(a: FieldElement) -> bool {
-        match a.pow(U256::from(0u128)) {
-            None => a.is_zero(),
-            Some(result) => result == FieldElement::ONE,
-        }
+        a.pow(U256::from(0u128)) == FieldElement::ONE
     }
 
     #[quickcheck]
     fn pow_1(a: FieldElement) -> bool {
-        match a.pow(U256::from(1u128)) {
-            None => false,
-            Some(result) => result == a,
-        }
+        a.pow(U256::from(1u128)) == a
     }
 
     #[quickcheck]
     fn pow_2(a: FieldElement) -> bool {
-        match a.pow(U256::from(2u128)) {
-            None => false,
-            Some(result) => result == a.square(),
-        }
+        a.pow(U256::from(2u128)) == a.square()
     }
 
     #[quickcheck]
     fn pow_n(a: FieldElement, n: usize) -> bool {
-        match a.pow(U256::from(n as u128)) {
-            None => a.is_zero() && n == 0,
-            Some(result) => result == repeat_n(a, n).product(),
-        }
+        a.pow(U256::from(n as u128)) == repeat_n(a, n).product()
     }
 
     #[quickcheck]
     fn fermats_little_theorem(a: FieldElement) -> bool {
-        a.pow(MODULUS).unwrap() == a
+        a.pow(MODULUS) == a
+    }
+
+    #[test]
+    fn zeroth_root_of_unity() {
+        assert_eq!(
+            FieldElement::root(U256::from(0u64)).unwrap(),
+            FieldElement::ONE
+        );
+    }
+
+    #[test]
+    fn roots_of_unity_squared() {
+        let powers_of_two = (0..193).map(|n| U256::ONE << n);
+        let roots_of_unity: Vec<_> = powers_of_two
+            .clone()
+            .map(|n| FieldElement::root(n).unwrap())
+            .collect();
+
+        for (smaller_root, larger_root) in roots_of_unity[1..].iter().zip(roots_of_unity.as_slice())
+        {
+            assert_eq!(smaller_root.square(), *larger_root);
+            assert!(!smaller_root.is_one());
+        }
+    }
+
+    #[test]
+    fn root_of_unity_definition() {
+        let powers_of_two = (0..193).map(|n| U256::ONE << n);
+        for n in powers_of_two {
+            let root_of_unity = FieldElement::root(n.clone()).unwrap();
+            assert_eq!(root_of_unity.pow(n), FieldElement::ONE);
+        }
     }
 }

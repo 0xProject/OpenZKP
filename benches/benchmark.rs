@@ -1,19 +1,22 @@
-#![allow(clippy::unreadable_literal)] // TODO - Switch to u256h!()
+// TODO: Use u256h everywhere
+#![allow(clippy::unreadable_literal)]
+
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use hex_literal::*;
-use starkcrypto::curve::Affine;
-use starkcrypto::ecdsa::{private_to_public, sign, verify};
-use starkcrypto::fft::fft_cofactor;
-use starkcrypto::fibonacci::*;
-use starkcrypto::field::FieldElement;
-use starkcrypto::jacobian::Jacobian;
-use starkcrypto::merkle::*;
-use starkcrypto::pedersen::hash;
-use starkcrypto::proofs::*;
-use starkcrypto::square_root::square_root;
-use starkcrypto::u256::U256;
-use starkcrypto::u256h;
-use starkcrypto::wnaf;
+use starkcrypto::{
+    curve::Affine,
+    ecdsa::{private_to_public, sign, verify},
+    fft::fft_cofactor,
+    fibonacci::*,
+    field::FieldElement,
+    jacobian::Jacobian,
+    merkle::*,
+    pedersen::hash,
+    proofs::*,
+    square_root::square_root,
+    u256::U256,
+    u256h, wnaf,
+};
 
 fn u256_add(crit: &mut Criterion) {
     let a = U256::new(
@@ -421,9 +424,6 @@ fn merkle_proof_make(crit: &mut Criterion) {
 }
 
 fn fft_timing(crit: &mut Criterion) {
-    let root = FieldElement::from(u256h!(
-        "063365fe0de874d9c90adb1e2f9c676e98c62155e4412e873ada5e1dee6feebb"
-    ));
     let cofactor = FieldElement::from(u256h!(
         "07696b8ff70e8e9285c76bef95d3ad76cdb29e213e4b5d9a9cd0afbd7cb29b5c"
     ));
@@ -454,7 +454,7 @@ fn fft_timing(crit: &mut Criterion) {
         )),
     ];
     crit.bench_function("Performing FFT", move |bench| {
-        bench.iter(|| black_box(fft_cofactor(root.clone(), &vector, cofactor.clone())))
+        bench.iter(|| black_box(fft_cofactor(&vector, &cofactor)))
     });
 }
 fn abstracted_fib_proof_make(crit: &mut Criterion) {

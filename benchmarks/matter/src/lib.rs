@@ -1,3 +1,6 @@
+// Not our code guidelines
+#![allow(warnings)]
+
 pub use ff::Field;
 use ff::*;
 use serde::{Deserialize, Serialize};

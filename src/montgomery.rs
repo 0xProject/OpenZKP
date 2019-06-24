@@ -1,7 +1,9 @@
-use crate::field::MODULUS;
-use crate::u256::U256;
-use crate::u256h;
-use crate::utils::{adc, mac};
+use crate::{
+    field::MODULUS,
+    u256::U256,
+    u256h,
+    utils::{adc, mac},
+};
 use hex_literal::*;
 use std::cmp::Ordering;
 

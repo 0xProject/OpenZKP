@@ -1,10 +1,5 @@
 use hex_literal::*;
-use starkcrypto::fibonacci::*;
-use starkcrypto::field::FieldElement;
-use starkcrypto::proofs::*;
-use starkcrypto::u256::*;
-use starkcrypto::u256h;
-use std::env;
+use starkcrypto::{fibonacci::*, field::FieldElement, proofs::*, u256::*, u256h};
 use std::time::Instant;
 
 fn main() {

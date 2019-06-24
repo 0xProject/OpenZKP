@@ -1,5 +1,4 @@
-use crate::channel::*;
-use crate::u256::*;
+use crate::{channel::*, u256::*};
 use hex_literal::*;
 use rayon::prelude::*;
 use tiny_keccak::Keccak;
@@ -95,12 +94,6 @@ pub fn pow_verify(n: u64, pow_bits: u64, proof: &Channel) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::channel::*;
-    use crate::fibonacci::*;
-    use crate::field::*;
-    use crate::u256::U256;
-    use crate::u256h;
-    use hex_literal::*;
 
     #[test]
     fn proof_of_work_test() {

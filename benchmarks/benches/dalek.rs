@@ -1,6 +1,11 @@
+// Criterion requires the second argument to be by reference
+#![allow(clippy::trivially_copy_pass_by_ref)]
+
 use criterion::{black_box, Bencher};
-use curve25519_dalek::field::FieldElement;
-use curve25519_dalek::scalar::{Scalar, UnpackedScalar};
+use curve25519_dalek::{
+    field::FieldElement,
+    scalar::{Scalar, UnpackedScalar},
+};
 use ed25519_dalek::Keypair;
 use rand::rngs::OsRng;
 use sha2::Sha512;

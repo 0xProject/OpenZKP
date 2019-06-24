@@ -1,12 +1,9 @@
-#![allow(non_snake_case)] // TODO - Migrate to naming system which the rust complier doesn't complain about
-use crate::channel::*;
-use crate::fft::*;
-use crate::field::*;
-use crate::merkle::*;
-use crate::polynomial::*;
-use crate::proof_of_work::*;
-use crate::u256::U256;
-use crate::utils::Reversible;
+#![allow(non_snake_case)] // TODO - Migrate to naming system which the rust complier doesn't complain
+                          // about
+use crate::{
+    channel::*, fft::*, field::*, merkle::*, polynomial::*, proof_of_work::*, u256::U256,
+    utils::Reversible,
+};
 use rayon::prelude::*;
 
 pub struct TraceTable {
@@ -43,9 +40,12 @@ impl ProofParams {
     }
 }
 
-// This struct contains two evaluation systems which allow different functionality, first it contains a default function which directly evaluates the constraint function
-// Second it contains a function designed to be used as the core of a loop on precomputed values to get the C function.
-// If the proof system wants to used a looped eval for speedup it can set the loop bool to true, otherwise the system will preform all computation directly
+// This struct contains two evaluation systems which allow different
+// functionality, first it contains a default function which directly evaluates
+// the constraint function Second it contains a function designed to be used as
+// the core of a loop on precomputed values to get the C function. If the proof
+// system wants to used a looped eval for speedup it can set the loop bool to
+// true, otherwise the system will preform all computation directly
 #[allow(clippy::type_complexity)]
 pub struct Constraint<'a> {
     pub NCONSTRAINTS: usize,
@@ -100,7 +100,7 @@ pub fn stark_proof(
     let beta = params.beta;
     let trace_len = (trace.elements.len() / trace.COLS) as u64;
     let omega = FieldElement::root(U256::from(trace_len * beta)).unwrap();
-    let g = omega.pow(U256::from(beta)).unwrap();
+    let g = omega.pow(U256::from(beta));
     let eval_domain_size = trace_len * beta;
     let gen = FieldElement::GENERATOR;
 
@@ -114,12 +114,13 @@ pub fn stark_proof(
             for i in (0..trace.elements.len()).step_by(trace.COLS) {
                 hold_col.push(trace.elements[x + i].clone());
             }
-            ifft(g.clone(), hold_col.as_slice())
+            ifft(hold_col.as_slice())
         })
         .collect_into_vec(&mut TPn);
 
     let mut LDEn = vec![vec![FieldElement::ZERO; eval_x.len()]; trace.COLS];
-    // OPT - Use some system to make this occur inline instead of storing then processing
+    // OPT - Use some system to make this occur inline instead of storing then
+    // processing
     #[allow(clippy::type_complexity)]
     let ret: Vec<(usize, Vec<(usize, Vec<FieldElement>)>)> = (0..(beta as usize))
         .into_par_iter()
@@ -132,9 +133,8 @@ pub fn stark_proof(
                         (
                             x,
                             fft_cofactor(
-                                g.clone(),
                                 TPn[x].as_slice(),
-                                &gen * (&omega.pow(U256::from(j as u64)).unwrap()),
+                                &(&gen * &omega.pow(U256::from(j as u64))),
                             ),
                         )
                     })
@@ -323,10 +323,7 @@ pub fn stark_proof(
     halvings += params.fri_layout[params.fri_layout.len() - 1];
 
     let last_layer_degree_bound = trace_len / (2_u64.pow(halvings as u32));
-    let mut last_layer_coefficient = ifft(
-        FieldElement::root(U256::from(fri[halvings].len() as u64)).unwrap(),
-        &(fri[halvings].as_slice()),
-    );
+    let mut last_layer_coefficient = ifft(&(fri[halvings].as_slice()));
     last_layer_coefficient.truncate(last_layer_degree_bound as usize);
     proof.write_element_list(last_layer_coefficient.as_slice());
     debug_assert_eq!(last_layer_coefficient.len() as u64, last_layer_degree_bound);
@@ -421,6 +418,8 @@ fn leaf_single(i: u64, CC: &[FieldElement]) -> U256 {
         .clone()
 }
 
+// TODO Better variable names
+#[allow(clippy::many_single_char_names)]
 fn fri_layer(
     previous: &[FieldElement],
     evaluation_point: &FieldElement,
@@ -482,30 +481,25 @@ pub fn geometric_series(base: &FieldElement, step: &FieldElement, len: usize) ->
     const PARALLELIZATION: usize = 16_usize;
     // OPT - Set based on the cores available and how well the work is spread
     let step_len = len / PARALLELIZATION;
-    (0..PARALLELIZATION)
-        .into_par_iter()
-        .map(|i| {
-            let mut hold = Vec::with_capacity(step_len);
-            // OPT - Avoid temporary vectors
-            hold.push(base * step.pow(U256::from((i * step_len) as u64)).unwrap());
-            for j in 1..(step_len) {
-                hold.push(&hold[j - 1] * step);
+    let mut range = vec![FieldElement::ZERO; len];
+    range
+        .par_chunks_mut(step_len)
+        .enumerate()
+        .for_each(|(i, slice)| {
+            let mut hold = base * step.pow(U256::from((i * step_len) as u64));
+            for element in slice.iter_mut() {
+                *element = hold.clone();
+                hold *= step;
             }
-            hold
-        })
-        .flatten()
-        .collect()
+        });
+    range
 }
 
 #[cfg(test)]
 
 mod tests {
     use super::*;
-    use crate::channel::*;
-    use crate::fibonacci::*;
-    use crate::field::*;
-    use crate::u256::U256;
-    use crate::u256h;
+    use crate::{fibonacci::*, u256::U256, u256h};
     use hex_literal::*;
 
     #[test]
@@ -566,5 +560,22 @@ mod tests {
             ProofParams::new(2_u64.pow(4), 12, 20, vec![0, 3, 2, 1]),
         );
         assert_eq!(actual.digest, expected);
+    }
+
+    #[test]
+    fn geometric_series_test() {
+        let base = FieldElement::from(u256h!(
+            "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
+        ));
+        let step = FieldElement::from(u256h!(
+            "00000000000000000000000000000000000000000000000f00dbabe0cafebabe"
+        ));
+
+        let domain = geometric_series(&base, &step, 32);
+        let mut hold = base.clone();
+        for item in domain {
+            assert_eq!(item, hold);
+            hold *= &step;
+        }
     }
 }
