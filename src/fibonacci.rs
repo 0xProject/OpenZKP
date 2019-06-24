@@ -1,9 +1,7 @@
 #![allow(non_snake_case)] // TODO - Migrate to Choose naming system which the rust complier doesn't
                           // complain about
 
-use crate::{
-    field::*, polynomial::*, proofs::*, u256::U256, u256h,
-};
+use crate::{field::*, polynomial::*, proofs::*, u256::U256, u256h};
 use hex_literal::*;
 use rayon::prelude::*;
 
@@ -204,10 +202,7 @@ pub fn get_constraint() -> Constraint<'static> {
 // [then move to proofs].
 mod tests {
     use super::*;
-    use crate::{
-        fft::*, channel::*, merkle::*, u256::U256, u256h,
-        utils::Reversible,
-    };
+    use crate::{channel::*, fft::*, merkle::*, u256::U256, u256h, utils::Reversible};
     use tiny_keccak::Keccak;
 
     #[test]
