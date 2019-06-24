@@ -457,7 +457,7 @@ fn fft_timing(crit: &mut Criterion) {
         )),
     ];
     crit.bench_function("Performing FFT", move |bench| {
-        bench.iter(|| black_box(fft_cofactor(root.clone(), &vector, cofactor.clone())))
+        bench.iter(|| black_box(fft_cofactor(&vector, &cofactor)))
     });
 }
 fn fib_proof_make(crit: &mut Criterion) {
