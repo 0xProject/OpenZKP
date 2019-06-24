@@ -2,8 +2,7 @@
                           // complain about
 
 use crate::{
-    channel::*, fft::*, field::*, merkle::*, polynomial::*, proofs::*, u256::U256, u256h,
-    utils::Reversible,
+    field::*, polynomial::*, proofs::*, u256::U256, u256h,
 };
 use hex_literal::*;
 use rayon::prelude::*;
@@ -206,10 +205,9 @@ pub fn get_constraint() -> Constraint<'static> {
 mod tests {
     use super::*;
     use crate::{
-        channel::*, fft::*, field::*, merkle::*, montgomery::*, polynomial::*, u256::U256, u256h,
+        fft::*, channel::*, merkle::*, u256::U256, u256h,
         utils::Reversible,
     };
-    use hex_literal::*;
     use tiny_keccak::Keccak;
 
     #[test]
