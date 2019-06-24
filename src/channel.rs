@@ -43,7 +43,6 @@ impl ChannelReadable<U256> for Channel {
     }
 }
 
-
 impl ChannelReadable<[u8; 32]> for Channel {
     fn read(&mut self) -> [u8; 32] {
         let mut res = [0; 32];
