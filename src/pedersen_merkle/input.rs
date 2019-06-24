@@ -39,10 +39,10 @@ pub fn get_periodic_columns() -> PeriodicColumns {
 mod tests {
     use super::*;
     use crate::curve::Affine;
-    use crate::field::MODULUS;
     use crate::pedersen_points::PEDERSEN_POINTS;
     use crate::polynomial::eval_poly;
     use crate::U256;
+    use crate::proofs::geometric_series;
 
     #[test]
     fn test_get_public_input() {
@@ -62,8 +62,8 @@ mod tests {
         let left_x_coefficients = periodic_columns.left_x_coefficients;
         let left_y_coefficients = periodic_columns.left_y_coefficients;
 
-        let evaluation_points = (0..252u128).map(|i| omega.pow(U256::from(i)).unwrap());
-        let left_points = evaluation_points.map(|f: FieldElement| Affine::Point {
+        let evaluation_points = geometric_series(&FieldElement::ONE, &omega, 252);
+        let left_points = evaluation_points.iter().map(|f: &FieldElement| Affine::Point {
             x: eval_poly(f.clone(), &left_x_coefficients),
             y: eval_poly(f.clone(), &left_y_coefficients),
         });
@@ -81,8 +81,8 @@ mod tests {
         let right_x_coefficients = periodic_columns.right_x_coefficients;
         let right_y_coefficients = periodic_columns.right_y_coefficients;
 
-        let evaluation_points = (0..252u128).map(|i| omega.pow(U256::from(i)).unwrap());
-        let right_points = evaluation_points.map(|f: FieldElement| Affine::Point {
+        let evaluation_points = geometric_series(&FieldElement::ONE, &omega, 252);
+        let right_points = evaluation_points.iter().map(|f: &FieldElement| Affine::Point {
             x: eval_poly(f.clone(), &right_x_coefficients),
             y: eval_poly(f.clone(), &right_y_coefficients),
         });
