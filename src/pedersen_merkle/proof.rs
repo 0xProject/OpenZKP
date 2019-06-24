@@ -1,9 +1,6 @@
 #[cfg(test)]
 mod tests {
     use rayon::prelude::*;
-    use std::iter;
-
-    use super::*;
     use crate::fft::{fft, fft_cofactor, ifft};
     use crate::field::{FieldElement, MODULUS};
     use crate::merkle::{hash_node, Hashable};
@@ -29,10 +26,9 @@ mod tests {
 
         let trace_length: usize = public_input.path_length * 256;
         let trace_generator = FieldElement::GENERATOR
-            .pow(MODULUS / U256::from(trace_length as u128))
-            .unwrap();
+            .pow(MODULUS / U256::from(trace_length as u128));
         let trace_polynomials: Vec<_> = (0..8)
-            .map(|i| ifft(trace_generator.clone(), columns[i].as_slice()))
+            .map(|i| ifft(columns[i].as_slice()))
             .collect();
 
         assert_eq!(columns[6][columns[6].len() - 1], public_input.root);
