@@ -83,11 +83,13 @@ impl From<&Affine> for Jacobian {
     fn from(other: &Affine) -> Jacobian {
         match other {
             Affine::Zero => Jacobian::ZERO,
-            Affine::Point { x, y } => Jacobian {
-                x: x.clone(),
-                y: y.clone(),
-                z: FieldElement::ONE,
-            },
+            Affine::Point { x, y } => {
+                Jacobian {
+                    x: x.clone(),
+                    y: y.clone(),
+                    z: FieldElement::ONE,
+                }
+            }
         }
     }
 }
@@ -96,11 +98,13 @@ impl From<Affine> for Jacobian {
     fn from(other: Affine) -> Jacobian {
         match other {
             Affine::Zero => Jacobian::ZERO,
-            Affine::Point { x, y } => Jacobian {
-                x,
-                y,
-                z: FieldElement::ONE,
-            },
+            Affine::Point { x, y } => {
+                Jacobian {
+                    x,
+                    y,
+                    z: FieldElement::ONE,
+                }
+            }
         }
     }
 }

@@ -324,10 +324,9 @@ impl U256 {
         let (lo, hi) = self.mul_full(rhs);
         let mut numerator = [lo.c0, lo.c1, lo.c2, lo.c3, hi.c0, hi.c1, hi.c2, hi.c3, 0];
         if modulus.c3 > 0 {
-            divrem_nbym(
-                &mut numerator,
-                &mut [modulus.c0, modulus.c1, modulus.c2, modulus.c3],
-            );
+            divrem_nbym(&mut numerator, &mut [
+                modulus.c0, modulus.c1, modulus.c2, modulus.c3,
+            ]);
             U256::new(numerator[0], numerator[1], numerator[2], numerator[3])
         } else if modulus.c2 > 0 {
             divrem_nbym(&mut numerator, &mut [modulus.c0, modulus.c1, modulus.c2]);

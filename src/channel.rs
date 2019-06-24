@@ -4,9 +4,9 @@ use tiny_keccak::Keccak;
 
 #[derive(PartialEq, Eq, Clone, Default)]
 pub struct Channel {
-    pub digest: [u8; 32],
+    pub digest:  [u8; 32],
     pub counter: u64,
-    pub proof: Vec<u8>,
+    pub proof:   Vec<u8>,
 }
 
 impl Channel {

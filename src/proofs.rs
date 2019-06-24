@@ -7,8 +7,8 @@ use crate::{
 use rayon::prelude::*;
 
 pub struct TraceTable {
-    pub ROWS: usize,
-    pub COLS: usize,
+    pub ROWS:     usize,
+    pub COLS:     usize,
     pub elements: Vec<FieldElement>,
 }
 
@@ -23,9 +23,9 @@ impl TraceTable {
 }
 
 pub struct ProofParams {
-    pub beta: u64,
-    pub pow_bits: u64,
-    pub queries: usize,
+    pub beta:       u64,
+    pub pow_bits:   u64,
+    pub queries:    usize,
     pub fri_layout: Vec<usize>,
 }
 

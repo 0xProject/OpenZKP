@@ -1,4 +1,5 @@
-#![allow(non_snake_case)] // TODO - Migrate to Choose naming system which the rust complier doesn't complain about
+#![allow(non_snake_case)] // TODO - Migrate to Choose naming system which the rust complier doesn't
+                          // complain about
 
 use crate::{
     channel::*, fft::*, field::*, merkle::*, polynomial::*, proofs::*, u256::U256, u256h,
@@ -199,18 +200,15 @@ pub fn get_constraint() -> Constraint<'static> {
 }
 
 #[cfg(test)]
-// TODO - When the proofs function is changed to included functions for each step of the proof, change this to make a set of unit tests of each of them [then move to proofs].
+// TODO - When the proofs function is changed to included functions for each
+// step of the proof, change this to make a set of unit tests of each of them
+// [then move to proofs].
 mod tests {
     use super::*;
-    use crate::channel::*;
-    use crate::fft::*;
-    use crate::field::*;
-    use crate::merkle::*;
-    use crate::montgomery::*;
-    use crate::polynomial::*;
-    use crate::u256::U256;
-    use crate::u256h;
-    use crate::utils::Reversible;
+    use crate::{
+        channel::*, fft::*, field::*, merkle::*, montgomery::*, polynomial::*, u256::U256, u256h,
+        utils::Reversible,
+    };
     use hex_literal::*;
     use tiny_keccak::Keccak;
 
