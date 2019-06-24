@@ -206,6 +206,7 @@ mod tests {
     use tiny_keccak::Keccak;
 
     #[test]
+    #[allow(clippy::cognitive_complexity)]
     fn fib_proof_test() {
         let trace_len = 1024;
         let beta = 2_u64.pow(4);
@@ -651,7 +652,7 @@ mod tests {
         );
 
         let pow_find_nonce = |pow_bits: u32| -> u64 {
-            let mut seed = vec![01_u8, 35_u8, 69_u8, 103_u8, 137_u8, 171_u8, 205_u8, 237_u8];
+            let mut seed = vec![1_u8, 35_u8, 69_u8, 103_u8, 137_u8, 171_u8, 205_u8, 237_u8];
             seed.extend_from_slice(&proof.digest);
             for byte in pow_bits.to_be_bytes().iter() {
                 if *byte > 0 {
