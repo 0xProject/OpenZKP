@@ -520,7 +520,7 @@ fn fri_tree(layer: &[FieldElement], coset_size: usize) -> Vec<[u8; 32]> {
 fn get_indices(num: usize, bits: u32, proof: &mut Channel) -> Vec<usize> {
     let mut query_indices = Vec::with_capacity(num + 3);
     while query_indices.len() < num {
-        let val = U256::from_bytes_be(&proof.bytes());
+        let val: U256 = proof.read();
         query_indices.push(((val.clone() >> (0x100 - 0x040)).c0 & (2_u64.pow(bits) - 1)) as usize);
         query_indices.push(((val.clone() >> (0x100 - 0x080)).c0 & (2_u64.pow(bits) - 1)) as usize);
         query_indices.push(((val.clone() >> (0x100 - 0x0C0)).c0 & (2_u64.pow(bits) - 1)) as usize);

@@ -704,7 +704,7 @@ mod tests {
         let num_queries = 20;
         let mut query_indices = Vec::with_capacity(num_queries + 3);
         while query_indices.len() < num_queries {
-            let val = U256::from_bytes_be(&proof.bytes());
+            let val: U256 = proof.read();
             query_indices
                 .push(((val.clone() >> (0x100 - 0x040)).c0 & (2_u64.pow(14) - 1)) as usize);
             query_indices
