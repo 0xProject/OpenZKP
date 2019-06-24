@@ -2,20 +2,21 @@ use crate::{field::FieldElement, u256::U256, utils::Reversible};
 
 pub fn fft(a: &[FieldElement]) -> Vec<FieldElement> {
     let mut result = a.to_vec();
-    let root = FieldElement::root(U256::from(result.len() as u64)).unwrap();
+    let root = FieldElement::root(U256::from(result.len() as u64)).expect(&format!(
+        "No root of unity for input length ({})",
+        result.len()
+    ));
     bit_reversal_fft(result.as_mut_slice(), root);
     bit_reversal_permute(result.as_mut_slice());
     result
 }
 
-// We can implement this function using an option for the cofactor input,
-// depending on what we want
-pub fn fft_cofactor(a: &[FieldElement], cofactor: FieldElement) -> Vec<FieldElement> {
+pub fn fft_cofactor(a: &[FieldElement], cofactor: &FieldElement) -> Vec<FieldElement> {
     let mut result = a.to_vec();
     let mut c = FieldElement::ONE;
     for element in result.iter_mut() {
         *element *= &c;
-        c *= &cofactor;
+        c *= cofactor;
     }
     fft(&result)
 }
@@ -23,14 +24,23 @@ pub fn fft_cofactor(a: &[FieldElement], cofactor: FieldElement) -> Vec<FieldElem
 pub fn ifft(a: &[FieldElement]) -> Vec<FieldElement> {
     let mut result = a.to_vec();
     let n_elements = U256::from(a.len() as u64);
+    // OPT: make inv_root function.
     let inverse_root = FieldElement::root(n_elements.clone())
-        .unwrap()
+        .expect(&format!(
+            "No root of unity for input length ({})",
+            &result.len()
+        ))
         .inv()
-        .unwrap();
+        .expect("No inverse for FieldElement::ZERO");
     bit_reversal_fft(result.as_mut_slice(), inverse_root);
     bit_reversal_permute(result.as_mut_slice());
-    let inverse_length = FieldElement::from(n_elements).inv().unwrap();
-    result.into_iter().map(|e| &inverse_length * e).collect()
+    let inverse_length = FieldElement::from(n_elements)
+        .inv()
+        .expect("No inverse length for empty list");
+    for e in result.iter_mut() {
+        *e *= &inverse_length;
+    }
+    result
 }
 
 fn bit_reversal_fft(coefficients: &mut [FieldElement], root: FieldElement) {
@@ -220,7 +230,7 @@ mod tests {
             u256h!("048bad0760f8b52ee4f9a46964bcf1ba9439a9467b2576176b1319cec9f12db0")
         );
 
-        res = fft_cofactor(&vector, cofactor);
+        res = fft_cofactor(&vector, &cofactor);
 
         assert_eq!(
             U256::from(&res[0]),

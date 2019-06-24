@@ -115,7 +115,7 @@ pub fn stark_proof(
                             x,
                             fft_cofactor(
                                 TPn[x].as_slice(),
-                                &gen * (&omega.pow(U256::from(j as u64))),
+                                &(&gen * &omega.pow(U256::from(j as u64))),
                             ),
                         )
                     })

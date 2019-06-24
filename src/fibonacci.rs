@@ -252,12 +252,12 @@ pub fn fib_proof(witness: FieldElement) -> Channel {
     let mut LDE1 = vec![FieldElement::ZERO; eval_x.len()];
 
     for j in 0..beta {
-        let mut vals = fft_cofactor(&(TP0.as_slice()), &gen * (&omega.pow(U256::from(j))));
+        let mut vals = fft_cofactor(&(TP0.as_slice()), &(&gen * &omega.pow(U256::from(j))));
         for i in 0..trace_len {
             LDE0[((i * beta + j) % (eval_domain_size)) as usize] = vals[i as usize].clone();
         }
 
-        vals = fft_cofactor(&(TP1.as_slice()), &gen * (&omega.pow(U256::from(j))));
+        vals = fft_cofactor(&(TP1.as_slice()), &(&gen * &omega.pow(U256::from(j))));
         for i in 0..trace_len {
             LDE1[((i * beta + j) % (eval_domain_size)) as usize] = vals[i as usize].clone();
         }
@@ -722,12 +722,12 @@ mod tests {
         let mut LDE1 = vec![FieldElement::ZERO; eval_x.len()];
 
         for j in 0..beta {
-            let mut vals = fft_cofactor(&(TP0.as_slice()), &gen * (&omega.pow(U256::from(j))));
+            let mut vals = fft_cofactor(&(TP0.as_slice()), &(&gen * &omega.pow(U256::from(j))));
             for i in 0..trace_len {
                 LDE0[((i * beta + j) % (eval_domain_size)) as usize] = vals[i as usize].clone();
             }
 
-            vals = fft_cofactor(&(TP1.as_slice()), &gen * (&omega.pow(U256::from(j))));
+            vals = fft_cofactor(&(TP1.as_slice()), &(&gen * &omega.pow(U256::from(j))));
             for i in 0..trace_len {
                 LDE1[((i * beta + j) % (eval_domain_size)) as usize] = vals[i as usize].clone();
             }
