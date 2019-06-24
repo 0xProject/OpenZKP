@@ -2,10 +2,8 @@ use crate::{field::FieldElement, u256::U256, utils::Reversible};
 
 pub fn fft(a: &[FieldElement]) -> Vec<FieldElement> {
     let mut result = a.to_vec();
-    let root = FieldElement::root(U256::from(result.len() as u64)).expect(&format!(
-        "No root of unity for input length ({})",
-        result.len()
-    ));
+    let root = FieldElement::root(U256::from(result.len() as u64))
+        .expect("No root of unity for input length");
     bit_reversal_fft(result.as_mut_slice(), root);
     bit_reversal_permute(result.as_mut_slice());
     result
@@ -26,10 +24,7 @@ pub fn ifft(a: &[FieldElement]) -> Vec<FieldElement> {
     let n_elements = U256::from(a.len() as u64);
     // OPT: make inv_root function.
     let inverse_root = FieldElement::root(n_elements.clone())
-        .expect(&format!(
-            "No root of unity for input length ({})",
-            &result.len()
-        ))
+        .expect("No root of unity for input length")
         .inv()
         .expect("No inverse for FieldElement::ZERO");
     bit_reversal_fft(result.as_mut_slice(), inverse_root);
@@ -50,6 +45,7 @@ fn bit_reversal_fft(coefficients: &mut [FieldElement], root: FieldElement) {
     for layer in 0..n_elements.trailing_zeros() {
         let n_blocks = 1 << layer;
         let mut twiddle_factor = FieldElement::ONE;
+        // OPT: In place combined update like gcd::mat_mul.
         let block_size = n_elements >> (layer + 1);
         let twiddle_factor_update = root.pow(U256::from(block_size as u64));
         for block in 0..n_blocks {
