@@ -424,9 +424,6 @@ fn merkle_proof_make(crit: &mut Criterion) {
 }
 
 fn fft_timing(crit: &mut Criterion) {
-    let root = FieldElement::from(u256h!(
-        "063365fe0de874d9c90adb1e2f9c676e98c62155e4412e873ada5e1dee6feebb"
-    ));
     let cofactor = FieldElement::from(u256h!(
         "07696b8ff70e8e9285c76bef95d3ad76cdb29e213e4b5d9a9cd0afbd7cb29b5c"
     ));
@@ -457,7 +454,7 @@ fn fft_timing(crit: &mut Criterion) {
         )),
     ];
     crit.bench_function("Performing FFT", move |bench| {
-        bench.iter(|| black_box(fft_cofactor(root.clone(), &vector, cofactor.clone())))
+        bench.iter(|| black_box(fft_cofactor(&vector, &cofactor)))
     });
 }
 fn fib_proof_make(crit: &mut Criterion) {

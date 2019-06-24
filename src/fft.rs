@@ -1,85 +1,65 @@
 use crate::{field::FieldElement, u256::U256, utils::Reversible};
 
-pub fn fft(_: FieldElement, vector: &[FieldElement]) -> Vec<FieldElement> {
-    let mut data = (vector.to_vec()).clone();
-    bit_reversal_fft(data.as_mut_slice());
-    bit_reversal_permute(data.as_mut_slice());
-    data
+pub fn fft(a: &[FieldElement]) -> Vec<FieldElement> {
+    let mut result = a.to_vec();
+    let root = FieldElement::root(U256::from(result.len() as u64))
+        .expect("No root of unity for input length");
+    bit_reversal_fft(result.as_mut_slice(), root);
+    bit_reversal_permute(result.as_mut_slice());
+    result
 }
 
-pub fn bit_reversal_fft(coefficients: &mut [FieldElement]) {
-    debug_assert!(coefficients.len().is_power_of_two());
-    let n_elements = coefficients.len();
-    for layer in 0..n_elements.trailing_zeros() {
-        let n_blocks = 1 << layer;
-        let mut twiddle_factor = FieldElement::ONE;
-        let block_size = n_elements / n_blocks / 2;
-        let twiddle_factor_update = FieldElement::root(U256::from(2 * n_blocks as u128)).unwrap();
-        for block in 0..n_blocks {
-            let block_start = 2 * reverse(block as u64, layer) as usize * block_size;
-            for i in block_start..block_start + block_size {
-                let j = i + block_size;
-                let left = coefficients[i].clone();
-                let right = &coefficients[j] * &twiddle_factor;
-                coefficients[i] = &left + &right;
-                coefficients[j] = left - right;
-            }
-            twiddle_factor *= &twiddle_factor_update;
-        }
-    }
-}
-
-pub fn bit_reversal_ifft(coefficients: &mut [FieldElement]) {
-    debug_assert!(coefficients.len().is_power_of_two());
-    let n_elements = coefficients.len();
-    for layer in 0..n_elements.trailing_zeros() {
-        let n_blocks = 1 << layer;
-        let mut twiddle_factor = FieldElement::ONE;
-        let block_size = n_elements / n_blocks / 2;
-        let twiddle_factor_update = FieldElement::root(U256::from(2 * n_blocks as u128))
-            .unwrap()
-            .inv()
-            .unwrap();
-        for block in 0..n_blocks {
-            let block_start = 2 * reverse(block as u64, layer) as usize * block_size;
-            for i in block_start..block_start + block_size {
-                let j = i + block_size;
-                let left = coefficients[i].clone();
-                let right = &coefficients[j] * &twiddle_factor;
-                coefficients[i] = &left + &right;
-                coefficients[j] = left - right;
-            }
-            twiddle_factor *= &twiddle_factor_update;
-        }
-    }
-}
-
-// We can implement this function using an option for the cofactor input,
-// depending on what we want
-pub fn fft_cofactor(
-    root: FieldElement,
-    vector: &[FieldElement],
-    cofactor: FieldElement,
-) -> Vec<FieldElement> {
-    let mut vector_type = vector.to_vec();
-
+pub fn fft_cofactor(a: &[FieldElement], cofactor: &FieldElement) -> Vec<FieldElement> {
+    let mut result = a.to_vec();
     let mut c = FieldElement::ONE;
-
-    for element in vector_type.iter_mut() {
+    for element in result.iter_mut() {
         *element *= &c;
-        c *= &cofactor;
+        c *= cofactor;
     }
-
-    fft(root, &vector_type)
+    fft(&result)
 }
 
-pub fn ifft(_: FieldElement, vector: &[FieldElement]) -> Vec<FieldElement> {
-    let mut r = (vector.to_vec()).clone();
-    bit_reversal_ifft(r.as_mut_slice());
-    bit_reversal_permute(r.as_mut_slice());
-    let len_el = FieldElement::from(U256::from((&r).len() as u64));
-    let s = len_el.inv().unwrap();
-    r.into_iter().map(|e| &s * e).collect()
+pub fn ifft(a: &[FieldElement]) -> Vec<FieldElement> {
+    let mut result = a.to_vec();
+    let n_elements = U256::from(a.len() as u64);
+    // OPT: make inv_root function.
+    let inverse_root = FieldElement::root(n_elements.clone())
+        .expect("No root of unity for input length")
+        .inv()
+        .expect("No inverse for FieldElement::ZERO");
+    bit_reversal_fft(result.as_mut_slice(), inverse_root);
+    bit_reversal_permute(result.as_mut_slice());
+    let inverse_length = FieldElement::from(n_elements)
+        .inv()
+        .expect("No inverse length for empty list");
+    for e in result.iter_mut() {
+        *e *= &inverse_length;
+    }
+    result
+}
+
+fn bit_reversal_fft(coefficients: &mut [FieldElement], root: FieldElement) {
+    let n_elements = coefficients.len();
+    debug_assert!(n_elements.is_power_of_two());
+    debug_assert!(root.pow(U256::from(n_elements as u64)).is_one());
+    for layer in 0..n_elements.trailing_zeros() {
+        let n_blocks = 1 << layer;
+        let mut twiddle_factor = FieldElement::ONE;
+        // OPT: In place combined update like gcd::mat_mul.
+        let block_size = n_elements >> (layer + 1);
+        let twiddle_factor_update = root.pow(U256::from(block_size as u64));
+        for block in 0..n_blocks {
+            let block_start = 2 * reverse(block as u64, layer) as usize * block_size;
+            for i in block_start..block_start + block_size {
+                let j = i + block_size;
+                let left = coefficients[i].clone();
+                let right = &coefficients[j] * &twiddle_factor;
+                coefficients[i] = &left + &right;
+                coefficients[j] = left - right;
+            }
+            twiddle_factor *= &twiddle_factor_update;
+        }
+    }
 }
 
 fn bit_reversal_permute<T>(v: &mut [T]) {
@@ -116,7 +96,7 @@ mod tests {
     #[test]
     fn fft_one_element_test() {
         let v = vec![FieldElement::from_hex_str("435767")];
-        assert_eq!(fft(FieldElement::ONE, &v), v);
+        assert_eq!(fft(&v), v);
     }
 
     #[test]
@@ -124,34 +104,34 @@ mod tests {
         let a = FieldElement::from_hex_str("435767");
         let b = FieldElement::from_hex_str("123430");
         let v = vec![a.clone(), b.clone()];
-        assert_eq!(fft(FieldElement::ONE, &v), vec![&a + &b, &a - &b]);
+        assert_eq!(fft(&v), vec![&a + &b, &a - &b]);
     }
 
     #[test]
     fn fft_four_element_test() {
-        let coefficients = vec![
+        let v = vec![
             FieldElement::from_hex_str("4357670"),
             FieldElement::from_hex_str("1353542"),
             FieldElement::from_hex_str("3123423"),
             FieldElement::from_hex_str("9986432"),
         ];
-        let polynomial_values: Vec<FieldElement> = (0..4u64)
+        let expected: Vec<FieldElement> = (0..4u64)
             .map(|i| {
                 eval_poly(
                     FieldElement::root(U256::from(4u64))
                         .unwrap()
                         .pow(U256::from(i)),
-                    &coefficients,
+                    &v,
                 )
             })
             .collect();
 
-        assert_eq!(fft(FieldElement::ONE, &coefficients), polynomial_values);
+        assert_eq!(fft(&v), expected);
     }
 
     #[test]
     fn fft_eight_element_test() {
-        let coefficients = vec![
+        let v = vec![
             FieldElement::from_hex_str("4357670"),
             FieldElement::from_hex_str("1353542"),
             FieldElement::from_hex_str("3123423"),
@@ -162,11 +142,11 @@ mod tests {
             FieldElement::from_hex_str("99864321"),
         ];
         let eighth_root_of_unity = FieldElement::root(U256::from(8u64)).unwrap();
-        let polynomial_values: Vec<FieldElement> = (0..8u64)
-            .map(|i| eval_poly(eighth_root_of_unity.pow(U256::from(i)), &coefficients))
+        let expected: Vec<FieldElement> = (0..8u64)
+            .map(|i| eval_poly(eighth_root_of_unity.pow(U256::from(i)), &v))
             .collect();
 
-        assert_eq!(fft(FieldElement::ONE, &coefficients), polynomial_values);
+        assert_eq!(fft(&v), expected);
     }
 
     #[test]
@@ -204,10 +184,9 @@ mod tests {
             )),
         ];
 
-        let mut res = fft(root.clone(), &vector);
+        let mut res = fft(&vector);
 
-        assert_eq!(root.pow(U256::from(8u64)), FieldElement::ONE);
-        for (i, x) in fft(root.clone(), &vector).into_iter().enumerate() {
+        for (i, x) in fft(&vector).into_iter().enumerate() {
             assert_eq!(
                 x,
                 eval_poly(root.clone().pow(U256::from(i as u64)), &vector)
@@ -247,7 +226,7 @@ mod tests {
             u256h!("048bad0760f8b52ee4f9a46964bcf1ba9439a9467b2576176b1319cec9f12db0")
         );
 
-        res = fft_cofactor(root, &vector, cofactor);
+        res = fft_cofactor(&vector, &cofactor);
 
         assert_eq!(
             U256::from(&res[0]),
@@ -289,6 +268,6 @@ mod tests {
             return true;
         }
         let truncated = &v[0..(1 + v.len()).next_power_of_two() / 2];
-        truncated.to_vec() == ifft(FieldElement::ONE, &fft(FieldElement::ONE, truncated))
+        truncated.to_vec() == ifft(&fft(truncated))
     }
 }

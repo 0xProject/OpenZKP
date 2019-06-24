@@ -245,27 +245,19 @@ pub fn fib_proof(witness: FieldElement) -> Channel {
         T_1.push(T_0[(i - 1) as usize].clone() + T_1[(i - 1) as usize].clone());
     }
 
-    let TP0 = ifft(g.clone(), &T_0.as_slice());
-    let TP1 = ifft(g.clone(), &T_1.as_slice());
+    let TP0 = ifft(&T_0.as_slice());
+    let TP1 = ifft(&T_1.as_slice());
 
     let mut LDE0 = vec![FieldElement::ZERO; eval_x.len()];
     let mut LDE1 = vec![FieldElement::ZERO; eval_x.len()];
 
     for j in 0..beta {
-        let mut vals = fft_cofactor(
-            g.clone(),
-            &(TP0.as_slice()),
-            &gen * (&omega.pow(U256::from(j))),
-        );
+        let mut vals = fft_cofactor(&(TP0.as_slice()), &(&gen * &omega.pow(U256::from(j))));
         for i in 0..trace_len {
             LDE0[((i * beta + j) % (eval_domain_size)) as usize] = vals[i as usize].clone();
         }
 
-        vals = fft_cofactor(
-            g.clone(),
-            &(TP1.as_slice()),
-            &gen * (&omega.pow(U256::from(j))),
-        );
+        vals = fft_cofactor(&(TP1.as_slice()), &(&gen * &omega.pow(U256::from(j))));
         for i in 0..trace_len {
             LDE1[((i * beta + j) % (eval_domain_size)) as usize] = vals[i as usize].clone();
         }
@@ -557,12 +549,7 @@ pub fn fib_proof(witness: FieldElement) -> Channel {
     fri.push(fri_layer(&(fri[3].as_slice()), &eval_point));
     fri.push(fri_layer(&(fri[4].as_slice()), &(eval_point.square())));
 
-    let mut last_layer_coefficents = ifft(
-        FieldElement::from(u256h!(
-            "011d07d97880b4dc0234b46e6d4b9bd4a1f811a9e3bc8e32cc4074a0c13a1d0b"
-        )),
-        &(fri[5].as_slice()),
-    );
+    let mut last_layer_coefficents = ifft(&(fri[5].as_slice()));
     last_layer_coefficents.truncate(32);
     proof.write_element_list(&(last_layer_coefficents.as_slice()));
 
@@ -726,8 +713,8 @@ mod tests {
         }
         assert_eq!(T_0[1000], claim_fib);
 
-        let TP0 = ifft(g.clone(), &T_0.as_slice());
-        let TP1 = ifft(g.clone(), &T_1.as_slice());
+        let TP0 = ifft(&T_0.as_slice());
+        let TP1 = ifft(&T_1.as_slice());
 
         assert_eq!(eval_poly(trace_x[1000].clone(), &TP0.as_slice()), T_0[1000]);
 
@@ -735,20 +722,12 @@ mod tests {
         let mut LDE1 = vec![FieldElement::ZERO; eval_x.len()];
 
         for j in 0..beta {
-            let mut vals = fft_cofactor(
-                g.clone(),
-                &(TP0.as_slice()),
-                &gen * (&omega.pow(U256::from(j))),
-            );
+            let mut vals = fft_cofactor(&(TP0.as_slice()), &(&gen * &omega.pow(U256::from(j))));
             for i in 0..trace_len {
                 LDE0[((i * beta + j) % (eval_domain_size)) as usize] = vals[i as usize].clone();
             }
 
-            vals = fft_cofactor(
-                g.clone(),
-                &(TP1.as_slice()),
-                &gen * (&omega.pow(U256::from(j))),
-            );
+            vals = fft_cofactor(&(TP1.as_slice()), &(&gen * &omega.pow(U256::from(j))));
             for i in 0..trace_len {
                 LDE1[((i * beta + j) % (eval_domain_size)) as usize] = vals[i as usize].clone();
             }
@@ -1102,12 +1081,7 @@ mod tests {
         fri.push(fri_layer(&(fri[3].as_slice()), &eval_point));
         fri.push(fri_layer(&(fri[4].as_slice()), &(eval_point.square())));
 
-        let mut last_layer_coefficents = ifft(
-            FieldElement::from(u256h!(
-                "011d07d97880b4dc0234b46e6d4b9bd4a1f811a9e3bc8e32cc4074a0c13a1d0b"
-            )),
-            &(fri[5].as_slice()),
-        );
+        let mut last_layer_coefficents = ifft(&(fri[5].as_slice()));
         last_layer_coefficents.truncate(32);
         assert_eq!(
             eval_poly(
