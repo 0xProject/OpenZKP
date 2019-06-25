@@ -1,5 +1,6 @@
-#![allow(non_snake_case)] // TODO - Migrate to Choose naming system which the rust complier doesn't
-                          // complain about
+#![allow(non_snake_case)]
+// TODO - Migrate to Choose naming system which the rust complier doesn't
+// complain about
 
 use crate::{field::*, polynomial::*, proofs::*, u256::U256, u256h};
 use hex_literal::*;
@@ -23,7 +24,7 @@ pub fn get_trace_table(length: u64, witness: FieldElement) -> TraceTable {
 pub fn eval_whole_loop(
     LDEn: &[&[FieldElement]],
     constraint_coefficients: &[FieldElement],
-    claim_index: u64,
+    claim_index: usize,
     claim_fib: &FieldElement,
 ) -> Vec<FieldElement> {
     let eval_domain_size_usize = LDEn[0].len();
@@ -37,7 +38,7 @@ pub fn eval_whole_loop(
 
     let mut CC = Vec::with_capacity(eval_domain_size_usize);
     let g_trace = g.pow(U256::from(trace_len - 1));
-    let g_claim = g.pow(U256::from(claim_index));
+    let g_claim = g.pow(U256::from(claim_index as u64));
     let x = gen.clone();
     let x_trace = (&x).pow(U256::from(trace_len));
     let x_1023 = (&x).pow(U256::from(trace_len - 1));
@@ -113,7 +114,7 @@ pub fn eval_whole_loop(
 pub fn eval_c_direct(
     x: &FieldElement,
     polynomials: &[&[FieldElement]],
-    claim_index: u64,
+    claim_index: usize,
     claim: FieldElement,
     constraint_coefficients: &[FieldElement],
 ) -> FieldElement {
@@ -137,7 +138,7 @@ pub fn eval_c_direct(
         ((eval_P0(x.clone()) - FieldElement::ONE) * FieldElement::ONE) / (&x - FieldElement::ONE)
     };
     let eval_C3 = |x: FieldElement| -> FieldElement {
-        (eval_P0(x.clone()) - claim) / (&x - &g.pow(U256::from(claim_index)))
+        (eval_P0(x.clone()) - claim) / (&x - &g.pow(U256::from(claim_index as u64)))
     };
 
     let deg_adj = |degree_bound: u64,

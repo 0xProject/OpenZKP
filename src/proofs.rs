@@ -22,22 +22,15 @@ impl TraceTable {
     }
 }
 
+// DOC - beta is the blowup factor, pow_bits hard the proof of work should be,
+// queries is the number of queries made to the layers, and fri_layout documents
+// which layers are decommitted and after how many folds
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ProofParams {
-    pub beta:       u64,
-    pub pow_bits:   u64,
+    pub beta:       usize,
+    pub pow_bits:   u8,
     pub queries:    usize,
     pub fri_layout: Vec<usize>,
-}
-
-impl ProofParams {
-    pub fn new(beta: u64, pow_bits: u64, queries: usize, fri_layout: Vec<usize>) -> Self {
-        Self {
-            beta,
-            pow_bits,
-            queries,
-            fri_layout,
-        }
-    }
 }
 
 // This struct contains two evaluation systems which allow different
@@ -52,7 +45,7 @@ pub struct Constraint<'a> {
     pub eval: &'a Fn(
         &FieldElement,      // X point
         &[&[FieldElement]], // Polynomials
-        u64,                // Claim Index
+        usize,              // Claim Index
         FieldElement,       // Claim
         &[FieldElement],    // Constraint_coefficient
     ) -> FieldElement,
@@ -60,7 +53,7 @@ pub struct Constraint<'a> {
         &'a Fn(
             &[&[FieldElement]], // Evaluated polynomials (LDEn)
             &[FieldElement],    // Constraint Coefficents
-            u64,                // Claim index
+            usize,              // Claim index
             &FieldElement,      // Claim
         ) -> Vec<FieldElement>,
     >,
@@ -73,12 +66,12 @@ impl<'a> Constraint<'a> {
         eval: &'a Fn(
             &FieldElement,
             &[&[FieldElement]],
-            u64,
+            usize,
             FieldElement,
             &[FieldElement],
         ) -> FieldElement,
         eval_loop: Option<
-            &'a Fn(&[&[FieldElement]], &[FieldElement], u64, &FieldElement) -> Vec<FieldElement>,
+            &'a Fn(&[&[FieldElement]], &[FieldElement], usize, &FieldElement) -> Vec<FieldElement>,
         >,
     ) -> Self {
         Self {
@@ -89,19 +82,19 @@ impl<'a> Constraint<'a> {
     }
 }
 
-#[allow(clippy::cognitive_complexity)] // TODO - Split into smaller functions
+// TODO - Split into smaller functions
+#[allow(clippy::cognitive_complexity)]
 pub fn stark_proof(
     trace: &TraceTable,
     constraints: &Constraint,
-    claim_index: u64,
+    claim_index: usize,
     claim_value: FieldElement,
-    params: ProofParams,
+    params: &ProofParams,
 ) -> Channel {
-    let beta = params.beta;
-    let trace_len = (trace.elements.len() / trace.COLS) as u64;
-    let omega = FieldElement::root(U256::from(trace_len * beta)).unwrap();
-    let g = omega.pow(U256::from(beta));
-    let eval_domain_size = trace_len * beta;
+    let trace_len = trace.elements.len() / trace.COLS;
+    let omega = FieldElement::root(U256::from((trace_len * params.beta) as u64)).unwrap();
+    let g = omega.pow(U256::from(params.beta as u64));
+    let eval_domain_size = trace_len * params.beta;
     let gen = FieldElement::GENERATOR;
 
     let eval_x = geometric_series(&FieldElement::ONE, &omega, eval_domain_size as usize);
@@ -122,7 +115,7 @@ pub fn stark_proof(
     // OPT - Use some system to make this occur inline instead of storing then
     // processing
     #[allow(clippy::type_complexity)]
-    let ret: Vec<(usize, Vec<(usize, Vec<FieldElement>)>)> = (0..(beta as usize))
+    let ret: Vec<(usize, Vec<(usize, Vec<FieldElement>)>)> = (0..params.beta)
         .into_par_iter()
         .map(|j| {
             (
@@ -146,9 +139,8 @@ pub fn stark_proof(
     for j_element in ret {
         for x_element in j_element.1 {
             for i in 0..trace_len {
-                LDEn[x_element.0]
-                    [((i * beta + (j_element.0 as u64)) % (eval_domain_size)) as usize] =
-                    x_element.1[i as usize].clone();
+                LDEn[x_element.0][((i * params.beta + j_element.0) % (eval_domain_size))] =
+                    x_element.1[i].clone();
             }
         }
     }
@@ -322,11 +314,11 @@ pub fn stark_proof(
     }
     halvings += params.fri_layout[params.fri_layout.len() - 1];
 
-    let last_layer_degree_bound = trace_len / (2_u64.pow(halvings as u32));
+    let last_layer_degree_bound = trace_len / (2_usize.pow(halvings as u32));
     let mut last_layer_coefficient = ifft(&(fri[halvings].as_slice()));
     last_layer_coefficient.truncate(last_layer_degree_bound as usize);
     proof.write_element_list(last_layer_coefficient.as_slice());
-    debug_assert_eq!(last_layer_coefficient.len() as u64, last_layer_degree_bound);
+    debug_assert_eq!(last_layer_coefficient.len(), last_layer_degree_bound);
 
     let proof_of_work = pow_find_nonce(params.pow_bits, &proof);
     debug_assert!(pow_verify(proof_of_work, 12, &proof));
@@ -364,7 +356,7 @@ pub fn stark_proof(
     }
     let mut fri_indices: Vec<usize> = query_indices
         .iter()
-        .map(|x| x / ((beta / 2) as usize))
+        .map(|x| x / ((params.beta / 2) as usize))
         .collect();
 
     let mut current_fri = 0;
@@ -375,8 +367,8 @@ pub fn stark_proof(
     {
         current_fri += *x;
         for i in fri_indices.iter() {
-            for j in 0..((beta / 2_u64.pow(k as u32 + 1)) as usize) {
-                let n = i * ((beta / 2_u64.pow(k as u32 + 1)) as usize) + j;
+            for j in 0..((params.beta / 2_usize.pow(k as u32 + 1)) as usize) {
+                let n = i * ((params.beta / 2_usize.pow(k as u32 + 1)) as usize) + j;
 
                 if previous_indicies.binary_search(&n).is_ok() {
                     continue;
@@ -423,28 +415,30 @@ fn leaf_single(i: u64, CC: &[FieldElement]) -> U256 {
 fn fri_layer(
     previous: &[FieldElement],
     evaluation_point: &FieldElement,
-    eval_domain_size: u64,
+    eval_domain_size: usize,
     eval_x: &[FieldElement],
 ) -> Vec<FieldElement> {
-    let len = previous.len() as u64;
-    let s = eval_domain_size / len;
-    let mut next = vec![FieldElement::ZERO; (len / 2) as usize];
+    let len = previous.len();
+    let step = eval_domain_size / len;
+    let mut next = vec![FieldElement::ZERO; len / 2];
+    let m = eval_x.len();
+    // OPT - Use parallel extend or chunked alg
     (0..(len as usize) / 2)
         .into_par_iter()
         .map(|index| {
-            let permuted_index = (len / 2 + (index as u64)) % len;
-            let m = eval_x.len() as u64;
-            let ind = ((m - (index as u64)) * s) % m;
-            let x_inv = &eval_x[ind as usize];
-            let value = &previous[index as usize];
-            let permuted_value = &previous[permuted_index as usize];
-            (value + permuted_value) + evaluation_point * x_inv * (value - permuted_value)
+            let negative_index = (len / 2 + index) % len;
+            let inverse_index = ((m - index) * step) % m;
+            // OPT: Check if computed x_inv is faster
+            let x_inv = &eval_x[inverse_index];
+            let value = &previous[index];
+            let neg_x_value = &previous[negative_index];
+            (value + neg_x_value) + evaluation_point * x_inv * (value - neg_x_value)
         })
         .collect_into_vec(&mut next);
     next
 }
 
-fn fri_tree(layer: &[FieldElement], coset_size: u64) -> Vec<[u8; 32]> {
+fn fri_tree(layer: &[FieldElement], coset_size: usize) -> Vec<[u8; 32]> {
     let n = layer.len();
     let bits = 64 - (n as u64).leading_zeros(); // Floored base 2 log
     let mut internal_leaves = Vec::new();
@@ -452,7 +446,7 @@ fn fri_tree(layer: &[FieldElement], coset_size: u64) -> Vec<[u8; 32]> {
         let mut internal_leaf = Vec::with_capacity(coset_size as usize);
         for j in 0..coset_size {
             internal_leaf.push(
-                layer[(((i as u64) + j).bit_reverse() >> (64 - bits + 1)) as usize]
+                layer[((i + j).bit_reverse() >> (64 - bits + 1)) as usize]
                     .0
                     .clone(),
             );
@@ -504,7 +498,7 @@ mod tests {
 
     #[test]
     fn fib_test_1024_python_witness() {
-        let claim_index = 1000_u64;
+        let claim_index = 1000;
         let claim_fib = FieldElement::from(u256h!(
             "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
         ));
@@ -517,14 +511,19 @@ mod tests {
             &get_constraint(),
             claim_index,
             claim_fib,
-            ProofParams::new(2_u64.pow(4), 12, 20, vec![0, 3, 2]),
+            &ProofParams {
+                beta:       16,
+                pow_bits:   12,
+                queries:    20,
+                fri_layout: vec![0, 3, 2],
+            },
         );
         assert_eq!(actual.digest, expected);
     }
 
     #[test]
     fn fib_test_1024_changed_witness() {
-        let claim_index = 1000_u64;
+        let claim_index = 1000;
         let claim_fib = FieldElement::from(u256h!(
             "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
         ));
@@ -537,14 +536,19 @@ mod tests {
             &get_constraint(),
             claim_index,
             claim_fib,
-            ProofParams::new(2_u64.pow(5), 12, 20, vec![0, 3, 2]),
+            &ProofParams {
+                beta:       32,
+                pow_bits:   12,
+                queries:    20,
+                fri_layout: vec![0, 3, 2],
+            },
         );
         assert_eq!(actual.digest, expected);
     }
 
     #[test]
     fn fib_test_4096() {
-        let claim_index = 4000_u64;
+        let claim_index = 4000;
         let claim_fib = FieldElement::from(u256h!(
             "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
         ));
@@ -557,7 +561,12 @@ mod tests {
             &get_constraint(),
             claim_index,
             claim_fib,
-            ProofParams::new(2_u64.pow(4), 12, 20, vec![0, 3, 2, 1]),
+            &ProofParams {
+                beta:       16,
+                pow_bits:   12,
+                queries:    20,
+                fri_layout: vec![0, 3, 2, 1],
+            },
         );
         assert_eq!(actual.digest, expected);
     }
