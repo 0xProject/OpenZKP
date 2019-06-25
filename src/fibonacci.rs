@@ -198,15 +198,15 @@ pub fn get_constraint() -> Constraint<'static> {
 }
 
 #[cfg(test)]
-// TODO - When the proofs function is changed to included functions for each
-// step of the proof, change this to make a set of unit tests of each of them
-// [then move to proofs].
 mod tests {
     use super::*;
     use crate::{channel::*, fft::*, merkle::*, u256::U256, u256h, utils::Reversible};
     use tiny_keccak::Keccak;
 
     #[test]
+    // TODO - When the proofs function is changed to included functions for each
+    // step of the proof, change this to make a set of unit tests of each of them
+    // [then move to proofs].
     #[allow(clippy::cognitive_complexity)]
     fn fib_proof_test() {
         let trace_len = 1024;
