@@ -416,17 +416,21 @@ fn fri_layer(
     let len = previous.len();
     let step = eval_domain_size / len;
     let mut next = vec![FieldElement::ZERO; len / 2];
-    let m = eval_x.len();
     // OPT - Use parallel extend or chunked alg
     (0..(len / 2))
         .into_par_iter()
         .map(|index| {
             let negative_index = (len / 2 + index) % len;
-            let inverse_index = ((m - index) * step) % m;
+            let inverse_index = (len - index) % len;
             // OPT: Check if computed x_inv is faster
-            let x_inv = &eval_x[inverse_index];
+            let x_inv = &eval_x[inverse_index * step];
             let value = &previous[index];
             let neg_x_value = &previous[negative_index];
+            debug_assert_eq!(FieldElement::ONE, (x_inv * &eval_x[index * step]));
+            debug_assert_eq!(
+                FieldElement::ZERO,
+                &eval_x[negative_index * step] + &eval_x[index * step]
+            );
             (value + neg_x_value) + evaluation_point * x_inv * (value - neg_x_value)
         })
         .collect_into_vec(&mut next);
