@@ -25,7 +25,7 @@ fn main() {
             beta:       32,
             pow_bits:   12,
             queries:    20,
-            fri_layout: vec![0, 3, 2],
+            fri_layout: vec![3, 2],
         },
     );
     let duration = start.elapsed();

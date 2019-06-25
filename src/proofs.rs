@@ -274,14 +274,16 @@ pub fn stark_proof(
     debug_assert!(eval_domain_size.is_power_of_two());
     let mut fri = Vec::with_capacity(64 - (eval_domain_size.leading_zeros() as usize));
     fri.push(CO);
-    let mut halvings = 0;
-    let mut fri_const = params.beta / 2;
     let mut fri_trees: Vec<Vec<[u8; 32]>> = Vec::with_capacity(params.fri_layout.len());
-    let mut eval_point = FieldElement::ONE;
+    let held_tree = fri_tree(&(fri[fri.len() - 1].as_slice()), params.beta / 2);
+    proof.write(&held_tree[1]);
+    fri_trees.push(held_tree);
+
+    let mut halvings = 0;
+    let mut fri_const = params.beta / 4;
     for x in params.fri_layout.as_slice()[..(params.fri_layout.len() - 1)].iter() {
-        if *x != 0 {
-            eval_point = proof.element();
-        }
+        let mut eval_point = proof.element();
+
         for _ in 0..*x {
             fri.push(fri_layer(
                 &fri[fri.len() - 1].as_slice(),
@@ -356,17 +358,17 @@ pub fn stark_proof(
         .collect();
 
     let mut current_fri = 0;
-    let mut previous_indicies = query_indices.clone();
-    for (k, x) in params.fri_layout.as_slice()[..(params.fri_layout.len() - 1)]
-        .iter()
-        .enumerate()
-    {
-        current_fri += *x;
+    let mut previous_indices = query_indices.clone();
+    for (k, next_tree) in fri_trees.iter().enumerate() {
+        if k != 0 {
+            current_fri += params.fri_layout[k - 1];
+        }
+
         for i in fri_indices.iter() {
             for j in 0..(params.beta / 2_usize.pow(k as u32 + 1)) {
                 let n = i * (params.beta / 2_usize.pow(k as u32 + 1)) + j;
 
-                if previous_indicies.binary_search(&n).is_ok() {
+                if previous_indices.binary_search(&n).is_ok() {
                     continue;
                 } else {
                     proof.write_element(
@@ -376,11 +378,11 @@ pub fn stark_proof(
                 }
             }
         }
-        decommitment = crate::merkle::proof(&fri_trees[k], &(fri_indices.as_slice()));
-        for x in decommitment.iter() {
-            proof.write(x);
+        decommitment = crate::merkle::proof(&next_tree, &(fri_indices.as_slice()));
+        for proof_element in decommitment.iter() {
+            proof.write(proof_element);
         }
-        previous_indicies = fri_indices.clone();
+        previous_indices = fri_indices.clone();
         fri_indices = fri_indices.iter().map(|ind| ind / 4).collect();
     }
 
@@ -510,7 +512,7 @@ mod tests {
                 beta:       16,
                 pow_bits:   12,
                 queries:    20,
-                fri_layout: vec![0, 3, 2],
+                fri_layout: vec![3, 2],
             },
         );
         assert_eq!(actual.digest, expected);
@@ -535,7 +537,7 @@ mod tests {
                 beta:       32,
                 pow_bits:   12,
                 queries:    20,
-                fri_layout: vec![0, 3, 2],
+                fri_layout: vec![3, 2],
             },
         );
         assert_eq!(actual.digest, expected);
@@ -560,7 +562,7 @@ mod tests {
                 beta:       16,
                 pow_bits:   12,
                 queries:    20,
-                fri_layout: vec![0, 3, 2, 1],
+                fri_layout: vec![3, 2, 1],
             },
         );
         assert_eq!(actual.digest, expected);

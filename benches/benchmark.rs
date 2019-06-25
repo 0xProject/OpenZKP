@@ -477,7 +477,7 @@ fn abstracted_fib_proof_make(crit: &mut Criterion) {
                     beta:       16,
                     pow_bits:   12,
                     queries:    20,
-                    fri_layout: vec![0, 3, 2, 1],
+                    fri_layout: vec![3, 2, 1],
                 },
             ))
         })
