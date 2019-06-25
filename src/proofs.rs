@@ -97,13 +97,13 @@ pub fn stark_proof(
     let eval_domain_size = trace_len * params.beta;
     let gen = FieldElement::GENERATOR;
 
-    let eval_x = geometric_series(&FieldElement::ONE, &omega, eval_domain_size as usize);
+    let eval_x = geometric_series(&FieldElement::ONE, &omega, eval_domain_size);
 
     let mut TPn = vec![Vec::new(); trace.COLS];
     (0..trace.COLS)
         .into_par_iter()
         .map(|x| {
-            let mut hold_col = Vec::with_capacity(trace_len as usize);
+            let mut hold_col = Vec::with_capacity(trace_len);
             for i in (0..trace.elements.len()).step_by(trace.COLS) {
                 hold_col.push(trace.elements[x + i].clone());
             }
@@ -120,7 +120,7 @@ pub fn stark_proof(
         .map(|j| {
             (
                 j,
-                (0..(trace.COLS as usize))
+                (0..trace.COLS)
                     .into_par_iter()
                     .map(|x| {
                         (
@@ -145,10 +145,10 @@ pub fn stark_proof(
         }
     }
 
-    let mut leaves = Vec::with_capacity(eval_domain_size as usize);
-    (0..(eval_domain_size as usize))
+    let mut leaves = Vec::with_capacity(eval_domain_size);
+    (0..eval_domain_size)
         .into_par_iter()
-        .map(|i| leaf_list(i as u64, &LDEn))
+        .map(|i| leaf_list(i, &LDEn))
         .collect_into_vec(&mut leaves);
 
     let leaf_pointer: Vec<&[U256]> = leaves.iter().map(|x| x.as_slice()).collect();
@@ -177,9 +177,9 @@ pub fn stark_proof(
             )
         }
         None => {
-            CC = vec![FieldElement::ZERO; eval_domain_size as usize];
-            for i in 0..eval_domain_size {
-                CC[i as usize] = (constraints.eval)(
+            CC = vec![FieldElement::ZERO; eval_domain_size];
+            for constraint_element in CC.iter_mut() {
+                *constraint_element = (constraints.eval)(
                     // This will perform the polynomial evaluation on each step
                     &x,
                     sliced_poly.as_slice(),
@@ -192,10 +192,10 @@ pub fn stark_proof(
             }
         }
     }
-    let mut c_leaves = Vec::with_capacity(eval_domain_size as usize);
-    (0..(eval_domain_size as usize))
+    let mut c_leaves = Vec::with_capacity(eval_domain_size);
+    (0..eval_domain_size)
         .into_par_iter()
-        .map(|i| leaf_single(i as u64, &CC))
+        .map(|i| leaf_single(i, &CC))
         .collect_into_vec(&mut c_leaves);
 
     let c_tree = make_tree(c_leaves.as_slice());
@@ -227,11 +227,11 @@ pub fn stark_proof(
         oods_coefficients.push(proof.element());
     }
 
-    let mut CO = Vec::with_capacity(eval_domain_size as usize);
+    let mut CO = Vec::with_capacity(eval_domain_size);
     let x = FieldElement::GENERATOR;
-    let mut x_omega_cycle = Vec::with_capacity(eval_domain_size as usize);
-    let mut x_oods_cycle: Vec<FieldElement> = Vec::with_capacity(eval_domain_size as usize);
-    let mut x_oods_cycle_g: Vec<FieldElement> = Vec::with_capacity(eval_domain_size as usize);
+    let mut x_omega_cycle = Vec::with_capacity(eval_domain_size);
+    let mut x_oods_cycle: Vec<FieldElement> = Vec::with_capacity(eval_domain_size);
+    let mut x_oods_cycle_g: Vec<FieldElement> = Vec::with_capacity(eval_domain_size);
 
     eval_x
         .par_iter()
@@ -252,21 +252,19 @@ pub fn stark_proof(
     x_oods_cycle_g = held.pop().unwrap();
     x_oods_cycle = held.pop().unwrap();
 
-    (0..(eval_domain_size as usize))
+    (0..eval_domain_size)
         .into_par_iter()
         .map(|i| {
-            let A = &x_oods_cycle[i as usize];
-            let B = &x_oods_cycle_g[i as usize];
+            let A = &x_oods_cycle[i];
+            let B = &x_oods_cycle_g[i];
             let mut r = FieldElement::ZERO;
 
             for x in 0..trace.COLS {
-                r += &oods_coefficients[2 * x] * (&LDEn[x][i as usize] - &oods_values[2 * x]) * A;
-                r += &oods_coefficients[2 * x + 1]
-                    * (&LDEn[x][i as usize] - &oods_values[2 * x + 1])
-                    * B;
+                r += &oods_coefficients[2 * x] * (&LDEn[x][i] - &oods_values[2 * x]) * A;
+                r += &oods_coefficients[2 * x + 1] * (&LDEn[x][i] - &oods_values[2 * x + 1]) * B;
             }
             r += &oods_coefficients[oods_coefficients.len() - 1]
-                * (&CC[i as usize] - &oods_values[oods_values.len() - 1])
+                * (&CC[i] - &oods_values[oods_values.len() - 1])
                 * A;
 
             r
@@ -316,7 +314,7 @@ pub fn stark_proof(
 
     let last_layer_degree_bound = trace_len / (2_usize.pow(halvings as u32));
     let mut last_layer_coefficient = ifft(&(fri[halvings].as_slice()));
-    last_layer_coefficient.truncate(last_layer_degree_bound as usize);
+    last_layer_coefficient.truncate(last_layer_degree_bound);
     proof.write_element_list(last_layer_coefficient.as_slice());
     debug_assert_eq!(last_layer_coefficient.len(), last_layer_degree_bound);
 
@@ -327,15 +325,15 @@ pub fn stark_proof(
     let num_queries = params.queries;
     let query_indices = get_indices(
         num_queries,
-        (64 - eval_domain_size.leading_zeros() - 1) as u32,
+        64 - eval_domain_size.leading_zeros() - 1,
         &mut proof,
     );
 
     for index in query_indices.iter() {
-        for x in 0..trace.COLS {
+        for low_degree_extension in LDEn.iter() {
             proof.write_element(
-                &LDEn[x as usize][(index.clone()).bit_reverse()
-                    >> ((LDEn[x].len().leading_zeros()) + 1) as usize],
+                &low_degree_extension[(index.clone()).bit_reverse()
+                    >> ((low_degree_extension.len().leading_zeros()) + 1)],
             );
         }
     }
@@ -346,9 +344,7 @@ pub fn stark_proof(
     }
 
     for index in query_indices.iter() {
-        proof.write_element(
-            &CC[index.clone().bit_reverse() >> ((CC.len().leading_zeros()) + 1) as usize],
-        );
+        proof.write_element(&CC[index.clone().bit_reverse() >> ((CC.len().leading_zeros()) + 1)]);
     }
     decommitment = crate::merkle::proof(&c_tree, &(query_indices.as_slice()));
     for x in decommitment.iter() {
@@ -356,7 +352,7 @@ pub fn stark_proof(
     }
     let mut fri_indices: Vec<usize> = query_indices
         .iter()
-        .map(|x| x / ((params.beta / 2) as usize))
+        .map(|x| x / (params.beta / 2))
         .collect();
 
     let mut current_fri = 0;
@@ -367,16 +363,15 @@ pub fn stark_proof(
     {
         current_fri += *x;
         for i in fri_indices.iter() {
-            for j in 0..((params.beta / 2_usize.pow(k as u32 + 1)) as usize) {
-                let n = i * ((params.beta / 2_usize.pow(k as u32 + 1)) as usize) + j;
+            for j in 0..(params.beta / 2_usize.pow(k as u32 + 1)) {
+                let n = i * (params.beta / 2_usize.pow(k as u32 + 1)) + j;
 
                 if previous_indicies.binary_search(&n).is_ok() {
                     continue;
                 } else {
                     proof.write_element(
-                        &fri[current_fri][((n as u64).bit_reverse()
-                            >> (u64::from(fri[current_fri].len().leading_zeros() + 1)))
-                            as usize],
+                        &fri[current_fri]
+                            [(n.bit_reverse() >> (fri[current_fri].len().leading_zeros() + 1))],
                     );
                 }
             }
@@ -392,11 +387,11 @@ pub fn stark_proof(
     proof
 }
 
-fn leaf_list(i: u64, LDEn: &[Vec<FieldElement>]) -> Vec<U256> {
+fn leaf_list(i: usize, LDEn: &[Vec<FieldElement>]) -> Vec<U256> {
     let mut ret = Vec::with_capacity(LDEn.len());
     for item in LDEn.iter() {
         ret.push(
-            item[(i.bit_reverse() >> (item.len().leading_zeros() + 1)) as usize]
+            item[i.bit_reverse() >> (item.len().leading_zeros() + 1)]
                 .0
                 .clone(),
         )
@@ -404,8 +399,8 @@ fn leaf_list(i: u64, LDEn: &[Vec<FieldElement>]) -> Vec<U256> {
     ret
 }
 
-fn leaf_single(i: u64, CC: &[FieldElement]) -> U256 {
-    CC[(i.bit_reverse() >> (CC.len().leading_zeros() + 1)) as usize]
+fn leaf_single(i: usize, CC: &[FieldElement]) -> U256 {
+    CC[i.bit_reverse() >> (CC.len().leading_zeros() + 1)]
         .0
         .clone()
 }
@@ -423,7 +418,7 @@ fn fri_layer(
     let mut next = vec![FieldElement::ZERO; len / 2];
     let m = eval_x.len();
     // OPT - Use parallel extend or chunked alg
-    (0..(len as usize) / 2)
+    (0..(len / 2))
         .into_par_iter()
         .map(|index| {
             let negative_index = (len / 2 + index) % len;
@@ -442,14 +437,10 @@ fn fri_tree(layer: &[FieldElement], coset_size: usize) -> Vec<[u8; 32]> {
     let n = layer.len();
     let bits = 64 - (n as u64).leading_zeros(); // Floored base 2 log
     let mut internal_leaves = Vec::new();
-    for i in (0..n).step_by(coset_size as usize) {
-        let mut internal_leaf = Vec::with_capacity(coset_size as usize);
+    for i in (0..n).step_by(coset_size) {
+        let mut internal_leaf = Vec::with_capacity(coset_size);
         for j in 0..coset_size {
-            internal_leaf.push(
-                layer[((i + j).bit_reverse() >> (64 - bits + 1)) as usize]
-                    .0
-                    .clone(),
-            );
+            internal_leaf.push(layer[(i + j).bit_reverse() >> (64 - bits + 1)].0.clone());
         }
         internal_leaves.push(internal_leaf);
     }
