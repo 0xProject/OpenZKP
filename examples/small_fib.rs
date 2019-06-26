@@ -18,7 +18,7 @@ fn main() {
         claim_index,
         claim_fib,
         &ProofParams {
-            beta:       16,
+            blowup:     16,
             pow_bits:   12,
             queries:    20,
             fri_layout: vec![3, 2],

@@ -22,7 +22,7 @@ fn main() {
         claim_index,
         claim_fib,
         &ProofParams {
-            beta:       32,
+            blowup:     32,
             pow_bits:   12,
             queries:    20,
             fri_layout: vec![3, 2],

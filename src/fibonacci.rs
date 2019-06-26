@@ -1,6 +1,6 @@
-#![allow(non_snake_case)]
 // TODO - Migrate to Choose naming system which the rust complier doesn't
 // complain about
+#![allow(non_snake_case)]
 
 use crate::{field::*, polynomial::*, proofs::*, u256::U256, u256h};
 use hex_literal::*;

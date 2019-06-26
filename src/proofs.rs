@@ -22,14 +22,39 @@ impl TraceTable {
     }
 }
 
-// DOC - beta is the blowup factor, pow_bits hard the proof of work should be,
-// queries is the number of queries made to the layers, and fri_layout documents
-// which layers are decommitted and after how many folds
+/// Parameters for Stark proof generation
+///
+/// Contains various tuning parameters that determine how proofs are computed.
+/// These can trade off between security, prover time, verifier time and
+/// proof size.
+///
+/// **Note**: This does not including the constraint system or anything
+/// about the claim to be proven.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ProofParams {
-    pub beta:       usize,
-    pub pow_bits:   u8,
-    pub queries:    usize,
+    /// The blowup factor
+    ///
+    /// The size of the low-degree-extension domain compared to the trace
+    /// domain. Should be a power of two. Recommended values are 16, 32 or 64.
+    pub blowup: usize,
+
+    /// Proof of work difficulty
+    ///
+    /// The difficulty of the proof of work step in number of leading zero bits
+    /// required.
+    pub pow_bits: u8,
+
+    /// Number of queries made to the oracles
+    pub queries: usize,
+
+    /// Number of FRI reductions between steps
+    ///
+    /// After the initial LDE polynomial is committed, several rounds of FRI
+    /// degree reduction are done. Entries in the vector specify how many
+    /// reductions are done between commitments.
+    ///
+    /// After `fri_layout.sum()` reductions are done, the remaining polynomial
+    /// is written explicitly in coefficient form.
     pub fri_layout: Vec<usize>,
 }
 
@@ -92,9 +117,9 @@ pub fn stark_proof(
     params: &ProofParams,
 ) -> Channel {
     let trace_len = trace.elements.len() / trace.COLS;
-    let omega = FieldElement::root(U256::from((trace_len * params.beta) as u64)).unwrap();
-    let g = omega.pow(U256::from(params.beta as u64));
-    let eval_domain_size = trace_len * params.beta;
+    let omega = FieldElement::root(U256::from((trace_len * params.blowup) as u64)).unwrap();
+    let g = omega.pow(U256::from(params.blowup as u64));
+    let eval_domain_size = trace_len * params.blowup;
     let gen = FieldElement::GENERATOR;
 
     let eval_x = geometric_series(&FieldElement::ONE, &omega, eval_domain_size);
@@ -115,7 +140,7 @@ pub fn stark_proof(
     // OPT - Use some system to make this occur inline instead of storing then
     // processing
     #[allow(clippy::type_complexity)]
-    let ret: Vec<(usize, Vec<(usize, Vec<FieldElement>)>)> = (0..params.beta)
+    let ret: Vec<(usize, Vec<(usize, Vec<FieldElement>)>)> = (0..params.blowup)
         .into_par_iter()
         .map(|j| {
             (
@@ -139,7 +164,7 @@ pub fn stark_proof(
     for j_element in ret {
         for x_element in j_element.1 {
             for i in 0..trace_len {
-                LDEn[x_element.0][((i * params.beta + j_element.0) % (eval_domain_size))] =
+                LDEn[x_element.0][(i * params.blowup + j_element.0) % eval_domain_size] =
                     x_element.1[i].clone();
             }
         }
@@ -275,12 +300,12 @@ pub fn stark_proof(
     let mut fri = Vec::with_capacity(64 - (eval_domain_size.leading_zeros() as usize));
     fri.push(CO);
     let mut fri_trees: Vec<Vec<[u8; 32]>> = Vec::with_capacity(params.fri_layout.len());
-    let held_tree = fri_tree(&(fri[fri.len() - 1].as_slice()), params.beta / 2);
+    let held_tree = fri_tree(&(fri[fri.len() - 1].as_slice()), params.blowup / 2);
     proof.write(&held_tree[1]);
     fri_trees.push(held_tree);
 
     let mut halvings = 0;
-    let mut fri_const = params.beta / 4;
+    let mut fri_const = params.blowup / 4;
     for x in params.fri_layout.as_slice()[..(params.fri_layout.len() - 1)].iter() {
         let mut eval_point = proof.element();
 
@@ -301,7 +326,6 @@ pub fn stark_proof(
         halvings += *x;
     }
 
-    // Gets the coefficient representation of the last number of fri reductions
     let mut eval_point = proof.element();
     for _ in 0..params.fri_layout[params.fri_layout.len() - 1] {
         fri.push(fri_layer(
@@ -313,6 +337,8 @@ pub fn stark_proof(
         eval_point = eval_point.square();
     }
     halvings += params.fri_layout[params.fri_layout.len() - 1];
+
+    // Gets the coefficient representation of the last number of fri reductions
 
     let last_layer_degree_bound = trace_len / (2_usize.pow(halvings as u32));
     let mut last_layer_coefficient = ifft(&(fri[halvings].as_slice()));
@@ -340,7 +366,7 @@ pub fn stark_proof(
         }
     }
 
-    let mut decommitment = crate::merkle::proof(&tree, &(query_indices.as_slice()));
+    let decommitment = crate::merkle::proof(&tree, &(query_indices.as_slice()));
     for x in decommitment.iter() {
         proof.write(x);
     }
@@ -348,13 +374,13 @@ pub fn stark_proof(
     for index in query_indices.iter() {
         proof.write_element(&CC[index.clone().bit_reverse() >> ((CC.len().leading_zeros()) + 1)]);
     }
-    decommitment = crate::merkle::proof(&c_tree, &(query_indices.as_slice()));
+    let decommitment = crate::merkle::proof(&c_tree, &(query_indices.as_slice()));
     for x in decommitment.iter() {
         proof.write(x);
     }
     let mut fri_indices: Vec<usize> = query_indices
         .iter()
-        .map(|x| x / (params.beta / 2))
+        .map(|x| x / (params.blowup / 2))
         .collect();
 
     let mut current_fri = 0;
@@ -365,8 +391,8 @@ pub fn stark_proof(
         }
 
         for i in fri_indices.iter() {
-            for j in 0..(params.beta / 2_usize.pow(k as u32 + 1)) {
-                let n = i * (params.beta / 2_usize.pow(k as u32 + 1)) + j;
+            for j in 0..(params.blowup / 2_usize.pow(k as u32 + 1)) {
+                let n = i * (params.blowup / 2_usize.pow(k as u32 + 1)) + j;
 
                 if previous_indices.binary_search(&n).is_ok() {
                     continue;
@@ -378,7 +404,7 @@ pub fn stark_proof(
                 }
             }
         }
-        decommitment = crate::merkle::proof(&next_tree, &(fri_indices.as_slice()));
+        let decommitment = crate::merkle::proof(&next_tree, &(fri_indices.as_slice()));
         for proof_element in decommitment.iter() {
             proof.write(proof_element);
         }
@@ -423,16 +449,13 @@ fn fri_layer(
         .into_par_iter()
         .map(|index| {
             let negative_index = (len / 2 + index) % len;
-            let inverse_index = (len - index) % len;
+            let inverse_index = ((len - index) % len) * step;
             // OPT: Check if computed x_inv is faster
-            let x_inv = &eval_x[inverse_index * step];
+            let x_inv = &eval_x[inverse_index];
             let value = &previous[index];
             let neg_x_value = &previous[negative_index];
-            debug_assert_eq!(FieldElement::ONE, (x_inv * &eval_x[index * step]));
-            debug_assert_eq!(
-                FieldElement::ZERO,
-                &eval_x[negative_index * step] + &eval_x[index * step]
-            );
+            debug_assert_eq!(&eval_x[index * step].inv().unwrap(), x_inv);
+            debug_assert_eq!(-&eval_x[index * step], eval_x[negative_index * step]);
             (value + neg_x_value) + evaluation_point * x_inv * (value - neg_x_value)
         })
         .collect_into_vec(&mut next);
@@ -487,7 +510,6 @@ pub fn geometric_series(base: &FieldElement, step: &FieldElement, len: usize) ->
 }
 
 #[cfg(test)]
-
 mod tests {
     use super::*;
     use crate::{fibonacci::*, u256::U256, u256h};
@@ -509,7 +531,7 @@ mod tests {
             claim_index,
             claim_fib,
             &ProofParams {
-                beta:       16,
+                blowup:     16,
                 pow_bits:   12,
                 queries:    20,
                 fri_layout: vec![3, 2],
@@ -534,7 +556,7 @@ mod tests {
             claim_index,
             claim_fib,
             &ProofParams {
-                beta:       32,
+                blowup:     32,
                 pow_bits:   12,
                 queries:    20,
                 fri_layout: vec![3, 2],
@@ -559,7 +581,7 @@ mod tests {
             claim_index,
             claim_fib,
             &ProofParams {
-                beta:       16,
+                blowup:     16,
                 pow_bits:   12,
                 queries:    20,
                 fri_layout: vec![3, 2, 1],

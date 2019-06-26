@@ -795,7 +795,6 @@ impl Arbitrary for U256 {
 // TODO: Replace literals with u256h!
 #[allow(clippy::unreadable_literal)]
 #[cfg(test)]
-#[allow(clippy::unreadable_literal)]
 mod tests {
     use super::*;
     use quickcheck_macros::quickcheck;

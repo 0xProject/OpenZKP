@@ -457,6 +457,7 @@ fn fft_timing(crit: &mut Criterion) {
         bench.iter(|| black_box(fft_cofactor(&vector, &cofactor)))
     });
 }
+
 fn abstracted_fib_proof_make(crit: &mut Criterion) {
     let claim_index = 1000_usize;
     let claim_fib = FieldElement::from(u256h!(
@@ -474,7 +475,7 @@ fn abstracted_fib_proof_make(crit: &mut Criterion) {
                 claim_index,
                 claim_fib.clone(),
                 &ProofParams {
-                    beta:       16,
+                    blowup:       16,
                     pow_bits:   12,
                     queries:    20,
                     fri_layout: vec![3, 2, 1],
