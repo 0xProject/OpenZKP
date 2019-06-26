@@ -9,7 +9,7 @@ fn main() {
         .build_global()
         .unwrap();
 
-    let claim_index = 1_000_000_u64;
+    let claim_index = 1_000_000_usize;
     let witness = FieldElement::from(u256h!(
         "00000000000000000000000000000000000000000000000000000000cafebabe"
     ));
@@ -21,7 +21,12 @@ fn main() {
         &get_constraint(),
         claim_index,
         claim_fib,
-        2_u64.pow(4),
+        &ProofParams {
+            blowup:     32,
+            pow_bits:   12,
+            queries:    20,
+            fri_layout: vec![3, 2],
+        },
     );
     let duration = start.elapsed();
     println!("{:?}", potential_proof.digest);

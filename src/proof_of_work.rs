@@ -3,21 +3,17 @@ use hex_literal::*;
 use rayon::prelude::*;
 use tiny_keccak::Keccak;
 
-pub fn pow_find_nonce(pow_bits: u32, proof: &Channel) -> u64 {
+pub fn pow_find_nonce(pow_bits: u8, proof: &Channel) -> u64 {
     let mut seed = hex!("0123456789abcded").to_vec();
     seed.extend_from_slice(&proof.digest);
-    for byte in pow_bits.to_be_bytes().iter() {
-        if *byte > 0 {
-            seed.push(*byte);
-            break;
-        }
-    }
+    seed.push(pow_bits);
+
     let mut seed_res = [0_u8; 32];
     let mut sha3 = Keccak::new_keccak256();
     sha3.update(&seed);
     sha3.finalize(&mut seed_res);
 
-    let test_value = U256::from(2_u64).pow(u64::from(256 - pow_bits)).unwrap();
+    let test_value = U256::from(2_u64).pow((255 - pow_bits + 1).into()).unwrap();
     for n in 0..(u64::max_value() as usize) {
         let mut sha3 = Keccak::new_keccak256();
         let mut res = [0; 32];
@@ -34,21 +30,16 @@ pub fn pow_find_nonce(pow_bits: u32, proof: &Channel) -> u64 {
 }
 
 // TODO - Make tests compatible with the proof of work values from this function
-pub fn pow_find_nonce_threaded(pow_bits: u32, proof: &Channel) -> u64 {
+pub fn pow_find_nonce_threaded(pow_bits: u8, proof: &Channel) -> u64 {
     let mut seed = hex!("0123456789abcded").to_vec();
     seed.extend_from_slice(&proof.digest);
-    for byte in pow_bits.to_be_bytes().iter() {
-        if *byte > 0 {
-            seed.push(*byte);
-            break;
-        }
-    }
+    seed.push(pow_bits);
     let mut seed_res = [0_u8; 32];
     let mut sha3 = Keccak::new_keccak256();
     sha3.update(&seed);
     sha3.finalize(&mut seed_res);
 
-    let test_value = U256::from(2_u64).pow(u64::from(256 - pow_bits)).unwrap();
+    let test_value = U256::from(2_u64).pow((255 - pow_bits + 1).into()).unwrap();
     let ret = (0..(u64::max_value() as usize))
         .into_par_iter()
         .find_any(|n| -> bool {
@@ -67,21 +58,16 @@ pub fn pow_find_nonce_threaded(pow_bits: u32, proof: &Channel) -> u64 {
     ret.unwrap() as u64
 }
 
-pub fn pow_verify(n: u64, pow_bits: u32, proof: &Channel) -> bool {
+pub fn pow_verify(n: u64, pow_bits: u8, proof: &Channel) -> bool {
     let mut seed = hex!("0123456789abcded").to_vec();
     seed.extend_from_slice(&proof.digest);
-    for byte in pow_bits.to_be_bytes().iter() {
-        if *byte > 0 {
-            seed.push(*byte);
-            break;
-        }
-    }
+    seed.push(pow_bits);
     let mut seed_res = [0_u8; 32];
     let mut sha3 = Keccak::new_keccak256();
     sha3.update(&seed);
     sha3.finalize(&mut seed_res);
 
-    let test_value = U256::from(2_u64).pow(u64::from(256 - pow_bits)).unwrap();
+    let test_value = U256::from(2_u64).pow((255 - pow_bits + 1).into()).unwrap();
     let mut sha3 = Keccak::new_keccak256();
     let mut res = [0; 32];
     sha3.update(&seed_res);

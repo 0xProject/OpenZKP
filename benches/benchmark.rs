@@ -457,17 +457,9 @@ fn fft_timing(crit: &mut Criterion) {
         bench.iter(|| black_box(fft_cofactor(&vector, &cofactor)))
     });
 }
-fn fib_proof_make(crit: &mut Criterion) {
-    let witness = FieldElement::from(u256h!(
-        "00000000000000000000000000000000000000000000000000000000cafebabe"
-    ));
 
-    crit.bench_function("Making a Fibonacci Proof", move |bench| {
-        bench.iter(|| black_box(fib_proof(witness.clone())))
-    });
-}
 fn abstracted_fib_proof_make(crit: &mut Criterion) {
-    let claim_index = 1000_u64;
+    let claim_index = 1000_usize;
     let claim_fib = FieldElement::from(u256h!(
         "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
     ));
@@ -482,7 +474,12 @@ fn abstracted_fib_proof_make(crit: &mut Criterion) {
                 &get_constraint(),
                 claim_index,
                 claim_fib.clone(),
-                2_u64.pow(4),
+                &ProofParams {
+                    blowup:     16,
+                    pow_bits:   12,
+                    queries:    20,
+                    fri_layout: vec![3, 2, 1],
+                },
             ))
         })
     });
@@ -520,6 +517,6 @@ criterion_group!(benches, criterion_benchmark);
 criterion_group! {
    name = slow_benches;
    config = Criterion::default().sample_size(20);
-   targets = fib_proof_make, abstracted_fib_proof_make
+   targets = abstracted_fib_proof_make
 }
 criterion_main!(benches, slow_benches);

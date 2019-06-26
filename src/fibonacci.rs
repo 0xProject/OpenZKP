@@ -1,18 +1,10 @@
 // TODO - Migrate to Choose naming system which the rust complier doesn't
 // complain about
 #![allow(non_snake_case)]
-// TODO Fix these
-#![allow(clippy::type_complexity)]
-#![allow(clippy::cognitive_complexity)]
-#![allow(clippy::zero_prefixed_literal)]
 
-use crate::{
-    channel::*, fft::*, field::*, merkle::*, polynomial::*, proofs::*, u256::U256, u256h,
-    utils::Reversible,
-};
+use crate::{field::*, polynomial::*, proofs::*, u256::U256, u256h};
 use hex_literal::*;
 use rayon::prelude::*;
-use tiny_keccak::Keccak;
 
 pub fn get_trace_table(length: u64, witness: FieldElement) -> TraceTable {
     let mut T_0 = vec![FieldElement::ONE];
@@ -32,7 +24,7 @@ pub fn get_trace_table(length: u64, witness: FieldElement) -> TraceTable {
 pub fn eval_whole_loop(
     LDEn: &[&[FieldElement]],
     constraint_coefficients: &[FieldElement],
-    claim_index: u64,
+    claim_index: usize,
     claim_fib: &FieldElement,
 ) -> Vec<FieldElement> {
     let eval_domain_size_usize = LDEn[0].len();
@@ -46,7 +38,7 @@ pub fn eval_whole_loop(
 
     let mut CC = Vec::with_capacity(eval_domain_size_usize);
     let g_trace = g.pow(U256::from(trace_len - 1));
-    let g_claim = g.pow(U256::from(claim_index));
+    let g_claim = g.pow(U256::from(claim_index as u64));
     let x = gen.clone();
     let x_trace = (&x).pow(U256::from(trace_len));
     let x_1023 = (&x).pow(U256::from(trace_len - 1));
@@ -122,7 +114,7 @@ pub fn eval_whole_loop(
 pub fn eval_c_direct(
     x: &FieldElement,
     polynomials: &[&[FieldElement]],
-    claim_index: u64,
+    claim_index: usize,
     claim: FieldElement,
     constraint_coefficients: &[FieldElement],
 ) -> FieldElement {
@@ -146,7 +138,7 @@ pub fn eval_c_direct(
         ((eval_P0(x.clone()) - FieldElement::ONE) * FieldElement::ONE) / (&x - FieldElement::ONE)
     };
     let eval_C3 = |x: FieldElement| -> FieldElement {
-        (eval_P0(x.clone()) - claim) / (&x - &g.pow(U256::from(claim_index)))
+        (eval_P0(x.clone()) - claim) / (&x - &g.pow(U256::from(claim_index as u64)))
     };
 
     let deg_adj = |degree_bound: u64,
@@ -205,456 +197,17 @@ pub fn get_constraint() -> Constraint<'static> {
     Constraint::new(20, &eval_c_direct, Some(&eval_whole_loop))
 }
 
-// TODO: Better variable names
-#[allow(clippy::many_single_char_names)]
-pub fn fib_proof(witness: FieldElement) -> Channel {
-    let trace_len = 1024;
-    let beta = 2_u64.pow(4);
-    let omega = FieldElement::from(u256h!(
-        "0393a32b34832dbad650df250f673d7c5edd09f076fc314a3e5a42f0606082e1"
-    ));
-    let g = FieldElement::from(u256h!(
-        "0659d83946a03edd72406af6711825f5653d9e35dc125289a206c054ec89c4f1"
-    ));
-    let eval_domain_size = trace_len * beta;
-    let eval_domain_size_usize = eval_domain_size as usize;
-
-    let gen = FieldElement::from(U256::from(3_u64));
-    let mut trace_x = Vec::with_capacity(trace_len as usize);
-    let mut eval_x = Vec::with_capacity((eval_domain_size) as usize);
-    let mut eval_offset_x = Vec::with_capacity((eval_domain_size) as usize);
-
-    for i in 0..trace_len {
-        trace_x.push(g.pow(U256::from(i)));
-    }
-    for i in 0..(eval_domain_size) {
-        let hold = omega.pow(U256::from(i));
-        eval_x.push(hold.clone());
-        eval_offset_x.push(hold * &gen);
-    }
-
-    let claim_index = 1000_u64;
-    let claim_fib = FieldElement::from(u256h!(
-        "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
-    ));
-
-    let mut T_0 = vec![FieldElement::ONE];
-    let mut T_1 = vec![witness];
-    for i in 1..trace_len {
-        T_0.push(T_1[(i - 1) as usize].clone());
-        T_1.push(T_0[(i - 1) as usize].clone() + T_1[(i - 1) as usize].clone());
-    }
-
-    let TP0 = ifft(&T_0.as_slice());
-    let TP1 = ifft(&T_1.as_slice());
-
-    let mut LDE0 = vec![FieldElement::ZERO; eval_x.len()];
-    let mut LDE1 = vec![FieldElement::ZERO; eval_x.len()];
-
-    for j in 0..beta {
-        let mut vals = fft_cofactor(&(TP0.as_slice()), &(&gen * &omega.pow(U256::from(j))));
-        for i in 0..trace_len {
-            LDE0[((i * beta + j) % (eval_domain_size)) as usize] = vals[i as usize].clone();
-        }
-
-        vals = fft_cofactor(&(TP1.as_slice()), &(&gen * &omega.pow(U256::from(j))));
-        for i in 0..trace_len {
-            LDE1[((i * beta + j) % (eval_domain_size)) as usize] = vals[i as usize].clone();
-        }
-    }
-
-    let leaf = |i: u64| -> Vec<U256> {
-        vec![
-            LDE0[(i.bit_reverse() >> 50) as usize].0.clone(),
-            LDE1[(i.bit_reverse() >> 50) as usize].0.clone(),
-        ]
-    };
-
-    let mut leaves = Vec::with_capacity(eval_domain_size_usize);
-    for i in 0..eval_domain_size {
-        leaves.push(leaf(i));
-    }
-
-    let leaf_pointer: Vec<&[U256]> = leaves.iter().map(|x| x.as_slice()).collect();
-    let tree = make_tree(leaf_pointer.as_slice());
-    let mut public_input = [claim_index.to_be_bytes()].concat();
-    public_input.extend_from_slice(&claim_fib.0.to_bytes_be());
-    let test_hex_input =
-        hex!("00000000000003e805a80444b56a9b6a5f2b99f0fd92ef6a065d662e5c5cf944be0008796f4a7c12");
-
-    for (byte_1, byte_2) in (public_input.iter()).zip(test_hex_input.iter()) {
-        assert_eq!(byte_1, byte_2);
-    }
-
-    let mut proof = Channel::new(&public_input.as_slice());
-    proof.write(&tree[1]);
-
-    let mut constraint_coefficients = Vec::with_capacity(8);
-    for _i in 0..8 {
-        constraint_coefficients.push(proof.element());
-    }
-
-    let eval_P0 = |x: FieldElement| -> FieldElement { eval_poly(x, &TP0) };
-    let eval_P1 = |x: FieldElement| -> FieldElement { eval_poly(x, &TP1) };
-    let eval_C0 = |x: FieldElement| -> FieldElement {
-        ((eval_P0(&x * &g) - eval_P1(x.clone())) * (&x - &g.pow(U256::from(trace_len - 1))))
-            / (&x.pow(U256::from(trace_len)) - FieldElement::ONE)
-    };
-    let eval_C1 = |x: FieldElement| -> FieldElement {
-        ((eval_P1(&x * &g) - eval_P0(x.clone()) - eval_P1(x.clone()))
-            * (&x - &g.pow(U256::from(trace_len - 1))))
-            / (&x.pow(U256::from(trace_len)) - FieldElement::ONE)
-    };
-    let eval_C2 = |x: FieldElement| -> FieldElement {
-        ((eval_P0(x.clone()) - FieldElement::ONE) * FieldElement::ONE) / (&x - FieldElement::ONE)
-    };
-    let eval_C3 = |x: FieldElement| -> FieldElement {
-        (eval_P0(x.clone()) - claim_fib.clone()) / (&x - &g.pow(U256::from(claim_index)))
-    };
-
-    let deg_adj = |degree_bound: u64,
-                   constraint_degree: u64,
-                   numerator_degree: u64,
-                   denominator_degree: u64|
-     -> u64 {
-        degree_bound + denominator_degree - 1 - constraint_degree - numerator_degree
-    };
-
-    let eval_C = |x: FieldElement| -> FieldElement {
-        let composition_degree_bound = trace_len;
-        let mut r = FieldElement::ZERO;
-        r += &constraint_coefficients[0] * &eval_C0(x.clone());
-        r += &constraint_coefficients[1]
-            * &eval_C0(x.clone())
-            * (&x).pow(U256::from(deg_adj(
-                composition_degree_bound,
-                trace_len - 1,
-                1,
-                trace_len,
-            )));
-        r += &constraint_coefficients[2] * &eval_C1(x.clone());
-        r += &constraint_coefficients[3]
-            * &eval_C1(x.clone())
-            * (&x).pow(U256::from(deg_adj(
-                composition_degree_bound,
-                trace_len - 1,
-                1,
-                trace_len,
-            )));
-        r += &constraint_coefficients[4] * &eval_C2(x.clone());
-        r += &constraint_coefficients[5]
-            * &eval_C2(x.clone())
-            * x.pow(U256::from(deg_adj(
-                composition_degree_bound,
-                trace_len - 1,
-                0,
-                1,
-            )));
-        r += &constraint_coefficients[6] * &eval_C3(x.clone());
-        r += &constraint_coefficients[7]
-            * &eval_C3(x.clone())
-            * x.pow(U256::from(deg_adj(
-                composition_degree_bound,
-                trace_len - 1,
-                0,
-                1,
-            )));
-        r
-    };
-
-    let mut CC = vec![FieldElement::ZERO; eval_domain_size_usize];
-    let g_trace = g.pow(U256::from(trace_len - 1));
-    let g_claim = g.pow(U256::from(claim_index));
-    let x = gen.clone();
-    let mut x_trace = (&x).pow(U256::from(trace_len));
-    let mut x_1023 = (&x).pow(U256::from(1023_u64));
-    let omega_trace = (&omega).pow(U256::from(trace_len));
-    let omega_1023 = (&omega).pow(U256::from(1023_u64));
-
-    let mut x = gen.clone();
-    let mut x_omega_cycle = Vec::with_capacity(eval_domain_size_usize);
-    let mut x_trace_cycle = Vec::with_capacity(eval_domain_size_usize);
-    let mut x_1023_cycle = Vec::with_capacity(eval_domain_size_usize);
-
-    let mut x_trace_sub_one: Vec<FieldElement> = Vec::with_capacity(eval_domain_size_usize);
-    let mut x_sub_one: Vec<FieldElement> = Vec::with_capacity(eval_domain_size_usize);
-    let mut x_g_claim_cycle: Vec<FieldElement> = Vec::with_capacity(eval_domain_size_usize);
-
-    for _i in 0..(eval_domain_size_usize) {
-        x_omega_cycle.push(x.clone());
-        x_trace_cycle.push(x_trace.clone());
-        x_1023_cycle.push(x_1023.clone());
-
-        x_trace_sub_one.push(&x_trace - FieldElement::ONE);
-        x_sub_one.push(&x - FieldElement::ONE);
-        x_g_claim_cycle.push(&x - &g_claim);
-
-        x_trace *= &omega_trace;
-        x *= &omega;
-        x_1023 *= &omega_1023;
-    }
-
-    x_trace_sub_one = invert_batch(&x_trace_sub_one);
-    x_sub_one = invert_batch(&x_sub_one);
-    x_g_claim_cycle = invert_batch(&x_g_claim_cycle);
-
-    for i in 0..eval_domain_size {
-        let j = (i + beta) % eval_domain_size;
-
-        let P0 = LDE0[i as usize].clone();
-        let P1 = LDE1[i as usize].clone();
-        let P0n = LDE0[j as usize].clone();
-        let P1n = LDE1[j as usize].clone();
-
-        let A = x_trace_sub_one[i as usize].clone();
-        let C0 = (&P0n - &P1) * (&x_omega_cycle[i as usize] - &g_trace) * &A;
-        let C1 = (&P1n - &P0 - &P1) * (&x_omega_cycle[i as usize] - &g_trace) * &A;
-        let C2 = (&P0 - FieldElement::ONE) * &x_sub_one[i as usize];
-        let C3 = (&P0 - &claim_fib) * &x_g_claim_cycle[i as usize];
-
-        let C0a = &C0 * &x_1023_cycle[i as usize];
-        let C1a = &C1 * &x_1023_cycle[i as usize];
-        let C2a = &C2 * &x_omega_cycle[i as usize];
-        let C3a = &C3 * &x_omega_cycle[i as usize];
-
-        let mut r = FieldElement::ZERO;
-        r += &constraint_coefficients[0] * C0;
-        r += &constraint_coefficients[1] * C0a;
-        r += &constraint_coefficients[2] * C1;
-        r += &constraint_coefficients[3] * C1a;
-        r += &constraint_coefficients[4] * C2;
-        r += &constraint_coefficients[5] * C2a;
-        r += &constraint_coefficients[6] * C3;
-        r += &constraint_coefficients[7] * C3a;
-
-        CC[i as usize] = r;
-    }
-
-    let leaf_constraint = |i: u64| -> U256 { CC[(i.bit_reverse() >> 50) as usize].0.clone() };
-    let mut leaves_con = Vec::with_capacity(eval_domain_size_usize);
-    for i in 0..eval_domain_size {
-        leaves_con.push(leaf_constraint(i));
-    }
-    let ctree = make_tree(leaves_con.as_slice());
-    proof.write(&ctree[1]);
-    let oods_point = proof.element();
-    let oods_values = vec![
-        (&eval_P0)(oods_point.clone()),
-        (&eval_P0)(&oods_point * &g),
-        (&eval_P1)(oods_point.clone()),
-        (&eval_P1)(&oods_point * &g),
-        (&eval_C)(oods_point.clone()),
-    ];
-    for element in oods_values.iter() {
-        proof.write_element(element);
-    }
-
-    let mut oods_coefficients = Vec::with_capacity(5);
-    for _i in 0..5 {
-        oods_coefficients.push(proof.element());
-    }
-
-    let _oods = |x: &FieldElement| -> FieldElement {
-        let mut r = FieldElement::ZERO;
-        r += &oods_coefficients[0] * (eval_P0(x.clone()) - &oods_values[0]) / (x - &oods_point);
-        r +=
-            &oods_coefficients[1] * (eval_P0(x.clone()) - &oods_values[1]) / (x - &oods_point * &g);
-        r += &oods_coefficients[2] * (eval_P1(x.clone()) - &oods_values[2]) / (x - &oods_point);
-        r +=
-            &oods_coefficients[3] * (eval_P1(x.clone()) - &oods_values[3]) / (x - &oods_point * &g);
-        r += &oods_coefficients[4] * (eval_C(x.clone()) - &oods_values[4]) / (x - &oods_point);
-        r
-    };
-
-    let mut CO = vec![FieldElement::ZERO; eval_domain_size_usize];
-
-    let mut x = gen.clone();
-    let mut x_omega_cycle = Vec::with_capacity(eval_domain_size_usize);
-    let mut x_oods_cycle: Vec<FieldElement> = Vec::with_capacity(eval_domain_size_usize);
-    let mut x_oods_cycle_g: Vec<FieldElement> = Vec::with_capacity(eval_domain_size_usize);
-    for _i in 0..(eval_domain_size_usize) {
-        x_omega_cycle.push(x.clone());
-        x_oods_cycle.push(&x - &oods_point);
-        x_oods_cycle_g.push(&x - &oods_point * &g);
-        x *= &omega;
-    }
-
-    x_oods_cycle = invert_batch(x_oods_cycle.as_slice());
-    x_oods_cycle_g = invert_batch(x_oods_cycle_g.as_slice());
-
-    for i in 0..eval_domain_size {
-        let A = FieldElement::ONE * &x_oods_cycle[i as usize];
-        let B = FieldElement::ONE * &x_oods_cycle_g[i as usize];
-        let mut r = FieldElement::ZERO;
-        r += &oods_coefficients[0] * (&LDE0[i as usize] - &oods_values[0]) * &A;
-        r += &oods_coefficients[1] * (&LDE0[i as usize] - &oods_values[1]) * &B;
-        r += &oods_coefficients[2] * (&LDE1[i as usize] - &oods_values[2]) * &A;
-        r += &oods_coefficients[3] * (&LDE1[i as usize] - &oods_values[3]) * &B;
-        r += &oods_coefficients[4] * (&CC[i as usize] - &oods_values[4]) * &A;
-
-        CO[i as usize] = r;
-    }
-
-    let fri_layer =
-        |previous: &[FieldElement], evaluation_point: &FieldElement| -> Vec<FieldElement> {
-            let n = previous.len() as u64;
-            let s = eval_domain_size / n;
-            let mut next = vec![FieldElement::ZERO; (n / 2) as usize];
-            for i in 0..n / 2 {
-                let j = (n / 2 + i) % n;
-                let m = eval_x.len() as u64;
-                let ind = ((m - i) * s) % m;
-                let x_inv = &eval_x[ind as usize];
-                let a = &previous[i as usize];
-                let b = &previous[j as usize];
-                let r = (a + b) + evaluation_point * x_inv * (a - b);
-                next[i as usize] = r;
-            }
-            next
-        };
-    let fri_tree = |layer: &[FieldElement], coset_size: u64| -> Vec<[u8; 32]> {
-        let n = layer.len();
-        let bits = 64 - (n as u64).leading_zeros(); // Floored base 2 log
-        let mut internal_leaves = Vec::new();
-        for i in (0..n).step_by(coset_size as usize) {
-            let mut internal_leaf = Vec::new();
-            for j in 0..coset_size {
-                internal_leaf.push(
-                    layer[(((i as u64) + j).bit_reverse() >> (64 - bits + 1)) as usize]
-                        .0
-                        .clone(),
-                );
-            }
-            internal_leaves.push(internal_leaf);
-        }
-        let leaf_pointer: Vec<&[U256]> = internal_leaves.iter().map(|x| x.as_slice()).collect();
-        make_tree(leaf_pointer.as_slice())
-    };
-    let mut fri = Vec::with_capacity(14);
-    fri.push(CO);
-    let fri_tree_1 = fri_tree(&(fri[0].as_slice()), 8);
-    proof.write(&fri_tree_1[1]);
-
-    let mut eval_point = proof.element();
-    fri.push(fri_layer(&(fri[0].as_slice()), &eval_point));
-    fri.push(fri_layer(&(fri[1].as_slice()), &(eval_point.square())));
-    fri.push(fri_layer(
-        &(fri[2].as_slice()),
-        &(eval_point.square().square()),
-    ));
-    let fri_tree_2 = fri_tree(&(fri[3].as_slice()), 4);
-    proof.write(&fri_tree_2[1]);
-
-    eval_point = proof.element();
-    fri.push(fri_layer(&(fri[3].as_slice()), &eval_point));
-    fri.push(fri_layer(&(fri[4].as_slice()), &(eval_point.square())));
-
-    let mut last_layer_coefficents = ifft(&(fri[5].as_slice()));
-    last_layer_coefficents.truncate(32);
-    proof.write_element_list(&(last_layer_coefficents.as_slice()));
-
-    let pow_find_nonce = |pow_bits: u32| -> u64 {
-        let mut seed = vec![01_u8, 35_u8, 69_u8, 103_u8, 137_u8, 171_u8, 205_u8, 237_u8];
-        seed.extend_from_slice(&proof.digest);
-        for byte in pow_bits.to_be_bytes().iter() {
-            if *byte > 0 {
-                seed.push(*byte);
-                break;
-            }
-        }
-        let mut seed_res = [0_u8; 32];
-        let mut sha3 = Keccak::new_keccak256();
-        sha3.update(&seed);
-        sha3.finalize(&mut seed_res);
-
-        let test_value = U256::from(2_u64).pow(u64::from(256 - pow_bits)).unwrap();
-        for n in 0..(u64::max_value() as usize) {
-            let mut sha3 = Keccak::new_keccak256();
-            let mut res = [0; 32];
-            sha3.update(&seed_res);
-            sha3.update(&(n.to_be_bytes()));
-            sha3.finalize(&mut res);
-            let final_int = U256::from_bytes_be(&res);
-            if final_int.leading_zeros() == pow_bits as usize && final_int < test_value {
-                // Only do the large int compare if the quick logs match
-                return n as u64;
-            }
-        }
-        0
-    };
-    let nonce = pow_find_nonce(12);
-    proof.write(&nonce.to_be_bytes());
-
-    let num_queries = 20;
-    let mut query_indices = Vec::with_capacity(num_queries + 3);
-    while query_indices.len() < num_queries {
-        let val = U256::from_bytes_be(&proof.bytes());
-        query_indices.push(((val.clone() >> (0x100 - 0x040)).c0 & (2_u64.pow(14) - 1)) as usize);
-        query_indices.push(((val.clone() >> (0x100 - 0x080)).c0 & (2_u64.pow(14) - 1)) as usize);
-        query_indices.push(((val.clone() >> (0x100 - 0x0C0)).c0 & (2_u64.pow(14) - 1)) as usize);
-        query_indices.push((val.c0 & (2_u64.pow(14) - 1)) as usize);
-    }
-    query_indices.truncate(num_queries);
-    (&mut query_indices).sort_unstable(); // Fast inplace sort that doesn't preserve the order of equal elements.
-
-    for index in query_indices.iter() {
-        proof.write_element(&LDE0[((*index as u64).bit_reverse() >> 50) as usize]);
-        proof.write_element(&LDE1[((*index as u64).bit_reverse() >> 50) as usize]);
-    }
-
-    let mut decommitment = crate::merkle::proof(&tree, &(query_indices.as_slice()));
-    for x in decommitment.iter() {
-        proof.write(x);
-    }
-
-    for index in query_indices.iter() {
-        proof.write_element(&CC[((*index as u64).bit_reverse() >> 50) as usize]);
-    }
-    decommitment = crate::merkle::proof(&ctree, &(query_indices.as_slice()));
-    for x in decommitment.iter() {
-        proof.write(x);
-    }
-
-    let fri_indices: Vec<usize> = query_indices.iter().map(|x| x / 8).collect();
-    for i in fri_indices.iter() {
-        for j in 0..8 {
-            let n = i * 8 + j;
-            if query_indices.binary_search(&n).is_ok() {
-                continue;
-            } else {
-                proof.write_element(&fri[0][((n as u64).bit_reverse() >> 50) as usize]);
-            }
-        }
-    }
-    decommitment = crate::merkle::proof(&fri_tree_1, &(fri_indices.as_slice()));
-    for x in decommitment.iter() {
-        proof.write(x);
-    }
-    let fri_low_indices: Vec<usize> = query_indices.iter().map(|x| x / 32).collect();
-    for i in fri_low_indices.iter() {
-        for j in 0..4 {
-            let n = i * 4 + j;
-            if fri_indices.binary_search(&n).is_ok() {
-                continue;
-            } else {
-                proof.write_element(&fri[3][((n as u64).bit_reverse() >> 53) as usize]);
-            }
-        }
-    }
-    decommitment = crate::merkle::proof(&fri_tree_2, &(fri_low_indices.as_slice()));
-    for x in decommitment.iter() {
-        proof.write(x);
-    }
-    proof
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{u256::U256, u256h};
+    use crate::{channel::*, fft::*, merkle::*, u256::U256, u256h, utils::Reversible};
     use tiny_keccak::Keccak;
 
     #[test]
+    // TODO - When the proofs function is changed to included functions for each
+    // step of the proof, change this to make a set of unit tests of each of them
+    // [then move to proofs].
+    #[allow(clippy::cognitive_complexity)]
     fn fib_proof_test() {
         let trace_len = 1024;
         let beta = 2_u64.pow(4);
@@ -1100,7 +653,7 @@ mod tests {
         );
 
         let pow_find_nonce = |pow_bits: u32| -> u64 {
-            let mut seed = vec![01_u8, 35_u8, 69_u8, 103_u8, 137_u8, 171_u8, 205_u8, 237_u8];
+            let mut seed = vec![1_u8, 35_u8, 69_u8, 103_u8, 137_u8, 171_u8, 205_u8, 237_u8];
             seed.extend_from_slice(&proof.digest);
             for byte in pow_bits.to_be_bytes().iter() {
                 if *byte > 0 {
