@@ -457,8 +457,8 @@ fn fri_layer(
             let x_inv = &eval_x[inverse_index];
             let value = &previous[index];
             let neg_x_value = &previous[negative_index];
-            debug_assert_eq!(&eval_x[index * step].inv().unwrap(), x_inv);
-            debug_assert_eq!(-&eval_x[index * step], eval_x[negative_index * step]);
+            debug_assert_eq!(x_inv, &eval_x[index * step].inv().unwrap());
+            debug_assert_eq!(eval_x[negative_index * step], -&eval_x[index * step]);
             (value + neg_x_value) + evaluation_point * x_inv * (value - neg_x_value)
         })
         .collect_into_vec(&mut next);
