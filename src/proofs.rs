@@ -1,8 +1,7 @@
 #![allow(non_snake_case)] // TODO - Migrate to naming system which the rust complier doesn't complain
                           // about
 use crate::{
-    channel::*, fft::*, field::*, merkle::*, polynomial::*, u256::U256,
-    utils::Reversible,
+    channel::*, fft::*, field::*, merkle::*, polynomial::*, u256::U256, utils::Reversible,
 };
 use rayon::prelude::*;
 
@@ -306,15 +305,11 @@ pub fn stark_proof(
 
     let mut halvings = 0;
     let mut fri_const = params.blowup / 4;
+    let mut eval_point = FieldElement::ONE;
     for x in params.fri_layout.as_slice()[..(params.fri_layout.len() - 1)].iter() {
-<<<<<<< HEAD
-        let mut eval_point = proof.element();
-
-=======
         if *x != 0 {
             eval_point = proof.read();
         }
->>>>>>> Added traits to read and write from a channel
         for _ in 0..*x {
             fri.push(fri_layer(
                 &fri[fri.len() - 1].as_slice(),
@@ -332,12 +327,8 @@ pub fn stark_proof(
         halvings += *x;
     }
 
-<<<<<<< HEAD
-    let mut eval_point = proof.element();
-=======
     // Gets the coefficient representation of the last number of fri reductions
     let mut eval_point = proof.read();
->>>>>>> Added traits to read and write from a channel
     for _ in 0..params.fri_layout[params.fri_layout.len() - 1] {
         fri.push(fri_layer(
             &fri[fri.len() - 1].as_slice(),
@@ -349,24 +340,13 @@ pub fn stark_proof(
     }
     halvings += params.fri_layout[params.fri_layout.len() - 1];
 
-<<<<<<< HEAD
     // Gets the coefficient representation of the last number of fri reductions
 
     let last_layer_degree_bound = trace_len / (2_usize.pow(halvings as u32));
     let mut last_layer_coefficient = ifft(&(fri[halvings].as_slice()));
     last_layer_coefficient.truncate(last_layer_degree_bound);
-    proof.write_element_list(last_layer_coefficient.as_slice());
-    debug_assert_eq!(last_layer_coefficient.len(), last_layer_degree_bound);
-=======
-    let last_layer_degree_bound = trace_len / (2_u64.pow(halvings as u32));
-    let mut last_layer_coefficient = ifft(
-        FieldElement::root(U256::from(fri[halvings].len() as u64)).unwrap(),
-        &(fri[halvings].as_slice()),
-    );
-    last_layer_coefficient.truncate(last_layer_degree_bound as usize);
     proof.write(last_layer_coefficient.as_slice());
-    debug_assert_eq!(last_layer_coefficient.len() as u64, last_layer_degree_bound);
->>>>>>> Added traits to read and write from a channel
+    debug_assert_eq!(last_layer_coefficient.len(), last_layer_degree_bound);
 
     let proof_of_work = proof.pow_find_nonce(params.pow_bits);
     debug_assert!(pow_verify(proof_of_work, params.pow_bits, &proof));
@@ -380,17 +360,10 @@ pub fn stark_proof(
     );
 
     for index in query_indices.iter() {
-<<<<<<< HEAD
         for low_degree_extension in LDEn.iter() {
-            proof.write_element(
+            proof.write(
                 &low_degree_extension[(index.clone()).bit_reverse()
                     >> ((low_degree_extension.len().leading_zeros()) + 1)],
-=======
-        for x in 0..trace.COLS {
-            proof.write(
-                &LDEn[x as usize][(index.clone()).bit_reverse()
-                    >> ((LDEn[x].len().leading_zeros()) + 1) as usize],
->>>>>>> Added traits to read and write from a channel
             );
         }
     }
@@ -401,11 +374,7 @@ pub fn stark_proof(
     }
 
     for index in query_indices.iter() {
-<<<<<<< HEAD
-        proof.write_element(&CC[index.clone().bit_reverse() >> ((CC.len().leading_zeros()) + 1)]);
-=======
         proof.write(&CC[index.clone().bit_reverse() >> ((CC.len().leading_zeros()) + 1) as usize]);
->>>>>>> Added traits to read and write from a channel
     }
     let decommitment = crate::merkle::proof(&c_tree, &(query_indices.as_slice()));
     for x in decommitment.iter() {
@@ -430,16 +399,10 @@ pub fn stark_proof(
                 if previous_indices.binary_search(&n).is_ok() {
                     continue;
                 } else {
-<<<<<<< HEAD
-                    proof.write_element(
-                        &fri[current_fri]
-                            [(n.bit_reverse() >> (fri[current_fri].len().leading_zeros() + 1))],
-=======
                     proof.write(
                         &fri[current_fri][((n as u64).bit_reverse()
                             >> (u64::from(fri[current_fri].len().leading_zeros() + 1)))
                             as usize],
->>>>>>> Added traits to read and write from a channel
                     );
                 }
             }

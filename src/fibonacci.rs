@@ -342,13 +342,8 @@ mod tests {
         );
 
         let mut constraint_coefficients = Vec::with_capacity(8);
-<<<<<<< HEAD
         for _ in 0..8 {
-            constraint_coefficients.push(proof.element());
-=======
-        for i in 0..8 {
             constraint_coefficients.push(proof.read());
->>>>>>> Added traits to read and write from a channel
         }
 
         let eval_P0 = |x: FieldElement| -> FieldElement { eval_poly(x, &TP0) };
@@ -530,13 +525,8 @@ mod tests {
         );
 
         let mut oods_coefficients = Vec::with_capacity(5);
-<<<<<<< HEAD
         for _ in 0..5 {
-            oods_coefficients.push(proof.element());
-=======
-        for i in 0..5 {
             oods_coefficients.push(proof.read());
->>>>>>> Added traits to read and write from a channel
         }
 
         let oods = |x: &FieldElement| -> FieldElement {
@@ -692,14 +682,9 @@ mod tests {
             }
             0
         };
-<<<<<<< HEAD
         let nonce = pow_find_nonce(12);
         assert_eq!(nonce, 3465);
-        proof.write(&nonce.to_be_bytes());
-=======
-        assert_eq!(pow_find_nonce(12), 3465);
-        proof.write(pow_find_nonce(12));
->>>>>>> Added traits to read and write from a channel
+        proof.write(nonce);
 
         let num_queries = 20;
         let mut query_indices = Vec::with_capacity(num_queries + 3);
