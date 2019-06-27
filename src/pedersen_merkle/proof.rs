@@ -1,16 +1,22 @@
 #[cfg(test)]
 mod tests {
-    use rayon::prelude::*;
-    use crate::fft::{fft, fft_cofactor, ifft};
-    use crate::field::{FieldElement, MODULUS};
-    use crate::merkle::{hash_node, Hashable};
-    use crate::montgomery::R1;
-    use crate::pedersen_merkle::input::{get_private_input, get_public_input};
-    use crate::pedersen_merkle::trace_table::get_trace_table;
-    use crate::polynomial::eval_poly;
-    use crate::u256::U256;
+    use crate::{
+        fft::{bit_reversal_fft_cofactor, fft, fft_cofactor, ifft},
+        field::{FieldElement, MODULUS},
+        merkle::{hash_leaf_list, hash_node, make_tree_from_leaves, Hashable},
+        montgomery::R1,
+        pedersen_merkle::{
+            input::{get_private_input, get_public_input},
+            trace_table::get_trace_table,
+        },
+        polynomial::eval_poly,
+        u256::U256,
+        utils::Reversible,
+    };
     use hex_literal::*;
+    use rayon::prelude::*;
 
+    #[test]
     fn pedersen_merkle_proof() {
         let public_input = get_public_input();
         let trace_table = get_trace_table(&public_input, &get_private_input());
@@ -25,11 +31,15 @@ mod tests {
         }
 
         let trace_length: usize = public_input.path_length * 256;
-        let trace_generator = FieldElement::GENERATOR
-            .pow(MODULUS / U256::from(trace_length as u128));
-        let trace_polynomials: Vec<_> = (0..8)
-            .map(|i| ifft(columns[i].as_slice()))
-            .collect();
+        let trace_generator =
+            FieldElement::GENERATOR.pow(MODULUS / U256::from(trace_length as u64));
+
+        let mut trace_polynomials: Vec<Vec<FieldElement>> =
+            vec![Vec::with_capacity(trace_length); 8];
+        columns
+            .into_par_iter()
+            .map(|c| ifft(&c))
+            .collect_into_vec(&mut trace_polynomials);
 
         assert_eq!(columns[6][columns[6].len() - 1], public_input.root);
         assert_eq!(
@@ -90,99 +100,99 @@ mod tests {
             );
         }
 
-        let beta: usize = 16;
+        let beta = 16usize;
         let evaluation_length = trace_length * beta;
         let evaluation_generator =
             FieldElement::root(U256::from(evaluation_length as u64)).unwrap();
         let evaluation_offset = FieldElement::GENERATOR;
 
-        // let index = 3671035u64;
-        // let evaluation_point = &evaluation_offset
-        //     * evaluation_generator
-        //         .pow(reverse(index, 25) as u128)
-        //         .unwrap();
-        // let expected_values = vec![
-        //     FieldElement::from_hex_str(
-        //         "0x191dd69283475ddd3b21e70a2f33ac1ddc57c94d94372c91b4dc165470cd16d",
-        //     ),
-        //     FieldElement::from_hex_str(
-        //         "0x540b97a03b8932df6a5ad25f7e575cfa54024094ea4a8bbd3c491b81b83fe4b",
-        //     ),
-        //     FieldElement::from_hex_str(
-        //         "0x77fc9484e5f4e5dff43420c0ed32ec8a082f530800f50e073f83b97f4f000b8",
-        //     ),
-        //     FieldElement::from_hex_str(
-        //         "0x46bc71b42bd78c76e4669ccfa1fa85c4bd8112b10c78535b7c113782ae410f3",
-        //     ),
-        //     FieldElement::from_hex_str(
-        //         "0x0acbed66102168104f8c9c8a536d11f0fd3d3865fa637fd8088fe5b8125b2f8",
-        //     ),
-        //     FieldElement::from_hex_str(
-        //         "0x1f84d70300430f209e89bff935c1bd588b34207a010eb113a35639483e152a7",
-        //     ),
-        //     FieldElement::from_hex_str(
-        //         "0x3101db85628661e0002ff9769e5ec8292173e6645bdba61925313da30a3989a",
-        //     ),
-        //     FieldElement::from_hex_str(
-        //         "0x626d82c055ce4c31c9e61d32c64293bab8e0973b4d9e9b627a785c1e7a17d67",
-        //     ),
-        // ];
-        // for (i, expected_value) in expected_values.iter().enumerate() {
-        //     assert_eq!(
-        //         eval_poly(evaluation_point.clone(), &trace_polynomials[i]),
-        //         *expected_value
-        //     );
-        // }
-        //
-        // let partner_index: u64 = index - 1;
-        // let partner_point = &evaluation_offset
-        //     * evaluation_generator
-        //         .pow(reverse(partner_index, 25) as u128)
-        //         .unwrap();
-        // let partner_row: Vec<_> = (0..8)
-        //     .map(|i| eval_poly(partner_point.clone(), &trace_polynomials[i]).0)
-        //     .collect();
-        // assert_eq!(
-        //     partner_row.as_slice().hash(),
-        //     hex!("9e7fc484305af8dc7171beac83e61b009d2d6f91000000000000000000000000")
-        // );
-        //
-        // let left_partner_index: u64 = index - 3;
-        // let left_partner_point = &evaluation_offset
-        //     * evaluation_generator
-        //         .pow(reverse(left_partner_index, 25) as u128)
-        //         .unwrap();
-        // let left_partner_row: Vec<_> = (0..8)
-        //     .map(|i| eval_poly(left_partner_point.clone(), &trace_polynomials[i]).0)
-        //     .collect();
-        //
-        // let right_partner_index: u64 = index - 2;
-        // let right_partner_point = &evaluation_offset
-        //     * evaluation_generator
-        //         .pow(reverse(right_partner_index, 25) as u128)
-        //         .unwrap();
-        // let right_partner_row: Vec<_> = (0..8)
-        //     .map(|i| eval_poly(right_partner_point.clone(), &trace_polynomials[i]).0)
-        //     .collect();
-        //
-        // let left = left_partner_row.as_slice().hash();
-        // let right = right_partner_row.as_slice().hash();
-        // assert_eq!(
-        //     hash_node(&left, &right),
-        //     hex!("a05377347d88d46b9d68b3c4082bfc7fab4d822a000000000000000000000000")
-        // );
+        let index = 3671035u64;
+        let evaluation_point = &evaluation_offset
+            * evaluation_generator.pow(U256::from(index.bit_reverse() >> (64 - 25)));
+        let expected_values = vec![
+            FieldElement::from_hex_str(
+                "0x191dd69283475ddd3b21e70a2f33ac1ddc57c94d94372c91b4dc165470cd16d",
+            ),
+            FieldElement::from_hex_str(
+                "0x540b97a03b8932df6a5ad25f7e575cfa54024094ea4a8bbd3c491b81b83fe4b",
+            ),
+            FieldElement::from_hex_str(
+                "0x77fc9484e5f4e5dff43420c0ed32ec8a082f530800f50e073f83b97f4f000b8",
+            ),
+            FieldElement::from_hex_str(
+                "0x46bc71b42bd78c76e4669ccfa1fa85c4bd8112b10c78535b7c113782ae410f3",
+            ),
+            FieldElement::from_hex_str(
+                "0x0acbed66102168104f8c9c8a536d11f0fd3d3865fa637fd8088fe5b8125b2f8",
+            ),
+            FieldElement::from_hex_str(
+                "0x1f84d70300430f209e89bff935c1bd588b34207a010eb113a35639483e152a7",
+            ),
+            FieldElement::from_hex_str(
+                "0x3101db85628661e0002ff9769e5ec8292173e6645bdba61925313da30a3989a",
+            ),
+            FieldElement::from_hex_str(
+                "0x626d82c055ce4c31c9e61d32c64293bab8e0973b4d9e9b627a785c1e7a17d67",
+            ),
+        ];
+        for (i, expected_value) in expected_values.iter().enumerate() {
+            assert_eq!(
+                eval_poly(evaluation_point.clone(), &trace_polynomials[i]),
+                *expected_value
+            );
+        }
 
-        // let low_degree_extensions: Vec<Vec<FieldElement>> = trace_polynomials
-        //     .into_par_iter()
-        //     .map(|trace_polynomial| {
-        //         (0..beta as u64)
-        //             .map(|j| {
-        //                 let cofactor = &evaluation_offset * evaluation_generator.pow(j).unwrap();
-        //                 fft_cofactor(trace_generator.clone(), &trace_polynomial, cofactor)
-        //             })
-        //             .flatten()
-        //             .collect()
-        //     })
-        //     .collect();
+        let partner_index: u64 = index - 1;
+        let partner_point = &evaluation_offset
+            * evaluation_generator.pow(U256::from((partner_index.bit_reverse() >> (64 - 25))));
+        let partner_row: Vec<_> = (0..8)
+            .map(|i| eval_poly(partner_point.clone(), &trace_polynomials[i]).0)
+            .collect();
+        assert_eq!(
+            partner_row.as_slice().hash(),
+            hex!("9e7fc484305af8dc7171beac83e61b009d2d6f91000000000000000000000000")
+        );
+
+        let mut leaf_hashes: Vec<[u8; 32]> = Vec::with_capacity(evaluation_length);
+        for i in 0..beta {
+            let mut leaves: Vec<Vec<FieldElement>> = vec![Vec::with_capacity(trace_length); 8];
+            trace_polynomials
+                .clone()
+                .into_par_iter()
+                .map(|p| {
+                    let reverse_i = i.bit_reverse() >> (64 - 4);
+                    let cofactor = FieldElement::GENERATOR
+                        * evaluation_generator.pow(U256::from(reverse_i as u64));
+                    bit_reversal_fft_cofactor(&p, &cofactor)
+                })
+                .collect_into_vec(&mut leaves);
+            for j in (0..trace_length) {
+                leaf_hashes.push(
+                    vec![
+                        leaves[0][j].0.clone(),
+                        leaves[1][j].0.clone(),
+                        leaves[2][j].0.clone(),
+                        leaves[3][j].0.clone(),
+                        leaves[4][j].0.clone(),
+                        leaves[5][j].0.clone(),
+                        leaves[6][j].0.clone(),
+                        leaves[7][j].0.clone(),
+                    ]
+                    .as_slice()
+                    .hash(),
+                );
+            }
+        }
+
+        let merkle_tree = make_tree_from_leaves(leaf_hashes);
+        assert_eq!(
+            merkle_tree[37225466],
+            hex!("9e7fc484305af8dc7171beac83e61b009d2d6f91000000000000000000000000")
+        );
+
+        assert_eq!(
+            merkle_tree[1],
+            hex!("b00a4c7f03959e01df2504fb73d2b238a8ab08b2000000000000000000000000")
+        );
     }
 }

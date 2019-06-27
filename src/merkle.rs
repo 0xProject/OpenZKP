@@ -81,11 +81,8 @@ pub const THREADS_MAX: usize = 16; // TODO - Figure out how many threads is opt
 
 pub fn make_tree_threaded<T: Hashable + std::marker::Sync>(leaves: &[T]) -> Vec<[u8; 32]> {
     let threads = THREADS_MAX;
-
     let n = leaves.len();
-    let depth = 64 - n.leading_zeros() - 1;
 
-    let mut layers = Vec::with_capacity(depth as usize);
     let base_layer: Vec<[u8; 32]> = (0..threads)
         .into_par_iter()
         .map(|i| {
@@ -97,8 +94,16 @@ pub fn make_tree_threaded<T: Hashable + std::marker::Sync>(leaves: &[T]) -> Vec<
         })
         .flatten()
         .collect();
-    layers.push(base_layer);
 
+    make_tree_from_leaves(base_layer)
+}
+
+pub fn make_tree_from_leaves(leaves: Vec<[u8; 32]>) -> Vec<[u8; 32]> {
+    let n = leaves.len();
+    let depth = 64 - n.leading_zeros() - 1;
+
+    let mut layers = Vec::with_capacity(depth as usize);
+    layers.push(leaves);
     for i in 1..((depth + 1) as usize) {
         let mut hold = Vec::with_capacity(layers[0].len() / 2);
         layers[i - 1]

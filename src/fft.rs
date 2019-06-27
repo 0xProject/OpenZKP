@@ -19,6 +19,21 @@ pub fn fft_cofactor(a: &[FieldElement], cofactor: &FieldElement) -> Vec<FieldEle
     fft(&result)
 }
 
+pub fn bit_reversal_fft_cofactor(a: &[FieldElement], cofactor: &FieldElement) -> Vec<FieldElement> {
+    let mut result = a.to_vec();
+    let mut c = FieldElement::ONE;
+    for element in result.iter_mut() {
+        *element *= &c;
+        c *= cofactor;
+    }
+
+    let root = FieldElement::root(U256::from(result.len() as u64))
+        .expect("No root of unity for input length");
+    bit_reversal_fft(result.as_mut_slice(), root);
+
+    result
+}
+
 pub fn ifft(a: &[FieldElement]) -> Vec<FieldElement> {
     let mut result = a.to_vec();
     let n_elements = U256::from(a.len() as u64);
@@ -35,25 +50,6 @@ pub fn ifft(a: &[FieldElement]) -> Vec<FieldElement> {
     for e in result.iter_mut() {
         *e *= &inverse_length;
     }
-    result
-}
-
-pub fn bit_reversal_fft_interpolate(
-    a: &[FieldElement],
-    beta: u64,
-    cofactor: FieldElement,
-) -> Vec<FieldElement> {
-    let mut result = vec![FieldElement::ZERO; a.len() * beta as usize];
-    result[..a.len()].clone_from_slice(a);
-
-    let mut c = FieldElement::ONE;
-    for element in result.iter_mut() {
-        *element *= &c;
-        c *= &cofactor;
-    }
-
-    let root = FieldElement::root(U256::from(result.len() as u64)).unwrap();
-    bit_reversal_fft(result.as_mut_slice(), root);
     result
 }
 

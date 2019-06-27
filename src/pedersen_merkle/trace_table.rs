@@ -1,9 +1,11 @@
-use crate::curve::Affine;
-use crate::field::FieldElement;
-use crate::pedersen::SHIFT_POINT;
-use crate::pedersen_merkle::input::{PrivateInput, PublicInput};
-use crate::pedersen_points::PEDERSEN_POINTS;
-use crate::u256::U256;
+use crate::{
+    curve::Affine,
+    field::FieldElement,
+    pedersen::SHIFT_POINT,
+    pedersen_merkle::input::{PrivateInput, PublicInput},
+    pedersen_points::PEDERSEN_POINTS,
+    u256::U256,
+};
 use std::default::Default;
 
 pub fn get_trace_table(
@@ -31,7 +33,7 @@ pub fn get_trace_table(
             } else {
                 state = hash_next_bit(&state, bit_index);
             }
-            trace_table.extend(get_trace(&state));
+            extend_trace_table_by_row(&mut trace_table, &state);
         }
     }
     trace_table
@@ -41,12 +43,13 @@ fn initialize_hash(left_source: U256, right_source: U256) -> Row {
     let mut state: Row = Default::default();
     state.left.source = left_source;
     state.right.source = right_source;
+    state.right.point = SHIFT_POINT;
     state
 }
 
 fn hash_next_bit(state: &Row, bit_index: usize) -> Row {
     let mut next_state = Row {
-        left: Subrow {
+        left:  Subrow {
             source: state.left.source.clone() >> 1,
             point: state.right.point.clone(),
             ..Default::default()
@@ -71,43 +74,40 @@ fn hash_next_bit(state: &Row, bit_index: usize) -> Row {
     next_state
 }
 
-fn get_trace(row: &Row) -> Vec<FieldElement> {
-    [
-        &get_subrow_trace(&row.left)[..],
-        &get_subrow_trace(&row.right)[..],
-    ]
-    .concat()
+fn extend_trace_table_by_row(table: &mut Vec<FieldElement>, row: &Row) {
+    extend_trace_table_by_subrow(table, &row.left);
+    extend_trace_table_by_subrow(table, &row.right);
 }
 
-fn get_subrow_trace(subrow: &Subrow) -> Vec<FieldElement> {
+fn extend_trace_table_by_subrow(table: &mut Vec<FieldElement>, subrow: &Subrow) {
     let (x, y) = get_coordinates(&subrow.point);
-
-    vec![
-        FieldElement(subrow.source.clone()),
-        subrow.slope.clone(),
-        x.clone(),
-        y.clone(),
-    ]
+    table.push(FieldElement(subrow.source.clone()));
+    table.push(subrow.slope.clone());
+    table.push(x.clone());
+    table.push(y.clone());
 }
 
 #[derive(Default)]
 struct Row {
-    left: Subrow,
+    left:  Subrow,
     right: Subrow,
 }
 
 struct Subrow {
     source: U256,
-    slope: FieldElement,
-    point: Affine,
+    slope:  FieldElement,
+    point:  Affine,
 }
 
 impl Default for Subrow {
     fn default() -> Self {
         Subrow {
             source: U256::ZERO,
-            slope: FieldElement::ZERO,
-            point: SHIFT_POINT,
+            slope:  FieldElement::ZERO,
+            point:  Affine::Point {
+                x: FieldElement::ZERO,
+                y: FieldElement::ZERO,
+            },
         }
     }
 }
@@ -128,8 +128,10 @@ fn get_coordinates(p: &Affine) -> (&FieldElement, &FieldElement) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::pedersen::old_hash;
-    use crate::pedersen_merkle::input::{get_private_input, get_public_input};
+    use crate::{
+        pedersen::old_hash,
+        pedersen_merkle::input::{get_private_input, get_public_input},
+    };
     use itertools::Itertools;
     use std::iter;
 

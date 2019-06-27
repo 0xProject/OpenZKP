@@ -1,9 +1,13 @@
 use crate::{commutative_binop, montgomery::*, noncommutative_binop, u256::U256, u256h};
 use hex_literal::*;
-use serde::de::Visitor;
-use serde::{de, Deserialize, Deserializer};
-use std::fmt;
-use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
+use serde::{
+    de::{self, Visitor},
+    Deserialize, Deserializer,
+};
+use std::{
+    fmt,
+    ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign},
+};
 
 // TODO: Implement Serde
 
