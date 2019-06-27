@@ -65,9 +65,8 @@ impl Channel {
         keccak.update(&[pow_bits as u8]);
         keccak.finalize(&mut seed_res);
 
-        let test_value = U256::from(2_u64).pow((255 - pow_bits + 1).into()).unwrap();
         for n in 0_u64.. {
-            if test_int(n, pow_bits, &test_value, &seed_res) {
+            if test_int(n, pow_bits, &seed_res) {
                 return n as u64;
             }
         }
@@ -83,10 +82,9 @@ impl Channel {
         keccak.update(&[pow_bits as u8]);
         keccak.finalize(&mut seed_res);
 
-        let test_value = U256::from(2_u64).pow((255 - pow_bits + 1).into()).unwrap();
         let ret = (0..u64::max_value())
             .into_par_iter()
-            .find_any(|n| -> bool { test_int(*n, pow_bits, &test_value, &seed_res) });
+            .find_any(|n| -> bool { test_int(*n, pow_bits, &seed_res) });
         ret.unwrap() as u64
     }
 }
@@ -98,12 +96,10 @@ pub fn pow_verify(n: u64, pow_bits: u8, proof: &Channel) -> bool {
     keccak.update(&proof.digest);
     keccak.update(&[pow_bits as u8]);
     keccak.finalize(&mut seed_res);
-
-    let test_value = U256::from(2_u64).pow((255 - pow_bits + 1).into()).unwrap();
-    test_int(n, pow_bits, &test_value, &seed_res)
+    test_int(n, pow_bits, &seed_res)
 }
 
-fn test_int(n: u64, pow_bits: u8, test_value: &U256, seed_res: &[u8; 32]) -> bool {
+fn test_int(n: u64, pow_bits: u8, seed_res: &[u8; 32]) -> bool {
     // OPT: Inline Keccak256 and work directly on buffer using 'keccakf'
     let mut keccak = Keccak::new_keccak256();
     let mut res = [0; 32];
@@ -112,11 +108,7 @@ fn test_int(n: u64, pow_bits: u8, test_value: &U256, seed_res: &[u8; 32]) -> boo
     keccak.finalize(&mut res);
     // OPT: Check performance impact of conversion
     let final_int = U256::from_bytes_be(&res);
-    if final_int.leading_zeros() == pow_bits as usize {
-        final_int < *test_value
-    } else {
-        false
-    }
+    final_int.leading_zeros() >= pow_bits as usize
 }
 
 impl ChannelReadable<FieldElement> for Channel {

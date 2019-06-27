@@ -667,7 +667,6 @@ mod tests {
             sha3.update(&seed);
             sha3.finalize(&mut seed_res);
 
-            let test_value = U256::from(2_u64).pow(u64::from(256 - pow_bits)).unwrap();
             for n in 0..(u64::max_value() as usize) {
                 let mut sha3 = Keccak::new_keccak256();
                 let mut res = [0; 32];
@@ -675,7 +674,7 @@ mod tests {
                 sha3.update(&(n.to_be_bytes()));
                 sha3.finalize(&mut res);
                 let final_int = U256::from_bytes_be(&res);
-                if final_int.leading_zeros() == pow_bits as usize && final_int < test_value {
+                if final_int.leading_zeros() >= pow_bits as usize {
                     // Only do the large int compare if the quick logs match
                     return n as u64;
                 }
