@@ -5,8 +5,8 @@ use serde_json::from_str;
 #[derive(Deserialize)]
 pub struct PublicInput {
     pub path_length: usize,
-    pub leaf: FieldElement,
-    pub root: FieldElement,
+    pub leaf:        FieldElement,
+    pub root:        FieldElement,
 }
 
 pub fn get_public_input() -> PublicInput {
@@ -16,7 +16,7 @@ pub fn get_public_input() -> PublicInput {
 #[derive(Deserialize)]
 pub struct PrivateInput {
     pub directions: Vec<bool>,
-    pub path: Vec<FieldElement>,
+    pub path:       Vec<FieldElement>,
 }
 
 pub fn get_private_input() -> PrivateInput {
@@ -25,8 +25,8 @@ pub fn get_private_input() -> PrivateInput {
 
 #[derive(Deserialize)]
 pub struct PeriodicColumns {
-    left_x_coefficients: Vec<FieldElement>,
-    left_y_coefficients: Vec<FieldElement>,
+    left_x_coefficients:  Vec<FieldElement>,
+    left_y_coefficients:  Vec<FieldElement>,
     right_x_coefficients: Vec<FieldElement>,
     right_y_coefficients: Vec<FieldElement>,
 }
@@ -38,11 +38,10 @@ pub fn get_periodic_columns() -> PeriodicColumns {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::curve::Affine;
-    use crate::pedersen_points::PEDERSEN_POINTS;
-    use crate::polynomial::eval_poly;
-    use crate::U256;
-    use crate::proofs::geometric_series;
+    use crate::{
+        curve::Affine, pedersen_points::PEDERSEN_POINTS, polynomial::eval_poly,
+        proofs::geometric_series, U256,
+    };
 
     #[test]
     fn test_get_public_input() {
@@ -63,9 +62,11 @@ mod tests {
         let left_y_coefficients = periodic_columns.left_y_coefficients;
 
         let evaluation_points = geometric_series(&FieldElement::ONE, &omega, 252);
-        let left_points = evaluation_points.iter().map(|f: &FieldElement| Affine::Point {
-            x: eval_poly(f.clone(), &left_x_coefficients),
-            y: eval_poly(f.clone(), &left_y_coefficients),
+        let left_points = evaluation_points.iter().map(|f: &FieldElement| {
+            Affine::Point {
+                x: eval_poly(f.clone(), &left_x_coefficients),
+                y: eval_poly(f.clone(), &left_y_coefficients),
+            }
         });
 
         for (i, point) in left_points.enumerate() {
@@ -82,9 +83,11 @@ mod tests {
         let right_y_coefficients = periodic_columns.right_y_coefficients;
 
         let evaluation_points = geometric_series(&FieldElement::ONE, &omega, 252);
-        let right_points = evaluation_points.iter().map(|f: &FieldElement| Affine::Point {
-            x: eval_poly(f.clone(), &right_x_coefficients),
-            y: eval_poly(f.clone(), &right_y_coefficients),
+        let right_points = evaluation_points.iter().map(|f: &FieldElement| {
+            Affine::Point {
+                x: eval_poly(f.clone(), &right_x_coefficients),
+                y: eval_poly(f.clone(), &right_y_coefficients),
+            }
         });
 
         for (i, point) in right_points.enumerate() {
