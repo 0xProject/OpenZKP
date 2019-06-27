@@ -13,122 +13,81 @@ pub trait ChannelWritable<T> {
 
 #[derive(PartialEq, Eq, Clone, Default)]
 pub struct Channel {
-    pub digest:  [u8; 32],
-    pub counter: u64,
-    pub proof:   Vec<u8>,
+    pub digest: [u8; 32],
+    counter:    u64,
+    pub proof:  Vec<u8>,
 }
 
 impl Channel {
-    pub fn new(data: &[u8]) -> Self {
+    pub fn new(seed: &[u8]) -> Self {
         let mut digest: [u8; 32] = [0; 32];
         let mut keccak = Keccak::new_keccak256();
-        keccak.update(data);
+        keccak.update(seed);
         keccak.finalize(&mut digest);
-        let counter = 0;
-        let proof = data.to_vec();
         Self {
             digest,
-            counter,
-            proof,
+            counter: 0,
+            proof: seed.to_vec(),
         }
-    }
-
-    pub fn write_bytes(&mut self, data: &[u8]) {
-        self.proof.extend_from_slice(data);
-        let mut res: [u8; 32] = [0; 32];
-        let mut keccak = Keccak::new_keccak256();
-        keccak.update(&self.digest);
-        keccak.update(data);
-        keccak.finalize(&mut res);
-        self.digest = res;
-        self.counter = 0;
-    }
-
-    pub fn bytes(&mut self) -> [u8; 32] {
-        let mut res = [0; 32];
-        let zero = [0_u8; 24];
-        let mut keccak = Keccak::new_keccak256();
-
-        keccak.update(&self.digest);
-        keccak.update(&zero);
-        keccak.update(&self.counter.to_be_bytes());
-        keccak.finalize(&mut res);
-        self.counter += 1;
-        res
     }
 
     pub fn pow_find_nonce(&self, pow_bits: u8) -> u64 {
-        let mut seed_res = [0_u8; 32];
-        let mut keccak = Keccak::new_keccak256();
-        keccak.update(&hex!("0123456789abcded"));
-        keccak.update(&self.digest);
-        keccak.update(&[pow_bits as u8]);
-        keccak.finalize(&mut seed_res);
+        let seed = self.pow_seed(pow_bits);
 
-        for n in 0_u64.. {
-            if test_int(n, pow_bits, &seed_res) {
-                return n as u64;
-            }
-        }
-        0
+        (0u64..)
+            .find(|&nonce| pow_verify_with_seed(nonce, pow_bits, &seed))
+            .expect("No valid nonce found")
     }
 
     // TODO - Make tests compatible with the proof of work values from this function
     pub fn pow_find_nonce_threaded(&self, pow_bits: u8) -> u64 {
-        let mut seed_res = [0_u8; 32];
+        let seed = self.pow_seed(pow_bits);
+        // NOTE: Rayon does not support open ended ranges, so we need to use a closed
+        // one.
+        (0..u64::max_value())
+            .into_par_iter()
+            .find_any(|&nonce| pow_verify_with_seed(nonce, pow_bits, &seed))
+            .expect("No valid nonce found")
+    }
+
+    pub fn pow_seed(&self, pow_bits: u8) -> [u8; 32] {
+        let mut seed = [0_u8; 32];
         let mut keccak = Keccak::new_keccak256();
         keccak.update(&hex!("0123456789abcded"));
         keccak.update(&self.digest);
-        keccak.update(&[pow_bits as u8]);
-        keccak.finalize(&mut seed_res);
+        keccak.update(&[pow_bits]);
+        keccak.finalize(&mut seed);
+        seed
+    }
 
-        let ret = (0..u64::max_value())
-            .into_par_iter()
-            .find_any(|n| -> bool { test_int(*n, pow_bits, &seed_res) });
-        ret.unwrap() as u64
+    pub fn pow_verify(&self, n: u64, pow_bits: u8) -> bool {
+        let seed = self.pow_seed(pow_bits);
+        pow_verify_with_seed(n, pow_bits, &seed)
     }
 }
 
-pub fn pow_verify(n: u64, pow_bits: u8, proof: &Channel) -> bool {
-    let mut seed_res = [0_u8; 32];
-    let mut keccak = Keccak::new_keccak256();
-    keccak.update(&hex!("0123456789abcded"));
-    keccak.update(&proof.digest);
-    keccak.update(&[pow_bits as u8]);
-    keccak.finalize(&mut seed_res);
-    test_int(n, pow_bits, &seed_res)
-}
-
-fn test_int(n: u64, pow_bits: u8, seed_res: &[u8; 32]) -> bool {
+fn pow_verify_with_seed(n: u64, pow_bits: u8, seed: &[u8; 32]) -> bool {
     // OPT: Inline Keccak256 and work directly on buffer using 'keccakf'
     let mut keccak = Keccak::new_keccak256();
-    let mut res = [0; 32];
-    keccak.update(seed_res);
+    let mut digest = [0; 32];
+    keccak.update(seed);
     keccak.update(&(n.to_be_bytes()));
-    keccak.finalize(&mut res);
+    keccak.finalize(&mut digest);
     // OPT: Check performance impact of conversion
-    let final_int = U256::from_bytes_be(&res);
-    final_int.leading_zeros() >= pow_bits as usize
+    let work = U256::from_bytes_be(&digest).leading_zeros();
+    work >= pow_bits as usize
 }
 
 impl ChannelReadable<FieldElement> for Channel {
     fn read(&mut self) -> FieldElement {
+        const MASK: U256 =
+            u256h!("0FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF");
         loop {
-            let mut res: [u8; 32] = [0; 32];
-            let zero = [0_u8; 24];
-            let mut keccak = Keccak::new_keccak256();
-            keccak.update(&self.digest);
-            keccak.update(&zero);
-            keccak.update(&self.counter.to_be_bytes());
-            keccak.finalize(&mut res);
-            self.counter += 1;
-            let seed = U256::from_bytes_be(&res)
-                % u256h!("1000000000000000000000000000000000000000000000000000000000000000"); // 2^256
+            let number: U256 = self.read();
+            let seed = number & MASK;
             if seed < MODULUS {
-                return FieldElement::from(seed)
-                    / FieldElement::from(u256h!(
-                        "07fffffffffffdf0ffffffffffffffffffffffffffffffffffffffffffffffe1"
-                    ));
+                // TODO: Avoid accessing FieldElement members directly
+                return FieldElement { 0: seed };
             }
         }
     }
@@ -136,48 +95,46 @@ impl ChannelReadable<FieldElement> for Channel {
 
 impl ChannelReadable<U256> for Channel {
     fn read(&mut self) -> U256 {
-        let mut res: [u8; 32] = [0; 32];
-        let zero = [0_u8; 24];
-        let mut keccak = Keccak::new_keccak256();
-        keccak.update(&self.digest);
-        keccak.update(&zero);
-        keccak.update(&self.counter.to_be_bytes());
-        keccak.finalize(&mut res);
-        self.counter += 1;
-        U256::from_bytes_be(&res)
+        U256::from_bytes_be(&self.read())
     }
 }
 
 impl ChannelReadable<[u8; 32]> for Channel {
     fn read(&mut self) -> [u8; 32] {
-        let mut res = [0; 32];
-        let zero = [0_u8; 24];
+        let mut result = [0; 32];
         let mut keccak = Keccak::new_keccak256();
         keccak.update(&self.digest);
-        keccak.update(&zero);
+        keccak.update(&[0_u8; 24]);
         keccak.update(&self.counter.to_be_bytes());
-        keccak.finalize(&mut res);
+        keccak.finalize(&mut result);
         self.counter += 1;
-        res
+        result
     }
 }
 
 impl ChannelWritable<&[u8]> for Channel {
     fn write(&mut self, data: &[u8]) {
-        self.write_bytes(data);
+        self.proof.extend_from_slice(data);
+        let mut result: [u8; 32] = [0; 32];
+        let mut keccak = Keccak::new_keccak256();
+        keccak.update(&self.digest);
+        keccak.update(data);
+        keccak.finalize(&mut result);
+        self.digest = result;
+        self.counter = 0;
     }
 }
 
 // TODO - Make into a hash type label
 impl ChannelWritable<&[u8; 32]> for Channel {
     fn write(&mut self, data: &[u8; 32]) {
-        self.write_bytes(data);
+        self.write(&data[..]);
     }
 }
 
 impl ChannelWritable<u64> for Channel {
     fn write(&mut self, data: u64) {
-        self.write_bytes(&data.to_be_bytes());
+        self.write(&data.to_be_bytes()[..]);
     }
 }
 
@@ -189,13 +146,14 @@ impl ChannelWritable<&[FieldElement]> for Channel {
                 container.push(byte.clone());
             }
         }
-        self.write_bytes(&container.as_slice());
+        self.write(container.as_slice());
     }
 }
 
 impl ChannelWritable<&FieldElement> for Channel {
     fn write(&mut self, data: &FieldElement) {
-        self.write_bytes(&data.0.to_bytes_be());
+        // TODO: Avoid accessing FieldElement members directly
+        self.write(&data.0.to_bytes_be()[..]);
     }
 }
 
@@ -207,13 +165,13 @@ mod tests {
     fn proof_of_work_test() {
         let rand_source = Channel::new(hex!("0123456789abcded").to_vec().as_slice());
         let work = rand_source.pow_find_nonce(15);
-        assert!(pow_verify(work, 15, &rand_source));
+        assert!(&rand_source.pow_verify(work, 15));
     }
 
     #[test]
     fn threaded_proof_of_work_test() {
         let rand_source = Channel::new(hex!("0123456789abcded").to_vec().as_slice());
         let work = rand_source.pow_find_nonce_threaded(15);
-        assert!(pow_verify(work, 15, &rand_source));
+        assert!(&rand_source.pow_verify(work, 15));
     }
 }

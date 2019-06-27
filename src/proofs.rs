@@ -349,7 +349,7 @@ pub fn stark_proof(
     debug_assert_eq!(last_layer_coefficient.len(), last_layer_degree_bound);
 
     let proof_of_work = proof.pow_find_nonce(params.pow_bits);
-    debug_assert!(pow_verify(proof_of_work, params.pow_bits, &proof));
+    debug_assert!(&proof.pow_verify(proof_of_work, params.pow_bits));
     proof.write(proof_of_work);
 
     let num_queries = params.queries;
