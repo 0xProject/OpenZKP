@@ -3,6 +3,7 @@
 use crate::{
     channel::*, fft::*, field::*, merkle::*, polynomial::*, u256::U256, utils::Reversible,
 };
+use itertools::Itertools;
 use rayon::prelude::*;
 
 pub struct TraceTable {
@@ -305,12 +306,13 @@ pub fn stark_proof(
 
     let mut halvings = 0;
     let mut fri_const = params.blowup / 4;
-    let mut eval_point = FieldElement::ONE;
-    for x in params.fri_layout.as_slice()[..(params.fri_layout.len() - 1)].iter() {
-        if *x != 0 {
-            eval_point = proof.read();
-        }
-        for _ in 0..*x {
+    for &x in params.fri_layout.iter().dropping_back(1) {
+        let mut eval_point = if x == 0 {
+            FieldElement::ONE
+        } else {
+            proof.read()
+        };
+        for _ in 0..x {
             fri.push(fri_layer(
                 &fri[fri.len() - 1].as_slice(),
                 &eval_point,
@@ -324,7 +326,7 @@ pub fn stark_proof(
         proof.write(&held_tree[1]);
         fri_trees.push(held_tree);
         fri_const /= 2;
-        halvings += *x;
+        halvings += x;
     }
 
     // Gets the coefficient representation of the last number of fri reductions
