@@ -11,8 +11,8 @@ use std::{
     fmt,
     num::Wrapping,
     ops::{
-        Add, AddAssign, BitAnd, Div, DivAssign, Mul, MulAssign, Rem, RemAssign, Shl, ShlAssign,
-        Shr, ShrAssign, Sub, SubAssign,
+        Add, AddAssign, BitAnd, BitAndAssign, Div, DivAssign, Mul, MulAssign, Rem, RemAssign, Shl,
+        ShlAssign, Shr, ShrAssign, Sub, SubAssign,
     },
     u64,
 };
@@ -465,6 +465,15 @@ impl BitAnd<u64> for &U256 {
     }
 }
 
+impl BitAndAssign<&U256> for U256 {
+    fn bitand_assign(&mut self, rhs: &U256) {
+        self.c0 &= rhs.c0;
+        self.c1 &= rhs.c1;
+        self.c2 &= rhs.c2;
+        self.c3 &= rhs.c3;
+    }
+}
+
 impl ShlAssign<usize> for U256 {
     #[inline(always)]
     fn shl_assign(&mut self, rhs: usize) {
@@ -666,6 +675,7 @@ impl RemAssign<&U256> for U256 {
 
 commutative_binop!(U256, Add, add, AddAssign, add_assign);
 commutative_binop!(U256, Mul, mul, MulAssign, mul_assign);
+commutative_binop!(U256, BitAnd, bitand, BitAndAssign, bitand_assign);
 noncommutative_binop!(U256, Sub, sub, SubAssign, sub_assign);
 noncommutative_binop!(U256, Div, div, DivAssign, div_assign);
 noncommutative_binop!(U256, Rem, rem, RemAssign, rem_assign);

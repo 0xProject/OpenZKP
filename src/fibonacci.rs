@@ -335,14 +335,15 @@ mod tests {
             proof.digest,
             hex!("b7d80385fa0c8879473cdf987ea7970bb807aec78bb91af39a1504d965ad8e92")
         );
+        let test_element: FieldElement = proof.read();
         assert_eq!(
-            U256::from(proof.element()),
+            U256::from(test_element),
             u256h!("0529fc64b01be65623ef376bfa31d62b9a75ba2f51b5fda79e55e2ac05dfa80f")
         );
 
         let mut constraint_coefficients = Vec::with_capacity(8);
         for _ in 0..8 {
-            constraint_coefficients.push(proof.element());
+            constraint_coefficients.push(proof.read());
         }
 
         let eval_P0 = |x: FieldElement| -> FieldElement { eval_poly(x, &TP0) };
@@ -502,7 +503,7 @@ mod tests {
         );
 
         proof.write(&ctree[1]);
-        let oods_point = proof.element();
+        let oods_point: FieldElement = proof.read();
         assert_eq!(
             U256::from(oods_point.clone()),
             u256h!("031dc8fc2f57e3f39f6951a04a04294a7c63c988573dc058eea4cbf3e6268353")
@@ -516,7 +517,7 @@ mod tests {
             (&eval_C)(oods_point.clone()),
         ];
         for element in oods_values.iter() {
-            proof.write_element(element);
+            proof.write(element);
         }
         assert_eq!(
             proof.digest,
@@ -525,7 +526,7 @@ mod tests {
 
         let mut oods_coefficients = Vec::with_capacity(5);
         for _ in 0..5 {
-            oods_coefficients.push(proof.element());
+            oods_coefficients.push(proof.read());
         }
 
         let oods = |x: &FieldElement| -> FieldElement {
@@ -616,7 +617,7 @@ mod tests {
         );
         proof.write(&fri_tree_1[1]);
 
-        let mut eval_point = proof.element();
+        let mut eval_point = proof.read();
         fri.push(fri_layer(&(fri[0].as_slice()), &eval_point));
         fri.push(fri_layer(&(fri[1].as_slice()), &(eval_point.square())));
         fri.push(fri_layer(
@@ -630,7 +631,7 @@ mod tests {
         );
         proof.write(&fri_tree_2[1]);
 
-        eval_point = proof.element();
+        eval_point = proof.read();
         fri.push(fri_layer(&(fri[3].as_slice()), &eval_point));
         fri.push(fri_layer(&(fri[4].as_slice()), &(eval_point.square())));
 
@@ -646,7 +647,7 @@ mod tests {
             ),
             fri[5][42]
         );
-        proof.write_element_list(&(last_layer_coefficents.as_slice()));
+        proof.write(last_layer_coefficents.as_slice());
         assert_eq!(
             proof.digest,
             hex!("e2c7e50f3d1dcaad74678d8abb489675849ead08e2f848429a136304d9550bb6")
@@ -666,7 +667,6 @@ mod tests {
             sha3.update(&seed);
             sha3.finalize(&mut seed_res);
 
-            let test_value = U256::from(2_u64).pow(u64::from(256 - pow_bits)).unwrap();
             for n in 0..(u64::max_value() as usize) {
                 let mut sha3 = Keccak::new_keccak256();
                 let mut res = [0; 32];
@@ -674,7 +674,7 @@ mod tests {
                 sha3.update(&(n.to_be_bytes()));
                 sha3.finalize(&mut res);
                 let final_int = U256::from_bytes_be(&res);
-                if final_int.leading_zeros() == pow_bits as usize && final_int < test_value {
+                if final_int.leading_zeros() >= pow_bits as usize {
                     // Only do the large int compare if the quick logs match
                     return n as u64;
                 }
@@ -683,12 +683,12 @@ mod tests {
         };
         let nonce = pow_find_nonce(12);
         assert_eq!(nonce, 3465);
-        proof.write(&nonce.to_be_bytes());
+        proof.write(nonce);
 
         let num_queries = 20;
         let mut query_indices = Vec::with_capacity(num_queries + 3);
         while query_indices.len() < num_queries {
-            let val = U256::from_bytes_be(&proof.bytes());
+            let val: U256 = proof.read();
             query_indices
                 .push(((val.clone() >> (0x100 - 0x040)).c0 & (2_u64.pow(14) - 1)) as usize);
             query_indices
@@ -709,8 +709,8 @@ mod tests {
         (&mut query_indices).sort_unstable(); // Fast inplace sort that doesn't preserve the order of equal elements.
 
         for index in query_indices.iter() {
-            proof.write_element(&LDE0[((*index as u64).bit_reverse() >> 50) as usize]);
-            proof.write_element(&LDE1[((*index as u64).bit_reverse() >> 50) as usize]);
+            proof.write(&LDE0[((*index as u64).bit_reverse() >> 50) as usize]);
+            proof.write(&LDE1[((*index as u64).bit_reverse() >> 50) as usize]);
         }
         assert_eq!(
             proof.digest,
@@ -727,7 +727,7 @@ mod tests {
         );
 
         for index in query_indices.iter() {
-            proof.write_element(&CC[((*index as u64).bit_reverse() >> 50) as usize]);
+            proof.write(&CC[((*index as u64).bit_reverse() >> 50) as usize]);
         }
         decommitment = crate::merkle::proof(&ctree, &(query_indices.as_slice()));
         for x in decommitment.iter() {
@@ -745,7 +745,7 @@ mod tests {
                 if query_indices.binary_search(&n).is_ok() {
                     continue;
                 } else {
-                    proof.write_element(&fri[0][((n as u64).bit_reverse() >> 50) as usize]);
+                    proof.write(&fri[0][((n as u64).bit_reverse() >> 50) as usize]);
                 }
             }
         }
@@ -765,7 +765,7 @@ mod tests {
                 if fri_indices.binary_search(&n).is_ok() {
                     continue;
                 } else {
-                    proof.write_element(&fri[3][((n as u64).bit_reverse() >> 53) as usize]);
+                    proof.write(&fri[3][((n as u64).bit_reverse() >> 53) as usize]);
                 }
             }
         }

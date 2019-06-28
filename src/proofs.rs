@@ -1,9 +1,9 @@
 #![allow(non_snake_case)] // TODO - Migrate to naming system which the rust complier doesn't complain
                           // about
 use crate::{
-    channel::*, fft::*, field::*, merkle::*, polynomial::*, proof_of_work::*, u256::U256,
-    utils::Reversible,
+    channel::*, fft::*, field::*, merkle::*, polynomial::*, u256::U256, utils::Reversible,
 };
+use itertools::Itertools;
 use rayon::prelude::*;
 
 pub struct TraceTable {
@@ -184,7 +184,7 @@ pub fn stark_proof(
     proof.write(&tree[1]);
     let mut constraint_coefficients = Vec::with_capacity(constraints.NCONSTRAINTS);
     for _i in 0..constraints.NCONSTRAINTS {
-        constraint_coefficients.push(proof.element());
+        constraint_coefficients.push(proof.read());
     }
 
     let mut CC;
@@ -225,7 +225,7 @@ pub fn stark_proof(
 
     let c_tree = make_tree(c_leaves.as_slice());
     proof.write(&c_tree[1]);
-    let oods_point = proof.element();
+    let oods_point: FieldElement = proof.read();
     let oods_point_g = &oods_point * &g;
     let mut oods_values = Vec::with_capacity(2 * trace.COLS + 1);
     for item in TPn.iter() {
@@ -244,12 +244,12 @@ pub fn stark_proof(
     )); // Gets eval_C of the oods point via direct computation
 
     for v in oods_values.iter() {
-        proof.write_element(v);
+        proof.write(v);
     }
 
     let mut oods_coefficients = Vec::with_capacity(2 * trace.COLS + 1);
     for _i in 0..=2 * trace.COLS {
-        oods_coefficients.push(proof.element());
+        oods_coefficients.push(proof.read());
     }
 
     let mut CO = Vec::with_capacity(eval_domain_size);
@@ -306,10 +306,13 @@ pub fn stark_proof(
 
     let mut halvings = 0;
     let mut fri_const = params.blowup / 4;
-    for x in params.fri_layout.as_slice()[..(params.fri_layout.len() - 1)].iter() {
-        let mut eval_point = proof.element();
-
-        for _ in 0..*x {
+    for &x in params.fri_layout.iter().dropping_back(1) {
+        let mut eval_point = if x == 0 {
+            FieldElement::ONE
+        } else {
+            proof.read()
+        };
+        for _ in 0..x {
             fri.push(fri_layer(
                 &fri[fri.len() - 1].as_slice(),
                 &eval_point,
@@ -323,10 +326,11 @@ pub fn stark_proof(
         proof.write(&held_tree[1]);
         fri_trees.push(held_tree);
         fri_const /= 2;
-        halvings += *x;
+        halvings += x;
     }
 
-    let mut eval_point = proof.element();
+    // Gets the coefficient representation of the last number of fri reductions
+    let mut eval_point = proof.read();
     for _ in 0..params.fri_layout[params.fri_layout.len() - 1] {
         fri.push(fri_layer(
             &fri[fri.len() - 1].as_slice(),
@@ -339,15 +343,16 @@ pub fn stark_proof(
     halvings += params.fri_layout[params.fri_layout.len() - 1];
 
     // Gets the coefficient representation of the last number of fri reductions
+
     let last_layer_degree_bound = trace_len / (2_usize.pow(halvings as u32));
     let mut last_layer_coefficient = ifft(&(fri[halvings].as_slice()));
     last_layer_coefficient.truncate(last_layer_degree_bound);
-    proof.write_element_list(last_layer_coefficient.as_slice());
+    proof.write(last_layer_coefficient.as_slice());
     debug_assert_eq!(last_layer_coefficient.len(), last_layer_degree_bound);
 
-    let proof_of_work = pow_find_nonce(params.pow_bits, &proof);
-    debug_assert!(pow_verify(proof_of_work, 12, &proof));
-    proof.write(&proof_of_work.to_be_bytes());
+    let proof_of_work = proof.pow_find_nonce(params.pow_bits);
+    debug_assert!(&proof.pow_verify(proof_of_work, params.pow_bits));
+    proof.write(proof_of_work);
 
     let num_queries = params.queries;
     let query_indices = get_indices(
@@ -358,7 +363,7 @@ pub fn stark_proof(
 
     for index in query_indices.iter() {
         for low_degree_extension in LDEn.iter() {
-            proof.write_element(
+            proof.write(
                 &low_degree_extension[(index.clone()).bit_reverse()
                     >> ((low_degree_extension.len().leading_zeros()) + 1)],
             );
@@ -371,7 +376,7 @@ pub fn stark_proof(
     }
 
     for index in query_indices.iter() {
-        proof.write_element(&CC[index.clone().bit_reverse() >> ((CC.len().leading_zeros()) + 1)]);
+        proof.write(&CC[index.clone().bit_reverse() >> ((CC.len().leading_zeros()) + 1) as usize]);
     }
     let decommitment = crate::merkle::proof(&c_tree, &(query_indices.as_slice()));
     for x in decommitment.iter() {
@@ -396,9 +401,10 @@ pub fn stark_proof(
                 if previous_indices.binary_search(&n).is_ok() {
                     continue;
                 } else {
-                    proof.write_element(
-                        &fri[current_fri]
-                            [(n.bit_reverse() >> (fri[current_fri].len().leading_zeros() + 1))],
+                    proof.write(
+                        &fri[current_fri][((n as u64).bit_reverse()
+                            >> (u64::from(fri[current_fri].len().leading_zeros() + 1)))
+                            as usize],
                     );
                 }
             }
@@ -479,7 +485,7 @@ fn fri_tree(layer: &[FieldElement], coset_size: usize) -> Vec<[u8; 32]> {
 fn get_indices(num: usize, bits: u32, proof: &mut Channel) -> Vec<usize> {
     let mut query_indices = Vec::with_capacity(num + 3);
     while query_indices.len() < num {
-        let val = U256::from_bytes_be(&proof.bytes());
+        let val: U256 = proof.read();
         query_indices.push(((val.clone() >> (0x100 - 0x040)).c0 & (2_u64.pow(bits) - 1)) as usize);
         query_indices.push(((val.clone() >> (0x100 - 0x080)).c0 & (2_u64.pow(bits) - 1)) as usize);
         query_indices.push(((val.clone() >> (0x100 - 0x0C0)).c0 & (2_u64.pow(bits) - 1)) as usize);
@@ -523,7 +529,7 @@ mod tests {
         let witness = FieldElement::from(u256h!(
             "00000000000000000000000000000000000000000000000000000000cafebabe"
         ));
-        let expected = hex!("185ab1df82b4464206cae58761c4ab6873322fd0f77ee9e4e8e479e7a1f18707");
+        let expected = hex!("fcf1924f84656e5068ab9cbd44ae084b235bb990eefc0fd0183c77d5645e830e");
         let actual = stark_proof(
             &get_trace_table(1024, witness),
             &get_constraint(),
