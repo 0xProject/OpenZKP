@@ -138,6 +138,7 @@ impl Writable<u64> for Channel {
     }
 }
 
+//OPT - Remove allocation of vectors
 impl Writable<&[FieldElement]> for Channel {
     fn write(&mut self, data: &[FieldElement]) {
         let mut container = Vec::with_capacity(32 * data.len());

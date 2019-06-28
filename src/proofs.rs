@@ -120,55 +120,12 @@ pub fn stark_proof(
     let omega = FieldElement::root(U256::from((trace_len * params.blowup) as u64)).unwrap();
     let g = omega.pow(U256::from(params.blowup as u64));
     let eval_domain_size = trace_len * params.blowup;
-    let gen = FieldElement::GENERATOR;
 
     let eval_x = geometric_series(&FieldElement::ONE, &omega, eval_domain_size);
 
-    let mut TPn = vec![Vec::new(); trace.COLS];
-    (0..trace.COLS)
-        .into_par_iter()
-        .map(|x| {
-            let mut hold_col = Vec::with_capacity(trace_len);
-            for i in (0..trace.elements.len()).step_by(trace.COLS) {
-                hold_col.push(trace.elements[x + i].clone());
-            }
-            ifft(hold_col.as_slice())
-        })
-        .collect_into_vec(&mut TPn);
-
-    let mut LDEn = vec![vec![FieldElement::ZERO; eval_x.len()]; trace.COLS];
-    // OPT - Use some system to make this occur inline instead of storing then
-    // processing
-    #[allow(clippy::type_complexity)]
-    let ret: Vec<(usize, Vec<(usize, Vec<FieldElement>)>)> = (0..params.blowup)
-        .into_par_iter()
-        .map(|j| {
-            (
-                j,
-                (0..trace.COLS)
-                    .into_par_iter()
-                    .map(|x| {
-                        (
-                            x,
-                            fft_cofactor(
-                                TPn[x].as_slice(),
-                                &(&gen * &omega.pow(U256::from(j as u64))),
-                            ),
-                        )
-                    })
-                    .collect(),
-            )
-        })
-        .collect();
-
-    for j_element in ret {
-        for x_element in j_element.1 {
-            for i in 0..trace_len {
-                LDEn[x_element.0][(i * params.blowup + j_element.0) % eval_domain_size] =
-                    x_element.1[i].clone();
-            }
-        }
-    }
+    let TPn = interpolate_trace_table(&trace);
+    let TPn_pointer : Vec<&[FieldElement]> = TPn.iter().map(|x| x.as_slice()).collect();
+    let LDEn = calculate_low_degree_extensions(TPn_pointer.as_slice(), &params, &eval_x);
 
     let mut leaves = Vec::with_capacity(eval_domain_size);
     (0..eval_domain_size)
@@ -187,36 +144,9 @@ pub fn stark_proof(
         constraint_coefficients.push(proof.read());
     }
 
-    let mut CC;
-    let mut x = gen.clone();
-    let sliced_poly: Vec<&[FieldElement]> = TPn.iter().map(|x| x.as_slice()).collect();
-    let sliced_eval: Vec<&[FieldElement]> = LDEn.iter().map(|x| x.as_slice()).collect();
+    let LDEn_pointer : Vec<&[FieldElement]> = LDEn.iter().map(|x| x.as_slice()).collect();
+    let CC = calculate_constraints_on_domain(TPn_pointer.as_slice(), LDEn_pointer.as_slice(), constraints, constraint_coefficients.as_slice(), claim_index, &claim_value, params.blowup);
 
-    match constraints.eval_loop {
-        Some(x) => {
-            CC = (x)(
-                sliced_eval.as_slice(),
-                constraint_coefficients.as_slice(),
-                claim_index,
-                &claim_value,
-            )
-        }
-        None => {
-            CC = vec![FieldElement::ZERO; eval_domain_size];
-            for constraint_element in CC.iter_mut() {
-                *constraint_element = (constraints.eval)(
-                    // This will perform the polynomial evaluation on each step
-                    &x,
-                    sliced_poly.as_slice(),
-                    claim_index,
-                    claim_value.clone(),
-                    constraint_coefficients.as_slice(),
-                );
-
-                x *= &omega;
-            }
-        }
-    }
     let mut c_leaves = Vec::with_capacity(eval_domain_size);
     (0..eval_domain_size)
         .into_par_iter()
@@ -237,7 +167,7 @@ pub fn stark_proof(
 
     oods_values.push((constraints.eval)(
         &oods_point,
-        sliced_poly.as_slice(),
+        TPn_pointer.as_slice(),
         claim_index,
         claim_value.clone(),
         constraint_coefficients.as_slice(),
@@ -252,49 +182,8 @@ pub fn stark_proof(
         oods_coefficients.push(proof.read());
     }
 
-    let mut CO = Vec::with_capacity(eval_domain_size);
-    let x = FieldElement::GENERATOR;
-    let mut x_omega_cycle = Vec::with_capacity(eval_domain_size);
-    let mut x_oods_cycle: Vec<FieldElement> = Vec::with_capacity(eval_domain_size);
-    let mut x_oods_cycle_g: Vec<FieldElement> = Vec::with_capacity(eval_domain_size);
+    let CO = calculate_out_of_domain_constraints(LDEn_pointer.as_slice(), CC.as_slice(), &oods_point, oods_coefficients.as_slice(), oods_values.as_slice(), eval_x.as_slice(), params.blowup);
 
-    eval_x
-        .par_iter()
-        .map(|i| i * &x)
-        .collect_into_vec(&mut x_omega_cycle);
-    x_omega_cycle
-        .par_iter()
-        .map(|i| (i - &oods_point, i - &oods_point * &g))
-        .unzip_into_vecs(&mut x_oods_cycle, &mut x_oods_cycle_g);
-
-    let pool = vec![&x_oods_cycle, &x_oods_cycle_g];
-
-    let mut held = Vec::with_capacity(3);
-    pool.par_iter()
-        .map(|i| invert_batch(i))
-        .collect_into_vec(&mut held);
-
-    x_oods_cycle_g = held.pop().unwrap();
-    x_oods_cycle = held.pop().unwrap();
-
-    (0..eval_domain_size)
-        .into_par_iter()
-        .map(|i| {
-            let A = &x_oods_cycle[i];
-            let B = &x_oods_cycle_g[i];
-            let mut r = FieldElement::ZERO;
-
-            for x in 0..trace.COLS {
-                r += &oods_coefficients[2 * x] * (&LDEn[x][i] - &oods_values[2 * x]) * A;
-                r += &oods_coefficients[2 * x + 1] * (&LDEn[x][i] - &oods_values[2 * x + 1]) * B;
-            }
-            r += &oods_coefficients[oods_coefficients.len() - 1]
-                * (&CC[i] - &oods_values[oods_values.len() - 1])
-                * A;
-
-            r
-        })
-        .collect_into_vec(&mut CO);
     // Fri Layers
     debug_assert!(eval_domain_size.is_power_of_two());
     let mut fri = Vec::with_capacity(64 - (eval_domain_size.leading_zeros() as usize));
@@ -512,6 +401,152 @@ pub fn geometric_series(base: &FieldElement, step: &FieldElement, len: usize) ->
             }
         });
     range
+}
+
+fn interpolate_trace_table(table : &TraceTable) -> Vec<Vec<FieldElement>> {
+    let trace_len = table.elements.len() / table.COLS;
+    let mut TPn = vec![Vec::new(); table.COLS];
+    (0..table.COLS)
+        .into_par_iter()
+        .map(|x| {
+            let mut hold_col = Vec::with_capacity(trace_len);
+            for i in (0..table.elements.len()).step_by(table.COLS) {
+                hold_col.push(table.elements[x + i].clone());
+            }
+            ifft(hold_col.as_slice())
+        })
+        .collect_into_vec(&mut TPn);
+    TPn
+}
+
+fn calculate_low_degree_extensions(trace_poly : &[&[FieldElement]], params : &ProofParams, eval_x : &[FieldElement]) -> Vec<Vec<FieldElement>>{
+    let trace_len = trace_poly[0].len();
+    let omega = FieldElement::root(U256::from((trace_len * params.blowup) as u64)).unwrap();
+    let eval_domain_size = trace_len * params.blowup;
+    let gen = FieldElement::GENERATOR;
+
+    let mut LDEn = vec![vec![FieldElement::ZERO; eval_x.len()]; trace_poly.len()];
+    // OPT - Use some system to make this occur inline instead of storing then
+    // processing
+    #[allow(clippy::type_complexity)]
+    let ret: Vec<(usize, Vec<(usize, Vec<FieldElement>)>)> = (0..params.blowup)
+        .into_par_iter()
+        .map(|j| {
+            (
+                j,
+                (0..trace_poly.len())
+                    .into_par_iter()
+                    .map(|x| {
+                        (
+                            x,
+                            fft_cofactor(
+                                trace_poly[x],
+                                &(&gen * &omega.pow(U256::from(j as u64))),
+                            ),
+                        )
+                    })
+                    .collect(),
+            )
+        })
+        .collect();
+
+    for j_element in ret {
+        for x_element in j_element.1 {
+            for i in 0..trace_len {
+                LDEn[x_element.0][(i * params.blowup + j_element.0) % eval_domain_size] =
+                    x_element.1[i].clone();
+            }
+        }
+    }
+    LDEn
+}
+
+fn calculate_constraints_on_domain(trace_poly : &[&[FieldElement]], lde_poly : &[&[FieldElement]], constraints : &Constraint, constraint_coefficients : &[FieldElement], claim_index : usize, claim_value : &FieldElement, blowup : usize) -> Vec<FieldElement> {
+    let mut CC;
+    let trace_len = trace_poly[0].len();
+    let mut x = FieldElement::GENERATOR;
+    let omega = FieldElement::root(U256::from((trace_len * blowup) as u64)).unwrap();
+    let trace_len = trace_poly[0].len();
+    let eval_domain_size = trace_len * blowup;
+
+    match constraints.eval_loop {
+        Some(x) => {
+            CC = (x)(
+                lde_poly,
+                constraint_coefficients,
+                claim_index,
+                &claim_value,
+            )
+        }
+        None => {
+            CC = vec![FieldElement::ZERO; eval_domain_size];
+            for constraint_element in CC.iter_mut() {
+                *constraint_element = (constraints.eval)(
+                    // This will perform the polynomial evaluation on each step
+                    &x,
+                    trace_poly,
+                    claim_index,
+                    claim_value.clone(),
+                    constraint_coefficients,
+                );
+
+                x *= &omega;
+            }
+        }
+    }
+    CC
+}
+
+fn calculate_out_of_domain_constraints(lde_poly : &[&[FieldElement]], constraint_on_domain : &[FieldElement], oods_point : &FieldElement, oods_coefficients : &[FieldElement], oods_values : &[FieldElement], eval_x : &[FieldElement], blowup: usize) -> Vec<FieldElement> {
+    let eval_domain_size = eval_x.len();
+    let trace_len = eval_domain_size/blowup;
+    let omega = FieldElement::root(U256::from((trace_len * blowup) as u64)).unwrap();
+    let g = omega.pow(U256::from(blowup as u64));
+    
+    let mut CO = Vec::with_capacity(eval_domain_size);
+    let x = FieldElement::GENERATOR;
+    let mut x_omega_cycle = Vec::with_capacity(eval_domain_size);
+    let mut x_oods_cycle: Vec<FieldElement> = Vec::with_capacity(eval_domain_size);
+    let mut x_oods_cycle_g: Vec<FieldElement> = Vec::with_capacity(eval_domain_size);
+
+    eval_x
+        .par_iter()
+        .map(|i| i * &x)
+        .collect_into_vec(&mut x_omega_cycle);
+    x_omega_cycle
+        .par_iter()
+        .map(|i| (i - oods_point, i - oods_point * &g))
+        .unzip_into_vecs(&mut x_oods_cycle, &mut x_oods_cycle_g);
+
+    let pool = vec![&x_oods_cycle, &x_oods_cycle_g];
+
+    let mut held = Vec::with_capacity(3);
+    pool.par_iter()
+        .map(|i| invert_batch(i))
+        .collect_into_vec(&mut held);
+
+    x_oods_cycle_g = held.pop().unwrap();
+    x_oods_cycle = held.pop().unwrap();
+
+    (0..eval_domain_size)
+        .into_par_iter()
+        .map(|i| {
+            let A = &x_oods_cycle[i];
+            let B = &x_oods_cycle_g[i];
+            let mut r = FieldElement::ZERO;
+
+            for x in 0..lde_poly.len() {
+                r += &oods_coefficients[2 * x] * (&lde_poly[x][i] - &oods_values[2 * x]) * A;
+                r += &oods_coefficients[2 * x + 1] * (&lde_poly[x][i] - &oods_values[2 * x + 1]) * B;
+            }
+            r += &oods_coefficients[oods_coefficients.len() - 1]
+                * (&constraint_on_domain[i] - &oods_values[oods_values.len() - 1])
+                * A;
+
+            r
+        })
+        .collect_into_vec(&mut CO);
+        CO
 }
 
 #[cfg(test)]
