@@ -170,7 +170,6 @@ impl Writable<Vec<U256>> for Channel {
 
 impl Writable<U256> for Channel {
     fn write(&mut self, data: U256) {
-        // TODO: Avoid accessing FieldElement members directly
         self.write(&data.to_bytes_be()[..]);
     }
 }

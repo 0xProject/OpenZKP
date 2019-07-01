@@ -15,7 +15,7 @@ pub trait Groupable<T: Hashable> {
     fn domain_size(&self) -> usize;
 }
 
-// This trait is applied to give groupable objects a hash based on their
+// This trait is applied to give groupable objects a merkle tree based on their
 // groupings
 pub trait Merkleizable<R: Hashable> {
     fn merkleize(self) -> Vec<[u8; 32]>;
@@ -78,7 +78,7 @@ pub struct ProofParams {
 // the constraint function Second it contains a function designed to be used as
 // the core of a loop on precomputed values to get the C function. If the proof
 // system wants to used a looped eval for speedup it can set the loop bool to
-// true, otherwise the system will preform all computation directly
+// true, otherwise the system will perform all computation directly
 #[allow(clippy::type_complexity)]
 pub struct Constraint<'a> {
     pub NCONSTRAINTS: usize,
@@ -233,7 +233,7 @@ pub fn stark_proof(
     );
 
     let (fri_layers, fri_trees) =
-        preform_fri_layering(CO.as_slice(), &mut proof, &params, eval_x.as_slice());
+        perform_fri_layering(CO.as_slice(), &mut proof, &params, eval_x.as_slice());
 
     let proof_of_work = proof.pow_find_nonce(params.pow_bits);
     debug_assert!(&proof.pow_verify(proof_of_work, params.pow_bits));
@@ -266,8 +266,6 @@ pub fn stark_proof(
     proof
 }
 
-// TODO Better variable names
-#[allow(clippy::many_single_char_names)]
 fn fri_layer(
     previous: &[FieldElement],
     evaluation_point: &FieldElement,
@@ -536,7 +534,7 @@ fn calculate_out_of_domain_constraints(
     CO
 }
 
-fn preform_fri_layering(
+fn perform_fri_layering(
     constraints_out_of_domain: &[FieldElement],
     proof: &mut Channel,
     params: &ProofParams,
