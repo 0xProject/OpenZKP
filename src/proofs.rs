@@ -6,6 +6,21 @@ use crate::{
 use itertools::Itertools;
 use rayon::prelude::*;
 
+// This trait is for objects where the object is grouped into hashable sets
+// based on index before getting made into a merkle tree, with domain size
+// being the max index [ie the one which if you iterate up to it splits the
+// whole range]
+pub trait Groupable<T: Hashable> {
+    fn make_group(&self, index: usize) -> T;
+    fn domain_size(&self) -> usize;
+}
+
+// This trait is applied to give groupable objects a hash based on their
+// groupings
+pub trait Merkleizable<R: Hashable> {
+    fn merkleize(self) -> Vec<[u8; 32]>;
+}
+
 pub struct TraceTable {
     pub ROWS:     usize,
     pub COLS:     usize,
@@ -107,8 +122,52 @@ impl<'a> Constraint<'a> {
     }
 }
 
-// TODO - Split into smaller functions
-#[allow(clippy::cognitive_complexity)]
+impl Groupable<Vec<U256>> for &[Vec<FieldElement>] {
+    fn make_group(&self, index: usize) -> Vec<U256> {
+        let mut ret = Vec::with_capacity(self.len());
+        for item in self.iter() {
+            ret.push(
+                item[index.bit_reverse() >> (item.len().leading_zeros() + 1)]
+                    .0
+                    .clone(),
+            )
+        }
+        ret
+    }
+
+    fn domain_size(&self) -> usize {
+        self[0].len()
+    }
+}
+
+impl Groupable<U256> for &[FieldElement] {
+    fn make_group(&self, index: usize) -> U256 {
+        self[index.bit_reverse() >> (self.len().leading_zeros() + 1)]
+            .0
+            .clone()
+    }
+
+    fn domain_size(&self) -> usize {
+        self.len()
+    }
+}
+
+impl<
+        R: Hashable + std::marker::Send + std::marker::Sync,
+        T: Groupable<R> + std::marker::Send + std::marker::Sync,
+    > Merkleizable<R> for T
+{
+    fn merkleize(self) -> Vec<[u8; 32]> {
+        let eval_domain_size = self.domain_size();
+        let mut leaves = Vec::with_capacity(eval_domain_size);
+        (0..eval_domain_size)
+            .into_par_iter()
+            .map(|index| self.make_group(index))
+            .collect_into_vec(&mut leaves);
+        make_tree(leaves.as_slice())
+    }
+}
+
 pub fn stark_proof(
     trace: &TraceTable,
     constraints: &Constraint,
@@ -124,207 +183,87 @@ pub fn stark_proof(
     let eval_x = geometric_series(&FieldElement::ONE, &omega, eval_domain_size);
 
     let TPn = interpolate_trace_table(&trace);
-    let TPn_pointer : Vec<&[FieldElement]> = TPn.iter().map(|x| x.as_slice()).collect();
+    let TPn_pointer: Vec<&[FieldElement]> = TPn.iter().map(|x| x.as_slice()).collect();
     let LDEn = calculate_low_degree_extensions(TPn_pointer.as_slice(), &params, &eval_x);
 
-    let mut leaves = Vec::with_capacity(eval_domain_size);
-    (0..eval_domain_size)
-        .into_par_iter()
-        .map(|i| leaf_list(i, &LDEn))
-        .collect_into_vec(&mut leaves);
+    let tree = LDEn.as_slice().merkleize();
 
-    let leaf_pointer: Vec<&[U256]> = leaves.iter().map(|x| x.as_slice()).collect();
-    let tree = make_tree(leaf_pointer.as_slice());
     let mut public_input = [claim_index.to_be_bytes()].concat();
     public_input.extend_from_slice(&claim_value.0.to_bytes_be());
     let mut proof = Channel::new(public_input.as_slice());
     proof.write(&tree[1]);
+
     let mut constraint_coefficients = Vec::with_capacity(constraints.NCONSTRAINTS);
     for _i in 0..constraints.NCONSTRAINTS {
         constraint_coefficients.push(proof.read());
     }
 
-    let LDEn_pointer : Vec<&[FieldElement]> = LDEn.iter().map(|x| x.as_slice()).collect();
-    let CC = calculate_constraints_on_domain(TPn_pointer.as_slice(), LDEn_pointer.as_slice(), constraints, constraint_coefficients.as_slice(), claim_index, &claim_value, params.blowup);
-
-    let mut c_leaves = Vec::with_capacity(eval_domain_size);
-    (0..eval_domain_size)
-        .into_par_iter()
-        .map(|i| leaf_single(i, &CC))
-        .collect_into_vec(&mut c_leaves);
-
-    let c_tree = make_tree(c_leaves.as_slice());
-    proof.write(&c_tree[1]);
-    let oods_point: FieldElement = proof.read();
-    let oods_point_g = &oods_point * &g;
-    let mut oods_values = Vec::with_capacity(2 * trace.COLS + 1);
-    for item in TPn.iter() {
-        let mut evaled = eval_poly(oods_point.clone(), item.as_slice());
-        oods_values.push(evaled.clone());
-        evaled = eval_poly(oods_point_g.clone(), item.as_slice());
-        oods_values.push(evaled.clone());
-    }
-
-    oods_values.push((constraints.eval)(
-        &oods_point,
+    let LDEn_pointer: Vec<&[FieldElement]> = LDEn.iter().map(|x| x.as_slice()).collect();
+    let CC = calculate_constraints_on_domain(
         TPn_pointer.as_slice(),
-        claim_index,
-        claim_value.clone(),
+        LDEn_pointer.as_slice(),
+        constraints,
         constraint_coefficients.as_slice(),
-    )); // Gets eval_C of the oods point via direct computation
+        claim_index,
+        &claim_value,
+        params.blowup,
+    );
 
-    for v in oods_values.iter() {
-        proof.write(v);
-    }
+    let c_tree = CC.as_slice().merkleize();
+    proof.write(&c_tree[1]);
 
-    let mut oods_coefficients = Vec::with_capacity(2 * trace.COLS + 1);
-    for _i in 0..=2 * trace.COLS {
-        oods_coefficients.push(proof.read());
-    }
+    let (oods_point, oods_coefficients, oods_values) = get_out_of_domain_information(
+        &mut proof,
+        TPn_pointer.as_slice(),
+        constraint_coefficients.as_slice(),
+        claim_index,
+        &claim_value,
+        &constraints,
+        &g,
+    );
 
-    let CO = calculate_out_of_domain_constraints(LDEn_pointer.as_slice(), CC.as_slice(), &oods_point, oods_coefficients.as_slice(), oods_values.as_slice(), eval_x.as_slice(), params.blowup);
+    let CO = calculate_out_of_domain_constraints(
+        LDEn_pointer.as_slice(),
+        CC.as_slice(),
+        &oods_point,
+        oods_coefficients.as_slice(),
+        oods_values.as_slice(),
+        eval_x.as_slice(),
+        params.blowup,
+    );
 
-    // Fri Layers
-    debug_assert!(eval_domain_size.is_power_of_two());
-    let mut fri = Vec::with_capacity(64 - (eval_domain_size.leading_zeros() as usize));
-    fri.push(CO);
-    let mut fri_trees: Vec<Vec<[u8; 32]>> = Vec::with_capacity(params.fri_layout.len());
-    let held_tree = fri_tree(&(fri[fri.len() - 1].as_slice()), params.blowup / 2);
-    proof.write(&held_tree[1]);
-    fri_trees.push(held_tree);
-
-    let mut halvings = 0;
-    let mut fri_const = params.blowup / 4;
-    for &x in params.fri_layout.iter().dropping_back(1) {
-        let mut eval_point = if x == 0 {
-            FieldElement::ONE
-        } else {
-            proof.read()
-        };
-        for _ in 0..x {
-            fri.push(fri_layer(
-                &fri[fri.len() - 1].as_slice(),
-                &eval_point,
-                eval_domain_size,
-                eval_x.as_slice(),
-            ));
-            eval_point = eval_point.square();
-        }
-        let held_tree = fri_tree(&(fri[fri.len() - 1].as_slice()), fri_const);
-
-        proof.write(&held_tree[1]);
-        fri_trees.push(held_tree);
-        fri_const /= 2;
-        halvings += x;
-    }
-
-    // Gets the coefficient representation of the last number of fri reductions
-    let mut eval_point = proof.read();
-    for _ in 0..params.fri_layout[params.fri_layout.len() - 1] {
-        fri.push(fri_layer(
-            &fri[fri.len() - 1].as_slice(),
-            &eval_point,
-            eval_domain_size,
-            eval_x.as_slice(),
-        ));
-        eval_point = eval_point.square();
-    }
-    halvings += params.fri_layout[params.fri_layout.len() - 1];
-
-    // Gets the coefficient representation of the last number of fri reductions
-
-    let last_layer_degree_bound = trace_len / (2_usize.pow(halvings as u32));
-    let mut last_layer_coefficient = ifft(&(fri[halvings].as_slice()));
-    last_layer_coefficient.truncate(last_layer_degree_bound);
-    proof.write(last_layer_coefficient.as_slice());
-    debug_assert_eq!(last_layer_coefficient.len(), last_layer_degree_bound);
+    let (fri_layers, fri_trees) =
+        preform_fri_layering(CO.as_slice(), &mut proof, &params, eval_x.as_slice());
 
     let proof_of_work = proof.pow_find_nonce(params.pow_bits);
     debug_assert!(&proof.pow_verify(proof_of_work, params.pow_bits));
     proof.write(proof_of_work);
 
-    let num_queries = params.queries;
     let query_indices = get_indices(
-        num_queries,
+        params.queries,
         64 - eval_domain_size.leading_zeros() - 1,
         &mut proof,
     );
-
-    for index in query_indices.iter() {
-        for low_degree_extension in LDEn.iter() {
-            proof.write(
-                &low_degree_extension[(index.clone()).bit_reverse()
-                    >> ((low_degree_extension.len().leading_zeros()) + 1)],
-            );
-        }
-    }
-
-    let decommitment = crate::merkle::proof(&tree, &(query_indices.as_slice()));
-    for x in decommitment.iter() {
-        proof.write(x);
-    }
-
-    for index in query_indices.iter() {
-        proof.write(&CC[index.clone().bit_reverse() >> ((CC.len().leading_zeros()) + 1) as usize]);
-    }
-    let decommitment = crate::merkle::proof(&c_tree, &(query_indices.as_slice()));
-    for x in decommitment.iter() {
-        proof.write(x);
-    }
-    let mut fri_indices: Vec<usize> = query_indices
-        .iter()
-        .map(|x| x / (params.blowup / 2))
-        .collect();
-
-    let mut current_fri = 0;
-    let mut previous_indices = query_indices.clone();
-    for (k, next_tree) in fri_trees.iter().enumerate() {
-        if k != 0 {
-            current_fri += params.fri_layout[k - 1];
-        }
-
-        for i in fri_indices.iter() {
-            for j in 0..(params.blowup / 2_usize.pow(k as u32 + 1)) {
-                let n = i * (params.blowup / 2_usize.pow(k as u32 + 1)) + j;
-
-                if previous_indices.binary_search(&n).is_ok() {
-                    continue;
-                } else {
-                    proof.write(
-                        &fri[current_fri][((n as u64).bit_reverse()
-                            >> (u64::from(fri[current_fri].len().leading_zeros() + 1)))
-                            as usize],
-                    );
-                }
-            }
-        }
-        let decommitment = crate::merkle::proof(&next_tree, &(fri_indices.as_slice()));
-        for proof_element in decommitment.iter() {
-            proof.write(proof_element);
-        }
-        previous_indices = fri_indices.clone();
-        fri_indices = fri_indices.iter().map(|ind| ind / 4).collect();
-    }
-
+    decommit_with_queries_and_proof(
+        query_indices.as_slice(),
+        LDEn.as_slice(),
+        tree.as_slice(),
+        &mut proof,
+    );
+    decommit_with_queries_and_proof(
+        query_indices.as_slice(),
+        CC.as_slice(),
+        c_tree.as_slice(),
+        &mut proof,
+    );
+    decommit_fri_layers_and_trees(
+        fri_layers.as_slice(),
+        fri_trees.as_slice(),
+        query_indices.as_slice(),
+        &params,
+        &mut proof,
+    );
     proof
-}
-
-fn leaf_list(i: usize, LDEn: &[Vec<FieldElement>]) -> Vec<U256> {
-    let mut ret = Vec::with_capacity(LDEn.len());
-    for item in LDEn.iter() {
-        ret.push(
-            item[i.bit_reverse() >> (item.len().leading_zeros() + 1)]
-                .0
-                .clone(),
-        )
-    }
-    ret
-}
-
-fn leaf_single(i: usize, CC: &[FieldElement]) -> U256 {
-    CC[i.bit_reverse() >> (CC.len().leading_zeros() + 1)]
-        .0
-        .clone()
 }
 
 // TODO Better variable names
@@ -403,7 +342,7 @@ pub fn geometric_series(base: &FieldElement, step: &FieldElement, len: usize) ->
     range
 }
 
-fn interpolate_trace_table(table : &TraceTable) -> Vec<Vec<FieldElement>> {
+fn interpolate_trace_table(table: &TraceTable) -> Vec<Vec<FieldElement>> {
     let trace_len = table.elements.len() / table.COLS;
     let mut TPn = vec![Vec::new(); table.COLS];
     (0..table.COLS)
@@ -419,7 +358,11 @@ fn interpolate_trace_table(table : &TraceTable) -> Vec<Vec<FieldElement>> {
     TPn
 }
 
-fn calculate_low_degree_extensions(trace_poly : &[&[FieldElement]], params : &ProofParams, eval_x : &[FieldElement]) -> Vec<Vec<FieldElement>>{
+fn calculate_low_degree_extensions(
+    trace_poly: &[&[FieldElement]],
+    params: &ProofParams,
+    eval_x: &[FieldElement],
+) -> Vec<Vec<FieldElement>> {
     let trace_len = trace_poly[0].len();
     let omega = FieldElement::root(U256::from((trace_len * params.blowup) as u64)).unwrap();
     let eval_domain_size = trace_len * params.blowup;
@@ -439,10 +382,7 @@ fn calculate_low_degree_extensions(trace_poly : &[&[FieldElement]], params : &Pr
                     .map(|x| {
                         (
                             x,
-                            fft_cofactor(
-                                trace_poly[x],
-                                &(&gen * &omega.pow(U256::from(j as u64))),
-                            ),
+                            fft_cofactor(trace_poly[x], &(&gen * &omega.pow(U256::from(j as u64)))),
                         )
                     })
                     .collect(),
@@ -461,23 +401,23 @@ fn calculate_low_degree_extensions(trace_poly : &[&[FieldElement]], params : &Pr
     LDEn
 }
 
-fn calculate_constraints_on_domain(trace_poly : &[&[FieldElement]], lde_poly : &[&[FieldElement]], constraints : &Constraint, constraint_coefficients : &[FieldElement], claim_index : usize, claim_value : &FieldElement, blowup : usize) -> Vec<FieldElement> {
+fn calculate_constraints_on_domain(
+    trace_poly: &[&[FieldElement]],
+    lde_poly: &[&[FieldElement]],
+    constraints: &Constraint,
+    constraint_coefficients: &[FieldElement],
+    claim_index: usize,
+    claim_value: &FieldElement,
+    blowup: usize,
+) -> Vec<FieldElement> {
     let mut CC;
     let trace_len = trace_poly[0].len();
     let mut x = FieldElement::GENERATOR;
     let omega = FieldElement::root(U256::from((trace_len * blowup) as u64)).unwrap();
-    let trace_len = trace_poly[0].len();
     let eval_domain_size = trace_len * blowup;
 
     match constraints.eval_loop {
-        Some(x) => {
-            CC = (x)(
-                lde_poly,
-                constraint_coefficients,
-                claim_index,
-                &claim_value,
-            )
-        }
+        Some(x) => CC = (x)(lde_poly, constraint_coefficients, claim_index, &claim_value),
         None => {
             CC = vec![FieldElement::ZERO; eval_domain_size];
             for constraint_element in CC.iter_mut() {
@@ -497,12 +437,58 @@ fn calculate_constraints_on_domain(trace_poly : &[&[FieldElement]], lde_poly : &
     CC
 }
 
-fn calculate_out_of_domain_constraints(lde_poly : &[&[FieldElement]], constraint_on_domain : &[FieldElement], oods_point : &FieldElement, oods_coefficients : &[FieldElement], oods_values : &[FieldElement], eval_x : &[FieldElement], blowup: usize) -> Vec<FieldElement> {
+fn get_out_of_domain_information(
+    proof: &mut Channel,
+    trace_poly: &[&[FieldElement]],
+    constraint_coefficients: &[FieldElement],
+    claim_index: usize,
+    claim_value: &FieldElement,
+    constraints: &Constraint,
+    g: &FieldElement,
+) -> (FieldElement, Vec<FieldElement>, Vec<FieldElement>) {
+    let oods_point: FieldElement = proof.read();
+    let oods_point_g = &oods_point * g;
+    let mut oods_values = Vec::with_capacity(2 * trace_poly.len() + 1);
+    for item in trace_poly.iter() {
+        let mut evaled = eval_poly(oods_point.clone(), item);
+        oods_values.push(evaled.clone());
+        evaled = eval_poly(oods_point_g.clone(), item);
+        oods_values.push(evaled.clone());
+    }
+
+    oods_values.push((constraints.eval)(
+        &oods_point,
+        trace_poly,
+        claim_index,
+        claim_value.clone(),
+        constraint_coefficients,
+    )); // Gets eval_C of the oods point via direct computation
+
+    for v in oods_values.iter() {
+        proof.write(v);
+    }
+
+    let mut oods_coefficients = Vec::with_capacity(2 * trace_poly.len() + 1);
+    for _i in 0..=2 * trace_poly.len() {
+        oods_coefficients.push(proof.read());
+    }
+    (oods_point, oods_coefficients, oods_values)
+}
+
+fn calculate_out_of_domain_constraints(
+    lde_poly: &[&[FieldElement]],
+    constraint_on_domain: &[FieldElement],
+    oods_point: &FieldElement,
+    oods_coefficients: &[FieldElement],
+    oods_values: &[FieldElement],
+    eval_x: &[FieldElement],
+    blowup: usize,
+) -> Vec<FieldElement> {
     let eval_domain_size = eval_x.len();
-    let trace_len = eval_domain_size/blowup;
+    let trace_len = eval_domain_size / blowup;
     let omega = FieldElement::root(U256::from((trace_len * blowup) as u64)).unwrap();
     let g = omega.pow(U256::from(blowup as u64));
-    
+
     let mut CO = Vec::with_capacity(eval_domain_size);
     let x = FieldElement::GENERATOR;
     let mut x_omega_cycle = Vec::with_capacity(eval_domain_size);
@@ -537,7 +523,8 @@ fn calculate_out_of_domain_constraints(lde_poly : &[&[FieldElement]], constraint
 
             for x in 0..lde_poly.len() {
                 r += &oods_coefficients[2 * x] * (&lde_poly[x][i] - &oods_values[2 * x]) * A;
-                r += &oods_coefficients[2 * x + 1] * (&lde_poly[x][i] - &oods_values[2 * x + 1]) * B;
+                r +=
+                    &oods_coefficients[2 * x + 1] * (&lde_poly[x][i] - &oods_values[2 * x + 1]) * B;
             }
             r += &oods_coefficients[oods_coefficients.len() - 1]
                 * (&constraint_on_domain[i] - &oods_values[oods_values.len() - 1])
@@ -546,7 +533,140 @@ fn calculate_out_of_domain_constraints(lde_poly : &[&[FieldElement]], constraint
             r
         })
         .collect_into_vec(&mut CO);
-        CO
+    CO
+}
+
+fn preform_fri_layering(
+    constraints_out_of_domain: &[FieldElement],
+    proof: &mut Channel,
+    params: &ProofParams,
+    eval_x: &[FieldElement],
+) -> (Vec<Vec<FieldElement>>, Vec<Vec<[u8; 32]>>) {
+    let eval_domain_size = constraints_out_of_domain.len();
+    let trace_len = eval_domain_size / params.blowup;
+
+    // Fri Layers
+    debug_assert!(eval_domain_size.is_power_of_two());
+    let mut fri: Vec<Vec<FieldElement>> =
+        Vec::with_capacity(64 - (eval_domain_size.leading_zeros() as usize));
+    fri.push(constraints_out_of_domain.to_vec());
+    let mut fri_trees: Vec<Vec<[u8; 32]>> = Vec::with_capacity(params.fri_layout.len());
+    let held_tree = fri_tree(&(fri[fri.len() - 1].as_slice()), params.blowup / 2);
+    proof.write(&held_tree[1]);
+    fri_trees.push(held_tree);
+
+    let mut halvings = 0;
+    let mut fri_const = params.blowup / 4;
+    for &x in params.fri_layout.iter().dropping_back(1) {
+        let mut eval_point = if x == 0 {
+            FieldElement::ONE
+        } else {
+            proof.read()
+        };
+        for _ in 0..x {
+            fri.push(fri_layer(
+                &fri[fri.len() - 1].as_slice(),
+                &eval_point,
+                eval_domain_size,
+                eval_x,
+            ));
+            eval_point = eval_point.square();
+        }
+        let held_tree = fri_tree(&(fri[fri.len() - 1].as_slice()), fri_const);
+
+        proof.write(&held_tree[1]);
+        fri_trees.push(held_tree);
+        fri_const /= 2;
+        halvings += x;
+    }
+
+    // Gets the coefficient representation of the last number of fri reductions
+    let mut eval_point = proof.read();
+    for _ in 0..params.fri_layout[params.fri_layout.len() - 1] {
+        fri.push(fri_layer(
+            &fri[fri.len() - 1].as_slice(),
+            &eval_point,
+            eval_domain_size,
+            eval_x,
+        ));
+        eval_point = eval_point.square();
+    }
+    halvings += params.fri_layout[params.fri_layout.len() - 1];
+
+    // Gets the coefficient representation of the last number of fri reductions
+
+    let last_layer_degree_bound = trace_len / (2_usize.pow(halvings as u32));
+    let mut last_layer_coefficient = ifft(&(fri[halvings].as_slice()));
+    last_layer_coefficient.truncate(last_layer_degree_bound);
+    proof.write(last_layer_coefficient.as_slice());
+    debug_assert_eq!(last_layer_coefficient.len(), last_layer_degree_bound);
+    (fri, fri_trees)
+}
+
+fn decommit_with_queries_and_proof<R: Hashable, T: Groupable<R>>(
+    queries: &[usize],
+    source: T,
+    tree: &[[u8; 32]],
+    proof: &mut Channel,
+) where
+    Channel: Writable<R>,
+{
+    for &index in queries.iter() {
+        proof.write((&source).make_group(index));
+    }
+    decommit_proof(crate::merkle::proof(tree, queries), proof);
+}
+
+// Note - This function exists because rust gets confused by the intersection of
+// the write types and the others.
+fn decommit_proof(decommitment: Vec<[u8; 32]>, proof: &mut Channel) {
+    for x in decommitment.iter() {
+        proof.write(x);
+    }
+}
+
+fn decommit_fri_layers_and_trees(
+    fri_layers: &[Vec<FieldElement>],
+    fri_trees: &[Vec<[u8; 32]>],
+    query_indices: &[usize],
+    params: &ProofParams,
+    proof: &mut Channel,
+) {
+    let mut fri_indices: Vec<usize> = query_indices
+        .to_vec()
+        .iter()
+        .map(|x| x / (params.blowup / 2))
+        .collect();
+
+    let mut current_fri = 0;
+    let mut previous_indices = query_indices.to_vec().clone();
+    for (k, next_tree) in fri_trees.iter().enumerate() {
+        if k != 0 {
+            current_fri += params.fri_layout[k - 1];
+        }
+
+        for i in fri_indices.iter() {
+            for j in 0..(params.blowup / 2_usize.pow(k as u32 + 1)) {
+                let n = i * (params.blowup / 2_usize.pow(k as u32 + 1)) + j;
+
+                if previous_indices.binary_search(&n).is_ok() {
+                    continue;
+                } else {
+                    proof.write(
+                        &fri_layers[current_fri][((n as u64).bit_reverse()
+                            >> (u64::from(fri_layers[current_fri].len().leading_zeros() + 1)))
+                            as usize],
+                    );
+                }
+            }
+        }
+        let decommitment = crate::merkle::proof(&next_tree, &(fri_indices.as_slice()));
+        for proof_element in decommitment.iter() {
+            proof.write(proof_element);
+        }
+        previous_indices = fri_indices.clone();
+        fri_indices = fri_indices.iter().map(|ind| ind / 4).collect();
+    }
 }
 
 #[cfg(test)]

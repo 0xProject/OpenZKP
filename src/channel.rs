@@ -138,7 +138,7 @@ impl Writable<u64> for Channel {
     }
 }
 
-//OPT - Remove allocation of vectors
+// OPT - Remove allocation of vectors
 impl Writable<&[FieldElement]> for Channel {
     fn write(&mut self, data: &[FieldElement]) {
         let mut container = Vec::with_capacity(32 * data.len());
@@ -155,6 +155,23 @@ impl Writable<&FieldElement> for Channel {
     fn write(&mut self, data: &FieldElement) {
         // TODO: Avoid accessing FieldElement members directly
         self.write(&data.0.to_bytes_be()[..]);
+    }
+}
+
+// Note -- This method writing is distinct from the field element, and is used
+// in the decommitment
+impl Writable<Vec<U256>> for Channel {
+    fn write(&mut self, data: Vec<U256>) {
+        for element in data {
+            self.write(element)
+        }
+    }
+}
+
+impl Writable<U256> for Channel {
+    fn write(&mut self, data: U256) {
+        // TODO: Avoid accessing FieldElement members directly
+        self.write(&data.to_bytes_be()[..]);
     }
 }
 
