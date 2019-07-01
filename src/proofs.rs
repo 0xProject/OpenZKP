@@ -363,39 +363,25 @@ fn calculate_low_degree_extensions(
 ) -> Vec<Vec<FieldElement>> {
     let trace_len = trace_poly[0].len();
     let omega = FieldElement::root(U256::from((trace_len * params.blowup) as u64)).unwrap();
-    let eval_domain_size = trace_len * params.blowup;
     let gen = FieldElement::GENERATOR;
 
     let mut LDEn = vec![vec![FieldElement::ZERO; eval_x.len()]; trace_poly.len()];
-    // OPT - Use some system to make this occur inline instead of storing then
-    // processing
-    #[allow(clippy::type_complexity)]
-    let ret: Vec<(usize, Vec<(usize, Vec<FieldElement>)>)> = (0..params.blowup)
-        .into_par_iter()
-        .map(|j| {
-            (
-                j,
-                (0..trace_poly.len())
-                    .into_par_iter()
-                    .map(|x| {
-                        (
-                            x,
-                            fft_cofactor(trace_poly[x], &(&gen * &omega.pow(U256::from(j as u64)))),
-                        )
-                    })
-                    .collect(),
-            )
-        })
-        .collect();
+    // OPT - Refactor to not allocate in this loop.
+    LDEn.par_iter_mut().enumerate().for_each(|(x, col)| {
+        let data_holder: Vec<Vec<FieldElement>> = (0..params.blowup)
+            .into_par_iter()
+            .map(|j| fft_cofactor(trace_poly[x], &(&gen * &omega.pow(U256::from(j as u64)))))
+            .collect();
 
-    for j_element in ret {
-        for x_element in j_element.1 {
-            for i in 0..trace_len {
-                LDEn[x_element.0][(i * params.blowup + j_element.0) % eval_domain_size] =
-                    x_element.1[i].clone();
-            }
-        }
-    }
+        col.par_chunks_mut(params.blowup)
+            .enumerate()
+            .for_each(|(i, chunk)| {
+                for (j, item) in chunk.iter_mut().enumerate() {
+                    *item = data_holder[j][i].clone();
+                }
+            });
+    });
+
     LDEn
 }
 
