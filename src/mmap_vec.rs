@@ -29,7 +29,7 @@ pub struct MmapVec<T> {
     _t:   PhantomData<T>,
 }
 
-impl<T: Copy> MmapVec<T> {
+impl<T: Clone> MmapVec<T> {
     pub fn from_file(mut file: File) -> std::io::Result<Self> {
         let min_size: usize = size_of::<T>().max(4096);
 
@@ -79,7 +79,7 @@ impl<T: Copy> MmapVec<T> {
         let slice_len = other.len();
         self.reserve(slice_len);
         self.len += slice_len;
-        self[len..(len + slice_len)].copy_from_slice(other);
+        self[len..(len + slice_len)].clone_from_slice(other);
     }
 
     pub fn resize(&mut self, new_len: usize, value: T) {
@@ -91,7 +91,7 @@ impl<T: Copy> MmapVec<T> {
                 let mut ptr = self.mmap.as_mut_ptr() as *mut T;
                 ptr = ptr.offset(self.len as isize);
                 for _ in 0..n {
-                    ptr::write(ptr, value);
+                    ptr::write(ptr, value.clone());
                     ptr = ptr.offset(1);
                 }
             }
@@ -181,6 +181,7 @@ mod tests {
     use quickcheck_macros::quickcheck;
     use std::fmt::Debug;
     use tempdir::TempDir;
+    use crate::FieldElement;
 
     fn check_with_vec<T: Copy + Eq + Default + Debug>(v: &Vec<T>) -> std::io::Result<()> {
         let tempdir = TempDir::new("mvec")?;
@@ -240,6 +241,22 @@ mod tests {
     #[quickcheck]
     fn test_compare_with_vec_i64(v: Vec<i64>) -> bool {
         check_with_vec(&v).is_ok()
+    }
+
+    #[test]
+    fn field_element_mmap_vec() {
+        let tempdir = TempDir::new("mvec").unwrap();
+        let path = tempdir.path().join("resize");
+        let mut m: MmapVec<FieldElement> = MmapVec::from_path(path).unwrap();
+        
+        // {
+        //     let mut m: MmapVec<u64> = MmapVec::from_path(path).unwrap();
+        //     for &(size, default) in [(10, 101), (100, 201), (1000, 301), (500, 401)].iter() {
+        //         m.resize(size, default);
+        //         v.resize(size, default);
+        //         assert_eq!(m[..], v[..]);
+        //     }
+        // }
     }
 
 }
