@@ -21,6 +21,7 @@ itertools = "0.8.0"
 serde = { version = "1.0.89", features = ["derive"] }
 serde_json = "1.0"
 crunchy = "0.2.2"
+memmap = ""
 
 [dev-dependencies]
 rand = "0.6.5"

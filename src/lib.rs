@@ -26,6 +26,7 @@ pub mod wnaf;
 use curve::Affine;
 use field::FieldElement;
 use u256::U256;
+pub mod mmap_vec;
 pub mod proof_of_work;
 pub mod proofs;
 
