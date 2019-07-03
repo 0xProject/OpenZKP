@@ -122,6 +122,28 @@ impl<'a> Constraint<'a> {
     }
 }
 
+impl Groupable<Vec<U256>> for (usize, &[FieldElement]) {
+    fn make_group(&self, index: usize) -> Vec<U256> {
+        let layer = self.1;
+        let coset_size = self.0;
+        let n = layer.len();
+        let bits = 64 - (n as u64).leading_zeros(); // Floored base 2 log
+        let mut internal_leaf = Vec::with_capacity(coset_size);
+        for j in 0..coset_size {
+            internal_leaf.push(
+                layer[(index * coset_size + j).bit_reverse() >> (64 - bits + 1)]
+                    .0
+                    .clone(),
+            );
+        }
+        internal_leaf
+    }
+
+    fn domain_size(&self) -> usize {
+        self.1.len() / self.0
+    }
+}
+
 impl Groupable<Vec<U256>> for &[Vec<FieldElement>] {
     fn make_group(&self, index: usize) -> Vec<U256> {
         let mut ret = Vec::with_capacity(self.len());
@@ -287,21 +309,6 @@ fn fri_layer(
         (value + neg_x_value) + evaluation_point * x_inv * (value - neg_x_value)
     }));
     next
-}
-
-fn fri_tree(layer: &[FieldElement], coset_size: usize) -> Vec<[u8; 32]> {
-    let n = layer.len();
-    let bits = 64 - (n as u64).leading_zeros(); // Floored base 2 log
-    let mut internal_leaves = Vec::new();
-    for i in (0..n).step_by(coset_size) {
-        let mut internal_leaf = Vec::with_capacity(coset_size);
-        for j in 0..coset_size {
-            internal_leaf.push(layer[(i + j).bit_reverse() >> (64 - bits + 1)].0.clone());
-        }
-        internal_leaves.push(internal_leaf);
-    }
-    let leaf_pointer: Vec<&[U256]> = internal_leaves.iter().map(|x| x.as_slice()).collect();
-    make_tree(leaf_pointer.as_slice())
 }
 
 fn get_indices(num: usize, bits: u32, proof: &mut Channel) -> Vec<usize> {
@@ -531,7 +538,7 @@ fn perform_fri_layering(
         Vec::with_capacity(64 - (eval_domain_size.leading_zeros() as usize));
     fri.push(constraints_out_of_domain.to_vec());
     let mut fri_trees: Vec<Vec<[u8; 32]>> = Vec::with_capacity(params.fri_layout.len());
-    let held_tree = fri_tree(&(fri[fri.len() - 1].as_slice()), params.blowup / 2);
+    let held_tree = (params.blowup / 2, (fri[fri.len() - 1].as_slice())).merkleize();
     proof.write(&held_tree[1]);
     fri_trees.push(held_tree);
 
@@ -552,7 +559,7 @@ fn perform_fri_layering(
             ));
             eval_point = eval_point.square();
         }
-        let held_tree = fri_tree(&(fri[fri.len() - 1].as_slice()), fri_const);
+        let held_tree = (fri_const, (fri[fri.len() - 1].as_slice())).merkleize();
 
         proof.write(&held_tree[1]);
         fri_trees.push(held_tree);
@@ -583,7 +590,7 @@ fn perform_fri_layering(
     (fri, fri_trees)
 }
 
-fn decommit_with_queries_and_proof<R: Hashable, T: Groupable<R>>(
+pub fn decommit_with_queries_and_proof<R: Hashable, T: Groupable<R>>(
     queries: &[usize],
     source: T,
     tree: &[[u8; 32]],
@@ -591,10 +598,16 @@ fn decommit_with_queries_and_proof<R: Hashable, T: Groupable<R>>(
 ) where
     Channel: Writable<R>,
 {
+    let mut proof_values = Vec::with_capacity(queries.len());
     for &index in queries.iter() {
         proof.write((&source).make_group(index));
+        if index % 2 == 0 {
+            proof_values.push((&source).make_group(index + 1));
+        } else {
+            proof_values.push((&source).make_group(index - 1));
+        }
     }
-    decommit_proof(crate::merkle::proof(tree, queries), proof);
+    decommit_proof(crate::merkle::proof(tree, queries, source), proof);
 }
 
 // Note - This function exists because rust gets confused by the intersection of
@@ -605,7 +618,7 @@ fn decommit_proof(decommitment: Vec<[u8; 32]>, proof: &mut Channel) {
     }
 }
 
-fn decommit_fri_layers_and_trees(
+pub fn decommit_fri_layers_and_trees(
     fri_layers: &[Vec<FieldElement>],
     fri_trees: &[Vec<[u8; 32]>],
     query_indices: &[usize],
@@ -620,6 +633,7 @@ fn decommit_fri_layers_and_trees(
 
     let mut current_fri = 0;
     let mut previous_indices = query_indices.to_vec().clone();
+    let mut fri_const = params.blowup / 2;
     for (k, next_tree) in fri_trees.iter().enumerate() {
         if k != 0 {
             current_fri += params.fri_layout[k - 1];
@@ -640,10 +654,17 @@ fn decommit_fri_layers_and_trees(
                 }
             }
         }
-        let decommitment = crate::merkle::proof(&next_tree, &(fri_indices.as_slice()));
+
+        let decommitment = crate::merkle::proof(
+            &next_tree,
+            &(fri_indices.as_slice()),
+            (fri_const, fri_layers[current_fri].as_slice()),
+        );
+
         for proof_element in decommitment.iter() {
             proof.write(proof_element);
         }
+        fri_const /= 2;
         previous_indices = fri_indices.clone();
         fri_indices = fri_indices.iter().map(|ind| ind / 4).collect();
     }
