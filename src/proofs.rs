@@ -22,16 +22,16 @@ pub trait Merkleizable<R: Hashable> {
 }
 
 pub struct TraceTable {
-    pub ROWS:     usize,
-    pub COLS:     usize,
+    pub rows:     usize,
+    pub cols:     usize,
     pub elements: Vec<FieldElement>,
 }
 
 impl TraceTable {
-    pub fn new(ROWS: usize, COLS: usize, elements: Vec<FieldElement>) -> Self {
+    pub fn new(rows: usize, cols: usize, elements: Vec<FieldElement>) -> Self {
         Self {
-            ROWS,
-            COLS,
+            rows,
+            cols,
             elements,
         }
     }
@@ -171,7 +171,7 @@ pub fn stark_proof(
     claim_value: FieldElement,
     params: &ProofParams,
 ) -> Channel {
-    let trace_len = trace.elements.len() / trace.COLS;
+    let trace_len = trace.elements.len() / trace.cols;
     let omega = FieldElement::root(U256::from((trace_len * params.blowup) as u64)).unwrap();
     let g = omega.pow(U256::from(params.blowup as u64));
     let eval_domain_size = trace_len * params.blowup;
@@ -179,8 +179,8 @@ pub fn stark_proof(
     let eval_x = geometric_series(&FieldElement::ONE, &omega, eval_domain_size);
 
     let TPn = interpolate_trace_table(&trace);
-    let TPn_pointer: Vec<&[FieldElement]> = TPn.iter().map(|x| x.as_slice()).collect();
-    let LDEn = calculate_low_degree_extensions(TPn_pointer.as_slice(), &params, &eval_x);
+    let TPn_reference: Vec<&[FieldElement]> = TPn.iter().map(|x| x.as_slice()).collect();
+    let LDEn = calculate_low_degree_extensions(TPn_reference.as_slice(), &params, &eval_x);
 
     let tree = LDEn.as_slice().merkleize();
 
@@ -194,10 +194,10 @@ pub fn stark_proof(
         constraint_coefficients.push(proof.read());
     }
 
-    let LDEn_pointer: Vec<&[FieldElement]> = LDEn.iter().map(|x| x.as_slice()).collect();
+    let LDEn_reference: Vec<&[FieldElement]> = LDEn.iter().map(|x| x.as_slice()).collect();
     let CC = calculate_constraints_on_domain(
-        TPn_pointer.as_slice(),
-        LDEn_pointer.as_slice(),
+        TPn_reference.as_slice(),
+        LDEn_reference.as_slice(),
         constraints,
         constraint_coefficients.as_slice(),
         claim_index,
@@ -210,7 +210,7 @@ pub fn stark_proof(
 
     let (oods_point, oods_coefficients, oods_values) = get_out_of_domain_information(
         &mut proof,
-        TPn_pointer.as_slice(),
+        TPn_reference.as_slice(),
         constraint_coefficients.as_slice(),
         claim_index,
         &claim_value,
@@ -219,7 +219,7 @@ pub fn stark_proof(
     );
 
     let CO = calculate_out_of_domain_constraints(
-        LDEn_pointer.as_slice(),
+        LDEn_reference.as_slice(),
         CC.as_slice(),
         &oods_point,
         oods_coefficients.as_slice(),
@@ -295,8 +295,8 @@ fn fri_tree(layer: &[FieldElement], coset_size: usize) -> Vec<[u8; 32]> {
         }
         internal_leaves.push(internal_leaf);
     }
-    let leaf_pointer: Vec<&[U256]> = internal_leaves.iter().map(|x| x.as_slice()).collect();
-    make_tree(leaf_pointer.as_slice())
+    let leaf_reference: Vec<&[U256]> = internal_leaves.iter().map(|x| x.as_slice()).collect();
+    make_tree(leaf_reference.as_slice())
 }
 
 fn get_indices(num: usize, bits: u32, proof: &mut Channel) -> Vec<usize> {
@@ -332,13 +332,13 @@ pub fn geometric_series(base: &FieldElement, step: &FieldElement, len: usize) ->
 }
 
 fn interpolate_trace_table(table: &TraceTable) -> Vec<Vec<FieldElement>> {
-    let trace_len = table.elements.len() / table.COLS;
-    let mut TPn = vec![Vec::new(); table.COLS];
-    (0..table.COLS)
+    let trace_len = table.elements.len() / table.cols;
+    let mut TPn = vec![Vec::new(); table.cols];
+    (0..table.cols)
         .into_par_iter()
         .map(|x| {
             let mut hold_col = Vec::with_capacity(trace_len);
-            for i in (0..table.elements.len()).step_by(table.COLS) {
+            for i in (0..table.elements.len()).step_by(table.cols) {
                 hold_col.push(table.elements[x + i].clone());
             }
             ifft(hold_col.as_slice())
