@@ -1,6 +1,7 @@
 use crate::{commutative_binop, montgomery::*, noncommutative_binop, u256::U256, u256h};
 use hex_literal::*;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
+use crate::square_root::square_root;
 
 // TODO: Implement Serde
 
@@ -80,6 +81,10 @@ impl FieldElement {
     #[inline(always)]
     pub fn square(&self) -> FieldElement {
         FieldElement(sqr_redc(&self.0))
+    }
+
+    pub fn square_root(&self) -> Option<FieldElement> {
+        square_root(self)
     }
 
     #[inline(always)]
