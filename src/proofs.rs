@@ -126,11 +126,7 @@ impl Groupable<Vec<U256>> for &[Vec<FieldElement>] {
     fn make_group(&self, index: usize) -> Vec<U256> {
         let mut ret = Vec::with_capacity(self.len());
         for item in self.iter() {
-            ret.push(
-                item[index.bit_reverse() >> (item.len().leading_zeros() + 1)]
-                    .0
-                    .clone(),
-            )
+            ret.push(item[index.bit_reverse_at(item.len())].0.clone())
         }
         ret
     }
@@ -291,12 +287,11 @@ fn fri_layer(
 
 fn fri_tree(layer: &[FieldElement], coset_size: usize) -> Vec<[u8; 32]> {
     let n = layer.len();
-    let bits = 64 - (n as u64).leading_zeros(); // Floored base 2 log
     let mut internal_leaves = Vec::new();
     for i in (0..n).step_by(coset_size) {
         let mut internal_leaf = Vec::with_capacity(coset_size);
         for j in 0..coset_size {
-            internal_leaf.push(layer[(i + j).bit_reverse() >> (64 - bits + 1)].0.clone());
+            internal_leaf.push(layer[(i + j).bit_reverse_at(n)].0.clone());
         }
         internal_leaves.push(internal_leaf);
     }
