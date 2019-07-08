@@ -1,17 +1,9 @@
-use crate::{commutative_binop, field::FieldElement, noncommutative_binop, u256::U256, u256h};
-use hex_literal::*;
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
-
-// Curve parameters
-
-// Alpha = 1
-// Beta  = 0x06f21413efbe40de150e596d72f7a8c5609ad26c15c915c1f4cdfcb99cee9e89
-// Order = 0x0800000000000010ffffffffffffffffb781126dcae7b2321e66a241adc64d2f
-
-pub const BETA: FieldElement = FieldElement::from_montgomery(u256h!(
-    "013931651774247fab8a1e002a41f9476725f2237aab9006359ddd67b59a21ca"
-));
-pub const ORDER: U256 = u256h!("0800000000000010ffffffffffffffffb781126dcae7b2321e66a241adc64d2f");
+use primefield::U256;
+use primefield::FieldElement;
+use primefield::commutative_binop;
+use primefield::noncommutative_binop;
+use crate::BETA;
 
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub enum Affine {
@@ -206,7 +198,11 @@ impl Arbitrary for Affine {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ORDER;
     use quickcheck_macros::quickcheck;
+    use primefield::u256h;
+    use primefield::U256;
+    use hex_literal::*;
 
     #[test]
     fn test_add() {

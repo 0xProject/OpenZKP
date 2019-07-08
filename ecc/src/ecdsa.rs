@@ -1,24 +1,10 @@
-use crate::{
-    curve::{Affine, ORDER},
-    field::FieldElement,
-    u256::U256,
-    u256h,
+use crate::{ORDER, GENERATOR,
+    curve::{Affine},
     wnaf::{base_mul, double_base_mul, window_table_affine},
 };
-use hex_literal::*;
 use lazy_static::*;
 use tiny_keccak::sha3_256;
-
-// x = 0x01ef15c18599971b7beced415a40f0c7deacfd9b0d1819e03d723d8bc943cfca
-// y = 0x005668060aa49730b7be4801df46ec62de53ecd11abe43a32873000c36e8dc1f
-pub const GENERATOR: Affine = Affine::Point {
-    x: FieldElement::from_montgomery(u256h!(
-        "033840300bf6cec10429bf5184041c7b51a9bf65d4403deac9019623cf0273dd"
-    )),
-    y: FieldElement::from_montgomery(u256h!(
-        "05a0e71610f55329fbd89a97cf4b33ad0939e3442869bbe7569d0da34235308a"
-    )),
-};
+use primefield::U256;
 
 lazy_static! {
     static ref GENERATOR_TABLE: [Affine; 32] = {
@@ -91,8 +77,10 @@ pub fn verify(msg_hash: &U256, r: &U256, w: &U256, public_key: &Affine) -> bool 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::field::FieldElement;
+    use primefield::FieldElement;
     use quickcheck_macros::quickcheck;
+    use primefield::u256h;
+    use hex_literal::*;
 
     #[test]
     fn test_pubkey() {

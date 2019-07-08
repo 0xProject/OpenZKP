@@ -1,5 +1,7 @@
-use crate::{curve::Affine, field::FieldElement, jacobian::Jacobian, u256::U256};
+use crate::{curve::Affine, jacobian::Jacobian};
 use itertools::izip;
+use primefield::U256;
+use primefield::FieldElement;
 
 pub fn window_table(p: &Affine, naf: &mut [Jacobian]) {
     // naf = P, 3P, 5P, ... 15P
@@ -218,7 +220,8 @@ pub fn double_base_mul(nafa: &[Affine], sa: U256, pb: &Affine, sb: U256) -> Jaco
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{field::FieldElement, u256h};
+    use primefield::FieldElement;
+    use primefield::u256h;
     use hex_literal::*;
 
     #[test]
