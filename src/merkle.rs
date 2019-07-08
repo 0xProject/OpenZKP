@@ -91,8 +91,6 @@ pub fn make_tree<T: Hashable + std::marker::Sync>(leaves: &[T]) -> Vec<[u8; 32]>
     }
 }
 
-pub const THREADS_MAX: usize = 16; // TODO - Figure out how many threads is opt
-
 pub fn make_tree_threaded<T: Hashable + std::marker::Sync>(leaves: &[T]) -> Vec<[u8; 32]> {
     let n = leaves.len();
     let depth = 64 - n.leading_zeros() - 1;
@@ -116,14 +114,11 @@ pub fn make_tree_threaded<T: Hashable + std::marker::Sync>(leaves: &[T]) -> Vec<
             .collect_into_vec(&mut hold);
         layers.push(hold);
     }
-
-    layers.push(vec![[0; 32]]); // TODO - This logic puts the root at the top, but the previous didn't, either
-                                // add another hash comp or change the rest of the code to match
+    layers.push(vec![[0; 32]]);
 
     layers.into_iter().rev().flatten().collect()
 }
 
-// TODO - Simplify and group logic better
 pub fn proof<R: Hashable, T: Groupable<R>>(
     tree: &[[u8; 32]],
     indices: &[usize],
@@ -170,73 +165,6 @@ pub fn proof<R: Hashable, T: Groupable<R>>(
         let left = known[(2 * i) as usize];
         let right = known[(2 * i + 1) as usize];
         known[i as usize] = left || right;
-    }
-
-    for d in (1..depth).rev() {
-        for i in (2_u64.pow(d - 1))..(2_u64.pow(d)) {
-            let left = known[(2 * i) as usize];
-            let right = known[(2 * i + 1) as usize];
-            if left && !right {
-                decommitment.push(tree[(2 * i + 1) as usize]);
-            }
-            if !left && right {
-                decommitment.push(tree[(2 * i) as usize]);
-            }
-            known[i as usize] = left || right;
-        }
-    }
-    decommitment
-}
-
-pub fn make_tree_threaded_full_memory<T: Hashable + std::marker::Sync>(
-    leaves: &[T],
-) -> Vec<[u8; 32]> {
-    let threads = THREADS_MAX;
-
-    let n = leaves.len();
-    let depth = 64 - n.leading_zeros() - 1;
-
-    let mut layers = Vec::with_capacity(depth as usize);
-    let base_layer: Vec<[u8; 32]> = (0..threads)
-        .into_par_iter()
-        .map(|i| {
-            let ret: Vec<[u8; 32]> = leaves[i * (n / threads)..(i * (n / threads) + (n / threads))]
-                .iter()
-                .map(|element| element.hash())
-                .collect();
-            ret
-        })
-        .flatten()
-        .collect();
-    layers.push(base_layer);
-
-    for i in 1..((depth + 1) as usize) {
-        let mut hold = Vec::with_capacity(layers[0].len() / 2);
-        layers[i - 1]
-            .clone()
-            .into_par_iter()
-            .chunks(2)
-            .map(|pair| hash_node(&pair[0_usize], &pair[1_usize]))
-            .collect_into_vec(&mut hold);
-        layers.push(hold);
-    }
-
-    layers.push(vec![[0; 32]]); // TODO - This logic puts the root at the top, but the previous didn't, either
-                                // add another hash comp or change the rest of the code to match
-
-    layers.into_iter().rev().flatten().collect()
-}
-
-pub fn proof_full_memory(tree: &[[u8; 32]], indices: &[usize]) -> Vec<[u8; 32]> {
-    let depth = 64 - (tree.len() as u64).leading_zeros() - 1; // Log base 2 - 1
-    let num_leaves = 2_u64.pow(depth);
-    let num_nodes = 2 * num_leaves;
-    let mut known = vec![false; (num_nodes + 1) as usize];
-    let mut decommitment = Vec::new();
-
-    let fixed = 2_u64.pow(depth - 1);
-    for i in indices.iter() {
-        known[(fixed + (*i as u64) % num_leaves) as usize] = true;
     }
 
     for d in (1..depth).rev() {

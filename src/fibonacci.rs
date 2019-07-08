@@ -315,7 +315,7 @@ mod tests {
             leaves.push(leaf(i));
         }
         let leaf_pointer: Vec<&[U256]> = leaves.iter().map(|x| x.as_slice()).collect();
-        let tree = make_tree_threaded_full_memory(leaf_pointer.as_slice());
+        let tree = make_tree_threaded(leaf_pointer.as_slice());
 
         assert_eq!(
             tree[1],
@@ -496,7 +496,7 @@ mod tests {
         for i in 0..eval_domain_size {
             leaves_con.push(leaf_constraint(i));
         }
-        let ctree = make_tree_threaded_full_memory(leaves_con.as_slice());
+        let ctree = make_tree_threaded(leaves_con.as_slice());
         assert_eq!(
             ctree[1],
             hex!("46318de7dbdafda87c1052d50989d15f8e61a5b8000000000000000000000000")
@@ -606,7 +606,7 @@ mod tests {
                 internal_leaves.push(internal_leaf);
             }
             let leaf_pointer: Vec<&[U256]> = internal_leaves.iter().map(|x| x.as_slice()).collect();
-            make_tree_threaded_full_memory(leaf_pointer.as_slice())
+            make_tree_threaded(leaf_pointer.as_slice())
         };
         let mut fri = Vec::with_capacity(14);
         fri.push(CO);
@@ -717,7 +717,9 @@ mod tests {
             hex!("664fa06e3244baea41f87dcfb26316c7ebf13e36d2f88bbd3f216197181db5d5")
         );
 
-        let mut decommitment = crate::merkle::proof_full_memory(&tree, &(query_indices.as_slice()));
+        let TPn = vec![LDE0, LDE1];
+        let mut decommitment =
+            crate::merkle::proof(&tree, &(query_indices.as_slice()), TPn.as_slice());
         for x in decommitment.iter() {
             proof.write(x);
         }
@@ -729,7 +731,7 @@ mod tests {
         for index in query_indices.iter() {
             proof.write(&CC[((*index as u64).bit_reverse() >> 50) as usize]);
         }
-        decommitment = crate::merkle::proof_full_memory(&ctree, &(query_indices.as_slice()));
+        decommitment = crate::merkle::proof(&ctree, &(query_indices.as_slice()), CC.as_slice());
         for x in decommitment.iter() {
             proof.write(x);
         }
@@ -749,7 +751,11 @@ mod tests {
                 }
             }
         }
-        decommitment = crate::merkle::proof_full_memory(&fri_tree_1, &(fri_indices.as_slice()));
+        decommitment = crate::merkle::proof(
+            &fri_tree_1,
+            &(fri_indices.as_slice()),
+            (8, fri[0].as_slice()),
+        );
         for x in decommitment.iter() {
             proof.write(x);
         }
@@ -769,7 +775,11 @@ mod tests {
                 }
             }
         }
-        decommitment = crate::merkle::proof_full_memory(&fri_tree_2, &(fri_low_indices.as_slice()));
+        decommitment = crate::merkle::proof(
+            &fri_tree_2,
+            &(fri_low_indices.as_slice()),
+            (4, fri[3].as_slice()),
+        );
         for x in decommitment.iter() {
             proof.write(x);
         }
