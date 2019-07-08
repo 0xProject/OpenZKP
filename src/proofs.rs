@@ -122,7 +122,8 @@ impl<'a> Constraint<'a> {
     }
 }
 
-// This groupable impl allows the fri tree layers to get grouped and use the same merkleize system
+// This groupable impl allows the fri tree layers to get grouped and use the
+// same merkleize system
 impl Groupable<Vec<U256>> for (usize, &[FieldElement]) {
     fn make_group(&self, index: usize) -> Vec<U256> {
         let layer = self.1;

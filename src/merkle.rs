@@ -137,50 +137,39 @@ pub fn proof<R: Hashable, T: Groupable<R>>(
 
     let mut peekable_indicies = indices.iter().peekable();
     let mut excluded_pair = false;
-    let values: Vec<[u8; 32]> = indices
-        .iter()
-        .filter_map(|&index| {
-            peekable_indicies.next();
-            if index % 2 == 0 {
-                let prophet = peekable_indicies.peek();
-                match prophet {
-                    Some(x) => {
-                        if **x != index + 1 {
-                            Some(source.make_group(index + 1).hash())
-                        } else {
-                            excluded_pair = true;
-                            None
-                        }
-                    }
-                    None => Some(source.make_group(index + 1).hash()),
-                }
-            } else if !excluded_pair {
-                Some(source.make_group(index - 1).hash())
-            } else {
-                excluded_pair = false;
-                None
-            }
-        })
-        .collect();
-
     let fixed = 2_u64.pow(depth);
-    for i in indices.iter() {
-        known[(fixed + (*i as u64) % num_leaves) as usize] = true;
-        if i % 2 == 0 {
-            known[(fixed + 1 + (*i as u64) % num_leaves) as usize] = true;
+    indices.iter().for_each(|&index| {
+        peekable_indicies.next();
+        known[(fixed + (index as u64) % num_leaves) as usize] = true;
+
+        if index % 2 == 0 {
+            known[(fixed + 1 + (index as u64) % num_leaves) as usize] = true;
+            let prophet = peekable_indicies.peek();
+            match prophet {
+                Some(x) => {
+                    if **x != index + 1 {
+                        decommitment.push(source.make_group(index + 1).hash());
+                    } else {
+                        excluded_pair = true;
+                    }
+                }
+                None => {
+                    decommitment.push(source.make_group(index + 1).hash());
+                }
+            }
+        } else if !excluded_pair {
+            known[(fixed - 1 + (index as u64) % num_leaves) as usize] = true;
+            decommitment.push(source.make_group(index - 1).hash());
         } else {
-            known[(fixed - 1 + (*i as u64) % num_leaves) as usize] = true;
+            known[(fixed - 1 + (index as u64) % num_leaves) as usize] = true;
+            excluded_pair = false;
         }
-    }
+    });
 
     for i in (2_u64.pow(depth - 1))..(2_u64.pow(depth)) {
         let left = known[(2 * i) as usize];
         let right = known[(2 * i + 1) as usize];
         known[i as usize] = left || right;
-    }
-
-    for member in values {
-        decommitment.push(member);
     }
 
     for d in (1..depth).rev() {
