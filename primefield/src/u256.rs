@@ -789,13 +789,9 @@ impl Mul<&U256> for u128 {
     }
 }
 
-#[cfg(test)]
 use quickcheck::{Arbitrary, Gen};
-
-#[cfg(test)]
 use rand::Rng;
 
-#[cfg(test)]
 impl Arbitrary for U256 {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         U256::new(g.gen(), g.gen(), g.gen(), g.gen())
