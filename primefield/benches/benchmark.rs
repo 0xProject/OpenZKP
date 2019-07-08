@@ -3,11 +3,7 @@
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use hex_literal::*;
-use primefield::{
-    FieldElement,
-    U256,
-    u256h,
-};
+use primefield::{u256h, FieldElement, U256};
 
 fn u256_add(crit: &mut Criterion) {
     let a = U256::new(

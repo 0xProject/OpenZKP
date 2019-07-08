@@ -1,10 +1,11 @@
-use crate::{ORDER, GENERATOR,
-    curve::{Affine},
+use crate::{
+    curve::Affine,
     wnaf::{base_mul, double_base_mul, window_table_affine},
+    GENERATOR, ORDER,
 };
 use lazy_static::*;
-use tiny_keccak::sha3_256;
 use primefield::U256;
+use tiny_keccak::sha3_256;
 
 lazy_static! {
     static ref GENERATOR_TABLE: [Affine; 32] = {
@@ -77,10 +78,9 @@ pub fn verify(msg_hash: &U256, r: &U256, w: &U256, public_key: &Affine) -> bool 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use primefield::FieldElement;
-    use quickcheck_macros::quickcheck;
-    use primefield::u256h;
     use hex_literal::*;
+    use primefield::{u256h, FieldElement};
+    use quickcheck_macros::quickcheck;
 
     #[test]
     fn test_pubkey() {

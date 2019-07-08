@@ -1,9 +1,6 @@
-use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
-use primefield::U256;
-use primefield::FieldElement;
-use primefield::commutative_binop;
-use primefield::noncommutative_binop;
 use crate::BETA;
+use primefield::{commutative_binop, noncommutative_binop, FieldElement, U256};
+use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub enum Affine {
@@ -199,10 +196,9 @@ impl Arbitrary for Affine {
 mod tests {
     use super::*;
     use crate::ORDER;
-    use quickcheck_macros::quickcheck;
-    use primefield::u256h;
-    use primefield::U256;
     use hex_literal::*;
+    use primefield::{u256h, U256};
+    use quickcheck_macros::quickcheck;
 
     #[test]
     fn test_add() {

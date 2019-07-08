@@ -2,15 +2,9 @@
 #![allow(clippy::unreadable_literal)]
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use ecc::{mul, private_to_public, sign, verify, Affine, Jacobian};
 use hex_literal::*;
-use ecc::{
-    Affine,
-    private_to_public, sign, verify,
-    Jacobian, mul,
-};
-use primefield::u256h;
-use primefield::U256;
-use primefield::FieldElement;
+use primefield::{u256h, FieldElement, U256};
 
 fn curve_add(crit: &mut Criterion) {
     let a = Affine::Point {

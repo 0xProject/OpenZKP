@@ -2,19 +2,17 @@
 #![warn(clippy::all)]
 #![deny(warnings)]
 mod curve;
-mod jacobian;
 mod ecdsa;
+mod jacobian;
 mod wnaf;
 
 pub use curve::Affine;
-pub use jacobian::Jacobian;
 pub use ecdsa::{private_to_public, sign, verify};
-pub use wnaf::{mul, double_mul, base_mul, double_base_mul};
+pub use jacobian::Jacobian;
+pub use wnaf::{base_mul, double_base_mul, double_mul, mul};
 
-use primefield::U256;
-use primefield::FieldElement;
-use primefield::u256h;
 use hex_literal::*;
+use primefield::{u256h, FieldElement, U256};
 
 // Curve parameters
 

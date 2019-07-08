@@ -1,11 +1,6 @@
-use crate::{
-    curve::Affine, curve_operations, 
-};
+use crate::{curve::Affine, curve_operations};
+use primefield::{commutative_binop, noncommutative_binop, FieldElement, U256};
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
-use primefield::U256;
-use primefield::FieldElement;
-use primefield::commutative_binop;
-use primefield::noncommutative_binop;
 
 // See http://www.hyperelliptic.org/EFD/g1p/auto-shortw-jacobian.html
 
@@ -258,7 +253,7 @@ impl Arbitrary for Jacobian {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{ORDER, u256h};
+    use crate::{u256h, ORDER};
     use hex_literal::*;
     use quickcheck_macros::quickcheck;
 
