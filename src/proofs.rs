@@ -22,16 +22,16 @@ pub trait Merkleizable<R: Hashable> {
 }
 
 pub struct TraceTable {
-    pub ROWS:     usize,
-    pub COLS:     usize,
+    pub rows:     usize,
+    pub cols:     usize,
     pub elements: Vec<FieldElement>,
 }
 
 impl TraceTable {
-    pub fn new(ROWS: usize, COLS: usize, elements: Vec<FieldElement>) -> Self {
+    pub fn new(rows: usize, cols: usize, elements: Vec<FieldElement>) -> Self {
         Self {
-            ROWS,
-            COLS,
+            rows,
+            cols,
             elements,
         }
     }
@@ -122,6 +122,7 @@ impl<'a> Constraint<'a> {
     }
 }
 
+// This groupable impl allows the fri tree layers to get grouped and use the same merkleize system
 impl Groupable<Vec<U256>> for (usize, &[FieldElement]) {
     fn make_group(&self, index: usize) -> Vec<U256> {
         let layer = self.1;
@@ -197,7 +198,7 @@ pub fn stark_proof(
     claim_value: FieldElement,
     params: &ProofParams,
 ) -> Channel {
-    let trace_len = trace.elements.len() / trace.COLS;
+    let trace_len = trace.elements.len() / trace.cols;
     let omega = FieldElement::root(U256::from((trace_len * params.blowup) as u64)).unwrap();
     let g = omega.pow(U256::from(params.blowup as u64));
     let eval_domain_size = trace_len * params.blowup;
@@ -344,13 +345,13 @@ pub fn geometric_series(base: &FieldElement, step: &FieldElement, len: usize) ->
 }
 
 fn interpolate_trace_table(table: &TraceTable) -> Vec<Vec<FieldElement>> {
-    let trace_len = table.elements.len() / table.COLS;
-    let mut TPn = vec![Vec::new(); table.COLS];
-    (0..table.COLS)
+    let trace_len = table.elements.len() / table.cols;
+    let mut TPn = vec![Vec::new(); table.cols];
+    (0..table.cols)
         .into_par_iter()
         .map(|x| {
             let mut hold_col = Vec::with_capacity(trace_len);
-            for i in (0..table.elements.len()).step_by(table.COLS) {
+            for i in (0..table.elements.len()).step_by(table.cols) {
                 hold_col.push(table.elements[x + i].clone());
             }
             ifft(hold_col.as_slice())
@@ -532,7 +533,6 @@ fn perform_fri_layering(
     let eval_domain_size = constraints_out_of_domain.len();
     let trace_len = eval_domain_size / params.blowup;
 
-    // Fri Layers
     debug_assert!(eval_domain_size.is_power_of_two());
     let mut fri: Vec<Vec<FieldElement>> =
         Vec::with_capacity(64 - (eval_domain_size.leading_zeros() as usize));
