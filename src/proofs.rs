@@ -138,9 +138,7 @@ impl Groupable<Vec<U256>> for &[Vec<FieldElement>] {
 
 impl Groupable<U256> for &[FieldElement] {
     fn make_group(&self, index: usize) -> U256 {
-        self[index.bit_reverse_at(self.len())]
-            .0
-            .clone()
+        self[index.bit_reverse_at(self.len())].0.clone()
     }
 
     fn domain_size(&self) -> usize {
