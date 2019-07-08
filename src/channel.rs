@@ -158,8 +158,8 @@ impl Writable<&FieldElement> for Channel {
     }
 }
 
-// Note -- This method writing is distinct from the field element, and is used
-// in the decommitment
+// Note -- This method of writing is distinct from the field element, and is
+// used in the decommitment when groups are decommited from the rows
 impl Writable<Vec<U256>> for Channel {
     fn write(&mut self, data: Vec<U256>) {
         for element in data {

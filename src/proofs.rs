@@ -150,11 +150,7 @@ impl Groupable<Vec<U256>> for &[Vec<FieldElement>] {
     fn make_group(&self, index: usize) -> Vec<U256> {
         let mut ret = Vec::with_capacity(self.len());
         for item in self.iter() {
-            ret.push(
-                item[index.bit_reverse() >> (item.len().leading_zeros() + 1)]
-                    .0
-                    .clone(),
-            )
+            ret.push(item[index.bit_reverse_at(item.len())].0.clone())
         }
         ret
     }
@@ -166,9 +162,7 @@ impl Groupable<Vec<U256>> for &[Vec<FieldElement>] {
 
 impl Groupable<U256> for &[FieldElement] {
     fn make_group(&self, index: usize) -> U256 {
-        self[index.bit_reverse() >> (self.len().leading_zeros() + 1)]
-            .0
-            .clone()
+        self[index.bit_reverse_at(self.len())].0.clone()
     }
 
     fn domain_size(&self) -> usize {
@@ -207,8 +201,8 @@ pub fn stark_proof(
     let eval_x = geometric_series(&FieldElement::ONE, &omega, eval_domain_size);
 
     let TPn = interpolate_trace_table(&trace);
-    let TPn_pointer: Vec<&[FieldElement]> = TPn.iter().map(|x| x.as_slice()).collect();
-    let LDEn = calculate_low_degree_extensions(TPn_pointer.as_slice(), &params, &eval_x);
+    let TPn_reference: Vec<&[FieldElement]> = TPn.iter().map(|x| x.as_slice()).collect();
+    let LDEn = calculate_low_degree_extensions(TPn_reference.as_slice(), &params, &eval_x);
 
     let tree = LDEn.as_slice().merkleize();
 
@@ -222,10 +216,10 @@ pub fn stark_proof(
         constraint_coefficients.push(proof.read());
     }
 
-    let LDEn_pointer: Vec<&[FieldElement]> = LDEn.iter().map(|x| x.as_slice()).collect();
+    let LDEn_reference: Vec<&[FieldElement]> = LDEn.iter().map(|x| x.as_slice()).collect();
     let CC = calculate_constraints_on_domain(
-        TPn_pointer.as_slice(),
-        LDEn_pointer.as_slice(),
+        TPn_reference.as_slice(),
+        LDEn_reference.as_slice(),
         constraints,
         constraint_coefficients.as_slice(),
         claim_index,
@@ -238,7 +232,7 @@ pub fn stark_proof(
 
     let (oods_point, oods_coefficients, oods_values) = get_out_of_domain_information(
         &mut proof,
-        TPn_pointer.as_slice(),
+        TPn_reference.as_slice(),
         constraint_coefficients.as_slice(),
         claim_index,
         &claim_value,
@@ -247,7 +241,7 @@ pub fn stark_proof(
     );
 
     let CO = calculate_out_of_domain_constraints(
-        LDEn_pointer.as_slice(),
+        LDEn_reference.as_slice(),
         CC.as_slice(),
         &oods_point,
         oods_coefficients.as_slice(),
@@ -591,7 +585,7 @@ fn perform_fri_layering(
     (fri, fri_trees)
 }
 
-pub fn decommit_with_queries_and_proof<R: Hashable, T: Groupable<R>>(
+fn decommit_with_queries_and_proof<R: Hashable, T: Groupable<R>>(
     queries: &[usize],
     source: T,
     tree: &[[u8; 32]],
@@ -599,14 +593,8 @@ pub fn decommit_with_queries_and_proof<R: Hashable, T: Groupable<R>>(
 ) where
     Channel: Writable<R>,
 {
-    let mut proof_values = Vec::with_capacity(queries.len());
     for &index in queries.iter() {
         proof.write((&source).make_group(index));
-        if index % 2 == 0 {
-            proof_values.push((&source).make_group(index + 1));
-        } else {
-            proof_values.push((&source).make_group(index - 1));
-        }
     }
     decommit_proof(crate::merkle::proof(tree, queries, source), proof);
 }
@@ -619,7 +607,7 @@ fn decommit_proof(decommitment: Vec<[u8; 32]>, proof: &mut Channel) {
     }
 }
 
-pub fn decommit_fri_layers_and_trees(
+fn decommit_fri_layers_and_trees(
     fri_layers: &[Vec<FieldElement>],
     fri_trees: &[Vec<[u8; 32]>],
     query_indices: &[usize],
