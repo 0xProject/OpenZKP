@@ -11,7 +11,6 @@ use crate::square_root::square_root;
 // 0000000000000001
 pub const MODULUS: U256 =
     u256h!("0800000000000011000000000000000000000000000000000000000000000001");
-pub const INVEXP: U256 = u256h!("0800000000000010ffffffffffffffffffffffffffffffffffffffffffffffff");
 
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub struct FieldElement(pub U256);
