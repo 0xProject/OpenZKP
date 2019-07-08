@@ -4,10 +4,12 @@ use std::{env, time::Instant};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    rayon::ThreadPoolBuilder::new()
-        .num_threads(args[1].parse::<usize>().unwrap())
-        .build_global()
-        .unwrap();
+    if args.len() > 1 {
+        rayon::ThreadPoolBuilder::new()
+            .num_threads(args[1].parse::<usize>().expect("Invalid number supplied"))
+            .build_global()
+            .expect("Error building Rayon thread pool.");
+    }
 
     let claim_index = 1_000_000_usize;
     let witness = FieldElement::from(u256h!(
@@ -22,7 +24,7 @@ fn main() {
         claim_index,
         claim_fib,
         &ProofParams {
-            blowup:     32,
+            blowup:     16,
             pow_bits:   12,
             queries:    20,
             fri_layout: vec![3, 2],
