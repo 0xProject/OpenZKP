@@ -1,3 +1,5 @@
+use crate::proofs::*;
+use primefield::FieldElement;
 use rayon::prelude::*;
 use tiny_keccak::Keccak;
 use u256::U256;
@@ -21,6 +23,13 @@ impl Hashable for &[U256] {
 impl Hashable for Vec<U256> {
     fn hash(&self) -> [u8; 32] {
         self.as_slice().hash()
+    }
+}
+
+// Note we have presumed that we want to hash the Montgomery adjusted value
+impl Hashable for FieldElement {
+    fn hash(&self) -> [u8; 32] {
+        self.0.hash()
     }
 }
 
@@ -62,15 +71,16 @@ pub fn hash_node(left_node: &[u8; 32], right_node: &[u8; 32]) -> [u8; 32] {
 }
 
 pub fn make_tree_direct<T: Hashable>(leaves: &[T]) -> Vec<[u8; 32]> {
-    let n = leaves.len() as u64;
-    let depth = 64 - n.leading_zeros() - 1; // Log_2 of n
+    let n = leaves.len();
+    let depth = n.trailing_zeros(); // Log_2 of n
+    let layer1_index = 2_usize.pow(depth - 1);
+    let mut tree = vec![[0; 32]; n]; // Get my vector heap for end results
 
-    let mut tree = vec![[0; 32]; 2 * n as usize]; // Get my vector heap for end results
-    for i in 0..n {
-        tree[(2_u64.pow(depth) + i) as usize] = leaves[(i) as usize].hash();
+    for (index, pair) in leaves.chunks(2).enumerate() {
+        tree[layer1_index + index] = hash_node(&pair[0_usize].hash(), &pair[1_usize].hash());
     }
-    for i in (0..(2_u64.pow(depth))).rev() {
-        tree[i as usize] = hash_node(&tree[(2 * i) as usize], &tree[(2 * i + 1) as usize]);
+    for i in (0..(2_usize.pow(depth - 1))).rev() {
+        tree[i] = hash_node(&tree[2 * i], &tree[2 * i + 1]);
     }
     tree
 }
@@ -83,30 +93,22 @@ pub fn make_tree<T: Hashable + std::marker::Sync>(leaves: &[T]) -> Vec<[u8; 32]>
     }
 }
 
-pub const THREADS_MAX: usize = 16; // TODO - Figure out how many threads is opt
-
 pub fn make_tree_threaded<T: Hashable + std::marker::Sync>(leaves: &[T]) -> Vec<[u8; 32]> {
-    let threads = THREADS_MAX;
-
     let n = leaves.len();
-    let depth = 64 - n.leading_zeros() - 1;
+    debug_assert!(n.is_power_of_two());
+    let depth = n.trailing_zeros() as usize;
 
-    let mut layers = Vec::with_capacity(depth as usize);
-    let base_layer: Vec<[u8; 32]> = (0..threads)
+    let mut layers = Vec::with_capacity(depth);
+    let mut hold = Vec::with_capacity(n / 2);
+    leaves
         .into_par_iter()
-        .map(|i| {
-            let ret: Vec<[u8; 32]> = leaves[i * (n / threads)..(i * (n / threads) + (n / threads))]
-                .iter()
-                .map(|element| element.hash())
-                .collect();
-            ret
-        })
-        .flatten()
-        .collect();
-    layers.push(base_layer);
+        .chunks(2)
+        .map(|pair| hash_node(&pair[0_usize].hash(), &pair[1_usize].hash()))
+        .collect_into_vec(&mut hold);
+    layers.push(hold);
 
-    for i in 1..((depth + 1) as usize) {
-        let mut hold = Vec::with_capacity(layers[0].len() / 2);
+    for i in 1..(depth) {
+        let mut hold = Vec::with_capacity(layers[i - 1].len() / 2);
         layers[i - 1]
             .clone()
             .into_par_iter()
@@ -115,52 +117,86 @@ pub fn make_tree_threaded<T: Hashable + std::marker::Sync>(leaves: &[T]) -> Vec<
             .collect_into_vec(&mut hold);
         layers.push(hold);
     }
-
-    layers.push(vec![[0; 32]]); // TODO - This logic puts the root at the top, but the previous didn't, either
-                                // add another hash comp or change the rest of the code to match
+    layers.push(vec![[0; 32]]);
 
     layers.into_iter().rev().flatten().collect()
 }
 
-pub fn proof(tree: &[[u8; 32]], indices: &[usize]) -> Vec<[u8; 32]> {
-    let depth = 64 - (tree.len() as u64).leading_zeros() - 1; // Log base 2 - 1
-    let num_leaves = 2_u64.pow(depth);
+pub fn proof<R: Hashable, T: Groupable<R>>(
+    tree: &[[u8; 32]],
+    indices: &[usize],
+    source: T,
+) -> Vec<[u8; 32]> {
+    debug_assert!(tree.len().is_power_of_two());
+    let depth = tree.len().trailing_zeros();
+    let num_leaves = 2_usize.pow(depth);
     let num_nodes = 2 * num_leaves;
-    let mut known = vec![false; (num_nodes + 1) as usize];
+    let mut known = vec![false; num_nodes + 1];
     let mut decommitment = Vec::new();
 
-    let fixed = 2_u64.pow(depth - 1);
-    for i in indices.iter() {
-        known[(fixed + (*i as u64) % num_leaves) as usize] = true;
+    let mut peekable_indicies = indices.iter().peekable();
+    let mut excluded_pair = false;
+    for &index in indices.iter() {
+        peekable_indicies.next();
+        known[num_leaves + index % num_leaves] = true;
+
+        if index % 2 == 0 {
+            known[num_leaves + 1 + index % num_leaves] = true;
+            let prophet = peekable_indicies.peek();
+            match prophet {
+                Some(x) => {
+                    if **x != index + 1 {
+                        decommitment.push(source.make_group(index + 1).hash());
+                    } else {
+                        excluded_pair = true;
+                    }
+                }
+                None => {
+                    decommitment.push(source.make_group(index + 1).hash());
+                }
+            }
+        } else if !excluded_pair {
+            known[num_leaves - 1 + index % num_leaves] = true;
+            decommitment.push(source.make_group(index - 1).hash());
+        } else {
+            known[num_leaves - 1 + index % num_leaves] = true;
+            excluded_pair = false;
+        }
+    }
+
+    for i in (2_usize.pow(depth - 1))..(2_usize.pow(depth)) {
+        let left = known[2 * i];
+        let right = known[2 * i + 1];
+        known[i] = left || right;
     }
 
     for d in (1..depth).rev() {
-        for i in (2_u64.pow(d - 1))..(2_u64.pow(d)) {
-            let left = known[(2 * i) as usize];
-            let right = known[(2 * i + 1) as usize];
+        for i in (2_usize.pow(d - 1))..(2_usize.pow(d)) {
+            let left = known[2 * i];
+            let right = known[2 * i + 1];
             if left && !right {
-                decommitment.push(tree[(2 * i + 1) as usize]);
+                decommitment.push(tree[2 * i + 1]);
             }
             if !left && right {
-                decommitment.push(tree[(2 * i) as usize]);
+                decommitment.push(tree[2 * i]);
             }
-            known[i as usize] = left || right;
+            known[i] = left || right;
         }
     }
     decommitment
 }
 
-pub fn verify(
+pub fn verify<T: Hashable>(
     root: [u8; 32],
     depth: u32,
-    values: &mut [(u64, U256)],
+    values: &mut [(u64, T)],
     mut decommitment: Vec<[u8; 32]>,
 ) -> bool {
     let mut queue = Vec::with_capacity(values.len());
     values.sort_by(|a, b| b.0.cmp(&a.0)); // Sorts the list by index
     for leaf in values.iter() {
         let tree_index = 2_u64.pow(depth) + leaf.0;
-        queue.push((tree_index, hash_leaf(&leaf.1)));
+        queue.push((tree_index, leaf.1.hash()));
     }
     let mut start = values.len() - 1;
     let mut current = start;
@@ -218,6 +254,16 @@ mod tests {
     use super::*;
     use hex_literal::*;
 
+    impl Groupable<U256> for &[U256] {
+        fn make_group(&self, index: usize) -> U256 {
+            self[index].clone()
+        }
+
+        fn domain_size(&self) -> usize {
+            self.len()
+        }
+    }
+
     #[test]
     fn test_merkle_creation_and_proof() {
         let depth = 6;
@@ -227,7 +273,7 @@ mod tests {
             leaves.push(U256::from((i + 10).pow(3)));
         }
 
-        let tree = make_tree_threaded(leaves.as_slice());
+        let tree = make_tree(leaves.as_slice());
 
         assert_eq!(
             tree[1],
@@ -238,8 +284,9 @@ mod tests {
             (11, leaves[11].clone()),
             (14, leaves[14].clone()),
         ];
+
         let indices = vec![1, 11, 14];
-        let decommitment = proof(tree.as_slice(), &indices);
+        let decommitment = proof(tree.as_slice(), &indices, leaves.as_slice());
         let non_root = hex!("ed112f44bc944f33e2567f86eea202350913b11c000000000000000000000000");
 
         assert!(verify(
