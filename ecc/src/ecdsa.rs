@@ -4,17 +4,15 @@ use crate::{
     GENERATOR, ORDER,
 };
 use lazy_static::*;
+use std::default::Default;
 use tiny_keccak::sha3_256;
 use u256::U256;
 
 lazy_static! {
     static ref GENERATOR_TABLE: [Affine; 32] = {
-        unsafe {
-            use std::mem::uninitialized;
-            let mut naf: [Affine; 32] = uninitialized();
-            window_table_affine(&GENERATOR, &mut naf);
-            naf
-        }
+        let mut naf: [Affine; 32] = Default::default();
+        window_table_affine(&GENERATOR, &mut naf);
+        naf
     };
 }
 
