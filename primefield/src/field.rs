@@ -1,9 +1,13 @@
 use crate::{montgomery::*, square_root::square_root};
 use hex_literal::*;
-use serde::de::Visitor;
-use serde::{de, Deserialize, Deserializer};
-use std::fmt;
-use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
+use serde::{
+    de::{self, Visitor},
+    Deserialize, Deserializer,
+};
+use std::{
+    fmt,
+    ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign},
+};
 use u256::{commutative_binop, noncommutative_binop, u256h, U256};
 
 // TODO: Implement Serde
@@ -272,6 +276,15 @@ mod tests {
     use super::*;
     use itertools::repeat_n;
     use quickcheck_macros::quickcheck;
+
+    use quickcheck::{Arbitrary, Gen};
+
+    impl Arbitrary for FieldElement {
+        fn arbitrary<G: Gen>(g: &mut G) -> Self {
+            // TODO: Generate 0, 1, p/2 and -1
+            FieldElement(U256::arbitrary(g) % FieldElement::MODULUS)
+        }
+    }
 
     #[test]
     fn negative_one_is_additive_inverse_of_one() {
