@@ -7,24 +7,20 @@ use primefield::{u256h, FieldElement, U256};
 
 fn curve_add(crit: &mut Criterion) {
     let a = Affine::Point {
-        x: FieldElement::new(&[
-            0xca9b3b7a, 0xadf5b0d8, 0x4728f1b4, 0x7a5cbd79, 0x316a86d0, 0xb9aaaf56, 0x557c9ca9,
-            0x0259dee2,
-        ]),
-        y: FieldElement::new(&[
-            0x68173fdd, 0x25daa0d2, 0xcd94b717, 0x4f84a316, 0xd637a579, 0x236d898d, 0x787b7c9e,
-            0x011cf020,
-        ]),
+        x: FieldElement(u256h!(
+            "04f50f81bf91b7ada9de33eeec4ae787bc39f520fbb5c8fa4620fecfca4d7cf5"
+        )),
+        y: FieldElement(u256h!(
+            "0176a4c00d1ce6b642176e460624b1699da148593f701cac4df2280c2edb163f"
+        )),
     };
     let b = Affine::Point {
-        x: FieldElement::new(&[
-            0x55893510, 0x5985d659, 0xc0cda9ae, 0xfb1db2ec, 0xc78fe4ec, 0xe60f0d63, 0xfb0e0cf5,
-            0x0449895d,
-        ]),
-        y: FieldElement::new(&[
-            0x1b78e1cc, 0x86e1e27b, 0x80a13dd1, 0x157492ef, 0x8191f8ae, 0x7fb47371, 0x8d4ef0e6,
-            0x07cfb4b0,
-        ]),
+        x: FieldElement(u256h!(
+            "03722d346a64345ec69b4a36c97247fa924bedfbd371d5bdedeb7db3fcf32a78"
+        )),
+        y: FieldElement(u256h!(
+            "07444fb1e7e4751935707758c5b9bb6bc270056bc12a00d1f5b82ba217a20876"
+        )),
     };
     crit.bench_function("Curve add", move |bench| {
         bench.iter(|| {
@@ -35,14 +31,12 @@ fn curve_add(crit: &mut Criterion) {
 
 fn curve_dbl(crit: &mut Criterion) {
     let a = Affine::Point {
-        x: FieldElement::new(&[
-            0xa19caf1f, 0x9764694b, 0xd49d26e1, 0xc2d21cea, 0x9d37cc5b, 0xce13e7e3, 0x787be6e0,
-            0x00ea1dff,
-        ]),
-        y: FieldElement::new(&[
-            0xce7296f0, 0xd1f6f7df, 0xc9c5b41c, 0x6b889413, 0xc9449f06, 0xf44da1a6, 0x302e9f91,
-            0x011b6c17,
-        ]),
+        x: FieldElement(u256h!(
+            "04f50f81bf91b7ada9de33eeec4ae787bc39f520fbb5c8fa4620fecfca4d7cf5"
+        )),
+        y: FieldElement(u256h!(
+            "0176a4c00d1ce6b642176e460624b1699da148593f701cac4df2280c2edb163f"
+        )),
     };
     crit.bench_function("Curve dbl", move |bench| {
         bench.iter(|| {
@@ -53,14 +47,12 @@ fn curve_dbl(crit: &mut Criterion) {
 
 fn curve_mul(crit: &mut Criterion) {
     let a = Affine::Point {
-        x: FieldElement::new(&[
-            0x5bf31eb0, 0xfe50a889, 0x2d1a8a21, 0x3242e28e, 0x0d13fe66, 0xcf63e064, 0x9426e2c3,
-            0x0040ffd5,
-        ]),
-        y: FieldElement::new(&[
-            0xe29859d2, 0xd21b931a, 0xea34d27d, 0x296f19b9, 0x6487ae5b, 0x524260f9, 0x069092ca,
-            0x060c2257,
-        ]),
+        x: FieldElement(u256h!(
+            "04f50f81bf91b7ada9de33eeec4ae787bc39f520fbb5c8fa4620fecfca4d7cf5"
+        )),
+        y: FieldElement(u256h!(
+            "0176a4c00d1ce6b642176e460624b1699da148593f701cac4df2280c2edb163f"
+        )),
     };
     let b = u256h!("014023b44fbb1e6f2a79c929c6da775be3c4b9e043d439385b5050fdc69177e3");
     crit.bench_function("Curve mul", move |bench| {
@@ -72,14 +64,12 @@ fn curve_mul(crit: &mut Criterion) {
 
 fn jacobian_to_affine(crit: &mut Criterion) {
     let a = Jacobian::from(Affine::Point {
-        x: FieldElement::new(&[
-            0xca9b3b7a, 0xadf5b0d8, 0x4728f1b4, 0x7a5cbd79, 0x316a86d0, 0xb9aaaf56, 0x557c9ca9,
-            0x0259dee2,
-        ]),
-        y: FieldElement::new(&[
-            0x68173fdd, 0x25daa0d2, 0xcd94b717, 0x4f84a316, 0xd637a579, 0x236d898d, 0x787b7c9e,
-            0x011cf020,
-        ]),
+        x: FieldElement(u256h!(
+            "04f50f81bf91b7ada9de33eeec4ae787bc39f520fbb5c8fa4620fecfca4d7cf5"
+        )),
+        y: FieldElement(u256h!(
+            "0176a4c00d1ce6b642176e460624b1699da148593f701cac4df2280c2edb163f"
+        )),
     });
     crit.bench_function("Jacobian to Affine", move |bench| {
         bench.iter(|| {
@@ -90,24 +80,20 @@ fn jacobian_to_affine(crit: &mut Criterion) {
 
 fn jacobian_add(crit: &mut Criterion) {
     let a = Jacobian::from(Affine::Point {
-        x: FieldElement::new(&[
-            0xca9b3b7a, 0xadf5b0d8, 0x4728f1b4, 0x7a5cbd79, 0x316a86d0, 0xb9aaaf56, 0x557c9ca9,
-            0x0259dee2,
-        ]),
-        y: FieldElement::new(&[
-            0x68173fdd, 0x25daa0d2, 0xcd94b717, 0x4f84a316, 0xd637a579, 0x236d898d, 0x787b7c9e,
-            0x011cf020,
-        ]),
+        x: FieldElement(u256h!(
+            "04f50f81bf91b7ada9de33eeec4ae787bc39f520fbb5c8fa4620fecfca4d7cf5"
+        )),
+        y: FieldElement(u256h!(
+            "0176a4c00d1ce6b642176e460624b1699da148593f701cac4df2280c2edb163f"
+        )),
     });
     let b = Jacobian::from(Affine::Point {
-        x: FieldElement::new(&[
-            0x55893510, 0x5985d659, 0xc0cda9ae, 0xfb1db2ec, 0xc78fe4ec, 0xe60f0d63, 0xfb0e0cf5,
-            0x0449895d,
-        ]),
-        y: FieldElement::new(&[
-            0x1b78e1cc, 0x86e1e27b, 0x80a13dd1, 0x157492ef, 0x8191f8ae, 0x7fb47371, 0x8d4ef0e6,
-            0x07cfb4b0,
-        ]),
+        x: FieldElement(u256h!(
+            "03722d346a64345ec69b4a36c97247fa924bedfbd371d5bdedeb7db3fcf32a78"
+        )),
+        y: FieldElement(u256h!(
+            "07444fb1e7e4751935707758c5b9bb6bc270056bc12a00d1f5b82ba217a20876"
+        )),
     });
     crit.bench_function("Jacobian add", move |bench| {
         bench.iter(|| {
@@ -118,24 +104,20 @@ fn jacobian_add(crit: &mut Criterion) {
 
 fn jacobian_add_affine(crit: &mut Criterion) {
     let a = Jacobian::from(Affine::Point {
-        x: FieldElement::new(&[
-            0xca9b3b7a, 0xadf5b0d8, 0x4728f1b4, 0x7a5cbd79, 0x316a86d0, 0xb9aaaf56, 0x557c9ca9,
-            0x0259dee2,
-        ]),
-        y: FieldElement::new(&[
-            0x68173fdd, 0x25daa0d2, 0xcd94b717, 0x4f84a316, 0xd637a579, 0x236d898d, 0x787b7c9e,
-            0x011cf020,
-        ]),
+        x: FieldElement(u256h!(
+            "04f50f81bf91b7ada9de33eeec4ae787bc39f520fbb5c8fa4620fecfca4d7cf5"
+        )),
+        y: FieldElement(u256h!(
+            "0176a4c00d1ce6b642176e460624b1699da148593f701cac4df2280c2edb163f"
+        )),
     });
     let b = Affine::Point {
-        x: FieldElement::new(&[
-            0x55893510, 0x5985d659, 0xc0cda9ae, 0xfb1db2ec, 0xc78fe4ec, 0xe60f0d63, 0xfb0e0cf5,
-            0x0449895d,
-        ]),
-        y: FieldElement::new(&[
-            0x1b78e1cc, 0x86e1e27b, 0x80a13dd1, 0x157492ef, 0x8191f8ae, 0x7fb47371, 0x8d4ef0e6,
-            0x07cfb4b0,
-        ]),
+        x: FieldElement(u256h!(
+            "03722d346a64345ec69b4a36c97247fa924bedfbd371d5bdedeb7db3fcf32a78"
+        )),
+        y: FieldElement(u256h!(
+            "07444fb1e7e4751935707758c5b9bb6bc270056bc12a00d1f5b82ba217a20876"
+        )),
     };
     crit.bench_function("Jacobian add affine", move |bench| {
         bench.iter(|| {
@@ -146,14 +128,12 @@ fn jacobian_add_affine(crit: &mut Criterion) {
 
 fn jacobian_dbl(crit: &mut Criterion) {
     let a = Jacobian::from(Affine::Point {
-        x: FieldElement::new(&[
-            0x5bf31eb0, 0xfe50a889, 0x2d1a8a21, 0x3242e28e, 0x0d13fe66, 0xcf63e064, 0x9426e2c3,
-            0x0040ffd5,
-        ]),
-        y: FieldElement::new(&[
-            0xe29859d2, 0xd21b931a, 0xea34d27d, 0x296f19b9, 0x6487ae5b, 0x524260f9, 0x069092ca,
-            0x060c2257,
-        ]),
+        x: FieldElement(u256h!(
+            "04f50f81bf91b7ada9de33eeec4ae787bc39f520fbb5c8fa4620fecfca4d7cf5"
+        )),
+        y: FieldElement(u256h!(
+            "0176a4c00d1ce6b642176e460624b1699da148593f701cac4df2280c2edb163f"
+        )),
     });
     crit.bench_function("Jacobian dbl", move |bench| {
         bench.iter(|| {
@@ -164,14 +144,12 @@ fn jacobian_dbl(crit: &mut Criterion) {
 
 fn jacobian_mul(crit: &mut Criterion) {
     let a = Jacobian::from(Affine::Point {
-        x: FieldElement::new(&[
-            0x5bf31eb0, 0xfe50a889, 0x2d1a8a21, 0x3242e28e, 0x0d13fe66, 0xcf63e064, 0x9426e2c3,
-            0x0040ffd5,
-        ]),
-        y: FieldElement::new(&[
-            0xe29859d2, 0xd21b931a, 0xea34d27d, 0x296f19b9, 0x6487ae5b, 0x524260f9, 0x069092ca,
-            0x060c2257,
-        ]),
+        x: FieldElement(u256h!(
+            "04f50f81bf91b7ada9de33eeec4ae787bc39f520fbb5c8fa4620fecfca4d7cf5"
+        )),
+        y: FieldElement(u256h!(
+            "0176a4c00d1ce6b642176e460624b1699da148593f701cac4df2280c2edb163f"
+        )),
     });
     let b = u256h!("014023b44fbb1e6f2a79c929c6da775be3c4b9e043d439385b5050fdc69177e3");
     crit.bench_function("Jacobian mul", move |bench| {
@@ -183,14 +161,12 @@ fn jacobian_mul(crit: &mut Criterion) {
 
 fn jacobian_mul_affine(crit: &mut Criterion) {
     let a = Affine::Point {
-        x: FieldElement::new(&[
-            0x5bf31eb0, 0xfe50a889, 0x2d1a8a21, 0x3242e28e, 0x0d13fe66, 0xcf63e064, 0x9426e2c3,
-            0x0040ffd5,
-        ]),
-        y: FieldElement::new(&[
-            0xe29859d2, 0xd21b931a, 0xea34d27d, 0x296f19b9, 0x6487ae5b, 0x524260f9, 0x069092ca,
-            0x060c2257,
-        ]),
+        x: FieldElement(u256h!(
+            "04f50f81bf91b7ada9de33eeec4ae787bc39f520fbb5c8fa4620fecfca4d7cf5"
+        )),
+        y: FieldElement(u256h!(
+            "0176a4c00d1ce6b642176e460624b1699da148593f701cac4df2280c2edb163f"
+        )),
     };
     let b = u256h!("014023b44fbb1e6f2a79c929c6da775be3c4b9e043d439385b5050fdc69177e3");
     crit.bench_function("Jacobian mul affine", move |bench| {
@@ -202,14 +178,12 @@ fn jacobian_mul_affine(crit: &mut Criterion) {
 
 fn wnaf_mul_affine(crit: &mut Criterion) {
     let a = Affine::Point {
-        x: FieldElement::new(&[
-            0x5bf31eb0, 0xfe50a889, 0x2d1a8a21, 0x3242e28e, 0x0d13fe66, 0xcf63e064, 0x9426e2c3,
-            0x0040ffd5,
-        ]),
-        y: FieldElement::new(&[
-            0xe29859d2, 0xd21b931a, 0xea34d27d, 0x296f19b9, 0x6487ae5b, 0x524260f9, 0x069092ca,
-            0x060c2257,
-        ]),
+        x: FieldElement(u256h!(
+            "04f50f81bf91b7ada9de33eeec4ae787bc39f520fbb5c8fa4620fecfca4d7cf5"
+        )),
+        y: FieldElement(u256h!(
+            "0176a4c00d1ce6b642176e460624b1699da148593f701cac4df2280c2edb163f"
+        )),
     };
     let b = u256h!("014023b44fbb1e6f2a79c929c6da775be3c4b9e043d439385b5050fdc69177e3");
     crit.bench_function("Wnaf mul", move |bench| {
