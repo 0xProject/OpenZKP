@@ -1,14 +1,14 @@
-// TODO Better variable names
-#![allow(clippy::many_single_char_names)]
+#![warn(clippy::all)]
+#![deny(warnings)]
 mod utils;
 
 use cfg_if::cfg_if;
 use serde::{Deserialize, Serialize};
-use starkcrypto;
-
-use starkcrypto::u256::U256;
+use starkdex::wrappers;
 use std::u64;
+use u256::U256;
 use wasm_bindgen::prelude::*;
+
 cfg_if! {
     // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
     // allocator.
@@ -55,7 +55,7 @@ pub fn nop(a: &str, b: &str) -> String {
 
 #[wasm_bindgen]
 pub fn pedersen_hash(a: &str, b: &str) -> JsValue {
-    let msg_hash = to_string(&starkcrypto::hash(&from_string(a), &from_string(b)));
+    let msg_hash = to_string(&wrappers::hash(&from_string(a), &from_string(b)));
 
     #[derive(Serialize, Deserialize)]
     pub struct Result {
@@ -79,7 +79,7 @@ pub struct CurvePoint {
 #[wasm_bindgen]
 pub fn public_key(private_key: &str) -> JsValue {
     console_error_panic_hook::set_once();
-    let (x, y) = starkcrypto::public_key(&from_string(private_key));
+    let (x, y) = wrappers::public_key(&from_string(private_key));
     JsValue::from_serde(&CurvePoint {
         x: to_string(&x),
         y: to_string(&y),
@@ -89,7 +89,7 @@ pub fn public_key(private_key: &str) -> JsValue {
 
 #[wasm_bindgen]
 pub fn sign(message_hash: &str, private_key: &str) -> JsValue {
-    let (r, w) = starkcrypto::sign(&from_string(message_hash), &from_string(private_key));
+    let (r, w) = wrappers::sign(&from_string(message_hash), &from_string(private_key));
     JsValue::from_serde(&Signature {
         r: to_string(&r),
         w: to_string(&w),
@@ -99,13 +99,13 @@ pub fn sign(message_hash: &str, private_key: &str) -> JsValue {
 
 #[wasm_bindgen]
 pub fn verify(message_hash: &str, signature: &JsValue, public_key: &JsValue) -> JsValue {
-    let s: Signature = signature.into_serde().unwrap();
-    let p: CurvePoint = public_key.into_serde().unwrap();
-    let r = from_string(&s.r);
-    let w = from_string(&s.w);
-    let x = from_string(&p.x);
-    let y = from_string(&p.y);
-    let is_valid = starkcrypto::verify(&from_string(message_hash), (&r, &w), (&x, &y));
+    let signature: Signature = signature.into_serde().unwrap();
+    let public_key: CurvePoint = public_key.into_serde().unwrap();
+    let r = from_string(&signature.r);
+    let w = from_string(&signature.w);
+    let x = from_string(&public_key.x);
+    let y = from_string(&public_key.y);
+    let is_valid = wrappers::verify(&from_string(message_hash), (&r, &w), (&x, &y));
 
     #[derive(Serialize, Deserialize)]
     struct Result {
@@ -114,7 +114,7 @@ pub fn verify(message_hash: &str, signature: &JsValue, public_key: &JsValue) -> 
     JsValue::from_serde(&Result { is_valid }).unwrap()
 }
 
-fn parse_message(message: &JsValue) -> starkcrypto::MakerMessage {
+fn parse_message(message: &JsValue) -> wrappers::MakerMessage {
     #[derive(Debug, Serialize, Deserialize)]
     struct MakerMessage {
         vault_a:  u32,
@@ -126,7 +126,7 @@ fn parse_message(message: &JsValue) -> starkcrypto::MakerMessage {
         trade_id: u32,
     }
     let message: MakerMessage = message.into_serde().unwrap();
-    starkcrypto::MakerMessage {
+    wrappers::MakerMessage {
         vault_a:  message.vault_a,
         vault_b:  message.vault_b,
         amount_a: u64_from_string(&message.amount_a),
@@ -140,12 +140,12 @@ fn parse_message(message: &JsValue) -> starkcrypto::MakerMessage {
 #[wasm_bindgen]
 pub fn maker_hash(message: &JsValue) -> String {
     let message = parse_message(message);
-    to_string(&starkcrypto::maker_hash(&message))
+    to_string(&wrappers::maker_hash(&message))
 }
 
 #[wasm_bindgen]
 pub fn taker_hash(maker_message_hash: &str, vault_a: u32, vault_b: u32) -> String {
-    to_string(&starkcrypto::taker_hash(
+    to_string(&wrappers::taker_hash(
         &from_string(maker_message_hash),
         vault_a,
         vault_b,
@@ -155,8 +155,8 @@ pub fn taker_hash(maker_message_hash: &str, vault_a: u32, vault_b: u32) -> Strin
 #[wasm_bindgen]
 pub fn maker_sign(message: &JsValue, private_key: &str) -> JsValue {
     let message = parse_message(message);
-    let maker_msg = starkcrypto::maker_hash(&message);
-    let (r, w) = starkcrypto::sign(&maker_msg, &from_string(private_key));
+    let maker_msg = wrappers::maker_hash(&message);
+    let (r, w) = wrappers::sign(&maker_msg, &from_string(private_key));
 
     #[derive(Serialize, Deserialize)]
     struct Result {
@@ -173,9 +173,9 @@ pub fn maker_sign(message: &JsValue, private_key: &str) -> JsValue {
 #[wasm_bindgen]
 pub fn taker_sign(message: &JsValue, vault_a: u32, vault_b: u32, private_key: &str) -> JsValue {
     let message = parse_message(message);
-    let maker_msg = starkcrypto::maker_hash(&message);
-    let taker_msg = starkcrypto::taker_hash(&maker_msg, vault_a, vault_b);
-    let (r, w) = starkcrypto::sign(&taker_msg, &from_string(private_key));
+    let maker_msg = wrappers::maker_hash(&message);
+    let taker_msg = wrappers::taker_hash(&maker_msg, vault_a, vault_b);
+    let (r, w) = wrappers::sign(&taker_msg, &from_string(private_key));
 
     #[derive(Serialize, Deserialize)]
     struct Result {
@@ -200,13 +200,13 @@ pub fn taker_sign(message: &JsValue, vault_a: u32, vault_b: u32, private_key: &s
 #[wasm_bindgen]
 pub fn maker_verify(message: &JsValue, signature: &JsValue, public_key: &JsValue) -> bool {
     let message = parse_message(message);
-    let s: Signature = signature.into_serde().unwrap();
-    let p: CurvePoint = public_key.into_serde().unwrap();
-    let r = from_string(&s.r);
-    let w = from_string(&s.w);
-    let x = from_string(&p.x);
-    let y = from_string(&p.y);
-    starkcrypto::maker_verify(&message, (&r, &w), (&x, &y))
+    let signature: Signature = signature.into_serde().unwrap();
+    let public_key: CurvePoint = public_key.into_serde().unwrap();
+    let r = from_string(&signature.r);
+    let w = from_string(&signature.w);
+    let x = from_string(&public_key.x);
+    let y = from_string(&public_key.y);
+    wrappers::maker_verify(&message, (&r, &w), (&x, &y))
 }
 
 #[wasm_bindgen]
@@ -218,11 +218,11 @@ pub fn taker_verify(
     public_key: &JsValue,
 ) -> bool {
     let message = parse_message(message);
-    let s: Signature = signature.into_serde().unwrap();
-    let p: CurvePoint = public_key.into_serde().unwrap();
-    let r = from_string(&s.r);
-    let w = from_string(&s.w);
-    let x = from_string(&p.x);
-    let y = from_string(&p.y);
-    starkcrypto::taker_verify(&message, vault_a, vault_b, (&r, &w), (&x, &y))
+    let signature: Signature = signature.into_serde().unwrap();
+    let public_key: CurvePoint = public_key.into_serde().unwrap();
+    let r = from_string(&signature.r);
+    let w = from_string(&signature.w);
+    let x = from_string(&public_key.x);
+    let y = from_string(&public_key.y);
+    wrappers::taker_verify(&message, vault_a, vault_b, (&r, &w), (&x, &y))
 }

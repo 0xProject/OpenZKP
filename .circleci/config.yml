@@ -17,6 +17,7 @@ jobs:
           name: Setup build environment
           command: |
             sudo apt-get update
+            sudo apt-get install jq
             rustup component add rustfmt clippy
             rustup toolchain install nightly
             rustup component add rustfmt --toolchain nightly
@@ -24,9 +25,10 @@ jobs:
       - run:
           name: Clean build
           command: |
-            # TODO: Use -Z cache-messages instead
-            cargo clean -p starkcrypto
-            cargo clean -p benchmarks
+            # Clean workspace projects  but not dependencies.
+            WORKSPACE=$(cargo metadata --format-version 1 | jq --raw-output '.workspace_members[] | match("^(\\w.+)\\ \\d";"g") | .captures[0].string')
+            echo "Workspace projects: " $WORKSPACE
+            for MEMBER in $WORKSPACE; do cargo clean -p $MEMBER; done
       - run:
           name: Linting
           command: |
@@ -34,21 +36,18 @@ jobs:
             RUSTFLAGS="-Dwarnings" cargo clippy --all --all-targets
       - run:
           name: Build all targets
-          command: RUST_BACKTRACE=1 RUSTFLAGS="-Dwarnings" cargo build --all --all-targets --features strict
+          command: RUST_BACKTRACE=1 RUSTFLAGS="-Dwarnings" cargo build --all --all-targets
       - run:
           name: Test in debug and release mode
           command: |
             RUST_BACKTRACE=1 cargo test --all -- --nocapture
             RUST_BACKTRACE=1 cargo test --release -- --nocapture
       - run:
-          name: Benchmark
+          name: Run benchmarks as tests
           command: |
-            if [[ "$CIRCLE_BRANCH" == "master" ]]
-            then
-              RUST_BACKTRACE=1 cargo bench --bench benchmark -- --save-baseline master
-            else
-              RUST_BACKTRACE=1 cargo bench --bench benchmark -- --baseline master
-            fi
+            # Actually running the benchmarks on CI is too noisy. The results
+            # would be meaningless. Instead we just run it to make sure they work.
+            RUST_BACKTRACE=1 cargo bench --bench benchmark -- --test
       # TODO: Coverage
       - save_cache:
           key: project-cache
