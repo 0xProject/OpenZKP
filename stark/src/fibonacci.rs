@@ -6,6 +6,8 @@ use hex_literal::*;
 use primefield::{invert_batch, u256h, FieldElement, U256};
 use rayon::prelude::*;
 
+// TODO: Naming
+#[allow(non_snake_case)]
 pub fn get_trace_table(length: u64, witness: FieldElement) -> TraceTable {
     let mut T_0 = vec![FieldElement::ONE];
     let mut T_1 = vec![witness];
@@ -21,6 +23,8 @@ pub fn get_trace_table(length: u64, witness: FieldElement) -> TraceTable {
     TraceTable::new(length as usize, 2, final_vec)
 }
 
+// TODO: Naming
+#[allow(non_snake_case)]
 pub fn eval_whole_loop(
     LDEn: &[&[FieldElement]],
     constraint_coefficients: &[FieldElement],
@@ -111,6 +115,8 @@ pub fn eval_whole_loop(
     CC
 }
 
+// TODO: Naming
+#[allow(non_snake_case)]
 pub fn eval_c_direct(
     x: &FieldElement,
     polynomials: &[&[FieldElement]],

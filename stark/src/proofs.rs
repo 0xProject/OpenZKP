@@ -9,17 +9,18 @@ use itertools::Itertools;
 use primefield::{invert_batch, FieldElement, U256};
 use rayon::prelude::*;
 
+#[allow(non_snake_case)]
 pub struct TraceTable {
-    pub ROWS:     usize,
-    pub COLS:     usize,
+    pub rows:     usize,
+    pub cols:     usize,
     pub elements: Vec<FieldElement>,
 }
 
 impl TraceTable {
-    pub fn new(ROWS: usize, COLS: usize, elements: Vec<FieldElement>) -> Self {
+    pub fn new(rows: usize, cols: usize, elements: Vec<FieldElement>) -> Self {
         Self {
-            ROWS,
-            COLS,
+            rows,
+            cols,
             elements,
         }
     }
@@ -69,7 +70,7 @@ pub struct ProofParams {
 // true, otherwise the system will preform all computation directly
 #[allow(clippy::type_complexity)]
 pub struct Constraint<'a> {
-    pub NCONSTRAINTS: usize,
+    pub num_constraints: usize,
     pub eval: &'a Fn(
         &FieldElement,      // X point
         &[&[FieldElement]], // Polynomials
@@ -90,7 +91,7 @@ pub struct Constraint<'a> {
 impl<'a> Constraint<'a> {
     #[allow(clippy::type_complexity)]
     pub fn new(
-        NCONSTRAINTS: usize,
+        num_constraints: usize,
         eval: &'a Fn(
             &FieldElement,
             &[&[FieldElement]],
@@ -103,13 +104,15 @@ impl<'a> Constraint<'a> {
         >,
     ) -> Self {
         Self {
-            NCONSTRAINTS,
+            num_constraints,
             eval,
             eval_loop,
         }
     }
 }
 
+// TODO: Naming
+#[allow(non_snake_case)]
 // TODO - Split into smaller functions
 #[allow(clippy::cognitive_complexity)]
 pub fn stark_proof(
@@ -119,7 +122,7 @@ pub fn stark_proof(
     claim_value: FieldElement,
     params: &ProofParams,
 ) -> Channel {
-    let trace_len = trace.elements.len() / trace.COLS;
+    let trace_len = trace.elements.len() / trace.cols;
     let omega = FieldElement::root(U256::from((trace_len * params.blowup) as u64)).unwrap();
     let g = omega.pow(U256::from(params.blowup as u64));
     let eval_domain_size = trace_len * params.blowup;
@@ -127,19 +130,19 @@ pub fn stark_proof(
 
     let eval_x = geometric_series(&FieldElement::ONE, &omega, eval_domain_size);
 
-    let mut TPn = vec![Vec::new(); trace.COLS];
-    (0..trace.COLS)
+    let mut TPn = vec![Vec::new(); trace.cols];
+    (0..trace.cols)
         .into_par_iter()
         .map(|x| {
             let mut hold_col = Vec::with_capacity(trace_len);
-            for i in (0..trace.elements.len()).step_by(trace.COLS) {
+            for i in (0..trace.elements.len()).step_by(trace.cols) {
                 hold_col.push(trace.elements[x + i].clone());
             }
             ifft(hold_col.as_slice())
         })
         .collect_into_vec(&mut TPn);
 
-    let mut LDEn = vec![vec![FieldElement::ZERO; eval_x.len()]; trace.COLS];
+    let mut LDEn = vec![vec![FieldElement::ZERO; eval_x.len()]; trace.cols];
     // OPT - Use some system to make this occur inline instead of storing then
     // processing
     #[allow(clippy::type_complexity)]
@@ -148,7 +151,7 @@ pub fn stark_proof(
         .map(|j| {
             (
                 j,
-                (0..trace.COLS)
+                (0..trace.cols)
                     .into_par_iter()
                     .map(|x| {
                         (
@@ -185,8 +188,8 @@ pub fn stark_proof(
     public_input.extend_from_slice(&claim_value.0.to_bytes_be());
     let mut proof = Channel::new(public_input.as_slice());
     proof.write(&tree[1]);
-    let mut constraint_coefficients = Vec::with_capacity(constraints.NCONSTRAINTS);
-    for _i in 0..constraints.NCONSTRAINTS {
+    let mut constraint_coefficients = Vec::with_capacity(constraints.num_constraints);
+    for _i in 0..constraints.num_constraints {
         constraint_coefficients.push(proof.read());
     }
 
@@ -230,7 +233,7 @@ pub fn stark_proof(
     proof.write(&c_tree[1]);
     let oods_point: FieldElement = proof.read();
     let oods_point_g = &oods_point * &g;
-    let mut oods_values = Vec::with_capacity(2 * trace.COLS + 1);
+    let mut oods_values = Vec::with_capacity(2 * trace.cols + 1);
     for item in TPn.iter() {
         let mut evaled = eval_poly(oods_point.clone(), item.as_slice());
         oods_values.push(evaled.clone());
@@ -250,8 +253,8 @@ pub fn stark_proof(
         proof.write(v);
     }
 
-    let mut oods_coefficients = Vec::with_capacity(2 * trace.COLS + 1);
-    for _i in 0..=2 * trace.COLS {
+    let mut oods_coefficients = Vec::with_capacity(2 * trace.cols + 1);
+    for _i in 0..=2 * trace.cols {
         oods_coefficients.push(proof.read());
     }
 
@@ -287,7 +290,7 @@ pub fn stark_proof(
             let B = &x_oods_cycle_g[i];
             let mut r = FieldElement::ZERO;
 
-            for x in 0..trace.COLS {
+            for x in 0..trace.cols {
                 r += &oods_coefficients[2 * x] * (&LDEn[x][i] - &oods_values[2 * x]) * A;
                 r += &oods_coefficients[2 * x + 1] * (&LDEn[x][i] - &oods_values[2 * x + 1]) * B;
             }
@@ -423,6 +426,8 @@ pub fn stark_proof(
     proof
 }
 
+// TODO: Naming
+#[allow(non_snake_case)]
 fn leaf_list(i: usize, LDEn: &[Vec<FieldElement>]) -> Vec<U256> {
     let mut ret = Vec::with_capacity(LDEn.len());
     for item in LDEn.iter() {
@@ -435,6 +440,8 @@ fn leaf_list(i: usize, LDEn: &[Vec<FieldElement>]) -> Vec<U256> {
     ret
 }
 
+// TODO: Naming
+#[allow(non_snake_case)]
 fn leaf_single(i: usize, CC: &[FieldElement]) -> U256 {
     CC[i.bit_reverse() >> (CC.len().leading_zeros() + 1)]
         .0
