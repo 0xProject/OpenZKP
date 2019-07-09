@@ -99,12 +99,12 @@ pub fn sign(message_hash: &str, private_key: &str) -> JsValue {
 
 #[wasm_bindgen]
 pub fn verify(message_hash: &str, signature: &JsValue, public_key: &JsValue) -> JsValue {
-    let s: Signature = signature.into_serde().unwrap();
-    let p: CurvePoint = public_key.into_serde().unwrap();
-    let r = from_string(&s.r);
-    let w = from_string(&s.w);
-    let x = from_string(&p.x);
-    let y = from_string(&p.y);
+    let signature: Signature = signature.into_serde().unwrap();
+    let public_key: CurvePoint = public_key.into_serde().unwrap();
+    let r = from_string(&signature.r);
+    let w = from_string(&signature.w);
+    let x = from_string(&public_key.x);
+    let y = from_string(&public_key.y);
     let is_valid = wrappers::verify(&from_string(message_hash), (&r, &w), (&x, &y));
 
     #[derive(Serialize, Deserialize)]
@@ -200,12 +200,12 @@ pub fn taker_sign(message: &JsValue, vault_a: u32, vault_b: u32, private_key: &s
 #[wasm_bindgen]
 pub fn maker_verify(message: &JsValue, signature: &JsValue, public_key: &JsValue) -> bool {
     let message = parse_message(message);
-    let s: Signature = signature.into_serde().unwrap();
-    let p: CurvePoint = public_key.into_serde().unwrap();
-    let r = from_string(&s.r);
-    let w = from_string(&s.w);
-    let x = from_string(&p.x);
-    let y = from_string(&p.y);
+    let signature: Signature = signature.into_serde().unwrap();
+    let public_key: CurvePoint = public_key.into_serde().unwrap();
+    let r = from_string(&signature.r);
+    let w = from_string(&signature.w);
+    let x = from_string(&public_key.x);
+    let y = from_string(&public_key.y);
     wrappers::maker_verify(&message, (&r, &w), (&x, &y))
 }
 
@@ -218,11 +218,11 @@ pub fn taker_verify(
     public_key: &JsValue,
 ) -> bool {
     let message = parse_message(message);
-    let s: Signature = signature.into_serde().unwrap();
-    let p: CurvePoint = public_key.into_serde().unwrap();
-    let r = from_string(&s.r);
-    let w = from_string(&s.w);
-    let x = from_string(&p.x);
-    let y = from_string(&p.y);
+    let signature: Signature = signature.into_serde().unwrap();
+    let public_key: CurvePoint = public_key.into_serde().unwrap();
+    let r = from_string(&signature.r);
+    let w = from_string(&signature.w);
+    let x = from_string(&public_key.x);
+    let y = from_string(&public_key.y);
     wrappers::taker_verify(&message, vault_a, vault_b, (&r, &w), (&x, &y))
 }
