@@ -2,7 +2,8 @@
 members = [
     "primefield",
     "ecc",
-    "starkdex"
+    "starkdex",
+    "wasm"
 ]
 
 # Don't forget to run `cargo clean` to force a rebuild of all dependencies!

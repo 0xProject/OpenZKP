@@ -11,9 +11,10 @@ crate-type = ["cdylib", "rlib"]
 default = ["console_error_panic_hook"]
 
 [dependencies]
+primefield = { path = "../primefield" }
+starkdex = { path = "../starkdex" }
 cfg-if = "0.1.2"
 wasm-bindgen = { version = "0.2", features = ["serde-serialize"] }
-starkcrypto = { path = ".." }
 hex = "0.3.2"
 serde = { version = "1.0.89", features = ["derive"] }
 
