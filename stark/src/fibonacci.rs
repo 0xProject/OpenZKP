@@ -1,9 +1,12 @@
 // TODO - Migrate to Choose naming system which the rust complier doesn't
 // complain about
 #![allow(non_snake_case)]
-
-use crate::{field::*, polynomial::*, proofs::*, u256::U256, u256h};
+use crate::{
+    polynomial::eval_poly,
+    proofs::{geometric_series, Constraint, TraceTable},
+};
 use hex_literal::*;
+use primefield::{invert_batch, u256h, FieldElement, U256};
 use rayon::prelude::*;
 
 pub fn get_trace_table(length: u64, witness: FieldElement) -> TraceTable {
@@ -200,7 +203,7 @@ pub fn get_constraint() -> Constraint<'static> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{channel::*, fft::*, merkle::*, u256::U256, u256h, utils::Reversible};
+    use crate::{channel::*, fft::*, merkle::*, utils::Reversible};
     use tiny_keccak::Keccak;
 
     #[test]

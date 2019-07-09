@@ -1,4 +1,4 @@
-use crate::u256::U256;
+use primefield::U256;
 use rayon::prelude::*;
 use tiny_keccak::Keccak;
 

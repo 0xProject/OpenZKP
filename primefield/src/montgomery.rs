@@ -1,5 +1,5 @@
 use crate::{
-    field::MODULUS,
+    field::FieldElement,
     u256::U256,
     u256h,
     utils::{adc, mac},
@@ -21,34 +21,34 @@ pub fn redc(lo: &U256, hi: &U256) -> U256 {
     // Algorithm 14.32 from Handbook of Applied Cryptography.
     // TODO: Optimize for the specific values of M64 and MODULUS.
     let ui = lo.c0.wrapping_mul(M64);
-    let (_a0, carry) = mac(lo.c0, ui, MODULUS.c0, 0);
-    let (a1, carry) = mac(lo.c1, ui, MODULUS.c1, carry);
-    let (a2, carry) = mac(lo.c2, ui, MODULUS.c2, carry);
-    let (a3, carry) = mac(lo.c3, ui, MODULUS.c3, carry);
+    let (_a0, carry) = mac(lo.c0, ui, FieldElement::MODULUS.c0, 0);
+    let (a1, carry) = mac(lo.c1, ui, FieldElement::MODULUS.c1, carry);
+    let (a2, carry) = mac(lo.c2, ui, FieldElement::MODULUS.c2, carry);
+    let (a3, carry) = mac(lo.c3, ui, FieldElement::MODULUS.c3, carry);
     let (a4, carry2) = adc(hi.c0, 0, carry);
     let ui = a1.wrapping_mul(M64);
-    let (_a1, carry) = mac(a1, ui, MODULUS.c0, 0);
-    let (a2, carry) = mac(a2, ui, MODULUS.c1, carry);
-    let (a3, carry) = mac(a3, ui, MODULUS.c2, carry);
-    let (a4, carry) = mac(a4, ui, MODULUS.c3, carry);
+    let (_a1, carry) = mac(a1, ui, FieldElement::MODULUS.c0, 0);
+    let (a2, carry) = mac(a2, ui, FieldElement::MODULUS.c1, carry);
+    let (a3, carry) = mac(a3, ui, FieldElement::MODULUS.c2, carry);
+    let (a4, carry) = mac(a4, ui, FieldElement::MODULUS.c3, carry);
     let (a5, carry2) = adc(hi.c1, carry2, carry);
     let ui = a2.wrapping_mul(M64);
-    let (_a2, carry) = mac(a2, ui, MODULUS.c0, 0);
-    let (a3, carry) = mac(a3, ui, MODULUS.c1, carry);
-    let (a4, carry) = mac(a4, ui, MODULUS.c2, carry);
-    let (a5, carry) = mac(a5, ui, MODULUS.c3, carry);
+    let (_a2, carry) = mac(a2, ui, FieldElement::MODULUS.c0, 0);
+    let (a3, carry) = mac(a3, ui, FieldElement::MODULUS.c1, carry);
+    let (a4, carry) = mac(a4, ui, FieldElement::MODULUS.c2, carry);
+    let (a5, carry) = mac(a5, ui, FieldElement::MODULUS.c3, carry);
     let (a6, carry2) = adc(hi.c2, carry2, carry);
     let ui = a3.wrapping_mul(M64);
-    let (_a3, carry) = mac(a3, ui, MODULUS.c0, 0);
-    let (a4, carry) = mac(a4, ui, MODULUS.c1, carry);
-    let (a5, carry) = mac(a5, ui, MODULUS.c2, carry);
-    let (a6, carry) = mac(a6, ui, MODULUS.c3, carry);
+    let (_a3, carry) = mac(a3, ui, FieldElement::MODULUS.c0, 0);
+    let (a4, carry) = mac(a4, ui, FieldElement::MODULUS.c1, carry);
+    let (a5, carry) = mac(a5, ui, FieldElement::MODULUS.c2, carry);
+    let (a6, carry) = mac(a6, ui, FieldElement::MODULUS.c3, carry);
     let (a7, _carry) = adc(hi.c3, carry2, carry);
 
     // Final reduction
     let mut r = U256::new(a4, a5, a6, a7);
-    if r >= MODULUS {
-        r -= &MODULUS;
+    if r >= FieldElement::MODULUS {
+        r -= &FieldElement::MODULUS;
     }
     r
 }
@@ -64,10 +64,10 @@ pub fn mul_redc(x: &U256, y: &U256) -> U256 {
     let (a2, carry) = mac(0, x.c0, y.c2, carry);
     let (a3, carry) = mac(0, x.c0, y.c3, carry);
     let a4 = carry;
-    let (_a, carry) = mac(a0, k, MODULUS.c0, 0);
-    let (a0, carry) = mac(a1, k, MODULUS.c1, carry);
-    let (a1, carry) = mac(a2, k, MODULUS.c2, carry);
-    let (a2, carry) = mac(a3, k, MODULUS.c3, carry);
+    let (_a, carry) = mac(a0, k, FieldElement::MODULUS.c0, 0);
+    let (a0, carry) = mac(a1, k, FieldElement::MODULUS.c1, carry);
+    let (a1, carry) = mac(a2, k, FieldElement::MODULUS.c2, carry);
+    let (a2, carry) = mac(a3, k, FieldElement::MODULUS.c3, carry);
     let a3 = a4 + carry;
     let k = x.c1.wrapping_mul(y.c0).wrapping_add(a0).wrapping_mul(M64);
     let (a0, carry) = mac(a0, x.c1, y.c0, 0);
@@ -75,10 +75,10 @@ pub fn mul_redc(x: &U256, y: &U256) -> U256 {
     let (a2, carry) = mac(a2, x.c1, y.c2, carry);
     let (a3, carry) = mac(a3, x.c1, y.c3, carry);
     let a4 = carry;
-    let (_a, carry) = mac(a0, k, MODULUS.c0, 0);
-    let (a0, carry) = mac(a1, k, MODULUS.c1, carry);
-    let (a1, carry) = mac(a2, k, MODULUS.c2, carry);
-    let (a2, carry) = mac(a3, k, MODULUS.c3, carry);
+    let (_a, carry) = mac(a0, k, FieldElement::MODULUS.c0, 0);
+    let (a0, carry) = mac(a1, k, FieldElement::MODULUS.c1, carry);
+    let (a1, carry) = mac(a2, k, FieldElement::MODULUS.c2, carry);
+    let (a2, carry) = mac(a3, k, FieldElement::MODULUS.c3, carry);
     let a3 = a4 + carry;
     let k = x.c2.wrapping_mul(y.c0).wrapping_add(a0).wrapping_mul(M64);
     let (a0, carry) = mac(a0, x.c2, y.c0, 0);
@@ -86,10 +86,10 @@ pub fn mul_redc(x: &U256, y: &U256) -> U256 {
     let (a2, carry) = mac(a2, x.c2, y.c2, carry);
     let (a3, carry) = mac(a3, x.c2, y.c3, carry);
     let a4 = carry;
-    let (_a, carry) = mac(a0, k, MODULUS.c0, 0);
-    let (a0, carry) = mac(a1, k, MODULUS.c1, carry);
-    let (a1, carry) = mac(a2, k, MODULUS.c2, carry);
-    let (a2, carry) = mac(a3, k, MODULUS.c3, carry);
+    let (_a, carry) = mac(a0, k, FieldElement::MODULUS.c0, 0);
+    let (a0, carry) = mac(a1, k, FieldElement::MODULUS.c1, carry);
+    let (a1, carry) = mac(a2, k, FieldElement::MODULUS.c2, carry);
+    let (a2, carry) = mac(a3, k, FieldElement::MODULUS.c3, carry);
     let a3 = a4 + carry;
     let k = x.c3.wrapping_mul(y.c0).wrapping_add(a0).wrapping_mul(M64);
     let (a0, carry) = mac(a0, x.c3, y.c0, 0);
@@ -97,16 +97,16 @@ pub fn mul_redc(x: &U256, y: &U256) -> U256 {
     let (a2, carry) = mac(a2, x.c3, y.c2, carry);
     let (a3, carry) = mac(a3, x.c3, y.c3, carry);
     let a4 = carry;
-    let (_a, carry) = mac(a0, k, MODULUS.c0, 0);
-    let (a0, carry) = mac(a1, k, MODULUS.c1, carry);
-    let (a1, carry) = mac(a2, k, MODULUS.c2, carry);
-    let (a2, carry) = mac(a3, k, MODULUS.c3, carry);
+    let (_a, carry) = mac(a0, k, FieldElement::MODULUS.c0, 0);
+    let (a0, carry) = mac(a1, k, FieldElement::MODULUS.c1, carry);
+    let (a1, carry) = mac(a2, k, FieldElement::MODULUS.c2, carry);
+    let (a2, carry) = mac(a3, k, FieldElement::MODULUS.c3, carry);
     let a3 = a4 + carry;
 
     // Final reduction
     let mut r = U256::new(a0, a1, a2, a3);
-    if r.cmp(&MODULUS) != Ordering::Less {
-        r -= &MODULUS;
+    if r.cmp(&FieldElement::MODULUS) != Ordering::Less {
+        r -= &FieldElement::MODULUS;
     }
     r
 }
@@ -118,7 +118,8 @@ pub fn sqr_redc(a: &U256) -> U256 {
 }
 
 pub fn inv_redc(n: &U256) -> Option<U256> {
-    n.invmod(&MODULUS).map(|ni| mul_redc(&ni, &R3))
+    n.invmod(&FieldElement::MODULUS)
+        .map(|ni| mul_redc(&ni, &R3))
 }
 
 pub fn to_montgomery(n: &U256) -> U256 {

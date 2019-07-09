@@ -1,8 +1,4 @@
-use crate::{
-    field::{FieldElement, MODULUS},
-    u256::U256,
-    u256h,
-};
+use crate::{field::FieldElement, u256::U256, u256h};
 use hex_literal::*;
 
 pub fn square_root(a: &FieldElement) -> Option<FieldElement> {
@@ -15,7 +11,7 @@ pub fn square_root(a: &FieldElement) -> Option<FieldElement> {
 
 // Returns the result of (a/p) != -1, where (a/p) is the Legendre symbol.
 fn is_quadratic_residue(a: &FieldElement) -> bool {
-    a.pow(MODULUS >> 1) != FieldElement::NEGATIVE_ONE
+    a.pow(FieldElement::MODULUS >> 1) != FieldElement::NEGATIVE_ONE
 }
 
 // These two constants are chosen so that 1 + SIGNIFICAND << BINARY_EXPONENT ==
@@ -33,7 +29,7 @@ fn tonelli_shanks(a: &FieldElement) -> FieldElement {
     // This algorithm is still correct when the following assertion fails. However,
     // more efficient algorithms exist when MODULUS % 4 == 1 or MODULUS % 8 == 5
     // (3.36 and 3.37 in HAC).
-    debug_assert!(&MODULUS & 7u64 == 1);
+    debug_assert!(&FieldElement::MODULUS & 7u64 == 1);
 
     if a.is_zero() {
         return FieldElement::ZERO;
@@ -65,13 +61,16 @@ mod tests {
     fn binary_exponent_is_correct() {
         assert_eq!(
             BINARY_EXPONENT,
-            (MODULUS - U256::from(1u128)).trailing_zeros()
+            (FieldElement::MODULUS - U256::from(1u128)).trailing_zeros()
         );
     }
 
     #[test]
     fn significand_is_correct() {
-        assert_eq!(SIGNIFICAND << BINARY_EXPONENT, MODULUS - U256::from(1u128));
+        assert_eq!(
+            SIGNIFICAND << BINARY_EXPONENT,
+            FieldElement::MODULUS - U256::from(1u128)
+        );
     }
 
     #[test]

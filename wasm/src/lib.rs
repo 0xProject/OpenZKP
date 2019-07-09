@@ -3,9 +3,9 @@
 mod utils;
 
 use cfg_if::cfg_if;
+use primefield::U256;
 use serde::{Deserialize, Serialize};
 use starkdex::wrappers;
-use primefield::U256;
 use std::u64;
 use wasm_bindgen::prelude::*;
 

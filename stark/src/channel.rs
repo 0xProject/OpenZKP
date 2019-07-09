@@ -1,5 +1,5 @@
-use crate::{field::*, u256::U256, u256h};
 use hex_literal::*;
+use primefield::{u256h, FieldElement, U256};
 use rayon::prelude::*;
 use tiny_keccak::Keccak;
 
@@ -85,7 +85,7 @@ impl Readable<FieldElement> for Channel {
         loop {
             let number: U256 = self.read();
             let seed = number & MASK;
-            if seed < MODULUS {
+            if seed < FieldElement::MODULUS {
                 // TODO: Avoid accessing FieldElement members directly
                 break FieldElement(seed);
             }
@@ -160,6 +160,7 @@ impl Writable<&FieldElement> for Channel {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use primefield::u256h;
 
     #[test]
     fn proof_of_work_test() {

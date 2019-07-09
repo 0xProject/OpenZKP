@@ -1,9 +1,14 @@
-#![allow(non_snake_case)] // TODO - Migrate to naming system which the rust complier doesn't complain
-                          // about
+// TODO - Fix to naming system
+#![allow(non_snake_case)]
 use crate::{
-    channel::*, fft::*, field::*, merkle::*, polynomial::*, u256::U256, utils::Reversible,
+    channel::{Channel, Readable, Writable},
+    fft::{fft_cofactor, ifft},
+    merkle::make_tree,
+    polynomial::eval_poly,
+    utils::Reversible,
 };
 use itertools::Itertools;
+use primefield::{invert_batch, FieldElement, U256};
 use rayon::prelude::*;
 
 pub struct TraceTable {
@@ -517,8 +522,9 @@ pub fn geometric_series(base: &FieldElement, step: &FieldElement, len: usize) ->
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{fibonacci::*, u256::U256, u256h};
+    use crate::fibonacci::*;
     use hex_literal::*;
+    use primefield::{u256h, U256};
 
     #[test]
     fn fib_test_1024_python_witness() {

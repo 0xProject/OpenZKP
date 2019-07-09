@@ -1,4 +1,5 @@
-use crate::{field::FieldElement, u256::U256, utils::Reversible};
+use crate::utils::Reversible;
+use primefield::{FieldElement, U256};
 
 pub fn fft(a: &[FieldElement]) -> Vec<FieldElement> {
     let mut result = a.to_vec();
@@ -89,8 +90,9 @@ fn reverse(x: u64, bits: u32) -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{polynomial::eval_poly, u256h};
+    use crate::polynomial::eval_poly;
     use hex_literal::*;
+    use primefield::u256h;
     use quickcheck_macros::quickcheck;
 
     #[test]

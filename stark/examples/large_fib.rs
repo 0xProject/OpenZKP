@@ -1,5 +1,6 @@
 use hex_literal::*;
-use starkcrypto::{fibonacci::*, field::FieldElement, proofs::*, u256::*, u256h};
+use primefield::{u256h, FieldElement, U256};
+use stark::{get_constraint, get_trace_table, stark_proof, ProofParams};
 use std::{env, time::Instant};
 
 fn main() {

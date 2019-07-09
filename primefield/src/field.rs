@@ -7,13 +7,6 @@ use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssi
 
 // TODO: Implement Serde
 
-// 0800000000000011 // (1 << 59) | (1 << 4) | (1)
-// 0000000000000000
-// 0000000000000000
-// 0000000000000001
-pub const MODULUS: U256 =
-    u256h!("0800000000000011000000000000000000000000000000000000000000000001");
-
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub struct FieldElement(pub U256);
 
@@ -21,6 +14,11 @@ impl FieldElement {
     pub const GENERATOR: FieldElement = FieldElement(u256h!(
         "07fffffffffff9b0ffffffffffffffffffffffffffffffffffffffffffffffa1"
     ));
+    /// Prime modulus of the field.
+    ///
+    /// Equal to (1 << 59) | (1 << 4) | 1.
+    pub const MODULUS: U256 =
+        u256h!("0800000000000011000000000000000000000000000000000000000000000001");
     // 3, in montgomery form.
     pub const NEGATIVE_ONE: FieldElement = FieldElement(u256h!(
         "0000000000000220000000000000000000000000000000000000000000000020"
@@ -112,7 +110,7 @@ impl FieldElement {
         if n.is_zero() {
             return Some(FieldElement::ONE);
         }
-        let (q, rem) = (MODULUS - U256::ONE).divrem(&n).unwrap();
+        let (q, rem) = (FieldElement::MODULUS - U256::ONE).divrem(&n).unwrap();
         if rem != U256::ZERO {
             return None;
         }
@@ -179,7 +177,7 @@ impl Neg for &FieldElement {
 
     #[inline(always)]
     fn neg(self) -> Self::Output {
-        FieldElement(MODULUS - &self.0)
+        FieldElement(FieldElement::MODULUS - &self.0)
     }
 }
 
@@ -187,8 +185,8 @@ impl AddAssign<&FieldElement> for FieldElement {
     #[inline(always)]
     fn add_assign(&mut self, rhs: &FieldElement) {
         self.0 += &rhs.0;
-        if self.0 >= MODULUS {
-            self.0 -= &MODULUS;
+        if self.0 >= FieldElement::MODULUS {
+            self.0 -= &FieldElement::MODULUS;
         }
     }
 }
@@ -200,7 +198,7 @@ impl SubAssign<&FieldElement> for FieldElement {
             self.0 -= &rhs.0;
         } else {
             self.0 -= &rhs.0;
-            self.0 += &MODULUS;
+            self.0 += &FieldElement::MODULUS;
         }
     }
 }
@@ -236,7 +234,7 @@ use quickcheck::{Arbitrary, Gen};
 impl Arbitrary for FieldElement {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         // TODO: Generate 0, 1, p/2 and -1
-        FieldElement(U256::arbitrary(g) % MODULUS)
+        FieldElement(U256::arbitrary(g) % FieldElement::MODULUS)
     }
 }
 
