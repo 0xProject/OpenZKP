@@ -1,9 +1,8 @@
-// TODO: Use u256h everywhere
-#![allow(clippy::unreadable_literal)]
-
+#![warn(clippy::all)]
+#![deny(warnings)]
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use hex_literal::*;
-use primefield::{u256h, FieldElement, U256};
+use primefield::{u256h, U256};
 use starkdex::hash;
 
 fn pedersen_hash(crit: &mut Criterion) {

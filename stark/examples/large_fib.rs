@@ -1,3 +1,5 @@
+#![warn(clippy::all)]
+#![deny(warnings)]
 use hex_literal::*;
 use primefield::{u256h, FieldElement, U256};
 use stark::{get_constraint, get_trace_table, stark_proof, ProofParams};

@@ -1,6 +1,3 @@
-// TODO - Migrate to Choose naming system which the rust complier doesn't
-// complain about
-#![allow(non_snake_case)]
 use crate::{
     polynomial::eval_poly,
     proofs::{geometric_series, Constraint, TraceTable},

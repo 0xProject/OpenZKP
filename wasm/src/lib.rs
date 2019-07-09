@@ -1,5 +1,5 @@
-// TODO Better variable names
-#![allow(clippy::many_single_char_names)]
+#![warn(clippy::all)]
+#![deny(warnings)]
 mod utils;
 
 use cfg_if::cfg_if;

@@ -1,5 +1,3 @@
-// TODO - Fix to naming system
-#![allow(non_snake_case)]
 use crate::{
     channel::{Channel, Readable, Writable},
     fft::{fft_cofactor, ifft},

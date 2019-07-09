@@ -1,3 +1,5 @@
+#![warn(clippy::all)]
+#![deny(warnings)]
 mod curve25519_donna;
 mod dalek;
 mod gmp;

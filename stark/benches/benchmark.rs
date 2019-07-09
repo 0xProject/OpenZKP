@@ -1,5 +1,5 @@
-// TODO: Use u256h everywhere
-#![allow(clippy::unreadable_literal)]
+#![warn(clippy::all)]
+#![deny(warnings)]
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use hex_literal::*;
