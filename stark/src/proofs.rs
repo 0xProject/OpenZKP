@@ -1,9 +1,7 @@
 use crate::{
     channel::{Channel, Readable, Writable},
     fft::{fft_cofactor, ifft},
-    merkle::{
-        self, {make_tree, Hashable},
-    },
+    merkle::{self, make_tree, Hashable},
     polynomial::eval_poly,
     utils::Reversible,
 };
