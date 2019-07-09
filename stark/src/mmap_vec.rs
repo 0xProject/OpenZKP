@@ -56,7 +56,7 @@ impl<T: Clone> MmapVec<T> {
         self[old_length..new_length].clone_from_slice(other);
     }
 
-        #[inline]
+    #[inline]
     pub fn as_slice(&self) -> &[T] {
         self
     }
