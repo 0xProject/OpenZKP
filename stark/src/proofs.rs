@@ -133,14 +133,9 @@ impl Groupable<Vec<U256>> for (usize, &[FieldElement]) {
         let layer = self.1;
         let coset_size = self.0;
         let n = layer.len();
-        let bits = 64 - (n as u64).leading_zeros(); // Floored base 2 log
         let mut internal_leaf = Vec::with_capacity(coset_size);
         for j in 0..coset_size {
-            internal_leaf.push(
-                layer[(index * coset_size + j).bit_reverse() >> (64 - bits + 1)]
-                    .0
-                    .clone(),
-            );
+            internal_leaf.push(layer[(index * coset_size + j).bit_reverse_at(n)].0.clone());
         }
         internal_leaf
     }
