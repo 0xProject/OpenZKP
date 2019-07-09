@@ -5,6 +5,7 @@ mod channel;
 mod fft;
 mod fibonacci;
 mod merkle;
+mod mmap_vec;
 mod polynomial;
 mod proofs;
 mod utils;
