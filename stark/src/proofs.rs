@@ -1,7 +1,9 @@
 use crate::{
     channel::{Channel, Readable, Writable},
     fft::{fft_cofactor, ifft},
-    merkle::{make_tree, Hashable},
+    merkle::{
+        self, {make_tree, Hashable},
+    },
     polynomial::eval_poly,
     utils::Reversible,
 };
@@ -547,7 +549,7 @@ fn perform_fri_layering(
         Vec::with_capacity(64 - (eval_domain_size.leading_zeros() as usize));
     fri.push(constraints_out_of_domain.to_vec());
     let mut fri_trees: Vec<Vec<[u8; 32]>> = Vec::with_capacity(params.fri_layout.len());
-    let held_tree = (params.blowup / 2, (fri[fri.len() - 1].as_slice())).merkleize();
+    let held_tree = (params.blowup / 2, fri[fri.len() - 1].as_slice()).merkleize();
     proof.write(&held_tree[1]);
     fri_trees.push(held_tree);
 
@@ -568,7 +570,7 @@ fn perform_fri_layering(
             ));
             eval_point = eval_point.square();
         }
-        let held_tree = (fri_const, (fri[fri.len() - 1].as_slice())).merkleize();
+        let held_tree = (fri_const, fri[fri.len() - 1].as_slice()).merkleize();
 
         proof.write(&held_tree[1]);
         fri_trees.push(held_tree);
@@ -610,7 +612,7 @@ fn decommit_with_queries_and_proof<R: Hashable, T: Groupable<R>>(
     for &index in queries.iter() {
         proof.write((&source).make_group(index));
     }
-    decommit_proof(crate::merkle::proof(tree, queries, source), proof);
+    decommit_proof(merkle::proof(tree, queries, source), proof);
 }
 
 // Note - This function exists because rust gets confused by the intersection of
@@ -658,7 +660,7 @@ fn decommit_fri_layers_and_trees(
             }
         }
 
-        let decommitment = crate::merkle::proof(
+        let decommitment = merkle::proof(
             &next_tree,
             &(fri_indices.as_slice()),
             (fri_const, fri_layers[current_fri].as_slice()),

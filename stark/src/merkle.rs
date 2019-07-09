@@ -71,17 +71,17 @@ pub fn hash_node(left_node: &[u8; 32], right_node: &[u8; 32]) -> [u8; 32] {
 }
 
 pub fn make_tree_direct<T: Hashable>(leaves: &[T]) -> Vec<[u8; 32]> {
-    let n = leaves.len() as u64;
-    let depth = 64 - n.leading_zeros() - 1; // Log_2 of n
+    let n = leaves.len();
+    let depth = n.trailing_zeros(); // Log_2 of n
+    let layer1_index = 2_usize.pow(depth - 1);
+    let mut tree = vec![[0; 32]; n]; // Get my vector heap for end results
 
-    let mut tree = vec![[0; 32]; 2 * n as usize]; // Get my vector heap for end results
-    for i in 0..n {
-        tree[(2_u64.pow(depth) + i) as usize] = leaves[(i) as usize].hash();
+    for (index, pair) in leaves.chunks(2).enumerate() {
+        tree[layer1_index + index] = hash_node(&pair[0_usize].hash(), &pair[1_usize].hash());
     }
-    for i in (0..(2_u64.pow(depth))).rev() {
-        tree[i as usize] = hash_node(&tree[(2 * i) as usize], &tree[(2 * i + 1) as usize]);
+    for i in (0..(2_usize.pow(depth - 1))).rev() {
+        tree[i] = hash_node(&tree[2 * i], &tree[2 * i + 1]);
     }
-    tree.truncate(tree.len() / 2);
     tree
 }
 
@@ -95,9 +95,10 @@ pub fn make_tree<T: Hashable + std::marker::Sync>(leaves: &[T]) -> Vec<[u8; 32]>
 
 pub fn make_tree_threaded<T: Hashable + std::marker::Sync>(leaves: &[T]) -> Vec<[u8; 32]> {
     let n = leaves.len();
-    let depth = 64 - n.leading_zeros() - 1;
+    debug_assert!(n.is_power_of_two());
+    let depth = n.trailing_zeros() as usize;
 
-    let mut layers = Vec::with_capacity(depth as usize);
+    let mut layers = Vec::with_capacity(depth);
     let mut hold = Vec::with_capacity(n / 2);
     leaves
         .into_par_iter()
@@ -106,7 +107,7 @@ pub fn make_tree_threaded<T: Hashable + std::marker::Sync>(leaves: &[T]) -> Vec<
         .collect_into_vec(&mut hold);
     layers.push(hold);
 
-    for i in 1..(depth as usize) {
+    for i in 1..(depth) {
         let mut hold = Vec::with_capacity(layers[i - 1].len() / 2);
         layers[i - 1]
             .clone()
@@ -126,21 +127,21 @@ pub fn proof<R: Hashable, T: Groupable<R>>(
     indices: &[usize],
     source: T,
 ) -> Vec<[u8; 32]> {
-    let depth = 64 - (tree.len() as u64).leading_zeros() - 1; // Log base 2 - 1
-    let num_leaves = 2_u64.pow(depth);
+    debug_assert!(tree.len().is_power_of_two());
+    let depth = tree.len().trailing_zeros();
+    let num_leaves = 2_usize.pow(depth);
     let num_nodes = 2 * num_leaves;
-    let mut known = vec![false; (num_nodes + 1) as usize];
+    let mut known = vec![false; num_nodes + 1];
     let mut decommitment = Vec::new();
 
     let mut peekable_indicies = indices.iter().peekable();
     let mut excluded_pair = false;
-    let fixed = 2_u64.pow(depth);
-    indices.iter().for_each(|&index| {
+    for &index in indices.iter() {
         peekable_indicies.next();
-        known[(fixed + (index as u64) % num_leaves) as usize] = true;
+        known[num_leaves + index % num_leaves] = true;
 
         if index % 2 == 0 {
-            known[(fixed + 1 + (index as u64) % num_leaves) as usize] = true;
+            known[num_leaves + 1 + index % num_leaves] = true;
             let prophet = peekable_indicies.peek();
             match prophet {
                 Some(x) => {
@@ -155,31 +156,31 @@ pub fn proof<R: Hashable, T: Groupable<R>>(
                 }
             }
         } else if !excluded_pair {
-            known[(fixed - 1 + (index as u64) % num_leaves) as usize] = true;
+            known[num_leaves - 1 + index % num_leaves] = true;
             decommitment.push(source.make_group(index - 1).hash());
         } else {
-            known[(fixed - 1 + (index as u64) % num_leaves) as usize] = true;
+            known[num_leaves - 1 + index % num_leaves] = true;
             excluded_pair = false;
         }
-    });
+    }
 
-    for i in (2_u64.pow(depth - 1))..(2_u64.pow(depth)) {
-        let left = known[(2 * i) as usize];
-        let right = known[(2 * i + 1) as usize];
-        known[i as usize] = left || right;
+    for i in (2_usize.pow(depth - 1))..(2_usize.pow(depth)) {
+        let left = known[2 * i];
+        let right = known[2 * i + 1];
+        known[i] = left || right;
     }
 
     for d in (1..depth).rev() {
-        for i in (2_u64.pow(d - 1))..(2_u64.pow(d)) {
-            let left = known[(2 * i) as usize];
-            let right = known[(2 * i + 1) as usize];
+        for i in (2_usize.pow(d - 1))..(2_usize.pow(d)) {
+            let left = known[2 * i];
+            let right = known[2 * i + 1];
             if left && !right {
-                decommitment.push(tree[(2 * i + 1) as usize]);
+                decommitment.push(tree[2 * i + 1]);
             }
             if !left && right {
-                decommitment.push(tree[(2 * i) as usize]);
+                decommitment.push(tree[2 * i]);
             }
-            known[i as usize] = left || right;
+            known[i] = left || right;
         }
     }
     decommitment
