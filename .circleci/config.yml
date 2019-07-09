@@ -17,6 +17,7 @@ jobs:
           name: Setup build environment
           command: |
             sudo apt-get update
+            sudo apt-get install jq
             rustup component add rustfmt clippy
             rustup toolchain install nightly
             rustup component add rustfmt --toolchain nightly
@@ -24,9 +25,10 @@ jobs:
       - run:
           name: Clean build
           command: |
-            # TODO: Use -Z cache-messages instead
-            cargo clean -p starkcrypto
-            cargo clean -p benchmarks
+            # Clean workspace projects  but not dependencies.
+            WORKSPACE=$(cargo metadata --format-version 1 | jq '.workspace_members[] | match("^(\\w.+)\\ \\d";"g") | .captures[0].string')
+            echo "Workspace projects: " $WORKSPACE
+            for MEMBER in $WORKSPACE; do cargo clean -p $MEMBER; done
       - run:
           name: Linting
           command: |
