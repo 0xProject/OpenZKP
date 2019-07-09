@@ -18,6 +18,7 @@ lazy_static! {
     };
 }
 
+// TODO (SECURITY): Use side-channel-resistant math
 pub fn private_to_public(private_key: &U256) -> Affine {
     Affine::from(&base_mul(&*GENERATOR_TABLE, private_key % ORDER))
 }
@@ -26,6 +27,7 @@ fn divmod(a: &U256, b: &U256) -> Option<U256> {
     b.invmod(&ORDER).map(|bi| a.mulmod(&bi, &ORDER))
 }
 
+// TODO (SECURITY): The signatures are malleable in s -> MODULUS - s.
 pub fn sign(msg_hash: &U256, private_key: &U256) -> (U256, U256) {
     assert!(msg_hash.bits() <= 251);
     for i in 0..1000 {
@@ -57,6 +59,7 @@ pub fn sign(msg_hash: &U256, private_key: &U256) -> (U256, U256) {
     panic!("Could not find k for ECDSA after 1000 tries.")
 }
 
+// TODO (SECURITY): The signatures are malleable in s -> MODULUS - s.
 pub fn verify(msg_hash: &U256, r: &U256, w: &U256, public_key: &Affine) -> bool {
     assert!(r != &U256::ZERO);
     assert!(r.bits() <= 251);
