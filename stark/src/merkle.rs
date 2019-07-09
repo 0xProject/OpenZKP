@@ -18,6 +18,12 @@ impl Hashable for &[U256] {
     }
 }
 
+impl Hashable for Vec<U256> {
+    fn hash(&self) -> [u8; 32] {
+        self.as_slice().hash()
+    }
+}
+
 fn mask(data: &mut [u8; 32]) {
     for d in data[20..].iter_mut() {
         *d = 0 as u8;

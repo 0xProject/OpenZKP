@@ -1,5 +1,6 @@
 pub trait Reversible {
     fn bit_reverse(self) -> Self;
+    fn bit_reverse_at(self, len: usize) -> Self;
 }
 
 impl Reversible for u64 {
@@ -14,6 +15,10 @@ impl Reversible for u64 {
         }
         reversed
     }
+
+    fn bit_reverse_at(self, len: usize) -> Self {
+        self.bit_reverse() >> (len.leading_zeros() + 1)
+    }
 }
 
 impl Reversible for usize {
@@ -27,6 +32,10 @@ impl Reversible for usize {
             self >>= 1;
         }
         reversed
+    }
+
+    fn bit_reverse_at(self, len: usize) -> Self {
+        self.bit_reverse() >> (len.leading_zeros() + 1)
     }
 }
 
