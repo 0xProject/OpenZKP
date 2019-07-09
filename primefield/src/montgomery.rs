@@ -153,7 +153,7 @@ mod tests {
 
     #[quickcheck]
     fn test_to_from(mut n: U256) -> bool {
-        n %= MODULUS;
+        n %= FieldElement::MODULUS;
         from_montgomery(&to_montgomery(&n)) == n
     }
 }

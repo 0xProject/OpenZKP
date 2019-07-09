@@ -468,10 +468,7 @@ pub fn inv_mod(modulus: &U256, num: &U256) -> Option<U256> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        field::{FieldElement, MODULUS},
-        u256h,
-    };
+    use crate::{field::FieldElement, u256h};
     use hex_literal::*;
     use quickcheck_macros::quickcheck;
 
@@ -694,7 +691,7 @@ mod tests {
 
     #[quickcheck]
     fn test_inv_lehmer(a: FieldElement) -> bool {
-        match inv_mod(&MODULUS, &(&a).into()) {
+        match inv_mod(&FieldElement::MODULUS, &(&a).into()) {
             None => a == FieldElement::ZERO,
             Some(a_inv) => FieldElement::from(a_inv) * a == FieldElement::ONE,
         }

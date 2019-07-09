@@ -214,6 +214,8 @@ mod tests {
     // step of the proof, change this to make a set of unit tests of each of them
     // [then move to proofs].
     #[allow(clippy::cognitive_complexity)]
+    // TODO: Naming
+    #[allow(non_snake_case)]
     fn fib_proof_test() {
         let trace_len = 1024;
         let beta = 2_u64.pow(4);

@@ -410,7 +410,7 @@ mod tests {
 
     #[quickcheck]
     fn fermats_little_theorem(a: FieldElement) -> bool {
-        a.pow(MODULUS) == a
+        a.pow(FieldElement::MODULUS) == a
     }
 
     #[test]
