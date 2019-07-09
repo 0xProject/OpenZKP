@@ -468,7 +468,7 @@ pub fn inv_mod(modulus: &U256, num: &U256) -> Option<U256> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{field::FieldElement, u256h};
+    use crate::u256h;
     use hex_literal::*;
     use quickcheck_macros::quickcheck;
 
@@ -690,10 +690,13 @@ mod tests {
     }
 
     #[quickcheck]
-    fn test_inv_lehmer(a: FieldElement) -> bool {
-        match inv_mod(&FieldElement::MODULUS, &(&a).into()) {
-            None => a == FieldElement::ZERO,
-            Some(a_inv) => FieldElement::from(a_inv) * a == FieldElement::ONE,
+    fn test_inv_lehmer(mut a: U256) -> bool {
+        const MODULUS: U256 =
+            u256h!("0800000000000011000000000000000000000000000000000000000000000001");
+        a %= MODULUS;
+        match inv_mod(&MODULUS, &a) {
+            None => a == U256::ZERO,
+            Some(a_inv) => a.mulmod(&a_inv, &MODULUS) == U256::ONE,
         }
     }
 }

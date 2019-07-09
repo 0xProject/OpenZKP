@@ -1,5 +1,5 @@
 use crate::pedersen::hash;
-use primefield::U256;
+use u256::U256;
 
 #[derive(Debug)]
 pub struct MakerMessage<T> {
@@ -42,7 +42,7 @@ pub fn hash_taker(maker_hash: &U256, vault_a: u32, vault_b: u32) -> U256 {
 mod tests {
     use super::*;
     use hex_literal::*;
-    use primefield::u256h;
+    use u256::u256h;
 
     #[test]
     fn test_hash_maker() {

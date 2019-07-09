@@ -1,6 +1,6 @@
-use primefield::U256;
 use rayon::prelude::*;
 use tiny_keccak::Keccak;
+use u256::U256;
 
 pub trait Hashable {
     fn hash(&self) -> [u8; 32];

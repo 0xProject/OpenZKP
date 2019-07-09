@@ -1,13 +1,10 @@
 [package]
-name = "starkdex"
+name = "u256"
 version = "0.1.0"
 authors = ["Remco Bloemen <remco@0x.org>"]
 edition = "2018"
 
 [dependencies]
-u256 =  { path = "../u256" }
-primefield =  { path = "../primefield" }
-ecc =  { path = "../ecc" }
 hex = ""
 hex-literal = "0.1.4"
 itertools = "0.8.0"

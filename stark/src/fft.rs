@@ -1,5 +1,6 @@
 use crate::utils::Reversible;
-use primefield::{FieldElement, U256};
+use primefield::FieldElement;
+use u256::U256;
 
 pub fn fft(a: &[FieldElement]) -> Vec<FieldElement> {
     let mut result = a.to_vec();
@@ -92,8 +93,8 @@ mod tests {
     use super::*;
     use crate::polynomial::eval_poly;
     use hex_literal::*;
-    use primefield::u256h;
     use quickcheck_macros::quickcheck;
+    use u256::u256h;
 
     #[test]
     fn fft_one_element_test() {

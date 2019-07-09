@@ -4,8 +4,8 @@ use crate::{
     GENERATOR, ORDER,
 };
 use lazy_static::*;
-use primefield::U256;
 use tiny_keccak::sha3_256;
+use u256::U256;
 
 lazy_static! {
     static ref GENERATOR_TABLE: [Affine; 32] = {
@@ -79,8 +79,9 @@ pub fn verify(msg_hash: &U256, r: &U256, w: &U256, public_key: &Affine) -> bool 
 mod tests {
     use super::*;
     use hex_literal::*;
-    use primefield::{u256h, FieldElement};
+    use primefield::FieldElement;
     use quickcheck_macros::quickcheck;
+    use u256::u256h;
 
     #[test]
     fn test_pubkey() {

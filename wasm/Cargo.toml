@@ -11,6 +11,7 @@ crate-type = ["cdylib", "rlib"]
 default = ["console_error_panic_hook"]
 
 [dependencies]
+u256 = { path = "../u256" }
 primefield = { path = "../primefield" }
 starkdex = { path = "../starkdex" }
 cfg-if = "0.1.2"

@@ -1,9 +1,10 @@
 #![warn(clippy::all)]
 #![deny(warnings)]
 use hex_literal::*;
-use primefield::{u256h, FieldElement, U256};
+use primefield::FieldElement;
 use stark::{get_constraint, get_trace_table, stark_proof, ProofParams};
 use std::{env, time::Instant};
+use u256::{u256h, U256};
 
 fn main() {
     let args: Vec<String> = env::args().collect();

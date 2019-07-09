@@ -1,11 +1,11 @@
-use crate::{
-    field::FieldElement,
-    u256::U256,
-    u256h,
-    utils::{adc, mac},
-};
+use crate::field::FieldElement;
 use hex_literal::*;
 use std::cmp::Ordering;
+use u256::{
+    u256h,
+    utils::{adc, mac},
+    U256,
+};
 
 // M64 = -MODULUS^(-1) mod 2^64
 pub const M64: u64 = 0xffff_ffff_ffff_ffff; // = -1

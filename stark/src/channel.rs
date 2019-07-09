@@ -1,7 +1,8 @@
 use hex_literal::*;
-use primefield::{u256h, FieldElement, U256};
+use primefield::FieldElement;
 use rayon::prelude::*;
 use tiny_keccak::Keccak;
+use u256::{u256h, U256};
 
 pub trait Readable<T> {
     fn read(&mut self) -> T;
@@ -160,7 +161,7 @@ impl Writable<&FieldElement> for Channel {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use primefield::u256h;
+    use u256::u256h;
 
     #[test]
     fn proof_of_work_test() {

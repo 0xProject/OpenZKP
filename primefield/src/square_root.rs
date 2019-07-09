@@ -1,5 +1,6 @@
-use crate::{field::FieldElement, u256::U256, u256h};
+use crate::field::FieldElement;
 use hex_literal::*;
+use u256::{u256h, U256};
 
 pub fn square_root(a: &FieldElement) -> Option<FieldElement> {
     if is_quadratic_residue(a) {

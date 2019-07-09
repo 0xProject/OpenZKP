@@ -12,7 +12,8 @@ pub use jacobian::Jacobian;
 pub use wnaf::{base_mul, double_base_mul, double_mul, mul};
 
 use hex_literal::*;
-use primefield::{u256h, FieldElement, U256};
+use primefield::FieldElement;
+use u256::{u256h, U256};
 
 // Curve parameters
 

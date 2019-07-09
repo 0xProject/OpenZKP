@@ -1,6 +1,7 @@
 use ecc::Affine;
 use hex_literal::*;
-use primefield::{u256h, FieldElement, U256};
+use primefield::FieldElement;
+use u256::{u256h, U256};
 
 pub const PEDERSEN_POINTS: [Affine; 506] = [
     Affine::Point {

@@ -12,7 +12,7 @@ pub fn eval_poly(x: FieldElement, coefficients: &[FieldElement]) -> FieldElement
 mod tests {
     use super::*;
     use hex_literal::*;
-    use primefield::{u256h, U256};
+    use u256::{u256h, U256};
 
     #[test]
     fn poly_eval_test() {

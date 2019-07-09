@@ -3,8 +3,9 @@ use crate::{
     proofs::{geometric_series, Constraint, TraceTable},
 };
 use hex_literal::*;
-use primefield::{invert_batch, u256h, FieldElement, U256};
+use primefield::{invert_batch, FieldElement};
 use rayon::prelude::*;
+use u256::{u256h, U256};
 
 // TODO: Naming
 #[allow(non_snake_case)]

@@ -3,10 +3,10 @@
 mod utils;
 
 use cfg_if::cfg_if;
-use primefield::U256;
 use serde::{Deserialize, Serialize};
 use starkdex::wrappers;
 use std::u64;
+use u256::U256;
 use wasm_bindgen::prelude::*;
 
 cfg_if! {
