@@ -25,3 +25,9 @@ criterion = "0.2.10"
 [[bench]]
 name = "benchmark"
 harness = false
+
+[features]
+# no features by default
+default = []
+unsafe_ecdsa = []
+

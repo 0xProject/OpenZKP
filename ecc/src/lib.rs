@@ -2,14 +2,19 @@
 #![warn(clippy::all)]
 #![deny(warnings)]
 mod curve;
-mod ecdsa;
 mod jacobian;
 mod wnaf;
 
 pub use curve::Affine;
-pub use ecdsa::{private_to_public, sign, verify};
 pub use jacobian::Jacobian;
-pub use wnaf::{base_mul, double_base_mul, double_mul, mul};
+pub use wnaf::{base_mul, double_base_mul, double_mul, mul, window_table_affine};
+
+// The ECDSA functions are not implemented for security.
+#[cfg(feature = "unsafe_ecdsa")]
+mod ecdsa;
+
+#[cfg(feature = "unsafe_ecdsa")]
+pub use ecdsa::{private_to_public, sign, verify};
 
 use hex_literal::*;
 use primefield::FieldElement;

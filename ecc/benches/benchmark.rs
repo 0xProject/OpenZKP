@@ -1,10 +1,13 @@
 #![warn(clippy::all)]
 #![deny(warnings)]
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use ecc::{mul, private_to_public, sign, verify, Affine, Jacobian};
+use ecc::{mul, Affine, Jacobian};
 use hex_literal::*;
 use primefield::FieldElement;
 use u256::{u256h, U256};
+
+#[cfg(feature = "unsafe_ecdsa")]
+use ecc::{private_to_public, sign, verify};
 
 fn curve_add(crit: &mut Criterion) {
     let a = Affine::Point {
@@ -194,6 +197,7 @@ fn wnaf_mul_affine(crit: &mut Criterion) {
     });
 }
 
+#[cfg(feature = "unsafe_ecdsa")]
 fn ecdsa_sign(crit: &mut Criterion) {
     let message_hash = u256h!("03d937c035c878245caf64531a5756109c53068da139362728feb561405371cb");
     let private_key = u256h!("0208a0a10250e382e1e4bbe2880906c2791bf6275695e02fbbc6aeff9cd8b31a");
@@ -202,6 +206,7 @@ fn ecdsa_sign(crit: &mut Criterion) {
     });
 }
 
+#[cfg(feature = "unsafe_ecdsa")]
 fn ecdsa_verify(crit: &mut Criterion) {
     let message_hash = u256h!("03d937c035c878245caf64531a5756109c53068da139362728feb561405371cb");
     let private_key = u256h!("0208a0a10250e382e1e4bbe2880906c2791bf6275695e02fbbc6aeff9cd8b31a");
@@ -223,7 +228,11 @@ fn criterion_benchmark(c: &mut Criterion) {
     jacobian_mul_affine(c);
     jacobian_to_affine(c);
     wnaf_mul_affine(c);
+
+    #[cfg(feature = "unsafe_ecdsa")]
     ecdsa_sign(c);
+
+    #[cfg(feature = "unsafe_ecdsa")]
     ecdsa_verify(c);
 }
 

@@ -7,7 +7,7 @@ edition = "2018"
 [dependencies]
 u256 =  { path = "../u256" }
 primefield =  { path = "../primefield" }
-ecc =  { path = "../ecc" }
+ecc =  { path = "../ecc", features=["unsafe_ecdsa"]  }
 hex = ""
 hex-literal = "0.1.4"
 itertools = "0.8.0"
