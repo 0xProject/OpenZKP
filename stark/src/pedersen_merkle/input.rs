@@ -1,4 +1,4 @@
-use crate::field::FieldElement;
+use primefield::FieldElement;
 use serde::Deserialize;
 use serde_json::from_str;
 

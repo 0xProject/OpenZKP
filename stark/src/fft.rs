@@ -21,6 +21,7 @@ pub fn fft_cofactor(a: &[FieldElement], cofactor: &FieldElement) -> Vec<FieldEle
     fft(&result)
 }
 
+#[allow(dead_code)]
 pub fn bit_reversal_fft_cofactor(a: &[FieldElement], cofactor: &FieldElement) -> Vec<FieldElement> {
     let mut result = a.to_vec();
     let mut c = FieldElement::ONE;

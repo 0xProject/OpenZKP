@@ -1,9 +1,6 @@
 #[cfg(test)]
 mod tests {
     use crate::{
-        fft::{bit_reversal_fft_cofactor, fft, fft_cofactor, ifft},
-        field::{FieldElement, MODULUS},
-        merkle::{hash_leaf_list, hash_node, make_tree_from_leaves, Hashable},
         montgomery::R1,
         pedersen_merkle::{
             input::{get_private_input, get_public_input},
@@ -13,7 +10,10 @@ mod tests {
         u256::U256,
         utils::Reversible,
     };
+    use fft::{bit_reversal_fft_cofactor, fft, fft_cofactor, ifft};
     use hex_literal::*;
+    use merkle::{hash_leaf_list, hash_node, make_tree_from_leaves, Hashable};
+    use primefield::{FieldElement, MODULUS};
     use rayon::prelude::*;
 
     #[test]

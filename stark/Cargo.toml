@@ -7,6 +7,8 @@ edition = "2018"
 [dependencies]
 u256 =  { path = "../u256" }
 primefield =  { path = "../primefield" }
+ecc =  { path = "../ecc" }
+starkdex = {path = "../starkdex"}
 crossbeam = "0.3.0"
 rayon = "1.0.3"
 hex = ""
@@ -17,6 +19,8 @@ itertools = "0.8.0"
 crunchy = "0.2.2"
 memmap = ""
 tempfile = ""
+serde_json = ""
+serde = { version = "1.0.80", features = ["derive"] }
 
 [dev-dependencies]
 primefield = { path = "../primefield", features = ["quickcheck"]}

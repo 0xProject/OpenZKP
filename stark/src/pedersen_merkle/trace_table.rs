@@ -1,13 +1,11 @@
-use crate::{
-    curve::Affine,
-    field::FieldElement,
-    pedersen::SHIFT_POINT,
-    pedersen_merkle::input::{PrivateInput, PublicInput},
-    pedersen_points::PEDERSEN_POINTS,
-    u256::U256,
-};
+use crate::pedersen_merkle::input::{PrivateInput, PublicInput};
+use ecc::Affine;
+use primefield::FieldElement;
+use starkdex::{PEDERSEN_POINTS, SHIFT_POINT};
 use std::default::Default;
+use u256::U256;
 
+#[allow(dead_code)]
 pub fn get_trace_table(
     public_input: &PublicInput,
     private_input: &PrivateInput,
