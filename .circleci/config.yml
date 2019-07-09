@@ -43,14 +43,11 @@ jobs:
             RUST_BACKTRACE=1 cargo test --all -- --nocapture
             RUST_BACKTRACE=1 cargo test --release -- --nocapture
       - run:
-          name: Benchmark
+          name: Run benchmarks as tests
           command: |
-            if [[ "$CIRCLE_BRANCH" == "master" ]]
-            then
-              RUST_BACKTRACE=1 cargo bench --bench benchmark -- --save-baseline master
-            else
-              RUST_BACKTRACE=1 cargo bench --bench benchmark -- --baseline master
-            fi
+            # Actually running the benchmarks on CI is too noisy. The results
+            # would be meaningless. Instead we just run it to make sure they work.
+            RUST_BACKTRACE=1 cargo bench --bench benchmark -- --test
       # TODO: Coverage
       - save_cache:
           key: project-cache
