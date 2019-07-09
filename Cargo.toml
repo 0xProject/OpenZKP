@@ -1,41 +1,14 @@
-[package]
-name = "starkcrypto"
-version = "0.1.0"
-authors = ["Remco Bloemen <remco@0x.org>"]
-edition = "2018"
-
 [workspace]
 members = [
+    "primefield",
+    "ecc",
+    "starkdex",
     "wasm",
-    "benchmarks",
+    "stark"
 ]
-
-[dependencies]
-crossbeam = "0.3.0"
-rayon = "1.0.3"
-hex = ""
-hex-literal = "0.1.4"
-tiny-keccak = "1.4.2"
-lazy_static = "1.3.0"
-itertools = "0.8.0"
-crunchy = "0.2.2"
-
-[dev-dependencies]
-rand = "0.6.5"
-quickcheck = "0.8"
-quickcheck_macros = "0.8"
-criterion = "0.2.10"
-
-[[bench]]
-name = "benchmark"
-harness = false
 
 # Don't forget to run `cargo clean` to force a rebuild of all dependencies!
 [profile.release]
 opt-level = 3
 lto = true
 debug = true # Debug symbols are required for profiling. Remove for production!
-
-[features]
-# Treat warnings as a build error.
-strict = []

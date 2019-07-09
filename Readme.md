@@ -32,23 +32,6 @@ You can then run tests under profiling. It is recommended to filter for a specif
 ```sh
 cargo instruments --release --bench benchmark --open [test name]
 ```
-
-## TODO
-
--   Make function `const fn`.
--   Integrate a fuzzer.
--   Implement more algoritms:
-    https://en.wikipedia.org/wiki/Template:Number-theoretic_algorithms
--   Migrate to libcore
-    https://doc.rust-lang.org/core/
--   Use const genetics for modulus and const fn for field params?
-    This RFC seems to explicitly not allow that:
-    https://github.com/rust-lang/rfcs/blob/master/text/2000-const-generics.md
-
--   GCD http://www.csd.uwo.ca/~moreno/CS424/Ressources/ComparingSeveralGCDAlgorithms.Jebelean.1993.pdf
-    https://pdfs.semanticscholar.org/a7e7/b01a3dd6ac0ec160b35e513c5efa38c2369e.pdf
-    https://math.stackexchange.com/questions/2515148/lehmers-algorithm-for-finding-the-greatest-common-divisor
-
 ## Goals
 
 -   Perfomance optimized for Native and WebAssembly
