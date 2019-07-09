@@ -2,8 +2,8 @@
 #![deny(warnings)]
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use hex_literal::*;
-use primefield::{u256h, U256};
 use starkdex::hash;
+use u256::{u256h, U256};
 
 fn pedersen_hash(crit: &mut Criterion) {
     let elements = [

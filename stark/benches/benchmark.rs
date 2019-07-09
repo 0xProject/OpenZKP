@@ -3,8 +3,9 @@
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use hex_literal::*;
-use primefield::{u256h, FieldElement, U256};
+use primefield::FieldElement;
 use stark::{fft_cofactor, get_constraint, get_trace_table, make_tree, stark_proof, ProofParams};
+use u256::{u256h, U256};
 
 fn merkle_proof_make(crit: &mut Criterion) {
     let depth = 6;
