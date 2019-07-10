@@ -1,20 +1,19 @@
 #[cfg(test)]
 mod tests {
     use crate::{
-        montgomery::R1,
+        fft::{bit_reversal_fft_cofactor, ifft},
+        merkle::{make_tree_from_leaves, Hashable},
         pedersen_merkle::{
             input::{get_private_input, get_public_input},
             trace_table::get_trace_table,
         },
         polynomial::eval_poly,
-        u256::U256,
         utils::Reversible,
     };
-    use fft::{bit_reversal_fft_cofactor, fft, fft_cofactor, ifft};
     use hex_literal::*;
-    use merkle::{hash_leaf_list, hash_node, make_tree_from_leaves, Hashable};
-    use primefield::{FieldElement, MODULUS};
+    use primefield::FieldElement;
     use rayon::prelude::*;
+    use u256::U256;
 
     #[test]
     fn pedersen_merkle_proof() {
@@ -22,9 +21,10 @@ mod tests {
         let trace_table = get_trace_table(&public_input, &get_private_input());
 
         let mut columns: [Vec<FieldElement>; 8] = Default::default();
+        let r1 = FieldElement::ONE.0;
         for (i, value) in trace_table.iter().enumerate() {
             if i % 4 == 0 {
-                columns[i % 8].push(FieldElement::from(R1) * value.clone());
+                columns[i % 8].push(FieldElement::from(&r1) * value.clone());
             } else {
                 columns[i % 8].push(value.clone());
             }
@@ -32,7 +32,7 @@ mod tests {
 
         let trace_length: usize = public_input.path_length * 256;
         let trace_generator =
-            FieldElement::GENERATOR.pow(MODULUS / U256::from(trace_length as u64));
+            FieldElement::GENERATOR.pow(FieldElement::MODULUS / U256::from(trace_length as u64));
 
         let mut trace_polynomials: Vec<Vec<FieldElement>> =
             vec![Vec::with_capacity(trace_length); 8];
@@ -144,7 +144,7 @@ mod tests {
 
         let partner_index: u64 = index - 1;
         let partner_point = &evaluation_offset
-            * evaluation_generator.pow(U256::from((partner_index.bit_reverse() >> (64 - 25))));
+            * evaluation_generator.pow(U256::from(partner_index.bit_reverse() >> (64 - 25)));
         let partner_row: Vec<_> = (0..8)
             .map(|i| eval_poly(partner_point.clone(), &trace_polynomials[i]).0)
             .collect();
@@ -166,7 +166,7 @@ mod tests {
                     bit_reversal_fft_cofactor(&p, &cofactor)
                 })
                 .collect_into_vec(&mut leaves);
-            for j in (0..trace_length) {
+            for j in 0..trace_length {
                 leaf_hashes.push(
                     vec![
                         leaves[0][j].0.clone(),

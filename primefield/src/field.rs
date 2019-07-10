@@ -277,15 +277,6 @@ mod tests {
     use itertools::repeat_n;
     use quickcheck_macros::quickcheck;
 
-    use quickcheck::{Arbitrary, Gen};
-
-    impl Arbitrary for FieldElement {
-        fn arbitrary<G: Gen>(g: &mut G) -> Self {
-            // TODO: Generate 0, 1, p/2 and -1
-            FieldElement(U256::arbitrary(g) % FieldElement::MODULUS)
-        }
-    }
-
     #[test]
     fn negative_one_is_additive_inverse_of_one() {
         assert_eq!(

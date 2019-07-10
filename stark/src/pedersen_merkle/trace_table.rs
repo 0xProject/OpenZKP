@@ -126,11 +126,9 @@ fn get_coordinates(p: &Affine) -> (&FieldElement, &FieldElement) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        pedersen::old_hash,
-        pedersen_merkle::input::{get_private_input, get_public_input},
-    };
+    use crate::pedersen_merkle::input::{get_private_input, get_public_input};
     use itertools::Itertools;
+    use starkdex::old_hash;
     use std::iter;
 
     #[test]

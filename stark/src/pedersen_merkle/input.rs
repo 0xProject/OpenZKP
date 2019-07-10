@@ -38,10 +38,10 @@ pub fn get_periodic_columns() -> PeriodicColumns {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        curve::Affine, pedersen_points::PEDERSEN_POINTS, polynomial::eval_poly,
-        proofs::geometric_series, U256,
-    };
+    use crate::{polynomial::eval_poly, proofs::geometric_series};
+    use ecc::Affine;
+    use starkdex::PEDERSEN_POINTS;
+    use u256::U256;
 
     #[test]
     fn test_get_public_input() {
