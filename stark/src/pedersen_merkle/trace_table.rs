@@ -1,11 +1,22 @@
-use crate::pedersen_merkle::input::PrivateInput;
+use crate::{pedersen_merkle::input::PrivateInput, proofs::TraceTable};
 use ecc::Affine;
 use primefield::FieldElement;
 use starkdex::{PEDERSEN_POINTS, SHIFT_POINT};
 use std::default::Default;
 use u256::U256;
 
-#[allow(dead_code)]
+pub fn get_trace_table(
+    path_length: usize,
+    leaf: FieldElement,
+    private_input: &PrivateInput,
+) -> TraceTable {
+    TraceTable {
+        rows:     path_length,
+        cols:     8,
+        elements: get_trace(path_length, leaf, private_input),
+    }
+}
+
 pub fn get_trace(
     path_length: usize,
     leaf: FieldElement,
