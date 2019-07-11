@@ -3,23 +3,29 @@
 
 use criterion::{
     black_box, criterion_group, criterion_main, AxisScale, Bencher, Criterion,
-    ParameterizedBenchmark, PlotConfiguration,
+    ParameterizedBenchmark, PlotConfiguration, Throughput,
 };
 use hex_literal::*;
 use primefield::FieldElement;
 use stark::{fft_cofactor, get_constraint, get_trace_table, make_tree, stark_proof, ProofParams};
+use std::{convert::TryInto, marker::Send};
 use u256::{u256h, U256};
 
 const SIZES: [usize; 6] = [64, 256, 1024, 4096, 16384, 65536];
 
 /// Utility function for log-log benchmark plots over a size parameter.
-fn logsize_bench<F>(crit: &mut Criterion, id: &str, sizes: &'static [usize], mut f: F)
+fn log_size_bench<F>(crit: &mut Criterion, id: &str, sizes: &'static [usize], mut f: F)
 where
     F: FnMut(&mut Bencher, usize) + 'static,
 {
     crit.bench(
         id,
         ParameterizedBenchmark::new(id, move |bench, &&size| f(bench, size), sizes)
+            .sample_size(10)
+            .throughput(|&&s| Throughput::Elements(s.try_into().unwrap()))
+            .plot_config(PlotConfiguration::default().summary_scale(AxisScale::Logarithmic)),
+    );
+}
             .plot_config(PlotConfiguration::default().summary_scale(AxisScale::Logarithmic)),
     );
 }
