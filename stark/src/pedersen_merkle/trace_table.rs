@@ -1,4 +1,4 @@
-use crate::pedersen_merkle::input::{PrivateInput, PublicInput};
+use crate::pedersen_merkle::input::PrivateInput;
 use ecc::Affine;
 use primefield::FieldElement;
 use starkdex::{PEDERSEN_POINTS, SHIFT_POINT};
@@ -6,19 +6,19 @@ use std::default::Default;
 use u256::U256;
 
 #[allow(dead_code)]
-pub fn get_trace_table(
-    public_input: &PublicInput,
+pub fn get_trace(
+    path_length: usize,
+    leaf: FieldElement,
     private_input: &PrivateInput,
 ) -> Vec<FieldElement> {
     let mut state: Row = Default::default();
     state.right.point = Affine::Point {
-        x: public_input.leaf.clone(),
+        x: leaf,
         y: FieldElement::ZERO,
     };
 
-    let mut trace_table: Vec<FieldElement> =
-        Vec::with_capacity(public_input.path_length * 256 * 8 as usize);
-    for path_index in 0..public_input.path_length {
+    let mut trace_table: Vec<FieldElement> = Vec::with_capacity(path_length * 256 * 8);
+    for path_index in 0..path_length {
         for bit_index in 0..256 {
             if bit_index % 256 == 0 {
                 let other_hash = U256::from(&private_input.path[path_index]);
@@ -126,17 +126,23 @@ fn get_coordinates(p: &Affine) -> (&FieldElement, &FieldElement) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::pedersen_merkle::input::{get_private_input, get_public_input};
+    use crate::pedersen_merkle::input::{get_private_input, get_public_input, PublicInput};
     use itertools::Itertools;
     use starkdex::old_hash;
     use std::iter;
 
     #[test]
-    fn trace_table_is_correct() {
+    fn trace_is_correct() {
         let public_input = get_public_input();
-        let trace_table = get_trace_table(&public_input, &get_private_input());
+        // let leaf = public_input.leaf;
+        // let path_length = public_input.path_length
+        let trace = get_trace(
+            public_input.path_length,
+            public_input.leaf,
+            &get_private_input(),
+        );
         assert_eq!(
-            U256::from(&trace_table[trace_table.len() - 2]),
+            U256::from(&trace[trace.len() - 2]),
             U256::from(&public_input.root)
         );
     }

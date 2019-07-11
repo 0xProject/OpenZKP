@@ -5,7 +5,7 @@ mod tests {
         merkle::{make_tree_from_leaves, Hashable},
         pedersen_merkle::{
             input::{get_private_input, get_public_input},
-            trace_table::get_trace_table,
+            trace_table::get_trace,
         },
         polynomial::eval_poly,
         utils::Reversible,
@@ -18,7 +18,11 @@ mod tests {
     #[test]
     fn pedersen_merkle_proof() {
         let public_input = get_public_input();
-        let trace_table = get_trace_table(&public_input, &get_private_input());
+        let trace_table = get_trace(
+            public_input.path_length,
+            public_input.leaf,
+            &get_private_input(),
+        );
 
         let mut columns: [Vec<FieldElement>; 8] = Default::default();
         let r1 = FieldElement::ONE.0;
