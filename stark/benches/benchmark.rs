@@ -17,7 +17,6 @@ const SIZES: [usize; 6] = [64, 256, 1024, 4096, 16384, 65536];
 lazy_static! {
     // Create an exponential number of threads up to the number of cpus.
     static ref THREADS: Vec<usize> = (0..=num_cpus::get().trailing_zeros())
-        .into_iter()
         .map(|log| 1usize << log)
         .collect();
 }
@@ -82,7 +81,6 @@ fn fft_size(crit: &mut Criterion) {
             "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
         ));
         let leaves: Vec<_> = (0..size)
-            .into_iter()
             .map(|i| FieldElement::from(U256::from(i as u64)))
             .collect();
         bench.iter(|| black_box(fft_cofactor(black_box(&leaves), black_box(&cofactor))))
@@ -96,7 +94,6 @@ fn fft_threads(crit: &mut Criterion) {
             "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
         ));
         let leaves: Vec<_> = (0..size)
-            .into_iter()
             .map(|i| FieldElement::from(U256::from(i as u64)))
             .collect();
         bench.iter(|| black_box(fft_cofactor(black_box(&leaves), black_box(&cofactor))))
