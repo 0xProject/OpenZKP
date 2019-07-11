@@ -1,5 +1,5 @@
 use crate::{
-    channel::{Channel, Readable, Writable},
+    channel::{ProverChannel, RandomGenerator, Writable},
     fft::{fft_cofactor, ifft},
     merkle::{self, make_tree, Hashable},
     polynomial::eval_poly,
@@ -193,7 +193,7 @@ pub fn stark_proof(
     claim_index: usize,
     claim_value: FieldElement,
     params: &ProofParams,
-) -> Channel {
+) -> ProverChannel {
     let trace_len = trace.elements.len() / trace.cols;
     let omega = FieldElement::root(U256::from((trace_len * params.blowup) as u64)).unwrap();
     let g = omega.pow(U256::from(params.blowup as u64));
@@ -209,12 +209,12 @@ pub fn stark_proof(
 
     let mut public_input = [claim_index.to_be_bytes()].concat();
     public_input.extend_from_slice(&claim_value.0.to_bytes_be());
-    let mut proof = Channel::new(public_input.as_slice());
+    let mut proof = ProverChannel::new(public_input.as_slice());
     proof.write(&tree[1]);
 
     let mut constraint_coefficients = Vec::with_capacity(constraints.num_constraints);
     for _i in 0..constraints.num_constraints {
-        constraint_coefficients.push(proof.read());
+        constraint_coefficients.push(proof.get_random());
     }
 
     let LDEn_reference: Vec<&[FieldElement]> = LDEn.iter().map(|x| x.as_slice()).collect();
@@ -308,10 +308,10 @@ fn fri_layer(
     next
 }
 
-fn get_indices(num: usize, bits: u32, proof: &mut Channel) -> Vec<usize> {
+fn get_indices(num: usize, bits: u32, proof: &mut ProverChannel) -> Vec<usize> {
     let mut query_indices = Vec::with_capacity(num + 3);
     while query_indices.len() < num {
-        let val: U256 = proof.read();
+        let val: U256 = proof.get_random();
         query_indices.push(((val.clone() >> (0x100 - 0x040)).c0 & (2_u64.pow(bits) - 1)) as usize);
         query_indices.push(((val.clone() >> (0x100 - 0x080)).c0 & (2_u64.pow(bits) - 1)) as usize);
         query_indices.push(((val.clone() >> (0x100 - 0x0C0)).c0 & (2_u64.pow(bits) - 1)) as usize);
@@ -428,7 +428,7 @@ fn calculate_constraints_on_domain(
 }
 
 fn get_out_of_domain_information(
-    proof: &mut Channel,
+    proof: &mut ProverChannel,
     trace_poly: &[&[FieldElement]],
     constraint_coefficients: &[FieldElement],
     claim_index: usize,
@@ -436,7 +436,7 @@ fn get_out_of_domain_information(
     constraints: &Constraint,
     g: &FieldElement,
 ) -> (FieldElement, Vec<FieldElement>, Vec<FieldElement>) {
-    let oods_point: FieldElement = proof.read();
+    let oods_point: FieldElement = proof.get_random();
     let oods_point_g = &oods_point * g;
     let mut oods_values = Vec::with_capacity(2 * trace_poly.len() + 1);
     for item in trace_poly.iter() {
@@ -460,7 +460,7 @@ fn get_out_of_domain_information(
 
     let mut oods_coefficients = Vec::with_capacity(2 * trace_poly.len() + 1);
     for _i in 0..=2 * trace_poly.len() {
-        oods_coefficients.push(proof.read());
+        oods_coefficients.push(proof.get_random());
     }
     (oods_point, oods_coefficients, oods_values)
 }
@@ -530,7 +530,7 @@ fn calculate_out_of_domain_constraints(
 
 fn perform_fri_layering(
     constraints_out_of_domain: &[FieldElement],
-    proof: &mut Channel,
+    proof: &mut ProverChannel,
     params: &ProofParams,
     eval_x: &[FieldElement],
 ) -> (Vec<Vec<FieldElement>>, Vec<Vec<[u8; 32]>>) {
@@ -552,7 +552,7 @@ fn perform_fri_layering(
         let mut eval_point = if x == 0 {
             FieldElement::ONE
         } else {
-            proof.read()
+            proof.get_random()
         };
         for _ in 0..x {
             fri.push(fri_layer(
@@ -572,7 +572,7 @@ fn perform_fri_layering(
     }
 
     // Gets the coefficient representation of the last number of fri reductions
-    let mut eval_point = proof.read();
+    let mut eval_point = proof.get_random();
     for _ in 0..params.fri_layout[params.fri_layout.len() - 1] {
         fri.push(fri_layer(
             &fri[fri.len() - 1].as_slice(),
@@ -598,9 +598,9 @@ fn decommit_with_queries_and_proof<R: Hashable, T: Groupable<R>>(
     queries: &[usize],
     source: T,
     tree: &[[u8; 32]],
-    proof: &mut Channel,
+    proof: &mut ProverChannel,
 ) where
-    Channel: Writable<R>,
+    ProverChannel: Writable<R>,
 {
     for &index in queries.iter() {
         proof.write((&source).make_group(index));
@@ -610,7 +610,7 @@ fn decommit_with_queries_and_proof<R: Hashable, T: Groupable<R>>(
 
 // Note - This function exists because rust gets confused by the intersection of
 // the write types and the others.
-fn decommit_proof(decommitment: Vec<[u8; 32]>, proof: &mut Channel) {
+fn decommit_proof(decommitment: Vec<[u8; 32]>, proof: &mut ProverChannel) {
     for x in decommitment.iter() {
         proof.write(x);
     }
@@ -621,7 +621,7 @@ fn decommit_fri_layers_and_trees(
     fri_trees: &[Vec<[u8; 32]>],
     query_indices: &[usize],
     params: &ProofParams,
-    proof: &mut Channel,
+    proof: &mut ProverChannel,
 ) {
     let mut fri_indices: Vec<usize> = query_indices
         .to_vec()
@@ -697,7 +697,7 @@ mod tests {
                 fri_layout: vec![3, 2],
             },
         );
-        assert_eq!(actual.digest, expected);
+        assert_eq!(actual.coin.digest, expected);
     }
 
     #[test]
@@ -722,7 +722,7 @@ mod tests {
                 fri_layout: vec![3, 2],
             },
         );
-        assert_eq!(actual.digest, expected);
+        assert_eq!(actual.coin.digest, expected);
     }
 
     #[test]
@@ -747,7 +747,7 @@ mod tests {
                 fri_layout: vec![3, 2, 1],
             },
         );
-        assert_eq!(actual.digest, expected);
+        assert_eq!(actual.coin.digest, expected);
     }
 
     #[test]
@@ -849,19 +849,19 @@ mod tests {
         let mut public_input = [(claim_index as u64).to_be_bytes()].concat();
         public_input.extend_from_slice(&claim_value.0.to_bytes_be());
 
-        let mut proof = Channel::new(&public_input.as_slice());
+        let mut proof = ProverChannel::new(&public_input.as_slice());
         // Checks that the channel is inited properly
         assert_eq!(
-            proof.digest,
+            proof.coin.digest,
             hex!("c891a11ddbc6c425fad523a7a4aeafa505d7aa1638cfffbd5b747100bc69e367")
         );
         proof.write(&tree[1]);
         // Checks that the channel allows writing of [u8; 32] properly
         assert_eq!(
-            proof.digest,
+            proof.coin.digest,
             hex!("b7d80385fa0c8879473cdf987ea7970bb807aec78bb91af39a1504d965ad8e92")
         );
-        let test_element: FieldElement = proof.read();
+        let test_element: FieldElement = proof.get_random();
         // Checks that the channel is pulling field elements properly
         assert_eq!(
             U256::from(test_element),
@@ -870,7 +870,7 @@ mod tests {
 
         let mut constraint_coefficients = Vec::with_capacity(constraints.num_constraints);
         for _i in 0..constraints.num_constraints {
-            constraint_coefficients.push(proof.read());
+            constraint_coefficients.push(proof.get_random());
         }
 
         let LDEn_reference: Vec<&[FieldElement]> = LDEn.iter().map(|x| x.as_slice()).collect();
@@ -917,7 +917,7 @@ mod tests {
         // Checks that our get out of domain function call has written the right values
         // to the proof
         assert_eq!(
-            proof.digest,
+            proof.coin.digest,
             hex!("f556f04f342598411b5626a797a114a64b3a15a5ab0d4f2a6b350b941d56d071")
         );
 
@@ -953,7 +953,7 @@ mod tests {
         );
         // Checks that the fri layering function decommited the right values.
         assert_eq!(
-            proof.digest,
+            proof.coin.digest,
             hex!("e2c7e50f3d1dcaad74678d8abb489675849ead08e2f848429a136304d9550bb6")
         );
 
@@ -979,7 +979,7 @@ mod tests {
         );
         // Checks that our first decommitment is successful
         assert_eq!(
-            proof.digest,
+            proof.coin.digest,
             hex!("804a12f5f778c9d2b076d07a8c516dd8e1a57c35ef2df10f55df58764812799d")
         );
 
@@ -991,7 +991,7 @@ mod tests {
         );
         // Checks that our second decommitment is successful
         assert_eq!(
-            proof.digest,
+            proof.coin.digest,
             hex!("ea73885255f98e9a51f6549fb74e076181971e426190660cdc45bac337423cb6")
         );
 
@@ -1004,7 +1004,7 @@ mod tests {
         );
         // Checks that our fri decommitment is successful
         assert_eq!(
-            proof.digest,
+            proof.coin.digest,
             hex!("3d3b54ffd1c5e6f579648398b4a9bb67166d83d24c76e6adf74fa0feaf4e16d9")
         );
     }
