@@ -42,21 +42,23 @@ fn log_thread_bench<F>(crit: &mut Criterion, id: &str, size: usize, mut f: F)
 where
     F: FnMut(&mut Bencher) + 'static + Send,
 {
-    let bench = ParameterizedBenchmark::new(
+    crit.bench(
         id,
-        move |bench, &&num_threads| {
-            let pool = ThreadPoolBuilder::new()
-                .num_threads(num_threads)
-                .build()
-                .expect("Building benchmark thread pool failed.");
-            pool.install(|| f(bench))
-        },
-        THREADS.iter(),
-    )
-    .sample_size(10)
-    .throughput(move |_| Throughput::Elements(size.try_into().unwrap()))
-    .plot_config(PlotConfiguration::default().summary_scale(AxisScale::Logarithmic));
-    crit.bench(id, bench);
+        ParameterizedBenchmark::new(
+            id,
+            move |bench, &&num_threads| {
+                let pool = ThreadPoolBuilder::new()
+                    .num_threads(num_threads)
+                    .build()
+                    .expect("Building benchmark thread pool failed.");
+                pool.install(|| f(bench))
+            },
+            THREADS.iter(),
+        )
+        .sample_size(10)
+        .throughput(move |_| Throughput::Elements(size.try_into().unwrap()))
+        .plot_config(PlotConfiguration::default().summary_scale(AxisScale::Logarithmic)),
+    );
 }
 
 fn merkle_tree_size(crit: &mut Criterion) {
