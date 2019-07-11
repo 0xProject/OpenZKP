@@ -18,7 +18,7 @@ lazy_static! {
     // Create an exponential number of threads up to the number of cpus.
     static ref THREADS: Vec<usize> = (0..=num_cpus::get().trailing_zeros())
         .into_iter()
-        .map(|l| 1usize << l)
+        .map(|log| 1usize << log)
         .collect();
 }
 
