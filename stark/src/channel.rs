@@ -128,9 +128,6 @@ impl ProverChannel {
     }
 }
 
-// TODO - Remove this dead code allowance when the actual verifier uses the
-// verifier channel
-#[allow(dead_code)]
 impl VerifierChannel {
     pub fn new(proof: Vec<u8>) -> Self {
         Self {
