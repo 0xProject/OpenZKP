@@ -35,6 +35,6 @@ fn main() {
         },
     );
     let duration = start.elapsed();
-    println!("{:?}", potential_proof.digest);
+    println!("{:?}", potential_proof.coin.digest);
     println!("Time elapsed in proof function is: {:?}", duration);
 }
