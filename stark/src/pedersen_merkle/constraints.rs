@@ -100,6 +100,7 @@ pub fn eval_c_direct(
         Affine::Point { x, y } => (x, y),
     };
 
+    // Get these by evaluating interpolating pedersen polynomials.
     let q_x_left = FieldElement::ONE;
     let q_y_left = FieldElement::ZERO;
     let q_x_right = FieldElement::ONE;
