@@ -295,8 +295,10 @@ impl Replayable<FieldElement> for VerifierChannel {
         let mut ret = Vec::with_capacity(len);
         for _ in 0..len {
             let mut holder = [0_u8; 32];
-            holder.copy_from_slice(&self.proof[self.proof_index..(self.proof_index + 32)]);
-            self.proof_index += 32;
+            let from = self.proof_index;
+            let to = from + 32;
+            self.proof_index = to;
+            holder.copy_from_slice(&self.proof[from..to]);
             ret.push(FieldElement(U256::from_bytes_be(&holder)));
         }
         self.coin.write(&self.proof[start_index..self.proof_index]);
