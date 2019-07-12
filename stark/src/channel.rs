@@ -1,6 +1,3 @@
-// TODO - Remove this dead code allowance when the actual verifier uses the
-// verifier channel
-#![allow(dead_code)]
 use hex_literal::*;
 use primefield::FieldElement;
 use rayon::prelude::*;
@@ -17,10 +14,10 @@ pub trait Writable<T> {
 
 pub trait Replayable<T> {
     fn replay(&mut self) -> T;
-}
 
-pub trait MultiReplayable<T> {
-    fn replay(&mut self, len: usize) -> T;
+    fn replay_many(&mut self, count: usize) -> Vec<T> {
+        (0..count).map(|_| self.replay()).collect()
+    }
 }
 
 #[derive(PartialEq, Eq, Clone, Default)]
@@ -29,11 +26,13 @@ pub struct PublicCoin {
     counter:    u64,
 }
 
+#[derive(PartialEq, Eq, Clone, Default)]
 pub struct ProverChannel {
     pub coin:  PublicCoin,
     pub proof: Vec<u8>,
 }
 
+#[derive(PartialEq, Eq, Clone, Default)]
 pub struct VerifierChannel {
     pub coin:    PublicCoin,
     pub proof:   Vec<u8>,
@@ -117,6 +116,9 @@ impl ProverChannel {
     }
 }
 
+// TODO - Remove this dead code allowance when the actual verifier uses the
+// verifier channel
+#[allow(dead_code)]
 impl VerifierChannel {
     pub fn new(seed: &[u8], proof: Vec<u8>) -> Self {
         assert_eq!(seed, &proof[..seed.len()]);
@@ -206,8 +208,8 @@ impl Writable<&[u8]> for PublicCoin {
 
 // Note - that this default implementation allows writing a sequence of &[u8] to
 // the proof with the same encoding for the writing and the non writing. However
-// by writing directly the the coin other writes for the channel could separate
-// encodings.
+// by writing directly to the coin, other writes for the channel could separate
+// encoding from random perturbation.
 impl Writable<&[u8]> for ProverChannel {
     fn write(&mut self, data: &[u8]) {
         self.proof.extend_from_slice(data);
@@ -267,8 +269,11 @@ impl Writable<U256> for ProverChannel {
 impl Replayable<[u8; 32]> for VerifierChannel {
     fn replay(&mut self) -> [u8; 32] {
         let mut holder = [0_u8; 32];
-        holder.copy_from_slice(&self.proof[self.proof_index..(self.proof_index + 32)]);
-        self.proof_index += 32;
+        let from = self.proof_index;
+        let to = from + 32;
+        self.proof_index = to;
+        // OPT: Use arrayref crate or similar to avoid copy
+        holder.copy_from_slice(&self.proof[from..to]);
         self.coin.write(&holder[..]);
         holder
     }
@@ -284,20 +289,8 @@ impl Replayable<FieldElement> for VerifierChannel {
     fn replay(&mut self) -> FieldElement {
         FieldElement(Replayable::replay(self))
     }
-}
 
-impl Replayable<u64> for VerifierChannel {
-    fn replay(&mut self) -> u64 {
-        let mut holder = [0_u8; 8];
-        holder.copy_from_slice(&self.proof[self.proof_index..(self.proof_index + 8)]);
-        self.proof_index += 8;
-        self.coin.write(&holder[..]);
-        u64::from_be_bytes(holder)
-    }
-}
-
-impl MultiReplayable<Vec<FieldElement>> for VerifierChannel {
-    fn replay(&mut self, len: usize) -> Vec<FieldElement> {
+    fn replay_many(&mut self, len: usize) -> Vec<FieldElement> {
         let start_index = self.proof_index;
         let mut ret = Vec::with_capacity(len);
         for _ in 0..len {
@@ -311,13 +304,16 @@ impl MultiReplayable<Vec<FieldElement>> for VerifierChannel {
     }
 }
 
-impl MultiReplayable<Vec<U256>> for VerifierChannel {
-    fn replay(&mut self, len: usize) -> Vec<U256> {
-        let mut ret = Vec::with_capacity(len);
-        for _ in 0..len {
-            ret.push(Replayable::replay(self));
-        }
-        ret
+impl Replayable<u64> for VerifierChannel {
+    fn replay(&mut self) -> u64 {
+        let mut holder = [0_u8; 8];
+        let from = self.proof_index;
+        let to = from + 8;
+        self.proof_index = to;
+        // OPT: Use arrayref crate or similar to avoid copy
+        holder.copy_from_slice(&self.proof[from..to]);
+        self.coin.write(&holder[..]);
+        u64::from_be_bytes(holder)
     }
 }
 
@@ -329,15 +325,29 @@ mod tests {
     #[test]
     fn proof_of_work_test() {
         let rand_source = ProverChannel::new(hex!("0123456789abcded").to_vec().as_slice());
-        let work = rand_source.pow_find_nonce(15);
-        assert!(&rand_source.pow_verify(work, 15));
+        let ver_rand_source =
+            VerifierChannel::new(&hex!("0123456789abcded")[..], rand_source.proof.clone());
+        let work = rand_source.pow_find_nonce(12);
+        let ver_work = ver_rand_source.pow_find_nonce(12);
+        assert_eq!(ver_work, work);
+        assert!(&rand_source.pow_verify(work, 12));
     }
 
     #[test]
     fn threaded_proof_of_work_test() {
         let rand_source = ProverChannel::new(hex!("0123456789abcded").to_vec().as_slice());
-        let work = rand_source.pow_find_nonce_threaded(15);
-        assert!(&rand_source.pow_verify(work, 15));
+        let work = rand_source.pow_find_nonce_threaded(12);
+        assert!(&rand_source.pow_verify(work, 12));
+    }
+
+    #[test]
+    fn ver_threaded_proof_of_work_test() {
+        let rand_source = VerifierChannel::new(
+            &hex!("0123456789abcded")[..],
+            hex!("0123456789abcded").to_vec(),
+        );
+        let work = rand_source.pow_find_nonce_threaded(12);
+        assert!(&rand_source.pow_verify(work, 12));
     }
 
     // Note - This test depends on the specific ordering of the subtests because of
@@ -402,5 +412,62 @@ mod tests {
             source.coin.digest,
             hex!("a748ff89e2c4322afb061ef3321e207b3fe32c35f181de0809300995dd9b92fd")
         );
+    }
+
+    #[test]
+    fn verifier_channel_test() {
+        let mut source = ProverChannel::new(hex!("0123456789abcded").to_vec().as_slice());
+        let rand_bytes: [u8; 32] = source.get_random();
+        source.write(&rand_bytes);
+        source.write(11_028_357_238_u64);
+        let written_field_element = FieldElement(u256h!(
+            "0389a47fe0e1e5f9c05d8dcb27b069b67b1c7ec61a5c0a3f54d81aea83d2c8f0"
+        ));
+        source.write(&written_field_element);
+        let written_field_element_vec = vec![
+            FieldElement(u256h!(
+                "0389a47fe0e1e5f9c05d8dcb27b069b67b1c7ec61a5c0a3f54d81aea83d2c8f0"
+            )),
+            FieldElement(u256h!(
+                "129ab47fe0e1a5f9c05d8dcb27b069b67b1c7ec61a5c0a3f54d81aea83d2c8f0"
+            )),
+        ];
+        source.write(written_field_element_vec.as_slice());
+
+        let written_big_int_vec = vec![
+            u256h!("0389a47fe0e1e5f9c05d8dcb27b069b67b1c7ec61a5c0a3f54d81aea83d2c8f0"),
+            u256h!("129ab47fe0e1a5f9c05d8dcb27b069b67b1c7ec61a5c0a3f54d81aea83d2c8f0"),
+        ];
+        source.write(written_big_int_vec.clone());
+
+        let mut verifier =
+            VerifierChannel::new(&hex!("0123456789abcded")[..], source.proof.clone());
+        let bytes_test: [u8; 32] = verifier.replay();
+        assert_eq!(bytes_test, rand_bytes);
+        assert_eq!(
+            verifier.coin.digest,
+            hex!("3174a00d031bc8deff799e24a78ee347b303295a6cb61986a49873d9b6f13a0d")
+        );
+        let integer_test: u64 = verifier.replay();
+        assert_eq!(integer_test, 11_028_357_238_u64);
+        assert_eq!(
+            verifier.coin.digest,
+            hex!("21571e2a323daa1e6f2adda87ce912608e1325492d868e8fe41626633d6acb93")
+        );
+        let field_element_test: FieldElement = verifier.replay();
+        assert_eq!(field_element_test, written_field_element);
+        assert_eq!(
+            verifier.coin.digest,
+            hex!("34a12938f047c34da72b5949434950fa2b24220270fd26e6f64b6eb5e86c6626")
+        );
+        let field_element_vec_test: Vec<FieldElement> = verifier.replay_many(2);
+        assert_eq!(field_element_vec_test, written_field_element_vec);
+        assert_eq!(
+            verifier.coin.digest,
+            hex!("a748ff89e2c4322afb061ef3321e207b3fe32c35f181de0809300995dd9b92fd")
+        );
+        let bit_int_vec_test: Vec<U256> = verifier.replay_many(2);
+        assert_eq!(bit_int_vec_test, written_big_int_vec);
+        assert_eq!(verifier.coin.digest, source.coin.digest);
     }
 }
