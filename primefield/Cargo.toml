@@ -18,6 +18,9 @@ criterion = "0.2.10"
 quickcheck = "0.8"
 quickcheck_macros = "0.8"
 
+[features]
+qc = ["quickcheck"]
+
 [[bench]]
 name = "benchmark"
 harness = false

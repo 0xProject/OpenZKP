@@ -19,7 +19,7 @@ memmap = ""
 tempfile = ""
 
 [dev-dependencies]
-primefield =  { path = "../primefield", features = ["quickcheck"]}
+primefield =  { path = "../primefield", features = ["qc"]}
 rand = "0.6.5"
 quickcheck = "0.8"
 quickcheck_macros = "0.8"
