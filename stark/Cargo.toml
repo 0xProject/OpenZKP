@@ -19,7 +19,6 @@ memmap = ""
 tempfile = ""
 
 [dev-dependencies]
-u256 =  { path = "../u256", features = ["quickcheck"] }
 primefield = { path = "../primefield", features = ["quickcheck"]}
 rand = "0.6.5"
 quickcheck = "0.8"

@@ -10,7 +10,6 @@ hex = ""
 hex-literal = "0.1.4"
 itertools = "0.8.0"
 crunchy = "0.2.2"
-rand = "0.6.5"
 quickcheck = {version = "0.8", optional = true}
 
 [dev-dependencies]
