@@ -372,7 +372,7 @@ fn get_out_of_domain_information(
     oods_values.push(constraint_polynomial.evaluate(&oods_point));
 
     for v in oods_values.iter() {
-        proof.write(v);
+        proof.write(v); // how many times does this loop run?
     }
 
     let mut oods_coefficients = Vec::with_capacity(2 * trace_polynomials.len() + 1);

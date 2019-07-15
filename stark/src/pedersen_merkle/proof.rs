@@ -2,7 +2,7 @@
 mod tests {
     use crate::{
         fft::{bit_reversal_fft_cofactor, ifft},
-        merkle::{make_tree_from_leaves, Hashable},
+        merkle::{make_tree, Hashable},
         pedersen_merkle::{
             input::{get_private_input, get_public_input},
             trace_table::get_trace,
@@ -188,7 +188,7 @@ mod tests {
             }
         }
 
-        let merkle_tree = make_tree_from_leaves(leaf_hashes);
+        let merkle_tree = make_tree(&leaf_hashes);
         assert_eq!(
             merkle_tree[37225466],
             hex!("9e7fc484305af8dc7171beac83e61b009d2d6f91000000000000000000000000")
