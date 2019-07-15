@@ -2,8 +2,8 @@
 mod tests {
     use crate::{
         fft::{bit_reversal_fft_cofactor, ifft},
-        mmap_vec::MmapVec,
         merkle::make_tree,
+        mmap_vec::MmapVec,
         pedersen_merkle::{
             input::{get_private_input, get_public_input},
             trace_table::get_trace,
@@ -45,14 +45,6 @@ mod tests {
             .into_par_iter()
             .map(|c| ifft(&c))
             .collect_into_vec(&mut trace_polynomials);
-
-        assert_eq!(columns[6][columns[6].len() - 1], public_input.root);
-        assert_eq!(
-            columns[6][columns[6].len() - 1],
-            FieldElement::from_hex_str(
-                "0x779aed4d3452b88d754ff4eed01b257e63384752782b7efde2e0a9e6eb03423"
-            )
-        );
 
         let oods_point = FieldElement::from_hex_str(
             "0x273966fc4697d1762d51fe633f941e92f87bdda124cf7571007a4681b140c05",
@@ -111,54 +103,6 @@ mod tests {
             FieldElement::root(U256::from(evaluation_length as u64)).unwrap();
         let evaluation_offset = FieldElement::GENERATOR;
 
-        let index = 3671035u64;
-        let evaluation_point = &evaluation_offset
-            * evaluation_generator.pow(U256::from(index.bit_reverse() >> (64 - 25)));
-        let expected_values = vec![
-            FieldElement::from_hex_str(
-                "0x191dd69283475ddd3b21e70a2f33ac1ddc57c94d94372c91b4dc165470cd16d",
-            ),
-            FieldElement::from_hex_str(
-                "0x540b97a03b8932df6a5ad25f7e575cfa54024094ea4a8bbd3c491b81b83fe4b",
-            ),
-            FieldElement::from_hex_str(
-                "0x77fc9484e5f4e5dff43420c0ed32ec8a082f530800f50e073f83b97f4f000b8",
-            ),
-            FieldElement::from_hex_str(
-                "0x46bc71b42bd78c76e4669ccfa1fa85c4bd8112b10c78535b7c113782ae410f3",
-            ),
-            FieldElement::from_hex_str(
-                "0x0acbed66102168104f8c9c8a536d11f0fd3d3865fa637fd8088fe5b8125b2f8",
-            ),
-            FieldElement::from_hex_str(
-                "0x1f84d70300430f209e89bff935c1bd588b34207a010eb113a35639483e152a7",
-            ),
-            FieldElement::from_hex_str(
-                "0x3101db85628661e0002ff9769e5ec8292173e6645bdba61925313da30a3989a",
-            ),
-            FieldElement::from_hex_str(
-                "0x626d82c055ce4c31c9e61d32c64293bab8e0973b4d9e9b627a785c1e7a17d67",
-            ),
-        ];
-        for (i, expected_value) in expected_values.iter().enumerate() {
-            assert_eq!(
-                eval_poly(evaluation_point.clone(), &trace_polynomials[i]),
-                *expected_value
-            );
-        }
-
-        // let partner_index: u64 = index - 1;
-        // let partner_point = &evaluation_offset
-        //     * evaluation_generator.pow(U256::from(partner_index.bit_reverse() >> (64
-        //       - 25)));
-        // let partner_row: Vec<_> = (0..8)
-        //     .map(|i| eval_poly(partner_point.clone(), &trace_polynomials[i]).0)
-        //     .collect();
-        // assert_eq!(
-        //     partner_row.as_slice().hash(),
-        //     hex!("9e7fc484305af8dc7171beac83e61b009d2d6f91000000000000000000000000")
-        // );
-
         let mut extended_trace_table: MmapVec<[FieldElement; 8]> =
             MmapVec::with_capacity(evaluation_length);
 
@@ -170,8 +114,8 @@ mod tests {
                 .into_par_iter()
                 .map(|p| {
                     let reverse_i = i.bit_reverse() >> (64 - 4);
-                    let cofactor = FieldElement::GENERATOR
-                        * evaluation_generator.pow(U256::from(reverse_i as u64));
+                    let cofactor =
+                        &evaluation_offset * evaluation_generator.pow(U256::from(reverse_i as u64));
                     bit_reversal_fft_cofactor(&p, &cofactor)
                 })
                 .collect_into_vec(&mut coset_leaves);
