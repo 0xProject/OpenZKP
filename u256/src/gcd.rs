@@ -68,7 +68,7 @@ fn lehmer_update(a0: &mut U256, a1: &mut U256, Matrix(q00, q01, q10, q11, even):
 
 /// Division optimized for small values
 ///
-/// Requires a > b > 0.
+/// Requires a >= b > 0.
 /// Returns a / b.
 ///
 /// See also `div1` in GMPs Lehmer implementation.
