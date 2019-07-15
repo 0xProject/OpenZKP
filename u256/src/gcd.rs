@@ -68,14 +68,14 @@ fn lehmer_update(a0: &mut U256, a1: &mut U256, Matrix(q00, q01, q10, q11, even):
 
 /// Division optimized for small values
 ///
-/// Requires a > b > 0.
+/// Requires a >= b > 0.
 /// Returns a / b.
 ///
 /// See also `div1` in GMPs Lehmer implementation.
 /// https://gmplib.org/repo/gmp-6.1/file/tip/mpn/generic/hgcd2.c#l44
 #[allow(clippy::cognitive_complexity)]
 fn div1(mut a: u64, b: u64) -> u64 {
-    debug_assert!(a > b);
+    debug_assert!(a >= b);
     debug_assert!(b > 0);
     unroll! {
         for i in 1..20 {
@@ -679,6 +679,17 @@ mod tests {
                 false
             )
         );
+    }
+
+    #[test]
+    fn test_gcd_lehmer_extended_equal_inputs() {
+        let a = U256::from(10u64);
+        let b = U256::from(10u64);
+        let (gcd, u, v, even) = gcd_extended(a.clone(), b.clone());
+        assert_eq!(&a % &gcd, U256::ZERO);
+        assert_eq!(&b % &gcd, U256::ZERO);
+        assert!(!even);
+        assert_eq!(gcd, v * b - u * a);
     }
 
     #[quickcheck]
