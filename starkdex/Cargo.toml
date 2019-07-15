@@ -14,6 +14,7 @@ itertools = "0.8.0"
 crunchy = "0.2.2"
 
 [dev-dependencies]
+u256 =  { path = "../u256", features = ["qc"] }
 criterion = "0.2.10"
 quickcheck = "0.8"
 quickcheck_macros = "0.8"
