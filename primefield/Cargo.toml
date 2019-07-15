@@ -5,7 +5,6 @@ authors = ["Remco Bloemen <remco@0x.org>"]
 edition = "2018"
 
 [dependencies]
-cfg-if = "0.1"
 u256 =  { path = "../u256" }
 hex = ""
 hex-literal = "0.1.4"
@@ -19,9 +18,6 @@ u256 =  { path = "../u256", features = ["quickcheck"] }
 criterion = "0.2.10"
 quickcheck = "0.8"
 quickcheck_macros = "0.8"
-
-[features]
-qc = ["quickcheck"]
 
 [[bench]]
 name = "benchmark"

@@ -17,8 +17,7 @@ itertools = "0.8.0"
 crunchy = "0.2.2"
 
 [dev-dependencies]
-primefield =  { path = "../primefield", features = ["qc"]}
-# u256 =  { path = "../u256" }
+primefield =  { path = "../primefield", features = ["quickcheck"]}
 rand = "0.6.5"
 quickcheck = "0.8"
 quickcheck_macros = "0.8"
