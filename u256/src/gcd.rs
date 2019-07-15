@@ -682,17 +682,14 @@ mod tests {
     }
 
     #[test]
-    fn test_gcd_lehmer_extended_1() {
-        let a = u256h!("0000000000000062000000000000005800000000000000020000000000000009");
-        let b = u256h!("00000000000000620000000000000048000000000000003a0000000000000053");
+    fn test_gcd_lehmer_extended_equal_inputs() {
+        let a = U256::from(10u64);
+        let b = U256::from(10u64);
         let (gcd, u, v, even) = gcd_extended(a.clone(), b.clone());
         assert_eq!(&a % &gcd, U256::ZERO);
         assert_eq!(&b % &gcd, U256::ZERO);
-        if even {
-            assert_eq!(gcd, u * a - v * b);
-        } else {
-            assert_eq!(gcd, v * b - u * a);
-        }
+        assert!(!even);
+        assert_eq!(gcd, v * b - u * a);
     }
 
     #[quickcheck]
