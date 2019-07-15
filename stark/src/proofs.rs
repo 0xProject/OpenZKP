@@ -455,7 +455,7 @@ fn get_out_of_domain_information(
     )); // Gets eval_C of the oods point via direct computation
 
     for v in oods_values.iter() {
-        proof.write(v);
+        proof.write(v); // how many times does this loop run?
     }
 
     let mut oods_coefficients = Vec::with_capacity(2 * trace_poly.len() + 1);
