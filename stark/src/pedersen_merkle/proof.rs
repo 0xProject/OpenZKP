@@ -2,7 +2,8 @@
 mod tests {
     use crate::{
         fft::{bit_reversal_fft_cofactor, ifft},
-        merkle::{make_tree, Hashable},
+        mmap_vec::MmapVec,
+        merkle::make_tree,
         pedersen_merkle::{
             input::{get_private_input, get_public_input},
             trace_table::get_trace,
@@ -146,20 +147,24 @@ mod tests {
             );
         }
 
-        let partner_index: u64 = index - 1;
-        let partner_point = &evaluation_offset
-            * evaluation_generator.pow(U256::from(partner_index.bit_reverse() >> (64 - 25)));
-        let partner_row: Vec<_> = (0..8)
-            .map(|i| eval_poly(partner_point.clone(), &trace_polynomials[i]).0)
-            .collect();
-        assert_eq!(
-            partner_row.as_slice().hash(),
-            hex!("9e7fc484305af8dc7171beac83e61b009d2d6f91000000000000000000000000")
-        );
+        // let partner_index: u64 = index - 1;
+        // let partner_point = &evaluation_offset
+        //     * evaluation_generator.pow(U256::from(partner_index.bit_reverse() >> (64
+        //       - 25)));
+        // let partner_row: Vec<_> = (0..8)
+        //     .map(|i| eval_poly(partner_point.clone(), &trace_polynomials[i]).0)
+        //     .collect();
+        // assert_eq!(
+        //     partner_row.as_slice().hash(),
+        //     hex!("9e7fc484305af8dc7171beac83e61b009d2d6f91000000000000000000000000")
+        // );
 
-        let mut leaf_hashes: Vec<[u8; 32]> = Vec::with_capacity(evaluation_length);
+        let mut extended_trace_table: MmapVec<[FieldElement; 8]> =
+            MmapVec::with_capacity(evaluation_length);
+
         for i in 0..beta {
-            let mut leaves: Vec<Vec<FieldElement>> = vec![Vec::with_capacity(trace_length); 8];
+            let mut coset_leaves: Vec<Vec<FieldElement>> =
+                vec![Vec::with_capacity(trace_length); 8];
             trace_polynomials
                 .clone()
                 .into_par_iter()
@@ -169,31 +174,23 @@ mod tests {
                         * evaluation_generator.pow(U256::from(reverse_i as u64));
                     bit_reversal_fft_cofactor(&p, &cofactor)
                 })
-                .collect_into_vec(&mut leaves);
+                .collect_into_vec(&mut coset_leaves);
+
             for j in 0..trace_length {
-                leaf_hashes.push(
-                    vec![
-                        leaves[0][j].0.clone(),
-                        leaves[1][j].0.clone(),
-                        leaves[2][j].0.clone(),
-                        leaves[3][j].0.clone(),
-                        leaves[4][j].0.clone(),
-                        leaves[5][j].0.clone(),
-                        leaves[6][j].0.clone(),
-                        leaves[7][j].0.clone(),
-                    ]
-                    .as_slice()
-                    .hash(),
-                );
+                extended_trace_table.push([
+                    coset_leaves[0][j].clone(),
+                    coset_leaves[1][j].clone(),
+                    coset_leaves[2][j].clone(),
+                    coset_leaves[3][j].clone(),
+                    coset_leaves[4][j].clone(),
+                    coset_leaves[5][j].clone(),
+                    coset_leaves[6][j].clone(),
+                    coset_leaves[7][j].clone(),
+                ])
             }
         }
 
-        let merkle_tree = make_tree(&leaf_hashes);
-        assert_eq!(
-            merkle_tree[37225466],
-            hex!("9e7fc484305af8dc7171beac83e61b009d2d6f91000000000000000000000000")
-        );
-
+        let merkle_tree = make_tree(&extended_trace_table);
         assert_eq!(
             merkle_tree[1],
             hex!("b00a4c7f03959e01df2504fb73d2b238a8ab08b2000000000000000000000000")
