@@ -5,6 +5,7 @@ use crate::{
     noncommutative_binop, u256h,
     utils::{adc, div_2_1, mac, sbb},
 };
+use cfg_if::cfg_if;
 use hex_literal::*;
 use std::{
     cmp::Ordering,
@@ -789,15 +790,15 @@ impl Mul<&U256> for u128 {
     }
 }
 
-#[cfg(feature = "qc")]
-use quickcheck::{Arbitrary, Gen};
-#[cfg(feature = "qc")]
-use rand::Rng;
-
-#[cfg(feature = "qc")]
-impl Arbitrary for U256 {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
-        U256::new(g.gen(), g.gen(), g.gen(), g.gen())
+cfg_if! {
+    if #[cfg(feature = "qc")] {
+        use quickcheck::{Arbitrary, Gen};
+        use rand::Rng;
+        impl Arbitrary for U256 {
+            fn arbitrary<G: Gen>(g: &mut G) -> Self {
+                U256::new(g.gen(), g.gen(), g.gen(), g.gen())
+            }
+        }
     }
 }
 

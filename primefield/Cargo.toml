@@ -5,6 +5,7 @@ authors = ["Remco Bloemen <remco@0x.org>"]
 edition = "2018"
 
 [dependencies]
+cfg-if = "0.1"
 u256 =  { path = "../u256" }
 hex = ""
 hex-literal = "0.1.4"

@@ -1,4 +1,5 @@
 use crate::{montgomery::*, square_root::square_root};
+use cfg_if::cfg_if;
 use hex_literal::*;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 use u256::{commutative_binop, noncommutative_binop, u256h, U256};
@@ -227,14 +228,15 @@ commutative_binop!(FieldElement, Mul, mul, MulAssign, mul_assign);
 noncommutative_binop!(FieldElement, Sub, sub, SubAssign, sub_assign);
 noncommutative_binop!(FieldElement, Div, div, DivAssign, div_assign);
 
-#[cfg(feature = "qc")]
-use quickcheck::{Arbitrary, Gen};
-
-#[cfg(feature = "qc")]
-impl Arbitrary for FieldElement {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
-        // TODO: Generate 0, 1, p/2 and -1
-        FieldElement(U256::arbitrary(g) % FieldElement::MODULUS)
+cfg_if! {
+    if #[cfg(feature = "qc")] {
+        use quickcheck::{Arbitrary, Gen};
+        impl Arbitrary for FieldElement {
+            fn arbitrary<G: Gen>(g: &mut G) -> Self {
+                // TODO: Generate 0, 1, p/2 and -1
+                FieldElement(U256::arbitrary(g) % FieldElement::MODULUS)
+            }
+        }
     }
 }
 
