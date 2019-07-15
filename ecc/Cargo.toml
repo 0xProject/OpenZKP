@@ -17,7 +17,8 @@ itertools = "0.8.0"
 crunchy = "0.2.2"
 
 [dev-dependencies]
-rand = "0.6.5"
+primefield =  { path = "../primefield", features = ["quickcheck"]}
+u256 =  { path = "../u256", features = ["quickcheck"] }
 quickcheck = "0.8"
 quickcheck_macros = "0.8"
 criterion = "0.2.10"
@@ -30,4 +31,3 @@ harness = false
 # no features by default
 default = []
 unsafe_ecdsa = []
-

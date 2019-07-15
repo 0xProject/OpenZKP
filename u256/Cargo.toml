@@ -9,12 +9,12 @@ hex = ""
 hex-literal = "0.1.4"
 itertools = "0.8.0"
 crunchy = "0.2.2"
-quickcheck = "0.8"
-quickcheck_macros = "0.8"
-rand = "0.6.5"
+quickcheck = { version = "0.8", optional = true }
 
 [dev-dependencies]
 criterion = "0.2.10"
+quickcheck_macros = "0.8"
+quickcheck = "0.8"
 
 [[bench]]
 name = "benchmark"
