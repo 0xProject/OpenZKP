@@ -20,6 +20,7 @@ tempfile = ""
 
 [dev-dependencies]
 primefield = { path = "../primefield", features = ["quickcheck"]}
+u256 =  { path = "../u256", features = ["quickcheck"] }
 quickcheck = "0.8"
 quickcheck_macros = "0.8"
 criterion = "0.2.10"
