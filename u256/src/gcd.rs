@@ -75,7 +75,7 @@ fn lehmer_update(a0: &mut U256, a1: &mut U256, Matrix(q00, q01, q10, q11, even):
 /// https://gmplib.org/repo/gmp-6.1/file/tip/mpn/generic/hgcd2.c#l44
 #[allow(clippy::cognitive_complexity)]
 fn div1(mut a: u64, b: u64) -> u64 {
-    debug_assert!(a > b);
+    debug_assert!(a >= b);
     debug_assert!(b > 0);
     unroll! {
         for i in 1..20 {
