@@ -33,6 +33,12 @@ impl Hashable for FieldElement {
     }
 }
 
+impl Hashable for [u8; 32] {
+    fn hash(&self) -> [u8; 32] {
+        self.clone()
+    }
+}
+
 fn mask(data: &mut [u8; 32]) {
     for d in data[20..].iter_mut() {
         *d = 0 as u8;

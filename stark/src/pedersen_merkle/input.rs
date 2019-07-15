@@ -25,10 +25,10 @@ pub fn get_private_input() -> PrivateInput {
 
 #[derive(Deserialize)]
 pub struct PeriodicColumns {
-    left_x_coefficients:  Vec<FieldElement>,
-    left_y_coefficients:  Vec<FieldElement>,
-    right_x_coefficients: Vec<FieldElement>,
-    right_y_coefficients: Vec<FieldElement>,
+    pub left_x_coefficients:  Vec<FieldElement>,
+    pub left_y_coefficients:  Vec<FieldElement>,
+    pub right_x_coefficients: Vec<FieldElement>,
+    pub right_y_coefficients: Vec<FieldElement>,
 }
 
 pub fn get_periodic_columns() -> PeriodicColumns {
