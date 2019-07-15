@@ -18,7 +18,6 @@ crunchy = "0.2.2"
 
 [dev-dependencies]
 primefield =  { path = "../primefield", features = ["quickcheck"]}
-rand = "0.6.5"
 quickcheck = "0.8"
 quickcheck_macros = "0.8"
 criterion = "0.2.10"
