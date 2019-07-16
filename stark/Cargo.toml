@@ -8,7 +8,7 @@ edition = "2018"
 u256 =  { path = "../u256" }
 primefield =  { path = "../primefield" }
 ecc =  { path = "../ecc" }
-starkdex = {path = "../starkdex"}
+starkdex = { path = "../starkdex" }
 crossbeam = "0.3.0"
 rayon = "1.0.3"
 hex = ""
