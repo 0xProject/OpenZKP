@@ -2,23 +2,15 @@ use crate::utils::Reversible;
 use primefield::FieldElement;
 use u256::U256;
 
-pub fn fft(a: &[FieldElement]) -> Vec<FieldElement> {
+// TODO: Remove this function. It's only being used in tests.
+#[allow(dead_code)]
+fn fft(a: &[FieldElement]) -> Vec<FieldElement> {
     let mut result = a.to_vec();
     let root = FieldElement::root(U256::from(result.len() as u64))
         .expect("No root of unity for input length");
     bit_reversal_fft(result.as_mut_slice(), root);
     bit_reversal_permute(result.as_mut_slice());
     result
-}
-
-pub fn fft_cofactor(a: &[FieldElement], cofactor: &FieldElement) -> Vec<FieldElement> {
-    let mut result = a.to_vec();
-    let mut c = FieldElement::ONE;
-    for element in result.iter_mut() {
-        *element *= &c;
-        c *= cofactor;
-    }
-    fft(&result)
 }
 
 pub fn bit_reversal_fft_cofactor(a: &[FieldElement], cofactor: &FieldElement) -> Vec<FieldElement> {
@@ -32,7 +24,6 @@ pub fn bit_reversal_fft_cofactor(a: &[FieldElement], cofactor: &FieldElement) ->
     let root = FieldElement::root(U256::from(result.len() as u64))
         .expect("No root of unity for input length");
     bit_reversal_fft(result.as_mut_slice(), root);
-
     result
 }
 
@@ -245,7 +236,8 @@ mod tests {
             u256h!("048bad0760f8b52ee4f9a46964bcf1ba9439a9467b2576176b1319cec9f12db0")
         );
 
-        res = fft_cofactor(&vector, &cofactor);
+        res = bit_reversal_fft_cofactor(&vector, &cofactor);
+        bit_reversal_permute(&mut res);
 
         assert_eq!(
             U256::from(&res[0]),

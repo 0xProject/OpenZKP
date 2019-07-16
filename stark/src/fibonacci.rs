@@ -83,7 +83,8 @@ pub fn eval_whole_loop(
     (0..eval_domain_size_usize)
         .into_par_iter()
         .map(|reverse_index| {
-            // OPT: Eliminate index by generate x_* cycles in bit-reversed order, using fft.
+            // OPT: Eliminate index by generating x_* cycles in bit-reversed order using
+            // fft.
             let index = reverse_index.bit_reverse_at(eval_domain_size_usize);
             let next_reverse_index = ((index + beta as usize) % eval_domain_size_usize)
                 .bit_reverse_at(eval_domain_size_usize);
