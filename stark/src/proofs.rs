@@ -305,54 +305,6 @@ fn fri_layer(
     next
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use crate::fft::bit_reversal_permute;
-//
-//     #[test]
-//     fn test_fri() {
-//         let previous = vec![
-//             FieldElement::ZERO,
-//             FieldElement::ONE,
-//             FieldElement::ZERO,
-//             FieldElement::ONE,
-//             FieldElement::ZERO,
-//             FieldElement::ZERO,
-//             FieldElement::ZERO,
-//             FieldElement::ZERO,
-//             FieldElement::ZERO,
-//             FieldElement::ONE,
-//             FieldElement::ZERO,
-//             FieldElement::ONE,
-//             FieldElement::ZERO,
-//             FieldElement::ONE,
-//             FieldElement::ZERO,
-//             FieldElement::ZERO,
-//         ];
-//         let eval_x = geometric_series(
-//             &FieldElement::ONE,
-//             &FieldElement::root(U256::from(1024u64)).unwrap(),
-//             1024,
-//         );
-//
-//         let a = fri_layer(&previous, &FieldElement::ONE, eval_x.len(),
-// &eval_x);
-//
-//         let mut bit_reversed_previous = previous.clone();
-//         bit_reversal_permute(bit_reversed_previous.as_mut_slice());
-//         let mut b = bit_reverse_fri_layer(
-//             &bit_reversed_previous,
-//             &FieldElement::ONE,
-//             eval_x.len(),
-//             &eval_x,
-//         );
-//         bit_reversal_permute(&mut b);
-//
-//         assert_eq!(a, b);
-//     }
-// }
-
 fn get_indices(num: usize, bits: u32, proof: &mut ProverChannel) -> Vec<usize> {
     let mut query_indices = Vec::with_capacity(num + 3);
     while query_indices.len() < num {
