@@ -1,6 +1,6 @@
 use crate::{
     channel::{ProverChannel, RandomGenerator, Writable},
-    fft::{fft_cofactor, ifft},
+    fft::{bit_reversal_fft_cofactor, bit_reversal_permute, ifft},
     merkle::{self, make_tree, Hashable},
     polynomial::eval_poly,
     utils::Reversible,
@@ -130,12 +130,11 @@ impl<'a> Constraint<'a> {
 // same merkleize system
 impl Groupable<Vec<U256>> for (usize, &[FieldElement]) {
     fn make_group(&self, index: usize) -> Vec<U256> {
-        let layer = self.1;
         let coset_size = self.0;
-        let n = layer.len();
+        let layer = self.1;
         let mut internal_leaf = Vec::with_capacity(coset_size);
         for j in 0..coset_size {
-            internal_leaf.push(layer[(index * coset_size + j).bit_reverse_at(n)].0.clone());
+            internal_leaf.push(layer[(index * coset_size + j)].0.clone());
         }
         internal_leaf
     }
@@ -149,7 +148,7 @@ impl Groupable<Vec<U256>> for &[Vec<FieldElement>] {
     fn make_group(&self, index: usize) -> Vec<U256> {
         let mut ret = Vec::with_capacity(self.len());
         for item in self.iter() {
-            ret.push(item[index.bit_reverse_at(item.len())].0.clone())
+            ret.push(item[index].0.clone())
         }
         ret
     }
@@ -161,7 +160,7 @@ impl Groupable<Vec<U256>> for &[Vec<FieldElement>] {
 
 impl Groupable<U256> for &[FieldElement] {
     fn make_group(&self, index: usize) -> U256 {
-        self[index.bit_reverse_at(self.len())].0.clone()
+        self[index].0.clone()
     }
 
     fn domain_size(&self) -> usize {
@@ -294,19 +293,65 @@ fn fri_layer(
     let len = previous.len();
     let step = eval_domain_size / len;
     let mut next = Vec::with_capacity(len / 2);
-    next.par_extend((0..(len / 2)).into_par_iter().map(|index| {
-        let negative_index = (len / 2 + index) % len;
-        let inverse_index = ((len - index) % len) * step;
-        // OPT: Check if computed x_inv is faster
-        let x_inv = &eval_x[inverse_index];
-        let value = &previous[index];
-        let neg_x_value = &previous[negative_index];
-        debug_assert_eq!(x_inv, &eval_x[index * step].inv().unwrap());
-        debug_assert_eq!(eval_x[negative_index * step], -&eval_x[index * step]);
-        (value + neg_x_value) + evaluation_point * x_inv * (value - neg_x_value)
-    }));
+    (0..(len / 2))
+        .into_par_iter()
+        .map(|index| {
+            let value = &previous[2 * index];
+            let neg_x_value = &previous[2 * index + 1];
+            let x_inv = &eval_x[index.bit_reverse_at(len / 2) * step].inv().unwrap();
+            (value + neg_x_value) + evaluation_point * x_inv * (value - neg_x_value)
+        })
+        .collect_into_vec(&mut next);
     next
 }
+
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
+//     use crate::fft::bit_reversal_permute;
+//
+//     #[test]
+//     fn test_fri() {
+//         let previous = vec![
+//             FieldElement::ZERO,
+//             FieldElement::ONE,
+//             FieldElement::ZERO,
+//             FieldElement::ONE,
+//             FieldElement::ZERO,
+//             FieldElement::ZERO,
+//             FieldElement::ZERO,
+//             FieldElement::ZERO,
+//             FieldElement::ZERO,
+//             FieldElement::ONE,
+//             FieldElement::ZERO,
+//             FieldElement::ONE,
+//             FieldElement::ZERO,
+//             FieldElement::ONE,
+//             FieldElement::ZERO,
+//             FieldElement::ZERO,
+//         ];
+//         let eval_x = geometric_series(
+//             &FieldElement::ONE,
+//             &FieldElement::root(U256::from(1024u64)).unwrap(),
+//             1024,
+//         );
+//
+//         let a = fri_layer(&previous, &FieldElement::ONE, eval_x.len(),
+// &eval_x);
+//
+//         let mut bit_reversed_previous = previous.clone();
+//         bit_reversal_permute(bit_reversed_previous.as_mut_slice());
+//         let mut b = bit_reverse_fri_layer(
+//             &bit_reversed_previous,
+//             &FieldElement::ONE,
+//             eval_x.len(),
+//             &eval_x,
+//         );
+//         bit_reversal_permute(&mut b);
+//
+//         assert_eq!(a, b);
+//     }
+// }
 
 fn get_indices(num: usize, bits: u32, proof: &mut ProverChannel) -> Vec<usize> {
     let mut query_indices = Vec::with_capacity(num + 3);
@@ -369,21 +414,13 @@ fn calculate_low_degree_extensions(
     let omega = FieldElement::root(U256::from((trace_len * params.blowup) as u64)).unwrap();
     let gen = FieldElement::GENERATOR;
 
-    let mut LDEn = vec![vec![FieldElement::ZERO; eval_x.len()]; trace_poly.len()];
-    // OPT - Refactor to not allocate in this loop.
+    let mut LDEn = vec![Vec::with_capacity(eval_x.len()); trace_poly.len()];
     LDEn.par_iter_mut().enumerate().for_each(|(x, col)| {
-        let data_holder: Vec<Vec<FieldElement>> = (0..params.blowup)
-            .into_par_iter()
-            .map(|j| fft_cofactor(trace_poly[x], &(&gen * &omega.pow(U256::from(j as u64)))))
-            .collect();
-
-        col.par_chunks_mut(params.blowup)
-            .enumerate()
-            .for_each(|(i, chunk)| {
-                for (j, item) in chunk.iter_mut().enumerate() {
-                    *item = data_holder[j][i].clone();
-                }
-            });
+        for index in 0..params.blowup {
+            let reverse_index = index.bit_reverse_at(params.blowup);
+            let cofactor = &gen * omega.pow(U256::from(reverse_index as u64));
+            col.extend(bit_reversal_fft_cofactor(trace_poly[x], &cofactor));
+        }
     });
 
     LDEn
@@ -468,8 +505,8 @@ fn get_out_of_domain_information(
 // TODO: Naming
 #[allow(non_snake_case)]
 fn calculate_out_of_domain_constraints(
-    lde_poly: &[&[FieldElement]],
-    constraint_on_domain: &[FieldElement],
+    lde_poly: &[&[FieldElement]],          // bit reversed
+    constraint_on_domain: &[FieldElement], // bit reversed
     oods_point: &FieldElement,
     oods_coefficients: &[FieldElement],
     oods_values: &[FieldElement],
@@ -508,18 +545,20 @@ fn calculate_out_of_domain_constraints(
 
     (0..eval_domain_size)
         .into_par_iter()
-        .map(|i| {
+        .map(|index| {
+            let i = index.bit_reverse_at(eval_domain_size);
             let A = &x_oods_cycle[i];
             let B = &x_oods_cycle_g[i];
             let mut r = FieldElement::ZERO;
 
             for x in 0..lde_poly.len() {
-                r += &oods_coefficients[2 * x] * (&lde_poly[x][i] - &oods_values[2 * x]) * A;
-                r +=
-                    &oods_coefficients[2 * x + 1] * (&lde_poly[x][i] - &oods_values[2 * x + 1]) * B;
+                r += &oods_coefficients[2 * x] * (&lde_poly[x][index] - &oods_values[2 * x]) * A;
+                r += &oods_coefficients[2 * x + 1]
+                    * (&lde_poly[x][index] - &oods_values[2 * x + 1])
+                    * B;
             }
             r += &oods_coefficients[oods_coefficients.len() - 1]
-                * (&constraint_on_domain[i] - &oods_values[oods_values.len() - 1])
+                * (&constraint_on_domain[index] - &oods_values[oods_values.len() - 1])
                 * A;
 
             r
@@ -587,7 +626,10 @@ fn perform_fri_layering(
     // Gets the coefficient representation of the last number of fri reductions
 
     let last_layer_degree_bound = trace_len / (2_usize.pow(halvings as u32));
-    let mut last_layer_coefficient = ifft(&(fri[halvings].as_slice()));
+
+    let mut last_layer = fri[halvings].clone();
+    bit_reversal_permute(&mut last_layer);
+    let mut last_layer_coefficient = ifft(&last_layer);
     last_layer_coefficient.truncate(last_layer_degree_bound);
     proof.write(last_layer_coefficient.as_slice());
     debug_assert_eq!(last_layer_coefficient.len(), last_layer_degree_bound);
@@ -616,6 +658,7 @@ fn decommit_proof(decommitment: Vec<[u8; 32]>, proof: &mut ProverChannel) {
     }
 }
 
+// Fix required here! Lol jk, you're not here yet.
 fn decommit_fri_layers_and_trees(
     fri_layers: &[Vec<FieldElement>],
     fri_trees: &[Vec<[u8; 32]>],
@@ -644,11 +687,7 @@ fn decommit_fri_layers_and_trees(
                 if previous_indices.binary_search(&n).is_ok() {
                     continue;
                 } else {
-                    proof.write(
-                        &fri_layers[current_fri][((n as u64).bit_reverse()
-                            >> (u64::from(fri_layers[current_fri].len().leading_zeros() + 1)))
-                            as usize],
-                    );
+                    proof.write(&fri_layers[current_fri][n]);
                 }
             }
         }
@@ -767,10 +806,19 @@ mod tests {
         }
     }
 
+    // use crate::fft::fft;
+    //
+    // #[test]
+    // fn geometric_series_fft() {
+    //     let g = geometric_series(&FieldElement::ONE,
+    // &FieldElement::root(U256::from(64u64)).unwrap(), 64);     //
+    // assert_eq!(fft(&g), vec![]);     // }
+
     #[test]
     // TODO: Naming
     #[allow(non_snake_case)]
-    // TODO - See if it's possible to do context cloning and break this into smaller tests
+    // TODO - See if it's possible to do context cloning and break this into
+    // smaller tests
     #[allow(clippy::cognitive_complexity)]
     fn fib_proof_test() {
         let claim_index = 1000;
@@ -801,8 +849,7 @@ mod tests {
 
         let eval_x = geometric_series(&FieldElement::ONE, &omega, eval_domain_size);
         let eval_offset_x = geometric_series(&gen, &omega, eval_domain_size);
-        let trace_x = geometric_series(&FieldElement::ONE, &g, trace_len);
-        // Checks that the geometric series is working
+        let trace_x = geometric_series(&FieldElement::ONE, &g, trace_len); // Checks that the geometric series is working
         assert_eq!(
             U256::from(eval_x[500].clone()),
             u256h!("068a24ef8b13c6b23a4fe31235667142494bc0eecbb59ed9866a44ac47fb2f6b")
@@ -825,10 +872,23 @@ mod tests {
         let LDE1 = LDEn[1].as_slice();
 
         // Checks that the low degree extension calculation is working
-        assert_eq!(eval_poly(eval_offset_x[13644].clone(), TP0), LDE0[13644]);
-        assert_eq!(eval_poly(eval_offset_x[13644].clone(), TP1), LDE1[13644]);
+        assert_eq!(eval_poly(eval_offset_x[0].clone(), TP1), LDE1[0]);
+        assert_eq!(eval_poly(FieldElement::GENERATOR, TP1), LDE1[0]);
+        assert_eq!(
+            eval_poly(eval_offset_x[eval_domain_size - 1].clone(), TP1),
+            LDE1[eval_domain_size - 1]
+        );
+        assert_eq!(eval_poly(eval_offset_x[1usize << 13].clone(), TP0), LDE0[1]);
+        assert_eq!(
+            eval_poly(
+                eval_offset_x[13644usize.bit_reverse() >> (64 - 14)].clone(),
+                TP1
+            ),
+            LDE1[13644]
+        );
 
-        // Checks that the groupable trait is properly grouping for &[Vec<FieldElement>]
+        // Checks that the groupable trait is properly grouping for
+        // &[Vec<FieldElement>]
         assert_eq!(
             (LDEn.as_slice().make_group(3243))[0].clone(),
             u256h!("01ddd9e389a326817ad1d2a5311e1bc2cf7fa734ebdc2961085b5acfa87a58ff")
@@ -839,8 +899,8 @@ mod tests {
         );
 
         let tree = LDEn.merkleize();
-        // Checks that the merklelizable implementation is working [implicit check of
-        // most previous steps]
+        // Checks that the merklelizable implementation is working [implicit
+        // check of         // most previous steps]
         assert_eq!(
             tree[1],
             hex!("018dc61f748b1a6c440827876f30f63cb6c4c188000000000000000000000000")
@@ -885,15 +945,16 @@ mod tests {
         );
         // Checks that our constraints are properly calculated on the domain
         assert_eq!(
-            CC[123].clone(),
+            CC[123.bit_reverse_at(eval_domain_size)].clone(),
             FieldElement(u256h!(
                 "019fb62b06446e919d7909f4896febce72978ff860e1ed61b4418091617677d3"
             ))
         );
 
         let c_tree = CC.as_slice().merkleize();
-        // Checks both that the merkle tree is working for this groupable type and that
-        // the constraints are properly calculated on the domain
+        // Checks both that the merkle tree is working for this groupable
+        // type and that the constraints are properly calculated on the
+        // domain
         assert_eq!(
             c_tree[1],
             hex!("46318de7dbdafda87c1052d50989d15f8e61a5b8000000000000000000000000")
@@ -914,8 +975,8 @@ mod tests {
             U256::from(oods_point.clone()),
             u256h!("031dc8fc2f57e3f39f6951a04a04294a7c63c988573dc058eea4cbf3e6268353")
         );
-        // Checks that our get out of domain function call has written the right values
-        // to the proof
+        // Checks that our get out of domain function call has written the
+        // right values to the proof
         assert_eq!(
             proof.coin.digest,
             hex!("f556f04f342598411b5626a797a114a64b3a15a5ab0d4f2a6b350b941d56d071")
@@ -930,9 +991,10 @@ mod tests {
             eval_x.as_slice(),
             params.blowup,
         );
-        // Checks that our out of domain evaluated constraints calculated right
+        // Checks that our out of domain evaluated constraints calculated
+        // right
         assert_eq!(
-            CO[4321].clone(),
+            CO[4321.bit_reverse_at(eval_domain_size)].clone(),
             FieldElement(u256h!(
                 "023b8ba264d4a1255e1dedd6e5819e86230562b85d5a7af8fb994053a2debdde"
             ))
@@ -951,6 +1013,7 @@ mod tests {
             fri_trees[1][1],
             hex!("27ad2f6a19d18a7e4535905f1ee0bf0d39e8e444000000000000000000000000")
         );
+        // failing here now!
         // Checks that the fri layering function decommited the right values.
         assert_eq!(
             proof.coin.digest,
@@ -958,8 +1021,8 @@ mod tests {
         );
 
         let proof_of_work = proof.pow_find_nonce(params.pow_bits);
-        // Checks that the pow function is working [may also fail if the previous steps
-        // have perturbed the channel's random]
+        // Checks that the pow function is working [may also fail if the
+        // previous steps have perturbed the channel's random]
         assert_eq!(proof_of_work, 3465);
         proof.write(proof_of_work);
 

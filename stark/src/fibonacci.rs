@@ -1,6 +1,7 @@
 use crate::{
     polynomial::eval_poly,
     proofs::{geometric_series, Constraint, TraceTable},
+    utils::Reversible,
 };
 use hex_literal::*;
 use primefield::{invert_batch, FieldElement};
@@ -81,24 +82,30 @@ pub fn eval_whole_loop(
 
     (0..eval_domain_size_usize)
         .into_par_iter()
-        .map(|i| {
-            let j = ((i as u64) + beta) % eval_domain_size;
+        .map(|reverse_index| {
+            let index = reverse_index.bit_reverse_at(eval_domain_size_usize);
+            let next_reverse_index = ((index + beta as usize) % eval_domain_size_usize)
+                .bit_reverse_at(eval_domain_size_usize);
+            // incidentally this means you've done it wrong for the pedersen merkle poly.
 
-            let P0 = LDEn[0][i as usize].clone();
-            let P1 = LDEn[1][i as usize].clone();
-            let P0n = LDEn[0][j as usize].clone();
-            let P1n = LDEn[1][j as usize].clone();
+            let P0 = LDEn[0][reverse_index as usize].clone();
+            let P1 = LDEn[1][reverse_index as usize].clone();
+            let P0n = LDEn[0][next_reverse_index as usize].clone();
+            let P1n = LDEn[1][next_reverse_index as usize].clone();
 
-            let A = x_trace_sub_one[i as usize].clone();
-            let C0 = (&P0n - &P1) * (&x_omega_cycle[i as usize] - &g_trace) * &A;
-            let C1 = (&P1n - &P0 - &P1) * (&x_omega_cycle[i as usize] - &g_trace) * &A;
-            let C2 = (&P0 - FieldElement::ONE) * &x_sub_one[i as usize];
-            let C3 = (&P0 - claim_fib) * &x_g_claim_cycle[i as usize];
+            // these all need to be generated in bit reversed order!!
+            // these also all have very simple FT's, which suggests this whole procedure can
+            // be done faster in frequency domain.
+            let A = x_trace_sub_one[index as usize].clone();
+            let C0 = (&P0n - &P1) * (&x_omega_cycle[index as usize] - &g_trace) * &A;
+            let C1 = (&P1n - &P0 - &P1) * (&x_omega_cycle[index as usize] - &g_trace) * &A;
+            let C2 = (&P0 - FieldElement::ONE) * &x_sub_one[index as usize];
+            let C3 = (&P0 - claim_fib) * &x_g_claim_cycle[index as usize];
 
-            let C0a = &C0 * &x_1023_cycle[i as usize];
-            let C1a = &C1 * &x_1023_cycle[i as usize];
-            let C2a = &C2 * &x_omega_cycle[i as usize];
-            let C3a = &C3 * &x_omega_cycle[i as usize];
+            let C0a = &C0 * &x_1023_cycle[index as usize];
+            let C1a = &C1 * &x_1023_cycle[index as usize];
+            let C2a = &C2 * &x_omega_cycle[index as usize];
+            let C3a = &C3 * &x_omega_cycle[index as usize];
 
             let mut r = FieldElement::ZERO;
             r += &constraint_coefficients[0] * C0;
