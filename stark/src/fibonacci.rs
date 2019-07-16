@@ -83,19 +83,16 @@ pub fn eval_whole_loop(
     (0..eval_domain_size_usize)
         .into_par_iter()
         .map(|reverse_index| {
+            // OPT: Eliminate index by generate x_* cycles in bit-reversed order, using fft.
             let index = reverse_index.bit_reverse_at(eval_domain_size_usize);
             let next_reverse_index = ((index + beta as usize) % eval_domain_size_usize)
                 .bit_reverse_at(eval_domain_size_usize);
-            // incidentally this means you've done it wrong for the pedersen merkle poly.
 
             let P0 = LDEn[0][reverse_index as usize].clone();
             let P1 = LDEn[1][reverse_index as usize].clone();
             let P0n = LDEn[0][next_reverse_index as usize].clone();
             let P1n = LDEn[1][next_reverse_index as usize].clone();
 
-            // these all need to be generated in bit reversed order!!
-            // these also all have very simple FT's, which suggests this whole procedure can
-            // be done faster in frequency domain.
             let A = x_trace_sub_one[index as usize].clone();
             let C0 = (&P0n - &P1) * (&x_omega_cycle[index as usize] - &g_trace) * &A;
             let C1 = (&P1n - &P0 - &P1) * (&x_omega_cycle[index as usize] - &g_trace) * &A;

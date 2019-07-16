@@ -130,8 +130,7 @@ impl<'a> Constraint<'a> {
 // same merkleize system
 impl Groupable<Vec<U256>> for (usize, &[FieldElement]) {
     fn make_group(&self, index: usize) -> Vec<U256> {
-        let coset_size = self.0;
-        let layer = self.1;
+        let (coset_size, layer) = *self;
         let mut internal_leaf = Vec::with_capacity(coset_size);
         for j in 0..coset_size {
             internal_leaf.push(layer[(index * coset_size + j)].0.clone());
@@ -811,13 +810,12 @@ mod tests {
         let TPn_reference: Vec<&[FieldElement]> = TPn.iter().map(|x| x.as_slice()).collect();
         let LDEn = calculate_low_degree_extensions(TPn_reference.as_slice(), &params, &eval_x);
 
+        // Checks that the low degree extension calculation is working
         let LDE0 = LDEn[0].as_slice();
         let LDE1 = LDEn[1].as_slice();
-
-        // Checks that the low degree extension calculation is working
         let i = 13644usize;
         let reverse_i = i.bit_reverse_at(eval_domain_size);
-        assert_eq!(eval_poly(eval_offset_x[reverse_i].clone(), TP1), LDE1[i]);
+        assert_eq!(eval_poly(eval_offset_x[reverse_i].clone(), TP0), LDE0[i]);
         assert_eq!(eval_poly(eval_offset_x[reverse_i].clone(), TP1), LDE1[i]);
 
         // Checks that the groupable trait is properly grouping for &[Vec<FieldElement>]
