@@ -10,15 +10,8 @@ hex = ""
 hex-literal = "0.1.4"
 itertools = "0.8.0"
 crunchy = "0.2.2"
-<<<<<<< HEAD
 quickcheck = {version = "0.8", optional = true}
-serde = { features = ["derive"] }
-=======
-quickcheck = "0.8"
-quickcheck_macros = "0.8"
-rand = "0.6.5"
 serde = { version = "1.0.89", features = ["derive"] }
->>>>>>> Tests compile
 
 [dev-dependencies]
 u256 =  { path = "../u256", features = ["quickcheck"] }
