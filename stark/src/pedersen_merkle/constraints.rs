@@ -481,6 +481,14 @@ mod test {
             )),
         ];
 
+        // let result = eval_c_direct(
+        //     FieldElement::ONE,
+        //     polynomials: &[&[FieldElement]],
+        //     0usize,
+        //     FieldElement::ZERO,
+        //     &coefficients,
+        // )
+        //
         // assert_eq!(eval_c_direct(FieldElement::ONE), FieldElement::ONE);
     }
 
