@@ -1,6 +1,6 @@
 use crate::{
     channel::{ProverChannel, RandomGenerator, Writable},
-    fft::{bit_reversal_fft_cofactor, bit_reversal_permute, ifft},
+    fft::{bit_reversal_permute, fft_cofactor_bit_reversed, ifft},
     merkle::{self, make_tree, Hashable},
     polynomial::eval_poly,
     utils::Reversible,
@@ -370,7 +370,7 @@ fn calculate_low_degree_extensions(
         for index in 0..params.blowup {
             let reverse_index = index.bit_reverse_at(params.blowup);
             let cofactor = &gen * omega.pow(U256::from(reverse_index as u64));
-            col.extend(bit_reversal_fft_cofactor(trace_poly[x], &cofactor));
+            col.extend(fft_cofactor_bit_reversed(trace_poly[x], &cofactor));
         }
     });
 

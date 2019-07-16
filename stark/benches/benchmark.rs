@@ -86,7 +86,7 @@ fn fft_size(crit: &mut Criterion) {
             .map(|i| FieldElement::from(U256::from(i as u64)))
             .collect();
         bench.iter(|| {
-            black_box(bit_reversal_fft_cofactor(
+            black_box(fft_cofactor_bit_reversed(
                 black_box(&leaves),
                 black_box(&cofactor),
             ))
@@ -104,7 +104,7 @@ fn fft_threads(crit: &mut Criterion) {
             .map(|i| FieldElement::from(U256::from(i as u64)))
             .collect();
         bench.iter(|| {
-            black_box(bit_reversal_fft_cofactor(
+            black_box(fft_cofactor_bit_reversed(
                 black_box(&leaves),
                 black_box(&cofactor),
             ))

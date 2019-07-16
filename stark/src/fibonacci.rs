@@ -10,7 +10,7 @@ use u256::{u256h, U256};
 
 // TODO: Naming
 #[allow(non_snake_case)]
-pub fn get_trace_table(length: u64, witness: FieldElement) -> TraceTable {
+pub fn get_trace_table(length: usize, witness: FieldElement) -> TraceTable {
     let mut T_0 = vec![FieldElement::ONE];
     let mut T_1 = vec![witness];
     for i in 1..length {
@@ -89,21 +89,21 @@ pub fn eval_whole_loop(
             let next_reverse_index = ((index + beta as usize) % eval_domain_size_usize)
                 .bit_reverse_at(eval_domain_size_usize);
 
-            let P0 = LDEn[0][reverse_index as usize].clone();
-            let P1 = LDEn[1][reverse_index as usize].clone();
-            let P0n = LDEn[0][next_reverse_index as usize].clone();
-            let P1n = LDEn[1][next_reverse_index as usize].clone();
+            let P0 = LDEn[0][reverse_index].clone();
+            let P1 = LDEn[1][reverse_index].clone();
+            let P0n = LDEn[0][next_reverse_index].clone();
+            let P1n = LDEn[1][next_reverse_index].clone();
 
-            let A = x_trace_sub_one[index as usize].clone();
-            let C0 = (&P0n - &P1) * (&x_omega_cycle[index as usize] - &g_trace) * &A;
-            let C1 = (&P1n - &P0 - &P1) * (&x_omega_cycle[index as usize] - &g_trace) * &A;
-            let C2 = (&P0 - FieldElement::ONE) * &x_sub_one[index as usize];
-            let C3 = (&P0 - claim_fib) * &x_g_claim_cycle[index as usize];
+            let A = x_trace_sub_one[index].clone();
+            let C0 = (&P0n - &P1) * (&x_omega_cycle[index] - &g_trace) * &A;
+            let C1 = (&P1n - &P0 - &P1) * (&x_omega_cycle[index] - &g_trace) * &A;
+            let C2 = (&P0 - FieldElement::ONE) * &x_sub_one[index];
+            let C3 = (&P0 - claim_fib) * &x_g_claim_cycle[index];
 
-            let C0a = &C0 * &x_1023_cycle[index as usize];
-            let C1a = &C1 * &x_1023_cycle[index as usize];
-            let C2a = &C2 * &x_omega_cycle[index as usize];
-            let C3a = &C3 * &x_omega_cycle[index as usize];
+            let C0a = &C0 * &x_1023_cycle[index];
+            let C1a = &C1 * &x_1023_cycle[index];
+            let C2a = &C2 * &x_omega_cycle[index];
+            let C3a = &C3 * &x_omega_cycle[index];
 
             let mut r = FieldElement::ZERO;
             r += &constraint_coefficients[0] * C0;
