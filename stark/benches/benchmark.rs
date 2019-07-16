@@ -10,7 +10,7 @@ use lazy_static::lazy_static;
 use primefield::FieldElement;
 use rayon::ThreadPoolBuilder;
 use stark::{
-    bit_reversal_fft_cofactor, get_constraint, get_trace_table, make_tree, stark_proof, ProofParams,
+    fft_cofactor_bit_reversed, get_constraint, get_trace_table, make_tree, stark_proof, ProofParams,
 };
 use std::{convert::TryInto, marker::Send};
 use u256::{u256h, U256};
