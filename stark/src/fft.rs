@@ -79,6 +79,7 @@ fn bit_reversal_fft(coefficients: &mut [FieldElement], root: FieldElement) {
     }
 }
 
+// TODO expose public ifft function which accepts bit-reversed input instead.
 pub fn bit_reversal_permute<T>(v: &mut [T]) {
     let n = v.len() as u64;
     let n_bits = 63 - n.leading_zeros();
