@@ -153,7 +153,7 @@ pub fn eval_c_direct(
     }
     let mut next_row: Vec<FieldElement> = Vec::with_capacity(8);
     for polynomial in polynomials {
-        next_row.push(eval_poly(x.clone() * &evaluation_generator, polynomial));
+        next_row.push(eval_poly(x.clone() * evaluation_generator.pow(U256::from(beta)), polynomial));
     }
 
     let this = Row {
