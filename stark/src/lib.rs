@@ -18,5 +18,5 @@ pub use fibonacci::{get_constraint, get_trace_table};
 
 // Exports for benchmarking
 // TODO: Avoid publicly exposing.
-pub use fft::fft_cofactor;
+pub use fft::fft_cofactor_bit_reversed;
 pub use merkle::make_tree;

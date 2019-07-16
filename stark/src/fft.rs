@@ -2,23 +2,19 @@ use crate::utils::Reversible;
 use primefield::FieldElement;
 use u256::U256;
 
-pub fn fft(a: &[FieldElement]) -> Vec<FieldElement> {
-    let mut result = a.to_vec();
-    let root = FieldElement::root(U256::from(result.len() as u64))
-        .expect("No root of unity for input length");
-    bit_reversal_fft(result.as_mut_slice(), root);
-    bit_reversal_permute(result.as_mut_slice());
-    result
-}
-
-pub fn fft_cofactor(a: &[FieldElement], cofactor: &FieldElement) -> Vec<FieldElement> {
+// TODO: Create a dedicated type for bit reversed vectors
+pub fn fft_cofactor_bit_reversed(a: &[FieldElement], cofactor: &FieldElement) -> Vec<FieldElement> {
     let mut result = a.to_vec();
     let mut c = FieldElement::ONE;
     for element in result.iter_mut() {
         *element *= &c;
         c *= cofactor;
     }
-    fft(&result)
+
+    let root = FieldElement::root(U256::from(result.len() as u64))
+        .expect("No root of unity for input length");
+    bit_reversal_fft(result.as_mut_slice(), root);
+    result
 }
 
 pub fn ifft(a: &[FieldElement]) -> Vec<FieldElement> {
@@ -64,7 +60,8 @@ fn bit_reversal_fft(coefficients: &mut [FieldElement], root: FieldElement) {
     }
 }
 
-fn bit_reversal_permute<T>(v: &mut [T]) {
+// TODO expose public ifft function which accepts bit-reversed input instead.
+pub fn bit_reversal_permute<T>(v: &mut [T]) {
     let n = v.len() as u64;
     let n_bits = 63 - n.leading_zeros();
     debug_assert_eq!(1 << n_bits, n);
@@ -95,6 +92,15 @@ mod tests {
     use hex_literal::*;
     use quickcheck_macros::quickcheck;
     use u256::u256h;
+
+    fn fft(a: &[FieldElement]) -> Vec<FieldElement> {
+        let mut result = a.to_vec();
+        let root = FieldElement::root(U256::from(result.len() as u64))
+            .expect("No root of unity for input length");
+        bit_reversal_fft(result.as_mut_slice(), root);
+        bit_reversal_permute(result.as_mut_slice());
+        result
+    }
 
     #[test]
     fn fft_one_element_test() {
@@ -229,7 +235,8 @@ mod tests {
             u256h!("048bad0760f8b52ee4f9a46964bcf1ba9439a9467b2576176b1319cec9f12db0")
         );
 
-        res = fft_cofactor(&vector, &cofactor);
+        res = fft_cofactor_bit_reversed(&vector, &cofactor);
+        bit_reversal_permute(&mut res);
 
         assert_eq!(
             U256::from(&res[0]),

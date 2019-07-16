@@ -1,6 +1,6 @@
 use crate::{
     channel::{ProverChannel, RandomGenerator, Writable},
-    fft::{fft_cofactor, ifft},
+    fft::{bit_reversal_permute, fft_cofactor_bit_reversed, ifft},
     merkle::{self, make_tree, Hashable},
     polynomial::eval_poly,
     utils::Reversible,
@@ -130,12 +130,10 @@ impl<'a> Constraint<'a> {
 // same merkleize system
 impl Groupable<Vec<U256>> for (usize, &[FieldElement]) {
     fn make_group(&self, index: usize) -> Vec<U256> {
-        let layer = self.1;
-        let coset_size = self.0;
-        let n = layer.len();
+        let (coset_size, layer) = *self;
         let mut internal_leaf = Vec::with_capacity(coset_size);
         for j in 0..coset_size {
-            internal_leaf.push(layer[(index * coset_size + j).bit_reverse_at(n)].0.clone());
+            internal_leaf.push(layer[(index * coset_size + j)].0.clone());
         }
         internal_leaf
     }
@@ -149,7 +147,7 @@ impl Groupable<Vec<U256>> for &[Vec<FieldElement>] {
     fn make_group(&self, index: usize) -> Vec<U256> {
         let mut ret = Vec::with_capacity(self.len());
         for item in self.iter() {
-            ret.push(item[index.bit_reverse_at(item.len())].0.clone())
+            ret.push(item[index].0.clone())
         }
         ret
     }
@@ -161,7 +159,7 @@ impl Groupable<Vec<U256>> for &[Vec<FieldElement>] {
 
 impl Groupable<U256> for &[FieldElement] {
     fn make_group(&self, index: usize) -> U256 {
-        self[index.bit_reverse_at(self.len())].0.clone()
+        self[index].0.clone()
     }
 
     fn domain_size(&self) -> usize {
@@ -294,17 +292,15 @@ fn fri_layer(
     let len = previous.len();
     let step = eval_domain_size / len;
     let mut next = Vec::with_capacity(len / 2);
-    next.par_extend((0..(len / 2)).into_par_iter().map(|index| {
-        let negative_index = (len / 2 + index) % len;
-        let inverse_index = ((len - index) % len) * step;
-        // OPT: Check if computed x_inv is faster
-        let x_inv = &eval_x[inverse_index];
-        let value = &previous[index];
-        let neg_x_value = &previous[negative_index];
-        debug_assert_eq!(x_inv, &eval_x[index * step].inv().unwrap());
-        debug_assert_eq!(eval_x[negative_index * step], -&eval_x[index * step]);
-        (value + neg_x_value) + evaluation_point * x_inv * (value - neg_x_value)
-    }));
+    (0..(len / 2))
+        .into_par_iter()
+        .map(|index| {
+            let value = &previous[2 * index];
+            let neg_x_value = &previous[2 * index + 1];
+            let x_inv = &eval_x[index.bit_reverse_at(len / 2) * step].inv().unwrap();
+            (value + neg_x_value) + evaluation_point * x_inv * (value - neg_x_value)
+        })
+        .collect_into_vec(&mut next);
     next
 }
 
@@ -369,21 +365,13 @@ fn calculate_low_degree_extensions(
     let omega = FieldElement::root(U256::from((trace_len * params.blowup) as u64)).unwrap();
     let gen = FieldElement::GENERATOR;
 
-    let mut LDEn = vec![vec![FieldElement::ZERO; eval_x.len()]; trace_poly.len()];
-    // OPT - Refactor to not allocate in this loop.
+    let mut LDEn = vec![Vec::with_capacity(eval_x.len()); trace_poly.len()];
     LDEn.par_iter_mut().enumerate().for_each(|(x, col)| {
-        let data_holder: Vec<Vec<FieldElement>> = (0..params.blowup)
-            .into_par_iter()
-            .map(|j| fft_cofactor(trace_poly[x], &(&gen * &omega.pow(U256::from(j as u64)))))
-            .collect();
-
-        col.par_chunks_mut(params.blowup)
-            .enumerate()
-            .for_each(|(i, chunk)| {
-                for (j, item) in chunk.iter_mut().enumerate() {
-                    *item = data_holder[j][i].clone();
-                }
-            });
+        for index in 0..params.blowup {
+            let reverse_index = index.bit_reverse_at(params.blowup);
+            let cofactor = &gen * omega.pow(U256::from(reverse_index as u64));
+            col.extend(fft_cofactor_bit_reversed(trace_poly[x], &cofactor));
+        }
     });
 
     LDEn
@@ -508,18 +496,20 @@ fn calculate_out_of_domain_constraints(
 
     (0..eval_domain_size)
         .into_par_iter()
-        .map(|i| {
+        .map(|index| {
+            let i = index.bit_reverse_at(eval_domain_size);
             let A = &x_oods_cycle[i];
             let B = &x_oods_cycle_g[i];
             let mut r = FieldElement::ZERO;
 
             for x in 0..lde_poly.len() {
-                r += &oods_coefficients[2 * x] * (&lde_poly[x][i] - &oods_values[2 * x]) * A;
-                r +=
-                    &oods_coefficients[2 * x + 1] * (&lde_poly[x][i] - &oods_values[2 * x + 1]) * B;
+                r += &oods_coefficients[2 * x] * (&lde_poly[x][index] - &oods_values[2 * x]) * A;
+                r += &oods_coefficients[2 * x + 1]
+                    * (&lde_poly[x][index] - &oods_values[2 * x + 1])
+                    * B;
             }
             r += &oods_coefficients[oods_coefficients.len() - 1]
-                * (&constraint_on_domain[i] - &oods_values[oods_values.len() - 1])
+                * (&constraint_on_domain[index] - &oods_values[oods_values.len() - 1])
                 * A;
 
             r
@@ -587,7 +577,10 @@ fn perform_fri_layering(
     // Gets the coefficient representation of the last number of fri reductions
 
     let last_layer_degree_bound = trace_len / (2_usize.pow(halvings as u32));
-    let mut last_layer_coefficient = ifft(&(fri[halvings].as_slice()));
+
+    let mut last_layer = fri[halvings].clone();
+    bit_reversal_permute(&mut last_layer);
+    let mut last_layer_coefficient = ifft(&last_layer);
     last_layer_coefficient.truncate(last_layer_degree_bound);
     proof.write(last_layer_coefficient.as_slice());
     debug_assert_eq!(last_layer_coefficient.len(), last_layer_degree_bound);
@@ -644,11 +637,7 @@ fn decommit_fri_layers_and_trees(
                 if previous_indices.binary_search(&n).is_ok() {
                     continue;
                 } else {
-                    proof.write(
-                        &fri_layers[current_fri][((n as u64).bit_reverse()
-                            >> (u64::from(fri_layers[current_fri].len().leading_zeros() + 1)))
-                            as usize],
-                    );
+                    proof.write(&fri_layers[current_fri][n]);
                 }
             }
         }
@@ -821,12 +810,13 @@ mod tests {
         let TPn_reference: Vec<&[FieldElement]> = TPn.iter().map(|x| x.as_slice()).collect();
         let LDEn = calculate_low_degree_extensions(TPn_reference.as_slice(), &params, &eval_x);
 
+        // Checks that the low degree extension calculation is working
         let LDE0 = LDEn[0].as_slice();
         let LDE1 = LDEn[1].as_slice();
-
-        // Checks that the low degree extension calculation is working
-        assert_eq!(eval_poly(eval_offset_x[13644].clone(), TP0), LDE0[13644]);
-        assert_eq!(eval_poly(eval_offset_x[13644].clone(), TP1), LDE1[13644]);
+        let i = 13644usize;
+        let reverse_i = i.bit_reverse_at(eval_domain_size);
+        assert_eq!(eval_poly(eval_offset_x[reverse_i].clone(), TP0), LDE0[i]);
+        assert_eq!(eval_poly(eval_offset_x[reverse_i].clone(), TP1), LDE1[i]);
 
         // Checks that the groupable trait is properly grouping for &[Vec<FieldElement>]
         assert_eq!(
@@ -885,7 +875,7 @@ mod tests {
         );
         // Checks that our constraints are properly calculated on the domain
         assert_eq!(
-            CC[123].clone(),
+            CC[123.bit_reverse_at(eval_domain_size)].clone(),
             FieldElement(u256h!(
                 "019fb62b06446e919d7909f4896febce72978ff860e1ed61b4418091617677d3"
             ))
@@ -932,7 +922,7 @@ mod tests {
         );
         // Checks that our out of domain evaluated constraints calculated right
         assert_eq!(
-            CO[4321].clone(),
+            CO[4321.bit_reverse_at(eval_domain_size)].clone(),
             FieldElement(u256h!(
                 "023b8ba264d4a1255e1dedd6e5819e86230562b85d5a7af8fb994053a2debdde"
             ))
