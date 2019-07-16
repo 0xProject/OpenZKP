@@ -6,8 +6,10 @@ use std::{
     slice,
 };
 use tempfile::tempfile;
+use std::ops::Add;
+use std::ops::Mul;
+use std::ops::Sub;
 
-#[allow(dead_code)]
 pub struct MmapVec<T: Clone> {
     mmap:     MmapMut,
     length:   usize,
@@ -35,6 +37,12 @@ impl<T: Clone> MmapVec<T> {
             capacity,
             _t: PhantomData,
         }
+    }
+
+    pub fn clone_from(s: &[T]) -> MmapVec<T> {
+        let mut m: MmapVec<T> = MmapVec::with_capacity(s.len());
+        m.extend(s);
+        m
     }
 
     pub fn push(&mut self, next: T) {
@@ -80,6 +88,48 @@ impl<T: Clone> DerefMut for MmapVec<T> {
     #[inline]
     fn deref_mut(&mut self) -> &mut [T] {
         unsafe { slice::from_raw_parts_mut(self.mmap.as_mut_ptr() as *mut T, self.length) }
+    }
+}
+
+impl<T: Clone + Add<Output=T>> Add for MmapVec<T> {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self {
+        let n = self.len();
+        debug_assert_eq!(n, other.len());
+        let mut result: MmapVec<T> = MmapVec::with_capacity(n);
+        for i in 0..n {
+            result.push(self[i].clone() + other[i].clone());
+        }
+        result
+    }
+}
+
+impl<T: Clone + Sub<Output=T>> Sub for MmapVec<T> {
+    type Output = Self;
+
+    fn sub(self, other: Self) -> Self {
+        let n = self.len();
+        debug_assert_eq!(n, other.len());
+        let mut result: MmapVec<T> = MmapVec::with_capacity(n);
+        for i in 0..n {
+            result.push(self[i].clone() - other[i].clone());
+        }
+        result
+    }
+}
+
+impl<T: Clone + Mul<Output=T>> Mul for MmapVec<T> {
+    type Output = Self;
+
+    fn mul(self, other: Self) -> Self {
+        let n = self.len();
+        debug_assert_eq!(n, other.len());
+        let mut result: MmapVec<T> = MmapVec::with_capacity(n);
+        for i in 0..n {
+            result.push(self[i].clone() * other[i].clone());
+        }
+        result
     }
 }
 

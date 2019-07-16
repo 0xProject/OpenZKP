@@ -7,13 +7,47 @@ use crate::pedersen_merkle::input::get_periodic_columns;
 use ecc::Affine;
 use itertools::izip;
 use starkdex::SHIFT_POINT;
+use crate::mmap_vec::MmapVec;
 
-// pub fn eval_whole_loop(
-//     LDEn: &[&[FieldElement]],
-//     constraint_coefficients: &[FieldElement],
-//     claim_index: usize,
-//     claim_fib: &FieldElement,
-// ) -> Vec<FieldElement> {
+
+struct Rows {
+    left:  Subrows,
+    right: Subrows,
+}
+
+struct Subrows {
+    source: MmapVec<FieldElement>,
+    slope:  MmapVec<FieldElement>,
+    x:      MmapVec<FieldElement>,
+    y:      MmapVec<FieldElement>,
+}
+
+pub fn eval_whole_loop(
+    low_degree_extension: &[&[FieldElement]],
+    constraint_coefficients: &[FieldElement],
+    _claim_index: usize,
+    _claim_fib: &FieldElement,
+) -> Vec<FieldElement> {
+    let _extended_trace_table = Rows {
+        left: Subrows {
+            source: MmapVec::clone_from(low_degree_extension[0]),
+            slope: MmapVec::clone_from(low_degree_extension[1]),
+            x: MmapVec::clone_from(low_degree_extension[2]),
+            y: MmapVec::clone_from(low_degree_extension[3]),
+        },
+        right: Subrows {
+            source: MmapVec::clone_from(low_degree_extension[4]),
+            slope: MmapVec::clone_from(low_degree_extension[5]),
+            x: MmapVec::clone_from(low_degree_extension[6]),
+            y: MmapVec::clone_from(low_degree_extension[7]),
+        }
+    };
+
+    let _x = constraint_coefficients;
+
+    vec![FieldElement::ZERO]
+
+}
 //     let eval_domain_size_usize = LDEn[0].len();
 //     let eval_domain_size = eval_domain_size_usize as u64;
 //     let beta = 2_u64.pow(4);
