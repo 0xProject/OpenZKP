@@ -3,12 +3,10 @@ use primefield::{invert_batch, FieldElement};
 // use rayon::prelude::*;
 use u256::U256;
 // use u256::u256h;
-use crate::pedersen_merkle::input::get_periodic_columns;
+use crate::{mmap_vec::MmapVec, pedersen_merkle::input::get_periodic_columns};
 use ecc::Affine;
 use itertools::izip;
 use starkdex::SHIFT_POINT;
-use crate::mmap_vec::MmapVec;
-
 
 struct Rows {
     left:  Subrows,
@@ -28,25 +26,79 @@ pub fn eval_whole_loop(
     _claim_index: usize,
     _claim_fib: &FieldElement,
 ) -> Vec<FieldElement> {
-    let _extended_trace_table = Rows {
-        left: Subrows {
+    let this = Rows {
+        left:  Subrows {
             source: MmapVec::clone_from(low_degree_extension[0]),
-            slope: MmapVec::clone_from(low_degree_extension[1]),
-            x: MmapVec::clone_from(low_degree_extension[2]),
-            y: MmapVec::clone_from(low_degree_extension[3]),
+            slope:  MmapVec::clone_from(low_degree_extension[1]),
+            x:      MmapVec::clone_from(low_degree_extension[2]),
+            y:      MmapVec::clone_from(low_degree_extension[3]),
         },
         right: Subrows {
             source: MmapVec::clone_from(low_degree_extension[4]),
-            slope: MmapVec::clone_from(low_degree_extension[5]),
-            x: MmapVec::clone_from(low_degree_extension[6]),
-            y: MmapVec::clone_from(low_degree_extension[7]),
-        }
+            slope:  MmapVec::clone_from(low_degree_extension[5]),
+            x:      MmapVec::clone_from(low_degree_extension[6]),
+            y:      MmapVec::clone_from(low_degree_extension[7]),
+        },
     };
+
+    let next = Rows {
+        left:  Subrows {
+            source: MmapVec::clone_from(low_degree_extension[0]),
+            slope:  MmapVec::clone_from(low_degree_extension[1]),
+            x:      MmapVec::clone_from(low_degree_extension[2]),
+            y:      MmapVec::clone_from(low_degree_extension[3]),
+        },
+        right: Subrows {
+            source: MmapVec::clone_from(low_degree_extension[4]),
+            slope:  MmapVec::clone_from(low_degree_extension[5]),
+            x:      MmapVec::clone_from(low_degree_extension[6]),
+            y:      MmapVec::clone_from(low_degree_extension[7]),
+        },
+    };
+
+    let n = this.left.source.len();
+
+    let mut result = MmapVec::clone_from(&vec![FieldElement::ZERO; n]);
+    result += &this.left.source;
+    result += &this.left.source;
+    result += &next.left.source;
+    let _constraints = vec![
+        this.left.source,
+        // this.left.slope.clone(),
+        // this.left.x.clone(),
+        // this.left.y.clone(),
+        // this.right.source.clone(),
+        // this.right.slope.clone(),
+        // this.right.x.clone(),
+        // this.right.y.clone(),
+        // (&public_input.leaf - &this.left.source) * (&public_input.leaf - &this.right.source),
+        // &public_input.root - &this.right.x,
+        // (&this.right.x - &next.left.source) * (&this.right.x - &next.right.source),
+        // &this.right.x - shift_point_x,
+        // &this.right.y - shift_point_y,
+        // &left_bit * (&left_bit - FieldElement::ONE),
+        // &left_bit * (&this.right.y - &q_y_left) - &next.left.slope * (&this.right.x - &q_x_left),
+        // next.left.slope.square() - &left_bit * (&this.right.x + &q_x_left + &next.left.x),
+        // &left_bit * (&this.right.y + &next.left.y)
+        //     - &next.left.slope * (&this.right.x - &next.left.x),
+        // (FieldElement::ONE - &left_bit) * (&this.right.x - &next.left.x),
+        // (FieldElement::ONE - &left_bit) * (&this.right.y - &next.left.y),
+        // this.left.source.clone(),
+        // this.left.source.clone(),
+        // &right_bit * (&right_bit - FieldElement::ONE),
+        // &right_bit * (&next.left.y - &q_y_right) - &next.right.slope * (&next.left.x - &q_x_right),
+        // next.right.slope.square() - &right_bit * (&next.left.x + &q_x_right + &next.right.x),
+        // &right_bit * (&next.left.y + &next.right.y)
+        //     - &next.right.slope * (&next.left.x - &next.right.x),
+        // (FieldElement::ONE - &right_bit) * (&next.left.x - &next.right.x),
+        // (FieldElement::ONE - &right_bit) * (&next.left.y - &next.right.y),
+        // this.right.source.clone(),
+        // this.right.source.clone(),
+    ];
 
     let _x = constraint_coefficients;
 
     vec![FieldElement::ZERO]
-
 }
 //     let eval_domain_size_usize = LDEn[0].len();
 //     let eval_domain_size = eval_domain_size_usize as u64;
@@ -158,11 +210,8 @@ pub fn eval_c_direct(
     let public_input = get_public_input();
     let path_length = U256::from(public_input.path_length as u64);
     let trace_length = U256::from(256u64) * &path_length;
-    let beta = 16u64;
-    let evaluation_length = U256::from(beta) * &trace_length;
 
     let trace_generator = FieldElement::root(trace_length.clone()).unwrap();
-    let evaluation_generator = FieldElement::root(evaluation_length.clone()).unwrap();
 
     let numerators = vec![
         x - trace_generator.pow(&trace_length - U256::ONE),
@@ -187,7 +236,7 @@ pub fn eval_c_direct(
     }
     let mut next_row: Vec<FieldElement> = Vec::with_capacity(8);
     for polynomial in polynomials {
-        next_row.push(eval_poly(x.clone() * evaluation_generator.pow(U256::from(beta)), polynomial));
+        next_row.push(eval_poly(x * &trace_generator, polynomial));
     }
 
     let this = Row {
@@ -195,7 +244,7 @@ pub fn eval_c_direct(
             source: this_row[0].clone(),
             slope:  this_row[1].clone(),
             x:      this_row[2].clone(),
-            y:      this_row[2].clone(),
+            y:      this_row[3].clone(),
         },
         right: Subrow {
             source: this_row[4].clone(),
@@ -210,7 +259,7 @@ pub fn eval_c_direct(
             source: next_row[0].clone(),
             slope:  next_row[1].clone(),
             x:      next_row[2].clone(),
-            y:      next_row[2].clone(),
+            y:      next_row[3].clone(),
         },
         right: Subrow {
             source: next_row[4].clone(),
@@ -334,11 +383,103 @@ pub fn eval_c_direct(
 mod test {
     use super::*;
     use hex_literal::*;
+    use rayon::prelude::*;
     use u256::u256h;
 
+    use crate::{
+        fft::ifft,
+        pedersen_merkle::{
+            input::{get_private_input, get_public_input},
+            trace_table::get_trace,
+        },
+    };
+
     #[test]
-    fn trace_is_correct() {
-        let _coefficients = vec![
+    fn eval_c_direct_is_correct() {
+        let public_input = get_public_input();
+        let trace_table = get_trace(
+            public_input.path_length,
+            public_input.leaf,
+            &get_private_input(),
+        );
+
+        let mut columns: [Vec<FieldElement>; 8] = Default::default();
+        let r1 = FieldElement::ONE.0;
+        for (i, value) in trace_table.iter().enumerate() {
+            if i % 4 == 0 {
+                columns[i % 8].push(FieldElement::from(&r1) * value.clone());
+            } else {
+                columns[i % 8].push(value.clone());
+            }
+        }
+
+        let trace_length: usize = public_input.path_length * 256;
+        // let trace_generator =
+        //     FieldElement::GENERATOR.pow(FieldElement::MODULUS /
+        // U256::from(trace_length as u64));
+
+        let mut trace_polynomials: Vec<Vec<FieldElement>> =
+            vec![Vec::with_capacity(trace_length); 8];
+        columns
+            .into_par_iter()
+            .map(|c| ifft(&c))
+            .collect_into_vec(&mut trace_polynomials);
+
+        let trace_polynomial_references: Vec<&[FieldElement]> =
+            trace_polynomials.iter().map(|x| x.as_slice()).collect();
+
+        let oods_point = FieldElement::from_hex_str(
+            "0x273966fc4697d1762d51fe633f941e92f87bdda124cf7571007a4681b140c05",
+        );
+        // let shifted_oods_point = &trace_generator * oods_point.clone();
+        //
+        // let expected_field_elements = vec![
+        //     (
+        //         "0x1c55a628c340086e7b03b833483a41e49232f2eb3cf7efe399af42d36026793",
+        //         "0x6a5fac2d52aad81e922c8e21515d3b93e2184137af76cec9ee16428bb3d8742",
+        //     ),
+        //     (
+        //         "0x37166910df8fec267b29d203031fb13e7f6da72863d9fe77e8a735d6a1e79a5",
+        //         "0xb9a28b911c2aaef882a6dfb7ff291cc98afe46d39c04cc7add60167d28320f",
+        //     ),
+        //     (
+        //         "0x221a5558fb6b1bcc8a61ba4aae7e0646ff4d7690e58a64cc53fdff836a3bc18",
+        //         "0x336b6efed32a340ec120f4eb8124a70df35548e8a0f71d207cd746bcc815606",
+        //     ),
+        //     (
+        //         "0x1ab3ec5448b6246fca3274aae40db371d6ab1d2d1ff2d32cfc598393d0458a2",
+        //         "0x71499fe5c6d16e0de24de83ee50f2d7068b636dd6a5ae6faaa83549b50348ba",
+        //     ),
+        //     (
+        //         "0x602e311233369f3f2e214f1e07345ce5a57b1c281e99a55d75966a29cb241e5",
+        //         "0x4f22d2b9e7fad2a83e220be43671604520d2b2e83d986061409b304ae5ac0ad",
+        //     ),
+        //     (
+        //         "0x227b8ac64b82ff81f247c523e63c8fe2dd23f198fb5da96209d465f9ad9a13b",
+        //         "0x4cfb2bfb81f724710fe4e80489dff8757835c157495c8257fe9283395b10bc5",
+        //     ),
+        //     (
+        //         "0x76bbb9f25fc2dec3d5ae212c754289e4ada4bf192d3b76ecdb8708e25f1b474",
+        //         "0x549a1f9ac0513424ac4311e8bc8830c527a375776cde770247d06389f74e895",
+        //     ),
+        //     (
+        //         "0x601aa2e1927d2b8c37b29e7a82d0e44fbfb9598c3cdef28beb8a9c31f3ebf8a",
+        //         "0x544e59775ac2833e4c353ec09dd296cbc7b2c9cbd6642da40859d64c534ce79",
+        //     ),
+        // ];
+        //
+        // for (i, (f_1, f_2)) in expected_field_elements.iter().enumerate() {
+        //     assert_eq!(
+        //         eval_poly(oods_point.clone(), &trace_polynomials[i]),
+        //         FieldElement::from_hex_str(*f_1)
+        //     );
+        //     assert_eq!(
+        //         eval_poly(shifted_oods_point.clone(), &trace_polynomials[i]),
+        //         FieldElement::from_hex_str(*f_2)
+        //     );
+        // }
+
+        let coefficients = vec![
             FieldElement::from(u256h!(
                 "0636ad17759a0cc671e906ef94553c10f7a2c012d7a2aa599875506f874c136a"
             )),
@@ -515,15 +656,18 @@ mod test {
             )),
         ];
 
-        // let result = eval_c_direct(
-        //     FieldElement::ONE,
-        //     polynomials: &[&[FieldElement]],
-        //     0usize,
-        //     FieldElement::ZERO,
-        //     &coefficients,
-        // )
-        //
-        // assert_eq!(eval_c_direct(FieldElement::ONE), FieldElement::ONE);
+        let result = eval_c_direct(
+            &oods_point,
+            &trace_polynomial_references,
+            0usize,             // not used
+            FieldElement::ZERO, // not used
+            &coefficients,
+        );
+
+        let expected = FieldElement::from(u256h!(
+            "077d10d22df8a41ee56095fc18c0d02dcd101c2e5749ff65458828bbd3c820db"
+        ));
+        assert_eq!(result, expected);
     }
 
 }
