@@ -668,10 +668,10 @@ mod test {
         //         "01d7b36c4e979188ec71f7013ac4ff807aa77d379d6e8b9eee04ecfe8ceaa5b6"
         //     )),
         // ];
-        // good up to 40
+        // good up to 50
 
         let mut coefficients = vec![FieldElement::ZERO; 58];
-        for i in 0..40 {
+        for i in 0..50 {
             coefficients[i] = FieldElement::ONE;
         }
 
@@ -685,7 +685,7 @@ mod test {
         );
 
         let expected = FieldElement::from_hex_str(
-            "0x5bd523661d3034e0743d4da6051bbebd87bc5329c1aeecfb37a18d14f13e2ca"
+            "0x574586611814b436df45e883804de8941c9f5c1b176ca745dd0af110b542573"
         );
         assert_eq!(result, expected);
     }
