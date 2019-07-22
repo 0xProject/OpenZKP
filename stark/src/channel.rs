@@ -157,6 +157,10 @@ impl VerifierChannel {
     pub fn pow_find_nonce_threaded(&self, pow_bits: u8) -> u64 {
         self.coin.pow_find_nonce_threaded(pow_bits)
     }
+
+    pub fn read_without_replay(&self, length: usize) -> &[u8] {
+        &self.proof[self.proof_index..(self.proof_index + length)]
+    }
 }
 
 impl RandomGenerator<FieldElement> for PublicCoin {

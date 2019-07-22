@@ -1,6 +1,6 @@
 // TODO: #![deny(missing_docs)]
 #![warn(clippy::all)]
-#![deny(warnings)]
+// c
 mod channel;
 mod fft;
 pub mod fibonacci;
@@ -13,6 +13,7 @@ mod polynomial;
 mod proofs;
 mod trace_table;
 mod utils;
+mod verifier;
 
 pub use trace_table::TraceTable;
 

@@ -130,6 +130,65 @@ pub fn proof<R: Hashable, T: Groupable<R>>(
     decommitment
 }
 
+pub fn decommitment_size(indices: &[usize], data_size: usize) -> usize {
+    let depth = data_size.trailing_zeros();
+    let num_leaves = 2_usize.pow(depth);
+    let num_nodes = 2 * num_leaves;
+    let mut known = vec![false; num_nodes + 1];
+    let mut total = 0;
+
+    let mut peekable_indicies = indices.iter().peekable();
+    let mut excluded_pair = false;
+    for &index in indices.iter() {
+        peekable_indicies.next();
+        known[num_leaves + index % num_leaves] = true;
+
+        if index % 2 == 0 {
+            known[num_leaves + 1 + index % num_leaves] = true;
+            let prophet = peekable_indicies.peek();
+            match prophet {
+                Some(x) => {
+                    if **x != index + 1 {
+                        total += 1;
+                    } else {
+                        excluded_pair = true;
+                    }
+                }
+                None => {
+                    total += 1;
+                }
+            }
+        } else if !excluded_pair {
+            known[num_leaves - 1 + index % num_leaves] = true;
+            total += 1;
+        } else {
+            known[num_leaves - 1 + index % num_leaves] = true;
+            excluded_pair = false;
+        }
+    }
+
+    for i in (2_usize.pow(depth - 1))..(2_usize.pow(depth)) {
+        let left = known[2 * i];
+        let right = known[2 * i + 1];
+        known[i] = left || right;
+    }
+
+    for d in (1..depth).rev() {
+        for i in (2_usize.pow(d - 1))..(2_usize.pow(d)) {
+            let left = known[2 * i];
+            let right = known[2 * i + 1];
+            if left && !right {
+                total += 1;
+            }
+            if !left && right {
+                total += 1;
+            }
+            known[i] = left || right;
+        }
+    }
+    total
+}
+
 pub fn verify<T: Hashable>(
     root: Hash,
     depth: u32,
@@ -139,7 +198,7 @@ pub fn verify<T: Hashable>(
     let mut queue = Vec::with_capacity(values.len());
     values.sort_by(|a, b| b.0.cmp(&a.0)); // Sorts the list by index
     for leaf in values.iter() {
-        let tree_index = 2_u64.pow(depth) + leaf.0;
+        let tree_index = 2_usize.pow(depth) + leaf.0;
         queue.push((tree_index, leaf.1.hash()));
     }
     let mut start = values.len() - 1;
@@ -175,6 +234,17 @@ pub fn verify<T: Hashable>(
                 current %= start;
             } else {
                 current = 0;
+            }
+        }  else if index % 2 == 0 {
+            queue.push((
+                index / 2,
+                hash_node(&data_hash, &decommitment.remove(current)),
+            ));
+
+            if current == 0 {
+                current = start;
+            } else {
+                current -= 1;
             }
         } else {
             queue.push((
