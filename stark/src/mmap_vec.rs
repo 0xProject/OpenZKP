@@ -1,8 +1,9 @@
 use memmap::{MmapMut, MmapOptions};
+use primefield::FieldElement;
 use std::{
     marker::PhantomData,
     mem::size_of,
-    ops::{Add, AddAssign, Deref, DerefMut, Mul, Sub},
+    ops::{Add, AddAssign, Deref, DerefMut, Mul, MulAssign},
     slice,
 };
 use tempfile::tempfile;
@@ -88,6 +89,14 @@ impl<T: Clone> DerefMut for MmapVec<T> {
     }
 }
 
+impl<T: Clone> Clone for MmapVec<T> {
+    fn clone(&self) -> Self {
+        let mut result = MmapVec::with_capacity(self.len());
+        result.extend(self);
+        result
+    }
+}
+
 impl<T: Clone + Add<Output = T>> Add for MmapVec<T> {
     type Output = Self;
 
@@ -112,20 +121,6 @@ impl<T: Clone + AddAssign> AddAssign<&MmapVec<T>> for MmapVec<T> {
     }
 }
 
-impl<T: Clone + Sub<Output = T>> Sub for MmapVec<T> {
-    type Output = Self;
-
-    fn sub(self, other: Self) -> Self {
-        let n = self.len();
-        debug_assert_eq!(n, other.len());
-        let mut result: MmapVec<T> = MmapVec::with_capacity(n);
-        for i in 0..n {
-            result.push(self[i].clone() - other[i].clone());
-        }
-        result
-    }
-}
-
 impl<T: Clone + Mul<Output = T>> Mul for MmapVec<T> {
     type Output = Self;
 
@@ -140,17 +135,39 @@ impl<T: Clone + Mul<Output = T>> Mul for MmapVec<T> {
     }
 }
 
-impl<T: Clone + Mul<Output = T>> Mul<T> for MmapVec<T> {
+impl Mul<&FieldElement> for MmapVec<FieldElement> {
     type Output = Self;
 
-    fn mul(self, other: T) -> Self {
-        let mut result: MmapVec<T> = MmapVec::with_capacity(self.len());
-        for x in self.iter() {
-            result.push(x.clone() * other.clone());
+    fn mul(self, scalar: &FieldElement) -> Self {
+        let mut result = MmapVec::clone_from(&self);
+        for i in 0..self.len() {
+            result[i] *= scalar;
         }
         result
     }
 }
+
+impl<T: Clone + MulAssign> MulAssign<&MmapVec<T>> for MmapVec<T> {
+    fn mul_assign(&mut self, other: &MmapVec<T>) {
+        let n = self.len();
+        debug_assert_eq!(n, other.len());
+        for i in 0..n {
+            self[i] *= other[i].clone();
+        }
+    }
+}
+
+// impl<T: Clone + Mul<Output = T>> Mul<T> for MmapVec<T> {
+//     type Output = Self;
+//
+//     fn mul(self, other: T) -> Self {
+//         let mut result: MmapVec<T> = MmapVec::with_capacity(self.len());
+//         for x in self.iter() {
+//             result.push(x.clone() * other.clone());
+//         }
+//         result
+//     }
+// }
 
 #[cfg(test)]
 mod tests {

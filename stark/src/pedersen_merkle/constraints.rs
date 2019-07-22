@@ -3,7 +3,9 @@ use primefield::{invert_batch, FieldElement};
 // use rayon::prelude::*;
 use u256::U256;
 // use u256::u256h;
-use crate::{mmap_vec::MmapVec, pedersen_merkle::input::get_periodic_columns};
+use crate::{
+    mmap_vec::MmapVec, pedersen_merkle::input::get_periodic_columns, proofs::geometric_series,
+};
 use ecc::Affine;
 use itertools::izip;
 use starkdex::SHIFT_POINT;
@@ -20,13 +22,20 @@ struct Subrows {
     y:      MmapVec<FieldElement>,
 }
 
+struct Constraint<'a> {
+    base:              &'a Fn(&Rows) -> MmapVec<FieldElement>,
+    numerator_index:   usize,
+    denominator_index: usize,
+    adjustment_index:  usize,
+}
+
 pub fn eval_whole_loop(
     low_degree_extension: &[&[FieldElement]],
-    constraint_coefficients: &[FieldElement],
+    _constraint_coefficients: &[FieldElement],
     _claim_index: usize,
     _claim_fib: &FieldElement,
 ) -> Vec<FieldElement> {
-    let this = Rows {
+    let rows = Rows {
         left:  Subrows {
             source: MmapVec::clone_from(low_degree_extension[0]),
             slope:  MmapVec::clone_from(low_degree_extension[1]),
@@ -41,152 +50,89 @@ pub fn eval_whole_loop(
         },
     };
 
-    let next = Rows {
-        left:  Subrows {
-            source: MmapVec::clone_from(low_degree_extension[0]),
-            slope:  MmapVec::clone_from(low_degree_extension[1]),
-            x:      MmapVec::clone_from(low_degree_extension[2]),
-            y:      MmapVec::clone_from(low_degree_extension[3]),
-        },
-        right: Subrows {
-            source: MmapVec::clone_from(low_degree_extension[4]),
-            slope:  MmapVec::clone_from(low_degree_extension[5]),
-            x:      MmapVec::clone_from(low_degree_extension[6]),
-            y:      MmapVec::clone_from(low_degree_extension[7]),
-        },
-    };
+    let n = rows.left.source.len();
 
-    let n = this.left.source.len();
+    let x_values = MmapVec::clone_from(&geometric_series(
+        &FieldElement::ONE,
+        &FieldElement::root(U256::from(n as u64)).unwrap(),
+        n,
+    ));
 
-    let mut result = MmapVec::clone_from(&vec![FieldElement::ZERO; n]);
-    result += &this.left.source;
-    result += &this.left.source;
-    result += &next.left.source;
-    let _constraints = vec![
-        this.left.source,
-        // this.left.slope.clone(),
-        // this.left.x.clone(),
-        // this.left.y.clone(),
-        // this.right.source.clone(),
-        // this.right.slope.clone(),
-        // this.right.x.clone(),
-        // this.right.y.clone(),
-        // (&public_input.leaf - &this.left.source) * (&public_input.leaf - &this.right.source),
-        // &public_input.root - &this.right.x,
-        // (&this.right.x - &next.left.source) * (&this.right.x - &next.right.source),
-        // &this.right.x - shift_point_x,
-        // &this.right.y - shift_point_y,
-        // &left_bit * (&left_bit - FieldElement::ONE),
-        // &left_bit * (&this.right.y - &q_y_left) - &next.left.slope * (&this.right.x - &q_x_left),
-        // next.left.slope.square() - &left_bit * (&this.right.x + &q_x_left + &next.left.x),
-        // &left_bit * (&this.right.y + &next.left.y)
-        //     - &next.left.slope * (&this.right.x - &next.left.x),
-        // (FieldElement::ONE - &left_bit) * (&this.right.x - &next.left.x),
-        // (FieldElement::ONE - &left_bit) * (&this.right.y - &next.left.y),
-        // this.left.source.clone(),
-        // this.left.source.clone(),
-        // &right_bit * (&right_bit - FieldElement::ONE),
-        // &right_bit * (&next.left.y - &q_y_right) - &next.right.slope * (&next.left.x - &q_x_right),
-        // next.right.slope.square() - &right_bit * (&next.left.x + &q_x_right + &next.right.x),
-        // &right_bit * (&next.left.y + &next.right.y)
-        //     - &next.right.slope * (&next.left.x - &next.right.x),
-        // (FieldElement::ONE - &right_bit) * (&next.left.x - &next.right.x),
-        // (FieldElement::ONE - &right_bit) * (&next.left.y - &next.right.y),
-        // this.right.source.clone(),
-        // this.right.source.clone(),
+    let numerators = vec![x_values];
+    let denominators = vec![MmapVec::clone_from(&geometric_series(
+        &FieldElement::ONE,
+        &FieldElement::root(U256::from(n as u64)).unwrap(),
+        n,
+    ))];
+    let adjustments = vec![MmapVec::clone_from(&geometric_series(
+        &FieldElement::ONE,
+        &FieldElement::root(U256::from(n as u64)).unwrap(),
+        n,
+    ))];
+
+    let constraints = vec![
+        Constraint {
+            base:              &|rows: &Rows| rows.left.source.clone(),
+            numerator_index:   2,
+            denominator_index: 6,
+            adjustment_index:  0,
+        },
+        Constraint {
+            base:              &|rows: &Rows| rows.left.slope.clone(),
+            numerator_index:   2,
+            denominator_index: 6,
+            adjustment_index:  0,
+        },
+        Constraint {
+            base:              &|rows: &Rows| rows.left.x.clone(),
+            numerator_index:   2,
+            denominator_index: 6,
+            adjustment_index:  0,
+        },
+        Constraint {
+            base:              &|rows: &Rows| rows.left.y.clone(),
+            numerator_index:   2,
+            denominator_index: 6,
+            adjustment_index:  0,
+        },
+        Constraint {
+            base:              &|rows: &Rows| rows.right.source.clone(),
+            numerator_index:   2,
+            denominator_index: 6,
+            adjustment_index:  0,
+        },
+        Constraint {
+            base:              &|rows: &Rows| rows.right.slope.clone(),
+            numerator_index:   2,
+            denominator_index: 6,
+            adjustment_index:  0,
+        },
+        Constraint {
+            base:              &|rows: &Rows| rows.right.x.clone(),
+            numerator_index:   2,
+            denominator_index: 6,
+            adjustment_index:  0,
+        },
+        Constraint {
+            base:              &|rows: &Rows| rows.right.y.clone(),
+            numerator_index:   2,
+            denominator_index: 6,
+            adjustment_index:  0,
+        },
     ];
 
-    let _x = constraint_coefficients;
+    let mut result = MmapVec::clone_from(&vec![FieldElement::ZERO; n]);
+    for constraint in constraints {
+        let mut term = (constraint.base)(&rows);
+        term *= &numerators[constraint.numerator_index];
+        term *= &denominators[constraint.denominator_index];
+        result += &term;
+        term *= &adjustments[constraint.adjustment_index];
+        result += &term;
+    }
 
     vec![FieldElement::ZERO]
 }
-//     let eval_domain_size_usize = LDEn[0].len();
-//     let eval_domain_size = eval_domain_size_usize as u64;
-//     let beta = 2_u64.pow(4);
-//     let trace_len = eval_domain_size / beta;
-//
-//     let omega = FieldElement::root(U256::from(trace_len * beta)).unwrap();
-//     let g = omega.pow(U256::from(beta));
-//     let gen = FieldElement::GENERATOR;
-//
-//     let mut CC = Vec::with_capacity(eval_domain_size_usize);
-//     let g_trace = g.pow(U256::from(trace_len - 1));
-//     let g_claim = g.pow(U256::from(claim_index as u64));
-//     let x = gen.clone();
-//     let x_trace = (&x).pow(U256::from(trace_len));
-//     let x_1023 = (&x).pow(U256::from(trace_len - 1));
-//     let omega_trace = (&omega).pow(U256::from(trace_len));
-//     let omega_1023 = (&omega).pow(U256::from(trace_len - 1));
-//
-//     let x_omega_cycle = geometric_series(&x, &omega, eval_domain_size_usize);
-//     let x_trace_cycle = geometric_series(&x_trace, &omega_trace,
-// eval_domain_size_usize);     let x_1023_cycle = geometric_series(&x_1023,
-// &omega_1023, eval_domain_size_usize);
-//
-//     let mut x_trace_sub_one: Vec<FieldElement> =
-// Vec::with_capacity(eval_domain_size_usize);     let mut x_sub_one:
-// Vec<FieldElement> = Vec::with_capacity(eval_domain_size_usize);     let mut
-// x_g_claim_cycle: Vec<FieldElement> =
-// Vec::with_capacity(eval_domain_size_usize);
-//
-//     x_omega_cycle
-//         .par_iter()
-//         .map(|i| (i - FieldElement::ONE, i - &g_claim))
-//         .unzip_into_vecs(&mut x_sub_one, &mut x_g_claim_cycle);
-//
-//     x_trace_cycle
-//         .par_iter()
-//         .map(|i| i - FieldElement::ONE)
-//         .collect_into_vec(&mut x_trace_sub_one);
-//
-//     let pool = vec![&x_trace_sub_one, &x_sub_one, &x_g_claim_cycle];
-//
-//     let mut held = Vec::with_capacity(3);
-//     pool.par_iter()
-//         .map(|i| invert_batch(i))
-//         .collect_into_vec(&mut held);
-//
-//     x_g_claim_cycle = held.pop().unwrap();
-//     x_sub_one = held.pop().unwrap();
-//     x_trace_sub_one = held.pop().unwrap();
-//
-//     (0..eval_domain_size_usize)
-//         .into_par_iter()
-//         .map(|i| {
-//             let j = ((i as u64) + beta) % eval_domain_size;
-//
-//             let P0 = LDEn[0][i as usize].clone();
-//             let P1 = LDEn[1][i as usize].clone();
-//             let P0n = LDEn[0][j as usize].clone();
-//             let P1n = LDEn[1][j as usize].clone();
-//
-//             let A = x_trace_sub_one[i as usize].clone();
-//             let C0 = (&P0n - &P1) * (&x_omega_cycle[i as usize] - &g_trace) *
-// &A;             let C1 = (&P1n - &P0 - &P1) * (&x_omega_cycle[i as usize] -
-// &g_trace) * &A;             let C2 = (&P0 - FieldElement::ONE) * &x_sub_one[i
-// as usize];             let C3 = (&P0 - claim_fib) * &x_g_claim_cycle[i as
-// usize];
-//
-//             let C0a = &C0 * &x_1023_cycle[i as usize];
-//             let C1a = &C1 * &x_1023_cycle[i as usize];
-//             let C2a = &C2 * &x_omega_cycle[i as usize];
-//             let C3a = &C3 * &x_omega_cycle[i as usize];
-//
-//             let mut r = FieldElement::ZERO;
-//             r += &constraint_coefficients[0] * C0;
-//             r += &constraint_coefficients[1] * C0a;
-//             r += &constraint_coefficients[2] * C1;
-//             r += &constraint_coefficients[3] * C1a;
-//             r += &constraint_coefficients[4] * C2;
-//             r += &constraint_coefficients[5] * C2a;
-//             r += &constraint_coefficients[6] * C3;
-//             r += &constraint_coefficients[7] * C3a;
-//
-//             r
-//         })
-//         .collect_into_vec(&mut CC);
-//     CC
-// }
 
 struct Row {
     left:  Subrow,
