@@ -212,17 +212,6 @@ pub fn verify<T: Hashable>(
 
         if index == 1 {
             return data_hash == root;
-        } else if index % 2 == 0 {
-            queue.push((
-                index / 2,
-                MerkleNode(&data_hash, &decommitment.remove(current)).hash(),
-            ));
-
-            if current == 0 {
-                current = start;
-            } else {
-                current -= 1;
-            }
         } else if !queue.is_empty() && queue[0].0 == index - 1 {
             let (_, sibling_hash) = queue.remove(0);
             queue.push((index / 2, MerkleNode(&sibling_hash, &data_hash).hash()));
