@@ -200,6 +200,32 @@ struct Subrow {
     y:      FieldElement,
 }
 
+fn get_pedersen_coordinates(
+    x: &FieldElement,
+    path_length: &U256,
+) -> (FieldElement, FieldElement, FieldElement, FieldElement) {
+    let periodic_columns = get_periodic_columns();
+
+    let q_x_left = eval_poly(
+        x.pow(path_length.clone()),
+        &periodic_columns.left_x_coefficients,
+    );
+    let q_y_left = eval_poly(
+        x.pow(path_length.clone()),
+        &periodic_columns.left_y_coefficients,
+    );
+    let q_x_right = eval_poly(
+        x.pow(path_length.clone()),
+        &periodic_columns.right_x_coefficients,
+    );
+    let q_y_right = eval_poly(
+        x.pow(path_length.clone()),
+        &periodic_columns.right_y_coefficients,
+    );
+
+    (q_x_left, q_y_left, q_x_right, q_y_right)
+}
+
 pub fn eval_c_direct(
     x: &FieldElement,
     polynomials: &[&[FieldElement]],
@@ -276,34 +302,24 @@ pub fn eval_c_direct(
         Affine::Point { x, y } => (x, y),
     };
 
-    // make sure these are correct?
-    let periodic_columns = get_periodic_columns();
-    let q_x_left = eval_poly(x.pow(path_length.clone()), &periodic_columns.left_x_coefficients);
-    assert_eq!(q_x_left, FieldElement::from_hex_str("0x4ea59d2fe0379a2e1a2ef80fb7c9ff326f32d1e4194dfffd22077ecc82e8072"));
-    let q_y_left = eval_poly(x.pow(path_length.clone()), &periodic_columns.left_y_coefficients);
-    assert_eq!(q_y_left, FieldElement::from_hex_str("0x395b0c1bdd514cad5718e7cfc7fb1b65493f49bbada576a505a426e9231abb9"));
-    let q_x_right = eval_poly(x.pow(path_length.clone()), &periodic_columns.right_x_coefficients);
-    let q_y_right = eval_poly(x.pow(path_length.clone()), &periodic_columns.right_y_coefficients);
-
-
+    let (q_x_left, q_y_left, q_x_right, q_y_right) = get_pedersen_coordinates(&x, &path_length);
 
     let constraints = vec![
-        this.left.source.clone(), // 0
-        this.left.slope.clone(), // 1
-        this.left.x.clone(), // 2
-        this.left.y.clone(), // 3
-        this.right.source.clone(), // 4
-        this.right.slope.clone(), // 5
-        this.right.x.clone(), // 6
-        this.right.y.clone(), // 7
-        (&public_input.leaf - &this.left.source) * (&public_input.leaf - &this.right.source), //8
-        &public_input.root - &this.right.x, //9
-        (&this.right.x - &next.left.source) * (&this.right.x - &next.right.source),// 10
-        &this.right.x - shift_point_x, //11
-        &this.right.y - shift_point_y, // 12
-        &left_bit * (&left_bit - FieldElement::ONE), // 13
-        // this next one?
-        &left_bit * (&this.right.y - &q_y_left) - &next.left.slope * (&this.right.x - &q_x_left), //14
+        this.left.source.clone(),
+        this.left.slope.clone(),
+        this.left.x.clone(),
+        this.left.y.clone(),
+        this.right.source.clone(),
+        this.right.slope.clone(),
+        this.right.x.clone(),
+        this.right.y.clone(),
+        (&public_input.leaf - &this.left.source) * (&public_input.leaf - &this.right.source),
+        &public_input.root - &this.right.x,
+        (&this.right.x - &next.left.source) * (&this.right.x - &next.right.source),
+        &this.right.x - shift_point_x,
+        &this.right.y - shift_point_y,
+        &left_bit * (&left_bit - FieldElement::ONE),
+        &left_bit * (&this.right.y - &q_y_left) - &next.left.slope * (&this.right.x - &q_x_left),
         next.left.slope.square() - &left_bit * (&this.right.x + &q_x_left + &next.left.x),
         &left_bit * (&this.right.y + &next.left.y)
             - &next.left.slope * (&this.right.x - &next.left.x),
@@ -322,12 +338,13 @@ pub fn eval_c_direct(
         this.right.source.clone(),
     ];
 
-    let degree_adjustment = |constraint_degree: U256,
-                             numerator_degree: U256,
-                             denominator_degree: U256|
-     -> U256 {
-        2u64 * trace_length.clone() + denominator_degree - U256::ONE - constraint_degree - numerator_degree
-    };
+    let degree_adjustment =
+        |constraint_degree: U256, numerator_degree: U256, denominator_degree: U256| -> U256 {
+            2u64 * trace_length.clone() + denominator_degree
+                - U256::ONE
+                - constraint_degree
+                - numerator_degree
+        };
 
     let adjustments = vec![
         x.pow(degree_adjustment(
@@ -362,22 +379,14 @@ pub fn eval_c_direct(
         )),
     ];
 
-    // 1, 4, 5?
-    // There are 58 coefficients, so each of these should be length 29.
     let numerator_indices = vec![
-        2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-        0, 2, 2, 1, 1, 1, 1, 1, 1, 2,
-        2, 1, 1, 1, 1, 1, 1, 2, 2,
+        2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 2, 2, 1, 1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1, 1, 2, 2,
     ];
     let denominator_indices = vec![
-        6, 6, 6, 6, 6, 6, 6, 6, 0, 1,
-        2, 3, 3, 4, 4, 4, 4, 4, 4, 5,
-        2, 4, 4, 4, 4, 4, 4, 5, 2,
+        6, 6, 6, 6, 6, 6, 6, 6, 0, 1, 2, 3, 3, 4, 4, 4, 4, 4, 4, 5, 2, 4, 4, 4, 4, 4, 4, 5, 2,
     ];
     let adjustment_indices = vec![
-        0, 0, 0, 0, 0, 0, 0, 0, 1, 2,
-        3, 4, 4, 5, 5, 5, 5, 5, 5, 4,
-        4, 5, 5, 5, 5, 5, 5, 4, 4,
+        0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 4, 5, 5, 5, 5, 5, 5, 4, 4, 5, 5, 5, 5, 5, 5, 4, 4,
     ];
 
     let mut result = FieldElement::ZERO;
@@ -408,6 +417,42 @@ mod test {
     };
 
     #[test]
+    fn pedersen_coordinates_are_correct() {
+        let oods_point = FieldElement::from_hex_str(
+            "0x273966fc4697d1762d51fe633f941e92f87bdda124cf7571007a4681b140c05",
+        );
+        let path_length = U256::from(8192u64);
+
+        let (q_x_left, q_y_left, q_x_right, q_y_right) =
+            get_pedersen_coordinates(&oods_point, &path_length);
+
+        assert_eq!(
+            q_x_left,
+            FieldElement::from_hex_str(
+                "0x4ea59d2fe0379a2e1a2ef80fb7c9ff326f32d1e4194dfffd22077ecc82e8072"
+            )
+        );
+        assert_eq!(
+            q_y_left,
+            FieldElement::from_hex_str(
+                "0x395b0c1bdd514cad5718e7cfc7fb1b65493f49bbada576a505a426e9231abb9"
+            )
+        );
+        assert_eq!(
+            q_x_right,
+            FieldElement::from_hex_str(
+                "0x40b16f2290963858584758e12b1f2da3c0e9c81ed45f69875554c0ca45ad104"
+            )
+        );
+        assert_eq!(
+            q_y_right,
+            FieldElement::from_hex_str(
+                "0x1d9e6d4e31f8278a249701bdb397de10d87b3a93ca7dcb71b38f9fda87119bc"
+            )
+        );
+    }
+
+    #[test]
     fn eval_c_direct_is_correct() {
         let public_input = get_public_input();
         let trace_table = get_trace(
@@ -427,9 +472,6 @@ mod test {
         }
 
         let trace_length: usize = public_input.path_length * 256;
-        // let trace_generator =
-        //     FieldElement::GENERATOR.pow(FieldElement::MODULUS /
-        // U256::from(trace_length as u64));
 
         let mut trace_polynomials: Vec<Vec<FieldElement>> =
             vec![Vec::with_capacity(trace_length); 8];
@@ -444,53 +486,6 @@ mod test {
         let oods_point = FieldElement::from_hex_str(
             "0x273966fc4697d1762d51fe633f941e92f87bdda124cf7571007a4681b140c05",
         );
-        // let shifted_oods_point = &trace_generator * oods_point.clone();
-        //
-        // let expected_field_elements = vec![
-        //     (
-        //         "0x1c55a628c340086e7b03b833483a41e49232f2eb3cf7efe399af42d36026793",
-        //         "0x6a5fac2d52aad81e922c8e21515d3b93e2184137af76cec9ee16428bb3d8742",
-        //     ),
-        //     (
-        //         "0x37166910df8fec267b29d203031fb13e7f6da72863d9fe77e8a735d6a1e79a5",
-        //         "0xb9a28b911c2aaef882a6dfb7ff291cc98afe46d39c04cc7add60167d28320f",
-        //     ),
-        //     (
-        //         "0x221a5558fb6b1bcc8a61ba4aae7e0646ff4d7690e58a64cc53fdff836a3bc18",
-        //         "0x336b6efed32a340ec120f4eb8124a70df35548e8a0f71d207cd746bcc815606",
-        //     ),
-        //     (
-        //         "0x1ab3ec5448b6246fca3274aae40db371d6ab1d2d1ff2d32cfc598393d0458a2",
-        //         "0x71499fe5c6d16e0de24de83ee50f2d7068b636dd6a5ae6faaa83549b50348ba",
-        //     ),
-        //     (
-        //         "0x602e311233369f3f2e214f1e07345ce5a57b1c281e99a55d75966a29cb241e5",
-        //         "0x4f22d2b9e7fad2a83e220be43671604520d2b2e83d986061409b304ae5ac0ad",
-        //     ),
-        //     (
-        //         "0x227b8ac64b82ff81f247c523e63c8fe2dd23f198fb5da96209d465f9ad9a13b",
-        //         "0x4cfb2bfb81f724710fe4e80489dff8757835c157495c8257fe9283395b10bc5",
-        //     ),
-        //     (
-        //         "0x76bbb9f25fc2dec3d5ae212c754289e4ada4bf192d3b76ecdb8708e25f1b474",
-        //         "0x549a1f9ac0513424ac4311e8bc8830c527a375776cde770247d06389f74e895",
-        //     ),
-        //     (
-        //         "0x601aa2e1927d2b8c37b29e7a82d0e44fbfb9598c3cdef28beb8a9c31f3ebf8a",
-        //         "0x544e59775ac2833e4c353ec09dd296cbc7b2c9cbd6642da40859d64c534ce79",
-        //     ),
-        // ];
-        //
-        // for (i, (f_1, f_2)) in expected_field_elements.iter().enumerate() {
-        //     assert_eq!(
-        //         eval_poly(oods_point.clone(), &trace_polynomials[i]),
-        //         FieldElement::from_hex_str(*f_1)
-        //     );
-        //     assert_eq!(
-        //         eval_poly(shifted_oods_point.clone(), &trace_polynomials[i]),
-        //         FieldElement::from_hex_str(*f_2)
-        //     );
-        // }
 
         let coefficients = vec![
             FieldElement::from(u256h!(
@@ -669,12 +664,6 @@ mod test {
             )),
         ];
 
-        // let mut coefficients = vec![FieldElement::ZERO; 58];
-        // for i in 0..58 {
-        //     coefficients[i] = FieldElement::ONE;
-        // }
-
-
         let result = eval_c_direct(
             &oods_point,
             &trace_polynomial_references,
@@ -684,7 +673,7 @@ mod test {
         );
 
         let expected = FieldElement::from_hex_str(
-            "0x77d10d22df8a41ee56095fc18c0d02dcd101c2e5749ff65458828bbd3c820db"
+            "0x77d10d22df8a41ee56095fc18c0d02dcd101c2e5749ff65458828bbd3c820db",
         );
         assert_eq!(result, expected);
     }
