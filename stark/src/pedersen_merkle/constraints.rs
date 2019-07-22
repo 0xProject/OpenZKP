@@ -395,9 +395,9 @@ pub fn eval_c_direct(
 #[cfg(test)]
 mod test {
     use super::*;
-    // use hex_literal::*;
+    use hex_literal::*;
     use rayon::prelude::*;
-    // use u256::u256h;
+    use u256::u256h;
 
     use crate::{
         fft::ifft,
@@ -491,189 +491,188 @@ mod test {
         //         FieldElement::from_hex_str(*f_2)
         //     );
         // }
-        //
-        // let coefficients = vec![
-        //     FieldElement::from(u256h!(
-        //         "0636ad17759a0cc671e906ef94553c10f7a2c012d7a2aa599875506f874c136a"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "00ab929f48dee245d46548d9ce7b5c12809a489269702bede4a0f0beba6c96c3"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "032d059175506c780d44d30bf305b2e5cce87c2d10812aa4d19a4528a5906e97"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "062fc698139debf58aa475f18474829bce0ad224493570b723b254220774c0a4"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "07a316b3888038c223729c1ca14608dc3a536c62453f29facbb945faea4edc06"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "073ba8423c357d128709e1a1c45f5321483026f156fc58bc3f2f2fcd4e26112d"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "0215d0bcc49a30e0ca497c801a392300b3621d9c9be977c956d84a72db66ef50"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "03063ac609aed7c06323a4a46df08169cda8222d6c825c41495938acac23bd25"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "03b8f5b9dcb514cb0b72b96e507ee51ed5a90ce9887f9ba0ed132a78379f41bf"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "02cba94fa3a77dc4a6472998bb8c2d730f5bb538216172abec1feeaac28172f7"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "0329512d0cf95b0c90e3df8a6dbc965057738955b26d3ab7099fd2129a2733ad"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "0029b37fd38f7517cd35c29d1963f4c48bc53ca3ca6ae97d238107bdeb4587c0"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "05d12ac775d829842a492cb4b73edc1496349571d4b1cac0ca69626753b0c000"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "05d1a23dfb3b7a0d2def3dc025daa911876871c471f46ad7f445373a22b499d6"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "05442e604659a3c9f8fb27a9045f0298ff7864c310f1e332f1731741b417fdd3"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "07d9afbc5e50e96cb40ee87da8bf587782e682c1f6a3992d80baa06c3ba7869e"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "07e1ce86e3b58bae217e62f4f65a748109d19312cd9fffc21d076670360aacf9"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "035f9da854f2c57d45b02aea22d6b3a6032709a56e4fc97ec2091cd0dbd5914e"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "059a33bc0404c02913a7e3f86e649872772fa342eb5f012ad305eaa1118838ac"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "045d9748f52e5a9d978b691134cc96cdccc424ca2a680443ae7a55c08d7c4aa2"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "02d57682b21f33ff481a4acb4998ae61cd63af8b093aad8c1045daec53c6c187"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "054528769c7f4a197d9e4ee98cfb1fcd4693005abf6971f5b2d1094c35b6213d"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "036f9f941c351259092b93d06fd6fa04ead6f9c2bf689ba5dc493dc272b3e4e2"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "0622608ba33a72b440416448210531a4d01603e896c2eb0845031805ed9a5c74"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "01cbed1d58c1df62c5d6858493008de7e597431dc57350fb2c2943e2de1cc0c3"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "0781db13a07eec56a98fa4a1a7ff68003e5c16811926409de4b1f7ea2c624ead"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "021331547cc14840df44d41241a4da54be67df3f788f38dbd737c2bae6cd7838"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "07235529f0c22209c5f44c41c9d932b8c5744b63634567edb4d175cfdf25437f"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "04f99ffbba41cc2d8cdd9f13bbaf265e6f32deb4daac355f095c6f3c3a6762a2"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "042b86e961dd43e847d6278ba49870e0f04212b5ae38785cae336fba6eafcbe1"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "00f4a02801ac456e6ced57ea2814cb038881cb6de9487104fd2c76732485bdd8"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "06850c719229f42ea96a90dfaf75f248b45b9d896443adf29189e02c906fd27f"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "0116ee01cb9f6967ae360d3c38983ca38aa5c863e10c85ad77b04ad65a8adae7"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "0695eeb76a10a9c0398db1ebe391d2e25f6a80ba83855dc9a6b3ebe0698a4bcd"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "053d35cee3cf6e8b1f4406f8c9bc0f88d1e39facbc70eb19b7c1927b02934eaf"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "05c040858783b6a092ae756b1bd36a91e18bd92bdf4453b3580c535db22d12d9"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "06a2a83dcf1222a9972faa03aa45b5a03ea9995833c9dcef272f73a4dc6fb7d6"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "07537e90d5b2bab1c038fc6854267e7b2806d2f26c2fb7ee92bc65501903e6d2"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "050c83b136f235043250e31fdc262b8ff441686e8f11b29d3a7706b86095d128"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "00821f83891431a1cc871d9c4b74b212c5eb113acc1340088900205e7b8698b3"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "05897b09a49d1ae72f7845fb242db4a6c0f6f4aac9d63ab0f331f46332df4c82"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "00728f28f5309ddf5a3a9444bc2e97a084a9f4342f62a84da891ef0931a2147b"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "0381b768e7faa0361af12ae323ccb29f502d0ddc3964a90f4354ed5bb6ba34b4"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "05870d743173c27f92536909745a36ac31c6b5384e4d0127f8cf6a813e036e3b"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "0012ea1ebbd9e4ad0fe90a0444d90f8c8e4cab8650a5f0cfed6fce0dfbb604ce"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "0551212193e2ffe995afb9052c083eb6773b43dcc8df6e69e73591ff3ba411b5"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "04e0cc02bf5c6c4b572e455f76de37fcf38e35905d856ad6e086d4ed9bd1793c"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "0480de46109f40b539374cbc413e935be066a7296443cb8e4de05f654faadbd7"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "026a515d41b9f630302a52b80b60d6dfd08ff009e104570ba0537c8f5f8ec02d"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "01e3755bec6d69cb6ff4516b0cf43ee52466aafbe9ffe9a2f1296ef53421d7ed"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "03e97a0940ddd5c2ee158a97e6d29dc5129ec9c7a96e34a8237a464f6d51f6ab"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "018c45ab286ec38ef666ca02ba3484186270c23b54edc2bac749da3fe78ffc40"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "064e9cfd92cd6deb7cf8bd9929bdcc1b6161774432a12575338b829372bc9a8b"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "02224d4e3eee94168463684553d1a14d399bf81d3cab736b3bc58480f3832477"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "01c2bb2a80a57431bfab9636e98a6c73b24661a19077c2b56f3de44b0896b9f4"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "066b5653e399f0d37c44d7e05559098c96d8bec05824c4fb82f8474a8911df74"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "037f7c5048aa39d4a8b09861d91c7e7c8d560e7e6dd1da981febdb526b2305d0"
-        //     )),
-        //     FieldElement::from(u256h!(
-        //         "01d7b36c4e979188ec71f7013ac4ff807aa77d379d6e8b9eee04ecfe8ceaa5b6"
-        //     )),
-        // ];
-        // good up to 50
 
-        let mut coefficients = vec![FieldElement::ZERO; 58];
-        for i in 0..58 {
-            coefficients[i] = FieldElement::ONE;
-        }
+        let coefficients = vec![
+            FieldElement::from(u256h!(
+                "0636ad17759a0cc671e906ef94553c10f7a2c012d7a2aa599875506f874c136a"
+            )),
+            FieldElement::from(u256h!(
+                "00ab929f48dee245d46548d9ce7b5c12809a489269702bede4a0f0beba6c96c3"
+            )),
+            FieldElement::from(u256h!(
+                "032d059175506c780d44d30bf305b2e5cce87c2d10812aa4d19a4528a5906e97"
+            )),
+            FieldElement::from(u256h!(
+                "062fc698139debf58aa475f18474829bce0ad224493570b723b254220774c0a4"
+            )),
+            FieldElement::from(u256h!(
+                "07a316b3888038c223729c1ca14608dc3a536c62453f29facbb945faea4edc06"
+            )),
+            FieldElement::from(u256h!(
+                "073ba8423c357d128709e1a1c45f5321483026f156fc58bc3f2f2fcd4e26112d"
+            )),
+            FieldElement::from(u256h!(
+                "0215d0bcc49a30e0ca497c801a392300b3621d9c9be977c956d84a72db66ef50"
+            )),
+            FieldElement::from(u256h!(
+                "03063ac609aed7c06323a4a46df08169cda8222d6c825c41495938acac23bd25"
+            )),
+            FieldElement::from(u256h!(
+                "03b8f5b9dcb514cb0b72b96e507ee51ed5a90ce9887f9ba0ed132a78379f41bf"
+            )),
+            FieldElement::from(u256h!(
+                "02cba94fa3a77dc4a6472998bb8c2d730f5bb538216172abec1feeaac28172f7"
+            )),
+            FieldElement::from(u256h!(
+                "0329512d0cf95b0c90e3df8a6dbc965057738955b26d3ab7099fd2129a2733ad"
+            )),
+            FieldElement::from(u256h!(
+                "0029b37fd38f7517cd35c29d1963f4c48bc53ca3ca6ae97d238107bdeb4587c0"
+            )),
+            FieldElement::from(u256h!(
+                "05d12ac775d829842a492cb4b73edc1496349571d4b1cac0ca69626753b0c000"
+            )),
+            FieldElement::from(u256h!(
+                "05d1a23dfb3b7a0d2def3dc025daa911876871c471f46ad7f445373a22b499d6"
+            )),
+            FieldElement::from(u256h!(
+                "05442e604659a3c9f8fb27a9045f0298ff7864c310f1e332f1731741b417fdd3"
+            )),
+            FieldElement::from(u256h!(
+                "07d9afbc5e50e96cb40ee87da8bf587782e682c1f6a3992d80baa06c3ba7869e"
+            )),
+            FieldElement::from(u256h!(
+                "07e1ce86e3b58bae217e62f4f65a748109d19312cd9fffc21d076670360aacf9"
+            )),
+            FieldElement::from(u256h!(
+                "035f9da854f2c57d45b02aea22d6b3a6032709a56e4fc97ec2091cd0dbd5914e"
+            )),
+            FieldElement::from(u256h!(
+                "059a33bc0404c02913a7e3f86e649872772fa342eb5f012ad305eaa1118838ac"
+            )),
+            FieldElement::from(u256h!(
+                "045d9748f52e5a9d978b691134cc96cdccc424ca2a680443ae7a55c08d7c4aa2"
+            )),
+            FieldElement::from(u256h!(
+                "02d57682b21f33ff481a4acb4998ae61cd63af8b093aad8c1045daec53c6c187"
+            )),
+            FieldElement::from(u256h!(
+                "054528769c7f4a197d9e4ee98cfb1fcd4693005abf6971f5b2d1094c35b6213d"
+            )),
+            FieldElement::from(u256h!(
+                "036f9f941c351259092b93d06fd6fa04ead6f9c2bf689ba5dc493dc272b3e4e2"
+            )),
+            FieldElement::from(u256h!(
+                "0622608ba33a72b440416448210531a4d01603e896c2eb0845031805ed9a5c74"
+            )),
+            FieldElement::from(u256h!(
+                "01cbed1d58c1df62c5d6858493008de7e597431dc57350fb2c2943e2de1cc0c3"
+            )),
+            FieldElement::from(u256h!(
+                "0781db13a07eec56a98fa4a1a7ff68003e5c16811926409de4b1f7ea2c624ead"
+            )),
+            FieldElement::from(u256h!(
+                "021331547cc14840df44d41241a4da54be67df3f788f38dbd737c2bae6cd7838"
+            )),
+            FieldElement::from(u256h!(
+                "07235529f0c22209c5f44c41c9d932b8c5744b63634567edb4d175cfdf25437f"
+            )),
+            FieldElement::from(u256h!(
+                "04f99ffbba41cc2d8cdd9f13bbaf265e6f32deb4daac355f095c6f3c3a6762a2"
+            )),
+            FieldElement::from(u256h!(
+                "042b86e961dd43e847d6278ba49870e0f04212b5ae38785cae336fba6eafcbe1"
+            )),
+            FieldElement::from(u256h!(
+                "00f4a02801ac456e6ced57ea2814cb038881cb6de9487104fd2c76732485bdd8"
+            )),
+            FieldElement::from(u256h!(
+                "06850c719229f42ea96a90dfaf75f248b45b9d896443adf29189e02c906fd27f"
+            )),
+            FieldElement::from(u256h!(
+                "0116ee01cb9f6967ae360d3c38983ca38aa5c863e10c85ad77b04ad65a8adae7"
+            )),
+            FieldElement::from(u256h!(
+                "0695eeb76a10a9c0398db1ebe391d2e25f6a80ba83855dc9a6b3ebe0698a4bcd"
+            )),
+            FieldElement::from(u256h!(
+                "053d35cee3cf6e8b1f4406f8c9bc0f88d1e39facbc70eb19b7c1927b02934eaf"
+            )),
+            FieldElement::from(u256h!(
+                "05c040858783b6a092ae756b1bd36a91e18bd92bdf4453b3580c535db22d12d9"
+            )),
+            FieldElement::from(u256h!(
+                "06a2a83dcf1222a9972faa03aa45b5a03ea9995833c9dcef272f73a4dc6fb7d6"
+            )),
+            FieldElement::from(u256h!(
+                "07537e90d5b2bab1c038fc6854267e7b2806d2f26c2fb7ee92bc65501903e6d2"
+            )),
+            FieldElement::from(u256h!(
+                "050c83b136f235043250e31fdc262b8ff441686e8f11b29d3a7706b86095d128"
+            )),
+            FieldElement::from(u256h!(
+                "00821f83891431a1cc871d9c4b74b212c5eb113acc1340088900205e7b8698b3"
+            )),
+            FieldElement::from(u256h!(
+                "05897b09a49d1ae72f7845fb242db4a6c0f6f4aac9d63ab0f331f46332df4c82"
+            )),
+            FieldElement::from(u256h!(
+                "00728f28f5309ddf5a3a9444bc2e97a084a9f4342f62a84da891ef0931a2147b"
+            )),
+            FieldElement::from(u256h!(
+                "0381b768e7faa0361af12ae323ccb29f502d0ddc3964a90f4354ed5bb6ba34b4"
+            )),
+            FieldElement::from(u256h!(
+                "05870d743173c27f92536909745a36ac31c6b5384e4d0127f8cf6a813e036e3b"
+            )),
+            FieldElement::from(u256h!(
+                "0012ea1ebbd9e4ad0fe90a0444d90f8c8e4cab8650a5f0cfed6fce0dfbb604ce"
+            )),
+            FieldElement::from(u256h!(
+                "0551212193e2ffe995afb9052c083eb6773b43dcc8df6e69e73591ff3ba411b5"
+            )),
+            FieldElement::from(u256h!(
+                "04e0cc02bf5c6c4b572e455f76de37fcf38e35905d856ad6e086d4ed9bd1793c"
+            )),
+            FieldElement::from(u256h!(
+                "0480de46109f40b539374cbc413e935be066a7296443cb8e4de05f654faadbd7"
+            )),
+            FieldElement::from(u256h!(
+                "026a515d41b9f630302a52b80b60d6dfd08ff009e104570ba0537c8f5f8ec02d"
+            )),
+            FieldElement::from(u256h!(
+                "01e3755bec6d69cb6ff4516b0cf43ee52466aafbe9ffe9a2f1296ef53421d7ed"
+            )),
+            FieldElement::from(u256h!(
+                "03e97a0940ddd5c2ee158a97e6d29dc5129ec9c7a96e34a8237a464f6d51f6ab"
+            )),
+            FieldElement::from(u256h!(
+                "018c45ab286ec38ef666ca02ba3484186270c23b54edc2bac749da3fe78ffc40"
+            )),
+            FieldElement::from(u256h!(
+                "064e9cfd92cd6deb7cf8bd9929bdcc1b6161774432a12575338b829372bc9a8b"
+            )),
+            FieldElement::from(u256h!(
+                "02224d4e3eee94168463684553d1a14d399bf81d3cab736b3bc58480f3832477"
+            )),
+            FieldElement::from(u256h!(
+                "01c2bb2a80a57431bfab9636e98a6c73b24661a19077c2b56f3de44b0896b9f4"
+            )),
+            FieldElement::from(u256h!(
+                "066b5653e399f0d37c44d7e05559098c96d8bec05824c4fb82f8474a8911df74"
+            )),
+            FieldElement::from(u256h!(
+                "037f7c5048aa39d4a8b09861d91c7e7c8d560e7e6dd1da981febdb526b2305d0"
+            )),
+            FieldElement::from(u256h!(
+                "01d7b36c4e979188ec71f7013ac4ff807aa77d379d6e8b9eee04ecfe8ceaa5b6"
+            )),
+        ];
+
+        // let mut coefficients = vec![FieldElement::ZERO; 58];
+        // for i in 0..58 {
+        //     coefficients[i] = FieldElement::ONE;
+        // }
 
 
         let result = eval_c_direct(
@@ -685,7 +684,7 @@ mod test {
         );
 
         let expected = FieldElement::from_hex_str(
-            "0x4de95a7fd0fc12ec551ad9ca13b28ac9512aac3d7ec73d1f00d33b59a12d9af"
+            "0x77d10d22df8a41ee56095fc18c0d02dcd101c2e5749ff65458828bbd3c820db"
         );
         assert_eq!(result, expected);
     }
