@@ -276,11 +276,16 @@ pub fn eval_c_direct(
         Affine::Point { x, y } => (x, y),
     };
 
+    // make sure these are correct?
     let periodic_columns = get_periodic_columns();
-    let q_x_left = eval_poly(x.clone(), &periodic_columns.left_x_coefficients);
-    let q_y_left = eval_poly(x.clone(), &periodic_columns.left_y_coefficients);
-    let q_x_right = eval_poly(x.clone(), &periodic_columns.right_x_coefficients);
-    let q_y_right = eval_poly(x.clone(), &periodic_columns.right_y_coefficients);
+    let q_x_left = eval_poly(x.pow(path_length.clone()), &periodic_columns.left_x_coefficients);
+    assert_eq!(q_x_left, FieldElement::from_hex_str("0x4ea59d2fe0379a2e1a2ef80fb7c9ff326f32d1e4194dfffd22077ecc82e8072"));
+    let q_y_left = eval_poly(x.pow(path_length.clone()), &periodic_columns.left_y_coefficients);
+    assert_eq!(q_y_left, FieldElement::from_hex_str("0x395b0c1bdd514cad5718e7cfc7fb1b65493f49bbada576a505a426e9231abb9"));
+    let q_x_right = eval_poly(x.pow(path_length.clone()), &periodic_columns.right_x_coefficients);
+    let q_y_right = eval_poly(x.pow(path_length.clone()), &periodic_columns.right_y_coefficients);
+
+
 
     let constraints = vec![
         this.left.source.clone(), // 0
@@ -357,6 +362,7 @@ pub fn eval_c_direct(
         )),
     ];
 
+    // 1, 4, 5?
     // There are 58 coefficients, so each of these should be length 29.
     let numerator_indices = vec![
         2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
@@ -662,10 +668,10 @@ mod test {
         //         "01d7b36c4e979188ec71f7013ac4ff807aa77d379d6e8b9eee04ecfe8ceaa5b6"
         //     )),
         // ];
-        // good up to 28.
-        // index 28 is bad. this is index 14 in the lists.
+        // good up to 40
+
         let mut coefficients = vec![FieldElement::ZERO; 58];
-        for i in 0..29 {
+        for i in 0..40 {
             coefficients[i] = FieldElement::ONE;
         }
 
@@ -679,7 +685,7 @@ mod test {
         );
 
         let expected = FieldElement::from_hex_str(
-            "0x4255de1ec7081c818057c7c04635fd45a53f0efb58e7810de83c082e030cf78"
+            "0x5bd523661d3034e0743d4da6051bbebd87bc5329c1aeecfb37a18d14f13e2ca"
         );
         assert_eq!(result, expected);
     }
