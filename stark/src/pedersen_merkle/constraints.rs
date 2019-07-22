@@ -671,7 +671,7 @@ mod test {
         // good up to 50
 
         let mut coefficients = vec![FieldElement::ZERO; 58];
-        for i in 0..50 {
+        for i in 0..58 {
             coefficients[i] = FieldElement::ONE;
         }
 
@@ -685,7 +685,7 @@ mod test {
         );
 
         let expected = FieldElement::from_hex_str(
-            "0x574586611814b436df45e883804de8941c9f5c1b176ca745dd0af110b542573"
+            "0x4de95a7fd0fc12ec551ad9ca13b28ac9512aac3d7ec73d1f00d33b59a12d9af"
         );
         assert_eq!(result, expected);
     }
