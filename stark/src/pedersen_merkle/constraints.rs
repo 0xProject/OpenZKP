@@ -31,7 +31,7 @@ struct Constraint<'a> {
 
 pub fn eval_whole_loop(
     low_degree_extension: &[&[FieldElement]],
-    _constraint_coefficients: &[FieldElement],
+    constraint_coefficients: &[FieldElement],
     _claim_index: usize,
     _claim_fib: &FieldElement,
 ) -> Vec<FieldElement> {
@@ -58,7 +58,13 @@ pub fn eval_whole_loop(
         n,
     ));
 
-    let numerators = vec![x_values];
+    let numerators = vec![
+        x_values.clone()
+         // - trace_generator.pow(&trace_length - U256::ONE),
+        // x_values.pow(path_length.clone())
+        //     - trace_generator.pow((&trace_length - U256::ONE) * &path_length),
+        // FieldElement::ONE,
+    ];
     let denominators = vec![MmapVec::clone_from(&geometric_series(
         &FieldElement::ONE,
         &FieldElement::root(U256::from(n as u64)).unwrap(),
@@ -119,16 +125,71 @@ pub fn eval_whole_loop(
             denominator_index: 6,
             adjustment_index:  0,
         },
+        // (&public_input.leaf - &this.left.source) * (&public_input.leaf - &this.right.source),
+        // &public_input.root - &this.right.x,
+        // (&this.right.x - &next.left.source) * (&this.right.x - &next.right.source),
+        // &this.right.x - shift_point_x,
+        // &this.right.y - shift_point_y,
+        // &left_bit * (&left_bit - FieldElement::ONE),
+        // &left_bit * (&this.right.y - &q_y_left) - &next.left.slope * (&this.right.x -
+        // &q_x_left), next.left.slope.square() - &left_bit * (&this.right.x + &q_x_left +
+        // &next.left.x), &left_bit * (&this.right.y + &next.left.y)
+        //     - &next.left.slope * (&this.right.x - &next.left.x),
+        // (FieldElement::ONE - &left_bit) * (&this.right.x - &next.left.x),
+        // (FieldElement::ONE - &left_bit) * (&this.right.y - &next.left.y),
+        // this.left.source.clone(),
+        // this.left.source.clone(),
+        // &right_bit * (&right_bit - FieldElement::ONE),
+        // &right_bit * (&next.left.y - &q_y_right) - &next.right.slope * (&next.left.x -
+        // &q_x_right), next.right.slope.square() - &right_bit * (&next.left.x + &q_x_right
+        // + &next.right.x), &right_bit * (&next.left.y + &next.right.y)
+        //     - &next.right.slope * (&next.left.x - &next.right.x),
+        // Constraint {
+        //     base:              &|rows: &Rows| {
+        //         right_bit.clone() * (rows.left.y.shift(1) + rows.right.y.shift(1))
+        //             - &next.right.slope * (&next.left.x - &next.right.x),
+        //     },
+        //     numerator_index:   2,
+        //     denominator_index: 5,
+        //     adjustment_index:  4,
+        // },
+        // Constraint {
+        //     base:              &|rows: &Rows| {
+        //         (right_bit.clone() - FieldElement::ONE) * (rows.right.y.shift(1) - rows.right.y)
+        //     },
+        //     numerator_index:   2,
+        //     denominator_index: 5,
+        //     adjustment_index:  4,
+        // },
+        // Constraint {
+        //     base:              &|rows: &Rows| {
+        //         (right_bit.clone() - FieldElement::ONE) * (rows.right.x.shift(1) - rows.right.x)
+        //     },            numerator_index:   2,
+        //     denominator_index: 5,
+        //     adjustment_index:  4,
+        // },
+        // Constraint {
+        //     base:              &|rows: &Rows| rows.right.source.clone(),
+        //     numerator_index:   2,
+        //     denominator_index: 5,
+        //     adjustment_index:  4,
+        // },
+        // Constraint {
+        //     base:              &|rows: &Rows| rows.right.source.clone(),
+        //     numerator_index:   2,
+        //     denominator_index: 4,
+        //     adjustment_index:  4,
+        // },
     ];
 
     let mut result = MmapVec::clone_from(&vec![FieldElement::ZERO; n]);
-    for constraint in constraints {
+    for (i, constraint) in constraints.iter().enumerate() {
         let mut term = (constraint.base)(&rows);
         term *= &numerators[constraint.numerator_index];
         term *= &denominators[constraint.denominator_index];
-        result += &term;
+        result += &(term.clone() * &constraint_coefficients[2 * i]);
         term *= &adjustments[constraint.adjustment_index];
-        result += &term;
+        result += &(term * &constraint_coefficients[2 * i + 1]);
     }
 
     vec![FieldElement::ZERO]
@@ -350,10 +411,6 @@ pub fn eval_c_direct(
 #[cfg(test)]
 mod test {
     use super::*;
-    use hex_literal::*;
-    use rayon::prelude::*;
-    use u256::u256h;
-
     use crate::{
         fft::ifft,
         pedersen_merkle::{
@@ -361,6 +418,9 @@ mod test {
             trace_table::get_trace,
         },
     };
+    use hex_literal::*;
+    use rayon::prelude::*;
+    use u256::u256h;
 
     #[test]
     fn pedersen_coordinates_are_correct() {
@@ -398,42 +458,8 @@ mod test {
         );
     }
 
-    #[test]
-    fn eval_c_direct_is_correct() {
-        let public_input = get_public_input();
-        let trace_table = get_trace(
-            public_input.path_length,
-            public_input.leaf,
-            &get_private_input(),
-        );
-
-        let mut columns: [Vec<FieldElement>; 8] = Default::default();
-        let r1 = FieldElement::ONE.0;
-        for (i, value) in trace_table.iter().enumerate() {
-            if i % 4 == 0 {
-                columns[i % 8].push(FieldElement::from(&r1) * value.clone());
-            } else {
-                columns[i % 8].push(value.clone());
-            }
-        }
-
-        let trace_length: usize = public_input.path_length * 256;
-
-        let mut trace_polynomials: Vec<Vec<FieldElement>> =
-            vec![Vec::with_capacity(trace_length); 8];
-        columns
-            .into_par_iter()
-            .map(|c| ifft(&c))
-            .collect_into_vec(&mut trace_polynomials);
-
-        let trace_polynomial_references: Vec<&[FieldElement]> =
-            trace_polynomials.iter().map(|x| x.as_slice()).collect();
-
-        let oods_point = FieldElement::from_hex_str(
-            "0x273966fc4697d1762d51fe633f941e92f87bdda124cf7571007a4681b140c05",
-        );
-
-        let coefficients = vec![
+    fn get_coefficients() -> Vec<FieldElement> {
+        vec![
             FieldElement::from(u256h!(
                 "0636ad17759a0cc671e906ef94553c10f7a2c012d7a2aa599875506f874c136a"
             )),
@@ -608,20 +634,105 @@ mod test {
             FieldElement::from(u256h!(
                 "01d7b36c4e979188ec71f7013ac4ff807aa77d379d6e8b9eee04ecfe8ceaa5b6"
             )),
-        ];
+        ]
+    }
+
+    fn get_trace_polynomials() -> Vec<Vec<FieldElement>> {
+        let public_input = get_public_input();
+        let trace_table = get_trace(
+            public_input.path_length,
+            public_input.leaf,
+            &get_private_input(),
+        );
+
+        let mut columns: [Vec<FieldElement>; 8] = Default::default();
+        let r1 = FieldElement::ONE.0;
+        for (i, value) in trace_table.iter().enumerate() {
+            if i % 4 == 0 {
+                columns[i % 8].push(FieldElement::from(&r1) * value.clone());
+            } else {
+                columns[i % 8].push(value.clone());
+            }
+        }
+
+        let trace_length: usize = public_input.path_length * 256;
+
+        let mut trace_polynomials: Vec<Vec<FieldElement>> =
+            vec![Vec::with_capacity(trace_length); 8];
+        columns
+            .into_par_iter()
+            .map(|c| ifft(&c))
+            .collect_into_vec(&mut trace_polynomials);
+
+        trace_polynomials
+    }
+
+    #[test]
+    fn eval_c_direct_is_correct() {
+        let trace_polynomials = get_trace_polynomials();
+        let trace_polynomial_references: Vec<&[FieldElement]> =
+            trace_polynomials.iter().map(|x| x.as_slice()).collect();
+
+        let oods_point = FieldElement::from_hex_str(
+            "0x273966fc4697d1762d51fe633f941e92f87bdda124cf7571007a4681b140c05",
+        );
 
         let result = eval_c_direct(
             &oods_point,
             &trace_polynomial_references,
             0usize,             // not used
             FieldElement::ZERO, // not used
-            &coefficients,
+            &get_coefficients(),
         );
 
         let expected = FieldElement::from_hex_str(
             "0x77d10d22df8a41ee56095fc18c0d02dcd101c2e5749ff65458828bbd3c820db",
         );
+
         assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn constraint_oods_values_are_correct() {
+        let trace_polynomials = get_trace_polynomials();
+        let trace_polynomial_references: Vec<&[FieldElement]> =
+            trace_polynomials.iter().map(|x| x.as_slice()).collect();
+
+        let oods_point = FieldElement::from_hex_str(
+            "0x273966fc4697d1762d51fe633f941e92f87bdda124cf7571007a4681b140c05",
+        );
+
+        let positive_oods = eval_c_direct(
+            &oods_point,
+            &trace_polynomial_references,
+            0usize,             // not used
+            FieldElement::ZERO, // not used
+            &get_coefficients(),
+        );
+
+        let negative_oods = eval_c_direct(
+            &(FieldElement::ZERO - &oods_point),
+            &trace_polynomial_references,
+            0usize,             // not used
+            FieldElement::ZERO, // not used
+            &get_coefficients(),
+        );
+
+        let even_oods_value = FieldElement::from_hex_str(
+            "0x7370f59cb5af66e4183bc0c5d206e7f6c2be944366ad42a4d8bccd5417499f",
+        );
+        let odd_oods_value = FieldElement::from_hex_str(
+            "0x4b32254637e364a6649ed013dd993dc0acd08ba4d360ddac758e931dcc531d",
+        );
+
+        assert_eq!(
+            (&positive_oods + &negative_oods) / FieldElement::from_hex_str("2"),
+            even_oods_value
+        );
+        assert_eq!(
+            (&positive_oods - &negative_oods) / oods_point.double(),
+            odd_oods_value
+        );
     }
 
 }
