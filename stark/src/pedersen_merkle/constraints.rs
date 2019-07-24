@@ -1,6 +1,6 @@
 use crate::{pedersen_merkle::input::get_public_input, polynomial::eval_poly};
 use primefield::{invert_batch, FieldElement};
-// use rayon::prelude::*;
+use rayon::prelude::*;
 use u256::U256;
 // use u256::u256h;
 use crate::{
@@ -29,12 +29,21 @@ struct Constraint<'a> {
     adjustment_index:  usize,
 }
 
+fn scalar_subtraction(v: &[FieldElement], s: FieldElement) -> Vec<FieldElement> {
+    let mut result: Vec<FieldElement> = Vec::with_capacity(v.len());
+    v.into_par_iter().map(|x| x - &s).collect_into_vec(&mut result);
+    result
+}
+
 pub fn eval_whole_loop(
     low_degree_extension: &[&[FieldElement]],
     constraint_coefficients: &[FieldElement],
     _claim_index: usize,
     _claim_fib: &FieldElement,
 ) -> Vec<FieldElement> {
+    let public_input = get_public_input();
+    let path_length = U256::from(public_input.path_length as u64);
+
     let rows = Rows {
         left:  Subrows {
             source: MmapVec::clone_from(low_degree_extension[0]),
@@ -50,30 +59,61 @@ pub fn eval_whole_loop(
         },
     };
 
-    let n = rows.left.source.len();
-
-    let x_values = MmapVec::clone_from(&geometric_series(
-        &FieldElement::ONE,
-        &FieldElement::root(U256::from(n as u64)).unwrap(),
-        n,
-    ));
+    let extended_domain_length = rows.left.source.len();
+    let extended_domain_generator = FieldElement::root(U256::from(extended_domain_length as u64)).unwrap();
+    let trace_length = U256::from(extended_domain_length as u64 / 16);
+    let trace_generator = FieldElement::root(trace_length.clone()).unwrap();
 
     let numerators = vec![
-        x_values.clone()
-         // - trace_generator.pow(&trace_length - U256::ONE),
-        // x_values.pow(path_length.clone())
-        //     - trace_generator.pow((&trace_length - U256::ONE) * &path_length),
-        // FieldElement::ONE,
+        MmapVec::clone_from(&geometric_series(
+            &FieldElement::ONE,
+            &extended_domain_generator,
+            extended_domain_length,
+        )) - trace_generator.pow(&trace_length - U256::ONE),
+        MmapVec::clone_from(&geometric_series(
+            &FieldElement::ONE,
+            &extended_domain_generator.pow(path_length.clone()),
+            extended_domain_length,
+        )) - trace_generator.pow((&trace_length - U256::ONE) * &path_length),
     ];
-    let denominators = vec![MmapVec::clone_from(&geometric_series(
-        &FieldElement::ONE,
-        &FieldElement::root(U256::from(n as u64)).unwrap(),
-        n,
-    ))];
+
+    // let denominators = invert_batch(&[
+    //     x.pow(path_length.clone())
+    //         - trace_generator.pow(&path_length * (&trace_length - U256::ONE)),
+    //     x.pow(path_length.clone()) - FieldElement::ONE,
+    //     x.pow(trace_length.clone()) - FieldElement::ONE,
+    //     x.pow(path_length.clone()) - trace_generator.pow(U256::from(252u64) *
+    // &path_length),     FieldElement::ONE,
+    // ]);
+
+    let denominators = vec![
+        MmapVec::clone_from(&invert_batch(&scalar_subtraction(
+            &geometric_series(
+                &FieldElement::ONE,
+                &extended_domain_generator.inv().unwrap(),
+                extended_domain_length,
+            ),
+            FieldElement::ONE,
+        ))),
+        MmapVec::clone_from(&geometric_series(
+            &FieldElement::ONE,
+            &extended_domain_generator.inv().unwrap(),
+            extended_domain_length,
+        )) - trace_generator.pow(&trace_length - U256::ONE),
+        MmapVec::clone_from(&geometric_series(
+            &FieldElement::ONE,
+            &extended_domain_generator
+                .inv()
+                .unwrap()
+                .pow(path_length.clone()),
+            extended_domain_length,
+        )) - trace_generator.pow(&path_length * (&trace_length - U256::ONE)),
+    ];
+
     let adjustments = vec![MmapVec::clone_from(&geometric_series(
         &FieldElement::ONE,
-        &FieldElement::root(U256::from(n as u64)).unwrap(),
-        n,
+        &FieldElement::root(trace_length).unwrap(),
+        extended_domain_length,
     ))];
 
     let constraints = vec![
@@ -182,7 +222,7 @@ pub fn eval_whole_loop(
         // },
     ];
 
-    let mut result = MmapVec::clone_from(&vec![FieldElement::ZERO; n]);
+    let mut result = MmapVec::clone_from(&vec![FieldElement::ZERO; extended_domain_length]);
     for (i, constraint) in constraints.iter().enumerate() {
         let mut term = (constraint.base)(&rows);
         term *= &numerators[constraint.numerator_index];

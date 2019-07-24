@@ -3,7 +3,7 @@ use primefield::FieldElement;
 use std::{
     marker::PhantomData,
     mem::size_of,
-    ops::{Add, AddAssign, Deref, DerefMut, Mul, MulAssign},
+    ops::{Add, AddAssign, Deref, DerefMut, Mul, MulAssign, Sub},
     slice,
 };
 use tempfile::tempfile;
@@ -106,6 +106,19 @@ impl<T: Clone + Add<Output = T>> Add for MmapVec<T> {
         let mut result: MmapVec<T> = MmapVec::with_capacity(n);
         for i in 0..n {
             result.push(self[i].clone() + other[i].clone());
+        }
+        result
+    }
+}
+
+impl<T: Clone + Sub<T, Output = T>> Sub<T> for MmapVec<T> {
+    type Output = Self;
+
+    fn sub(self, scalar: T) -> Self {
+        let n = self.len();
+        let mut result: MmapVec<T> = MmapVec::with_capacity(n);
+        for i in 0..n {
+            result.push(self[i].clone() - scalar.clone());
         }
         result
     }
