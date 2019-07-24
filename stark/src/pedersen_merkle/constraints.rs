@@ -24,14 +24,16 @@ struct Subrows {
 
 struct Constraint<'a> {
     base:              &'a Fn(&Rows) -> MmapVec<FieldElement>,
-    numerator_index:   usize,
-    denominator_index: usize,
+    numerator_index:   Option<usize>,
+    denominator_index: Option<usize>,
     adjustment_index:  usize,
 }
 
 fn scalar_subtraction(v: &[FieldElement], s: FieldElement) -> Vec<FieldElement> {
     let mut result: Vec<FieldElement> = Vec::with_capacity(v.len());
-    v.into_par_iter().map(|x| x - &s).collect_into_vec(&mut result);
+    v.into_par_iter()
+        .map(|x| x - &s)
+        .collect_into_vec(&mut result);
     result
 }
 
@@ -60,7 +62,8 @@ pub fn eval_whole_loop(
     };
 
     let extended_domain_length = rows.left.source.len();
-    let extended_domain_generator = FieldElement::root(U256::from(extended_domain_length as u64)).unwrap();
+    let extended_domain_generator =
+        FieldElement::root(U256::from(extended_domain_length as u64)).unwrap();
     let trace_length = U256::from(extended_domain_length as u64 / 16);
     let trace_generator = FieldElement::root(trace_length.clone()).unwrap();
 
@@ -76,157 +79,145 @@ pub fn eval_whole_loop(
             extended_domain_length,
         )) - trace_generator.pow((&trace_length - U256::ONE) * &path_length),
     ];
-
-    // let denominators = invert_batch(&[
-    //     x.pow(path_length.clone())
-    //         - trace_generator.pow(&path_length * (&trace_length - U256::ONE)),
-    //     x.pow(path_length.clone()) - FieldElement::ONE,
-    //     x.pow(trace_length.clone()) - FieldElement::ONE,
-    //     x.pow(path_length.clone()) - trace_generator.pow(U256::from(252u64) *
-    // &path_length),     FieldElement::ONE,
-    // ]);
-
     let denominators = vec![
         MmapVec::clone_from(&invert_batch(&scalar_subtraction(
             &geometric_series(
                 &FieldElement::ONE,
-                &extended_domain_generator.inv().unwrap(),
+                &extended_domain_generator,
                 extended_domain_length,
             ),
             FieldElement::ONE,
         ))),
-        MmapVec::clone_from(&geometric_series(
-            &FieldElement::ONE,
-            &extended_domain_generator.inv().unwrap(),
-            extended_domain_length,
-        )) - trace_generator.pow(&trace_length - U256::ONE),
-        MmapVec::clone_from(&geometric_series(
-            &FieldElement::ONE,
-            &extended_domain_generator
-                .inv()
-                .unwrap()
-                .pow(path_length.clone()),
-            extended_domain_length,
-        )) - trace_generator.pow(&path_length * (&trace_length - U256::ONE)),
+        MmapVec::clone_from(&invert_batch(&scalar_subtraction(
+            &geometric_series(
+                &FieldElement::ONE,
+                &extended_domain_generator,
+                extended_domain_length,
+            ),
+            trace_generator.pow(&trace_length - U256::ONE),
+        ))),
+        MmapVec::clone_from(&invert_batch(&scalar_subtraction(
+            &geometric_series(
+                &FieldElement::ONE,
+                &extended_domain_generator.pow(path_length.clone()),
+                extended_domain_length,
+            ),
+            trace_generator.pow(&path_length * (&trace_length - U256::ONE)),
+        ))),
+        MmapVec::clone_from(&invert_batch(&scalar_subtraction(
+            &geometric_series(
+                &FieldElement::ONE,
+                &extended_domain_generator.pow(path_length.clone()),
+                extended_domain_length,
+            ),
+            FieldElement::ONE,
+        ))),
+        MmapVec::clone_from(&invert_batch(&scalar_subtraction(
+            &geometric_series(&FieldElement::ONE, &trace_generator, extended_domain_length),
+            FieldElement::ONE,
+        ))),
+        MmapVec::clone_from(&invert_batch(&scalar_subtraction(
+            &geometric_series(
+                &FieldElement::ONE,
+                &extended_domain_generator.pow(path_length.clone()),
+                extended_domain_length,
+            ),
+            trace_generator.pow(U256::from(252u64) * &path_length),
+        ))),
     ];
 
-    let adjustments = vec![MmapVec::clone_from(&geometric_series(
-        &FieldElement::ONE,
-        &FieldElement::root(trace_length).unwrap(),
-        extended_domain_length,
-    ))];
+    let get_degree_adjustment =
+        |constraint_degree: U256, numerator_degree: &U256, denominator_degree: &U256| -> U256 {
+            2u64 * trace_length.clone() + denominator_degree
+                - U256::ONE
+                - constraint_degree
+                - numerator_degree
+        };
+    let degree_adjustments = vec![
+        get_degree_adjustment(&trace_length - U256::ONE, &U256::ZERO, &U256::ZERO),
+        get_degree_adjustment(2u64 * (&trace_length - U256::ONE), &U256::ZERO, &U256::ONE),
+        get_degree_adjustment(&trace_length - U256::ONE, &U256::ZERO, &U256::ONE),
+        get_degree_adjustment(2u64 * (&trace_length - U256::ONE), &U256::ONE, &path_length),
+        get_degree_adjustment(&trace_length - U256::ONE, &U256::ZERO, &path_length),
+        get_degree_adjustment(
+            2u64 * (&trace_length - U256::ONE),
+            &path_length,
+            &trace_length,
+        ),
+    ];
+    let adjustments: Vec<MmapVec<FieldElement>> = degree_adjustments
+        .into_par_iter()
+        .map(|n| {
+            MmapVec::clone_from(&geometric_series(
+                &FieldElement::ONE,
+                &extended_domain_generator.pow(n),
+                extended_domain_length,
+            ))
+        })
+        .collect();
 
     let constraints = vec![
         Constraint {
             base:              &|rows: &Rows| rows.left.source.clone(),
-            numerator_index:   2,
-            denominator_index: 6,
+            numerator_index:   None,
+            denominator_index: None,
             adjustment_index:  0,
         },
         Constraint {
             base:              &|rows: &Rows| rows.left.slope.clone(),
-            numerator_index:   2,
-            denominator_index: 6,
+            numerator_index:   None,
+            denominator_index: None,
             adjustment_index:  0,
         },
         Constraint {
             base:              &|rows: &Rows| rows.left.x.clone(),
-            numerator_index:   2,
-            denominator_index: 6,
+            numerator_index:   None,
+            denominator_index: None,
             adjustment_index:  0,
         },
         Constraint {
             base:              &|rows: &Rows| rows.left.y.clone(),
-            numerator_index:   2,
-            denominator_index: 6,
+            numerator_index:   None,
+            denominator_index: None,
             adjustment_index:  0,
         },
         Constraint {
             base:              &|rows: &Rows| rows.right.source.clone(),
-            numerator_index:   2,
-            denominator_index: 6,
+            numerator_index:   None,
+            denominator_index: None,
             adjustment_index:  0,
         },
         Constraint {
             base:              &|rows: &Rows| rows.right.slope.clone(),
-            numerator_index:   2,
-            denominator_index: 6,
+            numerator_index:   None,
+            denominator_index: None,
             adjustment_index:  0,
         },
         Constraint {
             base:              &|rows: &Rows| rows.right.x.clone(),
-            numerator_index:   2,
-            denominator_index: 6,
+            numerator_index:   None,
+            denominator_index: None,
             adjustment_index:  0,
         },
         Constraint {
             base:              &|rows: &Rows| rows.right.y.clone(),
-            numerator_index:   2,
-            denominator_index: 6,
+            numerator_index:   None,
+            denominator_index: None,
             adjustment_index:  0,
         },
-        // (&public_input.leaf - &this.left.source) * (&public_input.leaf - &this.right.source),
-        // &public_input.root - &this.right.x,
-        // (&this.right.x - &next.left.source) * (&this.right.x - &next.right.source),
-        // &this.right.x - shift_point_x,
-        // &this.right.y - shift_point_y,
-        // &left_bit * (&left_bit - FieldElement::ONE),
-        // &left_bit * (&this.right.y - &q_y_left) - &next.left.slope * (&this.right.x -
-        // &q_x_left), next.left.slope.square() - &left_bit * (&this.right.x + &q_x_left +
-        // &next.left.x), &left_bit * (&this.right.y + &next.left.y)
-        //     - &next.left.slope * (&this.right.x - &next.left.x),
-        // (FieldElement::ONE - &left_bit) * (&this.right.x - &next.left.x),
-        // (FieldElement::ONE - &left_bit) * (&this.right.y - &next.left.y),
-        // this.left.source.clone(),
-        // this.left.source.clone(),
-        // &right_bit * (&right_bit - FieldElement::ONE),
-        // &right_bit * (&next.left.y - &q_y_right) - &next.right.slope * (&next.left.x -
-        // &q_x_right), next.right.slope.square() - &right_bit * (&next.left.x + &q_x_right
-        // + &next.right.x), &right_bit * (&next.left.y + &next.right.y)
-        //     - &next.right.slope * (&next.left.x - &next.right.x),
-        // Constraint {
-        //     base:              &|rows: &Rows| {
-        //         right_bit.clone() * (rows.left.y.shift(1) + rows.right.y.shift(1))
-        //             - &next.right.slope * (&next.left.x - &next.right.x),
-        //     },
-        //     numerator_index:   2,
-        //     denominator_index: 5,
-        //     adjustment_index:  4,
-        // },
-        // Constraint {
-        //     base:              &|rows: &Rows| {
-        //         (right_bit.clone() - FieldElement::ONE) * (rows.right.y.shift(1) - rows.right.y)
-        //     },
-        //     numerator_index:   2,
-        //     denominator_index: 5,
-        //     adjustment_index:  4,
-        // },
-        // Constraint {
-        //     base:              &|rows: &Rows| {
-        //         (right_bit.clone() - FieldElement::ONE) * (rows.right.x.shift(1) - rows.right.x)
-        //     },            numerator_index:   2,
-        //     denominator_index: 5,
-        //     adjustment_index:  4,
-        // },
-        // Constraint {
-        //     base:              &|rows: &Rows| rows.right.source.clone(),
-        //     numerator_index:   2,
-        //     denominator_index: 5,
-        //     adjustment_index:  4,
-        // },
-        // Constraint {
-        //     base:              &|rows: &Rows| rows.right.source.clone(),
-        //     numerator_index:   2,
-        //     denominator_index: 4,
-        //     adjustment_index:  4,
-        // },
     ];
 
     let mut result = MmapVec::clone_from(&vec![FieldElement::ZERO; extended_domain_length]);
     for (i, constraint) in constraints.iter().enumerate() {
         let mut term = (constraint.base)(&rows);
-        term *= &numerators[constraint.numerator_index];
-        term *= &denominators[constraint.denominator_index];
+        match constraint.numerator_index {
+            Some(i) => term *= &numerators[i],
+            None => (),
+        };
+        match constraint.denominator_index {
+            Some(i) => term *= &denominators[i],
+            None => (),
+        };
         result += &(term.clone() * &constraint_coefficients[2 * i]);
         term *= &adjustments[constraint.adjustment_index];
         result += &(term * &constraint_coefficients[2 * i + 1]);
