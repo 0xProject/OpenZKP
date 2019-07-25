@@ -23,7 +23,7 @@ struct Subrows {
 }
 
 struct Constraint<'a> {
-    base:              &'a Fn(&Rows) -> MmapVec<FieldElement>,
+    base:              &'a Fn() -> MmapVec<FieldElement>,
     numerator_index:   Option<usize>,
     denominator_index: Option<usize>,
     adjustment_index:  usize,
@@ -37,6 +37,13 @@ fn scalar_subtraction(v: &[FieldElement], s: FieldElement) -> Vec<FieldElement> 
     result
 }
 
+// fn get_periodic_column(coefficients: &[FieldElement], extended_trace_length:
+// usize, offset: &FieldElement) -> MmapVec<FieldElement> {
+//
+//     let cycle = bit_reversal_fft(coefficients);
+//
+// }
+
 pub fn eval_whole_loop(
     low_degree_extension: &[&[FieldElement]],
     constraint_coefficients: &[FieldElement],
@@ -46,7 +53,7 @@ pub fn eval_whole_loop(
     let public_input = get_public_input();
     let path_length = U256::from(public_input.path_length as u64);
 
-    let rows = Rows {
+    let this = Rows {
         left:  Subrows {
             source: MmapVec::clone_from(low_degree_extension[0]),
             slope:  MmapVec::clone_from(low_degree_extension[1]),
@@ -61,7 +68,24 @@ pub fn eval_whole_loop(
         },
     };
 
-    let extended_domain_length = rows.left.source.len();
+    let next = Rows {
+        left:  Subrows {
+            source: MmapVec::clone_with_shift_from(low_degree_extension[0]),
+            slope:  MmapVec::clone_with_shift_from(low_degree_extension[1]),
+            x:      MmapVec::clone_with_shift_from(low_degree_extension[2]),
+            y:      MmapVec::clone_with_shift_from(low_degree_extension[3]),
+        },
+        right: Subrows {
+            source: MmapVec::clone_with_shift_from(low_degree_extension[4]),
+            slope:  MmapVec::clone_with_shift_from(low_degree_extension[5]),
+            x:      MmapVec::clone_with_shift_from(low_degree_extension[6]),
+            y:      MmapVec::clone_with_shift_from(low_degree_extension[7]),
+        },
+    };
+
+    let _evaluation_offset = FieldElement::GENERATOR;
+
+    let extended_domain_length = this.left.source.len();
     let extended_domain_generator =
         FieldElement::root(U256::from(extended_domain_length as u64)).unwrap();
     let trace_length = U256::from(extended_domain_length as u64 / 16);
@@ -156,60 +180,126 @@ pub fn eval_whole_loop(
         })
         .collect();
 
+    let (shift_point_x, shift_point_y) = match SHIFT_POINT {
+        Affine::Zero => panic!(),
+        Affine::Point { x, y } => (x, y),
+    };
+    let left_bit =
+        this.left.source.clone() + (next.left.source.clone() * &FieldElement::from_hex_str("2"));
+    // let q_y_left =
+    //     MmapVec::clone_from(&)
+
+    let left_source_low_degree = || this.left.source.clone();
+    let left_slope_low_degree = || this.left.slope.clone();
+    let left_x_low_degree = || this.left.x.clone();
+    let left_y_low_degree = || this.left.y.clone();
+    let right_source_low_degree = || this.right.source.clone();
+    let right_slope_low_degree = || this.right.slope.clone();
+    let right_x_low_degree = || this.right.x.clone();
+    let right_y_low_degree = || this.right.y.clone();
+    let _leaf_value = |r: &Rows| {
+        (-r.left.source.clone() + &public_input.leaf)
+            * (-r.right.source.clone() + &public_input.leaf)
+    };
+    let _root_value = |r: &Rows| -r.right.x.clone() + &public_input.root;
+    let _output_to_input =
+        || (-next.left.source + this.right.x.clone()) * (-next.right.source + this.right.x.clone());
+    let _shift_point_x = |r: &Rows| r.right.x.clone() - &shift_point_x;
+    let _shift_point_y = |r: &Rows| r.right.y.clone() - &shift_point_y;
+    let _left_src_bits = |_: &Rows| (left_bit.clone() - &FieldElement::ONE) * left_bit;
+    // let _left_add_points_slope =
+    //     || left_bit * (this.right.y - q_y_left) - next.left.slope * (this.right.x
+    // - q_x_left); let _left_add_points_x = |r: &Rows| {};
+    // let _left_add_points_y = |r: &Rows| {};
+    // let _left_no_add_x = |r: &Rows| {};
+    // let _left_no_add_y = |r: &Rows| {};
+    // let _left_src_vanish_start = |r: &Rows| {};
+    // let _left_src_vanish_end = |r: &Rows| {};
+    // let _right_src_bits = |r: &Rows| {};
+    // let _right_add_points_slope = |r: &Rows| {};
+    // let _right_add_points_x = |r: &Rows| {};
+    // let _right_add_points_y = |r: &Rows| {};
+    // let _right_no_add_x = |r: &Rows| {};
+    // let _right_no_add_y = |r: &Rows| {};
+    // let _right_src_vanish_start = |r: &Rows| {};
+    // let _right_src_vanish_end = |r: &Rows| {};
+
     let constraints = vec![
         Constraint {
-            base:              &|rows: &Rows| rows.left.source.clone(),
+            base:              &left_source_low_degree,
             numerator_index:   None,
             denominator_index: None,
             adjustment_index:  0,
         },
         Constraint {
-            base:              &|rows: &Rows| rows.left.slope.clone(),
+            base:              &left_slope_low_degree,
             numerator_index:   None,
             denominator_index: None,
             adjustment_index:  0,
         },
         Constraint {
-            base:              &|rows: &Rows| rows.left.x.clone(),
+            base:              &left_x_low_degree,
             numerator_index:   None,
             denominator_index: None,
             adjustment_index:  0,
         },
         Constraint {
-            base:              &|rows: &Rows| rows.left.y.clone(),
+            base:              &left_y_low_degree,
             numerator_index:   None,
             denominator_index: None,
             adjustment_index:  0,
         },
         Constraint {
-            base:              &|rows: &Rows| rows.right.source.clone(),
+            base:              &right_source_low_degree,
             numerator_index:   None,
             denominator_index: None,
             adjustment_index:  0,
         },
         Constraint {
-            base:              &|rows: &Rows| rows.right.slope.clone(),
+            base:              &right_slope_low_degree,
             numerator_index:   None,
             denominator_index: None,
             adjustment_index:  0,
         },
         Constraint {
-            base:              &|rows: &Rows| rows.right.x.clone(),
+            base:              &right_x_low_degree,
             numerator_index:   None,
             denominator_index: None,
             adjustment_index:  0,
         },
         Constraint {
-            base:              &|rows: &Rows| rows.right.y.clone(),
+            base:              &right_y_low_degree,
             numerator_index:   None,
             denominator_index: None,
             adjustment_index:  0,
         },
     ];
 
+    // (&this.right.x - &next.left.source) * (&this.right.x - &next.right.source),
+    // &this.right.x - shift_point_x,
+    // &this.right.y - shift_point_y,
+    // &left_bit * (&left_bit - FieldElement::ONE),
+    // &left_bit * (&this.right.y - &q_y_left) - &next.left.slope * (&this.right.x -
+    // &q_x_left), next.left.slope.square() - &left_bit * (&this.right.x +
+    // &q_x_left + &next.left.x), &left_bit * (&this.right.y + &next.left.y)
+    //     - &next.left.slope * (&this.right.x - &next.left.x),
+    // (FieldElement::ONE - &left_bit) * (&this.right.x - &next.left.x),
+    // (FieldElement::ONE - &left_bit) * (&this.right.y - &next.left.y),
+    // this.left.source.clone(),
+    // this.left.source.clone(),
+    // &right_bit * (&right_bit - FieldElement::ONE),
+    // &right_bit * (&next.left.y - &q_y_right) - &next.right.slope * (&next.left.x
+    // - &q_x_right), next.right.slope.square() - &right_bit * (&next.left.x +
+    // &q_x_right + &next.right.x), &right_bit * (&next.left.y + &next.right.y)
+    //     - &next.right.slope * (&next.left.x - &next.right.x),
+    // (FieldElement::ONE - &right_bit) * (&next.left.x - &next.right.x),
+    // (FieldElement::ONE - &right_bit) * (&next.left.y - &next.right.y),
+    // this.right.source.clone(),
+    // this.right.source.clone(),
+
     let mut result = MmapVec::clone_from(&vec![FieldElement::ZERO; extended_domain_length]);
     for (i, constraint) in constraints.iter().enumerate() {
-        let mut term = (constraint.base)(&rows);
+        let mut term = (constraint.base)();
         match constraint.numerator_index {
             Some(i) => term *= &numerators[i],
             None => (),

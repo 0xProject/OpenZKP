@@ -1,9 +1,10 @@
+use crate::utils::Reversible;
 use memmap::{MmapMut, MmapOptions};
 use primefield::FieldElement;
 use std::{
     marker::PhantomData,
     mem::size_of,
-    ops::{Add, AddAssign, Deref, DerefMut, Mul, MulAssign, Sub},
+    ops::{Add, AddAssign, Deref, DerefMut, Mul, MulAssign, Neg, Sub},
     slice,
 };
 use tempfile::tempfile;
@@ -43,6 +44,15 @@ impl<T: Clone> MmapVec<T> {
         m
     }
 
+    pub fn clone_with_shift_from(s: &[T]) -> MmapVec<T> {
+        let n = s.len();
+        let mut m: MmapVec<T> = MmapVec::with_capacity(n);
+        for i in 0..n {
+            m[(i.bit_reverse_at(n) + 16).bit_reverse_at(n)] = s[i].clone();
+        }
+        m
+    }
+
     pub fn push(&mut self, next: T) {
         if self.length == self.capacity {
             panic!("MmapVec is at capacity")
@@ -51,6 +61,18 @@ impl<T: Clone> MmapVec<T> {
         self.length += 1;
         self[end] = next;
     }
+
+    // pub fn next(&self) -> Self {
+    //     let n = self.len();
+    //     let mut m: MmapVec<T> = MmapVec::with_capacity(n);
+    //
+    //     let coset_size = n / 16;
+    //     for i in 0..16 {
+    //         m.extend(&self[i * coset_size + 1..(i + 1) * coset_size]);
+    //         m.push(self[i * coset_size].clone());
+    //     }
+    //     m
+    // }
 
     pub fn extend(&mut self, other: &[T]) {
         let old_length = self.length;
@@ -106,6 +128,32 @@ impl<T: Clone + Add<Output = T>> Add for MmapVec<T> {
         let mut result: MmapVec<T> = MmapVec::with_capacity(n);
         for i in 0..n {
             result.push(self[i].clone() + other[i].clone());
+        }
+        result
+    }
+}
+
+impl Add<&FieldElement> for MmapVec<FieldElement> {
+    type Output = Self;
+
+    fn add(self, other: &FieldElement) -> Self {
+        let n = self.len();
+        let mut result: MmapVec<FieldElement> = MmapVec::with_capacity(n);
+        for i in 0..n {
+            result.push(self[i].clone() + other);
+        }
+        result
+    }
+}
+
+impl Sub<&FieldElement> for MmapVec<FieldElement> {
+    type Output = Self;
+
+    fn sub(self, other: &FieldElement) -> Self {
+        let n = self.len();
+        let mut result: MmapVec<FieldElement> = MmapVec::with_capacity(n);
+        for i in 0..n {
+            result.push(self[i].clone() - other);
         }
         result
     }
@@ -170,17 +218,18 @@ impl<T: Clone + MulAssign> MulAssign<&MmapVec<T>> for MmapVec<T> {
     }
 }
 
-// impl<T: Clone + Mul<Output = T>> Mul<T> for MmapVec<T> {
-//     type Output = Self;
-//
-//     fn mul(self, other: T) -> Self {
-//         let mut result: MmapVec<T> = MmapVec::with_capacity(self.len());
-//         for x in self.iter() {
-//             result.push(x.clone() * other.clone());
-//         }
-//         result
-//     }
-// }
+impl Neg for MmapVec<FieldElement> {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        let n = self.len();
+        let mut result: MmapVec<FieldElement> = MmapVec::with_capacity(n);
+        for i in 0..n {
+            result.push(-&self[i]);
+        }
+        result
+    }
+}
 
 #[cfg(test)]
 mod tests {
