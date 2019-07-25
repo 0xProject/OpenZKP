@@ -53,39 +53,9 @@ pub fn eval_whole_loop(
     let public_input = get_public_input();
     let path_length = U256::from(public_input.path_length as u64);
 
-    let this = Rows {
-        left:  Subrows {
-            source: MmapVec::clone_from(low_degree_extension[0]),
-            slope:  MmapVec::clone_from(low_degree_extension[1]),
-            x:      MmapVec::clone_from(low_degree_extension[2]),
-            y:      MmapVec::clone_from(low_degree_extension[3]),
-        },
-        right: Subrows {
-            source: MmapVec::clone_from(low_degree_extension[4]),
-            slope:  MmapVec::clone_from(low_degree_extension[5]),
-            x:      MmapVec::clone_from(low_degree_extension[6]),
-            y:      MmapVec::clone_from(low_degree_extension[7]),
-        },
-    };
-
-    let next = Rows {
-        left:  Subrows {
-            source: MmapVec::clone_with_shift_from(low_degree_extension[0]),
-            slope:  MmapVec::clone_with_shift_from(low_degree_extension[1]),
-            x:      MmapVec::clone_with_shift_from(low_degree_extension[2]),
-            y:      MmapVec::clone_with_shift_from(low_degree_extension[3]),
-        },
-        right: Subrows {
-            source: MmapVec::clone_with_shift_from(low_degree_extension[4]),
-            slope:  MmapVec::clone_with_shift_from(low_degree_extension[5]),
-            x:      MmapVec::clone_with_shift_from(low_degree_extension[6]),
-            y:      MmapVec::clone_with_shift_from(low_degree_extension[7]),
-        },
-    };
-
     let _evaluation_offset = FieldElement::GENERATOR;
 
-    let extended_domain_length = this.left.source.len();
+    let extended_domain_length = public_input.path_length * 256 * 16;
     let extended_domain_generator =
         FieldElement::root(U256::from(extended_domain_length as u64)).unwrap();
     let trace_length = U256::from(extended_domain_length as u64 / 16);
@@ -184,10 +154,41 @@ pub fn eval_whole_loop(
         Affine::Zero => panic!(),
         Affine::Point { x, y } => (x, y),
     };
-    let left_bit =
-        this.left.source.clone() + (next.left.source.clone() * &FieldElement::from_hex_str("2"));
     // let q_y_left =
     //     MmapVec::clone_from(&)
+
+    let this = Rows {
+        left:  Subrows {
+            source: MmapVec::clone_from(low_degree_extension[0]),
+            slope:  MmapVec::clone_from(low_degree_extension[1]),
+            x:      MmapVec::clone_from(low_degree_extension[2]),
+            y:      MmapVec::clone_from(low_degree_extension[3]),
+        },
+        right: Subrows {
+            source: MmapVec::clone_from(low_degree_extension[4]),
+            slope:  MmapVec::clone_from(low_degree_extension[5]),
+            x:      MmapVec::clone_from(low_degree_extension[6]),
+            y:      MmapVec::clone_from(low_degree_extension[7]),
+        },
+    };
+
+    let next = Rows {
+        left:  Subrows {
+            source: MmapVec::clone_with_shift_from(low_degree_extension[0]),
+            slope:  MmapVec::clone_with_shift_from(low_degree_extension[1]),
+            x:      MmapVec::clone_with_shift_from(low_degree_extension[2]),
+            y:      MmapVec::clone_with_shift_from(low_degree_extension[3]),
+        },
+        right: Subrows {
+            source: MmapVec::clone_with_shift_from(low_degree_extension[4]),
+            slope:  MmapVec::clone_with_shift_from(low_degree_extension[5]),
+            x:      MmapVec::clone_with_shift_from(low_degree_extension[6]),
+            y:      MmapVec::clone_with_shift_from(low_degree_extension[7]),
+        },
+    };
+
+    let left_bit =
+        this.left.source.clone() + (next.left.source.clone() * &FieldElement::from_hex_str("2"));
 
     let left_source_low_degree = || this.left.source.clone();
     let left_slope_low_degree = || this.left.slope.clone();
@@ -197,16 +198,18 @@ pub fn eval_whole_loop(
     let right_slope_low_degree = || this.right.slope.clone();
     let right_x_low_degree = || this.right.x.clone();
     let right_y_low_degree = || this.right.y.clone();
-    let _leaf_value = |r: &Rows| {
-        (-r.left.source.clone() + &public_input.leaf)
-            * (-r.right.source.clone() + &public_input.leaf)
+
+    let leaf_value = || {
+        (-this.left.source.clone() + &public_input.leaf)
+            * (-this.right.source.clone() + &public_input.leaf)
     };
-    let _root_value = |r: &Rows| -r.right.x.clone() + &public_input.root;
-    let _output_to_input =
-        || (-next.left.source + this.right.x.clone()) * (-next.right.source + this.right.x.clone());
-    let _shift_point_x = |r: &Rows| r.right.x.clone() - &shift_point_x;
-    let _shift_point_y = |r: &Rows| r.right.y.clone() - &shift_point_y;
-    let _left_src_bits = |_: &Rows| (left_bit.clone() - &FieldElement::ONE) * left_bit;
+    let root_value = || -this.right.x.clone() + &public_input.root;
+    let output_to_input =
+        || (-next.left.source.clone() + this.right.x.clone()) * (-next.right.source.clone() + this.right.x.clone());
+    let shift_point_x = || this.right.x.clone() - &shift_point_x;
+    let shift_point_y = || this.right.y.clone() - &shift_point_y;
+
+    let left_src_bits = || (left_bit.clone() - &FieldElement::ONE) * left_bit.clone();
     // let _left_add_points_slope =
     //     || left_bit * (this.right.y - q_y_left) - next.left.slope * (this.right.x
     // - q_x_left); let _left_add_points_x = |r: &Rows| {};
@@ -269,6 +272,42 @@ pub fn eval_whole_loop(
         },
         Constraint {
             base:              &right_y_low_degree,
+            numerator_index:   None,
+            denominator_index: None,
+            adjustment_index:  0,
+        },
+        Constraint {
+            base:              &leaf_value,
+            numerator_index:   None,
+            denominator_index: None,
+            adjustment_index:  0,
+        },
+        Constraint {
+            base:              &root_value,
+            numerator_index:   None,
+            denominator_index: None,
+            adjustment_index:  0,
+        },
+        Constraint {
+            base:              &output_to_input,
+            numerator_index:   None,
+            denominator_index: None,
+            adjustment_index:  0,
+        },
+        Constraint {
+            base:              &shift_point_x,
+            numerator_index:   None,
+            denominator_index: None,
+            adjustment_index:  0,
+        },
+        Constraint {
+            base:              &shift_point_y,
+            numerator_index:   None,
+            denominator_index: None,
+            adjustment_index:  0,
+        },
+        Constraint {
+            base:              &left_src_bits,
             numerator_index:   None,
             denominator_index: None,
             adjustment_index:  0,
