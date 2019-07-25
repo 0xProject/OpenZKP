@@ -204,8 +204,10 @@ pub fn eval_whole_loop(
             * (-this.right.source.clone() + &public_input.leaf)
     };
     let root_value = || -this.right.x.clone() + &public_input.root;
-    let output_to_input =
-        || (-next.left.source.clone() + this.right.x.clone()) * (-next.right.source.clone() + this.right.x.clone());
+    let output_to_input = || {
+        (-next.left.source.clone() + this.right.x.clone())
+            * (-next.right.source.clone() + this.right.x.clone())
+    };
     let shift_point_x = || this.right.x.clone() - &shift_point_x;
     let shift_point_y = || this.right.y.clone() - &shift_point_y;
 
@@ -338,6 +340,9 @@ pub fn eval_whole_loop(
 
     let mut result = MmapVec::clone_from(&vec![FieldElement::ZERO; extended_domain_length]);
     for (i, constraint) in constraints.iter().enumerate() {
+        if i == 8 {
+            break;
+        }
         let mut term = (constraint.base)();
         match constraint.numerator_index {
             Some(i) => term *= &numerators[i],
@@ -351,8 +356,9 @@ pub fn eval_whole_loop(
         term *= &adjustments[constraint.adjustment_index];
         result += &(term * &constraint_coefficients[2 * i + 1]);
     }
-
-    vec![FieldElement::ZERO]
+    let mut r = Vec::with_capacity(extended_domain_length);
+    r.clone_from_slice(&result);
+    r
 }
 
 struct Row {
@@ -571,15 +577,8 @@ pub fn eval_c_direct(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{
-        fft::ifft,
-        pedersen_merkle::{
-            input::{get_private_input, get_public_input},
-            trace_table::get_trace,
-        },
-    };
+    use crate::pedersen_merkle::proof::get_trace_polynomials;
     use hex_literal::*;
-    use rayon::prelude::*;
     use u256::u256h;
 
     #[test]
@@ -797,34 +796,25 @@ mod test {
         ]
     }
 
-    fn get_trace_polynomials() -> Vec<Vec<FieldElement>> {
-        let public_input = get_public_input();
-        let trace_table = get_trace(
-            public_input.path_length,
-            public_input.leaf,
-            &get_private_input(),
+    #[test]
+    fn evals_match() {
+        let trace_polynomials = get_trace_polynomials();
+        let trace_polynomial_references: Vec<&[FieldElement]> =
+            trace_polynomials.iter().map(|x| x.as_slice()).collect();
+
+        let result = eval_c_direct(
+            &FieldElement::ONE,
+            &trace_polynomial_references,
+            0usize,             // not used
+            FieldElement::ZERO, // not used
+            &get_coefficients(),
         );
 
-        let mut columns: [Vec<FieldElement>; 8] = Default::default();
-        let r1 = FieldElement::ONE.0;
-        for (i, value) in trace_table.iter().enumerate() {
-            if i % 4 == 0 {
-                columns[i % 8].push(FieldElement::from(&r1) * value.clone());
-            } else {
-                columns[i % 8].push(value.clone());
-            }
-        }
+        let expected = FieldElement::from_hex_str(
+            "0x77d10d22df8a41ee56095fc18c0d02dcd101c2e5749ff65458828bbd3c820db",
+        );
 
-        let trace_length: usize = public_input.path_length * 256;
-
-        let mut trace_polynomials: Vec<Vec<FieldElement>> =
-            vec![Vec::with_capacity(trace_length); 8];
-        columns
-            .into_par_iter()
-            .map(|c| ifft(&c))
-            .collect_into_vec(&mut trace_polynomials);
-
-        trace_polynomials
+        assert_eq!(result, expected);
     }
 
     #[test]
