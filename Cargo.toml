@@ -4,7 +4,10 @@ members = [
     "ecc",
     "starkdex",
     "wasm",
-    "stark"
+    "stark",
+    "macros_decl",
+    "macros_impl",
+    "macros_lib",
 ]
 
 # Don't forget to run `cargo clean` to force a rebuild of all dependencies!
