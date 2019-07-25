@@ -58,7 +58,7 @@ pub fn eval_whole_loop(
     let extended_domain_length = public_input.path_length * 256 * 16;
     let extended_domain_generator =
         FieldElement::root(U256::from(extended_domain_length as u64)).unwrap();
-    let trace_length = U256::from(extended_domain_length as u64 / 16);
+    let trace_length = U256::from(extended_domain_length as u64 / 16u64);
     let trace_generator = FieldElement::root(trace_length.clone()).unwrap();
 
     let numerators = vec![
@@ -76,7 +76,7 @@ pub fn eval_whole_loop(
     let denominators = vec![
         MmapVec::clone_from(&invert_batch(&scalar_subtraction(
             &geometric_series(
-                &FieldElement::ONE,
+                &FieldElement::GENERATOR,
                 &extended_domain_generator,
                 extended_domain_length,
             ),
@@ -84,7 +84,7 @@ pub fn eval_whole_loop(
         ))),
         MmapVec::clone_from(&invert_batch(&scalar_subtraction(
             &geometric_series(
-                &FieldElement::ONE,
+                &FieldElement::GENERATOR,
                 &extended_domain_generator,
                 extended_domain_length,
             ),
@@ -92,7 +92,7 @@ pub fn eval_whole_loop(
         ))),
         MmapVec::clone_from(&invert_batch(&scalar_subtraction(
             &geometric_series(
-                &FieldElement::ONE,
+                &FieldElement::GENERATOR,
                 &extended_domain_generator.pow(path_length.clone()),
                 extended_domain_length,
             ),
@@ -100,19 +100,19 @@ pub fn eval_whole_loop(
         ))),
         MmapVec::clone_from(&invert_batch(&scalar_subtraction(
             &geometric_series(
-                &FieldElement::ONE,
+                &FieldElement::GENERATOR,
                 &extended_domain_generator.pow(path_length.clone()),
                 extended_domain_length,
             ),
             FieldElement::ONE,
         ))),
         MmapVec::clone_from(&invert_batch(&scalar_subtraction(
-            &geometric_series(&FieldElement::ONE, &trace_generator, extended_domain_length),
+            &geometric_series(&FieldElement::GENERATOR, &trace_generator, extended_domain_length),
             FieldElement::ONE,
         ))),
         MmapVec::clone_from(&invert_batch(&scalar_subtraction(
             &geometric_series(
-                &FieldElement::ONE,
+                &FieldElement::GENERATOR,
                 &extended_domain_generator.pow(path_length.clone()),
                 extended_domain_length,
             ),
@@ -212,22 +212,23 @@ pub fn eval_whole_loop(
     let shift_point_y = || this.right.y.clone() - &shift_point_y;
 
     let left_src_bits = || (left_bit.clone() - &FieldElement::ONE) * left_bit.clone();
-    // let _left_add_points_slope =
+    // let left_add_points_slope =
     //     || left_bit * (this.right.y - q_y_left) - next.left.slope * (this.right.x
     // - q_x_left); let _left_add_points_x = |r: &Rows| {};
-    // let _left_add_points_y = |r: &Rows| {};
-    // let _left_no_add_x = |r: &Rows| {};
-    // let _left_no_add_y = |r: &Rows| {};
-    // let _left_src_vanish_start = |r: &Rows| {};
-    // let _left_src_vanish_end = |r: &Rows| {};
-    // let _right_src_bits = |r: &Rows| {};
-    // let _right_add_points_slope = |r: &Rows| {};
-    // let _right_add_points_x = |r: &Rows| {};
-    // let _right_add_points_y = |r: &Rows| {};
-    // let _right_no_add_x = |r: &Rows| {};
-    // let _right_no_add_y = |r: &Rows| {};
-    // let _right_src_vanish_start = |r: &Rows| {};
-    // let _right_src_vanish_end = |r: &Rows| {};
+    // let left_add_points_y = |r: &Rows| {};
+    // let left_no_add_x = |r: &Rows| {};
+    // let left_no_add_y = |r: &Rows| {};
+    // let left_src_vanish_start = |r: &Rows| {};
+    // let left_src_vanish_end = |r: &Rows| {};
+
+    // let right_src_bits = |r: &Rows| {};
+    // let right_add_points_slope = |r: &Rows| {};
+    // let right_add_points_x = |r: &Rows| {};
+    // let right_add_points_y = |r: &Rows| {};
+    // let right_no_add_x = |r: &Rows| {};
+    // let right_no_add_y = |r: &Rows| {};
+    // let right_src_vanish_start = |r: &Rows| {};
+    // let right_src_vanish_end = |r: &Rows| {};
 
     let constraints = vec![
         Constraint {
@@ -315,28 +316,6 @@ pub fn eval_whole_loop(
             adjustment_index:  0,
         },
     ];
-
-    // (&this.right.x - &next.left.source) * (&this.right.x - &next.right.source),
-    // &this.right.x - shift_point_x,
-    // &this.right.y - shift_point_y,
-    // &left_bit * (&left_bit - FieldElement::ONE),
-    // &left_bit * (&this.right.y - &q_y_left) - &next.left.slope * (&this.right.x -
-    // &q_x_left), next.left.slope.square() - &left_bit * (&this.right.x +
-    // &q_x_left + &next.left.x), &left_bit * (&this.right.y + &next.left.y)
-    //     - &next.left.slope * (&this.right.x - &next.left.x),
-    // (FieldElement::ONE - &left_bit) * (&this.right.x - &next.left.x),
-    // (FieldElement::ONE - &left_bit) * (&this.right.y - &next.left.y),
-    // this.left.source.clone(),
-    // this.left.source.clone(),
-    // &right_bit * (&right_bit - FieldElement::ONE),
-    // &right_bit * (&next.left.y - &q_y_right) - &next.right.slope * (&next.left.x
-    // - &q_x_right), next.right.slope.square() - &right_bit * (&next.left.x +
-    // &q_x_right + &next.right.x), &right_bit * (&next.left.y + &next.right.y)
-    //     - &next.right.slope * (&next.left.x - &next.right.x),
-    // (FieldElement::ONE - &right_bit) * (&next.left.x - &next.right.x),
-    // (FieldElement::ONE - &right_bit) * (&next.left.y - &next.right.y),
-    // this.right.source.clone(),
-    // this.right.source.clone(),
 
     let mut result = MmapVec::clone_from(&vec![FieldElement::ZERO; extended_domain_length]);
     for (i, constraint) in constraints.iter().enumerate() {
@@ -577,7 +556,7 @@ pub fn eval_c_direct(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::pedersen_merkle::proof::get_trace_polynomials;
+    use crate::pedersen_merkle::proof::{get_extended_trace_table, get_trace_polynomials};
     use hex_literal::*;
     use u256::u256h;
 
@@ -798,23 +777,31 @@ mod test {
 
     #[test]
     fn evals_match() {
+        let coefficients = get_coefficients();
+
         let trace_polynomials = get_trace_polynomials();
         let trace_polynomial_references: Vec<&[FieldElement]> =
             trace_polynomials.iter().map(|x| x.as_slice()).collect();
 
-        let result = eval_c_direct(
-            &FieldElement::ONE,
+        let direct_result = eval_c_direct(
+            &FieldElement::GENERATOR,
             &trace_polynomial_references,
             0usize,             // not used
             FieldElement::ZERO, // not used
-            &get_coefficients(),
+            &coefficients,
         );
 
-        let expected = FieldElement::from_hex_str(
-            "0x77d10d22df8a41ee56095fc18c0d02dcd101c2e5749ff65458828bbd3c820db",
+        let extended_trace_table = get_extended_trace_table();
+        let extended_trace_table_references: Vec<&[FieldElement]> =
+            extended_trace_table.iter().map(|x| x.as_slice()).collect();
+        let whole_loop_result = eval_whole_loop(
+            &extended_trace_table_references,
+            &coefficients,
+            0usize,             // unused
+            &FieldElement::ZERO, // unused
         );
 
-        assert_eq!(result, expected);
+        assert_eq!(whole_loop_result[0], direct_result);
     }
 
     #[test]

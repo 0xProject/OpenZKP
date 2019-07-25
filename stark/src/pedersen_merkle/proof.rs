@@ -40,21 +40,20 @@ pub fn get_trace_polynomials() -> Vec<Vec<FieldElement>> {
     trace_polynomials
 }
 
-pub fn get_extended_trace_table() -> MmapVec<[FieldElement; 8]> {
+pub fn get_extended_trace_table() -> Vec<MmapVec<FieldElement>> {
     let trace_polynomials = get_trace_polynomials();
 
     let trace_length = trace_polynomials[0].len();
+    assert_eq!(trace_length, 2097152);
 
     let beta = 16usize;
     let evaluation_length = trace_length * beta;
     let evaluation_generator = FieldElement::root(U256::from(evaluation_length as u64)).unwrap();
     let evaluation_offset = FieldElement::GENERATOR;
 
-    let mut extended_trace_table: MmapVec<[FieldElement; 8]> =
-        MmapVec::with_capacity(evaluation_length);
-
+    let mut extended_trace_table = vec![MmapVec::with_capacity(evaluation_length); 8];
     for i in 0..beta {
-        let mut coset_leaves: Vec<Vec<FieldElement>> = vec![Vec::with_capacity(trace_length); 8];
+        let mut cosets: Vec<Vec<FieldElement>> = vec![Vec::with_capacity(trace_length); 8];
         trace_polynomials
             .clone()
             .into_par_iter()
@@ -64,19 +63,9 @@ pub fn get_extended_trace_table() -> MmapVec<[FieldElement; 8]> {
                     &evaluation_offset * evaluation_generator.pow(U256::from(reverse_i as u64));
                 bit_reversal_fft_cofactor(&p, &cofactor)
             })
-            .collect_into_vec(&mut coset_leaves);
-
-        for j in 0..trace_length {
-            extended_trace_table.push([
-                coset_leaves[0][j].clone(),
-                coset_leaves[1][j].clone(),
-                coset_leaves[2][j].clone(),
-                coset_leaves[3][j].clone(),
-                coset_leaves[4][j].clone(),
-                coset_leaves[5][j].clone(),
-                coset_leaves[6][j].clone(),
-                coset_leaves[7][j].clone(),
-            ])
+            .collect_into_vec(&mut cosets);
+        for (extended_trace_column, coset) in extended_trace_table.iter_mut().zip(cosets) {
+            extended_trace_column.extend(&coset);
         }
     }
     extended_trace_table
@@ -91,7 +80,24 @@ mod tests {
     #[test]
     fn merkle_root_is_correct() {
         let extended_trace_table = get_extended_trace_table();
-        let merkle_tree = make_tree(&extended_trace_table);
+        let trace_length = extended_trace_table[0].len();
+
+        let mut leaves: MmapVec<[FieldElement; 8]> = MmapVec::with_capacity(trace_length);
+        for i in 0..trace_length {
+            leaves.push([
+                extended_trace_table[0][i].clone(),
+                extended_trace_table[1][i].clone(),
+                extended_trace_table[2][i].clone(),
+                extended_trace_table[3][i].clone(),
+                extended_trace_table[4][i].clone(),
+                extended_trace_table[5][i].clone(),
+                extended_trace_table[6][i].clone(),
+                extended_trace_table[7][i].clone(),
+            ]);
+        }
+
+        let merkle_tree = make_tree(&leaves);
+
         assert_eq!(
             merkle_tree[1],
             hex!("b00a4c7f03959e01df2504fb73d2b238a8ab08b2000000000000000000000000")

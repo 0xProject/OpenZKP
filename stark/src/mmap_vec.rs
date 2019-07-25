@@ -1,4 +1,3 @@
-use crate::utils::Reversible;
 use memmap::{MmapMut, MmapOptions};
 use primefield::FieldElement;
 use std::{
@@ -8,6 +7,7 @@ use std::{
     slice,
 };
 use tempfile::tempfile;
+use crate::utils::Reversible;
 
 pub struct MmapVec<T: Clone> {
     mmap:     MmapMut,
@@ -113,7 +113,7 @@ impl<T: Clone> DerefMut for MmapVec<T> {
 
 impl<T: Clone> Clone for MmapVec<T> {
     fn clone(&self) -> Self {
-        let mut result = MmapVec::with_capacity(self.len());
+        let mut result = MmapVec::with_capacity(self.capacity);
         result.extend(self);
         result
     }
