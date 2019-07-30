@@ -2,7 +2,7 @@ use crate::{
     channel::{ProverChannel, RandomGenerator, Writable},
     fft::{bit_reversal_permute, fft_cofactor_bit_reversed, ifft},
     merkle::{self, make_tree, Hashable},
-    polynomial::eval_poly,
+    polynomial::Polynomial,
     utils::Reversible,
 };
 use itertools::Itertools;
@@ -428,9 +428,10 @@ fn get_out_of_domain_information(
     let oods_point_g = &oods_point * g;
     let mut oods_values = Vec::with_capacity(2 * trace_poly.len() + 1);
     for item in trace_poly.iter() {
-        let mut evaled = eval_poly(oods_point.clone(), item);
+        let trace_polynomial = Polynomial::new(item);
+        let mut evaled = trace_polynomial.evaluate(&oods_point);
         oods_values.push(evaled.clone());
-        evaled = eval_poly(oods_point_g.clone(), item);
+        evaled = trace_polynomial.evaluate(&oods_point_g);
         oods_values.push(evaled.clone());
     }
 
@@ -802,21 +803,19 @@ mod tests {
         assert_eq!(trace.elements[2000], claim_value);
 
         let TPn = interpolate_trace_table(&trace);
-        let TP0 = TPn[0].as_slice();
-        let TP1 = TPn[1].as_slice();
+        let TP0 = Polynomial::new(&TPn[0]);
+        let TP1 = Polynomial::new(&TPn[1]);
         // Checks that the trace table polynomial interpolation is working
-        assert_eq!(eval_poly(trace_x[1000].clone(), TP0), trace.elements[2000]);
+        assert_eq!(TP0.evaluate(&trace_x[1000]), trace.elements[2000]);
 
         let TPn_reference: Vec<&[FieldElement]> = TPn.iter().map(|x| x.as_slice()).collect();
         let LDEn = calculate_low_degree_extensions(TPn_reference.as_slice(), &params, &eval_x);
 
         // Checks that the low degree extension calculation is working
-        let LDE0 = LDEn[0].as_slice();
-        let LDE1 = LDEn[1].as_slice();
         let i = 13644usize;
         let reverse_i = i.bit_reverse_at(eval_domain_size);
-        assert_eq!(eval_poly(eval_offset_x[reverse_i].clone(), TP0), LDE0[i]);
-        assert_eq!(eval_poly(eval_offset_x[reverse_i].clone(), TP1), LDE1[i]);
+        assert_eq!(TP0.evaluate(&eval_offset_x[reverse_i]), LDEn[0][i]);
+        assert_eq!(TP1.evaluate(&eval_offset_x[reverse_i]), LDEn[1][i]);
 
         // Checks that the groupable trait is properly grouping for &[Vec<FieldElement>]
         assert_eq!(

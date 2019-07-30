@@ -1,5 +1,5 @@
 use crate::{
-    polynomial::eval_poly,
+    polynomial::Polynomial,
     proofs::{geometric_series, Constraint, TraceTable},
     utils::Reversible,
 };
@@ -135,22 +135,24 @@ pub fn eval_c_direct(
         "0659d83946a03edd72406af6711825f5653d9e35dc125289a206c054ec89c4f1"
     ));
 
-    let eval_P0 = |x: FieldElement| -> FieldElement { eval_poly(x, polynomials[0]) };
-    let eval_P1 = |x: FieldElement| -> FieldElement { eval_poly(x, polynomials[1]) };
+    let eval_P0 =
+        |x: &FieldElement| -> FieldElement { Polynomial::new(polynomials[0]).evaluate(x) };
+    let eval_P1 =
+        |x: &FieldElement| -> FieldElement { Polynomial::new(polynomials[1]).evaluate(x) };
     let eval_C0 = |x: FieldElement| -> FieldElement {
-        ((eval_P0(&x * &g) - eval_P1(x.clone())) * (&x - &g.pow(U256::from(trace_len - 1))))
+        ((eval_P0(&(&x * &g)) - eval_P1(&x)) * (&x - &g.pow(U256::from(trace_len - 1))))
             / (&x.pow(U256::from(trace_len)) - FieldElement::ONE)
     };
     let eval_C1 = |x: FieldElement| -> FieldElement {
-        ((eval_P1(&x * &g) - eval_P0(x.clone()) - eval_P1(x.clone()))
+        ((eval_P1(&(&x * &g)) - eval_P0(&x) - eval_P1(&x))
             * (&x - (&g.pow(U256::from(trace_len - 1)))))
             / (&x.pow(U256::from(trace_len)) - FieldElement::ONE)
     };
     let eval_C2 = |x: FieldElement| -> FieldElement {
-        ((eval_P0(x.clone()) - FieldElement::ONE) * FieldElement::ONE) / (&x - FieldElement::ONE)
+        ((eval_P0(&x) - FieldElement::ONE) * FieldElement::ONE) / (&x - FieldElement::ONE)
     };
     let eval_C3 = |x: FieldElement| -> FieldElement {
-        (eval_P0(x.clone()) - claim) / (&x - &g.pow(U256::from(claim_index as u64)))
+        (eval_P0(&x) - claim) / (&x - &g.pow(U256::from(claim_index as u64)))
     };
 
     let deg_adj = |degree_bound: u64,

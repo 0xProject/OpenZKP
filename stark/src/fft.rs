@@ -89,7 +89,7 @@ fn reverse(x: u64, bits: u32) -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::polynomial::eval_poly;
+    use crate::polynomial::Polynomial;
     use hex_literal::*;
     use quickcheck_macros::quickcheck;
     use u256::u256h;
@@ -127,11 +127,10 @@ mod tests {
         ];
         let expected: Vec<FieldElement> = (0..4u64)
             .map(|i| {
-                eval_poly(
-                    FieldElement::root(U256::from(4u64))
+                Polynomial::new(&v).evaluate(
+                    &FieldElement::root(U256::from(4u64))
                         .unwrap()
                         .pow(U256::from(i)),
-                    &v,
                 )
             })
             .collect();
@@ -153,7 +152,7 @@ mod tests {
         ];
         let eighth_root_of_unity = FieldElement::root(U256::from(8u64)).unwrap();
         let expected: Vec<FieldElement> = (0..8u64)
-            .map(|i| eval_poly(eighth_root_of_unity.pow(U256::from(i)), &v))
+            .map(|i| Polynomial::new(&v).evaluate(&eighth_root_of_unity.pow(U256::from(i))))
             .collect();
 
         assert_eq!(fft(&v), expected);
@@ -199,7 +198,7 @@ mod tests {
         for (i, x) in fft(&vector).into_iter().enumerate() {
             assert_eq!(
                 x,
-                eval_poly(root.clone().pow(U256::from(i as u64)), &vector)
+                Polynomial::new(&vector).evaluate(&root.pow(U256::from(i as u64)))
             );
         }
 
