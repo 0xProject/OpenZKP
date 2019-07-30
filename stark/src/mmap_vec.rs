@@ -1,3 +1,4 @@
+use crate::utils::Reversible;
 use memmap::{MmapMut, MmapOptions};
 use primefield::FieldElement;
 use std::{
@@ -7,7 +8,6 @@ use std::{
     slice,
 };
 use tempfile::tempfile;
-use crate::utils::Reversible;
 
 pub struct MmapVec<T: Clone> {
     mmap:     MmapMut,

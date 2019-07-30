@@ -107,7 +107,11 @@ pub fn eval_whole_loop(
             FieldElement::ONE,
         ))),
         MmapVec::clone_from(&invert_batch(&scalar_subtraction(
-            &geometric_series(&FieldElement::GENERATOR, &trace_generator, extended_domain_length),
+            &geometric_series(
+                &FieldElement::GENERATOR,
+                &trace_generator,
+                extended_domain_length,
+            ),
             FieldElement::ONE,
         ))),
         MmapVec::clone_from(&invert_batch(&scalar_subtraction(
@@ -797,7 +801,7 @@ mod test {
         let whole_loop_result = eval_whole_loop(
             &extended_trace_table_references,
             &coefficients,
-            0usize,             // unused
+            0usize,              // unused
             &FieldElement::ZERO, // unused
         );
 

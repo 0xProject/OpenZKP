@@ -232,6 +232,15 @@ impl Polynomial {
 }
 
 #[cfg(test)]
+use quickcheck::{Arbitrary, Gen};
+#[cfg(test)]
+impl Arbitrary for Polynomial {
+    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+        Polynomial(Vec::<FieldElement>::arbitrary(g))
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use hex_literal::*;

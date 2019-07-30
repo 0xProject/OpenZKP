@@ -402,6 +402,12 @@ impl From<&U256> for u128 {
     }
 }
 
+// impl From<usize> for U256 {
+//     fn from(n: usize) -> U256 {
+//         Self::new(n as u64, 0, 0, 0)
+//     }
+// }
+
 impl<T: Into<u128>> From<T> for U256 {
     fn from(n: T) -> U256 {
         let m: u128 = n.into();
