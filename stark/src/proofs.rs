@@ -8,8 +8,8 @@ use crate::{
 use itertools::Itertools;
 use primefield::{invert_batch, FieldElement};
 use rayon::prelude::*;
-use u256::U256;
 use std::cmp::max;
+use u256::U256;
 
 // This trait is for objects where the object is grouped into hashable sets
 // based on index before getting made into a merkle tree, with domain size

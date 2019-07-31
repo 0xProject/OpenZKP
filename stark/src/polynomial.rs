@@ -1,11 +1,11 @@
+use crate::proofs::geometric_series;
 use primefield::FieldElement;
 use rayon::{iter::repeatn, prelude::*};
 use std::{
     cmp::max,
-    ops::{Add, AddAssign, Mul, SubAssign, Div},
+    ops::{Add, AddAssign, Div, Mul, SubAssign},
 };
 use u256::U256;
-use crate::proofs::geometric_series;
 
 #[derive(Clone)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
@@ -133,7 +133,7 @@ impl Mul<&Polynomial> for &FieldElement {
     }
 }
 
-// TODO: use fft here if appropriate.
+// TODO: use fft for Mul and Div if appropriate.
 // https://stackoverflow.com/questions/44770632/fft-division-for-fast-polynomial-division
 impl Mul<Polynomial> for Polynomial {
     type Output = Self;
@@ -151,8 +151,6 @@ impl Mul<Polynomial> for Polynomial {
     }
 }
 
-// TODO: use fft here if appropriate.
-// https://stackoverflow.com/questions/44770632/fft-division-for-fast-polynomial-division
 impl Div<Polynomial> for Polynomial {
     type Output = Self;
 
@@ -228,7 +226,10 @@ mod tests {
     #[test]
     fn example_shift() {
         let p = Polynomial::from_dense(&[3, 2, 1]);
-        assert_eq!(p.shift(&(FieldElement::ZERO)), Polynomial::from_dense(&[3, 0, 0]))
+        assert_eq!(
+            p.shift(&(FieldElement::ZERO)),
+            Polynomial::from_dense(&[3, 0, 0])
+        )
     }
 
     #[quickcheck]
