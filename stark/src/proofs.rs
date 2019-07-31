@@ -9,6 +9,7 @@ use itertools::Itertools;
 use primefield::{invert_batch, FieldElement};
 use rayon::prelude::*;
 use u256::U256;
+use std::cmp::max;
 
 // This trait is for objects where the object is grouped into hashable sets
 // based on index before getting made into a merkle tree, with domain size
@@ -321,7 +322,7 @@ fn get_indices(num: usize, bits: u32, proof: &mut ProverChannel) -> Vec<usize> {
 pub fn geometric_series(base: &FieldElement, step: &FieldElement, len: usize) -> Vec<FieldElement> {
     const PARALLELIZATION: usize = 16_usize;
     // OPT - Set based on the cores available and how well the work is spread
-    let step_len = len / PARALLELIZATION;
+    let step_len = max(1, len / PARALLELIZATION);
     let mut range = vec![FieldElement::ZERO; len];
     range
         .par_chunks_mut(step_len)

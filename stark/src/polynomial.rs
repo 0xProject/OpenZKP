@@ -2,9 +2,10 @@ use primefield::FieldElement;
 use rayon::{iter::repeatn, prelude::*};
 use std::{
     cmp::max,
-    ops::{Add, AddAssign, Mul},
+    ops::{Add, AddAssign, Mul, SubAssign, Div},
 };
 use u256::U256;
+use crate::proofs::geometric_series;
 
 #[derive(Clone)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
@@ -74,8 +75,19 @@ impl Polynomial {
         result
     }
 
-    fn shift(self: &mut Self) {
-        self.0.push(FieldElement::ZERO);
+    pub fn shift(self: &Self, step: &FieldElement) -> Self {
+        let mut coefficients = self.0.clone();
+        let shift_factors = geometric_series(&FieldElement::ONE, step, self.0.len());
+        for (coefficient, shift_factor) in coefficients.iter_mut().zip(shift_factors.iter().rev()) {
+            *coefficient *= shift_factor;
+        }
+        Self(coefficients)
+    }
+
+    fn extend_to_length(self: &Self, degree_difference: usize) -> Self {
+        let mut coefficients = self.0.clone();
+        coefficients.extend_from_slice(&vec![FieldElement::ZERO; degree_difference]);
+        Self(coefficients)
     }
 }
 
@@ -88,6 +100,16 @@ impl Add for Polynomial {
             .map(|(x, y)| x + y)
             .collect_into_vec(&mut result);
         Polynomial(result)
+    }
+}
+
+impl SubAssign<&Self> for Polynomial {
+    fn sub_assign(self: &mut Self, other: &Self) {
+        let mut result = Vec::with_capacity(max(self.0.len(), other.0.len()));
+        Polynomial::aligned_coefficients(self, other)
+            .map(|(x, y)| x - y)
+            .collect_into_vec(&mut result);
+        *self = Polynomial(result)
     }
 }
 
@@ -111,6 +133,8 @@ impl Mul<&Polynomial> for &FieldElement {
     }
 }
 
+// TODO: use fft here if appropriate.
+// https://stackoverflow.com/questions/44770632/fft-division-for-fast-polynomial-division
 impl Mul<Polynomial> for Polynomial {
     type Output = Self;
 
@@ -120,10 +144,31 @@ impl Mul<Polynomial> for Polynomial {
         }
         let mut result = Polynomial(vec![]);
         for coefficient in other.coefficients().iter() {
-            result.shift();
+            result.0.push(FieldElement::ZERO);
             result += &(coefficient * &self);
         }
         result
+    }
+}
+
+// TODO: use fft here if appropriate.
+// https://stackoverflow.com/questions/44770632/fft-division-for-fast-polynomial-division
+impl Div<Polynomial> for Polynomial {
+    type Output = Self;
+
+    fn div(self, other: Self) -> Self {
+        let degree_difference = self.0.len() - other.0.len();
+        let inverse_leading_term = other.0[0].inv().unwrap();
+        let mut remainder = self.clone();
+        let mut other = other.extend_to_length(degree_difference);
+        let mut result = vec![];
+        for i in 0..(1 + degree_difference) {
+            let q = &remainder.0[i] * &inverse_leading_term;
+            remainder -= &(&q * &other);
+            result.push(q);
+            other.0.pop();
+        }
+        Polynomial(result)
     }
 }
 
@@ -173,6 +218,19 @@ mod tests {
         assert_eq!(p_1 * p_2, Polynomial::from_dense(&[1, 2, 1]))
     }
 
+    #[test]
+    fn example_division() {
+        let numerator = Polynomial::from_dense(&[1, 3, 3, 1]);
+        let denominator = Polynomial::from_dense(&[1, 1]);
+        assert_eq!(numerator / denominator, Polynomial::from_dense(&[1, 2, 1]))
+    }
+
+    #[test]
+    fn example_shift() {
+        let p = Polynomial::from_dense(&[3, 2, 1]);
+        assert_eq!(p.shift(&(FieldElement::ZERO)), Polynomial::from_dense(&[3, 0, 0]))
+    }
+
     #[quickcheck]
     fn product_evaluation_equivalence(x: FieldElement, a: Polynomial, b: Polynomial) -> bool {
         a.evaluate(&x) * b.evaluate(&x) == (a * b).evaluate(&x)
@@ -191,5 +249,21 @@ mod tests {
     #[quickcheck]
     fn distributivity(a: Polynomial, b: Polynomial, c: Polynomial) -> bool {
         a.clone() * (b.clone() + c.clone()) == a.clone() * b + a * c
+    }
+
+    #[quickcheck]
+    fn shift_definition(a: Polynomial, shift: FieldElement, x: FieldElement) -> bool {
+        a.shift(&shift).evaluate(&x) == a.evaluate(&(x * shift))
+    }
+
+    #[quickcheck]
+    fn division_multiplication_inverse(a: Polynomial, b: Polynomial) -> bool {
+        if b.0.is_empty() {
+            return true;
+        }
+        if b.0[0].is_zero() {
+            return true;
+        }
+        a.clone() * b.clone() / b == a
     }
 }
