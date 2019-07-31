@@ -11,6 +11,8 @@ use u256::U256;
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct Polynomial(Vec<FieldElement>);
 
+// TODO: create a canonical representation for polynonials based on vectors with
+// power of two lengths.
 impl Polynomial {
     pub fn new(coefficients: &[FieldElement]) -> Self {
         let mut coefficients = coefficients.to_vec();
@@ -18,6 +20,7 @@ impl Polynomial {
         Self(coefficients)
     }
 
+    // TODO: turn these two into macros which accepts negative values as well.
     pub fn from_dense(c: &[usize]) -> Self {
         debug_assert!(c.len() > 0);
         debug_assert!(c[c.len() - 1] != 0);
@@ -50,22 +53,6 @@ impl Polynomial {
         &self.0
     }
 
-    fn aligned_coefficients<'a>(
-        p_1: &'a Polynomial,
-        p_2: &'a Polynomial,
-    ) -> impl IndexedParallelIterator<Item = (&'a FieldElement, &'a FieldElement)> {
-        let mut padding_1 = 0;
-        let mut padding_2 = 0;
-        if p_1.0.len() < p_2.0.len() {
-            padding_1 = p_2.0.len() - p_1.0.len();
-        } else {
-            padding_2 = p_1.0.len() - p_2.0.len();
-        }
-        repeatn(&FieldElement::ZERO, padding_1)
-            .chain(p_1.0.par_iter())
-            .zip(repeatn(&FieldElement::ZERO, padding_2).chain(p_2.0.par_iter()))
-    }
-
     pub fn evaluate(self: &Self, x: &FieldElement) -> FieldElement {
         let mut result = FieldElement::ZERO;
         for coefficient in self.coefficients().iter() {
@@ -82,6 +69,22 @@ impl Polynomial {
             *coefficient *= shift_factor;
         }
         Self(coefficients)
+    }
+
+    fn aligned_coefficients<'a>(
+        p_1: &'a Polynomial,
+        p_2: &'a Polynomial,
+    ) -> impl IndexedParallelIterator<Item = (&'a FieldElement, &'a FieldElement)> {
+        let mut padding_1 = 0;
+        let mut padding_2 = 0;
+        if p_1.0.len() < p_2.0.len() {
+            padding_1 = p_2.0.len() - p_1.0.len();
+        } else {
+            padding_2 = p_1.0.len() - p_2.0.len();
+        }
+        repeatn(&FieldElement::ZERO, padding_1)
+            .chain(p_1.0.par_iter())
+            .zip(repeatn(&FieldElement::ZERO, padding_2).chain(p_2.0.par_iter()))
     }
 
     fn extend_to_length(self: &Self, degree_difference: usize) -> Self {
@@ -156,7 +159,7 @@ impl Div<Polynomial> for Polynomial {
 
     fn div(self, other: Self) -> Self {
         let degree_difference = self.0.len() - other.0.len();
-        let inverse_leading_term = other.0[0].inv().unwrap();
+        let inverse_leading_term = other.0[0].inv().expect("Cannot divide by zero polynomial");
         let mut remainder = self.clone();
         let mut other = other.extend_to_length(degree_difference);
         let mut result = vec![];
@@ -166,6 +169,7 @@ impl Div<Polynomial> for Polynomial {
             result.push(q);
             other.0.pop();
         }
+        // TODO: panic if remainder is not zero?
         Polynomial(result)
     }
 }
@@ -259,6 +263,7 @@ mod tests {
 
     #[quickcheck]
     fn division_multiplication_inverse(a: Polynomial, b: Polynomial) -> bool {
+        // TODO remove these once we have a canonical representation for polynomials.
         if b.0.is_empty() {
             return true;
         }
