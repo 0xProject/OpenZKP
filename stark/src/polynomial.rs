@@ -266,7 +266,7 @@ mod tests {
     #[quickcheck]
     fn division_multiplication_inverse(a: Polynomial, b: Polynomial) -> bool {
         // TODO remove these once we have a canonical representation for polynomials.
-        if b.0.is_empty() {
+        if a.0.is_empty() || b.0.is_empty() {
             return true;
         }
         if b.0[0].is_zero() {
