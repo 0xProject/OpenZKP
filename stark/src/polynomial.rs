@@ -3,7 +3,7 @@ use primefield::FieldElement;
 use rayon::{iter::repeatn, prelude::*};
 use std::{
     cmp::max,
-    ops::{Add, AddAssign, Div, Mul, SubAssign},
+    ops::{Add, AddAssign, Div, Mul, Sub, SubAssign},
 };
 use u256::U256;
 
@@ -101,6 +101,18 @@ impl Add for Polynomial {
         let mut result = Vec::with_capacity(max(self.0.len(), other.0.len()));
         Polynomial::aligned_coefficients(&self, &other)
             .map(|(x, y)| x + y)
+            .collect_into_vec(&mut result);
+        Polynomial(result)
+    }
+}
+
+impl Sub for Polynomial {
+    type Output = Self;
+
+    fn sub(self, other: Self) -> Self {
+        let mut result = Vec::with_capacity(max(self.0.len(), other.0.len()));
+        Polynomial::aligned_coefficients(&self, &other)
+            .map(|(x, y)| x - y)
             .collect_into_vec(&mut result);
         Polynomial(result)
     }
@@ -216,6 +228,13 @@ mod tests {
     }
 
     #[test]
+    fn example_difference() {
+        let p_1 = Polynomial::from_dense(&[1, 2, 10, 7]);
+        let p_2 = Polynomial::from_dense(&[1, 2, 6]);
+        assert_eq!(p_1 - p_2, Polynomial::from_dense(&[0, 0, 4, 7]))
+    }
+
+    #[test]
     fn example_product() {
         let p_1 = Polynomial::from_dense(&[1, 1]);
         let p_2 = Polynomial::from_dense(&[1, 1]);
@@ -233,8 +252,8 @@ mod tests {
     fn example_shift() {
         let p = Polynomial::from_dense(&[3, 2, 1]);
         assert_eq!(
-            p.shift(&(FieldElement::ZERO)),
-            Polynomial::from_dense(&[3, 0, 0])
+            p.shift(&(FieldElement::from(U256::from(2u64)))),
+            Polynomial::from_dense(&[3, 4, 4])
         )
     }
 
@@ -261,6 +280,12 @@ mod tests {
     #[quickcheck]
     fn shift_definition(a: Polynomial, shift: FieldElement, x: FieldElement) -> bool {
         a.shift(&shift).evaluate(&x) == a.evaluate(&(x * shift))
+    }
+
+    // TODO: fix this.
+    #[quickcheck]
+    fn addition_subtration_inverse(a: Polynomial, b: Polynomial) -> bool {
+        a.clone() + b.clone() - b == a
     }
 
     #[quickcheck]
