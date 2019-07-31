@@ -22,7 +22,7 @@ impl Polynomial {
 
     // TODO: turn these two into macros which accepts negative values as well.
     pub fn from_dense(c: &[usize]) -> Self {
-        debug_assert!(c.len() > 0);
+        debug_assert!(!c.is_empty());
         debug_assert!(c[c.len() - 1] != 0);
 
         let coefficients: Vec<FieldElement> = c
@@ -43,7 +43,7 @@ impl Polynomial {
 
         let mut coefficients = vec![0usize; max_degree + 1];
         for (degree, coefficient) in degrees_and_coefficients.iter() {
-            coefficients[*degree] = coefficient.clone();
+            coefficients[*degree] = *coefficient;
         }
         Polynomial::from_dense(&coefficients)
     }
@@ -138,11 +138,12 @@ impl Mul<&Polynomial> for &FieldElement {
 
 // TODO: use fft for Mul and Div if appropriate.
 // https://stackoverflow.com/questions/44770632/fft-division-for-fast-polynomial-division
+#[allow(clippy::suspicious_arithmetic_impl)]
 impl Mul<Polynomial> for Polynomial {
     type Output = Self;
 
     fn mul(self, other: Self) -> Self {
-        if self.0.len() == 0 || other.0.len() == 0 {
+        if self.0.is_empty() || other.0.is_empty() {
             return Polynomial(vec![]);
         }
         let mut result = Polynomial(vec![]);
@@ -154,6 +155,7 @@ impl Mul<Polynomial> for Polynomial {
     }
 }
 
+#[allow(clippy::suspicious_arithmetic_impl)]
 impl Div<Polynomial> for Polynomial {
     type Output = Self;
 
@@ -163,7 +165,7 @@ impl Div<Polynomial> for Polynomial {
         let mut remainder = self.clone();
         let mut other = other.extend_to_length(degree_difference);
         let mut result = vec![];
-        for i in 0..(1 + degree_difference) {
+        for i in 0..=degree_difference {
             let q = &remainder.0[i] * &inverse_leading_term;
             remainder -= &(&q * &other);
             result.push(q);
