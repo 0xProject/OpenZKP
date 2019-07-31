@@ -315,19 +315,32 @@ fn fri_layer(
     eval_domain_size: usize,
     eval_x: &[FieldElement],
 ) -> Vec<FieldElement> {
+    //println!("Layer: {}", previous.len());
     let len = previous.len();
     let step = eval_domain_size / len;
-    let mut next = Vec::with_capacity(len / 2);
+    //let mut next = Vec::with_capacity(len / 2);
+    // Todo - make sure to re-par
     (0..(len / 2))
-        .into_par_iter()
+        .into_iter()
         .map(|index| {
             let value = &previous[2 * index];
             let neg_x_value = &previous[2 * index + 1];
             let x_inv = &eval_x[index.bit_reverse_at(len / 2) * step].inv().unwrap();
+            let x = &eval_x[index.bit_reverse_at(len / 2) * step].clone();
+            let x_prev = &eval_x[(index+1).bit_reverse_at(len / 2) * step].clone();
+
+            // println!("Index: {}", index);
+            // println!("Len: {}", len);
+            // println!("Step: {}", step);
+            // println!("Value: {:?}", value);
+            // println!("Neg Value: {:?}", neg_x_value);
+            // println!("x_inv : {:?}", x_inv);
+            // println!("x : {:?}", &x);
+
             (value + neg_x_value) + evaluation_point * x_inv * (value - neg_x_value)
-        })
-        .collect_into_vec(&mut next);
-    next
+        }).collect::<Vec<_>>()
+    //     .collect_into_vec(&mut next);
+    // next
 }
 
 fn get_indices(num: usize, bits: u32, proof: &mut ProverChannel) -> Vec<usize> {
@@ -549,8 +562,7 @@ fn perform_fri_layering(
     fri_trees.push(held_tree);
 
     let mut halvings = 0;
-    let mut fri_const = params.blowup / 4;
-    for &x in params.fri_layout.iter().dropping_back(1) {
+    for (k, &x) in params.fri_layout.iter().enumerate().dropping_back(1){
         let mut eval_point = if x == 0 {
             FieldElement::ONE
         } else {
@@ -565,11 +577,10 @@ fn perform_fri_layering(
             ));
             eval_point = eval_point.square();
         }
-        let held_tree = (fri_const, fri[fri.len() - 1].as_slice()).merkleize();
+        let held_tree = (2_usize.pow(params.fri_layout[k+1] as u32), fri[fri.len() - 1].as_slice()).merkleize();
 
         proof.write(&held_tree[1]);
         fri_trees.push(held_tree);
-        fri_const /= 2;
         halvings += x;
     }
 
@@ -589,8 +600,12 @@ fn perform_fri_layering(
     // Gets the coefficient representation of the last number of fri reductions
 
     let last_layer_degree_bound = trace_len / (2_usize.pow(halvings as u32));
+    println!("Last Layer: {}", last_layer_degree_bound);
 
-    let mut last_layer = fri[halvings].clone();
+    let mut last_layer = fri[fri.len()-1].clone();
+    for (k, item) in last_layer.iter().enumerate() {
+        println!("At index {}, {:?}", k, item);
+    }
     bit_reversal_permute(&mut last_layer);
     let mut last_layer_coefficient = ifft(&last_layer);
     last_layer_coefficient.truncate(last_layer_degree_bound);
@@ -609,6 +624,7 @@ fn decommit_with_queries_and_proof<R: Hashable + std::fmt::Debug, T: Groupable<R
 {
     for &index in queries.iter() {
         proof.write((&source).make_group(index));
+        //println!("Index {}: element {:?}", index, (&source).make_group(index));
     }
     decommit_proof(merkle::proof(tree, queries, source), proof);
 }
@@ -617,6 +633,7 @@ fn decommit_with_queries_and_proof<R: Hashable + std::fmt::Debug, T: Groupable<R
 // the write types and the others.
 fn decommit_proof(decommitment: Vec<Hash>, proof: &mut ProverChannel) {
     for x in decommitment.iter() {
+        //println!("Decommit: {}", encode(x));
         proof.write(x);
     }
 }
@@ -631,20 +648,20 @@ fn decommit_fri_layers_and_trees(
     let mut fri_indices: Vec<usize> = query_indices
         .to_vec()
         .iter()
-        .map(|x| x / (params.blowup / 2))
+        .map(|x| x / 2_usize.pow((params.fri_layout[0]) as u32))
         .collect();
 
     let mut current_fri = 0;
     let mut previous_indices = query_indices.to_vec().clone();
-    let mut fri_const = params.blowup / 2;
     for (k, next_tree) in fri_trees.iter().enumerate() {
+        let fri_const = 2_usize.pow(params.fri_layout[k] as u32);
         if k != 0 {
             current_fri += params.fri_layout[k - 1];
         }
 
         for i in fri_indices.iter() {
-            for j in 0..(params.blowup / 2_usize.pow(k as u32 + 1)) {
-                let n = i * (params.blowup / 2_usize.pow(k as u32 + 1)) + j;
+            for j in 0..fri_const {
+                let n = i * fri_const + j;
 
                 if previous_indices.binary_search(&n).is_ok() {
                     continue;
@@ -653,19 +670,20 @@ fn decommit_fri_layers_and_trees(
                 }
             }
         }
-
         let decommitment = merkle::proof(
             &next_tree,
             &(fri_indices.as_slice()),
             (fri_const, fri_layers[current_fri].as_slice()),
         );
+        println!("Actual Len: {}", decommitment.len());
 
         for proof_element in decommitment.iter() {
             proof.write(proof_element);
         }
-        fri_const /= 2;
         previous_indices = fri_indices.clone();
-        fri_indices = fri_indices.iter().map(|ind| ind / 4).collect();
+        if k+1 < params.fri_layout.len() {
+            fri_indices = fri_indices.iter().map(|ind| ind /2_usize.pow((params.fri_layout[k+1]) as u32)).collect();
+        }
     }
 }
 
@@ -675,6 +693,7 @@ mod tests {
     use crate::fibonacci::*;
     use hex_literal::*;
     use u256::{u256h, U256};
+    use crate::verifier::*;
 
     #[test]
     fn fib_test_1024_python_witness() {
@@ -725,11 +744,26 @@ mod tests {
             &ProofParams {
                 blowup:     32,
                 pow_bits:   12,
-                queries:    20,
+                queries:    40,
                 fri_layout: vec![3, 2],
             },
         );
-        assert_eq!(actual.coin.digest, expected);
+        //assert_eq!(actual.coin.digest, expected);
+
+        assert!(check_proof(
+            actual,
+            &get_constraint(),
+            claim_index,
+            claim_value,
+            &ProofParams {
+                blowup:     32,
+                pow_bits:   12,
+                queries:    40,
+                fri_layout: vec![3, 2],
+            },
+            2,
+            1024
+        ));
     }
 
     #[test]
@@ -757,7 +791,22 @@ mod tests {
                 fri_layout: vec![3, 2, 1],
             },
         );
-        assert_eq!(actual.coin.digest, expected);
+        //assert_eq!(actual.coin.digest, expected);
+
+        assert!(check_proof(
+            actual,
+            &get_constraint(),
+            claim_index,
+            claim_value,
+            &ProofParams {
+                blowup:     16,
+                pow_bits:   12,
+                queries:    20,
+                fri_layout: vec![3, 2, 1],
+            },
+            2,
+            4096
+        ));
     }
 
     #[test]

@@ -36,7 +36,7 @@ pub struct ProverChannel {
 #[derive(PartialEq, Eq, Clone, Default)]
 pub struct VerifierChannel {
     pub coin:    PublicCoin,
-    pub proof:   Vec<u8>,
+    proof:   Vec<u8>,
     proof_index: usize,
 }
 
@@ -160,6 +160,10 @@ impl VerifierChannel {
 
     pub fn read_without_replay(&self, length: usize) -> &[u8] {
         &self.proof[self.proof_index..(self.proof_index + length)]
+    }
+
+    pub fn at_end(self) -> bool {
+        self.proof_index == self.proof.len()
     }
 }
 

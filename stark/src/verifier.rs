@@ -1,12 +1,12 @@
 #[allow(unused_imports)]
-use crate::{channel::*, merkle::*, polynomial::eval_poly, proofs::*};
+use crate::{channel::*, merkle::*, polynomial::eval_poly, proofs::*, utils::*, fft::*};
+use hex::*;
 use itertools::Itertools;
 use primefield::FieldElement;
-use u256::U256;
-// use hex::*;
+    use hex_literal::*;
+use u256::{U256, u256h};
+use std::collections::HashMap;
 
-// TODO - Remove when all written out.
-#[allow(warnings)]
 pub fn check_proof(
     proposed_proof: ProverChannel,
     constraints: &Constraint,
@@ -16,6 +16,11 @@ pub fn check_proof(
     trace_cols: usize,
     trace_len: usize,
 ) -> bool {
+    let omega = FieldElement::root(U256::from((trace_len * params.blowup) as u64)).unwrap();
+    let eval_domain_size = trace_len * params.blowup;
+
+    let eval_x = geometric_series(&FieldElement::ONE, &omega, eval_domain_size);
+
     let mut public_input = [claim_index.to_be_bytes()].concat();
     public_input.extend_from_slice(&claim_value.0.to_bytes_be());
     let mut proof_check =
@@ -92,11 +97,15 @@ pub fn check_proof(
         })
         .collect();
     let lde_decommitment: Vec<[u8; 32]> = proof_check.replay_many(merkle_proof_length);
+    if !verify(
+        low_degree_extension_root,
+        eval_domain_size.trailing_zeros(),
+        led_values.as_mut_slice(),
+        lde_decommitment,
+    ) {
+        return false;
+    }
 
-    // TOOD - Fix merkle proof function so that it works in this case.
-    assert!(verify(low_degree_extension_root, eval_domain_size.trailing_zeros(),
-    led_values.as_mut_slice(), lde_decommitment));
-    
     // Gets the values and checks the constraint decommitment
     let mut constraint_values: Vec<(usize, U256)> = queries
         .iter()
@@ -104,11 +113,137 @@ pub fn check_proof(
         .collect();
     let constraint_decommitment: Vec<[u8; 32]> = proof_check.replay_many(merkle_proof_length);
 
-    if !verify(constraint_evaluated_root, eval_domain_size.trailing_zeros(),
-    constraint_values.as_mut_slice(), constraint_decommitment) {     return
-    false; }
+    if !verify(
+        constraint_evaluated_root,
+        eval_domain_size.trailing_zeros(),
+        constraint_values.as_mut_slice(),
+        constraint_decommitment,
+    ) {
+        return false;
+    }
 
-    true
+     let mut fri_indices: Vec<usize> = queries
+        .to_vec()
+        .iter()
+        .map(|x| x / 2_usize.pow((params.fri_layout[0]) as u32))
+        .collect();
+    
+    // Deccommited fri cosets at each layer
+    let mut fri_values: Vec<Vec<(usize, Vec<FieldElement>)>> =
+        Vec::with_capacity(64 - (eval_domain_size.leading_zeros() as usize));
+    // Decommited folded fri cosets at each layer
+    let mut fri_folds: Vec<HashMap<usize, FieldElement>> = Vec::new();
+    // Decommited proofs of the hashes of cosets from each layer
+    let mut fri_decommitments: Vec<Vec<[u8; 32]>> = Vec::with_capacity(64 - (eval_domain_size.leading_zeros() as usize));
+
+    let mut current_fri = 0;
+    let mut previous_indices = queries.to_vec().clone();
+    let mut step = 1;
+    let mut len = eval_domain_size;
+    for (k, _) in fri_roots.iter().enumerate() {
+        let mut fri_layer_values = Vec::new();
+
+        if k != 0 {
+            current_fri += params.fri_layout[k - 1];
+        }
+
+        for i in fri_indices.iter() {
+            let mut coset : Vec<FieldElement> = Vec::new();
+            for j in 0..2_usize.pow(params.fri_layout[k] as u32) {
+                let n = i *2_usize.pow(params.fri_layout[k] as u32)  + j;
+
+                let has_index = previous_indices.binary_search(&n);
+                match has_index {
+                    Ok(z) => {
+                        if k > 0 {
+                            coset.push(fri_folds[k-1].get(&n).unwrap().clone());
+                        } else {
+                            let z_reverse = queries[z].bit_reverse_at(eval_domain_size);
+                            coset.push(out_of_domain_element(led_values[z].1.as_slice(), &constraint_values[z].1, &eval_x[z_reverse], &oods_point, oods_values.as_slice(), oods_coefficients.as_slice(), eval_domain_size, params.blowup));
+                        }
+                    },
+                    Err(_) => {
+                        coset.push(proof_check.replay());
+                    }
+                }
+            }
+            fri_layer_values.push((*i, coset));
+        }
+        // Fold and record foldings
+        let mut layer_folds = HashMap::new();
+        for (i, coset) in fri_layer_values.iter() {
+            
+            // println!("__________________");
+            // println!("Verify index: {}", 2_usize.pow((params.fri_layout[k] - 1) as u32)*i);
+            // println!("__________________");
+            // println!("Step : {:?}", &step);
+            layer_folds.insert(*i, fri_fold(coset.as_slice(), &eval_points[k], step, 2_usize.pow((params.fri_layout[k] - 1) as u32)*i, len, eval_x.as_slice()));
+        }
+
+        let merkle_proof_length = decommitment_size(fri_indices.as_slice(),len/2_usize.pow(params.fri_layout[k] as u32));
+        println!("Proposed proof_len: {}", merkle_proof_length);
+        let decommitment = proof_check.replay_many(merkle_proof_length);
+        fri_values.push(fri_layer_values);
+        fri_folds.push(layer_folds);
+        fri_decommitments.push(decommitment);
+
+        if k == 0 {
+            // Note that this is because the the first step is not included in the layout but is an 8
+            step *= 8;
+        } else {
+            for _ in 0..params.fri_layout[k-1] {
+                step *= 2;
+            }
+        }
+        len /= 2_usize.pow(params.fri_layout[k] as u32); 
+        previous_indices = fri_indices.clone();
+        if k+1 < params.fri_layout.len() {
+            fri_indices = fri_indices.iter().map(|ind| ind /2_usize.pow((params.fri_layout[k+1]) as u32)).collect();
+        }
+    }
+    if !proof_check.at_end() {
+        return false
+    }
+
+    // Checks the decommited and calculated fri cosets against the committed hashes
+    let mut current_size = eval_domain_size as u32 / 8;
+    for i in 0..fri_roots.len() {
+        if !verify(
+            fri_roots[i],
+            current_size.trailing_zeros(),
+            &fri_values[i],
+            fri_decommitments[i].clone(),
+        ) {
+            return false
+        } else {
+            println!("Passed layer");
+        }
+        if i+1 < params.fri_layout.len() {
+            current_size /= 2_u32.pow((params.fri_layout[i+1]) as u32);
+        }
+    }
+
+    println!("Got to calc check");
+    // Checks that the calculated fri folded queries are the points interpolated by the decommited polynomial.
+    let interp_root = FieldElement::root(U256::from(len as u64)).unwrap();   
+    for key in previous_indices.iter() {
+        let calculated = fri_folds[fri_folds.len()-1][key].clone();
+        let x_pow = interp_root.pow(U256::from((key.bit_reverse_at(len) as u64)));
+        let committed = eval_poly(x_pow, last_layer_coefficient.as_slice());
+
+        if committed != calculated.clone() {
+            // return false
+        } 
+        println!("At index: {}", key);
+        println!("Calculated: {:?}", calculated);
+        println!("Commited: {:?}", committed);
+    }
+
+    // Checks that the oods point calculation matches the constrain calculation
+    // TODO
+
+    
+    false
 }
 
 fn get_indices(num: usize, bits: u32, proof: &mut VerifierChannel) -> Vec<usize> {
@@ -123,6 +258,56 @@ fn get_indices(num: usize, bits: u32, proof: &mut VerifierChannel) -> Vec<usize>
     query_indices.truncate(num);
     (&mut query_indices).sort_unstable();
     query_indices
+}
+
+fn fri_fold(coset: &[FieldElement], eval_point: &FieldElement, mut step: usize, mut index: usize, mut len: usize, eval_x: &[FieldElement]) -> FieldElement {
+    let mut mutable_eval_copy = eval_point.clone();
+    let mut coset_full : Vec<FieldElement> = coset.to_vec();
+    while coset_full.len() > 1{
+        // println!("Layer _______");
+        let mut next_coset = Vec::with_capacity(coset.len()/2);
+
+        for (k, pair) in coset_full.chunks(2).enumerate() {
+            let x = &eval_x[(index+k).bit_reverse_at(len / 2) * step];
+            next_coset.push(fri_single_fold(&pair[0], &pair[1], x, &mutable_eval_copy));
+            // println!("Index plus: {}", k);
+            // println!("Len : {}", len);
+            // println!("Step : {}", step);
+            // println!("value {:?}", &pair[0]);
+            // println!("value neg {:?}", &pair[1]);
+            // println!("X {:?}", x);
+        }
+        len = len/2;
+        index = index/2;
+        step *= 2;
+        mutable_eval_copy = mutable_eval_copy.square();
+        coset_full = next_coset;
+    }
+    coset_full[0].clone()
+}
+
+fn fri_single_fold(poly_at_x: &FieldElement, poly_at_neg_x: &FieldElement, x: &FieldElement, eval_point: &FieldElement) -> FieldElement {
+    (poly_at_x + poly_at_neg_x) + eval_point/x * (poly_at_x - poly_at_neg_x)
+}
+
+fn out_of_domain_element(poly_points_u: &[U256], constraint_point_u: &U256, x_cord: &FieldElement, oods_point: &FieldElement, oods_values: &[FieldElement], oods_coefficients: &[FieldElement], eval_domain_size: usize, blowup: usize) -> FieldElement {
+    let poly_points : Vec<FieldElement> = poly_points_u.iter().map(|i| {FieldElement(i.clone())}).collect();
+    let constraint_point = FieldElement(constraint_point_u.clone());
+    let x_transform = x_cord*FieldElement::GENERATOR;
+    let omega = FieldElement::root(U256::from(eval_domain_size as u64)).unwrap();
+    let g = omega.pow(U256::from(blowup as u64));
+    let mut r = FieldElement::ZERO;
+
+    for x in 0..poly_points.len() {
+        r += &oods_coefficients[2 * x] * (&poly_points[x] - &oods_values[2 * x])  / (&x_transform- oods_point);
+        r += &oods_coefficients[2 * x + 1]
+            * (&poly_points[x] - &oods_values[2 * x + 1]) / (&x_transform - &g*oods_point);
+    }
+    r += &oods_coefficients[oods_coefficients.len() - 1]
+        * (constraint_point - &oods_values[oods_values.len() - 1])
+         / (&x_transform - oods_point);
+
+    r
 }
 
 #[cfg(test)]
