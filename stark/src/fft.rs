@@ -70,7 +70,8 @@ pub fn bit_reversal_permute<T>(v: &mut [T]) {
         let j = reverse(i, n_bits);
         if j > i {
             // TODO - potentially implement pure safe version
-            v.swap(j as usize, i as usize) // swap is unsafe when i == j but this is impossible here
+            v.swap(j as usize, i as usize) // swap is unsafe when i == j but
+                                           // this is impossible here
         }
     }
 }
