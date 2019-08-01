@@ -275,5 +275,4 @@ mod tests {
         let result = mul(&p, &c);
         assert_eq!(result, expected);
     }
-
 }
