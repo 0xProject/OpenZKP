@@ -66,6 +66,7 @@ pub fn make_tree_threaded<T: Hashable + Sync>(leaves: &[T]) -> Vec<Hash> {
     layers.into_iter().rev().flatten().collect()
 }
 
+// Note - Make sure to remove duplicated indexes from the input values.
 pub fn proof<R: Hashable, T: Groupable<R>>(
     tree: &[Hash],
     indices: &[usize],

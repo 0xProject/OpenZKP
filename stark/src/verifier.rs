@@ -129,12 +129,12 @@ pub fn check_proof(
         .collect();
     
     // Deccommited fri cosets at each layer
-    let mut fri_values: Vec<Vec<(usize, Vec<FieldElement>)>> =
+    let mut _fri_values: Vec<Vec<(usize, Vec<FieldElement>)>> =
         Vec::with_capacity(64 - (eval_domain_size.leading_zeros() as usize));
     // Decommited folded fri cosets at each layer
     let mut fri_folds: Vec<HashMap<usize, FieldElement>> = Vec::new();
     // Decommited proofs of the hashes of cosets from each layer
-    let mut fri_decommitments: Vec<Vec<[u8; 32]>> = Vec::with_capacity(64 - (eval_domain_size.leading_zeros() as usize));
+    let mut _fri_decommitments: Vec<Vec<[u8; 32]>> = Vec::with_capacity(64 - (eval_domain_size.leading_zeros() as usize));
 
     let mut current_fri = 0;
     let mut previous_indices = queries.to_vec().clone();
@@ -147,6 +147,7 @@ pub fn check_proof(
             current_fri += params.fri_layout[k - 1];
         }
 
+        fri_indices.dedup();
         for i in fri_indices.iter() {
             let mut coset : Vec<FieldElement> = Vec::new();
             for j in 0..2_usize.pow(params.fri_layout[k] as u32) {
@@ -181,11 +182,10 @@ pub fn check_proof(
         }
 
         let merkle_proof_length = decommitment_size(fri_indices.as_slice(),len/2_usize.pow(params.fri_layout[k] as u32));
-        println!("Proposed proof_len: {}", merkle_proof_length);
         let decommitment = proof_check.replay_many(merkle_proof_length);
-        fri_values.push(fri_layer_values);
+        //fri_values.push(fri_layer_values.clone());
         fri_folds.push(layer_folds);
-        fri_decommitments.push(decommitment);
+        //fri_decommitments.push(decommitment.clone());
 
         if k == 0 {
             // Note that this is because the the first step is not included in the layout but is an 8
@@ -196,6 +196,18 @@ pub fn check_proof(
             }
         }
         len /= 2_usize.pow(params.fri_layout[k] as u32); 
+
+        if !verify(
+            fri_roots[k],
+            len.trailing_zeros(),
+            &fri_layer_values,
+            decommitment,
+        ) {
+            return false
+        } else {
+            println!("Passed layer");
+        }
+
         previous_indices = fri_indices.clone();
         if k+1 < params.fri_layout.len() {
             fri_indices = fri_indices.iter().map(|ind| ind /2_usize.pow((params.fri_layout[k+1]) as u32)).collect();
@@ -205,25 +217,9 @@ pub fn check_proof(
         return false
     }
 
-    // Checks the decommited and calculated fri cosets against the committed hashes
-    let mut current_size = eval_domain_size as u32 / 8;
-    for i in 0..fri_roots.len() {
-        if !verify(
-            fri_roots[i],
-            current_size.trailing_zeros(),
-            &fri_values[i],
-            fri_decommitments[i].clone(),
-        ) {
-            return false
-        } else {
-            println!("Passed layer");
-        }
-        if i+1 < params.fri_layout.len() {
-            current_size /= 2_u32.pow((params.fri_layout[i+1]) as u32);
-        }
-    }
-
+    let mut flag = true;
     println!("Got to calc check");
+    println!("Proposed len {}", len);
     // Checks that the calculated fri folded queries are the points interpolated by the decommited polynomial.
     let interp_root = FieldElement::root(U256::from(len as u64)).unwrap();   
     for key in previous_indices.iter() {
@@ -232,7 +228,7 @@ pub fn check_proof(
         let committed = eval_poly(x_pow, last_layer_coefficient.as_slice());
 
         if committed != calculated.clone() {
-            // return false
+            flag = false;
         } 
         println!("At index: {}", key);
         println!("Calculated: {:?}", calculated);
@@ -243,7 +239,7 @@ pub fn check_proof(
     // TODO
 
     
-    false
+    flag
 }
 
 fn get_indices(num: usize, bits: u32, proof: &mut VerifierChannel) -> Vec<usize> {

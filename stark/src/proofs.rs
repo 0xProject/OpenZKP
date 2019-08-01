@@ -606,6 +606,7 @@ fn perform_fri_layering(
     for (k, item) in last_layer.iter().enumerate() {
         println!("At index {}, {:?}", k, item);
     }
+    println!("Last layer len {}", last_layer.len());
     bit_reversal_permute(&mut last_layer);
     let mut last_layer_coefficient = ifft(&last_layer);
     last_layer_coefficient.truncate(last_layer_degree_bound);
@@ -658,7 +659,8 @@ fn decommit_fri_layers_and_trees(
         if k != 0 {
             current_fri += params.fri_layout[k - 1];
         }
-
+        
+        fri_indices.dedup();
         for i in fri_indices.iter() {
             for j in 0..fri_const {
                 let n = i * fri_const + j;
@@ -675,7 +677,6 @@ fn decommit_fri_layers_and_trees(
             &(fri_indices.as_slice()),
             (fri_const, fri_layers[current_fri].as_slice()),
         );
-        println!("Actual Len: {}", decommitment.len());
 
         for proof_element in decommitment.iter() {
             proof.write(proof_element);
@@ -744,7 +745,7 @@ mod tests {
             &ProofParams {
                 blowup:     32,
                 pow_bits:   12,
-                queries:    40,
+                queries:    20,
                 fri_layout: vec![3, 2],
             },
         );
@@ -758,7 +759,7 @@ mod tests {
             &ProofParams {
                 blowup:     32,
                 pow_bits:   12,
-                queries:    40,
+                queries:    20,
                 fri_layout: vec![3, 2],
             },
             2,
@@ -788,10 +789,10 @@ mod tests {
                 blowup:     16,
                 pow_bits:   12,
                 queries:    20,
-                fri_layout: vec![3, 2, 1],
+                fri_layout: vec![3, 3, 2],
             },
         );
-        //assert_eq!(actual.coin.digest, expected);
+        assert_eq!(actual.coin.digest, expected);
 
         assert!(check_proof(
             actual,
@@ -802,7 +803,7 @@ mod tests {
                 blowup:     16,
                 pow_bits:   12,
                 queries:    20,
-                fri_layout: vec![3, 2, 1],
+                fri_layout: vec![3, 3, 2],
             },
             2,
             4096
