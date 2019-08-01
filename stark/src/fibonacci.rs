@@ -148,11 +148,8 @@ pub fn eval_c_direct(
     public: &PublicInput,
     constraint_coefficients: &[FieldElement],
 ) -> FieldElement {
-    let trace_len = 1024;
-    let g = FieldElement::from(u256h!(
-        "0659d83946a03edd72406af6711825f5653d9e35dc125289a206c054ec89c4f1"
-    ));
-    let value = public.value.clone();
+    let trace_len = polynomials[0].len() as u64;
+    let g = FieldElement::root(U256::from((trace_len))).unwrap();
 
     let eval_P0 = |x: FieldElement| -> FieldElement { eval_poly(x, polynomials[0]) };
     let eval_P1 = |x: FieldElement| -> FieldElement { eval_poly(x, polynomials[1]) };

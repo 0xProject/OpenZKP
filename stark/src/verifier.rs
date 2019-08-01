@@ -176,8 +176,9 @@ pub fn check_proof(
             
             // println!("__________________");
             // println!("Verify index: {}", 2_usize.pow((params.fri_layout[k] - 1) as u32)*i);
-            // println!("__________________");
             // println!("Step : {:?}", &step);
+            // println!("Len: {}", len);
+            // println!("__________________");
             layer_folds.insert(*i, fri_fold(coset.as_slice(), &eval_points[k], step, 2_usize.pow((params.fri_layout[k] - 1) as u32)*i, len, eval_x.as_slice()));
         }
 
@@ -187,13 +188,9 @@ pub fn check_proof(
         fri_folds.push(layer_folds);
         //fri_decommitments.push(decommitment.clone());
 
-        if k == 0 {
-            // Note that this is because the the first step is not included in the layout but is an 8
-            step *= 8;
-        } else {
-            for _ in 0..params.fri_layout[k-1] {
-                step *= 2;
-            }
+
+        for _ in 0..params.fri_layout[k] {
+            step *= 2;
         }
         len /= 2_usize.pow(params.fri_layout[k] as u32); 
 
@@ -217,7 +214,6 @@ pub fn check_proof(
         return false
     }
 
-    let mut flag = true;
     println!("Got to calc check");
     println!("Proposed len {}", len);
     // Checks that the calculated fri folded queries are the points interpolated by the decommited polynomial.
@@ -228,18 +224,18 @@ pub fn check_proof(
         let committed = eval_poly(x_pow, last_layer_coefficient.as_slice());
 
         if committed != calculated.clone() {
-            flag = false;
+            return false
         } 
-        println!("At index: {}", key);
-        println!("Calculated: {:?}", calculated);
-        println!("Commited: {:?}", committed);
+        // println!("At index: {}", key);
+        // println!("Calculated: {:?}", calculated);
+        // println!("Commited: {:?}", committed);
     }
 
     // Checks that the oods point calculation matches the constrain calculation
     // TODO
 
     
-    flag
+    true
 }
 
 fn get_indices(num: usize, bits: u32, proof: &mut VerifierChannel) -> Vec<usize> {
@@ -260,7 +256,7 @@ fn fri_fold(coset: &[FieldElement], eval_point: &FieldElement, mut step: usize, 
     let mut mutable_eval_copy = eval_point.clone();
     let mut coset_full : Vec<FieldElement> = coset.to_vec();
     while coset_full.len() > 1{
-        // println!("Layer _______");
+        println!("Layer _______");
         let mut next_coset = Vec::with_capacity(coset.len()/2);
 
         for (k, pair) in coset_full.chunks(2).enumerate() {
