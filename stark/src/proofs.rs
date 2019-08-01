@@ -780,7 +780,7 @@ mod tests {
                 fri_layout: vec![2, 1, 4, 2],
             },
         );
-        
+
         assert!(check_proof(
             actual,
             &get_constraint(),
