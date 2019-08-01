@@ -140,17 +140,62 @@ fn abstracted_fib_proof_make(crit: &mut Criterion) {
     });
 }
 
+fn proof_check(crit: &mut Criterion) {
+    let claim_index = 1000_usize;
+    let claim_fib = FieldElement::from(u256h!(
+        "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
+    ));
+    let witness = FieldElement::from(u256h!(
+        "00000000000000000000000000000000000000000000000000000000cafebabe"
+    ));
+
+    let proof = stark_proof(
+                &get_trace_table(1024, witness.clone()),
+                &get_constraint(),
+                claim_index,
+                claim_fib.clone(),
+                &ProofParams {
+                    blowup:     16,
+                    pow_bits:   12,
+                    queries:    20,
+                    fri_layout: vec![3, 2, 1],
+                },
+            );
+
+    crit.bench_function("Checking a fib proof of len 1024", move |bench| {
+        bench.iter(|| {
+            black_box(
+                check_proof(
+                    proof.clone(),
+                    &get_constraint(),
+                    claim_index,
+                    claim_fib.clone(),
+                    &ProofParams {
+                        blowup:     16,
+                        pow_bits:   12,
+                        queries:    20,
+                        fri_layout: vec![3, 2],
+                    },
+                    2,
+                    1024
+                )
+            )
+        })
+    });
+}
+
 fn criterion_benchmark(c: &mut Criterion) {
     merkle_tree_size(c);
     merkle_tree_threads(c);
     fft_size(c);
     fft_threads(c);
+    proof_check(c);
 }
 
 criterion_group!(benches, criterion_benchmark);
 criterion_group! {
    name = slow_benches;
    config = Criterion::default().sample_size(20);
-   targets = abstracted_fib_proof_make
+   targets = proof_make
 }
 criterion_main!(benches, slow_benches);

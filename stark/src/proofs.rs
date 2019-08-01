@@ -315,13 +315,11 @@ fn fri_layer(
     eval_domain_size: usize,
     eval_x: &[FieldElement],
 ) -> Vec<FieldElement> {
-    //println!("Layer: {}", previous.len());
     let len = previous.len();
     let step = eval_domain_size / len;
-    //let mut next = Vec::with_capacity(len / 2);
-    // Todo - make sure to re-par
+    let mut next = Vec::with_capacity(len / 2);
     (0..(len / 2))
-        .into_iter()
+        .into_par_iter()
         .map(|index| {
             let value = &previous[2 * index];
             let neg_x_value = &previous[2 * index + 1];
@@ -329,18 +327,9 @@ fn fri_layer(
             let x = &eval_x[index.bit_reverse_at(len / 2) * step].clone();
             let x_prev = &eval_x[(index+1).bit_reverse_at(len / 2) * step].clone();
 
-            println!("Index: {}", index);
-            println!("Len: {}", len);
-            println!("Step: {}", step);
-            println!("Value: {:?}", value);
-            println!("Neg Value: {:?}", neg_x_value);
-            println!("x_inv : {:?}", x_inv);
-            println!("x : {:?}", &x);
-
             (value + neg_x_value) + evaluation_point * x_inv * (value - neg_x_value)
-        }).collect::<Vec<_>>()
-    //     .collect_into_vec(&mut next);
-    // next
+        }).collect_into_vec(&mut next);
+    next
 }
 
 fn get_indices(num: usize, bits: u32, proof: &mut ProverChannel) -> Vec<usize> {
@@ -600,13 +589,8 @@ fn perform_fri_layering(
     // Gets the coefficient representation of the last number of fri reductions
 
     let last_layer_degree_bound = trace_len / (2_usize.pow(halvings as u32));
-    //println!("Last Layer: {}", last_layer_degree_bound);
 
     let mut last_layer = fri[fri.len()-1].clone();
-    // for (k, item) in last_layer.iter().enumerate() {
-    //     println!("At index {}, {:?}", k, item);
-    // }
-    // println!("Last layer len {}", last_layer.len());
     bit_reversal_permute(&mut last_layer);
     let mut last_layer_coefficient = ifft(&last_layer);
     last_layer_coefficient.truncate(last_layer_degree_bound);
@@ -625,7 +609,6 @@ fn decommit_with_queries_and_proof<R: Hashable + std::fmt::Debug, T: Groupable<R
 {
     for &index in queries.iter() {
         proof.write((&source).make_group(index));
-        //println!("Index {}: element {:?}", index, (&source).make_group(index));
     }
     decommit_proof(merkle::proof(tree, queries, source), proof);
 }
@@ -634,7 +617,6 @@ fn decommit_with_queries_and_proof<R: Hashable + std::fmt::Debug, T: Groupable<R
 // the write types and the others.
 fn decommit_proof(decommitment: Vec<Hash>, proof: &mut ProverChannel) {
     for x in decommitment.iter() {
-        //println!("Decommit: {}", encode(x));
         proof.write(x);
     }
 }

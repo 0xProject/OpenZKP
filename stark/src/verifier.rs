@@ -128,13 +128,9 @@ pub fn check_proof(
         .map(|x| x / 2_usize.pow((params.fri_layout[0]) as u32))
         .collect();
     
-    // Deccommited fri cosets at each layer
-    let mut _fri_values: Vec<Vec<(usize, Vec<FieldElement>)>> =
-        Vec::with_capacity(64 - (eval_domain_size.leading_zeros() as usize));
-    // Decommited folded fri cosets at each layer
-    let mut fri_folds: Vec<HashMap<usize, FieldElement>> = Vec::new();
-    // Decommited proofs of the hashes of cosets from each layer
-    let mut _fri_decommitments: Vec<Vec<[u8; 32]>> = Vec::with_capacity(64 - (eval_domain_size.leading_zeros() as usize));
+
+    // Folded fri values from the previous layer
+    let mut fri_folds: HashMap<usize, FieldElement> = HashMap::new();
 
     let mut current_fri = 0;
     let mut previous_indices = queries.to_vec().clone();
@@ -157,7 +153,7 @@ pub fn check_proof(
                 match has_index {
                     Ok(z) => {
                         if k > 0 {
-                            coset.push(fri_folds[k-1].get(&n).unwrap().clone());
+                            coset.push(fri_folds.get(&n).unwrap().clone());
                         } else {
                             let z_reverse = queries[z].bit_reverse_at(eval_domain_size);
                             coset.push(out_of_domain_element(led_values[z].1.as_slice(), &constraint_values[z].1, &eval_x[z_reverse], &oods_point, oods_values.as_slice(), oods_coefficients.as_slice(), eval_domain_size, params.blowup));
@@ -173,21 +169,12 @@ pub fn check_proof(
         // Fold and record foldings
         let mut layer_folds = HashMap::new();
         for (i, coset) in fri_layer_values.iter() {
-            
-            // println!("__________________");
-            // println!("Verify index: {}", 2_usize.pow((params.fri_layout[k] - 1) as u32)*i);
-            // println!("Step : {:?}", &step);
-            // println!("Len: {}", len);
-            // println!("__________________");
             layer_folds.insert(*i, fri_fold(coset.as_slice(), &eval_points[k], step, 2_usize.pow((params.fri_layout[k] - 1) as u32)*i, len, eval_x.as_slice()));
         }
 
         let merkle_proof_length = decommitment_size(fri_indices.as_slice(),len/2_usize.pow(params.fri_layout[k] as u32));
         let decommitment = proof_check.replay_many(merkle_proof_length);
-        //fri_values.push(fri_layer_values.clone());
-        fri_folds.push(layer_folds);
-        //fri_decommitments.push(decommitment.clone());
-
+        fri_folds = layer_folds;
 
         for _ in 0..params.fri_layout[k] {
             step *= 2;
@@ -201,8 +188,6 @@ pub fn check_proof(
             decommitment,
         ) {
             return false
-        } else {
-            println!("Passed layer");
         }
 
         previous_indices = fri_indices.clone();
@@ -214,21 +199,16 @@ pub fn check_proof(
         return false
     }
 
-    println!("Got to calc check");
-    println!("Proposed len {}", len);
     // Checks that the calculated fri folded queries are the points interpolated by the decommited polynomial.
     let interp_root = FieldElement::root(U256::from(len as u64)).unwrap();   
     for key in previous_indices.iter() {
-        let calculated = fri_folds[fri_folds.len()-1][key].clone();
+        let calculated = fri_folds[key].clone();
         let x_pow = interp_root.pow(U256::from((key.bit_reverse_at(len) as u64)));
         let committed = eval_poly(x_pow, last_layer_coefficient.as_slice());
 
         if committed != calculated.clone() {
             return false
         } 
-        // println!("At index: {}", key);
-        // println!("Calculated: {:?}", calculated);
-        // println!("Commited: {:?}", committed);
     }
 
     // Checks that the oods point calculation matches the constrain calculation
@@ -256,18 +236,11 @@ fn fri_fold(coset: &[FieldElement], eval_point: &FieldElement, mut step: usize, 
     let mut mutable_eval_copy = eval_point.clone();
     let mut coset_full : Vec<FieldElement> = coset.to_vec();
     while coset_full.len() > 1{
-        println!("Layer _______");
         let mut next_coset = Vec::with_capacity(coset.len()/2);
 
         for (k, pair) in coset_full.chunks(2).enumerate() {
             let x = &eval_x[(index+k).bit_reverse_at(len / 2) * step];
             next_coset.push(fri_single_fold(&pair[0], &pair[1], x, &mutable_eval_copy));
-            // println!("Index plus: {}", k);
-            // println!("Len : {}", len);
-            // println!("Step : {}", step);
-            // println!("value {:?}", &pair[0]);
-            // println!("value neg {:?}", &pair[1]);
-            // println!("X {:?}", x);
         }
         len = len/2;
         index = index/2;
@@ -282,6 +255,7 @@ fn fri_single_fold(poly_at_x: &FieldElement, poly_at_neg_x: &FieldElement, x: &F
     (poly_at_x + poly_at_neg_x) + eval_point/x * (poly_at_x - poly_at_neg_x)
 }
 
+// TODO - Make sure this is general
 fn out_of_domain_element(poly_points_u: &[U256], constraint_point_u: &U256, x_cord: &FieldElement, oods_point: &FieldElement, oods_values: &[FieldElement], oods_coefficients: &[FieldElement], eval_domain_size: usize, blowup: usize) -> FieldElement {
     let poly_points : Vec<FieldElement> = poly_points_u.iter().map(|i| {FieldElement(i.clone())}).collect();
     let constraint_point = FieldElement(constraint_point_u.clone());

@@ -39,4 +39,25 @@ fn main() {
     let duration = start.elapsed();
     println!("{:?}", potential_proof.coin.digest);
     println!("Time elapsed in proof function is: {:?}", duration);
+    println!("The proof length is {}", potential_proof.proof.len());
+    
+    let verified = check_proof(
+            potential_proof,
+            &get_constraint(),
+            claim_index,
+            claim_fib,
+            &ProofParams {
+                blowup:     16,
+                pow_bits:   12,
+                queries:    20,
+                fri_layout: vec![3, 4, 5, 2 , 3],
+            },
+            2,
+            1_048_576
+        );
+    if verified {
+        println!("And it was verified!");
+    } else {
+        println!("Something went wrong with verification");
+    }
 }
