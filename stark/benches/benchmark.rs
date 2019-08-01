@@ -150,7 +150,22 @@ fn proof_check(crit: &mut Criterion) {
     ));
 
     let proof = stark_proof(
-                &get_trace_table(1024, witness.clone()),
+        &get_trace_table(1024, witness.clone()),
+        &get_constraint(),
+        claim_index,
+        claim_fib.clone(),
+        &ProofParams {
+            blowup:     16,
+            pow_bits:   12,
+            queries:    20,
+            fri_layout: vec![3, 2, 1],
+        },
+    );
+
+    crit.bench_function("Checking a fib proof of len 1024", move |bench| {
+        bench.iter(|| {
+            black_box(check_proof(
+                proof.clone(),
                 &get_constraint(),
                 claim_index,
                 claim_fib.clone(),
@@ -158,28 +173,11 @@ fn proof_check(crit: &mut Criterion) {
                     blowup:     16,
                     pow_bits:   12,
                     queries:    20,
-                    fri_layout: vec![3, 2, 1],
+                    fri_layout: vec![3, 2],
                 },
-            );
-
-    crit.bench_function("Checking a fib proof of len 1024", move |bench| {
-        bench.iter(|| {
-            black_box(
-                check_proof(
-                    proof.clone(),
-                    &get_constraint(),
-                    claim_index,
-                    claim_fib.clone(),
-                    &ProofParams {
-                        blowup:     16,
-                        pow_bits:   12,
-                        queries:    20,
-                        fri_layout: vec![3, 2],
-                    },
-                    2,
-                    1024
-                )
-            )
+                2,
+                1024,
+            ))
         })
     });
 }

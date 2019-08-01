@@ -91,26 +91,17 @@ pub fn proof<R: Hashable, T: Groupable<R>>(
             match prophet {
                 Some(x) => {
                     if **x != index + 1 {
-                        // println!("at index {}:", num_leaves + index);
-                        // println!("Decommited {}, should be hashed with {}", encode(source.make_group(index + 1).hash()), encode(source.make_group(index).hash()) );
-
                         decommitment.push(source.make_group(index + 1).hash());
                     } else {
                         excluded_pair = true;
                     }
                 }
                 None => {
-                    // println!("at index {}:", num_leaves + index);
-                    // println!("Decommited {}, should be hashed with {}", encode(source.make_group(index + 1).hash()), encode(source.make_group(index).hash()) );
-
                     decommitment.push(source.make_group(index + 1).hash());
                 }
             }
         } else if !excluded_pair {
             known[num_leaves - 1 + index % num_leaves] = true;
-            // println!("at index {}:", num_leaves + index);
-            // println!("Decommited {}, should be hashed with {}", encode(source.make_group(index-1).hash()), encode(source.make_group(index).hash()) );
-
             decommitment.push(source.make_group(index - 1).hash());
         } else {
             known[num_leaves - 1 + index % num_leaves] = true;
@@ -212,11 +203,9 @@ pub fn verify<T: Hashable>(
             let tree_index = 2_usize.pow(depth) + leaf.0;
             queue.push((tree_index, leaf.1.hash()));
             previous_index = leaf.0;
-        } else {
-            if !(decommitment.iter().find(|&&x| x == leaf.1.hash())).is_some() {
-                let tree_index = 2_usize.pow(depth) + leaf.0;
-                queue.push((tree_index, leaf.1.hash()));
-            }
+        } else if !(decommitment.iter().any(|&x| x == leaf.1.hash())) {
+            let tree_index = 2_usize.pow(depth) + leaf.0;
+            queue.push((tree_index, leaf.1.hash()));
         }
     }
 
@@ -232,15 +221,6 @@ pub fn verify<T: Hashable>(
         let pairs = count_pairs(queue.as_slice());
 
         if consumed < decommitment.len() {
-            if true {
-                // println!("Pairs : {}",  pairs.len());
-                // println!("{}", decommitment.len()- consumed);
-                // println!("Queeue");
-                // for (index, item) in queue.iter() {
-                //     println!("{}, {}", index, encode(item));
-                // }
-            }
-            
             decommitment_iter = decommitment[consumed..(consumed + queue.len() - 2 * pairs.len())]
                 .iter()
                 .rev();
@@ -260,27 +240,10 @@ pub fn verify<T: Hashable>(
             } else {
                 if queue[index].0 % 2 == 0 {
                     let other_hash = decommitment_iter.next().expect("Bad decommitment");
-                    // println!("At index {}", queue[index].0);
-                    // println!("In Qeue: {}, In Decommitment {}", encode(queue[index].1), encode(other_hash));
-                    new_queue.push((
-                        queue[index].0 / 2,
-                        hash_node(
-                            &queue[index].1,
-                            other_hash,
-                        ),
-                    ))
+                    new_queue.push((queue[index].0 / 2, hash_node(&queue[index].1, other_hash)))
                 } else {
                     let other_hash = decommitment_iter.next().expect("Bad decommitment");
-                    // println!("At index {}", queue[index].0);
-                    // println!("In Qeue: {}, In Decommitment {}", encode(queue[index].1), encode(other_hash));
-
-                    new_queue.push((
-                        queue[index].0 / 2,
-                        hash_node(
-                            other_hash,
-                            &queue[index].1,
-                        ),
-                    ));
+                    new_queue.push((queue[index].0 / 2, hash_node(other_hash, &queue[index].1)));
                 }
                 index += 1;
             }

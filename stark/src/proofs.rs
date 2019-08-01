@@ -9,7 +9,6 @@ use crate::{
     utils::Reversible,
     TraceTable,
 };
-use hex::*;
 use itertools::Itertools;
 use primefield::{invert_batch, FieldElement};
 use rayon::prelude::*;
@@ -324,11 +323,9 @@ fn fri_layer(
             let value = &previous[2 * index];
             let neg_x_value = &previous[2 * index + 1];
             let x_inv = &eval_x[index.bit_reverse_at(len / 2) * step].inv().unwrap();
-            let x = &eval_x[index.bit_reverse_at(len / 2) * step].clone();
-            let x_prev = &eval_x[(index+1).bit_reverse_at(len / 2) * step].clone();
-
             (value + neg_x_value) + evaluation_point * x_inv * (value - neg_x_value)
-        }).collect_into_vec(&mut next);
+        })
+        .collect_into_vec(&mut next);
     next
 }
 
@@ -551,7 +548,7 @@ fn perform_fri_layering(
     fri_trees.push(held_tree);
 
     let mut halvings = 0;
-    for (k, &x) in params.fri_layout.iter().enumerate().dropping_back(1){
+    for (k, &x) in params.fri_layout.iter().enumerate().dropping_back(1) {
         let mut eval_point = if x == 0 {
             FieldElement::ONE
         } else {
@@ -566,7 +563,11 @@ fn perform_fri_layering(
             ));
             eval_point = eval_point.square();
         }
-        let held_tree = (2_usize.pow(params.fri_layout[k+1] as u32), fri[fri.len() - 1].as_slice()).merkleize();
+        let held_tree = (
+            2_usize.pow(params.fri_layout[k + 1] as u32),
+            fri[fri.len() - 1].as_slice(),
+        )
+            .merkleize();
 
         proof.write(&held_tree[1]);
         fri_trees.push(held_tree);
@@ -590,7 +591,7 @@ fn perform_fri_layering(
 
     let last_layer_degree_bound = trace_len / (2_usize.pow(halvings as u32));
 
-    let mut last_layer = fri[fri.len()-1].clone();
+    let mut last_layer = fri[fri.len() - 1].clone();
     bit_reversal_permute(&mut last_layer);
     let mut last_layer_coefficient = ifft(&last_layer);
     last_layer_coefficient.truncate(last_layer_degree_bound);
@@ -641,7 +642,7 @@ fn decommit_fri_layers_and_trees(
         if k != 0 {
             current_fri += params.fri_layout[k - 1];
         }
-        
+
         fri_indices.dedup();
         for i in fri_indices.iter() {
             for j in 0..fri_const {
@@ -664,8 +665,11 @@ fn decommit_fri_layers_and_trees(
             proof.write(proof_element);
         }
         previous_indices = fri_indices.clone();
-        if k+1 < params.fri_layout.len() {
-            fri_indices = fri_indices.iter().map(|ind| ind /2_usize.pow((params.fri_layout[k+1]) as u32)).collect();
+        if k + 1 < params.fri_layout.len() {
+            fri_indices = fri_indices
+                .iter()
+                .map(|ind| ind / 2_usize.pow((params.fri_layout[k + 1]) as u32))
+                .collect();
         }
     }
 }
@@ -673,10 +677,9 @@ fn decommit_fri_layers_and_trees(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fibonacci::*;
+    use crate::{fibonacci::*, verifier::*};
     use hex_literal::*;
     use u256::{u256h, U256};
-    use crate::verifier::*;
 
     #[test]
     fn fib_test_1024_python_witness() {
@@ -725,13 +728,14 @@ mod tests {
             &get_constraint(),
             &public,
             &ProofParams {
-                blowup:     16, // TODO - The blowup in the fib constraints is hardcoded to 16, we should set this back to 32 to get wider coverage when that's fixed
+                blowup: 16, /* TODO - The blowup in the fib constraints is hardcoded to 16,
+                             * we should set this back to 32 to get wider coverage when
+                             * that's fixed */
                 pow_bits:   12,
                 queries:    20,
                 fri_layout: vec![3, 2],
             },
         );
-        //assert_eq!(actual.coin.digest, expected);
 
         assert!(check_proof(
             actual,
@@ -739,7 +743,9 @@ mod tests {
             claim_index,
             claim_value,
             &ProofParams {
-                blowup:     16, // TODO - The blowup in the fib constraints is hardcoded to 16, we should set this back to 32 to get wider coverage when that's fixed
+                blowup: 16, /* TODO - The blowup in the fib constraints is hardcoded to 16,
+                             * we should set this back to 32 to get wider coverage when
+                             * that's fixed */
                 pow_bits:   12,
                 queries:    20,
                 fri_layout: vec![3, 2],
@@ -774,8 +780,7 @@ mod tests {
                 fri_layout: vec![2, 1, 4, 2],
             },
         );
-        //assert_eq!(actual.coin.digest, expected);
-
+        
         assert!(check_proof(
             actual,
             &get_constraint(),

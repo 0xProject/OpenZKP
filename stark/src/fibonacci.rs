@@ -5,10 +5,9 @@ use crate::{
     utils::Reversible,
     TraceTable,
 };
-use hex_literal::*;
 use primefield::{invert_batch, FieldElement};
 use rayon::prelude::*;
-use u256::{u256h, U256};
+use u256::U256;
 
 #[allow(dead_code)] // TODO
 #[derive(Debug)]
@@ -149,7 +148,7 @@ pub fn eval_c_direct(
     constraint_coefficients: &[FieldElement],
 ) -> FieldElement {
     let trace_len = polynomials[0].len() as u64;
-    let g = FieldElement::root(U256::from((trace_len))).unwrap();
+    let g = FieldElement::root(U256::from(trace_len)).unwrap();
 
     let eval_P0 = |x: FieldElement| -> FieldElement { eval_poly(x, polynomials[0]) };
     let eval_P1 = |x: FieldElement| -> FieldElement { eval_poly(x, polynomials[1]) };
