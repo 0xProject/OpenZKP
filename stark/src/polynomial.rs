@@ -5,10 +5,9 @@ use std::{
     cmp::max,
     ops::{Add, AddAssign, Div, Mul, Sub, SubAssign},
 };
-use u256::U256;
 
 #[derive(Clone)]
-#[cfg_attr(test, derive(Debug, PartialEq))]
+#[cfg_attr(test, derive(Debug))]
 pub struct Polynomial(Vec<FieldElement>);
 
 // TODO: create a canonical representation for polynonials based on vectors with
@@ -20,20 +19,7 @@ impl Polynomial {
         Self(coefficients)
     }
 
-    // TODO: turn these two into macros which accepts negative values as well.
-    pub fn from_dense(c: &[usize]) -> Self {
-        debug_assert!(!c.is_empty());
-        debug_assert!(c[c.len() - 1] != 0);
-
-        let coefficients: Vec<FieldElement> = c
-            .iter()
-            .rev()
-            .map(|x| FieldElement::from(U256::from(*x as u64)))
-            .collect();
-        Self(coefficients)
-    }
-
-    pub fn from_sparse(degrees_and_coefficients: &[(usize, usize)]) -> Self {
+    pub fn from_sparse(degrees_and_coefficients: &[(usize, FieldElement)]) -> Self {
         let mut max_degree = 0usize;
         for (degree, _) in degrees_and_coefficients.iter() {
             if max_degree < *degree {
@@ -41,16 +27,23 @@ impl Polynomial {
             }
         }
 
-        let mut coefficients = vec![0usize; max_degree + 1];
+        let mut coefficients = vec![FieldElement::ZERO; max_degree + 1];
         for (degree, coefficient) in degrees_and_coefficients.iter() {
-            coefficients[*degree] = *coefficient;
+            coefficients[*degree] = coefficient.clone();
         }
-        Polynomial::from_dense(&coefficients)
+        Self::new(&coefficients)
     }
 
     #[inline(always)]
-    fn coefficients(self: &Self) -> &[FieldElement] {
-        &self.0
+    pub fn len(self: &Self) -> usize {
+        self.0.len()
+    }
+
+    #[inline(always)]
+    pub fn reverse_coefficients(self: &Self) -> Vec<FieldElement> {
+        let mut reverse_coefficients = self.0.clone();
+        reverse_coefficients.reverse();
+        reverse_coefficients
     }
 
     pub fn evaluate(self: &Self, x: &FieldElement) -> FieldElement {
@@ -71,6 +64,15 @@ impl Polynomial {
         Self(coefficients)
     }
 
+    #[inline(always)]
+    fn coefficients(self: &Self) -> &[FieldElement] {
+        &self.0
+    }
+
+    fn is_zero(&self) -> bool {
+        self.coefficients().par_iter().all(|c| c.is_zero())
+    }
+
     fn aligned_coefficients<'a>(
         p_1: &'a Polynomial,
         p_2: &'a Polynomial,
@@ -87,10 +89,22 @@ impl Polynomial {
             .zip(repeatn(&FieldElement::ZERO, padding_2).chain(p_2.0.par_iter()))
     }
 
-    fn extend_to_length(self: &Self, degree_difference: usize) -> Self {
+    fn extend_to_length(&self, degree_difference: usize) -> Self {
         let mut coefficients = self.0.clone();
         coefficients.extend_from_slice(&vec![FieldElement::ZERO; degree_difference]);
         Self(coefficients)
+    }
+
+    fn divide_by_x(&mut self) {
+        self.0 = self.0[..self.len() - 1].to_vec();
+    }
+}
+
+impl PartialEq for Polynomial {
+    fn eq(&self, other: &Self) -> bool {
+        Polynomial::aligned_coefficients(self, other)
+            .map(|(x, y)| x - y)
+            .all(|c| c.is_zero())
     }
 }
 
@@ -120,7 +134,7 @@ impl Sub for Polynomial {
 
 impl SubAssign<&Self> for Polynomial {
     fn sub_assign(self: &mut Self, other: &Self) {
-        let mut result = Vec::with_capacity(max(self.0.len(), other.0.len()));
+        let mut result = Vec::with_capacity(max(self.len(), other.len()));
         Polynomial::aligned_coefficients(self, other)
             .map(|(x, y)| x - y)
             .collect_into_vec(&mut result);
@@ -130,7 +144,7 @@ impl SubAssign<&Self> for Polynomial {
 
 impl AddAssign<&Polynomial> for Polynomial {
     fn add_assign(self: &mut Self, other: &Polynomial) {
-        let mut result = Vec::with_capacity(max(self.0.len(), other.0.len()));
+        let mut result = Vec::with_capacity(max(self.len(), other.len()));
         Polynomial::aligned_coefficients(self, other)
             .map(|(x, y)| x + y)
             .collect_into_vec(&mut result);
@@ -155,8 +169,8 @@ impl Mul<Polynomial> for Polynomial {
     type Output = Self;
 
     fn mul(self, other: Self) -> Self {
-        if self.0.is_empty() || other.0.is_empty() {
-            return Polynomial(vec![]);
+        if self.is_zero() || other.is_zero() {
+            return Polynomial::new(&[]);
         }
         let mut result = Polynomial(vec![]);
         for coefficient in other.coefficients().iter() {
@@ -172,19 +186,19 @@ impl Div<Polynomial> for Polynomial {
     type Output = Self;
 
     fn div(self, other: Self) -> Self {
-        let degree_difference = self.0.len() - other.0.len();
+        let degree_difference = self.len() - other.len();
         let inverse_leading_term = other.0[0].inv().expect("Cannot divide by zero polynomial");
         let mut remainder = self.clone();
-        let mut other = other.extend_to_length(degree_difference);
+        let mut padded_other = other.extend_to_length(degree_difference);
         let mut result = vec![];
         for i in 0..=degree_difference {
             let q = &remainder.0[i] * &inverse_leading_term;
-            remainder -= &(&q * &other);
+            remainder -= &(&q * &padded_other);
             result.push(q);
-            other.0.pop();
+            padded_other.divide_by_x();
         }
-        // TODO: panic if remainder is not zero?
-        Polynomial(result)
+        debug_assert!(remainder.is_zero());
+        Self(result)
     }
 }
 
@@ -194,6 +208,22 @@ use quickcheck::{Arbitrary, Gen};
 impl Arbitrary for Polynomial {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         Polynomial(Vec::<FieldElement>::arbitrary(g))
+    }
+}
+#[cfg(test)]
+use u256::U256;
+#[cfg(test)]
+impl Polynomial {
+    // TODO: turn these two into macros which accepts negative values as well.
+    pub fn from_dense(c: &[usize]) -> Self {
+        debug_assert!(!c.is_empty());
+        // debug_assert!(c[c.len() - 1] != 0);
+
+        let coefficients: Vec<FieldElement> = c
+            .iter()
+            .map(|x| FieldElement::from(U256::from(*x as u64)))
+            .collect();
+        Self::new(&coefficients)
     }
 }
 
@@ -235,17 +265,54 @@ mod tests {
     }
 
     #[test]
-    fn example_product() {
+    fn example_product_0() {
         let p_1 = Polynomial::from_dense(&[1, 1]);
         let p_2 = Polynomial::from_dense(&[1, 1]);
         assert_eq!(p_1 * p_2, Polynomial::from_dense(&[1, 2, 1]))
     }
 
     #[test]
-    fn example_division() {
+    fn example_product_1() {
+        let p_1 = Polynomial::from_dense(&[1, 2]);
+        let p_2 = Polynomial::from_dense(&[1, 3, 4]);
+        assert_eq!(p_1 * p_2, Polynomial::from_dense(&[1, 5, 10, 8]))
+    }
+
+    #[test]
+    fn example_division_0() {
         let numerator = Polynomial::from_dense(&[1, 3, 3, 1]);
         let denominator = Polynomial::from_dense(&[1, 1]);
         assert_eq!(numerator / denominator, Polynomial::from_dense(&[1, 2, 1]))
+    }
+
+    #[test]
+    fn example_division_1() {
+        let numerator = Polynomial::from_dense(&[2, 2, 2, 2]);
+        let denominator = Polynomial::from_dense(&[1, 1, 1, 1]);
+        assert_eq!(numerator / denominator, Polynomial::from_dense(&[2]))
+    }
+
+    #[test]
+    fn example_division_2() {
+        let numerator = Polynomial::from_dense(&[1, 2, 1]);
+        let denominator = Polynomial::from_dense(&[1, 1]);
+        assert_eq!(numerator / denominator, Polynomial::from_dense(&[1, 1]))
+    }
+
+    #[test]
+    fn example_division_3() {
+        let numerator = Polynomial::from_dense(&[2, 6, 4]);
+        let denominator = Polynomial::from_dense(&[1, 2]);
+
+        assert_eq!(
+            Polynomial::from_dense(&[2, 2]) * denominator.clone(),
+            numerator.clone()
+        );
+        assert_eq!(
+            denominator.clone() * Polynomial::from_dense(&[2, 2]),
+            numerator.clone()
+        );
+        assert_eq!(numerator / denominator, Polynomial::from_dense(&[2, 2]))
     }
 
     #[test]
@@ -260,6 +327,11 @@ mod tests {
     #[quickcheck]
     fn product_evaluation_equivalence(x: FieldElement, a: Polynomial, b: Polynomial) -> bool {
         a.evaluate(&x) * b.evaluate(&x) == (a * b).evaluate(&x)
+    }
+
+    #[quickcheck]
+    fn sum_evaluation_equivalence(x: FieldElement, a: Polynomial, b: Polynomial) -> bool {
+        a.evaluate(&x) + b.evaluate(&x) == (a + b).evaluate(&x)
     }
 
     #[quickcheck]
@@ -282,10 +354,21 @@ mod tests {
         a.shift(&shift).evaluate(&x) == a.evaluate(&(x * shift))
     }
 
-    // TODO: fix this.
     #[quickcheck]
     fn addition_subtration_inverse(a: Polynomial, b: Polynomial) -> bool {
         a.clone() + b.clone() - b == a
+    }
+
+    #[quickcheck]
+    fn division_by_self(a: Polynomial) -> bool {
+        // TODO remove these once we have a canonical representation for polynomials.
+        if a.0.is_empty() {
+            return true;
+        }
+        if a.0[0].is_zero() {
+            return true;
+        }
+        a.clone() / a == Polynomial::from_dense(&[1])
     }
 
     #[quickcheck]
@@ -297,6 +380,6 @@ mod tests {
         if b.0[0].is_zero() {
             return true;
         }
-        a.clone() * b.clone() / b == a
+        (a.clone() * b.clone()) / b == a
     }
 }
