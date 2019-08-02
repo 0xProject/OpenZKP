@@ -184,6 +184,12 @@ impl Div<Polynomial> for Polynomial {
     type Output = Self;
 
     fn div(self, other: Self) -> Self {
+        if other.is_zero() {
+            panic!("Cannot divide by zero polynomial");
+        }
+        if self.is_zero() {
+            return Polynomial::new(&[]);
+        }
         let degree_difference = self.len() - other.len();
         let inverse_leading_term = other.0[0].inv().expect("Cannot divide by zero polynomial");
         let mut remainder = self.clone();
@@ -365,7 +371,7 @@ mod tests {
 
     #[quickcheck]
     fn division_multiplication_inverse(a: Polynomial, b: Polynomial) -> bool {
-        if a.is_zero() || b.is_zero() {
+        if b.is_zero() {
             return true;
         }
         (a.clone() * b.clone()) / b == a
