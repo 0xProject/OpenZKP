@@ -10,6 +10,8 @@ use std::{
 #[cfg_attr(test, derive(Debug))]
 pub struct Polynomial(Vec<FieldElement>);
 
+// TODO: create a canonical representation for polynonials based on vectors with
+// power of two lengths.
 impl Polynomial {
     pub fn new(coefficients: &[FieldElement]) -> Self {
         let mut coefficients = coefficients.to_vec();

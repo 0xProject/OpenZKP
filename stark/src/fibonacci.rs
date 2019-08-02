@@ -1,11 +1,10 @@
 use crate::{
     polynomial::Polynomial,
-    proofs::{geometric_series, Constraint, TraceTable},
-    utils::Reversible,
+    proofs::{Constraint, TraceTable},
 };
+use primefield::FieldElement;
+// use rayon::prelude::*;
 use hex_literal::*;
-use primefield::{invert_batch, FieldElement};
-use rayon::prelude::*;
 use u256::{u256h, U256};
 
 // TODO: Naming
@@ -25,107 +24,61 @@ pub fn get_trace_table(length: usize, witness: FieldElement) -> TraceTable {
     TraceTable::new(length as usize, 2, final_vec)
 }
 
-// TODO: Naming
-#[allow(non_snake_case)]
-pub fn eval_whole_loop(
-    LDEn: &[&[FieldElement]],
-    constraint_coefficients: &[FieldElement],
+pub fn get_fibonacci_constraints(
+    trace_length: usize,
+    claim_value: FieldElement,
     claim_index: usize,
-    claim_fib: &FieldElement,
-) -> Vec<FieldElement> {
-    let eval_domain_size_usize = LDEn[0].len();
-    let eval_domain_size = eval_domain_size_usize as u64;
-    let beta = 2_u64.pow(4);
-    let trace_len = eval_domain_size / beta;
+) -> Vec<Constraint> {
+    let trace_generator = FieldElement::root(U256::from(trace_length as u64)).unwrap();
+    let no_rows = Polynomial::new(&[FieldElement::ONE]);
+    let every_row =
+        Polynomial::from_sparse(&[(trace_length, FieldElement::ONE), (0, -&FieldElement::ONE)]);
+    let first_row = Polynomial::new(&[-&FieldElement::ONE, FieldElement::ONE]);
+    let last_row = Polynomial::new(&[
+        -&trace_generator.pow(U256::from(trace_length as u64 - 1)),
+        FieldElement::ONE,
+    ]);
 
-    let omega = FieldElement::root(U256::from(trace_len * beta)).unwrap();
-    let g = omega.pow(U256::from(beta));
-    let gen = FieldElement::GENERATOR;
+    let claim_index_row = Polynomial::new(&[
+        -&trace_generator.pow(U256::from(claim_index as u64)),
+        FieldElement::ONE,
+    ]);
 
-    let mut CC = Vec::with_capacity(eval_domain_size_usize);
-    let g_trace = g.pow(U256::from(trace_len - 1));
-    let g_claim = g.pow(U256::from(claim_index as u64));
-    let x = gen.clone();
-    let x_trace = (&x).pow(U256::from(trace_len));
-    let x_1023 = (&x).pow(U256::from(trace_len - 1));
-    let omega_trace = (&omega).pow(U256::from(trace_len));
-    let omega_1023 = (&omega).pow(U256::from(trace_len - 1));
-
-    let x_omega_cycle = geometric_series(&x, &omega, eval_domain_size_usize);
-    let x_trace_cycle = geometric_series(&x_trace, &omega_trace, eval_domain_size_usize);
-    let x_1023_cycle = geometric_series(&x_1023, &omega_1023, eval_domain_size_usize);
-
-    let mut x_trace_sub_one: Vec<FieldElement> = Vec::with_capacity(eval_domain_size_usize);
-    let mut x_sub_one: Vec<FieldElement> = Vec::with_capacity(eval_domain_size_usize);
-    let mut x_g_claim_cycle: Vec<FieldElement> = Vec::with_capacity(eval_domain_size_usize);
-
-    x_omega_cycle
-        .par_iter()
-        .map(|i| (i - FieldElement::ONE, i - &g_claim))
-        .unzip_into_vecs(&mut x_sub_one, &mut x_g_claim_cycle);
-
-    x_trace_cycle
-        .par_iter()
-        .map(|i| i - FieldElement::ONE)
-        .collect_into_vec(&mut x_trace_sub_one);
-
-    let pool = vec![&x_trace_sub_one, &x_sub_one, &x_g_claim_cycle];
-
-    let mut held = Vec::with_capacity(3);
-    pool.par_iter()
-        .map(|i| invert_batch(i))
-        .collect_into_vec(&mut held);
-
-    x_g_claim_cycle = held.pop().unwrap();
-    x_sub_one = held.pop().unwrap();
-    x_trace_sub_one = held.pop().unwrap();
-
-    (0..eval_domain_size_usize)
-        .into_par_iter()
-        .map(|reverse_index| {
-            // OPT: Eliminate index by generating x_* cycles in bit-reversed order using
-            // fft.
-            let index = reverse_index.bit_reverse_at(eval_domain_size_usize);
-            let next_reverse_index = ((index + beta as usize) % eval_domain_size_usize)
-                .bit_reverse_at(eval_domain_size_usize);
-
-            let P0 = LDEn[0][reverse_index].clone();
-            let P1 = LDEn[1][reverse_index].clone();
-            let P0n = LDEn[0][next_reverse_index].clone();
-            let P1n = LDEn[1][next_reverse_index].clone();
-
-            let A = x_trace_sub_one[index].clone();
-            let C0 = (&P0n - &P1) * (&x_omega_cycle[index] - &g_trace) * &A;
-            let C1 = (&P1n - &P0 - &P1) * (&x_omega_cycle[index] - &g_trace) * &A;
-            let C2 = (&P0 - FieldElement::ONE) * &x_sub_one[index];
-            let C3 = (&P0 - claim_fib) * &x_g_claim_cycle[index];
-
-            let C0a = &C0 * &x_1023_cycle[index];
-            let C1a = &C1 * &x_1023_cycle[index];
-            let C2a = &C2 * &x_omega_cycle[index];
-            let C3a = &C3 * &x_omega_cycle[index];
-
-            let mut r = FieldElement::ZERO;
-            r += &constraint_coefficients[0] * C0;
-            r += &constraint_coefficients[1] * C0a;
-            r += &constraint_coefficients[2] * C1;
-            r += &constraint_coefficients[3] * C1a;
-            r += &constraint_coefficients[4] * C2;
-            r += &constraint_coefficients[5] * C2a;
-            r += &constraint_coefficients[6] * C3;
-            r += &constraint_coefficients[7] * C3a;
-
-            r
-        })
-        .collect_into_vec(&mut CC);
-    CC
+    vec![
+        Constraint {
+            base:        Box::new(|tp, g| tp[0].shift(g) - tp[1].clone()),
+            numerator:   last_row.clone(),
+            denominator: every_row.clone(),
+            adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
+        },
+        Constraint {
+            base:        Box::new(|tp, g| tp[1].shift(g) - tp[1].clone() - tp[0].clone()),
+            numerator:   last_row.clone(),
+            denominator: every_row.clone(),
+            adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
+        },
+        Constraint {
+            base:        Box::new(|tp, _| tp[0].clone() - Polynomial::new(&[FieldElement::ONE])),
+            numerator:   no_rows.clone(),
+            denominator: first_row,
+            adjustment:  Polynomial::from_sparse(&[(1, FieldElement::ONE)]),
+        },
+        Constraint {
+            base:        Box::new(move |tp, _| {
+                tp[0].clone() - Polynomial::new(&[claim_value.clone()])
+            }),
+            numerator:   no_rows,
+            denominator: claim_index_row,
+            adjustment:  Polynomial::from_sparse(&[(1, FieldElement::ONE)]),
+        },
+    ]
 }
 
 // TODO: Naming
-#[allow(non_snake_case)]
+#[allow(non_snake_case, dead_code)]
 pub fn eval_c_direct(
     x: &FieldElement,
-    polynomials: &[&[FieldElement]],
+    polynomials: &[Polynomial],
     claim_index: usize,
     claim: FieldElement,
     constraint_coefficients: &[FieldElement],
@@ -135,24 +88,22 @@ pub fn eval_c_direct(
         "0659d83946a03edd72406af6711825f5653d9e35dc125289a206c054ec89c4f1"
     ));
 
-    let eval_P0 =
-        |x: &FieldElement| -> FieldElement { Polynomial::new(polynomials[0]).evaluate(x) };
-    let eval_P1 =
-        |x: &FieldElement| -> FieldElement { Polynomial::new(polynomials[1]).evaluate(x) };
+    let eval_P0 = |x: FieldElement| -> FieldElement { polynomials[0].evaluate(&x) };
+    let eval_P1 = |x: FieldElement| -> FieldElement { polynomials[1].evaluate(&x) };
     let eval_C0 = |x: FieldElement| -> FieldElement {
-        ((eval_P0(&(&x * &g)) - eval_P1(&x)) * (&x - &g.pow(U256::from(trace_len - 1))))
+        ((eval_P0(&x * &g) - eval_P1(x.clone())) * (&x - &g.pow(U256::from(trace_len - 1))))
             / (&x.pow(U256::from(trace_len)) - FieldElement::ONE)
     };
     let eval_C1 = |x: FieldElement| -> FieldElement {
-        ((eval_P1(&(&x * &g)) - eval_P0(&x) - eval_P1(&x))
+        ((eval_P1(&x * &g) - eval_P0(x.clone()) - eval_P1(x.clone()))
             * (&x - (&g.pow(U256::from(trace_len - 1)))))
             / (&x.pow(U256::from(trace_len)) - FieldElement::ONE)
     };
     let eval_C2 = |x: FieldElement| -> FieldElement {
-        ((eval_P0(&x) - FieldElement::ONE) * FieldElement::ONE) / (&x - FieldElement::ONE)
+        ((eval_P0(x.clone()) - FieldElement::ONE) * FieldElement::ONE) / (&x - FieldElement::ONE)
     };
     let eval_C3 = |x: FieldElement| -> FieldElement {
-        (eval_P0(&x) - claim) / (&x - &g.pow(U256::from(claim_index as u64)))
+        (eval_P0(x.clone()) - claim) / (&x - &g.pow(U256::from(claim_index as u64)))
     };
 
     let deg_adj = |degree_bound: u64,
@@ -207,6 +158,53 @@ pub fn eval_c_direct(
     eval_C(x.clone())
 }
 
-pub fn get_constraint() -> Constraint<'static> {
-    Constraint::new(20, &eval_c_direct, Some(&eval_whole_loop))
+#[cfg(test)]
+mod tests {
+    use super::*;
+    // use crate::fibonacci::{get_fibonacci_constraints, get_trace_table};
+    // use hex_literal::*;
+    // use u256::{u256h, U256};
+    use crate::proofs::{get_constraint_polynomial, interpolate_trace_table};
+    #[test]
+    fn mason() {
+        let x = FieldElement::ZERO;
+        let claim = FieldElement::from(u256h!(
+            "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
+        ));
+
+        let witness = FieldElement::from(u256h!(
+            "00000000000000000000000000000000000000000000000000000000cafebabe"
+        ));
+        let trace_table = get_trace_table(1024, witness);
+        let trace_polynomials = interpolate_trace_table(&trace_table);
+
+        let mut constraint_coefficients = vec![FieldElement::ZERO; 20];
+        constraint_coefficients[0] = FieldElement::ONE;
+        constraint_coefficients[1] = FieldElement::ONE;
+        constraint_coefficients[2] = FieldElement::ONE;
+        constraint_coefficients[3] = FieldElement::ONE;
+        constraint_coefficients[4] = FieldElement::ONE;
+        constraint_coefficients[5] = FieldElement::ONE;
+        constraint_coefficients[6] = FieldElement::ONE;
+
+        let old = eval_c_direct(
+            &x,
+            &trace_polynomials,
+            1000usize,
+            claim.clone(),
+            &constraint_coefficients,
+        );
+
+        let p = Polynomial::new(&[FieldElement::ONE, -&FieldElement::ONE]);
+        assert_eq!(p.evaluate(&FieldElement::ONE), FieldElement::ZERO);
+
+        let constraint_polynomial = get_constraint_polynomial(
+            &trace_polynomials,
+            &get_fibonacci_constraints(1024, claim, 1000usize),
+            &constraint_coefficients,
+        );
+        let new = constraint_polynomial.evaluate(&x);
+
+        assert_eq!(old, new);
+    }
 }

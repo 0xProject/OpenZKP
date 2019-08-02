@@ -2,7 +2,7 @@
 #![deny(warnings)]
 use hex_literal::*;
 use primefield::FieldElement;
-use stark::{get_constraint, get_trace_table, stark_proof, ProofParams};
+use stark::{get_fibonacci_constraints, get_trace_table, stark_proof, ProofParams};
 use std::{env, time::Instant};
 use u256::{u256h, U256};
 
@@ -24,9 +24,9 @@ fn main() {
     let start = Instant::now();
     let potential_proof = stark_proof(
         &trace_table,
-        &get_constraint(),
+        &get_fibonacci_constraints(trace_table.rows, claim_fib.clone(), claim_index),
         claim_index,
-        claim_fib,
+        claim_fib.clone(),
         &ProofParams {
             blowup:     16,
             pow_bits:   12,
