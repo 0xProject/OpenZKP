@@ -10,8 +10,6 @@ use std::{
 #[cfg_attr(test, derive(Debug))]
 pub struct Polynomial(Vec<FieldElement>);
 
-// TODO: create a canonical representation for polynonials based on vectors with
-// power of two lengths.
 impl Polynomial {
     pub fn new(coefficients: &[FieldElement]) -> Self {
         let mut coefficients = coefficients.to_vec();
@@ -214,11 +212,9 @@ impl Arbitrary for Polynomial {
 use u256::U256;
 #[cfg(test)]
 impl Polynomial {
-    // TODO: turn these two into macros which accepts negative values as well.
+    // TODO: turn this into a macro which accepts negative values as well.
     pub fn from_dense(c: &[usize]) -> Self {
         debug_assert!(!c.is_empty());
-        // debug_assert!(c[c.len() - 1] != 0);
-
         let coefficients: Vec<FieldElement> = c
             .iter()
             .map(|x| FieldElement::from(U256::from(*x as u64)))
