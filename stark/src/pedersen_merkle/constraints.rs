@@ -4,7 +4,7 @@ use rayon::prelude::*;
 use u256::U256;
 // use u256::u256h;
 use crate::{
-    mmap_vec::MmapVec, pedersen_merkle::input::get_periodic_columns, proofs::geometric_series,
+    mmap_vec::MmapVec, pedersen_merkle::input::get_periodic_columns, proofs::geometric_series, polynomial::Polynomial, proof::Constraint,
 };
 use ecc::Affine;
 use itertools::izip;
@@ -16,17 +16,10 @@ struct Rows {
 }
 
 struct Subrows {
-    source: MmapVec<FieldElement>,
-    slope:  MmapVec<FieldElement>,
-    x:      MmapVec<FieldElement>,
-    y:      MmapVec<FieldElement>,
-}
-
-struct Constraint<'a> {
-    base:              &'a Fn() -> MmapVec<FieldElement>,
-    numerator_index:   Option<usize>,
-    denominator_index: Option<usize>,
-    adjustment_index:  usize,
+    source: Polynomial,
+    slope:  Polynomial,
+    x:      Polynomial,
+    y:      Polynomial,
 }
 
 fn scalar_subtraction(v: &[FieldElement], s: FieldElement) -> Vec<FieldElement> {
