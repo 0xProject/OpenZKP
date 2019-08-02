@@ -335,6 +335,11 @@ mod tests {
     }
 
     #[quickcheck]
+    fn shift_evaluation_equivalence(a: Polynomial, shift: FieldElement, x: FieldElement) -> bool {
+        a.shift(&shift).evaluate(&x) == a.evaluate(&(x * shift))
+    }
+
+    #[quickcheck]
     fn sum_commutivity(a: Polynomial, b: Polynomial) -> bool {
         a.clone() + b.clone() == b + a
     }
@@ -350,22 +355,13 @@ mod tests {
     }
 
     #[quickcheck]
-    fn shift_definition(a: Polynomial, shift: FieldElement, x: FieldElement) -> bool {
-        a.shift(&shift).evaluate(&x) == a.evaluate(&(x * shift))
-    }
-
-    #[quickcheck]
     fn addition_subtration_inverse(a: Polynomial, b: Polynomial) -> bool {
         a.clone() + b.clone() - b == a
     }
 
     #[quickcheck]
     fn division_by_self(a: Polynomial) -> bool {
-        // TODO remove these once we have a canonical representation for polynomials.
-        if a.0.is_empty() {
-            return true;
-        }
-        if a.0[0].is_zero() {
+        if a.is_zero() {
             return true;
         }
         a.clone() / a == Polynomial::from_dense(&[1])
@@ -373,11 +369,7 @@ mod tests {
 
     #[quickcheck]
     fn division_multiplication_inverse(a: Polynomial, b: Polynomial) -> bool {
-        // TODO remove these once we have a canonical representation for polynomials.
-        if a.0.is_empty() || b.0.is_empty() {
-            return true;
-        }
-        if b.0[0].is_zero() {
+        if a.is_zero() || b.is_zero() {
             return true;
         }
         (a.clone() * b.clone()) / b == a
