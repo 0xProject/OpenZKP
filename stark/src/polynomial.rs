@@ -34,6 +34,15 @@ impl Polynomial {
         Self::new(&coefficients)
     }
 
+    pub fn periodic(coefficients: &[FieldElement], repetitions: usize) -> Self {
+        let mut periodic_coefficients = vec![];
+        for coefficient in coefficients {
+            periodic_coefficients.push(coefficient.clone());
+            periodic_coefficients.extend_from_slice(&vec![FieldElement::ZERO; repetitions - 1]);
+        }
+        Self::new(&periodic_coefficients)
+    }
+
     #[inline(always)]
     pub fn len(self: &Self) -> usize {
         self.0.len()
