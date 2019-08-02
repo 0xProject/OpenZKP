@@ -216,6 +216,7 @@ impl Arbitrary for Polynomial {
         Polynomial(Vec::<FieldElement>::arbitrary(g))
     }
 }
+
 #[cfg(test)]
 use u256::U256;
 #[cfg(test)]
@@ -228,15 +229,6 @@ impl Polynomial {
             .map(|x| FieldElement::from(U256::from(*x as u64)))
             .collect();
         Self::new(&coefficients)
-    }
-}
-
-#[cfg(test)]
-use quickcheck::{Arbitrary, Gen};
-#[cfg(test)]
-impl Arbitrary for Polynomial {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
-        Polynomial(Vec::<FieldElement>::arbitrary(g))
     }
 }
 

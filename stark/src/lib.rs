@@ -6,7 +6,7 @@ mod fft;
 mod fibonacci;
 mod merkle;
 mod mmap_vec;
-mod pedersen_merkle;
+// mod pedersen_merkle;
 mod polynomial;
 mod proofs;
 mod utils;
