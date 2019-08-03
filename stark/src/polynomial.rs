@@ -44,6 +44,11 @@ impl Polynomial {
     }
 
     #[inline(always)]
+    pub fn constant(coefficient: FieldElement) -> Self {
+        Self::new(&[coefficient])
+    }
+
+    #[inline(always)]
     pub fn len(self: &Self) -> usize {
         self.0.len()
     }
