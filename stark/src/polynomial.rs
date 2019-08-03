@@ -112,6 +112,10 @@ impl Polynomial {
     fn divide_by_x(&mut self) {
         self.0 = self.0[..self.len() - 1].to_vec();
     }
+
+    pub fn multiply_by_x(&mut self, degree: usize) {
+        self.0.extend_from_slice(&vec![FieldElement::ZERO; degree]);
+    }
 }
 
 impl PartialEq for Polynomial {

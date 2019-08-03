@@ -5,8 +5,8 @@ use crate::{
         input::{get_private_input, get_public_input},
         trace_table::get_trace,
     },
-    utils::Reversible,
     polynomial::Polynomial,
+    utils::Reversible,
 };
 use primefield::FieldElement;
 use rayon::prelude::*;

@@ -342,12 +342,12 @@ pub fn get_constraint_polynomial(
     let trace_length = trace_polynomials[0].len();
     let trace_generator = FieldElement::root(U256::from(trace_length as u64)).unwrap();
     for (i, constraint) in constraints.iter().enumerate() {
-        let p = (constraint.base)(trace_polynomials, &trace_generator)
-            * constraint.numerator.clone()
-            / constraint.denominator.clone();
+        let mut p =
+            (constraint.base)(trace_polynomials, &trace_generator) * constraint.numerator.clone();
+        // / constraint.denominator.clone();
         constraint_polynomial += &(&constraint_coefficients[2 * i] * &p);
-        constraint_polynomial +=
-            &(&constraint_coefficients[2 * i + 1] * &(p * constraint.adjustment.clone()));
+        p.multiply_by_x(trace_length);
+        constraint_polynomial += &(&constraint_coefficients[2 * i + 1] * &p);
     }
     constraint_polynomial
 }
