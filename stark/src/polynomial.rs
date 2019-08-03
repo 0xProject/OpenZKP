@@ -1,4 +1,5 @@
 use crate::proofs::geometric_series;
+use crate::fft::{fft, ifft};
 use primefield::FieldElement;
 use rayon::{iter::repeatn, prelude::*};
 use std::{
@@ -116,6 +117,16 @@ impl Polynomial {
     pub fn multiply_by_x(&mut self, degree: usize) {
         self.0.extend_from_slice(&vec![FieldElement::ZERO; degree]);
     }
+
+    fn subtract_at(&mut self, other: &Polynomial, offset: usize, factor: &FieldElement) {
+        for (i, coefficient) in other.coefficients().iter().enumerate() {
+            self.0[i + offset] -= factor * coefficient;
+        }
+    }
+
+    fn pad_to_power_of_two(&mut self) {
+        
+    }
 }
 
 impl PartialEq for Polynomial {
@@ -187,9 +198,6 @@ impl Mul<Polynomial> for Polynomial {
     type Output = Self;
 
     fn mul(self, other: Self) -> Self {
-        if self.is_zero() || other.is_zero() {
-            return Polynomial::new(&[]);
-        }
         let mut result = Polynomial(vec![]);
         for coefficient in other.coefficients().iter() {
             result.0.push(FieldElement::ZERO);
@@ -213,13 +221,12 @@ impl Div<Polynomial> for Polynomial {
         let degree_difference = self.len() - other.len();
         let inverse_leading_term = other.0[0].inv().expect("Cannot divide by zero polynomial");
         let mut remainder = self.clone();
-        let mut padded_other = other.extend_to_length(degree_difference);
+        // let mut padded_other = other.extend_to_length(degree_difference);
         let mut result = vec![];
         for i in 0..=degree_difference {
             let q = &remainder.0[i] * &inverse_leading_term;
-            remainder -= &(&q * &padded_other);
+            remainder.subtract_at(&other, i, &q);
             result.push(q);
-            padded_other.divide_by_x();
         }
         debug_assert!(remainder.is_zero());
         Self(result)

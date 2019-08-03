@@ -127,15 +127,15 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constr
             denominator: no_rows.clone(),
             adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
         },
-        // Constraint {
-        //     base:        Box::new(move |tp, _| {
-        //         (tp[0].clone() - Polynomial::constant(leaf.clone()))
-        //             * (tp[4].clone() - Polynomial::constant(leaf.clone()))
-        //     }),
-        //     numerator:   no_rows.clone(),
-        //     denominator: first_row.clone(),
-        //     adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
-        // },
+        Constraint {
+            base:        Box::new(move |tp, _| {
+                (tp[0].clone() - Polynomial::constant(leaf.clone()))
+                    * (tp[4].clone() - Polynomial::constant(leaf.clone()))
+            }),
+            numerator:   no_rows.clone(),
+            denominator: first_row.clone(),
+            adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
+        },
         // Constraint {
         //     base:        Box::new(move |tp, _| Polynomial::constant(root.clone()) - tp[4].clone()),
         //     numerator:   no_rows.clone(),

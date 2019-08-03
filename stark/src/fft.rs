@@ -17,22 +17,6 @@ pub fn fft_cofactor_bit_reversed(a: &[FieldElement], cofactor: &FieldElement) ->
     result
 }
 
-#[allow(dead_code)]
-pub fn bit_reversal_fft_cofactor(a: &[FieldElement], cofactor: &FieldElement) -> Vec<FieldElement> {
-    let mut result = a.to_vec();
-    let mut c = FieldElement::ONE;
-    for element in result.iter_mut() {
-        *element *= &c;
-        c *= cofactor;
-    }
-
-    let root = FieldElement::root(U256::from(result.len() as u64))
-        .expect("No root of unity for input length");
-    bit_reversal_fft(result.as_mut_slice(), root);
-
-    result
-}
-
 pub fn ifft(a: &[FieldElement]) -> Vec<FieldElement> {
     let mut result = a.to_vec();
     let n_elements = U256::from(a.len() as u64);
@@ -102,6 +86,15 @@ fn reverse(x: u64, bits: u32) -> u64 {
     }
 }
 
+pub fn fft(a: &[FieldElement]) -> Vec<FieldElement> {
+    let mut result = a.to_vec();
+    let root = FieldElement::root(U256::from(result.len() as u64))
+        .expect("No root of unity for input length");
+    bit_reversal_fft(result.as_mut_slice(), root);
+    bit_reversal_permute(result.as_mut_slice());
+    result
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -110,14 +103,14 @@ mod tests {
     use quickcheck_macros::quickcheck;
     use u256::u256h;
 
-    fn fft(a: &[FieldElement]) -> Vec<FieldElement> {
-        let mut result = a.to_vec();
-        let root = FieldElement::root(U256::from(result.len() as u64))
-            .expect("No root of unity for input length");
-        bit_reversal_fft(result.as_mut_slice(), root);
-        bit_reversal_permute(result.as_mut_slice());
-        result
-    }
+    // fn fft(a: &[FieldElement]) -> Vec<FieldElement> {
+    //     let mut result = a.to_vec();
+    //     let root = FieldElement::root(U256::from(result.len() as u64))
+    //         .expect("No root of unity for input length");
+    //     bit_reversal_fft(result.as_mut_slice(), root);
+    //     bit_reversal_permute(result.as_mut_slice());
+    //     result
+    // }
 
     #[test]
     fn fft_one_element_test() {
