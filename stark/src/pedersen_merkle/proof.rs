@@ -1,17 +1,18 @@
 use crate::{
-    fft::{bit_reversal_fft_cofactor, ifft},
+    fft::{fft_cofactor_bit_reversed, ifft},
     mmap_vec::MmapVec,
     pedersen_merkle::{
         input::{get_private_input, get_public_input},
         trace_table::get_trace,
     },
     utils::Reversible,
+    polynomial::Polynomial,
 };
 use primefield::FieldElement;
 use rayon::prelude::*;
 use u256::U256;
 
-pub fn get_trace_polynomials() -> Vec<Vec<FieldElement>> {
+pub fn get_trace_polynomials() -> Vec<Polynomial> {
     let public_input = get_public_input();
     let trace_table = get_trace(
         public_input.path_length,
@@ -31,10 +32,10 @@ pub fn get_trace_polynomials() -> Vec<Vec<FieldElement>> {
 
     let trace_length: usize = public_input.path_length * 256;
 
-    let mut trace_polynomials: Vec<Vec<FieldElement>> = vec![Vec::with_capacity(trace_length); 8];
+    let mut trace_polynomials: Vec<Polynomial> = Vec::with_capacity(8);
     columns
         .into_par_iter()
-        .map(|c| ifft(&c))
+        .map(|c| Polynomial::new(&ifft(&c)))
         .collect_into_vec(&mut trace_polynomials);
 
     trace_polynomials
@@ -61,7 +62,7 @@ pub fn get_extended_trace_table() -> Vec<MmapVec<FieldElement>> {
                 let reverse_i = i.bit_reverse() >> (64 - 4);
                 let cofactor =
                     &evaluation_offset * evaluation_generator.pow(U256::from(reverse_i as u64));
-                bit_reversal_fft_cofactor(&p, &cofactor)
+                fft_cofactor_bit_reversed(&p.reverse_coefficients(), &cofactor)
             })
             .collect_into_vec(&mut cosets);
         for (extended_trace_column, coset) in extended_trace_table.iter_mut().zip(cosets) {

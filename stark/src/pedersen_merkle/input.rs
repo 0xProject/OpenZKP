@@ -38,7 +38,7 @@ pub fn get_periodic_columns() -> PeriodicColumns {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{polynomial::eval_poly, proofs::geometric_series};
+    use crate::{polynomial::Polynomial, proofs::geometric_series};
     use ecc::Affine;
     use starkdex::PEDERSEN_POINTS;
     use u256::U256;
@@ -64,8 +64,8 @@ mod tests {
         let evaluation_points = geometric_series(&FieldElement::ONE, &omega, 252);
         let left_points = evaluation_points.iter().map(|f: &FieldElement| {
             Affine::Point {
-                x: eval_poly(f.clone(), &left_x_coefficients),
-                y: eval_poly(f.clone(), &left_y_coefficients),
+                x: Polynomial::new(&left_x_coefficients).evaluate(&f),
+                y: Polynomial::new(&left_y_coefficients).evaluate(&f),
             }
         });
 
@@ -85,8 +85,8 @@ mod tests {
         let evaluation_points = geometric_series(&FieldElement::ONE, &omega, 252);
         let right_points = evaluation_points.iter().map(|f: &FieldElement| {
             Affine::Point {
-                x: eval_poly(f.clone(), &right_x_coefficients),
-                y: eval_poly(f.clone(), &right_y_coefficients),
+                x: Polynomial::new(&right_x_coefficients).evaluate(&f),
+                y: Polynomial::new(&right_y_coefficients).evaluate(&f),
             }
         });
 
