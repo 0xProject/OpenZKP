@@ -125,7 +125,7 @@ impl Polynomial {
     }
 
     fn pad_to_power_of_two(&mut self) {
-        
+
     }
 }
 
@@ -198,12 +198,28 @@ impl Mul<Polynomial> for Polynomial {
     type Output = Self;
 
     fn mul(self, other: Self) -> Self {
-        let mut result = Polynomial(vec![]);
-        for coefficient in other.coefficients().iter() {
-            result.0.push(FieldElement::ZERO);
-            result += &(coefficient * &self);
+        if self.is_zero() || other.is_zero() {
+            return Polynomial::new(&[]);
         }
-        result
+        if other.len() < 4 {
+            let mut result = Polynomial(vec![]);
+            for coefficient in other.coefficients().iter() {
+                result.0.push(FieldElement::ZERO);
+                result += &(coefficient * &self);
+            }
+            return result;
+        }
+        let result_length = self.len() + other.len() - 1;
+        let padded_self = self.pad(result_length);
+        let padded_other = other.pad(result_length);
+
+        let a = fft(padded_self.coefficients());
+        let b = fft(padded_other.coefficients());
+
+        let product: Vec<_> = a.iter().zip(b).map(|(x, y)| x * y).collect();
+
+        let c = ifft(&product);
+        Self(c[c.len() - 1 - result_length..c.len() - 1].to_vec())
     }
 }
 
