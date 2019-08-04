@@ -34,6 +34,8 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constr
         -&g.pow(U256::from(trace_length as u64 - 1)),
         FieldElement::ONE,
     ]);
+    // x.pow(path_length.clone())
+    //     - trace_generator.pow(&path_length * (&trace_length - U256::ONE)),
     let every_hash_start_row = Polynomial::from_sparse(&[
         (path_length, FieldElement::ONE),
         (
@@ -142,14 +144,15 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constr
             denominator: last_row.clone(),
             adjustment:  Polynomial::from_sparse(&[(trace_length, FieldElement::ONE)]),
         },
-        // Constraint {
-        //     base:        Box::new(|tp, g| {
-        //         (tp[5].clone() - tp[0].shift(g)) * (tp[4].clone() - tp[4].shift(g))
-        //     }),
-        //     numerator:   no_rows.clone(),
-        //     denominator: every_hash_start_row.clone(),
-        //     adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
-        // },
+        Constraint {
+            base:        Box::new(|tp, g| {
+                (tp[6].clone() - tp[0].shift(g)) * (tp[6].clone() - tp[4].shift(g))
+            }),
+            // (&this.right.x - &next.left.source) * (&this.right.x - &next.right.source),
+            numerator:   first_row.clone(),
+            denominator: every_hash_start_row.clone(),
+            adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
+        },
         // Constraint {
         //     base:        Box::new(move |tp, g| {
         //         tp[6].clone() - Polynomial::constant(shift_point_x.clone())
@@ -405,13 +408,22 @@ pub fn eval_c_direct(
     ];
 
     let numerator_indices = vec![
-        2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 2, 2, 1, 1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1, 1, 2, 2,
+        2, 2, 2, 2, 2, 2, 2, 2,
+        2, 2, 0, 2, 2,
+        1, 1, 1, 1, 1, 1, 2, 2,
+        1, 1, 1, 1, 1, 1, 2, 2,
     ];
     let denominator_indices = vec![
-        6, 6, 6, 6, 6, 6, 6, 6, 0, 1, 2, 3, 3, 4, 4, 4, 4, 4, 4, 5, 2, 4, 4, 4, 4, 4, 4, 5, 2,
+        6, 6, 6, 6, 6, 6, 6, 6,
+        0, 1, 2, 3, 3,
+        4, 4, 4, 4, 4, 4, 5, 2,
+        4, 4, 4, 4, 4, 4, 5, 2,
     ];
     let adjustment_indices = vec![
-        0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 4, 5, 5, 5, 5, 5, 5, 4, 4, 5, 5, 5, 5, 5, 5, 4, 4,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        1, 2, 3, 4, 4,
+        5, 5, 5, 5, 5, 5, 4, 4,
+        5, 5, 5, 5, 5, 5, 4, 4,
     ];
 
     let mut result = FieldElement::ZERO;
@@ -749,7 +761,7 @@ mod test {
         let trace_polynomials = get_trace_polynomials();
 
         let mut constraint_coefficients = vec![FieldElement::ZERO; 100];
-        for i in 0..20 {
+        for i in 0..21 {
             constraint_coefficients[i] = FieldElement::ONE;
         }
 

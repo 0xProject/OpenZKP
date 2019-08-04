@@ -119,9 +119,13 @@ impl Polynomial {
     }
 
     fn subtract_at(&mut self, other: &Polynomial, offset: usize, factor: &FieldElement) {
-        for (i, coefficient) in other.coefficients().iter().enumerate() {
-            self.0[i + offset] -= factor * coefficient;
-        }
+        //     for (i, coefficient) in other.coefficients().iter().enumerate() {
+        //         self.0[i + offset] -= factor * coefficient;
+        //     }
+        self.0[offset] -= factor * &other.coefficients()[0];
+
+        let other_length = other.len();
+        self.0[offset + other_length - 1] -= factor * &other.coefficients()[other_length - 1];
     }
 
     fn pad(&self, length: usize) -> Self {
@@ -284,6 +288,14 @@ mod tests {
     use u256::{u256h, U256};
 
     #[test]
+    fn sparse_dense() {
+        assert_eq!(
+            Polynomial::new(&[FieldElement::ONE + FieldElement::ONE, FieldElement::ZERO, FieldElement::ONE]),
+            Polynomial::from_sparse(&[(0, FieldElement::ONE + FieldElement::ONE), (2, FieldElement::ONE)])
+        );
+    }
+
+    #[test]
     fn example_evaluate() {
         let x = FieldElement::from(u256h!(
             "04d59eebac89518453d226545efb550870f641831aaf0ed1fa2ec54499eb2183"
@@ -365,6 +377,14 @@ mod tests {
     }
 
     #[test]
+    fn example_division_4() {
+        let numerator = Polynomial::from_dense(&[1, 0, 2, 0 ,1]);
+        let denominator = Polynomial::from_dense(&[1, 0, 1]);
+        assert_eq!(numerator / denominator, Polynomial::from_dense(&[1, 0, 1]))
+    }
+
+
+    #[test]
     fn example_shift() {
         let p = Polynomial::from_dense(&[3, 2, 1]);
         assert_eq!(
@@ -422,5 +442,14 @@ mod tests {
             return true;
         }
         (a.clone() * b.clone()) / b == a
+    }
+
+    #[quickcheck]
+    fn hack_division(a: Polynomial, b: FieldElement, c: FieldElement, d: usize) -> bool {
+        if c.is_zero() {
+            return true;
+        }
+        let denominator = Polynomial::from_sparse(&[(0, b), (d, c)]);
+        a.clone() * denominator.clone() / denominator == a
     }
 }
