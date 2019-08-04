@@ -124,8 +124,11 @@ impl Polynomial {
         }
     }
 
-    fn pad_to_power_of_two(&mut self) {
-
+    fn pad(&self, length: usize) -> Self {
+        let mut coefficients =
+            vec![FieldElement::ZERO; (length + 1).next_power_of_two() - self.len()];
+        coefficients.extend_from_slice(self.coefficients());
+        Self(coefficients)
     }
 }
 
