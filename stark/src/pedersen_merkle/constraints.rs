@@ -34,8 +34,6 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constr
         -&g.pow(U256::from(trace_length as u64 - 1)),
         FieldElement::ONE,
     ]);
-    // x.pow(path_length.clone())
-    //     - trace_generator.pow(&path_length * (&trace_length - U256::ONE)),
     let every_hash_start_row = Polynomial::from_sparse(&[
         (path_length, FieldElement::ONE),
         (
@@ -50,13 +48,9 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constr
         ),
         (path_length, FieldElement::ONE),
     ]);
-    let hash_end_rows = Polynomial::from_sparse(&[
-        (path_length, FieldElement::ONE),
-        (
-            0,
-            -&g.pow(U256::from((path_length * (trace_length - 1)) as u64)),
-        ),
-    ]);
+    // x.pow(path_length.clone()) - FieldElement::ONE,
+    let hash_end_rows =
+        Polynomial::from_sparse(&[(path_length, FieldElement::ONE), (0, -&FieldElement::ONE)]);
     let every_row =
         Polynomial::from_sparse(&[(trace_length, FieldElement::ONE), (0, -&FieldElement::ONE)]);
 
@@ -153,22 +147,22 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constr
             denominator: every_hash_start_row.clone(),
             adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
         },
-        // Constraint {
-        //     base:        Box::new(move |tp, g| {
-        //         tp[6].clone() - Polynomial::constant(shift_point_x.clone())
-        //     }),
-        //     numerator:   no_rows.clone(),
-        //     denominator: last_row.clone(),
-        //     adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
-        // },
-        // Constraint {
-        //     base:        Box::new(move |tp, g| {
-        //         tp[7].clone() - Polynomial::constant(shift_point_y.clone())
-        //     }),
-        //     numerator:   no_rows.clone(),
-        //     denominator: last_row.clone(),
-        //     adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
-        // },
+        Constraint {
+            base:        Box::new(move |tp, g| {
+                tp[6].clone() - Polynomial::constant(shift_point_x.clone())
+            }),
+            numerator:   no_rows.clone(),
+            denominator: hash_end_rows.clone(), // name is flipped
+            adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
+        },
+        Constraint {
+            base:        Box::new(move |tp, g| {
+                tp[7].clone() - Polynomial::constant(shift_point_y.clone())
+            }),
+            numerator:   no_rows.clone(),
+            denominator: hash_end_rows.clone(),
+            adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
+        },
         // Constraint {
         //     base:        Box::new(|tp, g| {
         //         let left_bit = get_left_bit(tp, g);
@@ -408,22 +402,13 @@ pub fn eval_c_direct(
     ];
 
     let numerator_indices = vec![
-        2, 2, 2, 2, 2, 2, 2, 2,
-        2, 2, 0, 2, 2,
-        1, 1, 1, 1, 1, 1, 2, 2,
-        1, 1, 1, 1, 1, 1, 2, 2,
+        2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 2, 2, 1, 1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1, 1, 2, 2,
     ];
     let denominator_indices = vec![
-        6, 6, 6, 6, 6, 6, 6, 6,
-        0, 1, 2, 3, 3,
-        4, 4, 4, 4, 4, 4, 5, 2,
-        4, 4, 4, 4, 4, 4, 5, 2,
+        6, 6, 6, 6, 6, 6, 6, 6, 0, 1, 2, 3, 3, 4, 4, 4, 4, 4, 4, 5, 2, 4, 4, 4, 4, 4, 4, 5, 2,
     ];
     let adjustment_indices = vec![
-        0, 0, 0, 0, 0, 0, 0, 0,
-        1, 2, 3, 4, 4,
-        5, 5, 5, 5, 5, 5, 4, 4,
-        5, 5, 5, 5, 5, 5, 4, 4,
+        0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 4, 5, 5, 5, 5, 5, 5, 4, 4, 5, 5, 5, 5, 5, 5, 4, 4,
     ];
 
     let mut result = FieldElement::ZERO;
@@ -761,7 +746,7 @@ mod test {
         let trace_polynomials = get_trace_polynomials();
 
         let mut constraint_coefficients = vec![FieldElement::ZERO; 100];
-        for i in 0..22 {
+        for i in 0..26 {
             constraint_coefficients[i] = FieldElement::ONE;
         }
 

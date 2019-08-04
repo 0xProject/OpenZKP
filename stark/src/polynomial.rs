@@ -1,5 +1,7 @@
-use crate::proofs::geometric_series;
-use crate::fft::{fft, ifft};
+use crate::{
+    fft::{fft, ifft},
+    proofs::geometric_series,
+};
 use primefield::FieldElement;
 use rayon::{iter::repeatn, prelude::*};
 use std::{
@@ -290,8 +292,15 @@ mod tests {
     #[test]
     fn sparse_dense() {
         assert_eq!(
-            Polynomial::new(&[FieldElement::ONE + FieldElement::ONE, FieldElement::ZERO, FieldElement::ONE]),
-            Polynomial::from_sparse(&[(0, FieldElement::ONE + FieldElement::ONE), (2, FieldElement::ONE)])
+            Polynomial::new(&[
+                FieldElement::ONE + FieldElement::ONE,
+                FieldElement::ZERO,
+                FieldElement::ONE
+            ]),
+            Polynomial::from_sparse(&[
+                (0, FieldElement::ONE + FieldElement::ONE),
+                (2, FieldElement::ONE)
+            ])
         );
     }
 
@@ -378,11 +387,10 @@ mod tests {
 
     #[test]
     fn example_division_4() {
-        let numerator = Polynomial::from_dense(&[1, 0, 2, 0 ,1]);
+        let numerator = Polynomial::from_dense(&[1, 0, 2, 0, 1]);
         let denominator = Polynomial::from_dense(&[1, 0, 1]);
         assert_eq!(numerator / denominator, Polynomial::from_dense(&[1, 0, 1]))
     }
-
 
     #[test]
     fn example_shift() {
