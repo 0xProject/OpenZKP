@@ -149,7 +149,7 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constr
                 (tp[6].clone() - tp[0].shift(g)) * (tp[6].clone() - tp[4].shift(g))
             }),
             // (&this.right.x - &next.left.source) * (&this.right.x - &next.right.source),
-            numerator:   first_row.clone(),
+            numerator:   last_row.clone(),
             denominator: every_hash_start_row.clone(),
             adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
         },
@@ -761,7 +761,7 @@ mod test {
         let trace_polynomials = get_trace_polynomials();
 
         let mut constraint_coefficients = vec![FieldElement::ZERO; 100];
-        for i in 0..21 {
+        for i in 0..22 {
             constraint_coefficients[i] = FieldElement::ONE;
         }
 
