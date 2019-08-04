@@ -346,7 +346,7 @@ pub fn get_constraint_polynomial(
             * constraint.numerator.clone()
             / constraint.denominator.clone();
         constraint_polynomial += &(&constraint_coefficients[2 * i] * &p);
-        p.multiply_by_x(trace_length);
+        p.multiply_by_x(2 * trace_length - p.len());
         constraint_polynomial += &(&constraint_coefficients[2 * i + 1] * &p);
     }
     constraint_polynomial
