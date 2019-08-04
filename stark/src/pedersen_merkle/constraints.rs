@@ -136,45 +136,45 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constr
             denominator: first_row.clone(),
             adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
         },
-        // Constraint {
-        //     base:        Box::new(move |tp, _| Polynomial::constant(root.clone()) - tp[4].clone()),
-        //     numerator:   no_rows.clone(),
-        //     denominator: last_row.clone(),
-        //     adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
-        // },
-        // Constraint {
-        //     base:        Box::new(|tp, g| {
-        //         (tp[4].clone() - tp[0].shift(g)) * (tp[4].clone() - tp[4].shift(g))
-        //     }),
-        //     numerator:   no_rows.clone(),
-        //     denominator: last_row.clone(),
-        //     adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
-        // },
-        // Constraint {
-        //     base:        Box::new(move |tp, g| {
-        //         tp[6].clone() - Polynomial::constant(shift_point_x.clone())
-        //     }),
-        //     numerator:   no_rows.clone(),
-        //     denominator: last_row.clone(),
-        //     adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
-        // },
-        // Constraint {
-        //     base:        Box::new(move |tp, g| {
-        //         tp[7].clone() - Polynomial::constant(shift_point_y.clone())
-        //     }),
-        //     numerator:   no_rows.clone(),
-        //     denominator: last_row.clone(),
-        //     adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
-        // },
-        // Constraint {
-        //     base:        Box::new(|tp, g| {
-        //         let left_bit = get_left_bit(tp, g);
-        //         left_bit.clone() * (Polynomial::constant(FieldElement::ONE) - left_bit)
-        //     }),
-        //     numerator:   no_rows.clone(),
-        //     denominator: every_row.clone(),
-        //     adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
-        // },
+        Constraint {
+            base:        Box::new(move |tp, _| Polynomial::constant(root.clone()) - tp[6].clone()),
+            numerator:   no_rows.clone(),
+            denominator: last_row.clone(),
+            adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
+        }, // correct up until here.
+        Constraint {
+            base:        Box::new(|tp, g| {
+                (tp[4].clone() - tp[0].shift(g)) * (tp[4].clone() - tp[4].shift(g))
+            }),
+            numerator:   no_rows.clone(),
+            denominator: no_rows.clone(), // every_hash_start_row.clone(),
+            adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
+        },
+        Constraint {
+            base:        Box::new(move |tp, g| {
+                tp[6].clone() - Polynomial::constant(shift_point_x.clone())
+            }),
+            numerator:   no_rows.clone(),
+            denominator: no_rows.clone(), // every_hash_start_row.clone(),
+            adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
+        },
+        Constraint {
+            base:        Box::new(move |tp, g| {
+                tp[7].clone() - Polynomial::constant(shift_point_y.clone())
+            }),
+            numerator:   no_rows.clone(),
+            denominator: no_rows.clone(), // every_hash_start_row.clone(),
+            adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
+        }, // preceeding 4 cannot be done at the momemnt.
+        Constraint {
+            base:        Box::new(|tp, g| {
+                let left_bit = get_left_bit(tp, g);
+                left_bit.clone() * (Polynomial::constant(FieldElement::ONE) - left_bit)
+            }),
+            numerator:   every_hash_start_row.clone(),
+            denominator: every_row.clone(),
+            adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
+        },
         // Constraint {
         //     base:        Box::new(move |tp, g| {
         //         let left_bit = get_left_bit(tp, g);
@@ -748,8 +748,13 @@ mod test {
     fn wayne() {
         let trace_polynomials = get_trace_polynomials();
 
+        let constraints = get_pedersen_merkle_constraints(&get_public_input());
+
         let mut constraint_coefficients = vec![FieldElement::ZERO; 100];
-        for i in 0..16 {
+        for i in 0..20 {
+            constraint_coefficients[i] = FieldElement::ONE;
+        }
+        for i in 28..30 {
             constraint_coefficients[i] = FieldElement::ONE;
         }
 
@@ -762,11 +767,8 @@ mod test {
             &constraint_coefficients,
         );
 
-        let constraint_polynomial = get_constraint_polynomial(
-            &trace_polynomials,
-            &get_pedersen_merkle_constraints(&get_public_input()),
-            &constraint_coefficients,
-        );
+        let constraint_polynomial =
+            get_constraint_polynomial(&trace_polynomials, &constraints, &constraint_coefficients);
         let new = constraint_polynomial.evaluate(&x);
 
         assert_eq!(old, new);

@@ -1,5 +1,7 @@
-use crate::proofs::geometric_series;
-use crate::fft::{fft, ifft};
+use crate::{
+    fft::{fft, ifft},
+    proofs::geometric_series,
+};
 use primefield::FieldElement;
 use rayon::{iter::repeatn, prelude::*};
 use std::{
@@ -10,6 +12,7 @@ use std::{
 #[derive(Clone)]
 #[cfg_attr(test, derive(Debug))]
 pub struct Polynomial(Vec<FieldElement>);
+pub struct SparsePolynomial([(FieldElement, usize)]);
 
 // TODO: create a canonical representation for polynonials based on vectors with
 // power of two lengths.
@@ -18,21 +21,6 @@ impl Polynomial {
         let mut coefficients = coefficients.to_vec();
         coefficients.reverse();
         Self(coefficients)
-    }
-
-    pub fn from_sparse(degrees_and_coefficients: &[(usize, FieldElement)]) -> Self {
-        let mut max_degree = 0usize;
-        for (degree, _) in degrees_and_coefficients.iter() {
-            if max_degree < *degree {
-                max_degree = *degree;
-            }
-        }
-
-        let mut coefficients = vec![FieldElement::ZERO; max_degree + 1];
-        for (degree, coefficient) in degrees_and_coefficients.iter() {
-            coefficients[*degree] = coefficient.clone();
-        }
-        Self::new(&coefficients)
     }
 
     pub fn periodic(coefficients: &[FieldElement], repetitions: usize) -> Self {
@@ -118,14 +106,11 @@ impl Polynomial {
         self.0.extend_from_slice(&vec![FieldElement::ZERO; degree]);
     }
 
-    fn subtract_at(&mut self, other: &Polynomial, offset: usize, factor: &FieldElement) {
-        for (i, coefficient) in other.coefficients().iter().enumerate() {
-            self.0[i + offset] -= factor * coefficient;
-        }
-    }
-
-    fn pad_to_power_of_two(&mut self) {
-        
+    fn pad(&self, length: usize) -> Self {
+        let mut coefficients =
+            vec![FieldElement::ZERO; (length + 1).next_power_of_two() - self.len()];
+        coefficients.extend_from_slice(self.coefficients());
+        Self(coefficients)
     }
 }
 
@@ -193,11 +178,41 @@ impl Mul<&Polynomial> for &FieldElement {
 
 // TODO: use fft for Mul and Div if appropriate.
 // https://stackoverflow.com/questions/44770632/fft-division-for-fast-polynomial-division
+// http://people.csail.mit.edu/madhu/ST12/scribe/lect04.pdf
+// http://people.csail.mit.edu/madhu/ST12/scribe/lect06.pdf (lecture 5 doesn't exist.)
 #[allow(clippy::suspicious_arithmetic_impl)]
 impl Mul<Polynomial> for Polynomial {
     type Output = Self;
 
     fn mul(self, other: Self) -> Self {
+        if self.is_zero() || other.is_zero() {
+            return Polynomial::new(&[]);
+        }
+        if other.len() < 4 {
+            let mut result = Polynomial(vec![]);
+            for coefficient in other.coefficients().iter() {
+                result.0.push(FieldElement::ZERO);
+                result += &(coefficient * &self);
+            }
+            return result;
+        }
+        let result_length = self.len() + other.len() - 1;
+        let padded_self = self.pad(result_length);
+        let padded_other = other.pad(result_length);
+
+        let a = fft(padded_self.coefficients());
+        let b = fft(padded_other.coefficients());
+
+        let product: Vec<_> = a.iter().zip(b).map(|(x, y)| x * y).collect();
+
+        let c = ifft(&product);
+        Self(c[c.len() - 1 - result_length..c.len() - 1].to_vec())
+    }
+}
+
+#[allow(clippy::suspicious_arithmetic_impl)]
+impl MulAssign<SparsePolynomial> for Polynomial {
+    fn mul(&mut self, other: SparsePolynomial) {
         let mut result = Polynomial(vec![]);
         for coefficient in other.coefficients().iter() {
             result.0.push(FieldElement::ZERO);
@@ -208,28 +223,39 @@ impl Mul<Polynomial> for Polynomial {
 }
 
 #[allow(clippy::suspicious_arithmetic_impl)]
-impl Div<Polynomial> for Polynomial {
+impl DivAssign<&SparsePolynomial> for Polynomial {
     type Output = Self;
 
-    fn div(self, other: Self) -> Self {
+    fn div(self, other: &SparsePolynomial) -> Self {
         if other.is_zero() {
             panic!("Cannot divide by zero polynomial");
         }
         if self.is_zero() {
             return Polynomial::new(&[]);
         }
-        let degree_difference = self.len() - other.len();
+        let quotient_degree = self.len() - other.len();
         let inverse_leading_term = other.0[0].inv().expect("Cannot divide by zero polynomial");
-        let mut remainder = self.clone();
         // let mut padded_other = other.extend_to_length(degree_difference);
-        let mut result = vec![];
-        for i in 0..=degree_difference {
-            let q = &remainder.0[i] * &inverse_leading_term;
-            remainder.subtract_at(&other, i, &q);
-            result.push(q);
+        let mut quotient = vec![];
+        for degree in 0..=quotient_degree {
+            let coefficient = &self.0[degree] * &inverse_leading_term;
+            self -= &coefficient * denominator.
+
+            for (coefficient, degree) in denominator {
+                self.0[]
+            }
+            self.0[i + offset] -= c
+            -    fn subtract_at(&mut self, other: &Polynomial, offset: usize, factor: &FieldElement) {
+            -        for (i, coefficient) in other.coefficients().iter().enumerate() {
+            -            self.0[i + offset] -= factor * coefficient;
+            -        }
+            -    }
+
+            self.subtract_denominator(&denominator, degree);
+            quotient.push(coefficient);
         }
-        debug_assert!(remainder.is_zero());
-        Self(result)
+        debug_assert!(self.is_zero());
+        self = Self(quotient)
     }
 }
 
@@ -306,6 +332,13 @@ mod tests {
         let p_1 = Polynomial::from_dense(&[1, 2]);
         let p_2 = Polynomial::from_dense(&[1, 3, 4]);
         assert_eq!(p_1 * p_2, Polynomial::from_dense(&[1, 5, 10, 8]))
+    }
+
+    #[test]
+    fn example_product_2() {
+        let p_1 = Polynomial::from_dense(&[1, 1]);
+        let p_2 = Polynomial::from_dense(&[1, 2, 1]);
+        assert_eq!(p_1 * p_2, Polynomial::from_dense(&[1, 3, 3, 1]))
     }
 
     #[test]

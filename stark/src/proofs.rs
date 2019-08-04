@@ -3,6 +3,7 @@ use crate::{
     fft::{bit_reversal_permute, fft_cofactor_bit_reversed, ifft},
     merkle::{self, make_tree, Hashable},
     polynomial::Polynomial,
+    polynomial::SparsePolynomial,
     utils::Reversible,
 };
 use hex_literal::*;
@@ -81,9 +82,8 @@ pub struct ProofParams {
 
 pub struct Constraint {
     pub base:        Box<Fn(&[Polynomial], &FieldElement) -> Polynomial>,
-    pub denominator: Polynomial,
-    pub numerator:   Polynomial,
-    pub adjustment:  Polynomial,
+    pub denominator: Option<SparsePolynomial>,
+    pub numerator:   Option<SparsePolynomial>,
 }
 
 // This groupable impl allows the fri tree layers to get grouped and use the
@@ -341,13 +341,25 @@ pub fn get_constraint_polynomial(
     let mut constraint_polynomial = Polynomial::new(&[]);
     let trace_length = trace_polynomials[0].len();
     let trace_generator = FieldElement::root(U256::from(trace_length as u64)).unwrap();
+
+    // TODO: Fix this!
+    let max_degree = trace_length;
+    // TODO: get rid of indices here!
     for (i, constraint) in constraints.iter().enumerate() {
-        let mut p = (constraint.base)(trace_polynomials, &trace_generator)
-            * constraint.numerator.clone()
-            / constraint.denominator.clone();
-        constraint_polynomial += &(&constraint_coefficients[2 * i] * &p);
-        p.multiply_by_x(trace_length);
-        constraint_polynomial += &(&constraint_coefficients[2 * i + 1] * &p);
+        let mut p = (constraint.base)(trace_polynomials, &trace_generator);
+        match constraint.numerator {
+            Some(n) => constraint *= n,
+            None => (),
+        };
+        match constraint.denominator {
+            Some(d) => constraint /= d,
+            None => (),
+        }
+        p *= SparsePolynomial::new([
+            (constraint_coefficients[2 * i], 1),
+            (constraint_coefficients[2 * i + 1], max_degree - p.len()),
+        ]);
+        constraint_polynomial += p;
     }
     constraint_polynomial
 }

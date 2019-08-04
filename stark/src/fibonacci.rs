@@ -1,5 +1,6 @@
 use crate::{
     polynomial::Polynomial,
+        polynomial::SparsePolynomial,
     proofs::{Constraint, TraceTable},
 };
 use primefield::FieldElement;
@@ -30,46 +31,48 @@ pub fn get_fibonacci_constraints(
     claim_index: usize,
 ) -> Vec<Constraint> {
     let trace_generator = FieldElement::root(U256::from(trace_length as u64)).unwrap();
-    let no_rows = Polynomial::new(&[FieldElement::ONE]);
-    let every_row =
-        Polynomial::from_sparse(&[(trace_length, FieldElement::ONE), (0, -&FieldElement::ONE)]);
-    let first_row = Polynomial::new(&[-&FieldElement::ONE, FieldElement::ONE]);
-    let last_row = Polynomial::new(&[
-        -&trace_generator.pow(U256::from(trace_length as u64 - 1)),
-        FieldElement::ONE,
+
+    let every_row = SparsePolynomial::new([
+        (FieldElement::NEGATIVE_ONE, 0),
+        (FieldElement::ONE, trace_length),
+    ]);
+    let first_row =
+        SparsePolynomial::new([(FieldElement::NEGATIVE_ONE, 1), (FieldElement::ONE, 1)]);
+    let last_row = SparsePolynomial::new(&[
+        (
+            -&trace_generator.pow(U256::from(trace_length as u64 - 1)),
+            0,
+        ),
+        (FieldElement::ONE, 1),
     ]);
 
-    let claim_index_row = Polynomial::new(&[
-        -&trace_generator.pow(U256::from(claim_index as u64)),
-        FieldElement::ONE,
+    let claim_index_row = SparsePolynomial::new([
+        (-&trace_generator.pow(U256::from(claim_index as u64)), 0),
+        (FieldElement::ONE, 1),
     ]);
 
     vec![
         Constraint {
             base:        Box::new(|tp, g| tp[0].shift(g) - tp[1].clone()),
-            numerator:   last_row.clone(),
-            denominator: every_row.clone(),
-            adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
+            numerator:   Some(last_row.clone()),
+            denominator: Some(every_row.clone()),
         },
         Constraint {
             base:        Box::new(|tp, g| tp[1].shift(g) - tp[1].clone() - tp[0].clone()),
-            numerator:   last_row.clone(),
-            denominator: every_row.clone(),
-            adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
+            numerator:   Some(last_row.clone()),
+            denominator: Some(every_row.clone()),
         },
         Constraint {
             base:        Box::new(|tp, _| tp[0].clone() - Polynomial::new(&[FieldElement::ONE])),
-            numerator:   no_rows.clone(),
-            denominator: first_row,
-            adjustment:  Polynomial::from_sparse(&[(1, FieldElement::ONE)]),
+            numerator:   None,
+            denominator: Some(first_row),
         },
         Constraint {
             base:        Box::new(move |tp, _| {
                 tp[0].clone() - Polynomial::new(&[claim_value.clone()])
             }),
-            numerator:   no_rows,
-            denominator: claim_index_row,
-            adjustment:  Polynomial::from_sparse(&[(1, FieldElement::ONE)]),
+            numerator:   None,
+            denominator: Some(claim_index_row),
         },
     ]
 }
