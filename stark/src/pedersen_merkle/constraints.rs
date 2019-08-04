@@ -34,7 +34,7 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constr
         -&g.pow(U256::from(trace_length as u64 - 1)),
         FieldElement::ONE,
     ]);
-    let every_hash_start_row = Polynomial::from_sparse(&[
+    let hash_end_rows = Polynomial::from_sparse(&[
         (path_length, FieldElement::ONE),
         (
             0,
@@ -48,8 +48,7 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constr
         ),
         (path_length, FieldElement::ONE),
     ]);
-    // x.pow(path_length.clone()) - FieldElement::ONE,
-    let hash_end_rows =
+    let hash_start_rows =
         Polynomial::from_sparse(&[(path_length, FieldElement::ONE), (0, -&FieldElement::ONE)]);
     let every_row =
         Polynomial::from_sparse(&[(trace_length, FieldElement::ONE), (0, -&FieldElement::ONE)]);
@@ -124,8 +123,9 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constr
             adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
         },
         Constraint {
+            // note that this is much more easily done in the frequency domain.
             base:        Box::new(move |tp, _| {
-                (tp[0].clone() - Polynomial::constant(leaf.clone())) // note that this is much more easily done in the frequency domain.
+                (tp[0].clone() - Polynomial::constant(leaf.clone()))
                     * (tp[4].clone() - Polynomial::constant(leaf.clone()))
             }),
             numerator:   no_rows.clone(),
@@ -142,25 +142,24 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constr
             base:        Box::new(|tp, g| {
                 (tp[6].clone() - tp[0].shift(g)) * (tp[6].clone() - tp[4].shift(g))
             }),
-            // (&this.right.x - &next.left.source) * (&this.right.x - &next.right.source),
             numerator:   last_row.clone(),
-            denominator: every_hash_start_row.clone(),
+            denominator: hash_end_rows.clone(),
             adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
         },
         Constraint {
-            base:        Box::new(move |tp, g| {
+            base:        Box::new(move |tp, _| {
                 tp[6].clone() - Polynomial::constant(shift_point_x.clone())
             }),
             numerator:   no_rows.clone(),
-            denominator: hash_end_rows.clone(), // name is flipped
+            denominator: hash_start_rows.clone(), // name is flipped
             adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
         },
         Constraint {
-            base:        Box::new(move |tp, g| {
+            base:        Box::new(move |tp, _| {
                 tp[7].clone() - Polynomial::constant(shift_point_y.clone())
             }),
             numerator:   no_rows.clone(),
-            denominator: hash_end_rows.clone(),
+            denominator: hash_start_rows.clone(),
             adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
         },
         // Constraint {
