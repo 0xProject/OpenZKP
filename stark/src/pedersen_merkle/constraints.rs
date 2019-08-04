@@ -129,18 +129,18 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constr
         },
         Constraint {
             base:        Box::new(move |tp, _| {
-                (tp[0].clone() - Polynomial::constant(leaf.clone()))
+                (tp[0].clone() - Polynomial::constant(leaf.clone())) // note that this is much more easily done in the frequency domain.
                     * (tp[4].clone() - Polynomial::constant(leaf.clone()))
             }),
             numerator:   no_rows.clone(),
             denominator: first_row.clone(),
-            adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
+            adjustment:  Polynomial::from_sparse(&[(trace_length, FieldElement::ONE)]),
         },
         // Constraint {
-        //     base:        Box::new(move |tp, _| Polynomial::constant(root.clone()) - tp[4].clone()),
+        //     base:        Box::new(move |tp, _| Polynomial::constant(root.clone()) - tp[5].clone()),
         //     numerator:   no_rows.clone(),
         //     denominator: last_row.clone(),
-        //     adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
+        //     adjustment:  Polynomial::from_sparse(&[(trace_length, FieldElement::ONE)]),
         // },
         // Constraint {
         //     base:        Box::new(|tp, g| {
@@ -749,7 +749,7 @@ mod test {
         let trace_polynomials = get_trace_polynomials();
 
         let mut constraint_coefficients = vec![FieldElement::ZERO; 100];
-        for i in 0..16 {
+        for i in 0..18 {
             constraint_coefficients[i] = FieldElement::ONE;
         }
 
