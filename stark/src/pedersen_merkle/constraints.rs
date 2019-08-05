@@ -202,14 +202,24 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constr
             numerator:   hash_end_rows.clone(),
             denominator: every_row.clone(),
         },
+        Constraint {
+            base:        Box::new(move |tp, g| tp[0].clone()),
+            numerator:   no_rows.clone(),
+            denominator: field_element_end_rows.clone(),
+        },
+        Constraint {
+            base:        Box::new(move |tp, g| tp[0].clone()),
+            numerator:   no_rows.clone(),
+            denominator: hash_end_rows.clone(),
+        },
     ]
 }
 
 // Constraint expression for left_no_add_x: left_bit_neg * (right_pt__x_row0 -
 // left_pt__x_row1). Constraint expression for left_no_add_y: left_bit_neg *
-// (right_pt__y_row0 - left_pt__y_row1). Constraint expression for
-// left_src_vanish_start: left_src_row0. Constraint expression for
-// left_src_vanish_end: left_src_row0.
+// (right_pt__y_row0 - left_pt__y_row1).
+// Constraint expression for left_src_vanish_start: left_src_row0.
+// Constraint expression for left_src_vanish_end: left_src_row0.
 
 // Constraint expression for right_src_bits: right_bit * (right_bit - 1).
 // Constraint expression for right_add_points/slope: right_bit *
