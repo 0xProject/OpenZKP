@@ -49,19 +49,16 @@ pub fn get_fibonacci_constraints(
             base:        Box::new(|tp, g| tp[0].shift(g) - tp[1].clone()),
             numerator:   last_row.clone(),
             denominator: every_row.clone(),
-            adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
         },
         Constraint {
             base:        Box::new(|tp, g| tp[1].shift(g) - tp[1].clone() - tp[0].clone()),
             numerator:   last_row.clone(),
             denominator: every_row.clone(),
-            adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
         },
         Constraint {
             base:        Box::new(|tp, _| tp[0].clone() - Polynomial::new(&[FieldElement::ONE])),
             numerator:   no_rows.clone(),
             denominator: first_row,
-            adjustment:  Polynomial::from_sparse(&[(1, FieldElement::ONE)]),
         },
         Constraint {
             base:        Box::new(move |tp, _| {
@@ -69,7 +66,6 @@ pub fn get_fibonacci_constraints(
             }),
             numerator:   no_rows,
             denominator: claim_index_row,
-            adjustment:  Polynomial::from_sparse(&[(1, FieldElement::ONE)]),
         },
     ]
 }

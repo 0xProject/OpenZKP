@@ -78,49 +78,41 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constr
             base:        Box::new(|tp, _| tp[0].clone()),
             numerator:   no_rows.clone(),
             denominator: no_rows.clone(),
-            adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
         },
         Constraint {
             base:        Box::new(|tp, _| tp[1].clone()),
             numerator:   no_rows.clone(),
             denominator: no_rows.clone(),
-            adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
         },
         Constraint {
             base:        Box::new(|tp, _| tp[2].clone()),
             numerator:   no_rows.clone(),
             denominator: no_rows.clone(),
-            adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
         },
         Constraint {
             base:        Box::new(|tp, _| tp[3].clone()),
             numerator:   no_rows.clone(),
             denominator: no_rows.clone(),
-            adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
         },
         Constraint {
             base:        Box::new(|tp, _| tp[4].clone()),
             numerator:   no_rows.clone(),
             denominator: no_rows.clone(),
-            adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
         },
         Constraint {
             base:        Box::new(|tp, _| tp[5].clone()),
             numerator:   no_rows.clone(),
             denominator: no_rows.clone(),
-            adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
         },
         Constraint {
             base:        Box::new(|tp, _| tp[6].clone()),
             numerator:   no_rows.clone(),
             denominator: no_rows.clone(),
-            adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
         },
         Constraint {
             base:        Box::new(|tp, _| tp[7].clone()),
             numerator:   no_rows.clone(),
             denominator: no_rows.clone(),
-            adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
         },
         Constraint {
             // note that this is much more easily done in the frequency domain.
@@ -130,13 +122,11 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constr
             }),
             numerator:   no_rows.clone(),
             denominator: first_row.clone(),
-            adjustment:  Polynomial::from_sparse(&[(trace_length, FieldElement::ONE)]),
         },
         Constraint {
             base:        Box::new(move |tp, _| Polynomial::constant(root.clone()) - tp[6].clone()),
             numerator:   no_rows.clone(),
             denominator: last_row.clone(),
-            adjustment:  Polynomial::from_sparse(&[(trace_length, FieldElement::ONE)]),
         },
         Constraint {
             base:        Box::new(|tp, g| {
@@ -144,7 +134,6 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constr
             }),
             numerator:   last_row.clone(),
             denominator: hash_end_rows.clone(),
-            adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
         },
         Constraint {
             base:        Box::new(move |tp, _| {
@@ -152,7 +141,6 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constr
             }),
             numerator:   no_rows.clone(),
             denominator: hash_start_rows.clone(), // name is flipped
-            adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
         },
         Constraint {
             base:        Box::new(move |tp, _| {
@@ -160,7 +148,6 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constr
             }),
             numerator:   no_rows.clone(),
             denominator: hash_start_rows.clone(),
-            adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
         },
         Constraint {
             base:        Box::new(|tp, g| {
@@ -169,7 +156,6 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constr
             }),
             numerator:   hash_end_rows.clone(),
             denominator: every_row.clone(),
-            adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
         },
         Constraint {
             base:        Box::new(move |tp, g| {
@@ -179,19 +165,15 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constr
             }),
             numerator:   hash_end_rows.clone(),
             denominator: every_row.clone(),
-            adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
         },
         Constraint {
             base:        Box::new(move |tp, g| {
                 let left_bit = get_left_bit(tp, g);
-                // next.left.slope.square() - &left_bit * (&this.right.x + &q_x_left +
-                // &next.left.x),
                 tp[1].shift(g) * tp[1].shift(g)
                     - left_bit * (tp[6].clone() + q_x_left_2.clone() + tp[2].shift(g))
             }),
             numerator:   hash_end_rows.clone(),
             denominator: every_row.clone(),
-            adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
         },
     ]
 }

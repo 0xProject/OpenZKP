@@ -83,7 +83,6 @@ pub struct Constraint {
     pub base:        Box<Fn(&[Polynomial], &FieldElement) -> Polynomial>,
     pub denominator: Polynomial,
     pub numerator:   Polynomial,
-    pub adjustment:  Polynomial,
 }
 
 // This groupable impl allows the fri tree layers to get grouped and use the
