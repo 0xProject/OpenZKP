@@ -255,55 +255,36 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constr
             numerator:   hash_end_rows.clone(),
             denominator: every_row.clone(),
         },
-        // Constraint {
-        //     base:        Box::new(move |tp, g| {
-        //         let left_bit = get_left_bit(tp, g);
-        //         (Polynomial::constant(FieldElement::ONE) - left_bit)
-        //             * (tp[6].clone() - tp[2].shift(g))
-        //     }),
-        //     numerator:   hash_end_rows.clone(),
-        //     denominator: every_row.clone(),
-        // },
-        // Constraint {
-        //     base:        Box::new(move |tp, g| {
-        //         let left_bit = get_left_bit(tp, g);
-        //         (Polynomial::constant(FieldElement::ONE) - left_bit)
-        //             * (tp[7].clone() - tp[3].shift(g))
-        //     }),
-        //     numerator:   hash_end_rows.clone(),
-        //     denominator: every_row.clone(),
-        // },
-        // Constraint {
-        //     base:        Box::new(move |tp, g| tp[0].clone()),
-        //     numerator:   no_rows.clone(),
-        //     denominator: field_element_end_rows.clone(),
-        // },
-        // Constraint {
-        //     base:        Box::new(move |tp, g| tp[0].clone()),
-        //     numerator:   no_rows.clone(),
-        //     denominator: hash_end_rows.clone(),
-        // },
+        Constraint {
+            base:        Box::new(move |tp, g| {
+                let right_bit = get_right_bit(tp, g);
+                (Polynomial::constant(FieldElement::ONE) - right_bit)
+                    * (tp[2].shift(g) - tp[6].shift(g))
+            }),
+            numerator:   hash_end_rows.clone(),
+            denominator: every_row.clone(),
+        },
+        Constraint {
+            base:        Box::new(move |tp, g| {
+                let right_bit = get_right_bit(tp, g);
+                (Polynomial::constant(FieldElement::ONE) - right_bit)
+                    * (tp[3].shift(g) - tp[7].shift(g))
+            }),
+            numerator:   hash_end_rows.clone(),
+            denominator: every_row.clone(),
+        },
+        Constraint {
+            base:        Box::new(move |tp, g| tp[4].clone()),
+            numerator:   no_rows.clone(),
+            denominator: field_element_end_rows.clone(),
+        },
+        Constraint {
+            base:        Box::new(move |tp, g| tp[4].clone()),
+            numerator:   no_rows.clone(),
+            denominator: hash_end_rows.clone(),
+        },
     ]
 }
-
-// Constraint expression for left_no_add_x: left_bit_neg * (right_pt__x_row0 -
-// left_pt__x_row1). Constraint expression for left_no_add_y: left_bit_neg *
-// (right_pt__y_row0 - left_pt__y_row1).
-// Constraint expression for left_src_vanish_start: left_src_row0.
-// Constraint expression for left_src_vanish_end: left_src_row0.
-
-// Constraint expression for right_src_bits: right_bit * (right_bit - 1).
-// Constraint expression for right_add_points/slope: right_bit *
-// (left_pt__y_row1 - q_y_right) - right_slope_row1 * (left_pt__x_row1 -
-// q_x_right). Constraint expression for right_add_points/x: right_slope_row1 *
-// right_slope_row1 - right_bit * (left_pt__x_row1 + q_x_right +
-// right_pt__x_row1). Constraint expression for right_add_points/y: right_bit *
-// (left_pt__y_row1 + right_pt__y_row1) - right_slope_row1 * (left_pt__x_row1 -
-// right_pt__x_row1). Constraint expression for right_no_add_x: right_bit_neg *
-// (left_pt__x_row1 - right_pt__x_row1). Constraint expression for
-// right_no_add_y: right_bit_neg * (left_pt__y_row1 - right_pt__y_row1).
-// Constraint expression for right_src_vanish_start: right_src_row0.
-// Constraint expression for right_src_vanish_end: right_src_row0.
 
 struct Row {
     left:  Subrow,
@@ -837,7 +818,7 @@ mod test {
     }
 
     #[test]
-    fn wayne() {
+    fn new_matches_old_constraints() {
         let trace_polynomials = get_trace_polynomials();
 
         let constraints = get_pedersen_merkle_constraints(&get_public_input());
@@ -860,5 +841,25 @@ mod test {
         let new = constraint_polynomial.evaluate(&x);
 
         assert_eq!(old, new);
+    }
+
+    #[test]
+    fn wayne() {
+        let constraint_polynomial = get_constraint_polynomial(
+            &get_trace_polynomials(),
+            &get_pedersen_merkle_constraints(&get_public_input()),
+            &get_coefficients(),
+        );
+
+        let oods_point = FieldElement::from_hex_str(
+            "0x273966fc4697d1762d51fe633f941e92f87bdda124cf7571007a4681b140c05",
+        );
+        let oods_value = constraint_polynomial.evaluate(&oods_point);
+
+        let expected = FieldElement::from_hex_str(
+            "0x77d10d22df8a41ee56095fc18c0d02dcd101c2e5749ff65458828bbd3c820db",
+        );
+
+        assert_eq!(oods_value, expected);
     }
 }
