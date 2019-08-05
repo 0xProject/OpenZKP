@@ -8,7 +8,10 @@ mod merkle;
 mod mmap_vec;
 mod polynomial;
 mod proofs;
+mod trace_table;
 mod utils;
+
+pub use trace_table::TraceTable;
 
 pub use merkle::verify;
 pub use proofs::{stark_proof, ProofParams};

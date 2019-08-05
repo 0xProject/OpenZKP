@@ -20,7 +20,7 @@ fn main() {
         "00000000000000000000000000000000000000000000000000000000cafebabe"
     ));
     let trace_table = get_trace_table(1_048_576, witness.clone());
-    let claim_fib = trace_table.elements[2_000_000].clone();
+    let claim_fib = trace_table[(1_000_000, 0)].clone();
     let start = Instant::now();
     let potential_proof = stark_proof(
         &trace_table,
