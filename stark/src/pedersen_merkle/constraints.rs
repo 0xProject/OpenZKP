@@ -237,24 +237,26 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constr
             numerator:   hash_end_rows.clone(),
             denominator: every_row.clone(),
         },
-        // Constraint {
-        //     base:        Box::new(move |tp, g| {
-        //         let left_bit = get_left_bit(tp, g);
-        //         tp[1].shift(g) * tp[1].shift(g)
-        //             - left_bit * (tp[6].clone() + q_x_left_2.clone() + tp[2].shift(g))
-        //     }),
-        //     numerator:   hash_end_rows.clone(),
-        //     denominator: every_row.clone(),
-        // },
-        // Constraint {
-        //     base:        Box::new(move |tp, g| {
-        //         let left_bit = get_left_bit(tp, g);
-        //         left_bit * (tp[7].clone() + tp[3].shift(g))
-        //             - tp[1].shift(g) * (tp[6].clone() - tp[2].shift(g))
-        //     }),
-        //     numerator:   hash_end_rows.clone(),
-        //     denominator: every_row.clone(),
-        // },
+        Constraint {
+            base:        Box::new(move |tp, g| {
+                let right_bit = get_right_bit(tp, g);
+                // right_slope_row1 * right_slope_row1 - right_bit * (left_pt__x_row1 + q_x_right + right_pt__x_row1).
+                tp[5].shift(g) * tp[5].shift(g)
+                    - right_bit * (tp[2].shift(g) + q_x_right_2.clone() + tp[6].shift(g))
+            }),
+            numerator:   hash_end_rows.clone(),
+            denominator: every_row.clone(),
+        },
+        Constraint {
+            base:        Box::new(move |tp, g| {
+                let right_bit = get_right_bit(tp, g);
+                // right_bit * (left_pt__y_row1 + right_pt__y_row1) - right_slope_row1 * (left_pt__x_row1 - right_pt__x_row1).
+                right_bit * (tp[3].shift(g) + tp[7].shift(g))
+                    - tp[5].shift(g) * (tp[2].shift(g) - tp[6].shift(g))
+            }),
+            numerator:   hash_end_rows.clone(),
+            denominator: every_row.clone(),
+        },
         // Constraint {
         //     base:        Box::new(move |tp, g| {
         //         let left_bit = get_left_bit(tp, g);
