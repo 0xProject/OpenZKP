@@ -32,7 +32,7 @@ impl ConstraintSystem for Fibonacci {
 
         // The system
         Constraints {
-            trace_degree: Self::TRACE_LENGTH,
+            trace_length: Self::TRACE_LENGTH,
             num_columns:  Self::NUM_COLUMNS,
             constraints:  vec![
                 (Trace(0, 0) - 1.into()) * first_row,

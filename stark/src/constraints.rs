@@ -2,7 +2,7 @@ use crate::rational_expression::RationalExpression;
 use primefield::FieldElement;
 
 pub struct Constraints {
-    trace_degree: usize,
+    trace_length: usize,
     num_columns:  usize,
     constraints:  Vec<RationalExpression>,
 }
