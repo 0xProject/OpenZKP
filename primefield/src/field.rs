@@ -140,6 +140,44 @@ fn cumulative_product(elements: &[FieldElement]) -> Vec<FieldElement> {
         .collect()
 }
 
+macro_rules! impl_from_uint {
+    ($t:ty) => {
+        impl From<$t> for FieldElement {
+            fn from(n: $t) -> Self {
+                FieldElement(to_montgomery(&U256::from(n)))
+            }
+        }
+    };
+}
+
+impl_from_uint!(u8);
+impl_from_uint!(u16);
+impl_from_uint!(u32);
+impl_from_uint!(u64);
+impl_from_uint!(u128);
+impl_from_uint!(usize);
+
+macro_rules! impl_from_int {
+    ($t:ty) => {
+        impl From<$t> for FieldElement {
+            fn from(n: $t) -> Self {
+                if n >= 0 {
+                    FieldElement(to_montgomery(&U256::from(n)))
+                } else {
+                    FieldElement(to_montgomery(&U256::from(-n))).neg()
+                }
+            }
+        }
+    };
+}
+
+impl_from_int!(i8);
+impl_from_int!(i16);
+impl_from_int!(i32);
+impl_from_int!(i64);
+impl_from_int!(i128);
+impl_from_int!(isize);
+
 impl From<U256> for FieldElement {
     fn from(n: U256) -> Self {
         FieldElement(to_montgomery(&n))
