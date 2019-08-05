@@ -2,10 +2,12 @@ use crate::{
     fft::{fft_cofactor_bit_reversed, ifft},
     mmap_vec::MmapVec,
     pedersen_merkle::{
+        constraints::get_pedersen_merkle_constraints,
         input::{get_private_input, get_public_input},
         trace_table::get_trace,
     },
     polynomial::Polynomial,
+    proofs::get_constraint_polynomial,
     utils::Reversible,
 };
 use primefield::FieldElement;
@@ -72,10 +74,47 @@ pub fn get_extended_trace_table() -> Vec<MmapVec<FieldElement>> {
     extended_trace_table
 }
 
+pub fn evaluate_constraint_polynomial_on_extended_domain(
+    constraint_coefficients: &[FieldElement],
+) -> MmapVec<FieldElement> {
+    let constraint_polynomial = get_constraint_polynomial(
+        &get_trace_polynomials(),
+        &get_pedersen_merkle_constraints(&get_public_input()),
+        constraint_coefficients,
+    );
+
+    let trace_length = constraint_polynomial.len();
+
+    let beta = 8usize;
+    let evaluation_length = trace_length * beta;
+    let evaluation_generator = FieldElement::root(U256::from(evaluation_length as u64)).unwrap();
+    let evaluation_offset = FieldElement::GENERATOR;
+
+    let mut cosets = vec![Vec::with_capacity(trace_length); beta];
+    (0..beta)
+        .into_par_iter()
+        .map(|i| {
+            let reverse_i = i.bit_reverse() >> (64 - 4);
+            let cofactor =
+                &evaluation_offset * evaluation_generator.pow(U256::from(reverse_i as u64));
+            fft_cofactor_bit_reversed(&constraint_polynomial.reverse_coefficients(), &cofactor)
+        })
+        .collect_into_vec(&mut cosets);
+
+    let mut constraint_polynomial_on_extended_domain: MmapVec<FieldElement> =
+        MmapVec::with_capacity(evaluation_length);
+    for coset in cosets {
+        for element in coset.iter() {
+            constraint_polynomial_on_extended_domain.push(element.clone());
+        }
+    }
+    constraint_polynomial_on_extended_domain
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::merkle::make_tree;
+    use crate::{merkle::make_tree, pedersen_merkle::constraints::get_coefficients};
     use hex_literal::*;
 
     #[test]
@@ -102,6 +141,19 @@ mod tests {
         assert_eq!(
             merkle_tree[1],
             hex!("b00a4c7f03959e01df2504fb73d2b238a8ab08b2000000000000000000000000")
+        );
+    }
+
+    #[test]
+    fn constraint_merkle_root_is_correct() {
+        let constraint_polynomial_on_extended_domain =
+            evaluate_constraint_polynomial_on_extended_domain(&get_coefficients());
+
+        let merkle_tree = make_tree(&constraint_polynomial_on_extended_domain);
+
+        assert_eq!(
+            merkle_tree[1],
+            hex!("2e821fe1f3062acdbd3a4bd0be2293f4264abc7b000000000000000000000000")
         );
     }
 }

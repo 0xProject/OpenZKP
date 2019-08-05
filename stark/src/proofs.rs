@@ -740,7 +740,6 @@ mod tests {
         // Checks that the low degree extension calculation is working
         let i = 13644usize;
         let reverse_i = i.bit_reverse_at(eval_domain_size);
-        // this is failing!
         assert_eq!(TP0.evaluate(&eval_offset_x[reverse_i]), LDEn[0][i]);
         assert_eq!(TP1.evaluate(&eval_offset_x[reverse_i]), LDEn[1][i]);
 
