@@ -452,16 +452,35 @@ impl From<i128> for U256 {
     }
 }
 
-// TODO: These are lossy casts, should we keep them?
-impl From<&U256> for u64 {
-    fn from(n: &U256) -> u64 {
-        n.c0
-    }
+macro_rules! as_int {
+    ($name:ident, $type:ty) => {
+        pub fn $name(&self) -> $type {
+            self.c0 as $type
+        }
+    };
 }
 
-impl From<&U256> for u128 {
-    fn from(n: &U256) -> u128 {
-        u128::from(n.c0) + (u128::from(n.c1) << 64)
+// We don't want newlines between the macro invocations.
+#[rustfmt::skip]
+impl U256 {
+    as_int!(as_u8, u8);
+    as_int!(as_u16, u16);
+    as_int!(as_u32, u32);
+    as_int!(as_u64, u64);
+    as_int!(as_usize, usize);
+    as_int!(as_i8, i8);
+    as_int!(as_i16, i16);
+    as_int!(as_i32, i32);
+    as_int!(as_i64, i64);
+    as_int!(as_isize, isize);
+
+    // Clippy thinks casting u64 to u128 may be lossy.
+    pub fn as_u128(&self) -> u128 {
+        (self.c0 as u128) | ((self.c1 as u128) << 64)
+    }
+
+    pub fn as_i128(&self) -> i128 {
+        (self.c0 as i128) | ((self.c1 as i128) << 64)
     }
 }
 
