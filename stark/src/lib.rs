@@ -2,13 +2,17 @@
 #![warn(clippy::all)]
 #![deny(warnings)]
 mod channel;
+mod constraint_system;
+mod constraints;
 mod fft;
 mod fibonacci;
+mod fibonacci2;
 mod merkle;
 mod mmap_vec;
 mod polynomial;
 mod proofs;
 mod rational_expression;
+mod trace_table;
 mod utils;
 
 pub use merkle::verify;
