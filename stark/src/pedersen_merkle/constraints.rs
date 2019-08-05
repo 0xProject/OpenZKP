@@ -162,35 +162,37 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constr
             denominator: hash_start_rows.clone(),
             adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
         },
-        // Constraint {
-        //     base:        Box::new(|tp, g| {
-        //         let left_bit = get_left_bit(tp, g);
-        //         left_bit.clone() * (Polynomial::constant(FieldElement::ONE) - left_bit)
-        //     }),
-        //     numerator:   no_rows.clone(),
-        //     denominator: every_row.clone(),
-        //     adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
-        // },
-        // Constraint {
-        //     base:        Box::new(move |tp, g| {
-        //         let left_bit = get_left_bit(tp, g);
-        //         left_bit * (tp[7].clone() - q_y_left.clone())
-        //             - tp[1].shift(g) * (tp[6].clone() - q_x_left_1.clone())
-        //     }),
-        //     numerator:   no_rows.clone(),
-        //     denominator: every_row.clone(),
-        //     adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
-        // },
-        // Constraint {
-        //     base:        Box::new(move |tp, g| {
-        //         let left_bit = get_left_bit(tp, g);
-        //         tp[1].clone() * tp[1].clone()
-        //             - left_bit * (tp[6].clone() + q_x_left_2.clone() + tp[2].shift(g))
-        //     }),
-        //     numerator:   no_rows.clone(),
-        //     denominator: every_row.clone(),
-        //     adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
-        // },
+        Constraint {
+            base:        Box::new(|tp, g| {
+                let left_bit = get_left_bit(tp, g);
+                left_bit.clone() * (left_bit - Polynomial::constant(FieldElement::ONE))
+            }),
+            numerator:   hash_end_rows.clone(),
+            denominator: every_row.clone(),
+            adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
+        },
+        Constraint {
+            base:        Box::new(move |tp, g| {
+                let left_bit = get_left_bit(tp, g);
+                left_bit * (tp[7].clone() - q_y_left.clone())
+                    - tp[1].shift(g) * (tp[6].clone() - q_x_left_1.clone())
+            }),
+            numerator:   hash_end_rows.clone(),
+            denominator: every_row.clone(),
+            adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
+        },
+        Constraint {
+            base:        Box::new(move |tp, g| {
+                let left_bit = get_left_bit(tp, g);
+                // next.left.slope.square() - &left_bit * (&this.right.x + &q_x_left +
+                // &next.left.x),
+                tp[1].shift(g) * tp[1].shift(g)
+                    - left_bit * (tp[6].clone() + q_x_left_2.clone() + tp[2].shift(g))
+            }),
+            numerator:   hash_end_rows.clone(),
+            denominator: every_row.clone(),
+            adjustment:  Polynomial::from_sparse(&[(trace_length - 1, FieldElement::ONE)]),
+        },
     ]
 }
 
@@ -401,10 +403,16 @@ pub fn eval_c_direct(
     ];
 
     let numerator_indices = vec![
-        2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 2, 2, 1, 1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1, 1, 2, 2,
+        2, 2, 2, 2, 2, 2, 2, 2, // asdfasdf
+        2, 2, 0, 2, 2, // asdfasdf
+        1, 1, 1, 1, 1, 1, 2, 2, // asdfasdf
+        1, 1, 1, 1, 1, 1, 2, 2, // asdfasdf
     ];
     let denominator_indices = vec![
-        6, 6, 6, 6, 6, 6, 6, 6, 0, 1, 2, 3, 3, 4, 4, 4, 4, 4, 4, 5, 2, 4, 4, 4, 4, 4, 4, 5, 2,
+        6, 6, 6, 6, 6, 6, 6, 6, // asdfa
+        0, 1, 2, 3, 3, // asdfasdf
+        4, 4, 4, 4, 4, 4, 5, 2, // asdfasdf
+        4, 4, 4, 4, 4, 4, 5, 2, // asdfasdf
     ];
     let adjustment_indices = vec![
         0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 4, 5, 5, 5, 5, 5, 5, 4, 4, 5, 5, 5, 5, 5, 5, 4, 4,
@@ -744,8 +752,9 @@ mod test {
     fn wayne() {
         let trace_polynomials = get_trace_polynomials();
 
+        let constraints = get_pedersen_merkle_constraints(&get_public_input());
         let mut constraint_coefficients = vec![FieldElement::ZERO; 100];
-        for i in 0..26 {
+        for i in 0..2 * constraints.len() {
             constraint_coefficients[i] = FieldElement::ONE;
         }
 
@@ -758,11 +767,8 @@ mod test {
             &constraint_coefficients,
         );
 
-        let constraint_polynomial = get_constraint_polynomial(
-            &trace_polynomials,
-            &get_pedersen_merkle_constraints(&get_public_input()),
-            &constraint_coefficients,
-        );
+        let constraint_polynomial =
+            get_constraint_polynomial(&trace_polynomials, &constraints, &constraint_coefficients);
         let new = constraint_polynomial.evaluate(&x);
 
         assert_eq!(old, new);
