@@ -5,7 +5,7 @@ use std::ops::{Add, Div, Mul, Sub};
 pub enum RationalExpression {
     X,
     Constant(FieldElement),
-    Trace(usize, Box<RationalExpression>),
+    Trace(usize, isize),
     Add(Box<RationalExpression>, Box<RationalExpression>),
     Neg(Box<RationalExpression>),
     Mul(Box<RationalExpression>, Box<RationalExpression>),
@@ -13,9 +13,15 @@ pub enum RationalExpression {
     Exp(Box<RationalExpression>, usize),
 }
 
-impl From<FieldElement> for RationalExpression {
+impl From<i32> for RationalExpression {
+    fn from(value: i32) -> Self {
+        RationalExpression::Constant(value.into())
+    }
+}
+
+impl From<&FieldElement> for RationalExpression {
     fn from(value: FieldElement) -> Self {
-        RationalExpression::Constant(value)
+        RationalExpression::Constant(value.clone())
     }
 }
 
@@ -59,11 +65,6 @@ impl Div for RationalExpression {
 
 #[allow(dead_code)] // TODO
 impl RationalExpression {
-    /// Substitutes x with the given expression.
-    pub fn at(&self, _x: &RationalExpression) -> RationalExpression {
-        unimplemented!() // TODO
-    }
-
     /// Numerator and denominator degree of the expression in X.
     ///
     /// Calculates an upper bound. Cancelations may occur.
@@ -124,18 +125,6 @@ impl RationalExpression {
             _ => unimplemented!(),
         }
     }
-
-    // TODO
-    // pub fn eval_poly(&self, trace_table: &[&Polynomial]) -> Polynomial {
-    // use RationalExpression::*;
-    // match self {
-    // X => x.clone(),
-    // Constant(value) => value.clone(),
-    // Trace(i, exp) => trace_table[i],
-    // Add(a, b) => a.eval(trace_table, x) + b.eval(trace_table),
-    // _ => unimplemented!(),
-    // }
-    // }
 }
 
 struct Constraints {
@@ -157,27 +146,19 @@ pub fn fibonacci(index: usize, value: &FieldElement) -> Constraints {
     );
     assert!(index < trace_degree);
 
-    // Trace table values
-    // TODO: Do we need the argument to be an expression? It is always of the
-    // form X * g^i. Not using this form is likely an error.
-    let a = Trace(0, Box::new(X));
-    let b = Trace(1, Box::new(X));
-    let an = Trace(0, Box::new(X * g));
-    let bn = Trace(1, Box::new(X * g));
-
     // Constraint repetitions
-    let first_row = RationalExpression::from(FieldElement::ONE) / (X - FieldElement::ONE.into());
-    let target_row = RationalExpression::from(FieldElement::ONE) / (X - Exp(Box::new(g), index));
+    let first_row = RationalExpression::from(1) / (X - 1.into());
+    let target_row = RationalExpression::from(1) / (X - Exp(Box::new(g), index));
     let every_row = (X - Exp(Box::new(g), trace_degree)) / (X - Exp(Box::new(g), index));
 
     // The system
     Constraints {
         trace_degree,
         constraints: vec![
-            (a - FieldElement::ONE.into()) * first_row,
-            (a - value.clone().into()) * target_row,
-            (an - b) * every_row,
-            (bn - a - b) * every_row,
+            (Trace(0, 0) - 1.into()) * first_row,
+            (Trace(1, 0) - value.into()) * target_row,
+            (Trace(0, 1) - Trace(1, 0)) * every_row,
+            (Trace(1, 1) - Trace(0, 0) - Trace(1, 0)) * every_row,
         ],
     }
 }
