@@ -8,6 +8,7 @@ mod merkle;
 mod mmap_vec;
 mod polynomial;
 mod proofs;
+mod rational_expression;
 mod utils;
 
 pub use merkle::verify;
