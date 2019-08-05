@@ -474,7 +474,6 @@ impl U256 {
     as_int!(as_i64, i64);
     as_int!(as_isize, isize);
 
-    // Clippy thinks casting u64 to u128 may be lossy.
     pub fn as_u128(&self) -> u128 {
         (self.c0 as u128) | ((self.c1 as u128) << 64)
     }
