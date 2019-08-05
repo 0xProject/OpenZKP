@@ -390,18 +390,6 @@ impl U256 {
     }
 }
 
-impl From<&U256> for u64 {
-    fn from(n: &U256) -> u64 {
-        n.c0
-    }
-}
-
-impl From<&U256> for u128 {
-    fn from(n: &U256) -> u128 {
-        u128::from(n.c0) + (u128::from(n.c1) << 64)
-    }
-}
-
 macro_rules! impl_from_uint {
     ($t:ty) => {
         impl From<$t> for U256 {
@@ -461,6 +449,19 @@ impl From<i128> for U256 {
                 u64::max_value(),
             )
         }
+    }
+}
+
+// TODO: These are lossy casts, should we keep them?
+impl From<&U256> for u64 {
+    fn from(n: &U256) -> u64 {
+        n.c0
+    }
+}
+
+impl From<&U256> for u128 {
+    fn from(n: &U256) -> u128 {
+        u128::from(n.c0) + (u128::from(n.c1) << 64)
     }
 }
 
