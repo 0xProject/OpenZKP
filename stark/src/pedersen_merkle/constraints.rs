@@ -62,7 +62,8 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constr
     let q_x_left_1 = Polynomial::periodic(&periodic_columns.left_x_coefficients, path_length);
     let q_x_left_2 = Polynomial::periodic(&periodic_columns.left_x_coefficients, path_length);
     let q_y_left = Polynomial::periodic(&periodic_columns.left_y_coefficients, path_length);
-    let q_x_right = Polynomial::periodic(&periodic_columns.right_x_coefficients, path_length);
+    let q_x_right_1 = Polynomial::periodic(&periodic_columns.right_x_coefficients, path_length);
+    let q_x_right_2 = Polynomial::periodic(&periodic_columns.right_x_coefficients, path_length);
     let q_y_right = Polynomial::periodic(&periodic_columns.right_y_coefficients, path_length);
 
     fn get_left_bit(
@@ -71,6 +72,13 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constr
     ) -> Polynomial {
         trace_polynomials[0].clone()
             - &FieldElement::from(U256::from(2u64)) * &trace_polynomials[0].shift(trace_generator)
+    }
+    fn get_right_bit(
+        trace_polynomials: &[Polynomial],
+        trace_generator: &FieldElement,
+    ) -> Polynomial {
+        trace_polynomials[4].clone()
+            - &FieldElement::from(U256::from(2u64)) * &trace_polynomials[4].shift(trace_generator)
     }
 
     vec![
@@ -212,6 +220,69 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constr
             numerator:   no_rows.clone(),
             denominator: hash_end_rows.clone(),
         },
+        Constraint {
+            base:        Box::new(|tp, g| {
+                let right_bit = get_right_bit(tp, g);
+                right_bit.clone() * (right_bit - Polynomial::constant(FieldElement::ONE))
+            }),
+            numerator:   hash_end_rows.clone(),
+            denominator: every_row.clone(),
+        },
+        Constraint {
+            base:        Box::new(move |tp, g| {
+                let right_bit = get_right_bit(tp, g);
+                right_bit * (tp[3].shift(g) - q_y_right.clone())
+                    - tp[5].shift(g) * (tp[2].shift(g) - q_x_right_1.clone())
+            }),
+            numerator:   hash_end_rows.clone(),
+            denominator: every_row.clone(),
+        },
+        // Constraint {
+        //     base:        Box::new(move |tp, g| {
+        //         let left_bit = get_left_bit(tp, g);
+        //         tp[1].shift(g) * tp[1].shift(g)
+        //             - left_bit * (tp[6].clone() + q_x_left_2.clone() + tp[2].shift(g))
+        //     }),
+        //     numerator:   hash_end_rows.clone(),
+        //     denominator: every_row.clone(),
+        // },
+        // Constraint {
+        //     base:        Box::new(move |tp, g| {
+        //         let left_bit = get_left_bit(tp, g);
+        //         left_bit * (tp[7].clone() + tp[3].shift(g))
+        //             - tp[1].shift(g) * (tp[6].clone() - tp[2].shift(g))
+        //     }),
+        //     numerator:   hash_end_rows.clone(),
+        //     denominator: every_row.clone(),
+        // },
+        // Constraint {
+        //     base:        Box::new(move |tp, g| {
+        //         let left_bit = get_left_bit(tp, g);
+        //         (Polynomial::constant(FieldElement::ONE) - left_bit)
+        //             * (tp[6].clone() - tp[2].shift(g))
+        //     }),
+        //     numerator:   hash_end_rows.clone(),
+        //     denominator: every_row.clone(),
+        // },
+        // Constraint {
+        //     base:        Box::new(move |tp, g| {
+        //         let left_bit = get_left_bit(tp, g);
+        //         (Polynomial::constant(FieldElement::ONE) - left_bit)
+        //             * (tp[7].clone() - tp[3].shift(g))
+        //     }),
+        //     numerator:   hash_end_rows.clone(),
+        //     denominator: every_row.clone(),
+        // },
+        // Constraint {
+        //     base:        Box::new(move |tp, g| tp[0].clone()),
+        //     numerator:   no_rows.clone(),
+        //     denominator: field_element_end_rows.clone(),
+        // },
+        // Constraint {
+        //     base:        Box::new(move |tp, g| tp[0].clone()),
+        //     numerator:   no_rows.clone(),
+        //     denominator: hash_end_rows.clone(),
+        // },
     ]
 }
 
