@@ -50,7 +50,7 @@ mod tests {
 
     #[test]
     fn test_hash_0_0() {
-        let elements = [U256::from(0u128), U256::from(0u128)];
+        let elements = [U256::from(0), U256::from(0)];
         let result: U256 = match SHIFT_POINT {
             Affine::Zero => panic!(),
             Affine::Point { x, .. } => x.into(),
@@ -80,7 +80,7 @@ mod tests {
 
     #[test]
     fn test_old_hash_0_0() {
-        let elements = [U256::from(0u128), U256::from(0u128)];
+        let elements = [U256::from(0), U256::from(0)];
         let result: U256 = match SHIFT_POINT {
             Affine::Zero => panic!(),
             Affine::Point { x, .. } => x.into(),

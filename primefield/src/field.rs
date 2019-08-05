@@ -140,6 +140,83 @@ fn cumulative_product(elements: &[FieldElement]) -> Vec<FieldElement> {
         .collect()
 }
 
+macro_rules! impl_from_uint {
+    ($t:ty) => {
+        impl From<$t> for FieldElement {
+            fn from(n: $t) -> Self {
+                FieldElement(to_montgomery(&U256::from(n)))
+            }
+        }
+    };
+}
+
+impl_from_uint!(u8);
+impl_from_uint!(u16);
+impl_from_uint!(u32);
+impl_from_uint!(u64);
+impl_from_uint!(u128);
+impl_from_uint!(usize);
+
+macro_rules! impl_from_int {
+    ($t:ty) => {
+        impl From<$t> for FieldElement {
+            fn from(n: $t) -> Self {
+                if n >= 0 {
+                    FieldElement(to_montgomery(&U256::from(n)))
+                } else {
+                    FieldElement(to_montgomery(&U256::from(-n))).neg()
+                }
+            }
+        }
+    };
+}
+
+impl_from_int!(i8);
+impl_from_int!(i16);
+impl_from_int!(i32);
+impl_from_int!(i64);
+impl_from_int!(i128);
+impl_from_int!(isize);
+
+macro_rules! as_uint {
+    ($name:ident, $type:ty) => {
+        pub fn $name(&self) -> $type {
+            U256::from(self).$name()
+        }
+    };
+}
+
+macro_rules! as_int {
+    ($name:ident, $type:ty) => {
+        pub fn $name(&self) -> $type {
+            let n = U256::from(self);
+            let half = Self::MODULUS >> 1;
+            if n < half {
+                n.$name()
+            } else {
+                (n - Self::MODULUS).$name()
+            }
+        }
+    };
+}
+
+// We don't want newlines between the macro invocations.
+#[rustfmt::skip]
+impl FieldElement {
+    as_uint!(as_u8, u8);
+    as_uint!(as_u16, u16);
+    as_uint!(as_u32, u32);
+    as_uint!(as_u64, u64);
+    as_uint!(as_u128, u128);
+    as_uint!(as_usize, usize);
+    as_int!(as_i8, i8);
+    as_int!(as_i16, i16);
+    as_int!(as_i32, i32);
+    as_int!(as_i64, i64);
+    as_int!(as_i128, i128);
+    as_int!(as_isize, isize);
+}
+
 impl From<U256> for FieldElement {
     fn from(n: U256) -> Self {
         FieldElement(to_montgomery(&n))
@@ -341,6 +418,16 @@ mod tests {
     }
 
     #[quickcheck]
+    fn from_as_isize(n: isize) -> bool {
+        FieldElement::from(n).as_isize() == n
+    }
+
+    #[quickcheck]
+    fn from_as_i128(n: i128) -> bool {
+        FieldElement::from(n).as_i128() == n
+    }
+
+    #[quickcheck]
     fn add_identity(a: FieldElement) -> bool {
         &a + FieldElement::ZERO == a
     }
@@ -390,22 +477,22 @@ mod tests {
 
     #[quickcheck]
     fn pow_0(a: FieldElement) -> bool {
-        a.pow(U256::from(0u128)) == FieldElement::ONE
+        a.pow(0.into()) == FieldElement::ONE
     }
 
     #[quickcheck]
     fn pow_1(a: FieldElement) -> bool {
-        a.pow(U256::from(1u128)) == a
+        a.pow(1.into()) == a
     }
 
     #[quickcheck]
     fn pow_2(a: FieldElement) -> bool {
-        a.pow(U256::from(2u128)) == a.square()
+        a.pow(2.into()) == a.square()
     }
 
     #[quickcheck]
     fn pow_n(a: FieldElement, n: usize) -> bool {
-        a.pow(U256::from(n as u128)) == repeat_n(a, n).product()
+        a.pow(n.into()) == repeat_n(a, n).product()
     }
 
     #[quickcheck]
@@ -415,10 +502,7 @@ mod tests {
 
     #[test]
     fn zeroth_root_of_unity() {
-        assert_eq!(
-            FieldElement::root(U256::from(0u64)).unwrap(),
-            FieldElement::ONE
-        );
+        assert_eq!(FieldElement::root(0.into()).unwrap(), FieldElement::ONE);
     }
 
     #[test]

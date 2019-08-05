@@ -358,7 +358,7 @@ impl U256 {
             r *= Wrapping(2) - c * r; // mod 2^32
             r *= Wrapping(2) - c * r; // mod 2^64
             let mut r = Wrapping(u128::from(r.0));
-            r *= Wrapping(2) - Wrapping(u128::from(self)) * r; // mod 2^128
+            r *= Wrapping(2) - Wrapping(self.as_u128()) * r; // mod 2^128
             let mut r = U256::from(r.0);
             r *= &(U256::from(2u64) - &(r.clone() * self)); // mod 2^256
             Some(r)
@@ -390,22 +390,100 @@ impl U256 {
     }
 }
 
-impl From<&U256> for u64 {
-    fn from(n: &U256) -> u64 {
-        n.c0
+macro_rules! impl_from_uint {
+    ($t:ty) => {
+        impl From<$t> for U256 {
+            fn from(n: $t) -> U256 {
+                Self::new(n as u64, 0, 0, 0)
+            }
+        }
+    };
+}
+
+impl_from_uint!(u8);
+impl_from_uint!(u16);
+impl_from_uint!(u32);
+impl_from_uint!(u64);
+impl_from_uint!(usize);
+
+impl From<u128> for U256 {
+    fn from(n: u128) -> U256 {
+        Self::new(n as u64, (n >> 64) as u64, 0, 0)
     }
 }
 
-impl From<&U256> for u128 {
-    fn from(n: &U256) -> u128 {
-        u128::from(n.c0) + (u128::from(n.c1) << 64)
+macro_rules! impl_from_int {
+    ($t:ty) => {
+        impl From<$t> for U256 {
+            fn from(n: $t) -> U256 {
+                if n >= 0 {
+                    Self::new(n as u64, 0, 0, 0)
+                } else {
+                    Self::new(
+                        n as u64,
+                        u64::max_value(),
+                        u64::max_value(),
+                        u64::max_value(),
+                    )
+                }
+            }
+        }
+    };
+}
+
+impl_from_int!(i8);
+impl_from_int!(i16);
+impl_from_int!(i32);
+impl_from_int!(i64);
+impl_from_int!(isize);
+
+impl From<i128> for U256 {
+    fn from(n: i128) -> U256 {
+        if n >= 0 {
+            Self::new(n as u64, (n >> 64) as u64, 0, 0)
+        } else {
+            Self::new(
+                n as u64,
+                (n >> 64) as u64,
+                u64::max_value(),
+                u64::max_value(),
+            )
+        }
     }
 }
 
-impl<T: Into<u128>> From<T> for U256 {
-    fn from(n: T) -> U256 {
-        let m: u128 = n.into();
-        Self::new(m as u64, (m >> 64) as u64, 0, 0)
+macro_rules! as_int {
+    ($name:ident, $type:ty) => {
+        pub fn $name(&self) -> $type {
+            self.c0 as $type
+        }
+    };
+}
+
+// We don't want newlines between the macro invocations.
+#[rustfmt::skip]
+impl U256 {
+    as_int!(as_u8, u8);
+    as_int!(as_u16, u16);
+    as_int!(as_u32, u32);
+    as_int!(as_u64, u64);
+    as_int!(as_usize, usize);
+    as_int!(as_i8, i8);
+    as_int!(as_i16, i16);
+    as_int!(as_i32, i32);
+    as_int!(as_i64, i64);
+    as_int!(as_isize, isize);
+
+    // Clippy is afraid that casting u64 to u128 is lossy
+    #[allow(clippy::cast_lossless)]
+    pub fn as_u128(&self) -> u128 {
+        (self.c0 as u128) | ((self.c1 as u128) << 64)
+    }
+
+    // Clippy is afraid that casting u64 to u128 is lossy
+    #[allow(clippy::cast_lossless)]
+    pub fn as_i128(&self) -> i128 {
+        (self.c0 as i128) | ((self.c1 as i128) << 64)
     }
 }
 
