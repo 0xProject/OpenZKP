@@ -33,31 +33,31 @@ pub fn eval_whole_loop(
     claim_index: usize,
     claim_fib: &FieldElement,
 ) -> Vec<FieldElement> {
-    let eval_domain_size_usize = LDEn[0].len();
-    let eval_domain_size = eval_domain_size_usize as u64;
-    let beta = 2_u64.pow(4);
+    let eval_domain_size = LDEn[0].len();
+    let beta = 2usize.pow(4);
+    assert!(eval_domain_size % beta == 0);
     let trace_len = eval_domain_size / beta;
 
     let omega = FieldElement::root(U256::from(trace_len * beta)).unwrap();
     let g = omega.pow(U256::from(beta));
     let gen = FieldElement::GENERATOR;
 
-    let mut CC = Vec::with_capacity(eval_domain_size_usize);
+    let mut CC = Vec::with_capacity(eval_domain_size);
     let g_trace = g.pow(U256::from(trace_len - 1));
-    let g_claim = g.pow(U256::from(claim_index as u64));
+    let g_claim = g.pow(U256::from(claim_index));
     let x = gen.clone();
     let x_trace = (&x).pow(U256::from(trace_len));
     let x_1023 = (&x).pow(U256::from(trace_len - 1));
     let omega_trace = (&omega).pow(U256::from(trace_len));
     let omega_1023 = (&omega).pow(U256::from(trace_len - 1));
 
-    let x_omega_cycle = geometric_series(&x, &omega, eval_domain_size_usize);
-    let x_trace_cycle = geometric_series(&x_trace, &omega_trace, eval_domain_size_usize);
-    let x_1023_cycle = geometric_series(&x_1023, &omega_1023, eval_domain_size_usize);
+    let x_omega_cycle = geometric_series(&x, &omega, eval_domain_size);
+    let x_trace_cycle = geometric_series(&x_trace, &omega_trace, eval_domain_size);
+    let x_1023_cycle = geometric_series(&x_1023, &omega_1023, eval_domain_size);
 
-    let mut x_trace_sub_one: Vec<FieldElement> = Vec::with_capacity(eval_domain_size_usize);
-    let mut x_sub_one: Vec<FieldElement> = Vec::with_capacity(eval_domain_size_usize);
-    let mut x_g_claim_cycle: Vec<FieldElement> = Vec::with_capacity(eval_domain_size_usize);
+    let mut x_trace_sub_one: Vec<FieldElement> = Vec::with_capacity(eval_domain_size);
+    let mut x_sub_one: Vec<FieldElement> = Vec::with_capacity(eval_domain_size);
+    let mut x_g_claim_cycle: Vec<FieldElement> = Vec::with_capacity(eval_domain_size);
 
     x_omega_cycle
         .par_iter()
@@ -80,14 +80,14 @@ pub fn eval_whole_loop(
     x_sub_one = held.pop().unwrap();
     x_trace_sub_one = held.pop().unwrap();
 
-    (0..eval_domain_size_usize)
+    (0..eval_domain_size)
         .into_par_iter()
         .map(|reverse_index| {
             // OPT: Eliminate index by generating x_* cycles in bit-reversed order using
             // fft.
-            let index = reverse_index.bit_reverse_at(eval_domain_size_usize);
-            let next_reverse_index = ((index + beta as usize) % eval_domain_size_usize)
-                .bit_reverse_at(eval_domain_size_usize);
+            let index = reverse_index.bit_reverse_at(eval_domain_size);
+            let next_reverse_index =
+                ((index + beta as usize) % eval_domain_size).bit_reverse_at(eval_domain_size);
 
             let P0 = LDEn[0][reverse_index].clone();
             let P1 = LDEn[1][reverse_index].clone();

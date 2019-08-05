@@ -428,22 +428,22 @@ mod tests {
 
     #[quickcheck]
     fn pow_0(a: FieldElement) -> bool {
-        a.pow(U256::from(0u128)) == FieldElement::ONE
+        a.pow(0.into()) == FieldElement::ONE
     }
 
     #[quickcheck]
     fn pow_1(a: FieldElement) -> bool {
-        a.pow(U256::from(1u128)) == a
+        a.pow(1.into()) == a
     }
 
     #[quickcheck]
     fn pow_2(a: FieldElement) -> bool {
-        a.pow(U256::from(2u128)) == a.square()
+        a.pow(2.into()) == a.square()
     }
 
     #[quickcheck]
     fn pow_n(a: FieldElement, n: usize) -> bool {
-        a.pow(U256::from(n as u128)) == repeat_n(a, n).product()
+        a.pow(n.into()) == repeat_n(a, n).product()
     }
 
     #[quickcheck]
@@ -453,10 +453,7 @@ mod tests {
 
     #[test]
     fn zeroth_root_of_unity() {
-        assert_eq!(
-            FieldElement::root(U256::from(0u64)).unwrap(),
-            FieldElement::ONE
-        );
+        assert_eq!(FieldElement::root(0.into()).unwrap(), FieldElement::ONE);
     }
 
     #[test]

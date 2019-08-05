@@ -118,7 +118,7 @@ mod tests {
         m.extend(v.as_slice());
 
         for (i, x) in m.iter_mut().enumerate() {
-            *x += FieldElement::from(U256::from(i as u64));
+            *x += FieldElement::from(U256::from(i));
         }
 
         for i in 0..10u64 {

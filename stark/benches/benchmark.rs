@@ -64,7 +64,7 @@ where
 
 fn merkle_tree_size(crit: &mut Criterion) {
     log_size_bench(crit, "Merkle tree size", &SIZES, move |bench, size| {
-        let leaves: Vec<_> = (0..size).map(|i| U256::from(i as u64)).collect();
+        let leaves: Vec<_> = (0..size).map(|i| U256::from(i)).collect();
         bench.iter(|| black_box(make_tree(black_box(&leaves))))
     });
 }
@@ -72,7 +72,7 @@ fn merkle_tree_size(crit: &mut Criterion) {
 fn merkle_tree_threads(crit: &mut Criterion) {
     let size: usize = *SIZES.last().unwrap();
     log_thread_bench(crit, "Merkle tree threads", size, move |bench| {
-        let leaves: Vec<_> = (0..size).map(|i| U256::from(i as u64)).collect();
+        let leaves: Vec<_> = (0..size).map(|i| U256::from(i)).collect();
         bench.iter(|| black_box(make_tree(black_box(&leaves))))
     });
 }
@@ -82,9 +82,7 @@ fn fft_size(crit: &mut Criterion) {
         let cofactor = FieldElement::from(u256h!(
             "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
         ));
-        let leaves: Vec<_> = (0..size)
-            .map(|i| FieldElement::from(U256::from(i as u64)))
-            .collect();
+        let leaves: Vec<_> = (0..size).map(|i| FieldElement::from(i)).collect();
         bench.iter(|| {
             black_box(fft_cofactor_bit_reversed(
                 black_box(&leaves),
@@ -100,9 +98,7 @@ fn fft_threads(crit: &mut Criterion) {
         let cofactor = FieldElement::from(u256h!(
             "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
         ));
-        let leaves: Vec<_> = (0..size)
-            .map(|i| FieldElement::from(U256::from(i as u64)))
-            .collect();
+        let leaves: Vec<_> = (0..size).map(|i| FieldElement::from(i)).collect();
         bench.iter(|| {
             black_box(fft_cofactor_bit_reversed(
                 black_box(&leaves),

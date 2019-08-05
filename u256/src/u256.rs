@@ -358,7 +358,7 @@ impl U256 {
             r *= Wrapping(2) - c * r; // mod 2^32
             r *= Wrapping(2) - c * r; // mod 2^64
             let mut r = Wrapping(u128::from(r.0));
-            r *= Wrapping(2) - Wrapping(u128::from(self)) * r; // mod 2^128
+            r *= Wrapping(2) - Wrapping(self.as_u128()) * r; // mod 2^128
             let mut r = U256::from(r.0);
             r *= &(U256::from(2u64) - &(r.clone() * self)); // mod 2^256
             Some(r)

@@ -193,8 +193,8 @@ pub fn stark_proof(
     params: &ProofParams,
 ) -> ProverChannel {
     let trace_len = trace.elements.len() / trace.cols;
-    let omega = FieldElement::root(U256::from((trace_len * params.blowup) as u64)).unwrap();
-    let g = omega.pow(U256::from(params.blowup as u64));
+    let omega = FieldElement::root(U256::from(trace_len * params.blowup)).unwrap();
+    let g = omega.pow(U256::from(params.blowup));
     let eval_domain_size = trace_len * params.blowup;
 
     let eval_x = geometric_series(&FieldElement::ONE, &omega, eval_domain_size);
@@ -308,10 +308,11 @@ fn get_indices(num: usize, bits: u32, proof: &mut ProverChannel) -> Vec<usize> {
     let mut query_indices = Vec::with_capacity(num + 3);
     while query_indices.len() < num {
         let val: U256 = proof.get_random();
-        query_indices.push(((val.clone() >> (0x100 - 0x040)).c0 & (2_u64.pow(bits) - 1)) as usize);
-        query_indices.push(((val.clone() >> (0x100 - 0x080)).c0 & (2_u64.pow(bits) - 1)) as usize);
-        query_indices.push(((val.clone() >> (0x100 - 0x0C0)).c0 & (2_u64.pow(bits) - 1)) as usize);
-        query_indices.push((val.c0 & (2_u64.pow(bits) - 1)) as usize);
+        let mask = 2usize.pow(bits) - 1;
+        query_indices.push((val.clone() >> (0x100 - 0x040)).as_usize() & mask);
+        query_indices.push((val.clone() >> (0x100 - 0x080)).as_usize() & mask);
+        query_indices.push((val.clone() >> (0x100 - 0x0C0)).as_usize() & mask);
+        query_indices.push(val.as_usize() & mask);
     }
     query_indices.truncate(num);
     (&mut query_indices).sort_unstable();
@@ -327,7 +328,7 @@ pub fn geometric_series(base: &FieldElement, step: &FieldElement, len: usize) ->
         .par_chunks_mut(step_len)
         .enumerate()
         .for_each(|(i, slice)| {
-            let mut hold = base * step.pow(U256::from((i * step_len) as u64));
+            let mut hold = base * step.pow(U256::from(i * step_len));
             for element in slice.iter_mut() {
                 *element = hold.clone();
                 hold *= step;
@@ -362,14 +363,14 @@ fn calculate_low_degree_extensions(
     eval_x: &[FieldElement],
 ) -> Vec<Vec<FieldElement>> {
     let trace_len = trace_poly[0].len();
-    let omega = FieldElement::root(U256::from((trace_len * params.blowup) as u64)).unwrap();
+    let omega = FieldElement::root(U256::from(trace_len * params.blowup)).unwrap();
     let gen = FieldElement::GENERATOR;
 
     let mut LDEn = vec![Vec::with_capacity(eval_x.len()); trace_poly.len()];
     LDEn.par_iter_mut().enumerate().for_each(|(x, col)| {
         for index in 0..params.blowup {
             let reverse_index = index.bit_reverse_at(params.blowup);
-            let cofactor = &gen * omega.pow(U256::from(reverse_index as u64));
+            let cofactor = &gen * omega.pow(U256::from(reverse_index));
             col.extend(fft_cofactor_bit_reversed(trace_poly[x], &cofactor));
         }
     });
@@ -391,7 +392,7 @@ fn calculate_constraints_on_domain(
     let mut CC;
     let trace_len = trace_poly[0].len();
     let mut x = FieldElement::GENERATOR;
-    let omega = FieldElement::root(U256::from((trace_len * blowup) as u64)).unwrap();
+    let omega = FieldElement::root(U256::from(trace_len * blowup)).unwrap();
     let eval_domain_size = trace_len * blowup;
 
     match constraints.eval_loop {
@@ -466,8 +467,8 @@ fn calculate_out_of_domain_constraints(
 ) -> Vec<FieldElement> {
     let eval_domain_size = eval_x.len();
     let trace_len = eval_domain_size / blowup;
-    let omega = FieldElement::root(U256::from((trace_len * blowup) as u64)).unwrap();
-    let g = omega.pow(U256::from(blowup as u64));
+    let omega = FieldElement::root(U256::from(trace_len * blowup)).unwrap();
+    let g = omega.pow(U256::from(blowup));
 
     let mut CO = Vec::with_capacity(eval_domain_size);
     let x = FieldElement::GENERATOR;
