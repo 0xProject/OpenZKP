@@ -402,10 +402,65 @@ impl From<&U256> for u128 {
     }
 }
 
-impl<T: Into<u128>> From<T> for U256 {
-    fn from(n: T) -> U256 {
-        let m: u128 = n.into();
-        Self::new(m as u64, (m >> 64) as u64, 0, 0)
+macro_rules! impl_from_uint {
+    ($t:ty) => {
+        impl From<$t> for U256 {
+            fn from(n: $t) -> U256 {
+                Self::new(n as u64, 0, 0, 0)
+            }
+        }
+    };
+}
+
+impl_from_uint!(u8);
+impl_from_uint!(u16);
+impl_from_uint!(u32);
+impl_from_uint!(u64);
+impl_from_uint!(usize);
+
+impl From<u128> for U256 {
+    fn from(n: u128) -> U256 {
+        Self::new(n as u64, (n >> 64) as u64, 0, 0)
+    }
+}
+
+macro_rules! impl_from_int {
+    ($t:ty) => {
+        impl From<$t> for U256 {
+            fn from(n: $t) -> U256 {
+                if n >= 0 {
+                    Self::new(n as u64, 0, 0, 0)
+                } else {
+                    Self::new(
+                        n as u64,
+                        u64::max_value(),
+                        u64::max_value(),
+                        u64::max_value(),
+                    )
+                }
+            }
+        }
+    };
+}
+
+impl_from_int!(i8);
+impl_from_int!(i16);
+impl_from_int!(i32);
+impl_from_int!(i64);
+impl_from_int!(isize);
+
+impl From<i128> for U256 {
+    fn from(n: i128) -> U256 {
+        if n >= 0 {
+            Self::new(n as u64, (n >> 64) as u64, 0, 0)
+        } else {
+            Self::new(
+                n as u64,
+                (n >> 64) as u64,
+                u64::max_value(),
+                u64::max_value(),
+            )
+        }
     }
 }
 
