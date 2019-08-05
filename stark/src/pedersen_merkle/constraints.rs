@@ -140,7 +140,7 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constr
                 tp[6].clone() - Polynomial::constant(shift_point_x.clone())
             }),
             numerator:   no_rows.clone(),
-            denominator: hash_start_rows.clone(), // name is flipped
+            denominator: hash_start_rows.clone(),
         },
         Constraint {
             base:        Box::new(move |tp, _| {
@@ -175,11 +175,17 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constr
             numerator:   hash_end_rows.clone(),
             denominator: every_row.clone(),
         },
+        Constraint {
+            base:        Box::new(move |tp, g| {
+                let left_bit = get_left_bit(tp, g);
+                left_bit * (tp[7].clone() + tp[3].shift(g)) - tp[1].shift(g) * (tp[6].clone() - tp[2].shift(g))
+            }),
+            numerator:   hash_end_rows.clone(),
+            denominator: every_row.clone(),
+        },
     ]
 }
 
-// Constraint expression for left_add_points/y: left_bit * (right_pt__y_row0 +
-// left_pt__y_row1) - left_slope_row1 * (right_pt__x_row0 - left_pt__x_row1).
 // Constraint expression for left_no_add_x: left_bit_neg * (right_pt__x_row0 -
 // left_pt__x_row1). Constraint expression for left_no_add_y: left_bit_neg *
 // (right_pt__y_row0 - left_pt__y_row1). Constraint expression for
