@@ -183,6 +183,25 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constr
             numerator:   hash_end_rows.clone(),
             denominator: every_row.clone(),
         },
+        Constraint {
+            base:        Box::new(move |tp, g| {
+                let left_bit = get_left_bit(tp, g);
+                // FieldElement::ONE - &left_bit) * (&this.right.x - &next.left.x),
+                (Polynomial::constant(FieldElement::ONE) - left_bit) * (tp[6].clone() - tp[2].shift(g))
+                // left_bit_neg * (right_pt__x_row0 - left_pt__x_row1)
+            }),
+            numerator:   hash_end_rows.clone(),
+            denominator: every_row.clone(),
+        },
+        Constraint {
+            base:        Box::new(move |tp, g| {
+                let left_bit = get_left_bit(tp, g);
+                (Polynomial::constant(FieldElement::ONE) - left_bit) * (tp[7].clone() - tp[3].shift(g))
+                // left_bit_neg * (right_pt__y_row0 - left_pt__y_row1).
+            }),
+            numerator:   hash_end_rows.clone(),
+            denominator: every_row.clone(),
+        },
     ]
 }
 
