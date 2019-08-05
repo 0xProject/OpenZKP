@@ -1,3 +1,6 @@
+// TODO
+#![allow(dead_code)]
+
 use primefield::FieldElement;
 use std::ops::{Add, Div, Index, Mul, Sub};
 
@@ -98,6 +101,10 @@ impl RationalExpression {
                 let (n, d) = a.degree(trace_degree);
                 (d, n)
             }
+            Exp(a, e) => {
+                let (n, d) = a.degree(trace_degree);
+                (e * n, e * d)
+            }
         }
     }
 
@@ -111,7 +118,7 @@ impl RationalExpression {
         match self {
             X => x.clone(),
             Constant(value) => value.clone(),
-            Trace(&i, &j) => trace_table(i, x * g.pow(j)),
+            &Trace(i, j) => trace_table(i, &(x * g.pow(j.into()))),
             Add(a, b) => a.eval(trace_table, x, g) + b.eval(trace_table, x, g),
             Neg(a) => -&a.eval(trace_table, x, g),
             Inv(a) => {
@@ -126,7 +133,7 @@ impl RationalExpression {
 
 // Constraints
 
-struct Constraints {
+pub struct Constraints {
     trace_degree: usize,
     num_columns:  usize,
     constraints:  Vec<RationalExpression>,
@@ -140,7 +147,7 @@ impl Constraints {
 
 // Trace table
 
-struct TraceTable {
+pub struct TraceTable {
     trace_length: usize,
     num_columns:  usize,
     values:       Vec<FieldElement>,
@@ -160,7 +167,7 @@ impl Index<usize> for TraceTable {
     type Output = [FieldElement];
 
     fn index(&self, i: usize) -> &[FieldElement] {
-        self.values[i * self.num_columns..(i + 1) * self.num_columns]
+        &self.values[i * self.num_columns..(i + 1) * self.num_columns]
     }
 }
 
@@ -168,31 +175,32 @@ impl Index<(usize, usize)> for TraceTable {
     type Output = FieldElement;
 
     fn index(&self, (i, j): (usize, usize)) -> &Self::Output {
-        self.values[i * self.num_columns + j]
+        &self.values[i * self.num_columns + j]
     }
 }
 
 // Constraint System
 
 pub trait ConstraintSystem {
-    type PublicInput;
-    type PrivateInput;
+    type Public;
+    type Private;
 
-    fn constraints(public_input: &Self::PublicInput) -> Constraints;
+    fn constraints(public: &Self::Public) -> Constraints;
 
-    fn trace(public_inputs: &Self::PublicInput, private_input: &Self::PrivateInput) -> TraceTable;
+    fn trace(public: &Self::Public, private: &Self::Private) -> TraceTable;
 }
 /// The fibonacci constraint system.
 ///
 /// The public inputs are an index and value in the fibonacci sequence.
-struct Fibonacci;
+pub struct Fibonacci;
 
 impl ConstraintSystem for Fibonacci {
-    type PrivateInput = FieldElement;
-    type PublicInput = (usize, FieldElement);
+    type Private = FieldElement;
+    type Public = (usize, FieldElement);
 
-    fn constraints((&index, value): &Self::PublicInput) -> Constraints {
+    fn constraints((index, value): &Self::Public) -> Constraints {
         use RationalExpression::*;
+        let index = *index;
 
         // Trace table generation
         let trace_degree = 1024usize;
@@ -214,13 +222,13 @@ impl ConstraintSystem for Fibonacci {
             constraints: vec![
                 (Trace(0, 0) - 1.into()) * first_row,
                 (Trace(1, 0) - value.into()) * target_row,
-                (Trace(0, 1) - Trace(1, 0)) * every_row,
+                (Trace(0, 1) - Trace(1, 0)) * every_row.clone(),
                 (Trace(1, 1) - Trace(0, 0) - Trace(1, 0)) * every_row,
             ],
         }
     }
 
-    fn trace(public_inputs: &Self::PublicInput, private_input: &FieldElement) -> TraceTable {
+    fn trace(_public: &Self::Public, _private: &FieldElement) -> TraceTable {
         unimplemented!()
     }
 }
