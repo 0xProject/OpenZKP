@@ -9,11 +9,23 @@ use primefield::{invert_batch, FieldElement};
 use rayon::prelude::*;
 use u256::{u256h, U256};
 
-pub fn get_trace_table(length: usize, secret: FieldElement) -> TraceTable {
+#[allow(dead_code)] // TODO
+#[derive(Debug)]
+pub struct Public {
+    pub index:     usize,
+    pub fibonacci: FieldElement,
+}
+
+#[derive(Debug)]
+pub struct Private {
+    pub secret: FieldElement,
+}
+
+pub fn get_trace_table(length: usize, private: &Private) -> TraceTable {
     // Compute trace table
     let mut trace = TraceTable::new(length, 2);
     trace[(0, 0)] = 1.into();
-    trace[(0, 1)] = secret.clone();
+    trace[(0, 1)] = private.secret.clone();
     for i in 0..(length - 1) {
         trace[(i + 1, 0)] = trace[(i, 1)].clone();
         trace[(i + 1, 1)] = &trace[(i, 0)] + &trace[(i, 1)];

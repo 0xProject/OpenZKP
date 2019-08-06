@@ -2,7 +2,10 @@
 #![deny(warnings)]
 use hex_literal::*;
 use primefield::FieldElement;
-use stark::{get_constraint, get_trace_table, stark_proof, ProofParams};
+use stark::{
+    fibonacci::{get_constraint, get_trace_table, Private},
+    stark_proof, ProofParams,
+};
 use std::time::Instant;
 use u256::{u256h, U256};
 
@@ -11,10 +14,12 @@ fn main() {
     let claim_fib = FieldElement::from(u256h!(
         "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
     ));
-    let witness = FieldElement::from(u256h!(
-        "00000000000000000000000000000000000000000000000000000000cafebabe"
-    ));
-    let trace_table = get_trace_table(1024, witness.clone());
+    let private = Private {
+        secret: FieldElement::from(u256h!(
+            "00000000000000000000000000000000000000000000000000000000cafebabe"
+        )),
+    };
+    let trace_table = get_trace_table(1024, &private);
     let start = Instant::now();
     let potential_proof = stark_proof(
         &trace_table,

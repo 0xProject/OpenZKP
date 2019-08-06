@@ -688,12 +688,14 @@ mod tests {
         let claim_value = FieldElement::from(u256h!(
             "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
         ));
-        let witness = FieldElement::from(u256h!(
-            "00000000000000000000000000000000000000000000000000000000cafebabe"
-        ));
+        let private = Private {
+            secret: FieldElement::from(u256h!(
+                "00000000000000000000000000000000000000000000000000000000cafebabe"
+            )),
+        };
         let expected = hex!("fcf1924f84656e5068ab9cbd44ae084b235bb990eefc0fd0183c77d5645e830e");
         let actual = stark_proof(
-            &get_trace_table(1024, witness),
+            &get_trace_table(1024, &private),
             &get_constraint(),
             claim_index,
             claim_value,
@@ -713,12 +715,14 @@ mod tests {
         let claim_value = FieldElement::from(u256h!(
             "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
         ));
-        let witness = FieldElement::from(u256h!(
-            "00000000000000000000000000000000000000000000000f00dbabe0cafebabe"
-        ));
+        let private = Private {
+            secret: FieldElement::from(u256h!(
+                "00000000000000000000000000000000000000000000000f00dbabe0cafebabe"
+            )),
+        };
         let expected = hex!("5c8e2f6353526e422744a8c11a7a94db1829cb2bfac78bae774b5576c88279c9");
         let actual = stark_proof(
-            &get_trace_table(1024, witness),
+            &get_trace_table(1024, &private),
             &get_constraint(),
             claim_index,
             claim_value,
@@ -738,12 +742,14 @@ mod tests {
         let claim_value = FieldElement::from(u256h!(
             "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
         ));
-        let witness = FieldElement::from(u256h!(
-            "00000000000000000000000000000000000000000000000f00dbabe0cafebabe"
-        ));
+        let private = Private {
+            secret: FieldElement::from(u256h!(
+                "00000000000000000000000000000000000000000000000f00dbabe0cafebabe"
+            )),
+        };
         let expected = hex!("427499a0cd50a90fe7fdf2f039f6dffd71fcc930392151d2eb0ea611c3f312b5");
         let actual = stark_proof(
-            &get_trace_table(4096, witness),
+            &get_trace_table(4096, &private),
             &get_constraint(),
             claim_index,
             claim_value,
@@ -774,6 +780,9 @@ mod tests {
         }
     }
 
+    // TODO: What are we actually testing here? Should we add these as debug_assert
+    // to the main implementation? Should we break up the implementation so we
+    // can test the individual steps?
     #[test]
     // TODO: Naming
     #[allow(non_snake_case)]
@@ -784,9 +793,11 @@ mod tests {
         let claim_value = FieldElement::from(u256h!(
             "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
         ));
-        let witness = FieldElement::from(u256h!(
-            "00000000000000000000000000000000000000000000000000000000cafebabe"
-        ));
+        let private = Private {
+            secret: FieldElement::from(u256h!(
+                "00000000000000000000000000000000000000000000000000000000cafebabe"
+            )),
+        };
 
         let constraints = get_constraint();
         let params = ProofParams {
@@ -816,7 +827,7 @@ mod tests {
         );
 
         // Second check that the trace table function is working.
-        let trace = get_trace_table(1024, witness);
+        let trace = get_trace_table(1024, &private);
         assert_eq!(trace[(1000, 0)], claim_value);
 
         let TPn = interpolate_trace_table(&trace);
