@@ -1,6 +1,9 @@
-use crate::{hash::Hash, hashable::Hashable, masked_keccak::MaskedKeccak, proofs::*};
+use crate::{
+    hash::Hash, hashable::Hashable, masked_keccak::MaskedKeccak, merkle_index::MerkleIndex,
+    proofs::*,
+};
 use rayon::prelude::*;
-use std::marker::Sync;
+use std::marker::{PhantomData, Sync};
 
 struct MerkleNode<'a>(&'a Hash, &'a Hash);
 
@@ -10,6 +13,69 @@ impl Hashable for MerkleNode<'_> {
         hasher.update(self.0.as_bytes());
         hasher.update(self.1.as_bytes());
         hasher.hash()
+    }
+}
+
+// Only internal nodes are stored, not the leaves
+// TODO: We could create a sparse tree where the first n layers are skipped.
+#[derive(Clone, Debug)]
+pub struct MerkleTree<Leaf: Hashable> {
+    num_leafs: usize,
+    cursor:    Option<MerkleIndex>,
+    depth:     usize,
+    nodes:     Vec<Hash>,
+    leaf_type: PhantomData<Leaf>,
+}
+
+#[derive(Clone, Debug)]
+pub struct MerkleProof {
+    decommitments: Vec<Hash>,
+}
+
+#[allow(dead_code)] // TODO: Remove
+impl<Leaf: Hashable> MerkleTree<Leaf> {
+    pub fn new(size: usize) -> Self {
+        assert!(size.is_power_of_two());
+        let depth = size.trailing_zeros() as usize;
+        MerkleTree {
+            num_leafs: size,
+            cursor: Some(MerkleIndex::from_depth_offset(depth, 0)),
+            depth,
+            nodes: vec![Hash::default(); size],
+            leaf_type: PhantomData,
+        }
+    }
+
+    /// Incrementally compute the tree by advancing the cursor
+    pub fn append(&mut self, leaf: &Leaf) {
+        let mut cursor = self.cursor.expect("Can not append more leafs to the tree.");
+        self.nodes[cursor.index()] = leaf.hash();
+        self.cursor = cursor.right_sibling();
+        while cursor.is_right() {
+            cursor = cursor.parent().unwrap();
+            self.nodes[cursor.index()] = MerkleNode(
+                &self.nodes[cursor.left_child().index()],
+                &self.nodes[cursor.right_child().index()],
+            )
+            .hash()
+        }
+    }
+
+    pub fn root(&self) -> &Hash {
+        &self.nodes[MerkleIndex::root().index()]
+    }
+
+    pub fn proof<'a>(&self, _indices: &[usize], _leafs: &Fn(usize) -> &'a Leaf) -> MerkleProof {
+        unimplemented!()
+    }
+
+    pub fn verify<'a>(
+        _root: &Hash,
+        _indices: &[usize],
+        _leafs: &Fn(usize) -> &'a Leaf,
+        _proof: &MerkleProof,
+    ) -> bool {
+        unimplemented!()
     }
 }
 
