@@ -30,7 +30,6 @@ impl TraceTable {
         self.num_columns
     }
 
-    #[allow(dead_code)] // TODO
     pub fn generator(&self) -> FieldElement {
         FieldElement::root(self.trace_length.into()).expect("No generator for trace table length.")
     }
@@ -47,7 +46,11 @@ impl TraceTable {
     }
 
     /// Extract the j-th column as a vector
-    // OPT: Instead of using this function, work with strides.
+    ///
+    /// It allocates a potentially large new vector. Where possible, use
+    /// the index accessors or the column iterator instead. It is unfortunately
+    /// not possible to get a slice of a column (since the representation is
+    /// row first.)
     pub fn column_to_mmapvec(&self, j: usize) -> MmapVec<FieldElement> {
         let mut result: MmapVec<FieldElement> = MmapVec::with_capacity(self.trace_length);
         for v in self.iter_column(j) {
