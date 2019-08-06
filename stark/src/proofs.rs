@@ -9,20 +9,21 @@ use crate::{
 use itertools::Itertools;
 use primefield::{invert_batch, FieldElement};
 use rayon::prelude::*;
+use std::marker::{Send, Sync};
 use u256::U256;
 
 // This trait is for objects where the object is grouped into hashable sets
 // based on index before getting made into a merkle tree, with domain size
 // being the max index [ie the one which if you iterate up to it splits the
 // whole range]
-pub trait Groupable<T: Hashable> {
-    fn make_group(&self, index: usize) -> T;
+pub trait Groupable<LeafType: Hashable> {
+    fn make_group(&self, index: usize) -> LeafType;
     fn domain_size(&self) -> usize;
 }
 
 // This trait is applied to give groupable objects a merkle tree based on their
 // groupings
-pub trait Merkleizable<R: Hashable> {
+pub trait Merkleizable<NodeHash: Hashable> {
     fn merkleize(self) -> Vec<[u8; 32]>;
 }
 
@@ -152,10 +153,10 @@ impl Groupable<U256> for &[FieldElement] {
     }
 }
 
-impl<
-        R: Hashable + std::marker::Send + std::marker::Sync,
-        T: Groupable<R> + std::marker::Send + std::marker::Sync,
-    > Merkleizable<R> for T
+impl<NodeHash, LeafType> Merkleizable<NodeHash> for LeafType
+where
+    NodeHash: Hashable + Send + Sync,
+    LeafType: Groupable<NodeHash> + Send + Sync,
 {
     fn merkleize(self) -> Vec<[u8; 32]> {
         let eval_domain_size = self.domain_size();
