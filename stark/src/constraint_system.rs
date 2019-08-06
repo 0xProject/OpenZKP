@@ -1,4 +1,4 @@
-use crate::{constraints::Constraints, trace_table::TraceTable};
+use crate::{Constraints, TraceTable};
 
 pub trait ConstraintSystem {
     type Public;

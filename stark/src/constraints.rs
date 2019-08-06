@@ -1,4 +1,4 @@
-use crate::rational_expression::RationalExpression;
+use crate::RationalExpression;
 
 #[derive(Clone, Debug)]
 pub struct Constraints {

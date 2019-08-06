@@ -1,7 +1,4 @@
-use crate::{
-    constraint_system::ConstraintSystem, constraints::Constraints,
-    rational_expression::RationalExpression, trace_table::TraceTable,
-};
+use crate::{ConstraintSystem, Constraints, RationalExpression, TraceTable};
 use primefield::FieldElement;
 
 #[derive(Clone, Debug)]

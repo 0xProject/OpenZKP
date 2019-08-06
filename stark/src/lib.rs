@@ -15,6 +15,11 @@ mod rational_expression;
 mod trace_table;
 mod utils;
 
+pub use constraint_system::ConstraintSystem;
+pub use constraints::Constraints;
+pub use rational_expression::RationalExpression;
+pub use trace_table::TraceTable;
+
 pub use merkle::verify;
 pub use proofs::{stark_proof, ProofParams};
 
