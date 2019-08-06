@@ -1,7 +1,7 @@
 use crate::{
     channel::{ProverChannel, RandomGenerator, Writable},
     fft::{bit_reversal_permute, fft_cofactor_bit_reversed, ifft},
-    fibonacci::Public,
+    fibonacci::PublicInput,
     merkle::{self, make_tree, Hashable},
     polynomial::eval_poly,
     utils::Reversible,
@@ -88,13 +88,18 @@ pub struct Constraint<'a, Public> {
     >,
 }
 
-impl<'a> Constraint<'a, Public> {
+impl<'a> Constraint<'a, PublicInput> {
     #[allow(clippy::type_complexity)]
     pub fn new(
         num_constraints: usize,
-        eval: &'a Fn(&FieldElement, &[&[FieldElement]], &Public, &[FieldElement]) -> FieldElement,
+        eval: &'a Fn(
+            &FieldElement,
+            &[&[FieldElement]],
+            &PublicInput,
+            &[FieldElement],
+        ) -> FieldElement,
         eval_loop: Option<
-            &'a Fn(&[&[FieldElement]], &[FieldElement], &Public) -> Vec<FieldElement>,
+            &'a Fn(&[&[FieldElement]], &[FieldElement], &PublicInput) -> Vec<FieldElement>,
         >,
     ) -> Self {
         Self {
@@ -180,10 +185,6 @@ where
     let eval_x = geometric_series(&FieldElement::ONE, &omega, eval_domain_size);
 
     // Initialize a proof channel with the public input.
-    // TODO: Generalize over abstract type PublicInput
-    // let mut public_input = [public.index.to_be_bytes()].concat();
-    // public_input.extend_from_slice(&public.value.0.to_bytes_be());
-    // let mut proof = ProverChannel::new(public_input.as_slice());
     let mut proof = ProverChannel::new();
     proof.write(public);
 
@@ -674,13 +675,13 @@ mod tests {
 
     #[test]
     fn fib_test_1024_python_witness() {
-        let public = Public {
+        let public = PublicInput {
             index: 1000,
             value: FieldElement::from(u256h!(
                 "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
             )),
         };
-        let private = Private {
+        let private = PrivateInput {
             secret: FieldElement::from(u256h!(
                 "00000000000000000000000000000000000000000000000000000000cafebabe"
             )),
@@ -702,13 +703,13 @@ mod tests {
 
     #[test]
     fn fib_test_1024_changed_witness() {
-        let public = Public {
+        let public = PublicInput {
             index: 1000,
             value: FieldElement::from(u256h!(
                 "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
             )),
         };
-        let private = Private {
+        let private = PrivateInput {
             secret: FieldElement::from(u256h!(
                 "00000000000000000000000000000000000000000000000f00dbabe0cafebabe"
             )),
@@ -730,13 +731,13 @@ mod tests {
 
     #[test]
     fn fib_test_4096() {
-        let public = Public {
+        let public = PublicInput {
             index: 4000,
             value: FieldElement::from(u256h!(
                 "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
             )),
         };
-        let private = Private {
+        let private = PrivateInput {
             secret: FieldElement::from(u256h!(
                 "00000000000000000000000000000000000000000000000f00dbabe0cafebabe"
             )),
@@ -782,13 +783,13 @@ mod tests {
     // TODO - See if it's possible to do context cloning and break this into smaller tests
     #[allow(clippy::cognitive_complexity)]
     fn fib_proof_test() {
-        let public = Public {
+        let public = PublicInput {
             index: 1000,
             value: FieldElement::from(u256h!(
                 "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
             )),
         };
-        let private = Private {
+        let private = PrivateInput {
             secret: FieldElement::from(u256h!(
                 "00000000000000000000000000000000000000000000000000000000cafebabe"
             )),

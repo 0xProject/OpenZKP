@@ -3,7 +3,7 @@
 use hex_literal::*;
 use primefield::FieldElement;
 use stark::{
-    fibonacci::{get_constraint, get_trace_table, Private, Public},
+    fibonacci::{get_constraint, get_trace_table, PrivateInput, PublicInput},
     stark_proof, ProofParams,
 };
 use std::{env, time::Instant};
@@ -18,11 +18,11 @@ fn main() {
             .expect("Error building Rayon thread pool.");
     }
 
-    let mut public = Public {
+    let mut public = PublicInput {
         index: 1_000_000,
-        value: FieldElement::ZERO,
+        value: FieldElement::ZERO, // To be overwritten with the correct value.
     };
-    let private = Private {
+    let private = PrivateInput {
         secret: FieldElement::from(u256h!(
             "00000000000000000000000000000000000000000000000000000000cafebabe"
         )),

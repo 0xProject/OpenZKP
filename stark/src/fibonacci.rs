@@ -12,27 +12,27 @@ use u256::{u256h, U256};
 
 #[allow(dead_code)] // TODO
 #[derive(Debug)]
-pub struct Public {
+pub struct PublicInput {
     pub index: usize,
     pub value: FieldElement,
 }
 
 #[derive(Debug)]
-pub struct Private {
+pub struct PrivateInput {
     pub secret: FieldElement,
 }
 
 // TODO: We are abusing Writable here to do initialization. We should
 // probably have a dedicated trait for initializing a channel.
-impl Writable<&Public> for ProverChannel {
-    fn write(&mut self, public: &Public) {
+impl Writable<&PublicInput> for ProverChannel {
+    fn write(&mut self, public: &PublicInput) {
         let mut bytes = [public.index.to_be_bytes()].concat();
         bytes.extend_from_slice(&public.value.0.to_bytes_be());
         self.initialize(bytes.as_slice());
     }
 }
 
-pub fn get_trace_table(length: usize, private: &Private) -> TraceTable {
+pub fn get_trace_table(length: usize, private: &PrivateInput) -> TraceTable {
     // Compute trace table
     let mut trace = TraceTable::new(length, 2);
     trace[(0, 0)] = 1.into();
@@ -49,7 +49,7 @@ pub fn get_trace_table(length: usize, private: &Private) -> TraceTable {
 pub fn eval_whole_loop(
     LDEn: &[&[FieldElement]],
     constraint_coefficients: &[FieldElement],
-    public: &Public,
+    public: &PublicInput,
 ) -> Vec<FieldElement> {
     let eval_domain_size = LDEn[0].len();
     let beta = 2usize.pow(4);
@@ -145,7 +145,7 @@ pub fn eval_whole_loop(
 pub fn eval_c_direct(
     x: &FieldElement,
     polynomials: &[&[FieldElement]],
-    public: &Public,
+    public: &PublicInput,
     constraint_coefficients: &[FieldElement],
 ) -> FieldElement {
     let trace_len = 1024;
@@ -224,6 +224,6 @@ pub fn eval_c_direct(
     eval_C(x.clone())
 }
 
-pub fn get_constraint() -> Constraint<'static, Public> {
+pub fn get_constraint() -> Constraint<'static, PublicInput> {
     Constraint::new(20, &eval_c_direct, Some(&eval_whole_loop))
 }
