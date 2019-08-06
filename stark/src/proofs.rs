@@ -475,21 +475,21 @@ fn calculate_out_of_domain_constraints(
     let eval_domain_size = eval_x.len();
     let trace_len = eval_domain_size / blowup;
     let omega = FieldElement::root(U256::from(trace_len * blowup)).unwrap();
-    let g = omega.pow(U256::from(blowup));
+    let trace_generator = omega.pow(U256::from(blowup));
 
     let mut oods_constraint_lde = Vec::with_capacity(eval_domain_size);
-    let x = FieldElement::GENERATOR;
+    let domain_shift = FieldElement::GENERATOR;
     let mut x_omega_cycle = Vec::with_capacity(eval_domain_size);
     let mut x_oods_cycle: Vec<FieldElement> = Vec::with_capacity(eval_domain_size);
     let mut x_oods_cycle_g: Vec<FieldElement> = Vec::with_capacity(eval_domain_size);
 
     eval_x
         .par_iter()
-        .map(|i| i * &x)
+        .map(|i| i * &domain_shift)
         .collect_into_vec(&mut x_omega_cycle);
     x_omega_cycle
         .par_iter()
-        .map(|i| (i - oods_point, i - oods_point * &g))
+        .map(|i| (i - oods_point, i - oods_point * &trace_generator))
         .unzip_into_vecs(&mut x_oods_cycle, &mut x_oods_cycle_g);
 
     let pool = vec![&x_oods_cycle, &x_oods_cycle_g];

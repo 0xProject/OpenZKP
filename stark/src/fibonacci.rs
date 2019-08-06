@@ -210,7 +210,7 @@ pub fn eval_c_direct(
                 0,
                 1,
             )));
-        r += &constraint_coefficients[6] * (eval_C3.clone())(x.clone());
+        r += &constraint_coefficients[6] * (eval_C3)(x.clone());
         r += &constraint_coefficients[7]
             * &eval_C3(x.clone())
             * x.pow(U256::from(deg_adj(
