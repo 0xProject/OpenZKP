@@ -35,11 +35,22 @@ impl TraceTable {
         FieldElement::root(self.trace_length.into()).expect("No generator for trace table length.")
     }
 
+    pub fn iter_row(&self, i: usize) -> impl Iterator<Item = &FieldElement> {
+        self.values
+            .iter()
+            .skip(i * self.num_columns)
+            .take(self.num_columns)
+    }
+
+    pub fn iter_column(&self, j: usize) -> impl Iterator<Item = &FieldElement> {
+        self.values.iter().skip(j).step_by(self.num_columns)
+    }
+
     /// Extract the j-th column as a vector
     // OPT: Instead of using this function, work with strides.
-    pub fn column(&self, j: usize) -> MmapVec<FieldElement> {
+    pub fn column_to_mmapvec(&self, j: usize) -> MmapVec<FieldElement> {
         let mut result: MmapVec<FieldElement> = MmapVec::with_capacity(self.trace_length);
-        for v in self.values.iter().skip(j).step_by(self.num_columns) {
+        for v in self.iter_column(j) {
             result.push(v.clone());
         }
         result

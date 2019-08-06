@@ -363,7 +363,7 @@ fn interpolate_trace_table(table: &TraceTable) -> Vec<Vec<FieldElement>> {
     let mut result = vec![Vec::new(); table.num_columns()];
     (0..table.num_columns())
         .into_par_iter()
-        .map(|j| ifft(table.column(j).as_slice())) // OPT: use inplace FFT
+        .map(|j| ifft(table.column_to_mmapvec(j).as_slice())) // OPT: use inplace FFT
         .collect_into_vec(&mut result);
     result
 }
