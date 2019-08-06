@@ -169,8 +169,6 @@ where
     }
 }
 
-// TODO: Naming
-#[allow(non_snake_case)]
 pub fn stark_proof(
     trace: &TraceTable,
     constraints: &Constraint,
@@ -186,6 +184,7 @@ pub fn stark_proof(
     let eval_x = geometric_series(&FieldElement::ONE, &omega, eval_domain_size);
 
     // Initialize a proof channel with the public input.
+    // TODO: Generalize over abstract type PublicInput
     let mut public_input = [claim_index.to_be_bytes()].concat();
     public_input.extend_from_slice(&claim_value.0.to_bytes_be());
     let mut proof = ProverChannel::new(public_input.as_slice());
@@ -194,14 +193,16 @@ pub fn stark_proof(
     //
 
     // Compute the low degree extension of the trace table.
-    let TPn = interpolate_trace_table(&trace);
-    let TPn_reference: Vec<&[FieldElement]> = TPn.iter().map(|x| x.as_slice()).collect();
-    let LDEn = calculate_low_degree_extensions(TPn_reference.as_slice(), &params, &eval_x);
-    let LDEn_reference: Vec<&[FieldElement]> = LDEn.iter().map(|x| x.as_slice()).collect();
+    let trace_coefficients = interpolate_trace_table(&trace);
+    let trace_coefficients: Vec<&[FieldElement]> =
+        trace_coefficients.iter().map(|x| x.as_slice()).collect();
+    let trace_lde =
+        calculate_low_degree_extensions(trace_coefficients.as_slice(), &params, &eval_x);
+    let trace_lde_ref: Vec<&[FieldElement]> = trace_lde.iter().map(|x| x.as_slice()).collect();
 
     // Construct a merkle tree over the LDE trace
     // and write the root to the channel.
-    let tree = LDEn.as_slice().merkleize();
+    let tree = trace_lde.as_slice().merkleize();
     proof.write(&tree[1]);
 
     // 2. Constraint commitment
@@ -214,9 +215,9 @@ pub fn stark_proof(
     }
 
     // Combine the constraint polynomials using the coefficients.
-    let CC = calculate_constraints_on_domain(
-        TPn_reference.as_slice(),
-        LDEn_reference.as_slice(),
+    let constraint_lde = calculate_constraints_on_domain(
+        trace_coefficients.as_slice(),
+        trace_lde_ref.as_slice(),
         constraints,
         constraint_coefficients.as_slice(),
         claim_index,
@@ -226,7 +227,7 @@ pub fn stark_proof(
 
     // Construct a merkle tree over the LDE combined constraints
     // and write the root to the channel.
-    let c_tree = CC.as_slice().merkleize();
+    let c_tree = constraint_lde.as_slice().merkleize();
     proof.write(&c_tree[1]);
 
     // 3. Out of domain sampling
@@ -237,7 +238,7 @@ pub fn stark_proof(
     // TODO: expand
     let (oods_point, oods_coefficients, oods_values) = get_out_of_domain_information(
         &mut proof,
-        TPn_reference.as_slice(),
+        trace_coefficients.as_slice(),
         constraint_coefficients.as_slice(),
         claim_index,
         &claim_value,
@@ -246,9 +247,9 @@ pub fn stark_proof(
     );
 
     // Divide out the OODS points from the constraints and combine.
-    let CO = calculate_out_of_domain_constraints(
-        LDEn_reference.as_slice(),
-        CC.as_slice(),
+    let oods_constraint_lde = calculate_out_of_domain_constraints(
+        trace_lde_ref.as_slice(),
+        constraint_lde.as_slice(),
         &oods_point,
         oods_coefficients.as_slice(),
         oods_values.as_slice(),
@@ -257,8 +258,12 @@ pub fn stark_proof(
     );
 
     // 4. FRI layers
-    let (fri_layers, fri_trees) =
-        perform_fri_layering(CO.as_slice(), &mut proof, &params, eval_x.as_slice());
+    let (fri_layers, fri_trees) = perform_fri_layering(
+        oods_constraint_lde.as_slice(),
+        &mut proof,
+        &params,
+        eval_x.as_slice(),
+    );
 
     // 5. Proof of work
     let proof_of_work = proof.pow_find_nonce(params.pow_bits);
@@ -278,7 +283,7 @@ pub fn stark_proof(
     // Decommit the trace table values.
     decommit_with_queries_and_proof(
         query_indices.as_slice(),
-        LDEn.as_slice(),
+        trace_lde.as_slice(),
         tree.as_slice(),
         &mut proof,
     );
@@ -286,7 +291,7 @@ pub fn stark_proof(
     // Decommit the constraint values
     decommit_with_queries_and_proof(
         query_indices.as_slice(),
-        CC.as_slice(),
+        constraint_lde.as_slice(),
         c_tree.as_slice(),
         &mut proof,
     );
@@ -358,13 +363,15 @@ pub fn geometric_series(base: &FieldElement, step: &FieldElement, len: usize) ->
     range
 }
 
-// TODO: Naming
-#[allow(non_snake_case)]
 fn interpolate_trace_table(table: &TraceTable) -> Vec<Vec<FieldElement>> {
     let mut result = vec![Vec::new(); table.num_columns()];
     (0..table.num_columns())
         .into_par_iter()
-        .map(|j| ifft(table.column_to_mmapvec(j).as_slice())) // OPT: use inplace FFT
+        // OPT: Use and FFT that can transform the entire table in one pass,
+        // working on whole rows at a time. That is, it is vectorized over rows.
+        // OPT: Use an in-place FFT. We don't need the trace table after this,
+        // so it can be replaced by a matrix of coefficients.
+        .map(|j| ifft(table.column_to_mmapvec(j).as_slice()))
         .collect_into_vec(&mut result);
     result
 }
