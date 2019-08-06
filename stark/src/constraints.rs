@@ -1,14 +1,8 @@
 use crate::rational_expression::RationalExpression;
-use primefield::FieldElement;
 
+#[derive(Clone, Debug)]
 pub struct Constraints {
-    trace_length: usize,
-    num_columns:  usize,
-    constraints:  Vec<RationalExpression>,
-}
-
-impl Constraints {
-    pub fn combine(&mut self, coefficients: &[FieldElement]) {
-        assert_eq!(coefficients.len(), 2 * self.constraints.len());
-    }
+    pub trace_length: usize,
+    pub num_columns:  usize,
+    pub constraints:  Vec<RationalExpression>,
 }

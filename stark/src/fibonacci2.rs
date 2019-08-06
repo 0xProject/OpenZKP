@@ -4,6 +4,7 @@ use crate::{
 };
 use primefield::FieldElement;
 
+#[derive(Clone, Debug)]
 pub struct Fibonacci;
 
 impl Fibonacci {
