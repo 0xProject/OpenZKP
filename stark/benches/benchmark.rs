@@ -11,7 +11,7 @@ use primefield::FieldElement;
 use rayon::ThreadPoolBuilder;
 use stark::{
     fft_cofactor_bit_reversed,
-    fibonacci::{get_constraint, get_trace_table, Private, Public},
+    fibonacci::{get_constraint, get_trace_table, PrivateInput, PublicInput},
     make_tree, stark_proof, ProofParams,
 };
 use std::{convert::TryInto, marker::Send};
@@ -111,13 +111,13 @@ fn fft_threads(crit: &mut Criterion) {
 }
 
 fn abstracted_fib_proof_make(crit: &mut Criterion) {
-    let public = Public {
+    let public = PublicInput {
         index: 1000,
         value: FieldElement::from(u256h!(
             "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
         )),
     };
-    let private = Private {
+    let private = PrivateInput {
         secret: FieldElement::from(u256h!(
             "00000000000000000000000000000000000000000000000000000000cafebabe"
         )),
