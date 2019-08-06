@@ -4,6 +4,7 @@ use crate::{
     merkle::{self, make_tree, Hashable},
     polynomial::eval_poly,
     utils::Reversible,
+    TraceTable,
 };
 use itertools::Itertools;
 use primefield::{invert_batch, FieldElement};
@@ -23,22 +24,6 @@ pub trait Groupable<T: Hashable> {
 // groupings
 pub trait Merkleizable<R: Hashable> {
     fn merkleize(self) -> Vec<[u8; 32]>;
-}
-
-pub struct TraceTable {
-    pub rows:     usize,
-    pub cols:     usize,
-    pub elements: Vec<FieldElement>,
-}
-
-impl TraceTable {
-    pub fn new(rows: usize, cols: usize, elements: Vec<FieldElement>) -> Self {
-        Self {
-            rows,
-            cols,
-            elements,
-        }
-    }
 }
 
 /// Parameters for Stark proof generation
@@ -192,30 +177,42 @@ pub fn stark_proof(
     claim_value: FieldElement,
     params: &ProofParams,
 ) -> ProverChannel {
-    let trace_len = trace.elements.len() / trace.cols;
-    let omega = FieldElement::root(U256::from(trace_len * params.blowup)).unwrap();
-    let g = omega.pow(U256::from(params.blowup));
-    let eval_domain_size = trace_len * params.blowup;
-
+    // Compute some constants.
+    let g = trace.generator();
+    let eval_domain_size = trace.num_rows() * params.blowup;
+    let omega =
+        FieldElement::root(eval_domain_size.into()).expect("No generator for extended domain.");
     let eval_x = geometric_series(&FieldElement::ONE, &omega, eval_domain_size);
 
-    let TPn = interpolate_trace_table(&trace);
-    let TPn_reference: Vec<&[FieldElement]> = TPn.iter().map(|x| x.as_slice()).collect();
-    let LDEn = calculate_low_degree_extensions(TPn_reference.as_slice(), &params, &eval_x);
-
-    let tree = LDEn.as_slice().merkleize();
-
+    // Initialize a proof channel with the public input.
     let mut public_input = [claim_index.to_be_bytes()].concat();
     public_input.extend_from_slice(&claim_value.0.to_bytes_be());
     let mut proof = ProverChannel::new(public_input.as_slice());
+
+    // 1. Trace commitment.
+    //
+
+    // Compute the low degree extension of the trace table.
+    let TPn = interpolate_trace_table(&trace);
+    let TPn_reference: Vec<&[FieldElement]> = TPn.iter().map(|x| x.as_slice()).collect();
+    let LDEn = calculate_low_degree_extensions(TPn_reference.as_slice(), &params, &eval_x);
+    let LDEn_reference: Vec<&[FieldElement]> = LDEn.iter().map(|x| x.as_slice()).collect();
+
+    // Construct a merkle tree over the LDE trace
+    // and write the root to the channel.
+    let tree = LDEn.as_slice().merkleize();
     proof.write(&tree[1]);
 
+    // 2. Constraint commitment
+    //
+
+    // Read constraint coefficients from the channel.
     let mut constraint_coefficients = Vec::with_capacity(constraints.num_constraints);
     for _i in 0..constraints.num_constraints {
         constraint_coefficients.push(proof.get_random());
     }
 
-    let LDEn_reference: Vec<&[FieldElement]> = LDEn.iter().map(|x| x.as_slice()).collect();
+    // Combine the constraint polynomials using the coefficients.
     let CC = calculate_constraints_on_domain(
         TPn_reference.as_slice(),
         LDEn_reference.as_slice(),
@@ -226,9 +223,17 @@ pub fn stark_proof(
         params.blowup,
     );
 
+    // Construct a merkle tree over the LDE combined constraints
+    // and write the root to the channel.
     let c_tree = CC.as_slice().merkleize();
     proof.write(&c_tree[1]);
 
+    // 3. Out of domain sampling
+    //
+
+    // Read the out of domain sampling point from the channel.
+    // (and do a bunch more things)
+    // TODO: expand
     let (oods_point, oods_coefficients, oods_values) = get_out_of_domain_information(
         &mut proof,
         TPn_reference.as_slice(),
@@ -239,6 +244,7 @@ pub fn stark_proof(
         &g,
     );
 
+    // Divide out the OODS points from the constraints and combine.
     let CO = calculate_out_of_domain_constraints(
         LDEn_reference.as_slice(),
         CC.as_slice(),
@@ -249,30 +255,42 @@ pub fn stark_proof(
         params.blowup,
     );
 
+    // 4. FRI layers
     let (fri_layers, fri_trees) =
         perform_fri_layering(CO.as_slice(), &mut proof, &params, eval_x.as_slice());
 
+    // 5. Proof of work
     let proof_of_work = proof.pow_find_nonce(params.pow_bits);
     debug_assert!(&proof.pow_verify(proof_of_work, params.pow_bits));
     proof.write(proof_of_work);
 
+    // 6. Query decommitments
+    //
+
+    // Fetch query indices from channel.
     let query_indices = get_indices(
         params.queries,
         64 - eval_domain_size.leading_zeros() - 1,
         &mut proof,
     );
+
+    // Decommit the trace table values.
     decommit_with_queries_and_proof(
         query_indices.as_slice(),
         LDEn.as_slice(),
         tree.as_slice(),
         &mut proof,
     );
+
+    // Decommit the constraint values
     decommit_with_queries_and_proof(
         query_indices.as_slice(),
         CC.as_slice(),
         c_tree.as_slice(),
         &mut proof,
     );
+
+    // Decommit the FRI layer values
     decommit_fri_layers_and_trees(
         fri_layers.as_slice(),
         fri_trees.as_slice(),
@@ -280,6 +298,8 @@ pub fn stark_proof(
         &params,
         &mut proof,
     );
+
+    // Q.E.D.
     proof
 }
 
@@ -340,19 +360,12 @@ pub fn geometric_series(base: &FieldElement, step: &FieldElement, len: usize) ->
 // TODO: Naming
 #[allow(non_snake_case)]
 fn interpolate_trace_table(table: &TraceTable) -> Vec<Vec<FieldElement>> {
-    let trace_len = table.elements.len() / table.cols;
-    let mut TPn = vec![Vec::new(); table.cols];
-    (0..table.cols)
+    let mut result = vec![Vec::new(); table.num_columns()];
+    (0..table.num_columns())
         .into_par_iter()
-        .map(|x| {
-            let mut hold_col = Vec::with_capacity(trace_len);
-            for i in (0..table.elements.len()).step_by(table.cols) {
-                hold_col.push(table.elements[x + i].clone());
-            }
-            ifft(hold_col.as_slice())
-        })
-        .collect_into_vec(&mut TPn);
-    TPn
+        .map(|j| ifft(table.column_to_mmapvec(j).as_slice())) // OPT: use inplace FFT
+        .collect_into_vec(&mut result);
+    result
 }
 
 // TODO: Naming
@@ -800,13 +813,13 @@ mod tests {
 
         // Second check that the trace table function is working.
         let trace = get_trace_table(1024, witness);
-        assert_eq!(trace.elements[2000], claim_value);
+        assert_eq!(trace[(1000, 0)], claim_value);
 
         let TPn = interpolate_trace_table(&trace);
         let TP0 = TPn[0].as_slice();
         let TP1 = TPn[1].as_slice();
         // Checks that the trace table polynomial interpolation is working
-        assert_eq!(eval_poly(trace_x[1000].clone(), TP0), trace.elements[2000]);
+        assert_eq!(eval_poly(trace_x[1000].clone(), TP0), trace[(1000, 0)]);
 
         let TPn_reference: Vec<&[FieldElement]> = TPn.iter().map(|x| x.as_slice()).collect();
         let LDEn = calculate_low_degree_extensions(TPn_reference.as_slice(), &params, &eval_x);
