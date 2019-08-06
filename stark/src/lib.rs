@@ -3,7 +3,7 @@
 #![deny(warnings)]
 mod channel;
 mod fft;
-mod fibonacci;
+pub mod fibonacci;
 mod merkle;
 mod mmap_vec;
 mod polynomial;
@@ -15,9 +15,6 @@ pub use trace_table::TraceTable;
 
 pub use merkle::verify;
 pub use proofs::{stark_proof, ProofParams};
-
-// Example system
-pub use fibonacci::{get_constraint, get_trace_table};
 
 // Exports for benchmarking
 // TODO: Avoid publicly exposing.
