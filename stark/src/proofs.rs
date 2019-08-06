@@ -1,6 +1,7 @@
 use crate::{
     channel::{ProverChannel, RandomGenerator, Writable},
     fft::{bit_reversal_permute, fft_cofactor_bit_reversed, ifft},
+    fibonacci::Public,
     merkle::{self, make_tree, Hashable},
     polynomial::eval_poly,
     utils::Reversible,
@@ -70,38 +71,30 @@ pub struct ProofParams {
 // system wants to used a looped eval for speedup it can set the loop bool to
 // true, otherwise the system will perform all computation directly
 #[allow(clippy::type_complexity)]
-pub struct Constraint<'a> {
+pub struct Constraint<'a, Public> {
     pub num_constraints: usize,
     pub eval: &'a Fn(
         &FieldElement,      // X point
         &[&[FieldElement]], // Polynomials
-        usize,              // Claim Index
-        FieldElement,       // Claim
+        &Public,            // Public input
         &[FieldElement],    // Constraint_coefficient
     ) -> FieldElement,
     pub eval_loop: Option<
         &'a Fn(
             &[&[FieldElement]], // Evaluated polynomials (LDEn)
             &[FieldElement],    // Constraint Coefficents
-            usize,              // Claim index
-            &FieldElement,      // Claim
+            &Public,            // Public input
         ) -> Vec<FieldElement>,
     >,
 }
 
-impl<'a> Constraint<'a> {
+impl<'a> Constraint<'a, Public> {
     #[allow(clippy::type_complexity)]
     pub fn new(
         num_constraints: usize,
-        eval: &'a Fn(
-            &FieldElement,
-            &[&[FieldElement]],
-            usize,
-            FieldElement,
-            &[FieldElement],
-        ) -> FieldElement,
+        eval: &'a Fn(&FieldElement, &[&[FieldElement]], &Public, &[FieldElement]) -> FieldElement,
         eval_loop: Option<
-            &'a Fn(&[&[FieldElement]], &[FieldElement], usize, &FieldElement) -> Vec<FieldElement>,
+            &'a Fn(&[&[FieldElement]], &[FieldElement], &Public) -> Vec<FieldElement>,
         >,
     ) -> Self {
         Self {
@@ -169,13 +162,16 @@ where
     }
 }
 
-pub fn stark_proof(
+pub fn stark_proof<Public>(
     trace: &TraceTable,
-    constraints: &Constraint,
-    claim_index: usize,
-    claim_value: FieldElement,
+    constraints: &Constraint<Public>,
+    public: &Public,
     params: &ProofParams,
-) -> ProverChannel {
+) -> ProverChannel
+where
+    for<'a> ProverChannel: Writable<&'a Public>,
+    for<'a> ProverChannel: Writable<&'a [u8; 32]>,
+{
     // Compute some constants.
     let g = trace.generator();
     let eval_domain_size = trace.num_rows() * params.blowup;
@@ -185,9 +181,11 @@ pub fn stark_proof(
 
     // Initialize a proof channel with the public input.
     // TODO: Generalize over abstract type PublicInput
-    let mut public_input = [claim_index.to_be_bytes()].concat();
-    public_input.extend_from_slice(&claim_value.0.to_bytes_be());
-    let mut proof = ProverChannel::new(public_input.as_slice());
+    // let mut public_input = [public.index.to_be_bytes()].concat();
+    // public_input.extend_from_slice(&public.value.0.to_bytes_be());
+    // let mut proof = ProverChannel::new(public_input.as_slice());
+    let mut proof = ProverChannel::new();
+    proof.write(public);
 
     // 1. Trace commitment.
     //
@@ -220,8 +218,7 @@ pub fn stark_proof(
         trace_lde_ref.as_slice(),
         constraints,
         constraint_coefficients.as_slice(),
-        claim_index,
-        &claim_value,
+        public,
         params.blowup,
     );
 
@@ -240,8 +237,7 @@ pub fn stark_proof(
         &mut proof,
         trace_coefficients.as_slice(),
         constraint_coefficients.as_slice(),
-        claim_index,
-        &claim_value,
+        public,
         &constraints,
         &g,
     );
@@ -397,13 +393,12 @@ fn calculate_low_degree_extensions(
     trace_lde
 }
 
-fn calculate_constraints_on_domain(
+fn calculate_constraints_on_domain<Public>(
     trace_poly: &[&[FieldElement]],
     lde_poly: &[&[FieldElement]],
-    constraints: &Constraint,
+    constraints: &Constraint<Public>,
     constraint_coefficients: &[FieldElement],
-    claim_index: usize,
-    claim_value: &FieldElement,
+    public: &Public,
     blowup: usize,
 ) -> Vec<FieldElement> {
     let mut constraint_lde;
@@ -413,9 +408,7 @@ fn calculate_constraints_on_domain(
     let eval_domain_size = trace_len * blowup;
 
     match constraints.eval_loop {
-        Some(x) => {
-            constraint_lde = (x)(lde_poly, constraint_coefficients, claim_index, &claim_value)
-        }
+        Some(x) => constraint_lde = (x)(lde_poly, constraint_coefficients, public),
         None => {
             constraint_lde = vec![FieldElement::ZERO; eval_domain_size];
             for constraint_element in constraint_lde.iter_mut() {
@@ -423,8 +416,7 @@ fn calculate_constraints_on_domain(
                     // This will perform the polynomial evaluation on each step
                     &x,
                     trace_poly,
-                    claim_index,
-                    claim_value.clone(),
+                    public,
                     constraint_coefficients,
                 );
 
@@ -435,13 +427,12 @@ fn calculate_constraints_on_domain(
     constraint_lde
 }
 
-fn get_out_of_domain_information(
+fn get_out_of_domain_information<Public>(
     proof: &mut ProverChannel,
     trace_poly: &[&[FieldElement]],
     constraint_coefficients: &[FieldElement],
-    claim_index: usize,
-    claim_value: &FieldElement,
-    constraints: &Constraint,
+    public: &Public,
+    constraints: &Constraint<Public>,
     g: &FieldElement,
 ) -> (FieldElement, Vec<FieldElement>, Vec<FieldElement>) {
     let oods_point: FieldElement = proof.get_random();
@@ -457,8 +448,7 @@ fn get_out_of_domain_information(
     oods_values.push((constraints.eval)(
         &oods_point,
         trace_poly,
-        claim_index,
-        claim_value.clone(),
+        public,
         constraint_coefficients,
     )); // Gets eval_C of the oods point via direct computation
 
@@ -684,10 +674,12 @@ mod tests {
 
     #[test]
     fn fib_test_1024_python_witness() {
-        let claim_index = 1000;
-        let claim_value = FieldElement::from(u256h!(
-            "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
-        ));
+        let public = Public {
+            index: 1000,
+            value: FieldElement::from(u256h!(
+                "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
+            )),
+        };
         let private = Private {
             secret: FieldElement::from(u256h!(
                 "00000000000000000000000000000000000000000000000000000000cafebabe"
@@ -697,8 +689,7 @@ mod tests {
         let actual = stark_proof(
             &get_trace_table(1024, &private),
             &get_constraint(),
-            claim_index,
-            claim_value,
+            &public,
             &ProofParams {
                 blowup:     16,
                 pow_bits:   12,
@@ -711,10 +702,12 @@ mod tests {
 
     #[test]
     fn fib_test_1024_changed_witness() {
-        let claim_index = 1000;
-        let claim_value = FieldElement::from(u256h!(
-            "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
-        ));
+        let public = Public {
+            index: 1000,
+            value: FieldElement::from(u256h!(
+                "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
+            )),
+        };
         let private = Private {
             secret: FieldElement::from(u256h!(
                 "00000000000000000000000000000000000000000000000f00dbabe0cafebabe"
@@ -724,8 +717,7 @@ mod tests {
         let actual = stark_proof(
             &get_trace_table(1024, &private),
             &get_constraint(),
-            claim_index,
-            claim_value,
+            &public,
             &ProofParams {
                 blowup:     32,
                 pow_bits:   12,
@@ -738,10 +730,12 @@ mod tests {
 
     #[test]
     fn fib_test_4096() {
-        let claim_index = 4000;
-        let claim_value = FieldElement::from(u256h!(
-            "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
-        ));
+        let public = Public {
+            index: 4000,
+            value: FieldElement::from(u256h!(
+                "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
+            )),
+        };
         let private = Private {
             secret: FieldElement::from(u256h!(
                 "00000000000000000000000000000000000000000000000f00dbabe0cafebabe"
@@ -751,8 +745,7 @@ mod tests {
         let actual = stark_proof(
             &get_trace_table(4096, &private),
             &get_constraint(),
-            claim_index,
-            claim_value,
+            &public,
             &ProofParams {
                 blowup:     16,
                 pow_bits:   12,
@@ -789,10 +782,12 @@ mod tests {
     // TODO - See if it's possible to do context cloning and break this into smaller tests
     #[allow(clippy::cognitive_complexity)]
     fn fib_proof_test() {
-        let claim_index = 1000;
-        let claim_value = FieldElement::from(u256h!(
-            "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
-        ));
+        let public = Public {
+            index: 1000,
+            value: FieldElement::from(u256h!(
+                "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
+            )),
+        };
         let private = Private {
             secret: FieldElement::from(u256h!(
                 "00000000000000000000000000000000000000000000000000000000cafebabe"
@@ -828,7 +823,7 @@ mod tests {
 
         // Second check that the trace table function is working.
         let trace = get_trace_table(1024, &private);
-        assert_eq!(trace[(1000, 0)], claim_value);
+        assert_eq!(trace[(1000, 0)], public.value);
 
         let TPn = interpolate_trace_table(&trace);
         let TP0 = TPn[0].as_slice();
@@ -865,10 +860,11 @@ mod tests {
             hex!("018dc61f748b1a6c440827876f30f63cb6c4c188000000000000000000000000")
         );
 
-        let mut public_input = [(claim_index as u64).to_be_bytes()].concat();
-        public_input.extend_from_slice(&claim_value.0.to_bytes_be());
+        let mut public_input = [(public.index as u64).to_be_bytes()].concat();
+        public_input.extend_from_slice(&public.value.0.to_bytes_be());
 
-        let mut proof = ProverChannel::new(&public_input.as_slice());
+        let mut proof = ProverChannel::new();
+        proof.initialize(&public_input.as_slice());
         // Checks that the channel is inited properly
         assert_eq!(
             proof.coin.digest,
@@ -898,8 +894,7 @@ mod tests {
             LDEn_reference.as_slice(),
             &constraints,
             constraint_coefficients.as_slice(),
-            claim_index,
-            &claim_value,
+            &public,
             params.blowup,
         );
         // Checks that our constraints are properly calculated on the domain
@@ -923,8 +918,7 @@ mod tests {
             &mut proof,
             TPn_reference.as_slice(),
             constraint_coefficients.as_slice(),
-            claim_index,
-            &claim_value,
+            &public,
             &constraints,
             &g,
         );

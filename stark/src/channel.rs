@@ -40,12 +40,18 @@ pub struct VerifierChannel {
 }
 
 impl PublicCoin {
-    pub fn new(seed: &[u8]) -> Self {
-        let mut digest: [u8; 32] = [0; 32];
+    pub fn new() -> Self {
+        Self {
+            digest:  [0; 32],
+            counter: 0,
+        }
+    }
+
+    pub fn seed(&mut self, seed: &[u8]) {
         let mut keccak = Keccak::new_keccak256();
         keccak.update(seed);
-        keccak.finalize(&mut digest);
-        Self { digest, counter: 0 }
+        keccak.finalize(&mut self.digest);
+        self.counter = 0;
     }
 
     pub fn pow_find_nonce(&self, pow_bits: u8) -> u64 {
@@ -96,11 +102,16 @@ impl PublicCoin {
 }
 
 impl ProverChannel {
-    pub fn new(seed: &[u8]) -> Self {
+    pub fn new() -> Self {
         Self {
-            coin:  PublicCoin::new(seed),
-            proof: seed.to_vec(),
+            coin:  PublicCoin::new(),
+            proof: Vec::new(),
         }
+    }
+
+    pub fn initialize(&mut self, seed: &[u8]) {
+        self.coin.seed(seed);
+        self.proof = Vec::from(seed);
     }
 
     pub fn pow_verify(&self, nonce: u64, pow_bits: u8) -> bool {
@@ -120,13 +131,18 @@ impl ProverChannel {
 // verifier channel
 #[allow(dead_code)]
 impl VerifierChannel {
-    pub fn new(seed: &[u8], proof: Vec<u8>) -> Self {
-        assert_eq!(seed, &proof[..seed.len()]);
+    pub fn new(proof: Vec<u8>) -> Self {
         Self {
-            coin: PublicCoin::new(seed),
+            coin: PublicCoin::new(),
             proof,
-            proof_index: seed.len(),
+            proof_index: 0,
         }
+    }
+
+    pub fn initialize(&mut self, seed: &[u8]) {
+        assert_eq!(*seed, self.proof[..seed.len()]);
+        self.coin.seed(seed);
+        self.proof_index = seed.len();
     }
 
     pub fn pow_verify(&self, nonce: u64, pow_bits: u8) -> bool {
@@ -326,9 +342,10 @@ mod tests {
 
     #[test]
     fn proof_of_work_test() {
-        let rand_source = ProverChannel::new(hex!("0123456789abcded").to_vec().as_slice());
-        let ver_rand_source =
-            VerifierChannel::new(&hex!("0123456789abcded")[..], rand_source.proof.clone());
+        let mut rand_source = ProverChannel::new();
+        rand_source.initialize(hex!("0123456789abcded").to_vec().as_slice());
+        let mut ver_rand_source = VerifierChannel::new(rand_source.proof.clone());
+        ver_rand_source.initialize(&hex!("0123456789abcded")[..]);
         let work = rand_source.pow_find_nonce(12);
         let ver_work = ver_rand_source.pow_find_nonce(12);
         assert_eq!(ver_work, work);
@@ -337,17 +354,16 @@ mod tests {
 
     #[test]
     fn threaded_proof_of_work_test() {
-        let rand_source = ProverChannel::new(hex!("0123456789abcded").to_vec().as_slice());
+        let mut rand_source = ProverChannel::new();
+        rand_source.initialize(hex!("0123456789abcded").to_vec().as_slice());
         let work = rand_source.pow_find_nonce_threaded(12);
         assert!(&rand_source.pow_verify(work, 12));
     }
 
     #[test]
     fn ver_threaded_proof_of_work_test() {
-        let rand_source = VerifierChannel::new(
-            &hex!("0123456789abcded")[..],
-            hex!("0123456789abcded").to_vec(),
-        );
+        let mut rand_source = VerifierChannel::new(hex!("0123456789abcded").to_vec());
+        rand_source.initialize(&hex!("0123456789abcded")[..]);
         let work = rand_source.pow_find_nonce_threaded(12);
         assert!(&rand_source.pow_verify(work, 12));
     }
@@ -356,7 +372,8 @@ mod tests {
     // the nature of the channel
     #[test]
     fn test_channel_get_random() {
-        let mut source = ProverChannel::new(hex!("0123456789abcded").to_vec().as_slice());
+        let mut source = ProverChannel::new();
+        source.initialize(hex!("0123456789abcded").to_vec().as_slice());
         let rand_bytes: [u8; 32] = source.get_random();
         assert_eq!(
             rand_bytes,
@@ -380,7 +397,8 @@ mod tests {
     // the nature of the channel
     #[test]
     fn test_channel_write() {
-        let mut source = ProverChannel::new(hex!("0123456789abcded").to_vec().as_slice());
+        let mut source = ProverChannel::new();
+        source.initialize(hex!("0123456789abcded").to_vec().as_slice());
         let rand_bytes: [u8; 32] = source.get_random();
         source.write(&rand_bytes);
         assert_eq!(
@@ -418,7 +436,8 @@ mod tests {
 
     #[test]
     fn verifier_channel_test() {
-        let mut source = ProverChannel::new(hex!("0123456789abcded").to_vec().as_slice());
+        let mut source = ProverChannel::new();
+        source.initialize(hex!("0123456789abcded").to_vec().as_slice());
         let rand_bytes: [u8; 32] = source.get_random();
         source.write(&rand_bytes);
         source.write(11_028_357_238_u64);
@@ -442,8 +461,8 @@ mod tests {
         ];
         source.write(written_big_int_vec.clone());
 
-        let mut verifier =
-            VerifierChannel::new(&hex!("0123456789abcded")[..], source.proof.clone());
+        let mut verifier = VerifierChannel::new(source.proof.clone());
+        verifier.initialize(&hex!("0123456789abcded")[..]);
         let bytes_test: [u8; 32] = verifier.replay();
         assert_eq!(bytes_test, rand_bytes);
         assert_eq!(

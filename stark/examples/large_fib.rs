@@ -3,7 +3,7 @@
 use hex_literal::*;
 use primefield::FieldElement;
 use stark::{
-    fibonacci::{get_constraint, get_trace_table, Private},
+    fibonacci::{get_constraint, get_trace_table, Private, Public},
     stark_proof, ProofParams,
 };
 use std::{env, time::Instant};
@@ -18,27 +18,24 @@ fn main() {
             .expect("Error building Rayon thread pool.");
     }
 
-    let claim_index = 1_000_000_usize;
+    let mut public = Public {
+        index: 1_000_000,
+        value: FieldElement::ZERO,
+    };
     let private = Private {
         secret: FieldElement::from(u256h!(
             "00000000000000000000000000000000000000000000000000000000cafebabe"
         )),
     };
     let trace_table = get_trace_table(1_048_576, &private);
-    let claim_fib = trace_table[(1_000_000, 0)].clone();
+    public.value = trace_table[(public.index, 0)].clone();
     let start = Instant::now();
-    let potential_proof = stark_proof(
-        &trace_table,
-        &get_constraint(),
-        claim_index,
-        claim_fib,
-        &ProofParams {
-            blowup:     16,
-            pow_bits:   12,
-            queries:    20,
-            fri_layout: vec![3, 2],
-        },
-    );
+    let potential_proof = stark_proof(&trace_table, &get_constraint(), &public, &ProofParams {
+        blowup:     16,
+        pow_bits:   12,
+        queries:    20,
+        fri_layout: vec![3, 2],
+    });
     let duration = start.elapsed();
     println!("{:?}", potential_proof.coin.digest);
     println!("Time elapsed in proof function is: {:?}", duration);

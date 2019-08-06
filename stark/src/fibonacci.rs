@@ -1,4 +1,5 @@
 use crate::{
+    channel::{ProverChannel, Writable},
     polynomial::eval_poly,
     proofs::{geometric_series, Constraint},
     utils::Reversible,
@@ -12,13 +13,23 @@ use u256::{u256h, U256};
 #[allow(dead_code)] // TODO
 #[derive(Debug)]
 pub struct Public {
-    pub index:     usize,
-    pub fibonacci: FieldElement,
+    pub index: usize,
+    pub value: FieldElement,
 }
 
 #[derive(Debug)]
 pub struct Private {
     pub secret: FieldElement,
+}
+
+// TODO: We are abusing Writable here to do initialization. We should
+// probably have a dedicated trait for initializing a channel.
+impl Writable<&Public> for ProverChannel {
+    fn write(&mut self, public: &Public) {
+        let mut bytes = [public.index.to_be_bytes()].concat();
+        bytes.extend_from_slice(&public.value.0.to_bytes_be());
+        self.initialize(bytes.as_slice());
+    }
 }
 
 pub fn get_trace_table(length: usize, private: &Private) -> TraceTable {
@@ -38,8 +49,7 @@ pub fn get_trace_table(length: usize, private: &Private) -> TraceTable {
 pub fn eval_whole_loop(
     LDEn: &[&[FieldElement]],
     constraint_coefficients: &[FieldElement],
-    claim_index: usize,
-    claim_fib: &FieldElement,
+    public: &Public,
 ) -> Vec<FieldElement> {
     let eval_domain_size = LDEn[0].len();
     let beta = 2usize.pow(4);
@@ -52,7 +62,7 @@ pub fn eval_whole_loop(
 
     let mut CC = Vec::with_capacity(eval_domain_size);
     let g_trace = g.pow(U256::from(trace_len - 1));
-    let g_claim = g.pow(U256::from(claim_index));
+    let g_claim = g.pow(U256::from(public.index));
     let x = gen.clone();
     let x_trace = (&x).pow(U256::from(trace_len));
     let x_1023 = (&x).pow(U256::from(trace_len - 1));
@@ -88,6 +98,7 @@ pub fn eval_whole_loop(
     x_sub_one = held.pop().unwrap();
     x_trace_sub_one = held.pop().unwrap();
 
+    let value = public.value.clone();
     (0..eval_domain_size)
         .into_par_iter()
         .map(|reverse_index| {
@@ -106,7 +117,7 @@ pub fn eval_whole_loop(
             let C0 = (&P0n - &P1) * (&x_omega_cycle[index] - &g_trace) * &A;
             let C1 = (&P1n - &P0 - &P1) * (&x_omega_cycle[index] - &g_trace) * &A;
             let C2 = (&P0 - FieldElement::ONE) * &x_sub_one[index];
-            let C3 = (&P0 - claim_fib) * &x_g_claim_cycle[index];
+            let C3 = (&P0 - &value) * &x_g_claim_cycle[index];
 
             let C0a = &C0 * &x_1023_cycle[index];
             let C1a = &C1 * &x_1023_cycle[index];
@@ -134,14 +145,14 @@ pub fn eval_whole_loop(
 pub fn eval_c_direct(
     x: &FieldElement,
     polynomials: &[&[FieldElement]],
-    claim_index: usize,
-    claim: FieldElement,
+    public: &Public,
     constraint_coefficients: &[FieldElement],
 ) -> FieldElement {
     let trace_len = 1024;
     let g = FieldElement::from(u256h!(
         "0659d83946a03edd72406af6711825f5653d9e35dc125289a206c054ec89c4f1"
     ));
+    let value = public.value.clone();
 
     let eval_P0 = |x: FieldElement| -> FieldElement { eval_poly(x, polynomials[0]) };
     let eval_P1 = |x: FieldElement| -> FieldElement { eval_poly(x, polynomials[1]) };
@@ -158,7 +169,7 @@ pub fn eval_c_direct(
         ((eval_P0(x.clone()) - FieldElement::ONE) * FieldElement::ONE) / (&x - FieldElement::ONE)
     };
     let eval_C3 = |x: FieldElement| -> FieldElement {
-        (eval_P0(x.clone()) - claim) / (&x - &g.pow(U256::from(claim_index as u64)))
+        (eval_P0(x.clone()) - &value) / (&x - &g.pow(public.index.into()))
     };
 
     let deg_adj = |degree_bound: u64,
@@ -213,6 +224,6 @@ pub fn eval_c_direct(
     eval_C(x.clone())
 }
 
-pub fn get_constraint() -> Constraint<'static> {
+pub fn get_constraint() -> Constraint<'static, Public> {
     Constraint::new(20, &eval_c_direct, Some(&eval_whole_loop))
 }
