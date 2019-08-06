@@ -35,14 +35,12 @@ impl TraceTable {
     }
 
     pub fn iter_row(&self, i: usize) -> impl Iterator<Item = &FieldElement> {
-        self.values
-            .iter()
-            .skip(i * self.num_columns)
-            .take(self.num_columns)
+        // Delegate to Index<usize> which returns a row slice.
+        self[i].iter()
     }
 
     pub fn iter_column(&self, j: usize) -> impl Iterator<Item = &FieldElement> {
-        self.values.iter().skip(j).step_by(self.num_columns)
+        self.values[j..].iter().step_by(self.num_columns)
     }
 
     /// Extract the j-th column as a vector
