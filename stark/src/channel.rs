@@ -1,3 +1,4 @@
+use crate::hash::Hash;
 use hex_literal::*;
 use primefield::FieldElement;
 use rayon::prelude::*;
@@ -234,9 +235,9 @@ impl Writable<&[u8]> for ProverChannel {
 }
 
 // TODO - Make into a hash type label
-impl Writable<&[u8; 32]> for ProverChannel {
-    fn write(&mut self, data: &[u8; 32]) {
-        self.write(&data[..]);
+impl Writable<&Hash> for ProverChannel {
+    fn write(&mut self, data: &Hash) {
+        self.write(data.as_bytes());
     }
 }
 
@@ -400,7 +401,7 @@ mod tests {
         let mut source = ProverChannel::new();
         source.initialize(&hex!("0123456789abcded"));
         let rand_bytes: [u8; 32] = source.get_random();
-        source.write(&rand_bytes);
+        source.write(&rand_bytes[..]);
         assert_eq!(
             source.coin.digest,
             hex!("3174a00d031bc8deff799e24a78ee347b303295a6cb61986a49873d9b6f13a0d")
@@ -439,7 +440,7 @@ mod tests {
         let mut source = ProverChannel::new();
         source.initialize(&hex!("0123456789abcded"));
         let rand_bytes: [u8; 32] = source.get_random();
-        source.write(&rand_bytes);
+        source.write(&rand_bytes[..]);
         source.write(11_028_357_238_u64);
         let written_field_element = FieldElement(u256h!(
             "0389a47fe0e1e5f9c05d8dcb27b069b67b1c7ec61a5c0a3f54d81aea83d2c8f0"

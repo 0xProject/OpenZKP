@@ -1,91 +1,35 @@
-use crate::proofs::*;
-use primefield::FieldElement;
+use crate::{hash::Hash, hashable::Hashable, masked_keccak::MaskedKeccak, proofs::*};
 use rayon::prelude::*;
-use tiny_keccak::Keccak;
-use u256::U256;
+use std::marker::Sync;
 
-pub trait Hashable {
-    fn hash(&self) -> [u8; 32];
-}
+struct MerkleNode<'a>(&'a Hash, &'a Hash);
 
-impl Hashable for U256 {
-    fn hash(&self) -> [u8; 32] {
-        hash_leaf(self)
+impl Hashable for MerkleNode<'_> {
+    fn hash(&self) -> Hash {
+        let mut hasher = MaskedKeccak::new();
+        hasher.update(self.0.as_bytes());
+        hasher.update(self.1.as_bytes());
+        hasher.hash()
     }
 }
 
-impl Hashable for &[U256] {
-    fn hash(&self) -> [u8; 32] {
-        hash_leaf_list(self)
-    }
-}
-
-impl Hashable for Vec<U256> {
-    fn hash(&self) -> [u8; 32] {
-        self.as_slice().hash()
-    }
-}
-
-// Note we have presumed that we want to hash the Montgomery adjusted value
-impl Hashable for FieldElement {
-    fn hash(&self) -> [u8; 32] {
-        self.0.hash()
-    }
-}
-
-fn mask(data: &mut [u8; 32]) {
-    for d in data[20..].iter_mut() {
-        *d = 0 as u8;
-    }
-}
-
-pub fn hash_leaf(leaf: &U256) -> [u8; 32] {
-    U256::to_bytes_be(leaf)
-}
-
-pub fn hash_leaf_list(leaf: &[U256]) -> [u8; 32] {
-    if (&leaf).len() == 1 {
-        return hash_leaf(&leaf[0]);
-    }
-
-    let mut sha3 = Keccak::new_keccak256();
-    for x in leaf.iter() {
-        sha3.update(&(U256::to_bytes_be(x)));
-    }
-    let mut res: [u8; 32] = [0; 32];
-    sha3.finalize(&mut res);
-    mask(&mut res);
-    res
-}
-
-pub fn hash_node(left_node: &[u8; 32], right_node: &[u8; 32]) -> [u8; 32] {
-    let mut res: [u8; 32] = [0; 32];
-
-    let mut sha3 = Keccak::new_keccak256();
-    sha3.update(left_node);
-    sha3.update(right_node);
-    sha3.finalize(&mut res);
-    mask(&mut res);
-
-    res
-}
-
-pub fn make_tree_direct<T: Hashable>(leaves: &[T]) -> Vec<[u8; 32]> {
+pub fn make_tree_direct<T: Hashable>(leaves: &[T]) -> Vec<Hash> {
     let n = leaves.len();
     let depth = n.trailing_zeros(); // Log_2 of n
     let layer1_index = 2_usize.pow(depth - 1);
-    let mut tree = vec![[0; 32]; n]; // Get my vector heap for end results
+    let mut tree = vec![Hash::default(); n]; // Get my vector heap for end results
 
     for (index, pair) in leaves.chunks(2).enumerate() {
-        tree[layer1_index + index] = hash_node(&pair[0_usize].hash(), &pair[1_usize].hash());
+        tree[layer1_index + index] =
+            MerkleNode(&pair[0_usize].hash(), &pair[1_usize].hash()).hash();
     }
     for i in (0..(2_usize.pow(depth - 1))).rev() {
-        tree[i] = hash_node(&tree[2 * i], &tree[2 * i + 1]);
+        tree[i] = MerkleNode(&tree[2 * i], &tree[2 * i + 1]).hash();
     }
     tree
 }
 
-pub fn make_tree<T: Hashable + std::marker::Sync>(leaves: &[T]) -> Vec<[u8; 32]> {
+pub fn make_tree<T: Hashable + Sync>(leaves: &[T]) -> Vec<Hash> {
     if leaves.len() < 256 {
         make_tree_direct(leaves)
     } else {
@@ -93,7 +37,7 @@ pub fn make_tree<T: Hashable + std::marker::Sync>(leaves: &[T]) -> Vec<[u8; 32]>
     }
 }
 
-pub fn make_tree_threaded<T: Hashable + std::marker::Sync>(leaves: &[T]) -> Vec<[u8; 32]> {
+pub fn make_tree_threaded<T: Hashable + Sync>(leaves: &[T]) -> Vec<Hash> {
     let n = leaves.len();
     debug_assert!(n.is_power_of_two());
     let depth = n.trailing_zeros() as usize;
@@ -103,7 +47,7 @@ pub fn make_tree_threaded<T: Hashable + std::marker::Sync>(leaves: &[T]) -> Vec<
     leaves
         .into_par_iter()
         .chunks(2)
-        .map(|pair| hash_node(&pair[0_usize].hash(), &pair[1_usize].hash()))
+        .map(|pair| MerkleNode(&pair[0_usize].hash(), &pair[1_usize].hash()).hash())
         .collect_into_vec(&mut hold);
     layers.push(hold);
 
@@ -113,26 +57,26 @@ pub fn make_tree_threaded<T: Hashable + std::marker::Sync>(leaves: &[T]) -> Vec<
             .clone()
             .into_par_iter()
             .chunks(2)
-            .map(|pair| hash_node(&pair[0_usize], &pair[1_usize]))
+            .map(|pair| MerkleNode(&pair[0_usize], &pair[1_usize]).hash())
             .collect_into_vec(&mut hold);
         layers.push(hold);
     }
-    layers.push(vec![[0; 32]]);
+    layers.push(vec![Hash::default()]);
 
     layers.into_iter().rev().flatten().collect()
 }
 
 pub fn proof<R: Hashable, T: Groupable<R>>(
-    tree: &[[u8; 32]],
+    tree: &[Hash],
     indices: &[usize],
     source: T,
-) -> Vec<[u8; 32]> {
+) -> Vec<Hash> {
     debug_assert!(tree.len().is_power_of_two());
     let depth = tree.len().trailing_zeros();
     let num_leaves = 2_usize.pow(depth);
     let num_nodes = 2 * num_leaves;
     let mut known = vec![false; num_nodes + 1];
-    let mut decommitment = Vec::new();
+    let mut decommitment: Vec<Hash> = Vec::new();
 
     let mut peekable_indicies = indices.iter().peekable();
     let mut excluded_pair = false;
@@ -175,10 +119,10 @@ pub fn proof<R: Hashable, T: Groupable<R>>(
             let left = known[2 * i];
             let right = known[2 * i + 1];
             if left && !right {
-                decommitment.push(tree[2 * i + 1]);
+                decommitment.push(tree[2 * i + 1].clone());
             }
             if !left && right {
-                decommitment.push(tree[2 * i]);
+                decommitment.push(tree[2 * i].clone());
             }
             known[i] = left || right;
         }
@@ -187,10 +131,10 @@ pub fn proof<R: Hashable, T: Groupable<R>>(
 }
 
 pub fn verify<T: Hashable>(
-    root: [u8; 32],
+    root: Hash,
     depth: u32,
     values: &mut [(u64, T)],
-    mut decommitment: Vec<[u8; 32]>,
+    mut decommitment: Vec<Hash>,
 ) -> bool {
     let mut queue = Vec::with_capacity(values.len());
     values.sort_by(|a, b| b.0.cmp(&a.0)); // Sorts the list by index
@@ -212,7 +156,7 @@ pub fn verify<T: Hashable>(
         } else if index % 2 == 0 {
             queue.push((
                 index / 2,
-                hash_node(&data_hash, &decommitment.remove(current)),
+                MerkleNode(&data_hash, &decommitment.remove(current)).hash(),
             ));
 
             if current == 0 {
@@ -222,7 +166,7 @@ pub fn verify<T: Hashable>(
             }
         } else if !queue.is_empty() && queue[0].0 == index - 1 {
             let (_, sibbling_hash) = queue.remove(0);
-            queue.push((index / 2, hash_node(&sibbling_hash, &data_hash)));
+            queue.push((index / 2, MerkleNode(&sibbling_hash, &data_hash).hash()));
 
             if start != 0 {
                 start -= 1;
@@ -235,7 +179,7 @@ pub fn verify<T: Hashable>(
         } else {
             queue.push((
                 index / 2,
-                hash_node(&decommitment.remove(current), &data_hash),
+                MerkleNode(&decommitment.remove(current), &data_hash).hash(),
             ));
 
             if current == 0 {
@@ -253,6 +197,7 @@ pub fn verify<T: Hashable>(
 mod tests {
     use super::*;
     use hex_literal::*;
+    use u256::U256;
 
     impl Groupable<U256> for &[U256] {
         fn make_group(&self, index: usize) -> U256 {
@@ -276,7 +221,7 @@ mod tests {
         let tree = make_tree(leaves.as_slice());
 
         assert_eq!(
-            tree[1],
+            tree[1].as_bytes(),
             hex!("fd112f44bc944f33e2567f86eea202350913b11c000000000000000000000000")
         );
         let mut values = vec![
@@ -287,10 +232,12 @@ mod tests {
 
         let indices = vec![1, 11, 14];
         let decommitment = proof(tree.as_slice(), &indices, leaves.as_slice());
-        let non_root = hex!("ed112f44bc944f33e2567f86eea202350913b11c000000000000000000000000");
+        let non_root = Hash::new(hex!(
+            "ed112f44bc944f33e2567f86eea202350913b11c000000000000000000000000"
+        ));
 
         assert!(verify(
-            tree[1],
+            tree[1].clone(),
             depth,
             values.as_mut_slice(),
             decommitment.clone()

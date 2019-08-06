@@ -2,7 +2,9 @@ use crate::{
     channel::{ProverChannel, RandomGenerator, Writable},
     fft::{bit_reversal_permute, fft_cofactor_bit_reversed, ifft},
     fibonacci::PublicInput,
-    merkle::{self, make_tree, Hashable},
+    hash::Hash,
+    hashable::Hashable,
+    merkle::{self, make_tree},
     polynomial::eval_poly,
     utils::Reversible,
     TraceTable,
@@ -25,7 +27,7 @@ pub trait Groupable<LeafType: Hashable> {
 // This trait is applied to give groupable objects a merkle tree based on their
 // groupings
 pub trait Merkleizable<NodeHash: Hashable> {
-    fn merkleize(self) -> Vec<[u8; 32]>;
+    fn merkleize(self) -> Vec<Hash>;
 }
 
 /// Parameters for Stark proof generation
@@ -156,7 +158,7 @@ where
     NodeHash: Hashable + Send + Sync,
     LeafType: Groupable<NodeHash> + Send + Sync,
 {
-    fn merkleize(self) -> Vec<[u8; 32]> {
+    fn merkleize(self) -> Vec<Hash> {
         let eval_domain_size = self.domain_size();
         let mut leaves = Vec::with_capacity(eval_domain_size);
         (0..eval_domain_size)
@@ -175,7 +177,7 @@ pub fn stark_proof<Public>(
 ) -> ProverChannel
 where
     for<'a> ProverChannel: Writable<&'a Public>,
-    for<'a> ProverChannel: Writable<&'a [u8; 32]>,
+    for<'a> ProverChannel: Writable<&'a Hash>,
 {
     // Compute some constants.
     let g = trace.generator();
@@ -532,7 +534,7 @@ fn perform_fri_layering(
     proof: &mut ProverChannel,
     params: &ProofParams,
     eval_x: &[FieldElement],
-) -> (Vec<Vec<FieldElement>>, Vec<Vec<[u8; 32]>>) {
+) -> (Vec<Vec<FieldElement>>, Vec<Vec<Hash>>) {
     let eval_domain_size = constraints_out_of_domain.len();
     let trace_len = eval_domain_size / params.blowup;
 
@@ -540,7 +542,7 @@ fn perform_fri_layering(
     let mut fri: Vec<Vec<FieldElement>> =
         Vec::with_capacity(64 - (eval_domain_size.leading_zeros() as usize));
     fri.push(constraints_out_of_domain.to_vec());
-    let mut fri_trees: Vec<Vec<[u8; 32]>> = Vec::with_capacity(params.fri_layout.len());
+    let mut fri_trees: Vec<Vec<Hash>> = Vec::with_capacity(params.fri_layout.len());
     let held_tree = (params.blowup / 2, fri[fri.len() - 1].as_slice()).merkleize();
     proof.write(&held_tree[1]);
     fri_trees.push(held_tree);
@@ -599,7 +601,7 @@ fn perform_fri_layering(
 fn decommit_with_queries_and_proof<R: Hashable, T: Groupable<R>>(
     queries: &[usize],
     source: T,
-    tree: &[[u8; 32]],
+    tree: &[Hash],
     proof: &mut ProverChannel,
 ) where
     ProverChannel: Writable<R>,
@@ -612,7 +614,7 @@ fn decommit_with_queries_and_proof<R: Hashable, T: Groupable<R>>(
 
 // Note - This function exists because rust gets confused by the intersection of
 // the write types and the others.
-fn decommit_proof(decommitment: Vec<[u8; 32]>, proof: &mut ProverChannel) {
+fn decommit_proof(decommitment: Vec<Hash>, proof: &mut ProverChannel) {
     for x in decommitment.iter() {
         proof.write(x);
     }
@@ -620,7 +622,7 @@ fn decommit_proof(decommitment: Vec<[u8; 32]>, proof: &mut ProverChannel) {
 
 fn decommit_fri_layers_and_trees(
     fri_layers: &[Vec<FieldElement>],
-    fri_trees: &[Vec<[u8; 32]>],
+    fri_trees: &[Vec<Hash>],
     query_indices: &[usize],
     params: &ProofParams,
     proof: &mut ProverChannel,
@@ -857,7 +859,7 @@ mod tests {
         // Checks that the merklelizable implementation is working [implicit check of
         // most previous steps]
         assert_eq!(
-            tree[1],
+            tree[1].as_bytes(),
             hex!("018dc61f748b1a6c440827876f30f63cb6c4c188000000000000000000000000")
         );
 
@@ -910,7 +912,7 @@ mod tests {
         // Checks both that the merkle tree is working for this groupable type and that
         // the constraints are properly calculated on the domain
         assert_eq!(
-            c_tree[1],
+            c_tree[1].as_bytes(),
             hex!("46318de7dbdafda87c1052d50989d15f8e61a5b8000000000000000000000000")
         );
         proof.write(&c_tree[1]);
@@ -957,12 +959,12 @@ mod tests {
 
         // Checks that the first fri merkle tree root is right
         assert_eq!(
-            fri_trees[0][1],
+            fri_trees[0][1].as_bytes(),
             hex!("f5110a80f0fabf114678f7e643a2be01f88661fe000000000000000000000000")
         );
         // Checks that the second fri merkle tree root is right
         assert_eq!(
-            fri_trees[1][1],
+            fri_trees[1][1].as_bytes(),
             hex!("27ad2f6a19d18a7e4535905f1ee0bf0d39e8e444000000000000000000000000")
         );
         // Checks that the fri layering function decommited the right values.
