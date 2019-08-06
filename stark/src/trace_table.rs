@@ -12,7 +12,7 @@ impl TraceTable {
     /// Constructs a zero-initialized trace table of the given size.
     pub fn new(trace_length: usize, num_columns: usize) -> TraceTable {
         let mut values: MmapVec<FieldElement> = MmapVec::with_capacity(trace_length * num_columns);
-        for _i in 0..(trace_length * num_columns) {
+        for _ in 0..(trace_length * num_columns) {
             values.push(FieldElement::ZERO);
         }
         TraceTable {
