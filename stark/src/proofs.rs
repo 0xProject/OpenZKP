@@ -4,6 +4,7 @@ use crate::{
     merkle::{self, make_tree, Hashable},
     polynomial::eval_poly,
     utils::Reversible,
+    TraceTable,
 };
 use itertools::Itertools;
 use primefield::{invert_batch, FieldElement};
@@ -23,22 +24,6 @@ pub trait Groupable<T: Hashable> {
 // groupings
 pub trait Merkleizable<R: Hashable> {
     fn merkleize(self) -> Vec<[u8; 32]>;
-}
-
-pub struct TraceTable {
-    pub rows:     usize,
-    pub cols:     usize,
-    pub elements: Vec<FieldElement>,
-}
-
-impl TraceTable {
-    pub fn new(rows: usize, cols: usize, elements: Vec<FieldElement>) -> Self {
-        Self {
-            rows,
-            cols,
-            elements,
-        }
-    }
 }
 
 /// Parameters for Stark proof generation
@@ -192,7 +177,8 @@ pub fn stark_proof(
     claim_value: FieldElement,
     params: &ProofParams,
 ) -> ProverChannel {
-    let trace_len = trace.elements.len() / trace.cols;
+    let trace_len = trace.num_rows();
+
     let omega = FieldElement::root(U256::from(trace_len * params.blowup)).unwrap();
     let g = omega.pow(U256::from(params.blowup));
     let eval_domain_size = trace_len * params.blowup;
@@ -340,19 +326,12 @@ pub fn geometric_series(base: &FieldElement, step: &FieldElement, len: usize) ->
 // TODO: Naming
 #[allow(non_snake_case)]
 fn interpolate_trace_table(table: &TraceTable) -> Vec<Vec<FieldElement>> {
-    let trace_len = table.elements.len() / table.cols;
-    let mut TPn = vec![Vec::new(); table.cols];
-    (0..table.cols)
+    let mut result = vec![Vec::new(); table.num_columns()];
+    (0..table.num_columns())
         .into_par_iter()
-        .map(|x| {
-            let mut hold_col = Vec::with_capacity(trace_len);
-            for i in (0..table.elements.len()).step_by(table.cols) {
-                hold_col.push(table.elements[x + i].clone());
-            }
-            ifft(hold_col.as_slice())
-        })
-        .collect_into_vec(&mut TPn);
-    TPn
+        .map(|j| ifft(table.column(j).as_slice())) // OPT: use inplace FFT
+        .collect_into_vec(&mut result);
+    result
 }
 
 // TODO: Naming
@@ -800,13 +779,13 @@ mod tests {
 
         // Second check that the trace table function is working.
         let trace = get_trace_table(1024, witness);
-        assert_eq!(trace.elements[2000], claim_value);
+        assert_eq!(trace[(1000, 0)], claim_value);
 
         let TPn = interpolate_trace_table(&trace);
         let TP0 = TPn[0].as_slice();
         let TP1 = TPn[1].as_slice();
         // Checks that the trace table polynomial interpolation is working
-        assert_eq!(eval_poly(trace_x[1000].clone(), TP0), trace.elements[2000]);
+        assert_eq!(eval_poly(trace_x[1000].clone(), TP0), trace[(1000, 0)]);
 
         let TPn_reference: Vec<&[FieldElement]> = TPn.iter().map(|x| x.as_slice()).collect();
         let LDEn = calculate_low_degree_extensions(TPn_reference.as_slice(), &params, &eval_x);

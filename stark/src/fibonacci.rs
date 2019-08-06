@@ -1,28 +1,24 @@
 use crate::{
     polynomial::eval_poly,
-    proofs::{geometric_series, Constraint, TraceTable},
+    proofs::{geometric_series, Constraint},
     utils::Reversible,
+    TraceTable,
 };
 use hex_literal::*;
 use primefield::{invert_batch, FieldElement};
 use rayon::prelude::*;
 use u256::{u256h, U256};
 
-// TODO: Naming
-#[allow(non_snake_case)]
-pub fn get_trace_table(length: usize, witness: FieldElement) -> TraceTable {
-    let mut T_0 = vec![FieldElement::ONE];
-    let mut T_1 = vec![witness];
-    for i in 1..length {
-        T_0.push(T_1[(i - 1) as usize].clone());
-        T_1.push(T_0[(i - 1) as usize].clone() + T_1[(i - 1) as usize].clone());
+pub fn get_trace_table(length: usize, secret: FieldElement) -> TraceTable {
+    // Compute trace table
+    let mut trace = TraceTable::new(length, 2);
+    trace[(0, 0)] = 1.into();
+    trace[(0, 1)] = secret.clone();
+    for i in 0..(length - 1) {
+        trace[(i + 1, 0)] = trace[(i, 1)].clone();
+        trace[(i + 1, 1)] = &trace[(i, 0)] + &trace[(i, 1)];
     }
-    let mut final_vec = Vec::with_capacity(2 * length as usize);
-    for i in 0..length {
-        final_vec.push(T_0[i as usize].clone());
-        final_vec.push(T_1[i as usize].clone());
-    }
-    TraceTable::new(length as usize, 2, final_vec)
+    trace
 }
 
 // TODO: Naming
