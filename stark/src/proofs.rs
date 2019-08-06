@@ -376,8 +376,6 @@ fn interpolate_trace_table(table: &TraceTable) -> Vec<Vec<FieldElement>> {
     result
 }
 
-// TODO: Naming
-#[allow(non_snake_case)]
 fn calculate_low_degree_extensions(
     trace_poly: &[&[FieldElement]],
     params: &ProofParams,
@@ -387,8 +385,8 @@ fn calculate_low_degree_extensions(
     let omega = FieldElement::root(U256::from(trace_len * params.blowup)).unwrap();
     let gen = FieldElement::GENERATOR;
 
-    let mut LDEn = vec![Vec::with_capacity(eval_x.len()); trace_poly.len()];
-    LDEn.par_iter_mut().enumerate().for_each(|(x, col)| {
+    let mut trace_lde = vec![Vec::with_capacity(eval_x.len()); trace_poly.len()];
+    trace_lde.par_iter_mut().enumerate().for_each(|(x, col)| {
         for index in 0..params.blowup {
             let reverse_index = index.bit_reverse_at(params.blowup);
             let cofactor = &gen * omega.pow(U256::from(reverse_index));
@@ -396,11 +394,9 @@ fn calculate_low_degree_extensions(
         }
     });
 
-    LDEn
+    trace_lde
 }
 
-// TODO: Naming
-#[allow(non_snake_case)]
 fn calculate_constraints_on_domain(
     trace_poly: &[&[FieldElement]],
     lde_poly: &[&[FieldElement]],
@@ -410,17 +406,19 @@ fn calculate_constraints_on_domain(
     claim_value: &FieldElement,
     blowup: usize,
 ) -> Vec<FieldElement> {
-    let mut CC;
+    let mut constraint_lde;
     let trace_len = trace_poly[0].len();
     let mut x = FieldElement::GENERATOR;
     let omega = FieldElement::root(U256::from(trace_len * blowup)).unwrap();
     let eval_domain_size = trace_len * blowup;
 
     match constraints.eval_loop {
-        Some(x) => CC = (x)(lde_poly, constraint_coefficients, claim_index, &claim_value),
+        Some(x) => {
+            constraint_lde = (x)(lde_poly, constraint_coefficients, claim_index, &claim_value)
+        }
         None => {
-            CC = vec![FieldElement::ZERO; eval_domain_size];
-            for constraint_element in CC.iter_mut() {
+            constraint_lde = vec![FieldElement::ZERO; eval_domain_size];
+            for constraint_element in constraint_lde.iter_mut() {
                 *constraint_element = (constraints.eval)(
                     // This will perform the polynomial evaluation on each step
                     &x,
@@ -434,7 +432,7 @@ fn calculate_constraints_on_domain(
             }
         }
     }
-    CC
+    constraint_lde
 }
 
 fn get_out_of_domain_information(
@@ -475,8 +473,6 @@ fn get_out_of_domain_information(
     (oods_point, oods_coefficients, oods_values)
 }
 
-// TODO: Naming
-#[allow(non_snake_case)]
 fn calculate_out_of_domain_constraints(
     lde_poly: &[&[FieldElement]],
     constraint_on_domain: &[FieldElement],
@@ -491,7 +487,7 @@ fn calculate_out_of_domain_constraints(
     let omega = FieldElement::root(U256::from(trace_len * blowup)).unwrap();
     let g = omega.pow(U256::from(blowup));
 
-    let mut CO = Vec::with_capacity(eval_domain_size);
+    let mut oods_constraint_lde = Vec::with_capacity(eval_domain_size);
     let x = FieldElement::GENERATOR;
     let mut x_omega_cycle = Vec::with_capacity(eval_domain_size);
     let mut x_oods_cycle: Vec<FieldElement> = Vec::with_capacity(eval_domain_size);
@@ -520,24 +516,24 @@ fn calculate_out_of_domain_constraints(
         .into_par_iter()
         .map(|index| {
             let i = index.bit_reverse_at(eval_domain_size);
-            let A = &x_oods_cycle[i];
-            let B = &x_oods_cycle_g[i];
+            let a = &x_oods_cycle[i];
+            let b = &x_oods_cycle_g[i];
             let mut r = FieldElement::ZERO;
 
             for x in 0..lde_poly.len() {
-                r += &oods_coefficients[2 * x] * (&lde_poly[x][index] - &oods_values[2 * x]) * A;
+                r += &oods_coefficients[2 * x] * (&lde_poly[x][index] - &oods_values[2 * x]) * a;
                 r += &oods_coefficients[2 * x + 1]
                     * (&lde_poly[x][index] - &oods_values[2 * x + 1])
-                    * B;
+                    * b;
             }
             r += &oods_coefficients[oods_coefficients.len() - 1]
                 * (&constraint_on_domain[index] - &oods_values[oods_values.len() - 1])
-                * A;
+                * a;
 
             r
         })
-        .collect_into_vec(&mut CO);
-    CO
+        .collect_into_vec(&mut oods_constraint_lde);
+    oods_constraint_lde
 }
 
 fn perform_fri_layering(
