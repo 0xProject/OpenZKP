@@ -22,9 +22,27 @@ impl TraceTable {
         }
     }
 
+    pub fn num_rows(&self) -> usize {
+        self.trace_length
+    }
+
+    pub fn num_columns(&self) -> usize {
+        self.num_columns
+    }
+
     #[allow(dead_code)] // TODO
     pub fn generator(&self) -> FieldElement {
         FieldElement::root(self.trace_length.into()).expect("No generator for trace table length.")
+    }
+
+    /// Extract the j-th column as a vector
+    // OPT: Instead of using this function, work with strides.
+    pub fn column(&self, j: usize) -> MmapVec<FieldElement> {
+        let mut result: MmapVec<FieldElement> = MmapVec::with_capacity(self.trace_length);
+        for v in self.values.iter().skip(j).step_by(self.num_columns) {
+            result.push(v.clone());
+        }
+        result
     }
 }
 
