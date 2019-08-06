@@ -8,6 +8,7 @@ mod hash;
 mod hashable;
 mod masked_keccak;
 mod merkle;
+mod merkle_index;
 mod mmap_vec;
 mod polynomial;
 mod proofs;
