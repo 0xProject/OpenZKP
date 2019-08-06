@@ -3,7 +3,10 @@ use crate::{
     proofs::*,
 };
 use rayon::prelude::*;
-use std::marker::{PhantomData, Sync};
+use std::{
+    marker::{PhantomData, Sync},
+    ops::Index,
+};
 
 struct MerkleNode<'a>(&'a Hash, &'a Hash);
 
@@ -27,6 +30,14 @@ pub struct MerkleTree<Leaf: Hashable> {
     leaf_type: PhantomData<Leaf>,
 }
 
+impl<Leaf: Hashable> Index<MerkleIndex> for MerkleTree<Leaf> {
+    type Output = Hash;
+
+    fn index(&self, index: MerkleIndex) -> &Hash {
+        &self.nodes[index.index()]
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct MerkleProof {
     decommitments: Vec<Hash>,
@@ -41,7 +52,7 @@ impl<Leaf: Hashable> MerkleTree<Leaf> {
             num_leafs: size,
             cursor: Some(MerkleIndex::from_depth_offset(depth, 0)),
             depth,
-            nodes: vec![Hash::default(); size],
+            nodes: vec![Hash::default(); 2 * size - 1],
             leaf_type: PhantomData,
         }
     }
@@ -53,20 +64,70 @@ impl<Leaf: Hashable> MerkleTree<Leaf> {
         self.cursor = cursor.right_sibling();
         while cursor.is_right() {
             cursor = cursor.parent().unwrap();
-            self.nodes[cursor.index()] = MerkleNode(
-                &self.nodes[cursor.left_child().index()],
-                &self.nodes[cursor.right_child().index()],
-            )
-            .hash()
+            self.nodes[cursor.index()] =
+                MerkleNode(&self[cursor.left_child()], &self[cursor.right_child()]).hash()
         }
     }
 
     pub fn root(&self) -> &Hash {
-        &self.nodes[MerkleIndex::root().index()]
+        &self[MerkleIndex::root()]
     }
 
-    pub fn proof<'a>(&self, _indices: &[usize], _leafs: &Fn(usize) -> &'a Leaf) -> MerkleProof {
-        unimplemented!()
+    pub fn proof<'a>(&self, indices: &[usize], leafs: &Fn(usize) -> &'a Leaf) -> MerkleProof {
+        let mut known = vec![false; self.nodes.len()];
+        let mut decommitments: Vec<Hash> = Vec::new();
+
+        let mut peekable_indicies = indices.iter().peekable();
+        let mut excluded_pair = false;
+        for &index in indices.iter() {
+            peekable_indicies.next();
+            known[self.num_leafs + index % self.num_leafs] = true;
+
+            if index % 2 == 0 {
+                known[self.num_leafs + 1 + index % self.num_leafs] = true;
+                let prophet = peekable_indicies.peek();
+                match prophet {
+                    Some(x) => {
+                        if **x != index + 1 {
+                            decommitments.push(leafs(index + 1).hash());
+                        } else {
+                            excluded_pair = true;
+                        }
+                    }
+                    None => {
+                        decommitments.push(leafs(index + 1).hash());
+                    }
+                }
+            } else if !excluded_pair {
+                known[self.num_leafs - 1 + index % self.num_leafs] = true;
+                decommitments.push(leafs(index - 1).hash());
+            } else {
+                known[self.num_leafs - 1 + index % self.num_leafs] = true;
+                excluded_pair = false;
+            }
+        }
+
+        for i in (2_usize.pow(self.depth - 1))..(2_usize.pow(self.depth)) {
+            let left = known[2 * i];
+            let right = known[2 * i + 1];
+            known[i] = left || right;
+        }
+
+        for d in (1..self.depth).rev() {
+            for i in (2_usize.pow(d - 1))..(2_usize.pow(d)) {
+                let left = known[2 * i];
+                let right = known[2 * i + 1];
+                if left && !right {
+                    decommitments.push(self.nodes[2 * i + 1].clone());
+                }
+                if !left && right {
+                    decommitments.push(self.nodes[2 * i].clone());
+                }
+                known[i] = left || right;
+            }
+        }
+
+        MerkleProof { decommitments }
     }
 
     pub fn verify<'a>(
