@@ -241,13 +241,6 @@ impl From<&FieldElement> for U256 {
     }
 }
 
-// TODO: Remove
-impl From<&[u8; 32]> for FieldElement {
-    fn from(bytes: &[u8; 32]) -> Self {
-        U256::from_bytes_be(bytes).into()
-    }
-}
-
 impl Neg for &FieldElement {
     type Output = FieldElement;
 

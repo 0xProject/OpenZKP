@@ -38,8 +38,8 @@ pub fn verify(
         &from_bytes(signature.0),
         &from_bytes(signature.1),
         &ecc::Affine::Point {
-            x: primefield::FieldElement::from(public_key.0),
-            y: primefield::FieldElement::from(public_key.1),
+            x: U256::from_bytes_be(public_key.0).into(),
+            y: U256::from_bytes_be(public_key.1).into(),
         },
     )
 }
