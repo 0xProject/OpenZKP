@@ -44,6 +44,20 @@ pub fn hex(input: TokenStream) -> TokenStream {
     }
 }
 
+pub fn u256h(input: TokenStream) -> TokenStream {
+    match parse_hex(input) {
+        Ok(bytes) => {
+            let literal = Literal::byte_string(&bytes);
+            // OPT: Convert to limb based representation.
+            // TODO: Ideally we'd locally import U256 here and
+            // use $crate::U256 here, but this leads to a circular
+            // dependency.
+            quote! { ::u256::U256::from_bytes_be(#literal) }
+        }
+        Err(err) => TokenStream::from(err.to_compile_error()),
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -82,6 +96,18 @@ mod test {
         assert_eq!(
             hex(quote! {"hello!"}).to_string(),
             quote! {compile_error ! { "Invalid hexadecimal string: Invalid character \'h\' at position 0" }}.to_string()
+        );
+    }
+
+    #[test]
+    pub fn test_u256h() {
+        assert_eq!(
+            u256h(quote! {""}).to_string(),
+            quote! {::u256::U256::from_bytes_be(b"")}.to_string()
+        );
+        assert_eq!(
+            u256h(quote! {"00"}).to_string(),
+            quote! {::u256::U256::from_bytes_be(b"\0")}.to_string()
         );
     }
 }
