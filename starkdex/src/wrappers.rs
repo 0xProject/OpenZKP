@@ -19,7 +19,7 @@ pub fn public_key(private_key: &[u8; 32]) -> ([u8; 32], [u8; 32]) {
     let p = ecc::private_to_public(&from_bytes(private_key));
     match p {
         ecc::Affine::Zero => panic!(),
-        ecc::Affine::Point { x, y } => (x.to_bytes(), y.to_bytes()),
+        ecc::Affine::Point { x, y } => (U256::from(x).to_bytes_be(), U256::from(y).to_bytes_be()),
     }
 }
 

@@ -39,11 +39,6 @@ impl FieldElement {
         &self.0
     }
 
-    // TODO: Remove in favour of U256::from(self).to_bytes_be() ?
-    pub fn to_bytes(&self) -> [u8; 32] {
-        from_montgomery(&self.0).to_bytes_be()
-    }
-
     #[inline(always)]
     pub fn is_zero(&self) -> bool {
         self.0 == U256::ZERO
