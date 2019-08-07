@@ -234,7 +234,6 @@ impl Writable<&[u8]> for ProverChannel {
     }
 }
 
-// TODO - Make into a hash type label
 impl Writable<&Hash> for ProverChannel {
     fn write(&mut self, data: &Hash) {
         self.write(data.as_bytes());

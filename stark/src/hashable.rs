@@ -8,6 +8,9 @@ pub trait Hashable {
 
 impl Hashable for Hash {
     fn hash(&self) -> Hash {
+        // Hashing here is idempotent. Defining this in combination
+        // with `Hashable for [T]` makes it do the right thing for
+        // `[Hash]::hash().`
         self.clone()
     }
 }
