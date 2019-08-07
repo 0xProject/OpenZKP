@@ -226,35 +226,6 @@ mod tests {
 
     #[test]
     fn test_mul() {
-        let a = Affine::Point {
-            x: FieldElement::new(&[
-                0x5bf31eb0, 0xfe50a889, 0x2d1a8a21, 0x3242e28e, 0x0d13fe66, 0xcf63e064, 0x9426e2c3,
-                0x0040ffd5,
-            ]),
-            y: FieldElement::new(&[
-                0xe29859d2, 0xd21b931a, 0xea34d27d, 0x296f19b9, 0x6487ae5b, 0x524260f9, 0x069092ca,
-                0x060c2257,
-            ]),
-        };
-        let b = U256::from_slice(&[
-            0x711a14cf, 0xebe54f04, 0x4729d630, 0xd14a329a, 0xf5480b47, 0x35fdc862, 0xde09131d,
-            0x029f7a37,
-        ]);
-        let c = Jacobian::from(Affine::Point {
-            x: FieldElement::new(&[
-                0x143de731, 0x4c657d7e, 0x44b99cbf, 0x49dfc2e5, 0x40ea4226, 0xaf6c4895, 0x9a141832,
-                0x04851acc,
-            ]),
-            y: FieldElement::new(&[
-                0x138592fd, 0x1377613f, 0xd53c61dd, 0xaa8b32c1, 0xd5bf18bc, 0x3b22a665, 0xf54ed6ae,
-                0x07f4bb53,
-            ]),
-        });
-        assert_eq!(mul(&a, &b), c);
-    }
-
-    #[test]
-    fn test_mul_2() {
         let p = Affine::Point {
             x: FieldElement::from(u256h!(
                 "01ef15c18599971b7beced415a40f0c7deacfd9b0d1819e03d723d8bc943cfca"
