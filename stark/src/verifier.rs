@@ -36,7 +36,7 @@ pub fn check_proof(
     // Get the oods information from the proof and random
     let oods_point: FieldElement = proof_check.get_random();
     let mut oods_values: Vec<FieldElement> = Vec::with_capacity(2 * trace_cols + 1);
-    for _ in 0..=2 * trace_cols {
+    for _ in 0..(2 * trace_cols + params.constraints_degree_bound) {
         oods_values.push(proof_check.replay());
     }
     let mut oods_coefficients: Vec<FieldElement> = Vec::with_capacity(2 * trace_cols + 1);
@@ -313,7 +313,7 @@ fn out_of_domain_element(
             / (&x_transform - &g * oods_point);
     }
     r += &oods_coefficients[oods_coefficients.len() - 1]
-        * (constraint_point - &oods_values[oods_values.len() - 1])
+        * (constraint_point - &oods_values[oods_coefficients.len() - 1])
         / (&x_transform - oods_point);
 
     r
@@ -345,6 +345,7 @@ mod tests {
                 pow_bits:   12,
                 queries:    20,
                 fri_layout: vec![3, 2],
+                constraints_degree_bound: 2,
             },
         );
 
@@ -358,6 +359,7 @@ mod tests {
                 pow_bits:   12,
                 queries:    20,
                 fri_layout: vec![3, 2],
+                constraints_degree_bound: 2,
             },
             2,
             1024

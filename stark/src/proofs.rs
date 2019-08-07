@@ -64,6 +64,16 @@ pub struct ProofParams {
     /// After `fri_layout.sum()` reductions are done, the remaining polynomial
     /// is written explicitly in coefficient form.
     pub fri_layout: Vec<usize>,
+
+    /// The highest degree of any constraint polynomial.
+    ///
+    /// The polynomial constraints are not directly commited too on the trace
+    /// domain, instead they are calculated via "Deep fri" which samples and
+    /// commits too information outside of the domain.
+    ///
+    /// This information on constraint degree allows the out of domain sampling
+    /// to provide the right number points.
+    pub constraints_degree_bound: usize,
 }
 
 // This struct contains two evaluation systems which allow different
@@ -243,6 +253,7 @@ where
         public,
         &constraints,
         &g,
+        &params,
     );
 
     // Divide out the OODS points from the constraints and combine.
@@ -437,6 +448,7 @@ fn get_out_of_domain_information<Public>(
     public: &Public,
     constraints: &Constraint<Public>,
     g: &FieldElement,
+    params: &ProofParams,
 ) -> (FieldElement, Vec<FieldElement>, Vec<FieldElement>) {
     let oods_point: FieldElement = proof.get_random();
     let oods_point_g = &oods_point * g;
@@ -704,6 +716,7 @@ mod tests {
                 pow_bits:   12,
                 queries:    20,
                 fri_layout: vec![3, 2],
+                constraints_degree_bound: 1,
             },
         );
         assert_eq!(actual.coin.digest, expected);
@@ -734,6 +747,7 @@ mod tests {
                 pow_bits:   12,
                 queries:    20,
                 fri_layout: vec![3, 2],
+                constraints_degree_bound: 1,
             },
         );
 
@@ -749,6 +763,7 @@ mod tests {
                 pow_bits:   12,
                 queries:    20,
                 fri_layout: vec![3, 2],
+                constraints_degree_bound: 1,
             },
             2,
             1024
@@ -778,6 +793,7 @@ mod tests {
                 pow_bits:   12,
                 queries:    20,
                 fri_layout: vec![2, 1, 4, 2],
+                constraints_degree_bound: 1,
             },
         );
 
@@ -791,6 +807,7 @@ mod tests {
                 pow_bits:   12,
                 queries:    20,
                 fri_layout: vec![2, 1, 4, 2],
+                constraints_degree_bound: 1,
             },
             2,
             4096
@@ -841,6 +858,7 @@ mod tests {
             pow_bits:   12,
             queries:    20,
             fri_layout: vec![3, 2],
+            constraints_degree_bound: 1,
         };
 
         let trace_len = 1024;
@@ -962,6 +980,7 @@ mod tests {
             &public,
             &constraints,
             &g,
+            &params
         );
         // Checks that we have derived the right out of domain sample point
         assert_eq!(

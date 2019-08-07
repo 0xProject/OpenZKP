@@ -51,6 +51,7 @@ fn main() {
             pow_bits:   12,
             queries:    20,
             fri_layout: vec![3, 4, 5, 2, 3],
+            constraints_degree_bound: 1,
         },
         2,
         1_048_576,

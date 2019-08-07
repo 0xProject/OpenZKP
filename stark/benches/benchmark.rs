@@ -134,6 +134,7 @@ fn abstracted_fib_proof_make(crit: &mut Criterion) {
                     pow_bits:   12,
                     queries:    20,
                     fri_layout: vec![3, 2, 1],
+                    constraints_degree_bound: 1,
                 },
             ))
         })
@@ -159,6 +160,7 @@ fn proof_check(crit: &mut Criterion) {
             pow_bits:   12,
             queries:    20,
             fri_layout: vec![3, 2, 1],
+            constraints_degree_bound: 1,
         },
     );
 
@@ -173,7 +175,8 @@ fn proof_check(crit: &mut Criterion) {
                     blowup:     16,
                     pow_bits:   12,
                     queries:    20,
-                    fri_layout: vec![3, 2],
+                    fri_layout: vec![3, 2, 1],
+                    constraints_degree_bound: 1,
                 },
                 2,
                 1024,
