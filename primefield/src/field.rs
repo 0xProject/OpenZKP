@@ -44,6 +44,11 @@ impl FieldElement {
         FieldElement(bu)
     }
 
+    pub fn as_montogomery_u256(&self) -> &U256 {
+        &self.0
+    }
+
+    // TODO: Remove in favour of U256::from(self).to_bytes_be() ?
     pub fn to_bytes(&self) -> [u8; 32] {
         from_montgomery(&self.0).to_bytes_be()
     }

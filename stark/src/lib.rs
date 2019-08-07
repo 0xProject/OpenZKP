@@ -4,6 +4,9 @@
 mod channel;
 mod fft;
 pub mod fibonacci;
+mod hash;
+mod hashable;
+mod masked_keccak;
 mod merkle;
 mod mmap_vec;
 mod polynomial;
