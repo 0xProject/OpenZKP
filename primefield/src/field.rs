@@ -217,10 +217,9 @@ impl FieldElement {
     to_int!(to_isize, as_isize, isize);
 }
 
-// TODO: Remove?
 impl From<U256> for FieldElement {
     fn from(n: U256) -> Self {
-        FieldElement::from_montgomery(to_montgomery(&n))
+        (&n).into()
     }
 }
 
@@ -230,16 +229,15 @@ impl From<&U256> for FieldElement {
     }
 }
 
-// TODO: Remove?
 impl From<FieldElement> for U256 {
     fn from(n: FieldElement) -> Self {
-        from_montgomery(&n.0)
+        (&n).into()
     }
 }
 
 impl From<&FieldElement> for U256 {
     fn from(n: &FieldElement) -> Self {
-        from_montgomery(&n.0)
+        from_montgomery(n.as_montgomery_u256())
     }
 }
 
