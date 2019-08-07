@@ -108,6 +108,9 @@ impl FieldElement {
 }
 
 pub fn invert_batch(to_be_inverted: &[FieldElement]) -> Vec<FieldElement> {
+    if to_be_inverted.is_empty() {
+        return Vec::new();
+    }
     let n = to_be_inverted.len();
     let mut inverses = cumulative_product(to_be_inverted);
 
@@ -133,6 +136,9 @@ fn cumulative_product(elements: &[FieldElement]) -> Vec<FieldElement> {
 
 impl fmt::Debug for FieldElement {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // TODO: Once we have a proc macro that can do Montgomery conversion
+        // at compile time, use that instead. The current expression compiles,
+        // but is not compile time constant.
         write!(f, "FieldElement::from({:?})", U256::from(self))
     }
 }
@@ -379,51 +385,17 @@ mod tests {
         assert_eq!(a / b, c);
     }
 
-    // TODO
-    // #[test]
-    // fn test_batch_inv() {
-    // let a = FieldElement::new(&[
-    // 0x7d14253b, 0xef060e37, 0x98d1486f, 0x8700b80a, 0x0a83500d, 0x961ed57d,
-    // 0x68cc0469, 0x02945916,
-    // ]);
-    // let b = FieldElement::new(&[
-    // 0xf3a5912a, 0x62f3d853, 0x748c8465, 0x5f9b78d9, 0x8d66de24, 0xcf8479c5,
-    // 0x08cc1bb0, 0x06566f2f,
-    // ]);
-    // let c = FieldElement::new(&[
-    // 0x4fb2a90b, 0x301e1830, 0x97593d1a, 0x97e53783, 0xbf27c713, 0x1bed3220,
-    // 0x9a076875, 0x02a40705,
-    // ]);
-    // let d = FieldElement::new(&[
-    // 0x7d14353b, 0xef060e37, 0x98d1486f, 0x8700b80a, 0x0a83500d, 0x961ed57d,
-    // 0x68cc0469, 0x02945916,
-    // ]);
-    // let e = FieldElement::new(&[
-    // 0xf3a5912a, 0x74f3d853, 0x748c8465, 0x5f9b78d9, 0x8d66de24, 0xcf8479c5,
-    // 0x08cc1bb0, 0x06566f2f,
-    // ]);
-    // let f = FieldElement::new(&[
-    // 0x4fb2a9bb, 0x301e1830, 0x97593d1a, 0x97e56783, 0xbf27c713, 0x1bed3220,
-    // 0x9a076875, 0x02a40705,
-    // ]);
-    //
-    // let to_be_inverted = vec![
-    // a.clone(),
-    // b.clone(),
-    // c.clone(),
-    // d.clone(),
-    // e.clone(),
-    // f.clone(),
-    // ];
-    // let ret = invert_batch(to_be_inverted.as_slice());
-    //
-    // assert_eq!(ret[0], a.inv().unwrap());
-    // assert_eq!(ret[1], b.inv().unwrap());
-    // assert_eq!(ret[2], c.inv().unwrap());
-    // assert_eq!(ret[3], d.inv().unwrap());
-    // assert_eq!(ret[4], e.inv().unwrap());
-    // assert_eq!(ret[5], f.inv().unwrap());
-    // }
+    #[quickcheck]
+    fn test_batch_inv(x: Vec<FieldElement>) -> bool {
+        if x.iter().any(|a| a.is_zero()) {
+            true
+        } else {
+            invert_batch(x.as_slice())
+                .iter()
+                .zip(x.iter())
+                .all(|(a_inv, a)| *a_inv == a.inv().unwrap())
+        }
+    }
 
     #[quickcheck]
     fn from_as_isize(n: isize) -> bool {
