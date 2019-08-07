@@ -46,7 +46,7 @@ pub fn redc(lo: &U256, hi: &U256) -> U256 {
     let (a7, _carry) = adc(hi.c3, carry2, carry);
 
     // Final reduction
-    let mut r = U256::new(a4, a5, a6, a7);
+    let mut r = U256::from_limbs(a4, a5, a6, a7);
     if r >= FieldElement::MODULUS {
         r -= &FieldElement::MODULUS;
     }
@@ -104,7 +104,7 @@ pub fn mul_redc(x: &U256, y: &U256) -> U256 {
     let a3 = a4 + carry;
 
     // Final reduction
-    let mut r = U256::new(a0, a1, a2, a3);
+    let mut r = U256::from_limbs(a0, a1, a2, a3);
     if r.cmp(&FieldElement::MODULUS) != Ordering::Less {
         r -= &FieldElement::MODULUS;
     }
