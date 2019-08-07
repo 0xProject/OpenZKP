@@ -53,6 +53,7 @@ macro_rules! u256h {
     };
 }
 
+// TODO: Make field private.
 #[derive(PartialEq, Eq, Clone, Default)]
 pub struct U256 {
     pub c0: u64,
