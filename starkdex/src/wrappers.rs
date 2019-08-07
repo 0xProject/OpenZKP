@@ -19,7 +19,7 @@ pub fn public_key(private_key: &[u8; 32]) -> ([u8; 32], [u8; 32]) {
     let p = ecc::private_to_public(&from_bytes(private_key));
     match p {
         ecc::Affine::Zero => panic!(),
-        ecc::Affine::Point { x, y } => (x.to_bytes(), y.to_bytes()),
+        ecc::Affine::Point { x, y } => (U256::from(x).to_bytes_be(), U256::from(y).to_bytes_be()),
     }
 }
 
@@ -38,8 +38,8 @@ pub fn verify(
         &from_bytes(signature.0),
         &from_bytes(signature.1),
         &ecc::Affine::Point {
-            x: primefield::FieldElement::from(public_key.0),
-            y: primefield::FieldElement::from(public_key.1),
+            x: U256::from_bytes_be(public_key.0).into(),
+            y: U256::from_bytes_be(public_key.1).into(),
         },
     )
 }

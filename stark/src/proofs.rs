@@ -119,7 +119,7 @@ impl Groupable<Vec<U256>> for (usize, &[FieldElement]) {
         let (coset_size, layer) = *self;
         let mut internal_leaf = Vec::with_capacity(coset_size);
         for j in 0..coset_size {
-            internal_leaf.push(layer[(index * coset_size + j)].0.clone());
+            internal_leaf.push(layer[(index * coset_size + j)].as_montgomery().clone());
         }
         internal_leaf
     }
@@ -133,7 +133,7 @@ impl Groupable<Vec<U256>> for &[Vec<FieldElement>] {
     fn make_group(&self, index: usize) -> Vec<U256> {
         let mut ret = Vec::with_capacity(self.len());
         for item in self.iter() {
-            ret.push(item[index].0.clone())
+            ret.push(item[index].as_montgomery().clone())
         }
         ret
     }
@@ -145,7 +145,7 @@ impl Groupable<Vec<U256>> for &[Vec<FieldElement>] {
 
 impl Groupable<U256> for &[FieldElement] {
     fn make_group(&self, index: usize) -> U256 {
-        self[index].0.clone()
+        self[index].as_montgomery().clone()
     }
 
     fn domain_size(&self) -> usize {
@@ -864,7 +864,7 @@ mod tests {
         );
 
         let mut public_input = [(public.index as u64).to_be_bytes()].concat();
-        public_input.extend_from_slice(&public.value.0.to_bytes_be());
+        public_input.extend_from_slice(&public.value.as_montgomery().to_bytes_be());
 
         let mut proof = ProverChannel::new();
         proof.initialize(&public_input.as_slice());
@@ -903,7 +903,7 @@ mod tests {
         // Checks that our constraints are properly calculated on the domain
         assert_eq!(
             CC[123.bit_reverse_at(eval_domain_size)].clone(),
-            FieldElement(u256h!(
+            FieldElement::from_montgomery(u256h!(
                 "019fb62b06446e919d7909f4896febce72978ff860e1ed61b4418091617677d3"
             ))
         );
@@ -949,7 +949,7 @@ mod tests {
         // Checks that our out of domain evaluated constraints calculated right
         assert_eq!(
             CO[4321.bit_reverse_at(eval_domain_size)].clone(),
-            FieldElement(u256h!(
+            FieldElement::from_montgomery(u256h!(
                 "023b8ba264d4a1255e1dedd6e5819e86230562b85d5a7af8fb994053a2debdde"
             ))
         );
