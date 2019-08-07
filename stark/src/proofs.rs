@@ -348,6 +348,7 @@ pub fn get_constraint_polynomial(
         p.multiply_by_x(2 * trace_length - p.len());
         constraint_polynomial += &(&constraint_coefficients[2 * i + 1] * &p);
         assert_eq!(p.len(), 2 * trace_length);
+        println!("{}", {i});
     }
     constraint_polynomial
 }

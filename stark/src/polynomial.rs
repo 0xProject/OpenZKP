@@ -136,6 +136,18 @@ impl Polynomial {
         coefficients.extend_from_slice(self.coefficients());
         Self(coefficients)
     }
+
+    pub fn even(&self) -> Self {
+        // assumes length is even!
+        let even_coefficients = self.0[1..].iter().cloned().step_by(2).collect();
+        Self(even_coefficients)
+    }
+
+    pub fn odd(&self) -> Self {
+        // assumes length is even!
+        let odd_coefficients = self.0.iter().cloned().step_by(2).collect();
+        Self(odd_coefficients)
+    }
 }
 
 impl PartialEq for Polynomial {
@@ -459,5 +471,32 @@ mod tests {
         }
         let denominator = Polynomial::from_sparse(&[(0, b), (d, c)]);
         a.clone() * denominator.clone() / denominator == a
+    }
+
+    #[test]
+    fn even_example() {
+        assert_eq!(Polynomial::from_dense(&[1, 0]).even(), Polynomial::from_dense(&[1]));
+    }
+
+    #[quickcheck]
+    fn even_definition(a: Polynomial, x: FieldElement) -> bool {
+        if a.is_zero() {
+            return true;
+        }
+        if a.len() % 2 == 1 {
+            return true;
+        }
+        a.even().evaluate(&(&x * &x)) == (a.evaluate(&x) + a.evaluate(&-&x)) / FieldElement::from(U256::from(2u64))
+    }
+
+    #[quickcheck]
+    fn odd_definition(a: Polynomial, x: FieldElement) -> bool {
+        if a.is_zero() {
+            return true;
+        }
+        if a.len() % 2 == 1 {
+            return true;
+        }
+        a.odd().evaluate(&(&x * &x)) == (a.evaluate(&x) - a.evaluate(&-&x)) / x.double()
     }
 }

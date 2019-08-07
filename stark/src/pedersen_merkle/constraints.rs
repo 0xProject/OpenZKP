@@ -861,4 +861,39 @@ mod test {
 
         assert_eq!(oods_value, expected);
     }
+
+    #[test]
+    fn oods_2() {
+        let constraint_polynomial = get_constraint_polynomial(
+            &get_trace_polynomials(),
+            &get_pedersen_merkle_constraints(&get_public_input()),
+            &get_coefficients(),
+        );
+
+        let oods_point = FieldElement::from_hex_str(
+            "0x273966fc4697d1762d51fe633f941e92f87bdda124cf7571007a4681b140c05",
+        );
+        let negative_oods_point = -&oods_point;
+
+        let even_oods_value = (constraint_polynomial.evaluate(&oods_point)
+            + constraint_polynomial.evaluate(&negative_oods_point))
+            / FieldElement::from_hex_str("2");
+        let odd_oods_value = (constraint_polynomial.evaluate(&oods_point)
+            - constraint_polynomial.evaluate(&negative_oods_point))
+            / oods_point.double();
+
+        assert_eq!(
+            even_oods_value,
+            FieldElement::from_hex_str(
+                "0x7370f59cb5af66e4183bc0c5d206e7f6c2be944366ad42a4d8bccd5417499f",
+            )
+        );
+
+        assert_eq!(
+            odd_oods_value,
+            FieldElement::from_hex_str(
+                "0x4b32254637e364a6649ed013dd993dc0acd08ba4d360ddac758e931dcc531d",
+            )
+        );
+    }
 }

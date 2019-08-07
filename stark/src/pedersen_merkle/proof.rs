@@ -76,37 +76,41 @@ pub fn get_extended_trace_table() -> Vec<MmapVec<FieldElement>> {
 
 pub fn evaluate_constraint_polynomial_on_extended_domain(
     constraint_coefficients: &[FieldElement],
-) -> MmapVec<FieldElement> {
+) -> Vec<MmapVec<FieldElement>> {
     let constraint_polynomial = get_constraint_polynomial(
         &get_trace_polynomials(),
         &get_pedersen_merkle_constraints(&get_public_input()),
         constraint_coefficients,
     );
+    println!("constraint polynomial!");
+    let even_polynomial = constraint_polynomial.even();
+    let odd_polynomial = constraint_polynomial.odd();
+    let trace_length = even_polynomial.len();
 
-    let trace_length = constraint_polynomial.len();
 
-    let beta = 8usize;
+    let polynomials = vec![even_polynomial, odd_polynomial];
+
+    let beta = 16usize;
     let evaluation_length = trace_length * beta;
     let evaluation_generator = FieldElement::root(U256::from(evaluation_length as u64)).unwrap();
     let evaluation_offset = FieldElement::GENERATOR;
 
-    let mut cosets = vec![Vec::with_capacity(trace_length); beta];
-    (0..beta)
-        .into_par_iter()
-        .map(|i| {
-            let reverse_i = i.bit_reverse() >> (64 - 4);
-            let cofactor =
-                &evaluation_offset * evaluation_generator.pow(U256::from(reverse_i as u64));
-            fft_cofactor_bit_reversed(&constraint_polynomial.reverse_coefficients(), &cofactor)
-        })
-        .collect_into_vec(&mut cosets);
-
-    let mut constraint_polynomial_on_extended_domain: MmapVec<FieldElement> =
-        MmapVec::with_capacity(evaluation_length);
-    for coset in cosets {
-        for element in coset.iter() {
-            constraint_polynomial_on_extended_domain.push(element.clone());
+    let mut constraint_polynomial_on_extended_domain = vec![MmapVec::with_capacity(evaluation_length); 2];
+    for i in 0..beta {
+        let mut cosets: Vec<Vec<FieldElement>> = vec![Vec::with_capacity(trace_length); 2];
+        polynomials
+            .par_iter()
+            .map(|p| {
+                let reverse_i = i.bit_reverse() >> (64 - 4);
+                let cofactor =
+                    &evaluation_offset * evaluation_generator.pow(U256::from(reverse_i as u64));
+                fft_cofactor_bit_reversed(&p.reverse_coefficients(), &cofactor)
+            })
+            .collect_into_vec(&mut cosets);
+        for (extended_trace_column, coset) in constraint_polynomial_on_extended_domain.iter_mut().zip(cosets) {
+            extended_trace_column.extend(&coset);
         }
+        println!("{}", {i});
     }
     constraint_polynomial_on_extended_domain
 }
@@ -144,12 +148,29 @@ mod tests {
         );
     }
 
+    // pretty sure what's going on is the two values are hashed to get get the leaf
+    // hash, same way that there are two oods points. P->V[16936:16968]:
+    // /pedersen merkle/STARK/FRI/Virtual Oracle/Decommit: Row: 3671035, Column:
+    // 0: Field Element(0x227aeeb56044b8097e038b05addd9ba04172780add7485ff52cf903099ac0c0)
+    // P->V[16968:17000]: /pedersen merkle/STARK/FRI/Virtual Oracle/Decommit:
+    // Row: 3671035, Column: 1: Field
+    // Element(0x3fe79f6e1101a8966553a48038b01f48ff70a48b3c89bcea6b3a44bdc732388)
+
     #[test]
     fn constraint_merkle_root_is_correct() {
         let constraint_polynomial_on_extended_domain =
             evaluate_constraint_polynomial_on_extended_domain(&get_coefficients());
+        let trace_length = constraint_polynomial_on_extended_domain[0].len();
 
-        let merkle_tree = make_tree(&constraint_polynomial_on_extended_domain);
+        let mut leaves: MmapVec<[FieldElement; 2]> = MmapVec::with_capacity(trace_length);
+        for i in 0..trace_length {
+            leaves.push([
+                constraint_polynomial_on_extended_domain[0][i].clone(),
+                constraint_polynomial_on_extended_domain[1][i].clone(),
+            ]);
+        }
+
+        let merkle_tree = make_tree(&leaves);
 
         assert_eq!(
             merkle_tree[1],

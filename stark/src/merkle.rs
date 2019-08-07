@@ -40,6 +40,13 @@ impl Hashable for [FieldElement; 8] {
     }
 }
 
+impl Hashable for [FieldElement; 2] {
+    fn hash(&self) -> [u8; 32] {
+        let leaf_list: Vec<U256> = self.iter().map(|x| x.0.clone()).collect();
+        hash_leaf_list(&leaf_list)
+    }
+}
+
 impl Hashable for [u8; 32] {
     fn hash(&self) -> [u8; 32] {
         self.clone()
