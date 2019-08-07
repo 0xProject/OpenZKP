@@ -94,13 +94,19 @@ mod test {
 
     #[test]
     pub fn test_hex() {
-        assert_eq!(hex(quote! {""}).to_string(), quote! {b""}.to_string());
-        assert_eq!(hex(quote! {"00"}).to_string(), quote! {b"\0"}.to_string());
-        assert_eq!(hex(quote! {"0f"}).to_string(), quote! {b"\x0F"}.to_string());
-        assert_eq!(hex(quote! {"0F"}).to_string(), quote! {b"\x0F"}.to_string());
+        assert_eq!(hex(quote! {""}).to_string(), quote! {*b""}.to_string());
+        assert_eq!(hex(quote! {"00"}).to_string(), quote! {*b"\0"}.to_string());
+        assert_eq!(
+            hex(quote! {"0f"}).to_string(),
+            quote! {*b"\x0F"}.to_string()
+        );
+        assert_eq!(
+            hex(quote! {"0F"}).to_string(),
+            quote! {*b"\x0F"}.to_string()
+        );
         assert_eq!(
             hex(quote! {"0123456789abCDeF"}).to_string(),
-            quote! {b"\x01#Eg\x89\xAB\xCD\xEF"}.to_string()
+            quote! {*b"\x01#Eg\x89\xAB\xCD\xEF"}.to_string()
         );
     }
 
