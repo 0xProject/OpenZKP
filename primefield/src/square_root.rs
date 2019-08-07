@@ -21,7 +21,7 @@ const BINARY_EXPONENT: usize = 3 * 4 * 16;
 const SIGNIFICAND: U256 = U256::new(0x0800_0000_0000_0011u64, 0, 0, 0);
 // The starting value of c in the Tonelli Shanks algorithm. We are using 3, a
 // generator, as the quadratic nonresidue the algorithm requires.
-const INITIAL_C: FieldElement = FieldElement(u256h!(
+const INITIAL_C: FieldElement = FieldElement::from_montgomery(u256h!(
     "07222e32c47afc260a35c5be60505574aaada25731fe3be94106bccd64a2bdd8"
 ));
 

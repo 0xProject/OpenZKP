@@ -6,10 +6,10 @@ use u256::{commutative_binop, noncommutative_binop, u256h, U256};
 // TODO: Implement Serde
 
 #[derive(PartialEq, Eq, Clone, Debug)]
-pub struct FieldElement(pub U256);
+pub struct FieldElement(U256);
 
 impl FieldElement {
-    pub const GENERATOR: FieldElement = FieldElement(u256h!(
+    pub const GENERATOR: FieldElement = FieldElement::from_montgomery(u256h!(
         "07fffffffffff9b0ffffffffffffffffffffffffffffffffffffffffffffffa1"
     ));
     /// Prime modulus of the field.
@@ -18,11 +18,11 @@ impl FieldElement {
     pub const MODULUS: U256 =
         u256h!("0800000000000011000000000000000000000000000000000000000000000001");
     // 3, in montgomery form.
-    pub const NEGATIVE_ONE: FieldElement = FieldElement(u256h!(
+    pub const NEGATIVE_ONE: FieldElement = FieldElement::from_montgomery(u256h!(
         "0000000000000220000000000000000000000000000000000000000000000020"
     ));
-    pub const ONE: FieldElement = FieldElement(R1);
-    pub const ZERO: FieldElement = FieldElement(U256::ZERO);
+    pub const ONE: FieldElement = FieldElement::from_montgomery(R1);
+    pub const ZERO: FieldElement = FieldElement::from_montgomery(U256::ZERO);
 
     pub const fn from_montgomery(n: U256) -> Self {
         FieldElement(n)
@@ -32,6 +32,7 @@ impl FieldElement {
         FieldElement::from(U256::from_hex_str(s))
     }
 
+    // TODO: Remove
     #[allow(clippy::cast_lossless)]
     pub fn new(limbs: &[u32; 8]) -> Self {
         let mut bu = U256::new(
@@ -41,10 +42,10 @@ impl FieldElement {
             ((limbs[7] as u64) << 32) | (limbs[6] as u64),
         );
         bu = to_montgomery(&bu);
-        FieldElement(bu)
+        FieldElement::from_montgomery(bu)
     }
 
-    pub fn as_montogomery_u256(&self) -> &U256 {
+    pub fn as_montgomery_u256(&self) -> &U256 {
         &self.0
     }
 
@@ -82,7 +83,7 @@ impl FieldElement {
 
     #[inline(always)]
     pub fn square(&self) -> FieldElement {
-        FieldElement(sqr_redc(&self.0))
+        FieldElement::from_montgomery(sqr_redc(&self.0))
     }
 
     pub fn square_root(&self) -> Option<FieldElement> {
@@ -149,7 +150,7 @@ macro_rules! impl_from_uint {
     ($t:ty) => {
         impl From<$t> for FieldElement {
             fn from(n: $t) -> Self {
-                FieldElement(to_montgomery(&U256::from(n)))
+                U256::from(n).into()
             }
         }
     };
@@ -167,9 +168,9 @@ macro_rules! impl_from_int {
         impl From<$t> for FieldElement {
             fn from(n: $t) -> Self {
                 if n >= 0 {
-                    FieldElement(to_montgomery(&U256::from(n)))
+                    U256::from(n).into()
                 } else {
-                    FieldElement(to_montgomery(&U256::from(-n))).neg()
+                    FieldElement::from(U256::from(-n)).neg()
                 }
             }
         }
@@ -183,6 +184,7 @@ impl_from_int!(i64);
 impl_from_int!(i128);
 impl_from_int!(isize);
 
+// TODO: Rename to to_ since a nontrivial conversion is involved.
 macro_rules! as_uint {
     ($name:ident, $type:ty) => {
         pub fn $name(&self) -> $type {
@@ -222,18 +224,20 @@ impl FieldElement {
     as_int!(as_isize, isize);
 }
 
+// TODO: Remove?
 impl From<U256> for FieldElement {
     fn from(n: U256) -> Self {
-        FieldElement(to_montgomery(&n))
+        FieldElement::from_montgomery(to_montgomery(&n))
     }
 }
 
 impl From<&U256> for FieldElement {
     fn from(n: &U256) -> Self {
-        FieldElement(to_montgomery(n))
+        FieldElement::from_montgomery(to_montgomery(n))
     }
 }
 
+// TODO: Remove?
 impl From<FieldElement> for U256 {
     fn from(n: FieldElement) -> Self {
         from_montgomery(&n.0)
@@ -246,9 +250,10 @@ impl From<&FieldElement> for U256 {
     }
 }
 
+// TODO: Remove
 impl From<&[u8; 32]> for FieldElement {
     fn from(bytes: &[u8; 32]) -> Self {
-        FieldElement(to_montgomery(&U256::from_bytes_be(bytes)))
+        U256::from_bytes_be(bytes).into()
     }
 }
 
@@ -257,7 +262,7 @@ impl Neg for &FieldElement {
 
     #[inline(always)]
     fn neg(self) -> Self::Output {
-        FieldElement(FieldElement::MODULUS - &self.0)
+        FieldElement::from_montgomery(FieldElement::MODULUS - &self.0)
     }
 }
 
@@ -316,7 +321,7 @@ use quickcheck::{Arbitrary, Gen};
 impl Arbitrary for FieldElement {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         // TODO: Generate 0, 1, p/2 and -1
-        FieldElement(U256::arbitrary(g) % FieldElement::MODULUS)
+        FieldElement::from_montgomery(U256::arbitrary(g) % FieldElement::MODULUS)
     }
 }
 
@@ -339,13 +344,13 @@ mod tests {
     #[rustfmt::skip]
     #[test]
     fn test_add() {
-        let a = FieldElement(u256h!(
+        let a = FieldElement::from_montgomery(u256h!(
             "0548c135e26faa9c977fb2eda057b54b2e0baa9a77a0be7c80278f4f03462d4c"
         ));
-        let b = FieldElement(u256h!(
+        let b = FieldElement::from_montgomery(u256h!(
             "024385f6bebc1c496e09955db534ef4b1eaff9a78e27d4093cfa8f7c8f886f6b"
         ));
-        let c = FieldElement(u256h!(
+        let c = FieldElement::from_montgomery(u256h!(
             "078c472ca12bc6e60589484b558ca4964cbba44205c89285bd221ecb92ce9cb7"
         ));
         assert_eq!(a + b, c);
