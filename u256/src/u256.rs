@@ -2,10 +2,10 @@ use crate::{
     commutative_binop,
     division::{divrem_nby1, divrem_nbym},
     gcd::inv_mod,
-    noncommutative_binop, u256h,
+    noncommutative_binop,
     utils::{adc, div_2_1, mac, sbb},
 };
-use hex_literal::*;
+use macros_decl::u256h;
 use std::{
     cmp::Ordering,
     fmt,
@@ -46,14 +46,6 @@ macro_rules! u64_from_bytes_be {
     };
 }
 
-#[macro_export]
-macro_rules! u256h {
-    ($hexstr:expr) => {
-        U256::from_bytes_be(&hex!($hexstr))
-    };
-}
-
-// TODO: Make field private.
 #[derive(PartialEq, Eq, Clone, Default)]
 pub struct U256 {
     pub c0: u64,

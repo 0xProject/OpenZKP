@@ -9,9 +9,9 @@ u256 =  { path = "../u256" }
 primefield =  { path = "../primefield" }
 ecc =  { path = "../ecc", features=["unsafe_ecdsa"]  }
 hex = ""
-hex-literal = "0.1.4"
 itertools = "0.8.0"
 crunchy = "0.2.2"
+macros-decl = { path = "../macros_decl" }
 
 [dev-dependencies]
 criterion = "0.2.10"

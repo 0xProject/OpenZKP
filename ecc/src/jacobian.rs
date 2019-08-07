@@ -255,9 +255,8 @@ impl Arbitrary for Jacobian {
 mod tests {
     use super::*;
     use crate::ORDER;
-    use hex_literal::*;
+    use macros_decl::u256h;
     use quickcheck_macros::quickcheck;
-    use u256::u256h;
 
     #[test]
     fn test_add() {

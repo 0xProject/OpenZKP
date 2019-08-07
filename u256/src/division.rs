@@ -147,8 +147,8 @@ pub fn divrem_nbym(numerator: &mut [u64], divisor: &mut [u64]) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{u256::U256, u256h};
-    use hex_literal::*;
+    use crate::u256::U256;
+    use macros_decl::u256h;
     use quickcheck_macros::quickcheck;
 
     const HALF: u64 = 1u64 << 63;

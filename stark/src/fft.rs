@@ -90,9 +90,8 @@ fn reverse(x: u64, bits: u32) -> u64 {
 mod tests {
     use super::*;
     use crate::polynomial::eval_poly;
-    use hex_literal::*;
+    use macros_decl::u256h;
     use quickcheck_macros::quickcheck;
-    use u256::u256h;
 
     fn fft(a: &[FieldElement]) -> Vec<FieldElement> {
         let mut result = a.to_vec();

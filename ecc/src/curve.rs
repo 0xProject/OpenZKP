@@ -194,9 +194,9 @@ impl Arbitrary for Affine {
 mod tests {
     use super::*;
     use crate::ORDER;
-    use hex_literal::*;
+    use macros_decl::u256h;
     use quickcheck_macros::quickcheck;
-    use u256::{u256h, U256};
+    use u256::U256;
 
     #[test]
     fn test_add() {

@@ -1,8 +1,7 @@
 use crate::field::FieldElement;
-use hex_literal::*;
+use macros_decl::u256h;
 use std::cmp::Ordering;
 use u256::{
-    u256h,
     utils::{adc, mac},
     U256,
 };

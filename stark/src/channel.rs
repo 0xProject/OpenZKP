@@ -1,9 +1,9 @@
 use crate::hash::Hash;
-use hex_literal::*;
+use macros_decl::{hex, u256h};
 use primefield::FieldElement;
 use rayon::prelude::*;
 use tiny_keccak::Keccak;
-use u256::{u256h, U256};
+use u256::U256;
 
 pub trait RandomGenerator<T> {
     fn get_random(&mut self) -> T;
@@ -338,7 +338,7 @@ impl Replayable<u64> for VerifierChannel {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use u256::u256h;
+    use macros_decl::u256h;
 
     #[test]
     fn proof_of_work_test() {

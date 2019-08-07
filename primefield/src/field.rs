@@ -1,10 +1,10 @@
 use crate::{montgomery::*, square_root::square_root};
-use hex_literal::*;
+use macros_decl::u256h;
 use std::{
     fmt,
     ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
-use u256::{commutative_binop, noncommutative_binop, u256h, U256};
+use u256::{commutative_binop, noncommutative_binop, U256};
 
 // TODO: Implement Serde
 

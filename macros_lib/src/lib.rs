@@ -69,7 +69,7 @@ fn bytes_to_limbs(bytes: &[u8]) -> syn::Result<[u64; 4]> {
 pub fn hex(input: TokenStream) -> TokenStream {
     let bytes = handle_errors!(parse_hex(input));
     let literal = Literal::byte_string(&bytes);
-    quote! { #literal }
+    quote! { *#literal }
 }
 
 pub fn u256h(input: TokenStream) -> TokenStream {
@@ -83,7 +83,7 @@ pub fn u256h(input: TokenStream) -> TokenStream {
     // TODO: Ideally we'd locally import U256 here and
     // use $crate::U256 here, but this leads to a circular
     // dependency.
-    quote! { ::u256::U256::from_limbs(#c0, #c1, #c2, #c3) }
+    quote! { U256::from_limbs(#c0, #c1, #c2, #c3) }
 }
 
 #[cfg(test)]
@@ -131,12 +131,12 @@ mod test {
     pub fn test_u256h() {
         assert_eq!(
             u256h(quote! {""}).to_string(),
-            quote! {::u256::U256::from_limbs(0u64, 0u64, 0u64, 0u64)}.to_string()
+            quote! {U256::from_limbs(0u64, 0u64, 0u64, 0u64)}.to_string()
         );
         assert_eq!(
             u256h(quote! {"0000000000000004000000000000000300000000000000020000000000000001"})
                 .to_string(),
-            quote! {::u256::U256::from_limbs(1u64, 2u64, 3u64, 4u64)}.to_string()
+            quote! {U256::from_limbs(1u64, 2u64, 3u64, 4u64)}.to_string()
         );
     }
 }
