@@ -165,8 +165,8 @@ pub fn verify<T: Hashable>(
                 current -= 1;
             }
         } else if !queue.is_empty() && queue[0].0 == index - 1 {
-            let (_, sibbling_hash) = queue.remove(0);
-            queue.push((index / 2, MerkleNode(&sibbling_hash, &data_hash).hash()));
+            let (_, sibling_hash) = queue.remove(0);
+            queue.push((index / 2, MerkleNode(&sibling_hash, &data_hash).hash()));
 
             if start != 0 {
                 start -= 1;
