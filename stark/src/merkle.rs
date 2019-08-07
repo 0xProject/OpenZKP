@@ -87,57 +87,46 @@ impl<Leaf: Hashable> MerkleTree<Leaf> {
     }
 
     pub fn proof<'a>(&self, indices: &[usize], leafs: &Fn(usize) -> &'a Leaf) -> MerkleProof {
-        let mut known = vec![false; self.nodes.len()];
+        // Allocate space for decommitments
         let mut decommitments: Vec<Hash> = Vec::new();
 
-        let mut peekable_indicies = indices.iter().peekable();
-        let mut excluded_pair = false;
-        for &index in indices.iter() {
-            peekable_indicies.next();
-            known[self.num_leafs + index % self.num_leafs] = true;
+        // Convert leaf indices to a sorted list of unique MerkleIndices.
+        let mut indices: Vec<MerkleIndex> = indices
+            .iter()
+            .map(|i| MerkleIndex::from_depth_offset(self.depth, *i))
+            .collect();
+        indices.sort();
+        indices.dedup();
 
-            if index % 2 == 0 {
-                known[self.num_leafs + 1 + index % self.num_leafs] = true;
-                let prophet = peekable_indicies.peek();
-                match prophet {
-                    Some(x) => {
-                        if **x != index + 1 {
-                            decommitments.push(leafs(index + 1).hash());
-                        } else {
-                            excluded_pair = true;
-                        }
-                    }
-                    None => {
-                        decommitments.push(leafs(index + 1).hash());
+        // Iterate over indices
+        while !indices.is_empty() {
+            let mut next_indices: Vec<MerkleIndex> = Vec::new();
+            let mut iter = indices.iter().peekable();
+            while let Some(i) = iter.next() {
+                // Add parent index to the queue for the next pass
+                if let Some(parent) = i.parent() {
+                    if !parent.is_root() {
+                        next_indices.push(parent);
                     }
                 }
-            } else if !excluded_pair {
-                known[self.num_leafs - 1 + index % self.num_leafs] = true;
-                decommitments.push(leafs(index - 1).hash());
-            } else {
-                known[self.num_leafs - 1 + index % self.num_leafs] = true;
-                excluded_pair = false;
-            }
-        }
 
-        for i in (2_usize.pow(self.depth - 1))..(2_usize.pow(self.depth)) {
-            let left = known[2 * i];
-            let right = known[2 * i + 1];
-            known[i] = left || right;
-        }
+                // Check if we merge with the next merkle index.
+                if let Some(j) = iter.peek() {
+                    if i.sibling() == Some(**j) {
+                        // Don't write a decommitment and skip next.
+                        iter.next();
+                        continue;
+                    }
+                }
 
-        for d in (1..self.depth).rev() {
-            for i in (2_usize.pow(d - 1))..(2_usize.pow(d)) {
-                let left = known[2 * i];
-                let right = known[2 * i + 1];
-                if left && !right {
-                    decommitments.push(self.nodes[2 * i + 1].clone());
-                }
-                if !left && right {
-                    decommitments.push(self.nodes[2 * i].clone());
-                }
-                known[i] = left || right;
+                // Add a hash to the decommitment
+                decommitments.push(if i.depth() == self.depth {
+                    leafs(i.offset()).hash()
+                } else {
+                    self[*i].clone()
+                });
             }
+            indices = next_indices
         }
 
         MerkleProof { decommitments }
