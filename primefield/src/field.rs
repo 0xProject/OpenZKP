@@ -184,24 +184,26 @@ impl_from_int!(i64);
 impl_from_int!(i128);
 impl_from_int!(isize);
 
-// TODO: Rename to to_ since a nontrivial conversion is involved.
-macro_rules! as_uint {
-    ($name:ident, $type:ty) => {
-        pub fn $name(&self) -> $type {
-            U256::from(self).$name()
+// The FieldElement versions are called `to_` and not `as_` like their
+// U256 counterparts. This is because a `U256::from` is performed which
+// does a non-trivial `from_montgomery` conversion.
+macro_rules! to_uint {
+    ($fname:ident, $uname:ident, $type:ty) => {
+        pub fn $fname(&self) -> $type {
+            U256::from(self).$uname()
         }
     };
 }
 
-macro_rules! as_int {
-    ($name:ident, $type:ty) => {
-        pub fn $name(&self) -> $type {
+macro_rules! to_int {
+    ($fname:ident, $uname:ident, $type:ty) => {
+        pub fn $fname(&self) -> $type {
             let n = U256::from(self);
             let half = Self::MODULUS >> 1;
             if n < half {
-                n.$name()
+                n.$uname()
             } else {
-                (n - Self::MODULUS).$name()
+                (n - Self::MODULUS).$uname()
             }
         }
     };
@@ -210,18 +212,18 @@ macro_rules! as_int {
 // We don't want newlines between the macro invocations.
 #[rustfmt::skip]
 impl FieldElement {
-    as_uint!(as_u8, u8);
-    as_uint!(as_u16, u16);
-    as_uint!(as_u32, u32);
-    as_uint!(as_u64, u64);
-    as_uint!(as_u128, u128);
-    as_uint!(as_usize, usize);
-    as_int!(as_i8, i8);
-    as_int!(as_i16, i16);
-    as_int!(as_i32, i32);
-    as_int!(as_i64, i64);
-    as_int!(as_i128, i128);
-    as_int!(as_isize, isize);
+    to_uint!(to_u8, as_u8, u8);
+    to_uint!(to_u16, as_u16, u16);
+    to_uint!(to_u32, as_u32, u32);
+    to_uint!(to_u64, as_u64, u64);
+    to_uint!(to_u128, as_u128, u128);
+    to_uint!(to_usize, as_usize, usize);
+    to_int!(to_i8, as_i8, i8);
+    to_int!(to_i16, as_i16, i16);
+    to_int!(to_i32, as_i32, i32);
+    to_int!(to_i64, as_i64, i64);
+    to_int!(to_i128, as_i128, i128);
+    to_int!(to_isize, as_isize, isize);
 }
 
 // TODO: Remove?
@@ -429,12 +431,12 @@ mod tests {
 
     #[quickcheck]
     fn from_as_isize(n: isize) -> bool {
-        FieldElement::from(n).as_isize() == n
+        FieldElement::from(n).to_isize() == n
     }
 
     #[quickcheck]
     fn from_as_i128(n: i128) -> bool {
-        FieldElement::from(n).as_i128() == n
+        FieldElement::from(n).to_i128() == n
     }
 
     #[quickcheck]
