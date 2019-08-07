@@ -47,6 +47,8 @@ pub fn hex(input: TokenStream) -> TokenStream {
 #[cfg(test)]
 mod test {
     use super::*;
+    // Note: TokenSteam does not implement Eq, so we can not compare them
+    // directly. Instead we go roundabout and compare their `.to_string()`.
 
     #[test]
     pub fn test_hex() {
@@ -62,11 +64,16 @@ mod test {
 
     #[test]
     pub fn test_hex_negative() {
-        assert_eq!(hex(quote! {0x00000234320323247423897429387489237498273498237498237489237492384723984783928}).to_string(), quote! {compile_error ! { "unexpected end of input, unsupported expression; enable syn\'s features=[\"full\"]" }}.to_string());
-        assert_eq!(hex(quote! {}).to_string(), quote! {compile_error ! { "unexpected end of input, unsupported expression; enable syn\'s features=[\"full\"]" }}.to_string());
+        assert_eq!(
+            hex(quote! {0x00000234320323247423897429387489237498273498237498237489237492384723984783928}).to_string(),
+            quote! {compile_error ! { "Expected hexadecimal string" }}.to_string());
+        assert_eq!(
+            hex(quote! {}).to_string(),
+            quote! {compile_error ! { "unexpected end of input, expected expression" }}.to_string()
+        );
         assert_eq!(
             hex(quote! {pub fn asd() {}}).to_string(),
-            quote! {compile_error ! { "unsupported expression; enable syn\'s features=[\"full\"]" }}.to_string()
+            quote! {compile_error ! { "expected expression" }}.to_string()
         );
         assert_eq!(
             hex(quote! {123}).to_string(),
