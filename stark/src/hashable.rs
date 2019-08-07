@@ -26,7 +26,7 @@ impl Hashable for U256 {
 impl Hashable for FieldElement {
     fn hash(&self) -> Hash {
         // We hash as U256 in Montgomery form (which is identity-hashed)
-        self.as_montgomery_u256().hash()
+        self.as_montgomery().hash()
     }
 }
 

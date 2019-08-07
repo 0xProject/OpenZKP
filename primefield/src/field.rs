@@ -35,7 +35,7 @@ impl FieldElement {
         FieldElement::from(U256::from_hex_str(s))
     }
 
-    pub fn as_montgomery_u256(&self) -> &U256 {
+    pub fn as_montgomery(&self) -> &U256 {
         &self.0
     }
 
@@ -243,7 +243,7 @@ impl From<FieldElement> for U256 {
 
 impl From<&FieldElement> for U256 {
     fn from(n: &FieldElement) -> Self {
-        from_montgomery(n.as_montgomery_u256())
+        from_montgomery(n.as_montgomery())
     }
 }
 

@@ -27,7 +27,7 @@ pub struct PrivateInput {
 impl Writable<&PublicInput> for ProverChannel {
     fn write(&mut self, public: &PublicInput) {
         let mut bytes = [public.index.to_be_bytes()].concat();
-        bytes.extend_from_slice(&public.value.as_montgomery_u256().to_bytes_be());
+        bytes.extend_from_slice(&public.value.as_montgomery().to_bytes_be());
         self.initialize(bytes.as_slice());
     }
 }

@@ -251,7 +251,7 @@ impl Writable<&[FieldElement]> for ProverChannel {
     fn write(&mut self, data: &[FieldElement]) {
         let mut container = Vec::with_capacity(32 * data.len());
         for element in data {
-            for byte in element.as_montgomery_u256().to_bytes_be().iter() {
+            for byte in element.as_montgomery().to_bytes_be().iter() {
                 container.push(byte.clone());
             }
         }
@@ -262,7 +262,7 @@ impl Writable<&[FieldElement]> for ProverChannel {
 impl Writable<&FieldElement> for ProverChannel {
     fn write(&mut self, data: &FieldElement) {
         // TODO: Avoid accessing FieldElement members directly
-        self.write(&data.as_montgomery_u256().to_bytes_be()[..]);
+        self.write(&data.as_montgomery().to_bytes_be()[..]);
     }
 }
 
