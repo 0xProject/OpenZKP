@@ -39,11 +39,11 @@ impl MerkleIndex {
     }
 
     pub fn is_left(&self) -> bool {
-        self.0 != 0 && self.0 % 2 == 0
+        self.0 % 2 == 1
     }
 
     pub fn is_right(&self) -> bool {
-        self.0 % 2 == 1
+        self.0 != 0 && self.0 % 2 == 0
     }
 
     pub fn is_left_most(&self) -> bool {
@@ -62,7 +62,17 @@ impl MerkleIndex {
         }
     }
 
-    pub fn left_sibling(&self) -> Option<MerkleIndex> {
+    pub fn sibling(&self) -> Option<MerkleIndex> {
+        if self.is_root() {
+            None
+        } else if self.is_left() {
+            Some(MerkleIndex(self.0 + 1))
+        } else {
+            Some(MerkleIndex(self.0 - 1))
+        }
+    }
+
+    pub fn left_neighbor(&self) -> Option<MerkleIndex> {
         if self.is_left_most() {
             None
         } else {
@@ -70,7 +80,7 @@ impl MerkleIndex {
         }
     }
 
-    pub fn right_sibling(&self) -> Option<MerkleIndex> {
+    pub fn right_neighbor(&self) -> Option<MerkleIndex> {
         if self.is_right_most() {
             None
         } else {

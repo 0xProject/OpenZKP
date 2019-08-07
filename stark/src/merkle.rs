@@ -8,6 +8,7 @@ use std::{
     ops::Index,
 };
 
+#[derive(Clone, Debug)]
 struct MerkleNode<'a>(&'a Hash, &'a Hash);
 
 impl Hashable for MerkleNode<'_> {
@@ -57,11 +58,23 @@ impl<Leaf: Hashable> MerkleTree<Leaf> {
         }
     }
 
+    pub fn from_iter<Iter>(iter: Iter) -> Self
+    where
+        Iter: ExactSizeIterator<Item = Leaf>,
+    {
+        let mut tree = MerkleTree::new(iter.len());
+        for leaf in iter {
+            tree.append(&leaf);
+        }
+        tree
+    }
+
     /// Incrementally compute the tree by advancing the cursor
+    // OPT: Write all leaves first, then compute the higher layers in one go.
     pub fn append(&mut self, leaf: &Leaf) {
         let mut cursor = self.cursor.expect("Can not append more leafs to the tree.");
         self.nodes[cursor.index()] = leaf.hash();
-        self.cursor = cursor.right_sibling();
+        self.cursor = cursor.right_neighbor();
         while cursor.is_right() {
             cursor = cursor.parent().unwrap();
             self.nodes[cursor.index()] =
@@ -346,6 +359,12 @@ mod tests {
         }
 
         let tree = make_tree(leaves.as_slice());
+
+        let tree2 = MerkleTree::from_iter(leaves.iter());
+        assert_eq!(
+            tree2.root().as_bytes(),
+            hex!("fd112f44bc944f33e2567f86eea202350913b11c000000000000000000000000")
+        );
 
         assert_eq!(
             tree[1].as_bytes(),
