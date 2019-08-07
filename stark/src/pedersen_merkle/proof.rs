@@ -87,7 +87,6 @@ pub fn evaluate_constraint_polynomial_on_extended_domain(
     let odd_polynomial = constraint_polynomial.odd();
     let trace_length = even_polynomial.len();
 
-
     let polynomials = vec![even_polynomial, odd_polynomial];
 
     let beta = 16usize;
@@ -95,7 +94,8 @@ pub fn evaluate_constraint_polynomial_on_extended_domain(
     let evaluation_generator = FieldElement::root(U256::from(evaluation_length as u64)).unwrap();
     let evaluation_offset = FieldElement::GENERATOR;
 
-    let mut constraint_polynomial_on_extended_domain = vec![MmapVec::with_capacity(evaluation_length); 2];
+    let mut constraint_polynomial_on_extended_domain =
+        vec![MmapVec::with_capacity(evaluation_length); 2];
     for i in 0..beta {
         let mut cosets: Vec<Vec<FieldElement>> = vec![Vec::with_capacity(trace_length); 2];
         polynomials
@@ -107,10 +107,13 @@ pub fn evaluate_constraint_polynomial_on_extended_domain(
                 fft_cofactor_bit_reversed(&p.reverse_coefficients(), &cofactor)
             })
             .collect_into_vec(&mut cosets);
-        for (extended_trace_column, coset) in constraint_polynomial_on_extended_domain.iter_mut().zip(cosets) {
+        for (extended_trace_column, coset) in constraint_polynomial_on_extended_domain
+            .iter_mut()
+            .zip(cosets)
+        {
             extended_trace_column.extend(&coset);
         }
-        println!("{}", {i});
+        println!("{}", { i });
     }
     constraint_polynomial_on_extended_domain
 }

@@ -475,7 +475,10 @@ mod tests {
 
     #[test]
     fn even_example() {
-        assert_eq!(Polynomial::from_dense(&[1, 0]).even(), Polynomial::from_dense(&[1]));
+        assert_eq!(
+            Polynomial::from_dense(&[1, 0]).even(),
+            Polynomial::from_dense(&[1])
+        );
     }
 
     #[quickcheck]
@@ -486,7 +489,8 @@ mod tests {
         if a.len() % 2 == 1 {
             return true;
         }
-        a.even().evaluate(&(&x * &x)) == (a.evaluate(&x) + a.evaluate(&-&x)) / FieldElement::from(U256::from(2u64))
+        a.even().evaluate(&(&x * &x))
+            == (a.evaluate(&x) + a.evaluate(&-&x)) / FieldElement::from(U256::from(2u64))
     }
 
     #[quickcheck]
