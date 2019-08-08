@@ -10,3 +10,8 @@ pub fn hex(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 pub fn u256h(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     macros_lib::u256h(input.into()).into()
 }
+
+#[proc_macro_hack]
+pub fn field_h(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    macros_lib::field_h(input.into()).into()
+}

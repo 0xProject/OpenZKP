@@ -319,7 +319,20 @@ impl Arbitrary for FieldElement {
 mod tests {
     use super::*;
     use itertools::repeat_n;
+    use macros_decl::field_h;
     use quickcheck_macros::quickcheck;
+
+    #[test]
+    fn test_literal() {
+        const SMALL: FieldElement = field_h!("0F");
+        const NUM: FieldElement =
+            field_h!("0548c135e26faa9c977fb2eda057b54b2e0baa9a77a0be7c80278f4f03462d4c");
+        assert_eq!(SMALL, FieldElement::from(15));
+        assert_eq!(
+            NUM,
+            u256h!("0548c135e26faa9c977fb2eda057b54b2e0baa9a77a0be7c80278f4f03462d4c").into()
+        );
+    }
 
     #[test]
     fn negative_one_is_additive_inverse_of_one() {

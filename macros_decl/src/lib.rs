@@ -11,3 +11,9 @@ pub use macros_impl::hex;
 /// (Documentation goes here on the re-export, not in the other crate.)
 #[proc_macro_hack]
 pub use macros_impl::u256h;
+
+/// FieldElement hexadecimal literal
+///
+/// (Documentation goes here on the re-export, not in the other crate.)
+#[proc_macro_hack]
+pub use macros_impl::field_h;
