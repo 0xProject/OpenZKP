@@ -3,6 +3,7 @@ use macros_decl::u256h;
 use primefield::FieldElement;
 use u256::U256;
 
+// TODO: Use field_h
 pub const PEDERSEN_POINTS: [Affine; 506] = [
     Affine::Point {
         x: FieldElement::from_montgomery(u256h!(

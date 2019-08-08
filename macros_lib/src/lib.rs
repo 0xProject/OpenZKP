@@ -217,10 +217,12 @@ mod test {
             hex(quote! {123}).to_string(),
             quote! {compile_error ! { "Expected hexadecimal string" }}.to_string()
         );
-        assert_eq!(
-            hex(quote! {"hello!"}).to_string(),
-            quote! {compile_error ! { "Invalid hexadecimal string: Invalid character \'h\' at position 0" }}.to_string()
-        );
+        // TODO: This test unstable, depending on the build environment
+        // (rustc version?) it requires the single quotes to be escaped or not.
+        let result = hex(quote! {"hello!"}).to_string();
+        let expected_1 = quote! {compile_error ! { "Invalid hexadecimal string: Invalid character 'h' at position 0" }}.to_string();
+        let expected_2 = quote! {compile_error ! { "Invalid hexadecimal string: Invalid character \'h\' at position 0" }}.to_string();
+        assert!(result == expected_1 || result == expected_2);
     }
 
     #[test]
