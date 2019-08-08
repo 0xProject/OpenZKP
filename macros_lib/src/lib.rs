@@ -51,7 +51,7 @@ fn bytes_to_limbs(bytes: &[u8]) -> syn::Result<[u64; 4]> {
     if bytes.len() > 32 {
         return Err(syn::Error::new(
             Span::call_site(),
-            format!("expected up to 32 bytes"),
+            "expected up to 32 bytes",
         ));
     }
     let mut result = [0u64; 4];
@@ -59,7 +59,7 @@ fn bytes_to_limbs(bytes: &[u8]) -> syn::Result<[u64; 4]> {
     for i in 0..4 {
         for j in 0..8 {
             if let Some(byte) = iter.next() {
-                result[i] |= (*byte as u64) << (8 * j);
+                result[i] |= u64::from(*byte) << (8 * j);
             } else {
                 return Ok(result);
             }
@@ -70,6 +70,8 @@ fn bytes_to_limbs(bytes: &[u8]) -> syn::Result<[u64; 4]> {
 
 // This function and constants are taken from primefield::montgomery
 // TODO: Drop this in favour of a `const fn` call.
+// These constants are copied, but we don't have u256h! to format them here.
+#[allow(clippy::unreadable_literal)]
 fn montgomery_convert(x: (u64, u64, u64, u64)) -> (u64, u64, u64, u64) {
     const M64: u64 = 0xffff_ffff_ffff_ffff;
     const M: (u64, u64, u64, u64) = (1, 0, 0, 576460752303423505);
@@ -80,6 +82,8 @@ fn montgomery_convert(x: (u64, u64, u64, u64)) -> (u64, u64, u64, u64) {
         576413109808302096,
     );
 
+    // Clippy thinks casting u64 to u128 is lossy
+    #[allow(clippy::cast_lossless)]
     pub fn mac(a: u64, b: u64, c: u64, carry: u64) -> (u64, u64) {
         let ret = (a as u128) + ((b as u128) * (c as u128)) + (carry as u128);
         (ret as u64, (ret >> 64) as u64)
