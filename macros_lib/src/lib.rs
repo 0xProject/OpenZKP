@@ -19,6 +19,8 @@ fn parse_string(input: TokenStream) -> syn::Result<String> {
         Expr::Lit(expr_lit) => {
             match expr_lit.lit {
                 Lit::Str(s) => Some(s),
+                // TODO: A literal large integer (> u64) would show up as
+                // Lit::Verbatim(v) =>
                 _ => None,
             }
         }
@@ -143,6 +145,7 @@ pub fn hex(input: TokenStream) -> TokenStream {
 }
 
 pub fn u256h(input: TokenStream) -> TokenStream {
+    // TODO: Also accept integer literals
     let bytes = handle_errors!(parse_hex(input));
     let limbs = handle_errors!(bytes_to_limbs(bytes.as_slice()));
     let c0 = Literal::u64_suffixed(limbs[0]);
@@ -157,6 +160,7 @@ pub fn u256h(input: TokenStream) -> TokenStream {
 }
 
 pub fn field_h(input: TokenStream) -> TokenStream {
+    // TODO: Also accept integer literals
     let bytes = handle_errors!(parse_hex(input));
     let limbs = handle_errors!(bytes_to_limbs(bytes.as_slice()));
     let (c0, c1, c2, c3) = montgomery_convert((limbs[0], limbs[1], limbs[2], limbs[3]));
