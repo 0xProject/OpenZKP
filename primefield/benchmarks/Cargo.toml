@@ -8,7 +8,10 @@ edition = "2018"
 
 [dev-dependencies]
 criterion = "0.2.10"
-starkcrypto = { path = "..", version = "0.1.0" }
+macros-decl = { path = "../../macros_decl" }
+primefield = { path = "..", version = "0.1.0" }
+u256 = { path = "../../u256", version = "0.1.0" }
+ecc = { path = "../../ecc", version = "0.1.0", features = ["unsafe_ecdsa"] }
 secp256k1-bindings = { package = "secp256k1", version = "0.12.2" }
 secp256k1-native = { package = "libsecp256k1", version = "0.2.2" }
 ed25519-dalek = "0.9.1"
@@ -18,7 +21,6 @@ matter = { path = "./matter" }
 rug = { version = "1.3.0", default-features = false, features = ["integer"] }
 # TODO: zcash = { package = "pairing", version = "0.14.2" }
 sha2 = "0.8.0"
-hex-literal = "0.1.4"
 # HACK: Make Rand compile
 # See https://github.com/dalek-cryptography/ed25519-dalek/issues/56
 # See https://github.com/rust-random/rand/issues/645

@@ -29,7 +29,7 @@ fn parse_string(input: TokenStream) -> syn::Result<String> {
     match result {
         Some(b) => Ok(b.value()),
         None => {
-            return Err(syn::Error::new(
+            Err(syn::Error::new(
                 Span::call_site(),
                 "Expected hexadecimal string",
             ))
