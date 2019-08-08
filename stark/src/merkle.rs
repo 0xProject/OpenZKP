@@ -120,10 +120,10 @@ pub fn proof<R: Hashable, T: Groupable<R>>(
             let left = known[2 * i];
             let right = known[2 * i + 1];
             if left && !right {
-                decommitment.push(tree[2 * i + 1].clone());
+                decommitment.push(tree[2 * i + 1]);
             }
             if !left && right {
-                decommitment.push(tree[2 * i].clone());
+                decommitment.push(tree[2 * i]);
             }
             known[i] = left || right;
         }
@@ -193,8 +193,8 @@ pub fn decommitment_size(indices: &[usize], data_size: usize) -> usize {
 pub fn verify<T: Hashable>(
     root: Hash,
     depth: u32,
-    values: &mut [(u64, T)],
-    mut decommitment: Vec<Hash>,
+    values: &mut [(usize, T)],
+    decommitment: Vec<Hash>,
 ) -> bool {
     let mut queue = Vec::with_capacity(values.len());
     let mut previous_index = 0;
@@ -233,17 +233,23 @@ pub fn verify<T: Hashable>(
             if pairs.len() > pair_index && index == pairs[pair_index] {
                 new_queue.push((
                     queue[index].0 / 2,
-                    hash_node(&queue[index + 1].1, &queue[index].1),
+                    MerkleNode(&queue[index + 1].1, &queue[index].1).hash(),
                 ));
                 index += 2;
                 pair_index += 1;
             } else {
                 if queue[index].0 % 2 == 0 {
                     let other_hash = decommitment_iter.next().expect("Bad decommitment");
-                    new_queue.push((queue[index].0 / 2, hash_node(&queue[index].1, other_hash)))
+                    new_queue.push((
+                        queue[index].0 / 2,
+                        MerkleNode(&queue[index].1, other_hash).hash(),
+                    ))
                 } else {
                     let other_hash = decommitment_iter.next().expect("Bad decommitment");
-                    new_queue.push((queue[index].0 / 2, hash_node(other_hash, &queue[index].1)));
+                    new_queue.push((
+                        queue[index].0 / 2,
+                        MerkleNode(other_hash, &queue[index].1).hash(),
+                    ));
                 }
                 index += 1;
             }
@@ -310,7 +316,7 @@ mod tests {
         ));
 
         assert!(verify(
-            tree[1].clone(),
+            tree[1],
             depth,
             values.as_mut_slice(),
             decommitment.clone()

@@ -10,7 +10,7 @@ use lazy_static::lazy_static;
 use primefield::FieldElement;
 use rayon::ThreadPoolBuilder;
 use stark::{
-    fft_cofactor_bit_reversed,
+    check_proof, fft_cofactor_bit_reversed,
     fibonacci::{get_constraint, get_trace_table, PrivateInput, PublicInput},
     make_tree, stark_proof, ProofParams,
 };
@@ -110,7 +110,7 @@ fn fft_threads(crit: &mut Criterion) {
     });
 }
 
-fn abstracted_fib_proof_make(crit: &mut Criterion) {
+fn proof_make(crit: &mut Criterion) {
     let public = PublicInput {
         index: 1000,
         value: FieldElement::from(u256h!(
@@ -130,10 +130,10 @@ fn abstracted_fib_proof_make(crit: &mut Criterion) {
                 &get_constraint(),
                 &public,
                 &ProofParams {
-                    blowup:     16,
-                    pow_bits:   12,
-                    queries:    20,
-                    fri_layout: vec![3, 2, 1],
+                    blowup:                   16,
+                    pow_bits:                 12,
+                    queries:                  20,
+                    fri_layout:               vec![3, 2, 1],
                     constraints_degree_bound: 1,
                 },
             ))
@@ -142,24 +142,27 @@ fn abstracted_fib_proof_make(crit: &mut Criterion) {
 }
 
 fn proof_check(crit: &mut Criterion) {
-    let claim_index = 1000_usize;
-    let claim_fib = FieldElement::from(u256h!(
-        "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
-    ));
-    let witness = FieldElement::from(u256h!(
-        "00000000000000000000000000000000000000000000000000000000cafebabe"
-    ));
+    let public = PublicInput {
+        index: 1000,
+        value: FieldElement::from(u256h!(
+            "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
+        )),
+    };
+    let private = PrivateInput {
+        secret: FieldElement::from(u256h!(
+            "00000000000000000000000000000000000000000000000000000000cafebabe"
+        )),
+    };
 
     let proof = stark_proof(
-        &get_trace_table(1024, witness.clone()),
+        &get_trace_table(1024, &private),
         &get_constraint(),
-        claim_index,
-        claim_fib.clone(),
+        &public,
         &ProofParams {
-            blowup:     16,
-            pow_bits:   12,
-            queries:    20,
-            fri_layout: vec![3, 2, 1],
+            blowup:                   16,
+            pow_bits:                 12,
+            queries:                  20,
+            fri_layout:               vec![3, 2, 1],
             constraints_degree_bound: 1,
         },
     );
@@ -169,13 +172,12 @@ fn proof_check(crit: &mut Criterion) {
             black_box(check_proof(
                 proof.clone(),
                 &get_constraint(),
-                claim_index,
-                claim_fib.clone(),
+                &public,
                 &ProofParams {
-                    blowup:     16,
-                    pow_bits:   12,
-                    queries:    20,
-                    fri_layout: vec![3, 2, 1],
+                    blowup:                   16,
+                    pow_bits:                 12,
+                    queries:                  20,
+                    fri_layout:               vec![3, 2, 1],
                     constraints_degree_bound: 1,
                 },
                 2,

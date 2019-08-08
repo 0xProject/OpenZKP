@@ -1,5 +1,5 @@
 use crate::{
-    channel::{ProverChannel, Writable},
+    channel::*,
     polynomial::eval_poly,
     proofs::{geometric_series, Constraint},
     utils::Reversible,
@@ -10,7 +10,7 @@ use rayon::prelude::*;
 use u256::U256;
 
 #[allow(dead_code)] // TODO
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct PublicInput {
     pub index: usize,
     pub value: FieldElement,
@@ -28,6 +28,23 @@ impl Writable<&PublicInput> for ProverChannel {
         let mut bytes = [public.index.to_be_bytes()].concat();
         bytes.extend_from_slice(&public.value.0.to_bytes_be());
         self.initialize(bytes.as_slice());
+    }
+}
+
+impl Replayable<PublicInput> for VerifierChannel {
+    fn replay(&mut self) -> PublicInput {
+        let mut index_holder = [0_u8; 8];
+        index_holder.clone_from_slice(&self.proof[0..8]);
+        let index: u64 = u64::from_be_bytes(index_holder);
+        let mut value_holder = [0_u8; 32];
+        value_holder.clone_from_slice(&self.proof[8..40]);
+        let value: FieldElement = FieldElement(U256::from_bytes_be(&value_holder));
+        let borrow = &self.proof[0..40].to_vec();
+        self.initialize(borrow.as_slice());
+        PublicInput {
+            index: (index as usize),
+            value,
+        }
     }
 }
 
@@ -149,6 +166,7 @@ pub fn eval_c_direct(
 ) -> FieldElement {
     let trace_len = polynomials[0].len() as u64;
     let g = FieldElement::root(U256::from(trace_len)).unwrap();
+    let value = public.value.clone();
 
     let eval_P0 = |x: FieldElement| -> FieldElement { eval_poly(x, polynomials[0]) };
     let eval_P1 = |x: FieldElement| -> FieldElement { eval_poly(x, polynomials[1]) };

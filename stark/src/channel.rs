@@ -36,7 +36,7 @@ pub struct ProverChannel {
 #[derive(PartialEq, Eq, Clone, Default)]
 pub struct VerifierChannel {
     pub coin:    PublicCoin,
-    proof:   Vec<u8>,
+    pub proof:   Vec<u8>,
     proof_index: usize,
 }
 
@@ -128,9 +128,6 @@ impl ProverChannel {
     }
 }
 
-// TODO - Remove this dead code allowance when the actual verifier uses the
-// verifier channel
-#[allow(dead_code)]
 impl VerifierChannel {
     pub fn new(proof: Vec<u8>) -> Self {
         Self {
@@ -287,6 +284,13 @@ impl Writable<Vec<U256>> for ProverChannel {
 impl Writable<U256> for ProverChannel {
     fn write(&mut self, data: U256) {
         self.write(&data.to_bytes_be()[..]);
+    }
+}
+
+impl Replayable<Hash> for VerifierChannel {
+    fn replay(&mut self) -> Hash {
+        let hash: [u8; 32] = self.replay();
+        Hash::new(hash)
     }
 }
 

@@ -11,7 +11,7 @@ impl Hashable for Hash {
         // Hashing here is idempotent. Defining this in combination
         // with `Hashable for [T]` makes it do the right thing for
         // `[Hash]::hash().`
-        self.clone()
+        *self
     }
 }
 

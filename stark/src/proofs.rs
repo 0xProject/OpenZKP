@@ -460,12 +460,16 @@ fn get_out_of_domain_information<Public>(
         oods_values.push(evaled.clone());
     }
 
-    oods_values.push((constraints.eval)(
-        &oods_point,
-        trace_poly,
-        public,
-        constraint_coefficients,
-    )); // Gets eval_C of the oods point via direct computation
+    let mut current_oods = oods_point.clone();
+    for _ in 0..params.constraints_degree_bound {
+        oods_values.push((constraints.eval)(
+            &current_oods,
+            trace_poly,
+            public,
+            constraint_coefficients,
+        )); // Gets eval_C of the oods points via direct computation
+        current_oods *= g;
+    }
 
     for v in oods_values.iter() {
         proof.write(v);
@@ -532,7 +536,7 @@ fn calculate_out_of_domain_constraints(
                     * b;
             }
             r += &oods_coefficients[oods_coefficients.len() - 1]
-                * (&constraint_on_domain[index] - &oods_values[oods_values.len() - 1])
+                * (&constraint_on_domain[index] - &oods_values[oods_coefficients.len() - 1])
                 * a;
 
             r
@@ -555,7 +559,11 @@ fn perform_fri_layering(
         Vec::with_capacity(64 - (eval_domain_size.leading_zeros() as usize));
     fri.push(constraints_out_of_domain.to_vec());
     let mut fri_trees: Vec<Vec<Hash>> = Vec::with_capacity(params.fri_layout.len());
-    let held_tree = (params.blowup / 2, fri[fri.len() - 1].as_slice()).merkleize();
+    let held_tree = (
+        2_usize.pow(params.fri_layout[0] as u32),
+        fri[fri.len() - 1].as_slice(),
+    )
+        .merkleize();
     proof.write(&held_tree[1]);
     fri_trees.push(held_tree);
 
@@ -695,47 +703,39 @@ mod tests {
 
     #[test]
     fn fib_test_1024_python_witness() {
-        let public = PublicInput {
-            index: 1000,
-            value: FieldElement::from(u256h!(
-                "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
-            )),
-        };
         let private = PrivateInput {
             secret: FieldElement::from(u256h!(
                 "00000000000000000000000000000000000000000000000000000000cafebabe"
             )),
         };
+        let tt = get_trace_table(1024, &private);
+        let public = PublicInput {
+            index: 1000,
+            value: tt[(1000, 0)].clone(),
+        };
         let expected = hex!("fcf1924f84656e5068ab9cbd44ae084b235bb990eefc0fd0183c77d5645e830e");
-        let actual = stark_proof(
-            &get_trace_table(1024, &private),
-            &get_constraint(),
-            &public,
-            &ProofParams {
-                blowup:     16,
-                pow_bits:   12,
-                queries:    20,
-                fri_layout: vec![3, 2],
-                constraints_degree_bound: 1,
-            },
-        );
+        let actual = stark_proof(&tt, &get_constraint(), &public, &ProofParams {
+            blowup:                   16,
+            pow_bits:                 12,
+            queries:                  20,
+            fri_layout:               vec![3, 2],
+            constraints_degree_bound: 1,
+        });
         assert_eq!(actual.coin.digest, expected);
     }
 
     #[test]
     fn fib_test_1024_changed_witness() {
-        let public = PublicInput {
-            index: 1000,
-            value: FieldElement::from(u256h!(
-                "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
-            )),
-        };
         let private = PrivateInput {
             secret: FieldElement::from(u256h!(
                 "00000000000000000000000000000000000000000000000f00dbabe0cafebabe"
             )),
         };
-        let expected = hex!("5c8e2f6353526e422744a8c11a7a94db1829cb2bfac78bae774b5576c88279c9");
+        let tt = get_trace_table(1024, &private);
+        let public = PublicInput {
+            index: 1000,
+            value: tt[(1000, 0)].clone(),
+        };
         let actual = stark_proof(
             &get_trace_table(1024, &private),
             &get_constraint(),
@@ -744,9 +744,9 @@ mod tests {
                 blowup: 16, /* TODO - The blowup in the fib constraints is hardcoded to 16,
                              * we should set this back to 32 to get wider coverage when
                              * that's fixed */
-                pow_bits:   12,
-                queries:    20,
-                fri_layout: vec![3, 2],
+                pow_bits:                 12,
+                queries:                  20,
+                fri_layout:               vec![3, 2],
                 constraints_degree_bound: 1,
             },
         );
@@ -754,15 +754,14 @@ mod tests {
         assert!(check_proof(
             actual,
             &get_constraint(),
-            claim_index,
-            claim_value,
+            &public,
             &ProofParams {
                 blowup: 16, /* TODO - The blowup in the fib constraints is hardcoded to 16,
                              * we should set this back to 32 to get wider coverage when
                              * that's fixed */
-                pow_bits:   12,
-                queries:    20,
-                fri_layout: vec![3, 2],
+                pow_bits:                 12,
+                queries:                  20,
+                fri_layout:               vec![3, 2],
                 constraints_degree_bound: 1,
             },
             2,
@@ -772,41 +771,33 @@ mod tests {
 
     #[test]
     fn fib_test_4096() {
-        let public = PublicInput {
-            index: 4000,
-            value: FieldElement::from(u256h!(
-                "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
-            )),
-        };
         let private = PrivateInput {
             secret: FieldElement::from(u256h!(
                 "00000000000000000000000000000000000000000000000f00dbabe0cafebabe"
             )),
         };
-        let expected = hex!("427499a0cd50a90fe7fdf2f039f6dffd71fcc930392151d2eb0ea611c3f312b5");
-        let actual = stark_proof(
-            &get_trace_table(4096, &private),
-            &get_constraint(),
-            &public,
-            &ProofParams {
-                blowup:     16,
-                pow_bits:   12,
-                queries:    20,
-                fri_layout: vec![2, 1, 4, 2],
-                constraints_degree_bound: 1,
-            },
-        );
+        let tt = get_trace_table(4096, &private);
+        let public = PublicInput {
+            index: 4000,
+            value: tt[(4000, 0)].clone(),
+        };
+        let actual = stark_proof(&tt, &get_constraint(), &public, &ProofParams {
+            blowup:                   16,
+            pow_bits:                 12,
+            queries:                  20,
+            fri_layout:               vec![2, 1, 4, 2],
+            constraints_degree_bound: 1,
+        });
 
         assert!(check_proof(
             actual,
             &get_constraint(),
-            claim_index,
-            claim_value,
+            &public,
             &ProofParams {
-                blowup:     16,
-                pow_bits:   12,
-                queries:    20,
-                fri_layout: vec![2, 1, 4, 2],
+                blowup:                   16,
+                pow_bits:                 12,
+                queries:                  20,
+                fri_layout:               vec![2, 1, 4, 2],
                 constraints_degree_bound: 1,
             },
             2,
@@ -854,10 +845,10 @@ mod tests {
 
         let constraints = get_constraint();
         let params = ProofParams {
-            blowup:     16,
-            pow_bits:   12,
-            queries:    20,
-            fri_layout: vec![3, 2],
+            blowup:                   16,
+            pow_bits:                 12,
+            queries:                  20,
+            fri_layout:               vec![3, 2],
             constraints_degree_bound: 1,
         };
 
@@ -980,7 +971,7 @@ mod tests {
             &public,
             &constraints,
             &g,
-            &params
+            &params,
         );
         // Checks that we have derived the right out of domain sample point
         assert_eq!(
