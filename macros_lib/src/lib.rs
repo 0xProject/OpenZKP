@@ -4,6 +4,8 @@ use syn::{Expr, Lit};
 
 // For use in functions that return TokenStream. Turns syn::Result into
 // compile errors.
+// This is equivalent to the try! macro that backs the ? operator
+// see https://doc.rust-lang.org/std/macro.try.html
 macro_rules! handle_errors {
     ($e:expr) => {
         match $e {
@@ -140,6 +142,18 @@ fn montgomery_convert(x: (u64, u64, u64, u64)) -> (u64, u64, u64, u64) {
     } else {
         (a0, a1, a2, a3)
     }
+}
+
+pub fn com_err(result: syn::Result<TokenStream>) -> TokenStream {
+    result.unwrap_or_else(|err| TokenStream::from(err.to_compile_error()))
+}
+
+pub fn hex2(input: TokenStream) -> TokenStream {
+    com_err((|| {
+        let bytes = parse_hex(input)?;
+        let literal = Literal::byte_string(&bytes);
+        Ok(quote! { *#literal })
+    })())
 }
 
 pub fn hex(input: TokenStream) -> TokenStream {
