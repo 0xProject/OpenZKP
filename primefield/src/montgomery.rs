@@ -1,6 +1,5 @@
 use crate::field::FieldElement;
 use macros_decl::u256h;
-use std::cmp::Ordering;
 use u256::{
     utils::{adc, mac},
     U256,
@@ -52,6 +51,7 @@ pub fn redc(lo: &U256, hi: &U256) -> U256 {
     r
 }
 
+// TODO: Make `const fn` once https://github.com/rust-lang/rust/issues/49146 lands.
 #[inline(always)]
 pub fn mul_redc(x: &U256, y: &U256) -> U256 {
     // TODO: This might not be faster than:
@@ -104,7 +104,7 @@ pub fn mul_redc(x: &U256, y: &U256) -> U256 {
 
     // Final reduction
     let mut r = U256::from_limbs(a0, a1, a2, a3);
-    if r.cmp(&FieldElement::MODULUS) != Ordering::Less {
+    if r >= FieldElement::MODULUS {
         r -= &FieldElement::MODULUS;
     }
     r
