@@ -2,16 +2,6 @@ use proc_macro2::{Literal, Span, TokenStream};
 use quote::quote;
 use syn::{Expr, Lit};
 
-trait CompileError {
-    fn or_compile_error(self) -> TokenStream;
-}
-
-impl CompileError for syn::Result<TokenStream> {
-    fn or_compile_error(self) -> TokenStream {
-        self.unwrap_or_else(|err| TokenStream::from(err.to_compile_error()))
-    }
-}
-
 fn parse_string(input: TokenStream) -> syn::Result<String> {
     let input: Expr = syn::parse2(input)?;
     let result = match input {
@@ -149,7 +139,7 @@ pub fn hex(input: TokenStream) -> TokenStream {
         let literal = Literal::byte_string(&bytes);
         Ok(quote! { *#literal })
     })()
-    .or_compile_error()
+    .unwrap_or_else(|err: syn::Error| err.to_compile_error())
 }
 
 pub fn u256h(input: TokenStream) -> TokenStream {
@@ -167,7 +157,7 @@ pub fn u256h(input: TokenStream) -> TokenStream {
         // dependency.
         Ok(quote! { U256::from_limbs(#c0, #c1, #c2, #c3) })
     })()
-    .or_compile_error()
+    .unwrap_or_else(|err: syn::Error| err.to_compile_error())
 }
 
 pub fn field_h(input: TokenStream) -> TokenStream {
@@ -183,7 +173,7 @@ pub fn field_h(input: TokenStream) -> TokenStream {
 
         Ok(quote! { FieldElement::from_montgomery(U256::from_limbs(#c0, #c1, #c2, #c3)) })
     })()
-    .or_compile_error()
+    .unwrap_or_else(|err: syn::Error| err.to_compile_error())
 }
 
 #[cfg(test)]
