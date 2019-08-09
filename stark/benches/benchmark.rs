@@ -5,8 +5,8 @@ use criterion::{
     black_box, criterion_group, criterion_main, AxisScale, Bencher, Criterion,
     ParameterizedBenchmark, PlotConfiguration, Throughput,
 };
-use hex_literal::*;
 use lazy_static::lazy_static;
+use macros_decl::u256h;
 use primefield::FieldElement;
 use rayon::ThreadPoolBuilder;
 use stark::{
@@ -15,7 +15,7 @@ use stark::{
     make_tree, stark_proof, ProofParams,
 };
 use std::{convert::TryInto, marker::Send};
-use u256::{u256h, U256};
+use u256::U256;
 
 const SIZES: [usize; 6] = [64, 256, 1024, 4096, 16384, 65536];
 lazy_static! {

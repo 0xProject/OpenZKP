@@ -1,15 +1,18 @@
 use crate::{montgomery::*, square_root::square_root};
-use hex_literal::*;
-use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
-use u256::{commutative_binop, noncommutative_binop, u256h, U256};
+use macros_decl::u256h;
+use std::{
+    fmt,
+    ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign},
+};
+use u256::{commutative_binop, noncommutative_binop, U256};
 
 // TODO: Implement Serde
 
-#[derive(PartialEq, Eq, Clone, Debug)]
-pub struct FieldElement(pub U256);
+#[derive(PartialEq, Eq, Clone)]
+pub struct FieldElement(U256);
 
 impl FieldElement {
-    pub const GENERATOR: FieldElement = FieldElement(u256h!(
+    pub const GENERATOR: FieldElement = FieldElement::from_montgomery(u256h!(
         "07fffffffffff9b0ffffffffffffffffffffffffffffffffffffffffffffffa1"
     ));
     /// Prime modulus of the field.
@@ -18,11 +21,15 @@ impl FieldElement {
     pub const MODULUS: U256 =
         u256h!("0800000000000011000000000000000000000000000000000000000000000001");
     // 3, in montgomery form.
-    pub const NEGATIVE_ONE: FieldElement = FieldElement(u256h!(
+    pub const NEGATIVE_ONE: FieldElement = FieldElement::from_montgomery(u256h!(
         "0000000000000220000000000000000000000000000000000000000000000020"
     ));
-    pub const ONE: FieldElement = FieldElement(R1);
-    pub const ZERO: FieldElement = FieldElement(U256::ZERO);
+    pub const ONE: FieldElement = FieldElement::from_montgomery(R1);
+    pub const ZERO: FieldElement = FieldElement::from_montgomery(U256::ZERO);
+
+    pub const fn from_u256_const(n: U256) -> Self {
+        FieldElement(to_montgomery_const(&n))
+    }
 
     pub const fn from_montgomery(n: U256) -> Self {
         FieldElement(n)
@@ -32,25 +39,8 @@ impl FieldElement {
         FieldElement::from(U256::from_hex_str(s))
     }
 
-    #[allow(clippy::cast_lossless)]
-    pub fn new(limbs: &[u32; 8]) -> Self {
-        let mut bu = U256::new(
-            ((limbs[1] as u64) << 32) | (limbs[0] as u64),
-            ((limbs[3] as u64) << 32) | (limbs[2] as u64),
-            ((limbs[5] as u64) << 32) | (limbs[4] as u64),
-            ((limbs[7] as u64) << 32) | (limbs[6] as u64),
-        );
-        bu = to_montgomery(&bu);
-        FieldElement(bu)
-    }
-
-    pub fn as_montogomery_u256(&self) -> &U256 {
+    pub fn as_montgomery(&self) -> &U256 {
         &self.0
-    }
-
-    // TODO: Remove in favour of U256::from(self).to_bytes_be() ?
-    pub fn to_bytes(&self) -> [u8; 32] {
-        from_montgomery(&self.0).to_bytes_be()
     }
 
     #[inline(always)]
@@ -82,7 +72,7 @@ impl FieldElement {
 
     #[inline(always)]
     pub fn square(&self) -> FieldElement {
-        FieldElement(sqr_redc(&self.0))
+        FieldElement::from_montgomery(sqr_redc(&self.0))
     }
 
     pub fn square_root(&self) -> Option<FieldElement> {
@@ -122,6 +112,9 @@ impl FieldElement {
 }
 
 pub fn invert_batch(to_be_inverted: &[FieldElement]) -> Vec<FieldElement> {
+    if to_be_inverted.is_empty() {
+        return Vec::new();
+    }
     let n = to_be_inverted.len();
     let mut inverses = cumulative_product(to_be_inverted);
 
@@ -145,11 +138,22 @@ fn cumulative_product(elements: &[FieldElement]) -> Vec<FieldElement> {
         .collect()
 }
 
+impl fmt::Debug for FieldElement {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let n = U256::from(self);
+        write!(
+            f,
+            "field_element!(\"{:016x}{:016x}{:016x}{:016x}\")",
+            n.c3, n.c2, n.c1, n.c0
+        )
+    }
+}
+
 macro_rules! impl_from_uint {
     ($t:ty) => {
         impl From<$t> for FieldElement {
             fn from(n: $t) -> Self {
-                FieldElement(to_montgomery(&U256::from(n)))
+                U256::from(n).into()
             }
         }
     };
@@ -167,9 +171,9 @@ macro_rules! impl_from_int {
         impl From<$t> for FieldElement {
             fn from(n: $t) -> Self {
                 if n >= 0 {
-                    FieldElement(to_montgomery(&U256::from(n)))
+                    U256::from(n).into()
                 } else {
-                    FieldElement(to_montgomery(&U256::from(-n))).neg()
+                    FieldElement::from(U256::from(-n)).neg()
                 }
             }
         }
@@ -183,23 +187,26 @@ impl_from_int!(i64);
 impl_from_int!(i128);
 impl_from_int!(isize);
 
-macro_rules! as_uint {
-    ($name:ident, $type:ty) => {
-        pub fn $name(&self) -> $type {
-            U256::from(self).$name()
+// The FieldElement versions are called `to_` and not `as_` like their
+// U256 counterparts. This is because a `U256::from` is performed which
+// does a non-trivial `from_montgomery` conversion.
+macro_rules! to_uint {
+    ($fname:ident, $uname:ident, $type:ty) => {
+        pub fn $fname(&self) -> $type {
+            U256::from(self).$uname()
         }
     };
 }
 
-macro_rules! as_int {
-    ($name:ident, $type:ty) => {
-        pub fn $name(&self) -> $type {
+macro_rules! to_int {
+    ($fname:ident, $uname:ident, $type:ty) => {
+        pub fn $fname(&self) -> $type {
             let n = U256::from(self);
             let half = Self::MODULUS >> 1;
             if n < half {
-                n.$name()
+                n.$uname()
             } else {
-                (n - Self::MODULUS).$name()
+                (n - Self::MODULUS).$uname()
             }
         }
     };
@@ -208,47 +215,41 @@ macro_rules! as_int {
 // We don't want newlines between the macro invocations.
 #[rustfmt::skip]
 impl FieldElement {
-    as_uint!(as_u8, u8);
-    as_uint!(as_u16, u16);
-    as_uint!(as_u32, u32);
-    as_uint!(as_u64, u64);
-    as_uint!(as_u128, u128);
-    as_uint!(as_usize, usize);
-    as_int!(as_i8, i8);
-    as_int!(as_i16, i16);
-    as_int!(as_i32, i32);
-    as_int!(as_i64, i64);
-    as_int!(as_i128, i128);
-    as_int!(as_isize, isize);
+    to_uint!(to_u8, as_u8, u8);
+    to_uint!(to_u16, as_u16, u16);
+    to_uint!(to_u32, as_u32, u32);
+    to_uint!(to_u64, as_u64, u64);
+    to_uint!(to_u128, as_u128, u128);
+    to_uint!(to_usize, as_usize, usize);
+    to_int!(to_i8, as_i8, i8);
+    to_int!(to_i16, as_i16, i16);
+    to_int!(to_i32, as_i32, i32);
+    to_int!(to_i64, as_i64, i64);
+    to_int!(to_i128, as_i128, i128);
+    to_int!(to_isize, as_isize, isize);
 }
 
 impl From<U256> for FieldElement {
     fn from(n: U256) -> Self {
-        FieldElement(to_montgomery(&n))
+        (&n).into()
     }
 }
 
 impl From<&U256> for FieldElement {
     fn from(n: &U256) -> Self {
-        FieldElement(to_montgomery(n))
+        FieldElement::from_montgomery(to_montgomery(n))
     }
 }
 
 impl From<FieldElement> for U256 {
     fn from(n: FieldElement) -> Self {
-        from_montgomery(&n.0)
+        (&n).into()
     }
 }
 
 impl From<&FieldElement> for U256 {
     fn from(n: &FieldElement) -> Self {
-        from_montgomery(&n.0)
-    }
-}
-
-impl From<&[u8; 32]> for FieldElement {
-    fn from(bytes: &[u8; 32]) -> Self {
-        FieldElement(to_montgomery(&U256::from_bytes_be(bytes)))
+        from_montgomery(n.as_montgomery())
     }
 }
 
@@ -257,7 +258,7 @@ impl Neg for &FieldElement {
 
     #[inline(always)]
     fn neg(self) -> Self::Output {
-        FieldElement(FieldElement::MODULUS - &self.0)
+        FieldElement::from_montgomery(FieldElement::MODULUS - &self.0)
     }
 }
 
@@ -316,17 +317,35 @@ use quickcheck::{Arbitrary, Gen};
 impl Arbitrary for FieldElement {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         // TODO: Generate 0, 1, p/2 and -1
-        FieldElement(U256::arbitrary(g) % FieldElement::MODULUS)
+        FieldElement::from_montgomery(U256::arbitrary(g) % FieldElement::MODULUS)
     }
 }
 
-// TODO: Use u256h literals here.
-#[allow(clippy::unreadable_literal)]
+#[allow(unused_macros)]
+macro_rules! field_h {
+    (- $e:expr) => {
+        field_h!($e).neg()
+    };
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use itertools::repeat_n;
+    use macros_decl::field_element;
     use quickcheck_macros::quickcheck;
+
+    #[test]
+    fn test_literal() {
+        const SMALL: FieldElement = field_element!("0F");
+        const NUM: FieldElement =
+            field_element!("0548c135e26faa9c977fb2eda057b54b2e0baa9a77a0be7c80278f4f03462d4c");
+        assert_eq!(SMALL, FieldElement::from(15));
+        assert_eq!(
+            NUM,
+            u256h!("0548c135e26faa9c977fb2eda057b54b2e0baa9a77a0be7c80278f4f03462d4c").into()
+        );
+    }
 
     #[test]
     fn negative_one_is_additive_inverse_of_one() {
@@ -336,100 +355,76 @@ mod tests {
         );
     }
 
-    #[rustfmt::skip]
     #[test]
     fn test_add() {
-        let a = FieldElement(u256h!(
-            "0548c135e26faa9c977fb2eda057b54b2e0baa9a77a0be7c80278f4f03462d4c"
-        ));
-        let b = FieldElement(u256h!(
-            "024385f6bebc1c496e09955db534ef4b1eaff9a78e27d4093cfa8f7c8f886f6b"
-        ));
-        let c = FieldElement(u256h!(
-            "078c472ca12bc6e60589484b558ca4964cbba44205c89285bd221ecb92ce9cb7"
-        ));
+        let a = field_element!("06eabe184aa9caca2e17f6073bcc10bb9714c0e3866ff00e0d386f4396392852");
+        let b = field_element!("0313000a764a9a5514efc99070de3f70586794f9bb0add62ac689763aadea7e8");
+        let c = field_element!("01fdbe22c0f4650e4307bf97acaa502bef7c55dd417acd70b9a106a74117d039");
         assert_eq!(a + b, c);
     }
 
-    #[rustfmt::skip]
     #[test]
     fn test_sub() {
-        let a = FieldElement::new(&[0x7d14253b, 0xef060e37, 0x98d1486f, 0x8700b80a, 0x0a83500d, 0x961ed57d, 0x68cc0469, 0x02945916]);
-        let b = FieldElement::new(&[0xf3a5912a, 0x62f3d853, 0x748c8465, 0x5f9b78d9, 0x8d66de24, 0xcf8479c5, 0x08cc1bb0, 0x06566f2f]);
-        let c = FieldElement::new(&[0x896e9412, 0x8c1235e3, 0x2444c40a, 0x27653f31, 0x7d1c71e9, 0xc69a5bb7, 0x5fffe8c9, 0x043de9e7]);
+        let a = FieldElement::from_montgomery(u256h!(
+            "0548c135e26faa9c977fb2eda057b54b2e0baa9a77a0be7c80278f4f03462d4c"
+        ));
+        let b = FieldElement::from_montgomery(u256h!(
+            "024385f6bebc1c496e09955db534ef4b1eaff9a78e27d4093cfa8f7c8f886f6b"
+        ));
+        let c = FieldElement::from(u256h!(
+            "03d7be0dd45f307519282c76caedd14b3ead2be9cb6512ab60cfd7dfeb5a806a"
+        ));
         assert_eq!(a - b, c);
     }
 
-    #[rustfmt::skip]
     #[test]
     fn test_mul() {
-        let a = FieldElement::new(&[0x25fb5664, 0x9884280e, 0x0dcdbb96, 0x299078c9, 0x4392fd2e, 0x5a3ba2c1, 0x76e8c4ab, 0x06456ad3]);
-        let b = FieldElement::new(&[0xf4926adb, 0x7e94c9d8, 0x18646bfe, 0x75c324f5, 0x1beb13ef, 0xc4195ea4, 0xd6098107, 0x009ce793]);
-        let c = FieldElement::new(&[0x8f18f110, 0x98593af8, 0x1eda2b3f, 0x92f06f39, 0x36f1d62e, 0x8c7b6e67, 0xa1175434, 0x037ad171]);
+        let a = FieldElement::from_montgomery(u256h!(
+            "0548c135e26faa9c977fb2eda057b54b2e0baa9a77a0be7c80278f4f03462d4c"
+        ));
+        let b = FieldElement::from_montgomery(u256h!(
+            "024385f6bebc1c496e09955db534ef4b1eaff9a78e27d4093cfa8f7c8f886f6b"
+        ));
+        let c = FieldElement::from(u256h!(
+            "0738900c5dcab24b419674df19d2cfeb9782eca6d1107be18577eb060390365b"
+        ));
         assert_eq!(a * b, c);
     }
 
-    #[rustfmt::skip]
     #[test]
     fn test_div() {
-        let a = FieldElement::new(&[0x7d14253b, 0xef060e37, 0x98d1486f, 0x8700b80a, 0x0a83500d, 0x961ed57d, 0x68cc0469, 0x02945916]);
-        let b = FieldElement::new(&[0xf3a5912a, 0x62f3d853, 0x748c8465, 0x5f9b78d9, 0x8d66de24, 0xcf8479c5, 0x08cc1bb0, 0x06566f2f]);
-        let c = FieldElement::new(&[0x4fb2a90b, 0x301e1830, 0x97593d1a, 0x97e53783, 0xbf27c713, 0x1bed3220, 0x9a076875, 0x02a40705]);
+        let a = FieldElement::from_montgomery(u256h!(
+            "0548c135e26faa9c977fb2eda057b54b2e0baa9a77a0be7c80278f4f03462d4c"
+        ));
+        let b = FieldElement::from_montgomery(u256h!(
+            "024385f6bebc1c496e09955db534ef4b1eaff9a78e27d4093cfa8f7c8f886f6b"
+        ));
+        let c = FieldElement::from(u256h!(
+            "003a9a346e7103c74dfcddd0eeb4e16ca71d8887c2bed3d4ee718b62015e87b2"
+        ));
         assert_eq!(a / b, c);
     }
-    #[test]
-    fn test_batch_inv() {
-        let a = FieldElement::new(&[
-            0x7d14253b, 0xef060e37, 0x98d1486f, 0x8700b80a, 0x0a83500d, 0x961ed57d, 0x68cc0469,
-            0x02945916,
-        ]);
-        let b = FieldElement::new(&[
-            0xf3a5912a, 0x62f3d853, 0x748c8465, 0x5f9b78d9, 0x8d66de24, 0xcf8479c5, 0x08cc1bb0,
-            0x06566f2f,
-        ]);
-        let c = FieldElement::new(&[
-            0x4fb2a90b, 0x301e1830, 0x97593d1a, 0x97e53783, 0xbf27c713, 0x1bed3220, 0x9a076875,
-            0x02a40705,
-        ]);
-        let d = FieldElement::new(&[
-            0x7d14353b, 0xef060e37, 0x98d1486f, 0x8700b80a, 0x0a83500d, 0x961ed57d, 0x68cc0469,
-            0x02945916,
-        ]);
-        let e = FieldElement::new(&[
-            0xf3a5912a, 0x74f3d853, 0x748c8465, 0x5f9b78d9, 0x8d66de24, 0xcf8479c5, 0x08cc1bb0,
-            0x06566f2f,
-        ]);
-        let f = FieldElement::new(&[
-            0x4fb2a9bb, 0x301e1830, 0x97593d1a, 0x97e56783, 0xbf27c713, 0x1bed3220, 0x9a076875,
-            0x02a40705,
-        ]);
 
-        let to_be_inverted = vec![
-            a.clone(),
-            b.clone(),
-            c.clone(),
-            d.clone(),
-            e.clone(),
-            f.clone(),
-        ];
-        let ret = invert_batch(to_be_inverted.as_slice());
-
-        assert_eq!(ret[0], a.inv().unwrap());
-        assert_eq!(ret[1], b.inv().unwrap());
-        assert_eq!(ret[2], c.inv().unwrap());
-        assert_eq!(ret[3], d.inv().unwrap());
-        assert_eq!(ret[4], e.inv().unwrap());
-        assert_eq!(ret[5], f.inv().unwrap());
+    #[quickcheck]
+    fn test_batch_inv(x: Vec<FieldElement>) -> bool {
+        if x.iter().any(|a| a.is_zero()) {
+            true
+        } else {
+            invert_batch(x.as_slice())
+                .iter()
+                .zip(x.iter())
+                .all(|(a_inv, a)| *a_inv == a.inv().unwrap())
+        }
     }
 
     #[quickcheck]
     fn from_as_isize(n: isize) -> bool {
-        FieldElement::from(n).as_isize() == n
+        FieldElement::from(n).to_isize() == n
     }
 
     #[quickcheck]
     fn from_as_i128(n: i128) -> bool {
-        FieldElement::from(n).as_i128() == n
+        FieldElement::from(n).to_i128() == n
     }
 
     #[quickcheck]

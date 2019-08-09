@@ -305,9 +305,9 @@ fn out_of_domain_element(
 ) -> FieldElement {
     let poly_points: Vec<FieldElement> = poly_points_u
         .iter()
-        .map(|i| FieldElement(i.clone()))
+        .map(|i| FieldElement::from_montgomery(i.clone()))
         .collect();
-    let constraint_point = FieldElement(constraint_point_u.clone());
+    let constraint_point = FieldElement::from_montgomery(constraint_point_u.clone());
     let x_transform = x_cord * FieldElement::GENERATOR;
     let omega = FieldElement::root(U256::from(eval_domain_size as u64)).unwrap();
     let g = omega.pow(U256::from(blowup as u64));
@@ -330,8 +330,7 @@ fn out_of_domain_element(
 mod tests {
     use super::*;
     use crate::fibonacci::*;
-    use hex_literal::*;
-    use u256::u256h;
+    use macros_decl::u256h;
 
     #[test]
     fn verifier_fib_test() {

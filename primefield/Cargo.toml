@@ -7,10 +7,10 @@ edition = "2018"
 [dependencies]
 u256 =  { path = "../u256" }
 hex = ""
-hex-literal = "0.1.4"
 itertools = "0.8.0"
 crunchy = "0.2.2"
 quickcheck = {version = "0.8", optional = true}
+macros-decl = { path = "../macros_decl" }
 
 [dev-dependencies]
 u256 =  { path = "../u256", features = ["quickcheck"] }

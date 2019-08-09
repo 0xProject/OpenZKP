@@ -26,7 +26,7 @@ pub struct PrivateInput {
 impl Writable<&PublicInput> for ProverChannel {
     fn write(&mut self, public: &PublicInput) {
         let mut bytes = [public.index.to_be_bytes()].concat();
-        bytes.extend_from_slice(&public.value.0.to_bytes_be());
+        bytes.extend_from_slice(&public.value.as_montgomery().to_bytes_be());
         self.initialize(bytes.as_slice());
     }
 }
@@ -38,7 +38,7 @@ impl Replayable<PublicInput> for VerifierChannel {
         let index: u64 = u64::from_be_bytes(index_holder);
         let mut value_holder = [0_u8; 32];
         value_holder.clone_from_slice(&self.proof[8..40]);
-        let value: FieldElement = FieldElement(U256::from_bytes_be(&value_holder));
+        let value: FieldElement = FieldElement::from_montgomery(U256::from_bytes_be(&value_holder));
         let borrow = &self.proof[0..40].to_vec();
         self.initialize(borrow.as_slice());
         PublicInput {

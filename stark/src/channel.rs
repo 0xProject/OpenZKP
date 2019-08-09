@@ -1,9 +1,9 @@
 use crate::hash::Hash;
-use hex_literal::*;
+use macros_decl::{hex, u256h};
 use primefield::FieldElement;
 use rayon::prelude::*;
 use tiny_keccak::Keccak;
-use u256::{u256h, U256};
+use u256::U256;
 
 pub trait RandomGenerator<T> {
     fn get_random(&mut self) -> T;
@@ -173,7 +173,7 @@ impl RandomGenerator<FieldElement> for PublicCoin {
             let seed = number & MASK;
             if seed < FieldElement::MODULUS {
                 // TODO: Avoid accessing FieldElement members directly
-                break FieldElement(seed);
+                break FieldElement::from_montgomery(seed);
             }
         }
     }
@@ -256,7 +256,7 @@ impl Writable<&[FieldElement]> for ProverChannel {
     fn write(&mut self, data: &[FieldElement]) {
         let mut container = Vec::with_capacity(32 * data.len());
         for element in data {
-            for byte in U256::to_bytes_be(&element.0).iter() {
+            for byte in element.as_montgomery().to_bytes_be().iter() {
                 container.push(byte.clone());
             }
         }
@@ -267,7 +267,7 @@ impl Writable<&[FieldElement]> for ProverChannel {
 impl Writable<&FieldElement> for ProverChannel {
     fn write(&mut self, data: &FieldElement) {
         // TODO: Avoid accessing FieldElement members directly
-        self.write(&data.0.to_bytes_be()[..]);
+        self.write(&data.as_montgomery().to_bytes_be()[..]);
     }
 }
 
@@ -315,7 +315,7 @@ impl Replayable<U256> for VerifierChannel {
 
 impl Replayable<FieldElement> for VerifierChannel {
     fn replay(&mut self) -> FieldElement {
-        FieldElement(Replayable::replay(self))
+        FieldElement::from_montgomery(Replayable::replay(self))
     }
 
     fn replay_many(&mut self, len: usize) -> Vec<FieldElement> {
@@ -327,7 +327,7 @@ impl Replayable<FieldElement> for VerifierChannel {
             let to = from + 32;
             self.proof_index = to;
             holder.copy_from_slice(&self.proof[from..to]);
-            ret.push(FieldElement(U256::from_bytes_be(&holder)));
+            ret.push(FieldElement::from_montgomery(U256::from_bytes_be(&holder)));
         }
         self.coin.write(&self.proof[start_index..self.proof_index]);
         ret
@@ -350,7 +350,7 @@ impl Replayable<u64> for VerifierChannel {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use u256::u256h;
+    use macros_decl::u256h;
 
     #[test]
     fn proof_of_work_test() {
@@ -399,7 +399,7 @@ mod tests {
         let rand_element: FieldElement = source.get_random();
         assert_eq!(
             rand_element,
-            FieldElement(u256h!(
+            FieldElement::from_montgomery(u256h!(
                 "0389a47fe0e1e5f9c05d8dcb27b069b67b1c7ec61a5c0a3f54d81aea83d2c8f0"
             ))
         );
@@ -422,7 +422,7 @@ mod tests {
             source.coin.digest,
             hex!("21571e2a323daa1e6f2adda87ce912608e1325492d868e8fe41626633d6acb93")
         );
-        source.write(&FieldElement(u256h!(
+        source.write(&FieldElement::from_montgomery(u256h!(
             "0389a47fe0e1e5f9c05d8dcb27b069b67b1c7ec61a5c0a3f54d81aea83d2c8f0"
         )));
         assert_eq!(
@@ -431,10 +431,10 @@ mod tests {
         );
         source.write(
             vec![
-                FieldElement(u256h!(
+                FieldElement::from_montgomery(u256h!(
                     "0389a47fe0e1e5f9c05d8dcb27b069b67b1c7ec61a5c0a3f54d81aea83d2c8f0"
                 )),
-                FieldElement(u256h!(
+                FieldElement::from_montgomery(u256h!(
                     "129ab47fe0e1a5f9c05d8dcb27b069b67b1c7ec61a5c0a3f54d81aea83d2c8f0"
                 )),
             ]
@@ -453,15 +453,15 @@ mod tests {
         let rand_bytes: [u8; 32] = source.get_random();
         source.write(&rand_bytes[..]);
         source.write(11_028_357_238_u64);
-        let written_field_element = FieldElement(u256h!(
+        let written_field_element = FieldElement::from_montgomery(u256h!(
             "0389a47fe0e1e5f9c05d8dcb27b069b67b1c7ec61a5c0a3f54d81aea83d2c8f0"
         ));
         source.write(&written_field_element);
         let written_field_element_vec = vec![
-            FieldElement(u256h!(
+            FieldElement::from_montgomery(u256h!(
                 "0389a47fe0e1e5f9c05d8dcb27b069b67b1c7ec61a5c0a3f54d81aea83d2c8f0"
             )),
-            FieldElement(u256h!(
+            FieldElement::from_montgomery(u256h!(
                 "129ab47fe0e1a5f9c05d8dcb27b069b67b1c7ec61a5c0a3f54d81aea83d2c8f0"
             )),
         ];
