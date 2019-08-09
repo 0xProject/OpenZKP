@@ -697,11 +697,7 @@ fn decommit_fri_layers_and_trees(
 #[cfg(test)]
 mod tests {
     use super::*;
-<<<<<<< HEAD
     use crate::{fibonacci::*, verifier::*};
-=======
-    use crate::fibonacci::*;
->>>>>>> master
     use macros_decl::{hex, u256h};
     use u256::U256;
 
