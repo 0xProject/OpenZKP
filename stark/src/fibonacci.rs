@@ -5,6 +5,7 @@ use crate::{
     utils::Reversible,
     TraceTable,
 };
+use macros_decl::u256h;
 use primefield::{invert_batch, FieldElement};
 use rayon::prelude::*;
 use std::convert::TryInto;
