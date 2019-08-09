@@ -1,6 +1,6 @@
 // TODO: #![deny(missing_docs)]
 #![warn(clippy::all)]
-// c
+#![deny(warnings)]
 mod channel;
 mod fft;
 pub mod fibonacci;

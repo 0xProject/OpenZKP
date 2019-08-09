@@ -120,10 +120,10 @@ pub fn proof<R: Hashable, T: Groupable<R>>(
             let left = known[2 * i];
             let right = known[2 * i + 1];
             if left && !right {
-                decommitment.push(tree[2 * i + 1]);
+                decommitment.push(tree[2 * i + 1].clone());
             }
             if !left && right {
-                decommitment.push(tree[2 * i]);
+                decommitment.push(tree[2 * i].clone());
             }
             known[i] = left || right;
         }
@@ -203,7 +203,7 @@ pub fn verify<T: Hashable>(
             let tree_index = 2_usize.pow(depth) + leaf.0;
             queue.push((tree_index, leaf.1.hash()));
             previous_index = leaf.0;
-        } else if !(decommitment.iter().any(|&x| x == leaf.1.hash())) {
+        } else if !(decommitment.iter().any(|x| *x == leaf.1.hash())) {
             let tree_index = 2_usize.pow(depth) + leaf.0;
             queue.push((tree_index, leaf.1.hash()));
         }
@@ -316,7 +316,7 @@ mod tests {
         ));
 
         assert!(verify(
-            tree[1],
+            tree[1].clone(),
             depth,
             values.as_mut_slice(),
             decommitment.clone()

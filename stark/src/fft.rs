@@ -47,6 +47,7 @@ fn bit_reversal_fft(coefficients: &mut [FieldElement], root: FieldElement) {
         let block_size = n_elements >> (layer + 1);
         let twiddle_factor_update = root.pow(U256::from(block_size));
         for block in 0..n_blocks {
+            // TODO: Do without casts.
             let block_start = 2 * reverse(block as u64, layer) as usize * block_size;
             for i in block_start..block_start + block_size {
                 let j = i + block_size;

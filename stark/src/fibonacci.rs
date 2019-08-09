@@ -36,6 +36,7 @@ impl Replayable<PublicInput> for VerifierChannel {
     fn replay(&mut self) -> PublicInput {
         // Need to make a temporary copy here to satisfy the borrow checker.
         // We can not guarantee proof won't change in `initialize`.
+        // TODO: Move to verifier.
         self.initialize(self.proof[0..40].to_vec().as_slice());
         PublicInput {
             index: u64::from_be_bytes((&self.proof[0..8]).try_into().unwrap())
@@ -164,7 +165,7 @@ pub fn eval_c_direct(
     public: &PublicInput,
     constraint_coefficients: &[FieldElement],
 ) -> FieldElement {
-    let trace_len = polynomials[0].len() as u64;
+    let trace_len = polynomials[0].len();
     let g = FieldElement::root(U256::from(trace_len)).unwrap();
     let value = public.value.clone();
 
@@ -186,11 +187,7 @@ pub fn eval_c_direct(
         (eval_P0(x.clone()) - &value) / (&x - &g.pow(public.index.into()))
     };
 
-    let deg_adj = |degree_bound: u64,
-                   constraint_degree: u64,
-                   numerator_degree: u64,
-                   denominator_degree: u64|
-     -> u64 {
+    let deg_adj = |degree_bound, constraint_degree, numerator_degree, denominator_degree| {
         degree_bound + denominator_degree - 1 - constraint_degree - numerator_degree
     };
 

@@ -1,13 +1,10 @@
-use crate::hash::*;
-#[allow(unused_imports)]
-use crate::{channel::*, fft::*, merkle::*, polynomial::eval_poly, proofs::*, utils::*};
+use crate::{channel::*, hash::*, merkle::*, polynomial::eval_poly, proofs::*, utils::*};
 use itertools::Itertools;
 use primefield::FieldElement;
-use std::collections::HashMap;
+use std::{collections::HashMap, convert::TryInto};
 use u256::U256;
 
-use std::fmt::Debug;
-pub fn check_proof<Public: std::cmp::PartialEq + Clone + Debug>(
+pub fn check_proof<Public>(
     proposed_proof: ProverChannel,
     constraints: &Constraint<Public>,
     public: &Public,
@@ -16,79 +13,80 @@ pub fn check_proof<Public: std::cmp::PartialEq + Clone + Debug>(
     trace_len: usize,
 ) -> bool
 where
+    Public: PartialEq + Clone,
     VerifierChannel: Replayable<Public>,
     VerifierChannel: Replayable<Hash>,
 {
-    let omega = FieldElement::root(U256::from((trace_len * params.blowup) as u64)).unwrap();
+    let omega = FieldElement::root(U256::from(trace_len * params.blowup)).unwrap();
     let eval_domain_size = trace_len * params.blowup;
 
     let eval_x = geometric_series(&FieldElement::ONE, &omega, eval_domain_size);
 
-    let mut proof_check = VerifierChannel::new(proposed_proof.proof.clone());
-    let seen_public: Public = proof_check.replay();
+    let mut channel = VerifierChannel::new(proposed_proof.proof.clone());
+    let seen_public: Public = channel.replay();
     if seen_public != public.clone() {
         return false;
     }
+    // TOOD: Initialize verifier channel here.
 
     // Get the low degree root commitment, and constraint root commitment
-    let low_degree_extension_root = Replayable::<Hash>::replay(&mut proof_check);
+    // TODO: Make it work as channel.read()
+    let low_degree_extension_root = Replayable::<Hash>::replay(&mut channel);
     let mut constraint_coefficients: Vec<FieldElement> =
         Vec::with_capacity(constraints.num_constraints);
     for _i in 0..constraints.num_constraints {
-        constraint_coefficients.push(proof_check.get_random());
+        constraint_coefficients.push(channel.get_random());
     }
-    let constraint_evaluated_root = Replayable::<Hash>::replay(&mut proof_check);
+    let constraint_evaluated_root = Replayable::<Hash>::replay(&mut channel);
 
     // Get the oods information from the proof and random
-    let oods_point: FieldElement = proof_check.get_random();
+    let oods_point: FieldElement = channel.get_random();
     let mut oods_values: Vec<FieldElement> = Vec::with_capacity(2 * trace_cols + 1);
     for _ in 0..(2 * trace_cols + params.constraints_degree_bound) {
-        oods_values.push(Replayable::<FieldElement>::replay(&mut proof_check));
+        oods_values.push(Replayable::<FieldElement>::replay(&mut channel));
     }
     let mut oods_coefficients: Vec<FieldElement> = Vec::with_capacity(2 * trace_cols + 1);
     for _ in 0..=2 * trace_cols {
-        oods_coefficients.push(proof_check.get_random());
+        oods_coefficients.push(channel.get_random());
     }
 
     let mut fri_roots: Vec<Hash> = Vec::with_capacity(params.fri_layout.len() + 1);
     let mut eval_points: Vec<FieldElement> = Vec::with_capacity(params.fri_layout.len() + 1);
     // Get first fri root:
-    fri_roots.push(Replayable::<Hash>::replay(&mut proof_check));
+    fri_roots.push(Replayable::<Hash>::replay(&mut channel));
     // Get fri roots and eval points from the channel random
     let mut halvings = 0;
     for &x in params.fri_layout.iter().dropping_back(1) {
         let eval_point = if x == 0 {
             FieldElement::ONE
         } else {
-            proof_check.get_random()
+            channel.get_random()
         };
         eval_points.push(eval_point);
-        fri_roots.push(Replayable::<Hash>::replay(&mut proof_check));
+        fri_roots.push(Replayable::<Hash>::replay(&mut channel));
         halvings += x;
     }
     // Gets the last layer and the polynomial coefficients
-    eval_points.push(proof_check.get_random());
+    eval_points.push(channel.get_random());
     halvings += params.fri_layout[params.fri_layout.len() - 1];
     let last_layer_degree_bound = trace_len / (2_usize.pow(halvings as u32));
     let last_layer_coefficient: Vec<FieldElement> =
-        Replayable::<FieldElement>::replay_many(&mut proof_check, last_layer_degree_bound);
+        Replayable::<FieldElement>::replay_many(&mut channel, last_layer_degree_bound);
 
     // Gets the proof of work from the proof, without moving the random forward.
-    let mut holder = [0_u8; 8];
-    holder.copy_from_slice(proof_check.read_without_replay(8));
-    let proof_of_work = u64::from_be_bytes(holder);
-    if !proof_check.pow_verify(proof_of_work, params.pow_bits) {
+    let proof_of_work = u64::from_be_bytes(channel.read_without_replay(8).try_into().unwrap());
+    if !channel.pow_verify(proof_of_work, params.pow_bits) {
         return false;
     }
-    let recorded_work = Replayable::<u64>::replay(&mut proof_check);
+    let recorded_work = Replayable::<u64>::replay(&mut channel);
     assert_eq!(recorded_work, proof_of_work);
 
     // Gets queries from channel
-    let eval_domain_size = trace_len * (params.blowup as usize);
+    let eval_domain_size = trace_len * params.blowup;
     let queries = get_indices(
         params.queries,
         eval_domain_size.trailing_zeros(),
-        &mut proof_check,
+        &mut channel,
     );
     let merkle_proof_length = decommitment_size(queries.as_slice(), eval_domain_size);
 
@@ -96,11 +94,11 @@ where
     let mut led_values: Vec<(usize, Vec<U256>)> = queries
         .iter()
         .map(|&index| {
-            let held = Replayable::<U256>::replay_many(&mut proof_check, trace_cols);
+            let held = Replayable::<U256>::replay_many(&mut channel, trace_cols);
             (index, held)
         })
         .collect();
-    let lde_decommitment = Replayable::<Hash>::replay_many(&mut proof_check, merkle_proof_length);
+    let lde_decommitment = Replayable::<Hash>::replay_many(&mut channel, merkle_proof_length);
     if !verify(
         low_degree_extension_root,
         eval_domain_size.trailing_zeros(),
@@ -113,10 +111,10 @@ where
     // Gets the values and checks the constraint decommitment
     let mut constraint_values: Vec<(usize, U256)> = queries
         .iter()
-        .map({ |&index| (index, Replayable::<U256>::replay(&mut proof_check)) })
+        .map({ |&index| (index, Replayable::<U256>::replay(&mut channel)) })
         .collect();
     let constraint_decommitment: Vec<Hash> =
-        Replayable::<Hash>::replay_many(&mut proof_check, merkle_proof_length);
+        Replayable::<Hash>::replay_many(&mut channel, merkle_proof_length);
 
     if !verify(
         constraint_evaluated_root,
@@ -168,7 +166,7 @@ where
                         }
                     }
                     Err(_) => {
-                        coset.push(Replayable::<FieldElement>::replay(&mut proof_check));
+                        coset.push(Replayable::<FieldElement>::replay(&mut channel));
                     }
                 }
             }
@@ -194,7 +192,7 @@ where
             fri_indices.as_slice(),
             len / 2_usize.pow(params.fri_layout[k] as u32),
         );
-        let decommitment = Replayable::<Hash>::replay_many(&mut proof_check, merkle_proof_length);
+        let decommitment = Replayable::<Hash>::replay_many(&mut channel, merkle_proof_length);
         fri_folds = layer_folds;
 
         for _ in 0..params.fri_layout[k] {
@@ -203,7 +201,7 @@ where
         len /= 2_usize.pow(params.fri_layout[k] as u32);
 
         if !verify(
-            fri_roots[k],
+            fri_roots[k].clone(),
             len.trailing_zeros(),
             fri_layer_values.as_mut_slice(),
             decommitment,
@@ -219,16 +217,16 @@ where
                 .collect();
         }
     }
-    if !proof_check.at_end() {
+    if !channel.at_end() {
         return false;
     }
 
     // Checks that the calculated fri folded queries are the points interpolated by
     // the decommited polynomial.
-    let interp_root = FieldElement::root(U256::from(len as u64)).unwrap();
+    let interp_root = FieldElement::root(len.into()).unwrap();
     for key in previous_indices.iter() {
         let calculated = fri_folds[key].clone();
-        let x_pow = interp_root.pow(U256::from(key.bit_reverse_at(len) as u64));
+        let x_pow = interp_root.pow(key.bit_reverse_at(len).into());
         let committed = eval_poly(x_pow, last_layer_coefficient.as_slice());
 
         if committed != calculated.clone() {
@@ -309,8 +307,8 @@ fn out_of_domain_element(
         .collect();
     let constraint_point = FieldElement::from_montgomery(constraint_point_u.clone());
     let x_transform = x_cord * FieldElement::GENERATOR;
-    let omega = FieldElement::root(U256::from(eval_domain_size as u64)).unwrap();
-    let g = omega.pow(U256::from(blowup as u64));
+    let omega = FieldElement::root(U256::from(eval_domain_size)).unwrap();
+    let g = omega.pow(blowup.into());
     let mut r = FieldElement::ZERO;
 
     for x in 0..poly_points.len() {

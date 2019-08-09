@@ -620,7 +620,7 @@ fn perform_fri_layering(
     (fri, fri_trees)
 }
 
-fn decommit_with_queries_and_proof<R: Hashable + std::fmt::Debug, T: Groupable<R>>(
+fn decommit_with_queries_and_proof<R: Hashable, T: Groupable<R>>(
     queries: &[usize],
     source: T,
     tree: &[Hash],
