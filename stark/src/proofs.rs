@@ -672,8 +672,8 @@ fn decommit_fri_layers_and_trees(
 mod tests {
     use super::*;
     use crate::fibonacci::*;
-    use hex_literal::*;
-    use u256::{u256h, U256};
+    use macros_decl::{hex, u256h};
+    use u256::U256;
 
     #[test]
     fn fib_test_1024_python_witness() {

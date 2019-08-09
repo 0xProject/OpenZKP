@@ -2,9 +2,9 @@
 #![deny(warnings)]
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use ecc::{mul, Affine, Jacobian};
-use hex_literal::*;
+use macros_decl::u256h;
 use primefield::FieldElement;
-use u256::{u256h, U256};
+use u256::U256;
 
 #[cfg(feature = "unsafe_ecdsa")]
 use ecc::{private_to_public, sign, verify};

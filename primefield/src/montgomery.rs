@@ -1,9 +1,7 @@
 use crate::field::FieldElement;
-use hex_literal::*;
-use std::cmp::Ordering;
+use macros_decl::u256h;
 use u256::{
-    u256h,
-    utils::{adc, mac},
+    utils::{adc, mac, sbb},
     U256,
 };
 
@@ -14,6 +12,70 @@ pub const M64: u64 = 0xffff_ffff_ffff_ffff; // = -1
 pub const R1: U256 = u256h!("07fffffffffffdf0ffffffffffffffffffffffffffffffffffffffffffffffe1");
 pub const R2: U256 = u256h!("07ffd4ab5e008810ffffffffff6f800000000001330ffffffffffd737e000401");
 pub const R3: U256 = u256h!("038e5f79873c0a6df47d84f8363000187545706677ffcc06cc7177d1406df18e");
+
+pub const fn to_montgomery_const(x: &U256) -> U256 {
+    let k = x.c0.wrapping_mul(R2.c0).wrapping_mul(M64);
+    let (a0, carry) = mac(0, x.c0, R2.c0, 0);
+    let (a1, carry) = mac(0, x.c0, R2.c1, carry);
+    let (a2, carry) = mac(0, x.c0, R2.c2, carry);
+    let (a3, carry) = mac(0, x.c0, R2.c3, carry);
+    let a4 = carry;
+    let (_a, carry) = mac(a0, k, FieldElement::MODULUS.c0, 0);
+    let (a0, carry) = mac(a1, k, FieldElement::MODULUS.c1, carry);
+    let (a1, carry) = mac(a2, k, FieldElement::MODULUS.c2, carry);
+    let (a2, carry) = mac(a3, k, FieldElement::MODULUS.c3, carry);
+    let a3 = a4 + carry;
+    let k = x.c1.wrapping_mul(R2.c0).wrapping_add(a0).wrapping_mul(M64);
+    let (a0, carry) = mac(a0, x.c1, R2.c0, 0);
+    let (a1, carry) = mac(a1, x.c1, R2.c1, carry);
+    let (a2, carry) = mac(a2, x.c1, R2.c2, carry);
+    let (a3, carry) = mac(a3, x.c1, R2.c3, carry);
+    let a4 = carry;
+    let (_a, carry) = mac(a0, k, FieldElement::MODULUS.c0, 0);
+    let (a0, carry) = mac(a1, k, FieldElement::MODULUS.c1, carry);
+    let (a1, carry) = mac(a2, k, FieldElement::MODULUS.c2, carry);
+    let (a2, carry) = mac(a3, k, FieldElement::MODULUS.c3, carry);
+    let a3 = a4 + carry;
+    let k = x.c2.wrapping_mul(R2.c0).wrapping_add(a0).wrapping_mul(M64);
+    let (a0, carry) = mac(a0, x.c2, R2.c0, 0);
+    let (a1, carry) = mac(a1, x.c2, R2.c1, carry);
+    let (a2, carry) = mac(a2, x.c2, R2.c2, carry);
+    let (a3, carry) = mac(a3, x.c2, R2.c3, carry);
+    let a4 = carry;
+    let (_a, carry) = mac(a0, k, FieldElement::MODULUS.c0, 0);
+    let (a0, carry) = mac(a1, k, FieldElement::MODULUS.c1, carry);
+    let (a1, carry) = mac(a2, k, FieldElement::MODULUS.c2, carry);
+    let (a2, carry) = mac(a3, k, FieldElement::MODULUS.c3, carry);
+    let a3 = a4 + carry;
+    let k = x.c3.wrapping_mul(R2.c0).wrapping_add(a0).wrapping_mul(M64);
+    let (a0, carry) = mac(a0, x.c3, R2.c0, 0);
+    let (a1, carry) = mac(a1, x.c3, R2.c1, carry);
+    let (a2, carry) = mac(a2, x.c3, R2.c2, carry);
+    let (a3, carry) = mac(a3, x.c3, R2.c3, carry);
+    let a4 = carry;
+    let (_a, carry) = mac(a0, k, FieldElement::MODULUS.c0, 0);
+    let (a0, carry) = mac(a1, k, FieldElement::MODULUS.c1, carry);
+    let (a1, carry) = mac(a2, k, FieldElement::MODULUS.c2, carry);
+    let (a2, carry) = mac(a3, k, FieldElement::MODULUS.c3, carry);
+    let a3 = a4 + carry;
+
+    // The result (a0, a1, a2, a3) may be off by at most one modulus.
+    // In a `const fn` we can not conditionally subtract, so instead
+    // we always subtract
+    let (a0, borrow) = sbb(a0, FieldElement::MODULUS.c0, 0);
+    let (a1, borrow) = sbb(a1, FieldElement::MODULUS.c1, borrow);
+    let (a2, borrow) = sbb(a2, FieldElement::MODULUS.c2, borrow);
+    let (a3, borrow) = sbb(a3, FieldElement::MODULUS.c3, borrow);
+    // Now we may have accidentally subtracted where we shouldn't.
+    // If this is the case `borrow == 1` and else `borrow = 0`. We can
+    // use  this to conditionally add back a modulus.
+    let (a0, carry) = adc(a0, borrow * FieldElement::MODULUS.c0, 0);
+    let (a1, carry) = adc(a1, borrow * FieldElement::MODULUS.c1, carry);
+    let (a2, carry) = adc(a2, borrow * FieldElement::MODULUS.c2, carry);
+    let (a3, _carry) = adc(a3, borrow * FieldElement::MODULUS.c3, carry);
+    // Return the now reduced result
+    U256::from_limbs(a0, a1, a2, a3)
+}
 
 // TODO: Make const fn
 #[inline(always)]
@@ -46,13 +108,14 @@ pub fn redc(lo: &U256, hi: &U256) -> U256 {
     let (a7, _carry) = adc(hi.c3, carry2, carry);
 
     // Final reduction
-    let mut r = U256::new(a4, a5, a6, a7);
+    let mut r = U256::from_limbs(a4, a5, a6, a7);
     if r >= FieldElement::MODULUS {
         r -= &FieldElement::MODULUS;
     }
     r
 }
 
+// TODO: Make `const fn` once https://github.com/rust-lang/rust/issues/49146 lands.
 #[inline(always)]
 pub fn mul_redc(x: &U256, y: &U256) -> U256 {
     // TODO: This might not be faster than:
@@ -104,8 +167,8 @@ pub fn mul_redc(x: &U256, y: &U256) -> U256 {
     let a3 = a4 + carry;
 
     // Final reduction
-    let mut r = U256::new(a0, a1, a2, a3);
-    if r.cmp(&FieldElement::MODULUS) != Ordering::Less {
+    let mut r = U256::from_limbs(a0, a1, a2, a3);
+    if r >= FieldElement::MODULUS {
         r -= &FieldElement::MODULUS;
     }
     r

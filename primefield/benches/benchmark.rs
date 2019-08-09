@@ -1,9 +1,9 @@
 #![warn(clippy::all)]
 #![deny(warnings)]
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use hex_literal::*;
+use macros_decl::u256h;
 use primefield::FieldElement;
-use u256::{u256h, U256};
+use u256::U256;
 
 fn field_add(crit: &mut Criterion) {
     let a = FieldElement::from_montgomery(u256h!(

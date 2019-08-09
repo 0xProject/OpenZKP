@@ -2,10 +2,10 @@ use crate::{
     commutative_binop,
     division::{divrem_nby1, divrem_nbym},
     gcd::inv_mod,
-    noncommutative_binop, u256h,
+    noncommutative_binop,
     utils::{adc, div_2_1, mac, sbb},
 };
-use hex_literal::*;
+use macros_decl::u256h;
 use std::{
     cmp::Ordering,
     fmt,
@@ -46,14 +46,6 @@ macro_rules! u64_from_bytes_be {
     };
 }
 
-#[macro_export]
-macro_rules! u256h {
-    ($hexstr:expr) => {
-        U256::from_bytes_be(&hex!($hexstr))
-    };
-}
-
-// TODO: Make field private.
 #[derive(PartialEq, Eq, Clone, Default)]
 pub struct U256 {
     pub c0: u64,
@@ -63,19 +55,19 @@ pub struct U256 {
 }
 
 impl U256 {
-    pub const MAX: U256 = U256::new(u64::MAX, u64::MAX, u64::MAX, u64::MAX);
-    pub const ONE: U256 = U256::new(1, 0, 0, 0);
-    pub const ZERO: U256 = U256::new(0, 0, 0, 0);
+    pub const MAX: U256 = U256::from_limbs(u64::MAX, u64::MAX, u64::MAX, u64::MAX);
+    pub const ONE: U256 = U256::from_limbs(1, 0, 0, 0);
+    pub const ZERO: U256 = U256::from_limbs(0, 0, 0, 0);
 
     #[inline(always)]
-    pub const fn new(c0: u64, c1: u64, c2: u64, c3: u64) -> Self {
+    pub const fn from_limbs(c0: u64, c1: u64, c2: u64, c3: u64) -> Self {
         Self { c0, c1, c2, c3 }
     }
 
     #[inline(always)]
     #[allow(clippy::cast_lossless)]
     pub const fn from_bytes_be(n: &[u8; 32]) -> Self {
-        Self::new(
+        U256::from_limbs(
             u64_from_bytes_be!(n, 24),
             u64_from_bytes_be!(n, 16),
             u64_from_bytes_be!(n, 8),
@@ -93,11 +85,11 @@ impl U256 {
         r
     }
 
+    // TODO: Remove
     #[inline(always)]
     #[allow(clippy::cast_lossless)]
     pub const fn from_slice(limbs: &[u32; 8]) -> Self {
-        // TODO: Remove
-        Self::new(
+        Self::from_limbs(
             ((limbs[1] as u64) << 32) | (limbs[0] as u64),
             ((limbs[3] as u64) << 32) | (limbs[2] as u64),
             ((limbs[5] as u64) << 32) | (limbs[4] as u64),
@@ -244,7 +236,10 @@ impl U256 {
         let (r4, carry) = mac(r4, self.c3, rhs.c1, carry);
         let (r5, carry) = mac(r5, self.c3, rhs.c2, carry);
         let (r6, r7) = mac(r6, self.c3, rhs.c3, carry);
-        (U256::new(r0, r1, r2, r3), U256::new(r4, r5, r6, r7))
+        (
+            U256::from_limbs(r0, r1, r2, r3),
+            U256::from_limbs(r4, r5, r6, r7),
+        )
     }
 
     #[inline(always)]
@@ -270,7 +265,10 @@ impl U256 {
         let (r5, carry) = adc(r5, 0, carry);
         let (r6, carry) = mac(r6, self.c3, self.c3, carry);
         let (r7, _carry) = adc(r7, 0, carry);
-        (U256::new(r0, r1, r2, r3), U256::new(r4, r5, r6, r7))
+        (
+            U256::from_limbs(r0, r1, r2, r3),
+            U256::from_limbs(r4, r5, r6, r7),
+        )
     }
 
     // Short division
@@ -285,7 +283,7 @@ impl U256 {
             let (q2, r) = div_2_1(self.c2, r, rhs);
             let (q1, r) = div_2_1(self.c1, r, rhs);
             let (q0, r) = div_2_1(self.c0, r, rhs);
-            Some((U256::new(q0, q1, q2, q3), r))
+            Some((U256::from_limbs(q0, q1, q2, q3), r))
         }
     }
 
@@ -295,26 +293,26 @@ impl U256 {
         if rhs.c3 > 0 {
             divrem_nbym(&mut numerator, &mut [rhs.c0, rhs.c1, rhs.c2, rhs.c3]);
             Some((
-                U256::new(numerator[4], 0, 0, 0),
-                U256::new(numerator[0], numerator[1], numerator[2], numerator[3]),
+                U256::from_limbs(numerator[4], 0, 0, 0),
+                U256::from_limbs(numerator[0], numerator[1], numerator[2], numerator[3]),
             ))
         } else if rhs.c2 > 0 {
             divrem_nbym(&mut numerator, &mut [rhs.c0, rhs.c1, rhs.c2]);
             Some((
-                U256::new(numerator[3], numerator[4], 0, 0),
-                U256::new(numerator[0], numerator[1], numerator[2], 0),
+                U256::from_limbs(numerator[3], numerator[4], 0, 0),
+                U256::from_limbs(numerator[0], numerator[1], numerator[2], 0),
             ))
         } else if rhs.c1 > 0 {
             divrem_nbym(&mut numerator, &mut [rhs.c0, rhs.c1]);
             Some((
-                U256::new(numerator[2], numerator[3], numerator[4], 0),
-                U256::new(numerator[0], numerator[1], 0, 0),
+                U256::from_limbs(numerator[2], numerator[3], numerator[4], 0),
+                U256::from_limbs(numerator[0], numerator[1], 0, 0),
             ))
         } else if rhs.c0 > 0 {
             let remainder = divrem_nby1(&mut numerator, rhs.c0);
             Some((
-                U256::new(numerator[0], numerator[1], numerator[2], numerator[3]),
-                U256::new(remainder, 0, 0, 0),
+                U256::from_limbs(numerator[0], numerator[1], numerator[2], numerator[3]),
+                U256::from_limbs(remainder, 0, 0, 0),
             ))
         } else {
             None
@@ -328,16 +326,16 @@ impl U256 {
             divrem_nbym(&mut numerator, &mut [
                 modulus.c0, modulus.c1, modulus.c2, modulus.c3,
             ]);
-            U256::new(numerator[0], numerator[1], numerator[2], numerator[3])
+            U256::from_limbs(numerator[0], numerator[1], numerator[2], numerator[3])
         } else if modulus.c2 > 0 {
             divrem_nbym(&mut numerator, &mut [modulus.c0, modulus.c1, modulus.c2]);
-            U256::new(numerator[0], numerator[1], numerator[2], 0)
+            U256::from_limbs(numerator[0], numerator[1], numerator[2], 0)
         } else if modulus.c1 > 0 {
             divrem_nbym(&mut numerator, &mut [modulus.c0, modulus.c1]);
-            U256::new(numerator[0], numerator[1], 0, 0)
+            U256::from_limbs(numerator[0], numerator[1], 0, 0)
         } else if modulus.c0 > 0 {
             let remainder = divrem_nby1(&mut numerator, modulus.c0);
-            U256::new(remainder, 0, 0, 0)
+            U256::from_limbs(remainder, 0, 0, 0)
         } else {
             panic!(); // TODO: return Option<>
         }
@@ -395,7 +393,7 @@ macro_rules! impl_from_uint {
     ($t:ty) => {
         impl From<$t> for U256 {
             fn from(n: $t) -> U256 {
-                Self::new(n as u64, 0, 0, 0)
+                Self::from_limbs(n as u64, 0, 0, 0)
             }
         }
     };
@@ -409,7 +407,7 @@ impl_from_uint!(usize);
 
 impl From<u128> for U256 {
     fn from(n: u128) -> U256 {
-        Self::new(n as u64, (n >> 64) as u64, 0, 0)
+        Self::from_limbs(n as u64, (n >> 64) as u64, 0, 0)
     }
 }
 
@@ -418,9 +416,9 @@ macro_rules! impl_from_int {
         impl From<$t> for U256 {
             fn from(n: $t) -> U256 {
                 if n >= 0 {
-                    Self::new(n as u64, 0, 0, 0)
+                    Self::from_limbs(n as u64, 0, 0, 0)
                 } else {
-                    Self::new(
+                    Self::from_limbs(
                         n as u64,
                         u64::max_value(),
                         u64::max_value(),
@@ -441,9 +439,9 @@ impl_from_int!(isize);
 impl From<i128> for U256 {
     fn from(n: i128) -> U256 {
         if n >= 0 {
-            Self::new(n as u64, (n >> 64) as u64, 0, 0)
+            Self::from_limbs(n as u64, (n >> 64) as u64, 0, 0)
         } else {
-            Self::new(
+            Self::from_limbs(
                 n as u64,
                 (n >> 64) as u64,
                 u64::max_value(),
@@ -874,7 +872,7 @@ use quickcheck::{Arbitrary, Gen};
 #[cfg(any(test, feature = "quickcheck"))]
 impl Arbitrary for U256 {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
-        U256::new(
+        U256::from_limbs(
             u64::arbitrary(g),
             u64::arbitrary(g),
             u64::arbitrary(g),
@@ -933,13 +931,13 @@ mod tests {
 
     #[test]
     fn test_shl() {
-        let mut n = U256::new(
+        let mut n = U256::from_limbs(
             0x9050e39a8638969f,
             0xd7cc21c004c428d1,
             0x9026e34ec8fb83ac,
             0x03d4679634263e15,
         );
-        let e = U256::new(
+        let e = U256::from_limbs(
             0xcd431c4b4f800000,
             0xe002621468c82871,
             0xa7647dc1d66be610,
@@ -951,13 +949,13 @@ mod tests {
 
     #[test]
     fn test_shr() {
-        let mut n = U256::new(
+        let mut n = U256::from_limbs(
             0xbe1897b996367829,
             0x24c4cd2cacd2e3be,
             0xa0a61c4de933a54e,
             0x059e0db9d96add73,
         );
-        let e = U256::new(
+        let e = U256::from_limbs(
             0xa5c77d7c312f732c,
             0x674a9c49899a5959,
             0xd5bae7414c389bd2,
@@ -969,19 +967,19 @@ mod tests {
 
     #[test]
     fn test_add() {
-        let mut a = U256::new(
+        let mut a = U256::from_limbs(
             0x7209a73f5af87656,
             0x99223186ad9732d3,
             0xd403de023ea32bf3,
             0x01b54cf967a0f4f0,
         );
-        let b = U256::new(
+        let b = U256::from_limbs(
             0xabe25acf4f460ee0,
             0x627c6bdf52bd869e,
             0x403390a0497c51ab,
             0x041aa3e6140810ca,
         );
-        let e = U256::new(
+        let e = U256::from_limbs(
             0x1dec020eaa3e8536,
             0xfb9e9d660054b972,
             0x14376ea2881f7d9e,
@@ -993,19 +991,19 @@ mod tests {
 
     #[test]
     fn test_sub() {
-        let mut a = U256::new(
+        let mut a = U256::from_limbs(
             0x281c7cfb32e98dd8,
             0x9018b2a04f60102b,
             0xd6e32fb1e0564153,
             0x02d005315d1af15f,
         );
-        let b = U256::new(
+        let b = U256::from_limbs(
             0x407666ddda2343ae,
             0xb4dd92954c5a0860,
             0x237cf6a1c121a335,
             0x05d6ce1edbd1908a,
         );
-        let e = U256::new(
+        let e = U256::from_limbs(
             0xe7a6161d58c64a2a,
             0xdb3b200b030607ca,
             0xb36639101f349e1d,
@@ -1017,19 +1015,19 @@ mod tests {
 
     #[test]
     fn test_mul() {
-        let mut a = U256::new(
+        let mut a = U256::from_limbs(
             0x11daab4a80b1cf9a,
             0x147ac29a5c5db4d4,
             0xb378f759c80c1d3a,
             0x02a2b5155bee10dc,
         );
-        let b = U256::new(
+        let b = U256::from_limbs(
             0x81aa26a88e9edd46,
             0xadb0ffe4dfb4a10f,
             0xc3a61b547a1f01ad,
             0x0554a84aa321a31c,
         );
-        let e = U256::new(
+        let e = U256::from_limbs(
             0x02cd4f6e3de2b61c,
             0x364935c057086115,
             0xb912b5cf544f5866,
@@ -1041,25 +1039,25 @@ mod tests {
 
     #[test]
     fn test_mul_full() {
-        let a = U256::new(
+        let a = U256::from_limbs(
             0xcef29c5de9ccefc1,
             0x1f0363af6e0e89e0,
             0x2edfffcc3ce19c1c,
             0x0533aefb3249d52d,
         );
-        let b = U256::new(
+        let b = U256::from_limbs(
             0x7aedeade9e192566,
             0xbde10917fae93c03,
             0x3419d1ecf392f766,
             0x03027f1aaf32c3fe,
         );
-        let elo = U256::new(
+        let elo = U256::from_limbs(
             0xc34784904e276be6,
             0x19f527745e55f913,
             0x1b805a30c8f277c6,
             0x360d66c911328f7a,
         );
-        let ehi = U256::new(
+        let ehi = U256::from_limbs(
             0x41f3f98d2b4a4d5c,
             0x2fdba3d97ab78ebe,
             0x5b3854220ea8f86c,
@@ -1072,13 +1070,13 @@ mod tests {
 
     #[test]
     fn test_invmod256() {
-        let a = U256::new(
+        let a = U256::from_limbs(
             0xf80aa815a36a7e47,
             0x090be90cfa96712a,
             0xf52ec0a4083d2c14,
             0x05405dfd1d1c1a97,
         );
-        let e = U256::new(
+        let e = U256::from_limbs(
             0xf0a9a0091b3bcb77,
             0x42d3eba6084ca0de,
             0x60d848b6513392d7,
@@ -1090,28 +1088,28 @@ mod tests {
 
     #[test]
     fn test_invmod_small() {
-        let n = U256::new(271, 0, 0, 0);
-        let m = U256::new(383, 0, 0, 0);
-        let i = U256::new(106, 0, 0, 0);
+        let n = U256::from_limbs(271, 0, 0, 0);
+        let m = U256::from_limbs(383, 0, 0, 0);
+        let i = U256::from_limbs(106, 0, 0, 0);
         let r = n.invmod(&m).unwrap();
         assert_eq!(i, r);
     }
 
     #[test]
     fn test_invmod() {
-        let m = U256::new(
+        let m = U256::from_limbs(
             0x0000000000000001,
             0x0000000000000000,
             0x0000000000000000,
             0x0800000000000011,
         );
-        let n = U256::new(
+        let n = U256::from_limbs(
             0x1717f47973471ed5,
             0xe106229070982941,
             0xd82120c54277c73e,
             0x07717a21e77894e8,
         );
-        let i = U256::new(
+        let i = U256::from_limbs(
             0xbda5eaad406f66d1,
             0xfac4d8e66130d944,
             0x97c88939cbce8317,
@@ -1123,25 +1121,25 @@ mod tests {
 
     #[test]
     fn test_mulmod() {
-        let a = U256::new(
+        let a = U256::from_limbs(
             0xb7eb3137d7271553,
             0xf44101622499c849,
             0x6364b9150f381299,
             0x0487868a9c0b15bb,
         );
-        let b = U256::new(
+        let b = U256::from_limbs(
             0xee5c3e0c95ea3606,
             0xb5d23720247b076a,
             0x125d5c1cc549a496,
             0x02fa68e3d326247a,
         );
-        let m = U256::new(
+        let m = U256::from_limbs(
             0x04893c41700b0160,
             0x9ba854d08388861e,
             0x834be37ce5dd881f,
             0x0000000425a6a188,
         );
-        let e = U256::new(
+        let e = U256::from_limbs(
             0x14527949a28bfa32,
             0xa388ec81a8763eae,
             0x35b22ffb468ed013,

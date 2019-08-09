@@ -10,11 +10,11 @@ primefield =  { path = "../primefield" }
 crossbeam = "0.3.0"
 rayon = "1.0.3"
 hex = ""
-hex-literal = "0.1.4"
 tiny-keccak = "1.4.2"
 lazy_static = "1.3.0"
 itertools = "0.8.0"
 crunchy = "0.2.2"
+macros-decl = { path = "../macros_decl" }
 
 [dev-dependencies]
 primefield =  { path = "../primefield", features = ["quickcheck"]}

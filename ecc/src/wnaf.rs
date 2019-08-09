@@ -220,9 +220,8 @@ pub fn double_base_mul(nafa: &[Affine], sa: U256, pb: &Affine, sb: U256) -> Jaco
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hex_literal::*;
+    use macros_decl::u256h;
     use primefield::FieldElement;
-    use u256::u256h;
 
     #[test]
     fn test_mul() {

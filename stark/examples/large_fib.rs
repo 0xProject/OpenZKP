@@ -1,13 +1,13 @@
 #![warn(clippy::all)]
 #![deny(warnings)]
-use hex_literal::*;
+use macros_decl::u256h;
 use primefield::FieldElement;
 use stark::{
     fibonacci::{get_constraint, get_trace_table, PrivateInput, PublicInput},
     stark_proof, ProofParams,
 };
 use std::{env, time::Instant};
-use u256::{u256h, U256};
+use u256::U256;
 
 fn main() {
     let args: Vec<String> = env::args().collect();

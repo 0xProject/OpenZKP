@@ -468,8 +468,7 @@ pub fn inv_mod(modulus: &U256, num: &U256) -> Option<U256> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::u256h;
-    use hex_literal::*;
+    use macros_decl::u256h;
     use quickcheck_macros::quickcheck;
 
     #[test]

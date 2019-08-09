@@ -196,7 +196,7 @@ pub fn verify<T: Hashable>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hex_literal::*;
+    use macros_decl::hex;
     use u256::U256;
 
     impl Groupable<U256> for &[U256] {

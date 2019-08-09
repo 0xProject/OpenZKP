@@ -2,13 +2,10 @@
 #![allow(clippy::trivially_copy_pass_by_ref)]
 
 use criterion::{black_box, Bencher};
-use hex_literal::*;
-use starkcrypto::{
-    ecdsa::{private_to_public, sign, verify},
-    field::FieldElement,
-    u256::U256,
-    u256h,
-};
+use ecc::{private_to_public, sign, verify};
+use macros_decl::{field_element, u256h};
+use primefield::FieldElement;
+use u256::U256;
 
 pub fn starkcrypto_verify(bench: &mut Bencher, _i: &()) {
     let message_hash = u256h!("03d937c035c878245caf64531a5756109c53068da139362728feb561405371cb");
@@ -19,30 +16,22 @@ pub fn starkcrypto_verify(bench: &mut Bencher, _i: &()) {
 }
 
 pub fn starkcrypto_field_mul(bench: &mut Bencher, _i: &()) {
-    let a = FieldElement::from(u256h!(
-        "03d937c035c878245caf64531a5756109c53068da139362728feb561405371cb"
-    ));
-    let b = FieldElement::from(u256h!(
-        "0208a0a10250e382e1e4bbe2880906c2791bf6275695e02fbbc6aeff9cd8b31a"
-    ));
+    let a = field_element!("03d937c035c878245caf64531a5756109c53068da139362728feb561405371cb");
+    let b = field_element!("0208a0a10250e382e1e4bbe2880906c2791bf6275695e02fbbc6aeff9cd8b31a");
     bench.iter(|| {
         black_box(black_box(&a) * black_box(&b));
     })
 }
 
 pub fn starkcrypto_field_sqr(bench: &mut Bencher, _i: &()) {
-    let a = FieldElement::from(u256h!(
-        "03d937c035c878245caf64531a5756109c53068da139362728feb561405371cb"
-    ));
+    let a = field_element!("03d937c035c878245caf64531a5756109c53068da139362728feb561405371cb");
     bench.iter(|| {
         black_box(black_box(&a).square());
     })
 }
 
 pub fn starkcrypto_field_inv(bench: &mut Bencher, _i: &()) {
-    let a = FieldElement::from(u256h!(
-        "03d937c035c878245caf64531a5756109c53068da139362728feb561405371cb"
-    ));
+    let a = field_element!("03d937c035c878245caf64531a5756109c53068da139362728feb561405371cb");
     bench.iter(|| {
         black_box(black_box(&a).inv());
     })

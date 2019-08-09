@@ -5,10 +5,10 @@ use crate::{
     utils::Reversible,
     TraceTable,
 };
-use hex_literal::*;
+use macros_decl::u256h;
 use primefield::{invert_batch, FieldElement};
 use rayon::prelude::*;
-use u256::{u256h, U256};
+use u256::U256;
 
 #[allow(dead_code)] // TODO
 #[derive(Debug)]

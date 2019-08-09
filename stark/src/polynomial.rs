@@ -11,8 +11,8 @@ pub fn eval_poly(x: FieldElement, coefficients: &[FieldElement]) -> FieldElement
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hex_literal::*;
-    use u256::{u256h, U256};
+    use macros_decl::u256h;
+    use u256::U256;
 
     #[test]
     fn poly_eval_test() {
