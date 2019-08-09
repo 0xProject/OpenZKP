@@ -2,17 +2,14 @@ use proc_macro2::{Literal, Span, TokenStream};
 use quote::quote;
 use syn::{Expr, Lit};
 
-// For use in functions that return TokenStream. Turns syn::Result into
-// compile errors.
-// This is equivalent to the try! macro that backs the ? operator
-// see https://doc.rust-lang.org/std/macro.try.html
-macro_rules! handle_errors {
-    ($e:expr) => {
-        match $e {
-            Err(err) => return TokenStream::from(err.to_compile_error()),
-            Ok(val) => val,
-        }
-    };
+trait CompileError {
+    fn or_compile_error(self) -> TokenStream;
+}
+
+impl CompileError for syn::Result<TokenStream> {
+    fn or_compile_error(self) -> TokenStream {
+        self.unwrap_or_else(|err| TokenStream::from(err.to_compile_error()))
+    }
 }
 
 fn parse_string(input: TokenStream) -> syn::Result<String> {
@@ -144,50 +141,49 @@ fn montgomery_convert(x: (u64, u64, u64, u64)) -> (u64, u64, u64, u64) {
     }
 }
 
-pub fn com_err(result: syn::Result<TokenStream>) -> TokenStream {
-    result.unwrap_or_else(|err| TokenStream::from(err.to_compile_error()))
-}
-
-pub fn hex2(input: TokenStream) -> TokenStream {
-    com_err((|| {
+pub fn hex(input: TokenStream) -> TokenStream {
+    // Wrapped in a closure so we can use `?` and
+    // capture the Result<T,E>.
+    (|| {
         let bytes = parse_hex(input)?;
         let literal = Literal::byte_string(&bytes);
         Ok(quote! { *#literal })
-    })())
-}
-
-pub fn hex(input: TokenStream) -> TokenStream {
-    let bytes = handle_errors!(parse_hex(input));
-    let literal = Literal::byte_string(&bytes);
-    quote! { *#literal }
+    })()
+    .or_compile_error()
 }
 
 pub fn u256h(input: TokenStream) -> TokenStream {
-    // TODO: Also accept integer literals
-    let bytes = handle_errors!(parse_hex(input));
-    let limbs = handle_errors!(bytes_to_limbs(bytes.as_slice()));
-    let c0 = Literal::u64_suffixed(limbs[0]);
-    let c1 = Literal::u64_suffixed(limbs[1]);
-    let c2 = Literal::u64_suffixed(limbs[2]);
-    let c3 = Literal::u64_suffixed(limbs[3]);
+    (|| {
+        // TODO: Also accept integer literals
+        let bytes = parse_hex(input)?;
+        let limbs = bytes_to_limbs(bytes.as_slice())?;
+        let c0 = Literal::u64_suffixed(limbs[0]);
+        let c1 = Literal::u64_suffixed(limbs[1]);
+        let c2 = Literal::u64_suffixed(limbs[2]);
+        let c3 = Literal::u64_suffixed(limbs[3]);
 
-    // TODO: Ideally we'd locally import U256 here and
-    // use $crate::U256 here, but this leads to a circular
-    // dependency.
-    quote! { U256::from_limbs(#c0, #c1, #c2, #c3) }
+        // TODO: Ideally we'd locally import U256 here and
+        // use $crate::U256 here, but this leads to a circular
+        // dependency.
+        Ok(quote! { U256::from_limbs(#c0, #c1, #c2, #c3) })
+    })()
+    .or_compile_error()
 }
 
 pub fn field_h(input: TokenStream) -> TokenStream {
-    // TODO: Also accept integer literals
-    let bytes = handle_errors!(parse_hex(input));
-    let limbs = handle_errors!(bytes_to_limbs(bytes.as_slice()));
-    let (c0, c1, c2, c3) = montgomery_convert((limbs[0], limbs[1], limbs[2], limbs[3]));
-    let c0 = Literal::u64_suffixed(c0);
-    let c1 = Literal::u64_suffixed(c1);
-    let c2 = Literal::u64_suffixed(c2);
-    let c3 = Literal::u64_suffixed(c3);
+    (|| {
+        // TODO: Also accept integer literals
+        let bytes = parse_hex(input)?;
+        let limbs = bytes_to_limbs(bytes.as_slice())?;
+        let (c0, c1, c2, c3) = montgomery_convert((limbs[0], limbs[1], limbs[2], limbs[3]));
+        let c0 = Literal::u64_suffixed(c0);
+        let c1 = Literal::u64_suffixed(c1);
+        let c2 = Literal::u64_suffixed(c2);
+        let c3 = Literal::u64_suffixed(c3);
 
-    quote! { FieldElement::from_montgomery(U256::from_limbs(#c0, #c1, #c2, #c3)) }
+        Ok(quote! { FieldElement::from_montgomery(U256::from_limbs(#c0, #c1, #c2, #c3)) })
+    })()
+    .or_compile_error()
 }
 
 #[cfg(test)]
