@@ -12,6 +12,6 @@ pub fn u256h(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 }
 
 #[proc_macro_hack]
-pub fn field_h(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    macros_lib::field_h(input.into()).into()
+pub fn field_element(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    macros_lib::field_element(input.into()).into()
 }

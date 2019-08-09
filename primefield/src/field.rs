@@ -27,6 +27,10 @@ impl FieldElement {
     pub const ONE: FieldElement = FieldElement::from_montgomery(R1);
     pub const ZERO: FieldElement = FieldElement::from_montgomery(U256::ZERO);
 
+    pub const fn from_u256_const(n: U256) -> Self {
+        FieldElement(to_montgomery_const(&n))
+    }
+
     pub const fn from_montgomery(n: U256) -> Self {
         FieldElement(n)
     }
@@ -139,7 +143,7 @@ impl fmt::Debug for FieldElement {
         let n = U256::from(self);
         write!(
             f,
-            "field_h!(\"{:016x}{:016x}{:016x}{:016x}\")",
+            "field_element!(\"{:016x}{:016x}{:016x}{:016x}\")",
             n.c3, n.c2, n.c1, n.c0
         )
     }
@@ -317,18 +321,25 @@ impl Arbitrary for FieldElement {
     }
 }
 
+#[allow(unused_macros)]
+macro_rules! field_h {
+    (- $e:expr) => {
+        field_h!($e).neg()
+    };
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use itertools::repeat_n;
-    use macros_decl::field_h;
+    use macros_decl::field_element;
     use quickcheck_macros::quickcheck;
 
     #[test]
     fn test_literal() {
-        const SMALL: FieldElement = field_h!("0F");
+        const SMALL: FieldElement = field_element!("0F");
         const NUM: FieldElement =
-            field_h!("0548c135e26faa9c977fb2eda057b54b2e0baa9a77a0be7c80278f4f03462d4c");
+            field_element!("0548c135e26faa9c977fb2eda057b54b2e0baa9a77a0be7c80278f4f03462d4c");
         assert_eq!(SMALL, FieldElement::from(15));
         assert_eq!(
             NUM,
@@ -346,9 +357,9 @@ mod tests {
 
     #[test]
     fn test_add() {
-        let a = field_h!("06eabe184aa9caca2e17f6073bcc10bb9714c0e3866ff00e0d386f4396392852");
-        let b = field_h!("0313000a764a9a5514efc99070de3f70586794f9bb0add62ac689763aadea7e8");
-        let c = field_h!("01fdbe22c0f4650e4307bf97acaa502bef7c55dd417acd70b9a106a74117d039");
+        let a = field_element!("06eabe184aa9caca2e17f6073bcc10bb9714c0e3866ff00e0d386f4396392852");
+        let b = field_element!("0313000a764a9a5514efc99070de3f70586794f9bb0add62ac689763aadea7e8");
+        let c = field_element!("01fdbe22c0f4650e4307bf97acaa502bef7c55dd417acd70b9a106a74117d039");
         assert_eq!(a + b, c);
     }
 

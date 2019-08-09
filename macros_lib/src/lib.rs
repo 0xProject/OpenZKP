@@ -169,7 +169,7 @@ pub fn u256h(input: TokenStream) -> TokenStream {
     .unwrap_or_else(|err: syn::Error| err.to_compile_error())
 }
 
-pub fn field_h(input: TokenStream) -> TokenStream {
+pub fn field_element(input: TokenStream) -> TokenStream {
     (|| {
         // TODO: Also accept integer literals
         let bytes = parse_hex(input)?;
@@ -248,16 +248,16 @@ mod test {
     }
 
     #[test]
-    pub fn test_field_h() {
+    pub fn test_field_element() {
         assert_eq!(
-            field_h(quote! {""}).to_string(),
+            field_element(quote! {""}).to_string(),
             quote! {FieldElement::from_montgomery(
                 U256::from_limbs(0u64, 0u64, 0u64, 0u64)
             )}
             .to_string()
         );
         assert_eq!(
-            field_h(quote! {"01"}).to_string(),
+            field_element(quote! {"01"}).to_string(),
             quote! {FieldElement::from_montgomery(
                 U256::from_limbs(18446744073709551585u64 , 18446744073709551615u64 , 18446744073709551615u64 , 576460752303422960u64)
             )}
