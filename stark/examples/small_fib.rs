@@ -24,10 +24,11 @@ fn main() {
     let trace_table = get_trace_table(1024, &private);
     let start = Instant::now();
     let potential_proof = stark_proof(&trace_table, &get_constraint(), &public, &ProofParams {
-        blowup:     16,
-        pow_bits:   12,
-        queries:    20,
-        fri_layout: vec![3, 2],
+        blowup:                   16,
+        pow_bits:                 12,
+        queries:                  20,
+        fri_layout:               vec![3, 2],
+        constraints_degree_bound: 1,
     });
     let duration = start.elapsed();
     println!("{:?}", potential_proof.coin.digest);

@@ -33,7 +33,7 @@ pub fn sign(msg_hash: &U256, private_key: &U256) -> (U256, U256) {
             &[
                 private_key.to_bytes_be(),
                 msg_hash.to_bytes_be(),
-                U256::from(i as u64).to_bytes_be(),
+                U256::from(i).to_bytes_be(),
             ]
             .concat(),
         )) >> 4;

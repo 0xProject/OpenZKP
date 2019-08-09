@@ -128,9 +128,6 @@ impl ProverChannel {
     }
 }
 
-// TODO - Remove this dead code allowance when the actual verifier uses the
-// verifier channel
-#[allow(dead_code)]
 impl VerifierChannel {
     pub fn new(proof: Vec<u8>) -> Self {
         Self {
@@ -156,6 +153,14 @@ impl VerifierChannel {
 
     pub fn pow_find_nonce_threaded(&self, pow_bits: u8) -> u64 {
         self.coin.pow_find_nonce_threaded(pow_bits)
+    }
+
+    pub fn read_without_replay(&self, length: usize) -> &[u8] {
+        &self.proof[self.proof_index..(self.proof_index + length)]
+    }
+
+    pub fn at_end(self) -> bool {
+        self.proof_index == self.proof.len()
     }
 }
 
@@ -279,6 +284,13 @@ impl Writable<Vec<U256>> for ProverChannel {
 impl Writable<U256> for ProverChannel {
     fn write(&mut self, data: U256) {
         self.write(&data.to_bytes_be()[..]);
+    }
+}
+
+impl Replayable<Hash> for VerifierChannel {
+    fn replay(&mut self) -> Hash {
+        let hash: [u8; 32] = self.replay();
+        Hash::new(hash)
     }
 }
 

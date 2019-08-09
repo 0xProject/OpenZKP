@@ -13,11 +13,13 @@ mod polynomial;
 mod proofs;
 mod trace_table;
 mod utils;
+mod verifier;
 
 pub use trace_table::TraceTable;
 
 pub use merkle::verify;
 pub use proofs::{stark_proof, ProofParams};
+pub use verifier::check_proof;
 
 // Exports for benchmarking
 // TODO: Avoid publicly exposing.
