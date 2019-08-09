@@ -7,6 +7,7 @@ use crate::{
 };
 use primefield::{invert_batch, FieldElement};
 use rayon::prelude::*;
+use std::convert::TryInto;
 use u256::U256;
 
 #[allow(dead_code)] // TODO
@@ -33,17 +34,16 @@ impl Writable<&PublicInput> for ProverChannel {
 
 impl Replayable<PublicInput> for VerifierChannel {
     fn replay(&mut self) -> PublicInput {
-        let mut index_holder = [0_u8; 8];
-        index_holder.clone_from_slice(&self.proof[0..8]);
-        let index: u64 = u64::from_be_bytes(index_holder);
-        let mut value_holder = [0_u8; 32];
-        value_holder.clone_from_slice(&self.proof[8..40]);
-        let value: FieldElement = FieldElement::from_montgomery(U256::from_bytes_be(&value_holder));
-        let borrow = &self.proof[0..40].to_vec();
-        self.initialize(borrow.as_slice());
+        // Need to make a temporary copy here to satisfy the borrow checker.
+        // We can not guarantee proof won't change in `initialize`.
+        self.initialize(self.proof[0..40].to_vec().as_slice());
         PublicInput {
-            index: (index as usize),
-            value,
+            index: u64::from_be_bytes((&self.proof[0..8]).try_into().unwrap())
+                .try_into()
+                .expect("Index too large."),
+            value: FieldElement::from_montgomery(U256::from_bytes_be(
+                (&self.proof[8..40]).try_into().unwrap(),
+            )),
         }
     }
 }
