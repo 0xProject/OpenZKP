@@ -1,8 +1,8 @@
 #![warn(clippy::all)]
 #![deny(warnings)]
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use hex_literal::*;
-use u256::{u256h, U256};
+use macros_decl::u256h;
+use u256::U256;
 
 fn u256_add(crit: &mut Criterion) {
     let a = u256h!("01c9e043b135fa21471cec503f1181884ef3d9c2cb44b6a3531bb3056443bc99");

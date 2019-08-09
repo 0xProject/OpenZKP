@@ -1,17 +1,17 @@
 use crate::{
-    channel::{ProverChannel, Writable},
+    channel::*,
     polynomial::eval_poly,
     proofs::{geometric_series, Constraint},
     utils::Reversible,
     TraceTable,
 };
-use hex_literal::*;
 use primefield::{invert_batch, FieldElement};
 use rayon::prelude::*;
-use u256::{u256h, U256};
+use std::convert::TryInto;
+use u256::U256;
 
 #[allow(dead_code)] // TODO
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct PublicInput {
     pub index: usize,
     pub value: FieldElement,
@@ -27,8 +27,25 @@ pub struct PrivateInput {
 impl Writable<&PublicInput> for ProverChannel {
     fn write(&mut self, public: &PublicInput) {
         let mut bytes = [public.index.to_be_bytes()].concat();
-        bytes.extend_from_slice(&public.value.0.to_bytes_be());
+        bytes.extend_from_slice(&public.value.as_montgomery().to_bytes_be());
         self.initialize(bytes.as_slice());
+    }
+}
+
+impl Replayable<PublicInput> for VerifierChannel {
+    fn replay(&mut self) -> PublicInput {
+        // Need to make a temporary copy here to satisfy the borrow checker.
+        // We can not guarantee proof won't change in `initialize`.
+        // TODO: Move to verifier.
+        self.initialize(self.proof[0..40].to_vec().as_slice());
+        PublicInput {
+            index: u64::from_be_bytes((&self.proof[0..8]).try_into().unwrap())
+                .try_into()
+                .expect("Index too large."),
+            value: FieldElement::from_montgomery(U256::from_bytes_be(
+                (&self.proof[8..40]).try_into().unwrap(),
+            )),
+        }
     }
 }
 
@@ -148,10 +165,8 @@ pub fn eval_c_direct(
     public: &PublicInput,
     constraint_coefficients: &[FieldElement],
 ) -> FieldElement {
-    let trace_len = 1024;
-    let g = FieldElement::from(u256h!(
-        "0659d83946a03edd72406af6711825f5653d9e35dc125289a206c054ec89c4f1"
-    ));
+    let trace_len = polynomials[0].len();
+    let g = FieldElement::root(U256::from(trace_len)).unwrap();
     let value = public.value.clone();
 
     let eval_P0 = |x: FieldElement| -> FieldElement { eval_poly(x, polynomials[0]) };
@@ -172,11 +187,7 @@ pub fn eval_c_direct(
         (eval_P0(x.clone()) - &value) / (&x - &g.pow(public.index.into()))
     };
 
-    let deg_adj = |degree_bound: u64,
-                   constraint_degree: u64,
-                   numerator_degree: u64,
-                   denominator_degree: u64|
-     -> u64 {
+    let deg_adj = |degree_bound, constraint_degree, numerator_degree, denominator_degree| {
         degree_bound + denominator_degree - 1 - constraint_degree - numerator_degree
     };
 

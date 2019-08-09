@@ -195,6 +195,7 @@ pub fn make_tree_threaded<T: Hashable + Sync>(leaves: &[T]) -> Vec<Hash> {
     layers.into_iter().rev().flatten().collect()
 }
 
+// Note - Make sure to remove duplicated indexes from the input values.
 pub fn proof<R: Hashable, T: Groupable<R>>(
     tree: &[Hash],
     indices: &[usize],
@@ -259,73 +260,150 @@ pub fn proof<R: Hashable, T: Groupable<R>>(
     decommitment
 }
 
+pub fn decommitment_size(indices: &[usize], data_size: usize) -> usize {
+    let depth = data_size.trailing_zeros();
+    let num_leaves = 2_usize.pow(depth);
+    let num_nodes = 2 * num_leaves;
+    let mut known = vec![false; num_nodes + 1];
+    let mut total = 0;
+
+    let mut peekable_indicies = indices.iter().peekable();
+    let mut excluded_pair = false;
+    for &index in indices.iter() {
+        peekable_indicies.next();
+        known[num_leaves + index % num_leaves] = true;
+
+        if index % 2 == 0 {
+            known[num_leaves + 1 + index % num_leaves] = true;
+            let prophet = peekable_indicies.peek();
+            match prophet {
+                Some(x) => {
+                    if **x != index + 1 {
+                        total += 1;
+                    } else {
+                        excluded_pair = true;
+                    }
+                }
+                None => {
+                    total += 1;
+                }
+            }
+        } else if !excluded_pair {
+            known[num_leaves - 1 + index % num_leaves] = true;
+            total += 1;
+        } else {
+            known[num_leaves - 1 + index % num_leaves] = true;
+            excluded_pair = false;
+        }
+    }
+
+    for i in (2_usize.pow(depth - 1))..(2_usize.pow(depth)) {
+        let left = known[2 * i];
+        let right = known[2 * i + 1];
+        known[i] = left || right;
+    }
+
+    for d in (1..depth).rev() {
+        for i in (2_usize.pow(d - 1))..(2_usize.pow(d)) {
+            let left = known[2 * i];
+            let right = known[2 * i + 1];
+            if left && !right {
+                total += 1;
+            }
+            if !left && right {
+                total += 1;
+            }
+            known[i] = left || right;
+        }
+    }
+    total
+}
+
 pub fn verify<T: Hashable>(
     root: Hash,
     depth: u32,
-    values: &mut [(u64, T)],
-    mut decommitment: Vec<Hash>,
+    values: &mut [(usize, T)],
+    decommitment: Vec<Hash>,
 ) -> bool {
     let mut queue = Vec::with_capacity(values.len());
-    values.sort_by(|a, b| b.0.cmp(&a.0)); // Sorts the list by index
-    for leaf in values.iter() {
-        let tree_index = 2_u64.pow(depth) + leaf.0;
-        queue.push((tree_index, leaf.1.hash()));
+    let mut previous_index = 0;
+    for leaf in values.iter().rev() {
+        if leaf.0 % 2 == 1 || previous_index != leaf.0 + 1 {
+            let tree_index = 2_usize.pow(depth) + leaf.0;
+            queue.push((tree_index, leaf.1.hash()));
+            previous_index = leaf.0;
+        } else if !(decommitment.iter().any(|x| *x == leaf.1.hash())) {
+            let tree_index = 2_usize.pow(depth) + leaf.0;
+            queue.push((tree_index, leaf.1.hash()));
+        }
     }
-    let mut start = values.len() - 1;
-    let mut current = start;
+
+    let mut consumed = 0;
+    let mut decommitment_iter = decommitment[0..0].iter().rev();
     loop {
-        if queue.is_empty() {
-            break;
+        if queue.len() == 1 && queue[0].0 == 1 {
+            debug_assert_eq!(decommitment.len(), consumed);
+            return queue[0].1 == root;
         }
 
-        let (index, data_hash) = queue.remove(0); // Debug check that this is doing it right
+        let mut new_queue = Vec::new();
+        let pairs = count_pairs(queue.as_slice());
 
-        if index == 1 {
-            return data_hash == root;
-        } else if index % 2 == 0 {
-            queue.push((
-                index / 2,
-                MerkleNode(&data_hash, &decommitment.remove(current)).hash(),
-            ));
+        if consumed < decommitment.len() {
+            decommitment_iter = decommitment[consumed..(consumed + queue.len() - 2 * pairs.len())]
+                .iter()
+                .rev();
+            consumed += queue.len() - 2 * pairs.len();
+        }
 
-            if current == 0 {
-                current = start;
+        let mut index = 0;
+        let mut pair_index = 0;
+        while index < queue.len() {
+            if pairs.len() > pair_index && index == pairs[pair_index] {
+                new_queue.push((
+                    queue[index].0 / 2,
+                    MerkleNode(&queue[index + 1].1, &queue[index].1).hash(),
+                ));
+                index += 2;
+                pair_index += 1;
             } else {
-                current -= 1;
-            }
-        } else if !queue.is_empty() && queue[0].0 == index - 1 {
-            let (_, sibbling_hash) = queue.remove(0);
-            queue.push((index / 2, MerkleNode(&sibbling_hash, &data_hash).hash()));
-
-            if start != 0 {
-                start -= 1;
-            }
-            if start != 0 {
-                current %= start;
-            } else {
-                current = 0;
-            }
-        } else {
-            queue.push((
-                index / 2,
-                MerkleNode(&decommitment.remove(current), &data_hash).hash(),
-            ));
-
-            if current == 0 {
-                current = start;
-            } else {
-                current -= 1;
+                if queue[index].0 % 2 == 0 {
+                    let other_hash = decommitment_iter.next().expect("Bad decommitment");
+                    new_queue.push((
+                        queue[index].0 / 2,
+                        MerkleNode(&queue[index].1, other_hash).hash(),
+                    ))
+                } else {
+                    let other_hash = decommitment_iter.next().expect("Bad decommitment");
+                    new_queue.push((
+                        queue[index].0 / 2,
+                        MerkleNode(other_hash, &queue[index].1).hash(),
+                    ));
+                }
+                index += 1;
             }
         }
+        debug_assert_eq!(decommitment_iter.next(), None);
+        queue = new_queue;
     }
+}
 
-    false
+fn count_pairs<T>(domain: &[(usize, T)]) -> Vec<usize> {
+    let mut previous = &domain[0];
+    let mut pairs = Vec::new();
+    for (index, item) in domain[1..].iter().enumerate() {
+        if previous.0 % 2 == 1 && previous.0 - 1 == item.0 {
+            pairs.push(index);
+        }
+        previous = item;
+    }
+    pairs
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hex_literal::*;
+    use macros_decl::hex;
     use u256::U256;
 
     impl Groupable<U256> for &[U256] {
@@ -361,6 +439,7 @@ mod tests {
         );
         let mut values = vec![
             (1, leaves[1].clone()),
+            (10, leaves[10].clone()),
             (11, leaves[11].clone()),
             (14, leaves[14].clone()),
         ];

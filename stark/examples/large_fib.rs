@@ -1,13 +1,14 @@
 #![warn(clippy::all)]
 #![deny(warnings)]
-use hex_literal::*;
+use macros_decl::u256h;
 use primefield::FieldElement;
 use stark::{
+    check_proof,
     fibonacci::{get_constraint, get_trace_table, PrivateInput, PublicInput},
     stark_proof, ProofParams,
 };
 use std::{env, time::Instant};
-use u256::{u256h, U256};
+use u256::U256;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -31,12 +32,34 @@ fn main() {
     public.value = trace_table[(public.index, 0)].clone();
     let start = Instant::now();
     let potential_proof = stark_proof(&trace_table, &get_constraint(), &public, &ProofParams {
-        blowup:     16,
-        pow_bits:   12,
-        queries:    20,
-        fri_layout: vec![3, 2],
+        blowup:                   16,
+        pow_bits:                 12,
+        queries:                  20,
+        fri_layout:               vec![3, 2],
+        constraints_degree_bound: 1,
     });
     let duration = start.elapsed();
     println!("{:?}", potential_proof.coin.digest);
     println!("Time elapsed in proof function is: {:?}", duration);
+    println!("The proof length is {}", potential_proof.proof.len());
+
+    let verified = check_proof(
+        potential_proof,
+        &get_constraint(),
+        &public,
+        &ProofParams {
+            blowup:                   16,
+            pow_bits:                 12,
+            queries:                  20,
+            fri_layout:               vec![3, 4, 5, 2, 3],
+            constraints_degree_bound: 1,
+        },
+        2,
+        1_048_576,
+    );
+    if verified {
+        println!("And it was verified!");
+    } else {
+        println!("Something went wrong with verification");
+    }
 }

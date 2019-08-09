@@ -33,7 +33,7 @@ pub fn sign(msg_hash: &U256, private_key: &U256) -> (U256, U256) {
             &[
                 private_key.to_bytes_be(),
                 msg_hash.to_bytes_be(),
-                U256::from(i as u64).to_bytes_be(),
+                U256::from(i).to_bytes_be(),
             ]
             .concat(),
         )) >> 4;
@@ -79,10 +79,9 @@ pub fn verify(msg_hash: &U256, r: &U256, w: &U256, public_key: &Affine) -> bool 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hex_literal::*;
+    use macros_decl::u256h;
     use primefield::FieldElement;
     use quickcheck_macros::quickcheck;
-    use u256::u256h;
 
     #[test]
     fn test_pubkey() {

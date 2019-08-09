@@ -147,8 +147,8 @@ pub fn divrem_nbym(numerator: &mut [u64], divisor: &mut [u64]) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{u256::U256, u256h};
-    use hex_literal::*;
+    use crate::u256::U256;
+    use macros_decl::u256h;
     use quickcheck_macros::quickcheck;
 
     const HALF: u64 = 1u64 << 63;
@@ -216,7 +216,7 @@ mod tests {
     #[quickcheck]
     fn div_3by2_correct(q: u64, d0: u64, d1: u64) -> bool {
         let d1 = d1 | (1 << 63);
-        let n = U256::new(d0, d1, 0, 0) * &U256::from(q);
+        let n = U256::from_limbs(d0, d1, 0, 0) * &U256::from(q);
         let qhat = div_3by2(&[n.c0, n.c1, n.c2], &[d0, d1]);
         qhat == q
     }

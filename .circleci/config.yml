@@ -3,6 +3,9 @@ jobs:
   build:
     docker:
       - image: circleci/rust:latest
+    environment:
+      - RUST_BACKTRACE: 1
+      - RUSTFLAGS: -Dwarnings
     steps:
       - checkout
       - restore_cache:
@@ -32,22 +35,22 @@ jobs:
       - run:
           name: Linting
           command: |
-            RUSTFLAGS="-Dwarnings" cargo +nightly-2019-07-31 fmt --all -- --check
-            RUSTFLAGS="-Dwarnings" cargo clippy --all --all-targets
+            cargo +nightly-2019-07-31 fmt --all -- --check
+            cargo clippy --all --all-targets
       - run:
           name: Build all targets
-          command: RUST_BACKTRACE=1 RUSTFLAGS="-Dwarnings" cargo build --all --all-targets
+          command: cargo build --all --all-targets
       - run:
           name: Test in debug and release mode
           command: |
-            RUST_BACKTRACE=1 cargo test --all -- --nocapture
-            RUST_BACKTRACE=1 cargo test --release -- --nocapture
+            cargo test --all -- --nocapture
+            cargo test --release -- --nocapture
       - run:
           name: Run benchmarks as tests
           command: |
             # Actually running the benchmarks on CI is too noisy. The results
             # would be meaningless. Instead we just run it to make sure they work.
-            RUST_BACKTRACE=1 cargo bench --bench benchmark -- --test
+            cargo bench --bench benchmark -- --test
       # TODO: Coverage
       - save_cache:
           key: project-cache
