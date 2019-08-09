@@ -125,7 +125,16 @@ fn montgomery_convert(x: (u64, u64, u64, u64)) -> (u64, u64, u64, u64) {
 
     // Final reduction
     if (a3, a2, a1, a0) >= (M.3, M.2, M.1, M.0) {
-        (a0 - M.0, a1 - M.1, a2 - M.2, a3 - M.3)
+        pub const fn sbb(a: u64, b: u64, borrow: u64) -> (u64, u64) {
+            let ret = (a as u128).wrapping_sub((b as u128) + ((borrow >> 63) as u128));
+            (ret as u64, (ret >> 64) as u64)
+        }
+
+        let (a0, borrow) = sbb(a0, M.0, 0);
+        let (a1, borrow) = sbb(a1, M.1, borrow);
+        let (a2, borrow) = sbb(a2, M.2, borrow);
+        let (a3, _borrow) = sbb(a3, M.3, borrow);
+        (a0, a1, a2, a3)
     } else {
         (a0, a1, a2, a3)
     }
