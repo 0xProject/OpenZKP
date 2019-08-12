@@ -25,7 +25,9 @@ jobs:
             rustup component add rustfmt clippy
             rustup toolchain install nightly-2019-07-31
             rustup component add rustfmt --toolchain nightly-2019-07-31
+            rustup update nightly
             rustup target add wasm32-unknown-unknown --toolchain nightly
+            rustup update stable
             cargo install --git https://github.com/alexcrichton/wasm-gc
           no_output_timeout: 1800s
       - run:
