@@ -9,6 +9,7 @@ members = [
     "macros_decl",
     "macros_impl",
     "macros_lib",
+    "substrate-node",
 ]
 
 # Don't forget to run `cargo clean` to force a rebuild of all dependencies!
