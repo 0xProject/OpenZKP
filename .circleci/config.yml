@@ -21,7 +21,7 @@ jobs:
           command: |
             sudo apt-get update
             sudo apt-get install jq
-            sudo apt-get install cmake pkg-config libssl-dev git clang libclang-dev
+            sudo apt-get install -y cmake pkg-config libssl-dev git clang libclang-dev
             rustup update nightly
             rustup target add wasm32-unknown-unknown --toolchain nightly
             rustup update stable
