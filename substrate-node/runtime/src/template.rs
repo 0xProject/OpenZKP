@@ -1,3 +1,5 @@
+#[allow(unused_imports)] // TODO - Remove when used
+use starkdex::wrappers::*;
 /// A runtime module template with necessary imports
 
 /// Feel free to remove or edit this file as needed.
@@ -7,8 +9,6 @@
 /// For more guidance on Substrate modules, see the example module
 /// https://github.com/paritytech/substrate/blob/master/srml/example/src/lib.rs
 use support::{decl_event, decl_module, decl_storage, dispatch::Result, StorageValue};
-#[allow(unused_imports)] // TODO - Remove when used
-use starkdex::wrappers::*;
 use system::ensure_signed;
 
 /// The module's configuration trait.
