@@ -21,7 +21,12 @@ jobs:
           command: |
             sudo apt-get update
             sudo apt-get install jq
-            sudo apt-get install -y cmake pkg-config libssl-dev git clang libclang-dev
+            sudo apt-get install cmake 
+            sudo apt-get install pkg-config 
+            sudo apt-get install libssl-dev 
+            sudo apt-get install git 
+            sudo apt-get install clang 
+            sudo apt-get install libclang-dev
             rustup update nightly
             rustup target add wasm32-unknown-unknown --toolchain nightly
             rustup update stable
@@ -40,8 +45,8 @@ jobs:
       - run:
           name: Linting
           command: |
-            cargo +nightly-2019-07-31 fmt --all --except substrate-node -- --check
-            cargo clippy --all --except substrate-node --all-targets
+            cargo +nightly-2019-07-31 fmt --all -- --check
+            cargo clippy --all --all-targets
       - run:
           name: Build all targets
           command: cargo build --all --all-targets
