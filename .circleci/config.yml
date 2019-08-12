@@ -46,28 +46,28 @@ jobs:
           name: Linting
           command: |
             cargo +nightly-2019-07-31 fmt -p ecc -- --check
-            cargo clippy --p ecc --all-targets
+            cargo clippy -p ecc --all-targets
             
             cargo +nightly-2019-07-31 fmt -p primefield -- --check
-            cargo clippy --p primefield --all-targets
+            cargo clippy -p primefield --all-targets
 
             cargo +nightly-2019-07-31 fmt -p starkdex -- --check
-            cargo clippy --p starkdex --all-targets
+            cargo clippy -p starkdex --all-targets
 
             cargo +nightly-2019-07-31 fmt -p wasm -- --check
-            cargo clippy --p wasm --all-targets
+            cargo clippy -p wasm --all-targets
 
             cargo +nightly-2019-07-31 fmt -p stark -- --check
-            cargo clippy --p stark --all-targets
+            cargo clippy -p stark --all-targets
 
             cargo +nightly-2019-07-31 fmt -p macros_decl -- --check
-            cargo clippy --p macros_decl --all-targets
+            cargo clippy -p macros_decl --all-targets
 
             cargo +nightly-2019-07-31 fmt -p macros_impl -- --check
-            cargo clippy --p macros_impl --all-targets
+            cargo clippy -p macros_impl --all-targets
 
             cargo +nightly-2019-07-31 fmt -p macros_lib -- --check
-            cargo clippy --p macros_lib --all-targets
+            cargo clippy -p macros_lib --all-targets
       - run:
           name: Build all targets
           command: cargo build --all --all-targets
