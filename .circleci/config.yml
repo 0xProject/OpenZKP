@@ -24,7 +24,7 @@ jobs:
             rustup component add rustfmt clippy
             rustup toolchain install nightly-2019-07-31
             rustup component add rustfmt --toolchain nightly-2019-07-31
-            apt-get install clang
+            sudo apt-get install clang
           no_output_timeout: 1800s
       - run:
           name: Clean build
