@@ -54,9 +54,6 @@ jobs:
             cargo +nightly-2019-07-31 fmt -p starkdex -- --check
             cargo clippy -p starkdex --all-targets
 
-            cargo +nightly-2019-07-31 fmt -p wasm -- --check
-            cargo clippy -p wasm --all-targets
-
             cargo +nightly-2019-07-31 fmt -p stark -- --check
             cargo clippy -p stark --all-targets
 
