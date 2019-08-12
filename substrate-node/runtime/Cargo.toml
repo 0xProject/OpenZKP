@@ -23,7 +23,7 @@ std = [
 ]
 
 [dependencies]
-starkdex = { path = "../../starkcrypto/starkdex" }
+starkdex = { path = "../../starkdex" }
 
 [package]
 authors = ['Parity Technologies <admin@parity.io>']
