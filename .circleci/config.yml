@@ -21,6 +21,7 @@ jobs:
           command: |
             sudo apt-get update
             sudo apt-get install jq
+            sudo apt-get install -y gcc g++
             sudo apt-get install cmake 
             sudo apt-get install pkg-config 
             sudo apt-get install libssl-dev 
