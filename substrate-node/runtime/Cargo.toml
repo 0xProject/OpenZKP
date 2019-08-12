@@ -148,6 +148,3 @@ default_features = false
 git = 'https://github.com/paritytech/substrate.git'
 package = 'sr-version'
 rev = 'fc206f3a009b64fc746202e5b4c701bf7e24d1f1'
-
-[dependencies.starkdex]
-starkdex = { path = "../../starkdex" }
