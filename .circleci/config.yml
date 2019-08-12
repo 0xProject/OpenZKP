@@ -54,17 +54,20 @@ jobs:
             cargo +nightly-2019-07-31 fmt -p starkdex -- --check
             cargo clippy -p starkdex --all-targets
 
+            cargo +nightly-2019-07-31 fmt -p starkcrypto-wasm -- --check
+            cargo clippy -p starkcrypto-wasm --all-targets
+
             cargo +nightly-2019-07-31 fmt -p stark -- --check
             cargo clippy -p stark --all-targets
 
-            cargo +nightly-2019-07-31 fmt -p macros_decl -- --check
-            cargo clippy -p macros_decl --all-targets
+            cargo +nightly-2019-07-31 fmt -p macros-decl -- --check
+            cargo clippy -p macros-decl --all-targets
 
-            cargo +nightly-2019-07-31 fmt -p macros_impl -- --check
-            cargo clippy -p macros_impl --all-targets
+            cargo +nightly-2019-07-31 fmt -p macros-impl -- --check
+            cargo clippy -p macros-impl --all-targets
 
-            cargo +nightly-2019-07-31 fmt -p macros_lib -- --check
-            cargo clippy -p macros_lib --all-targets
+            cargo +nightly-2019-07-31 fmt -p macros-lib -- --check
+            cargo clippy -p macros-lib --all-targets
       - run:
           name: Build all targets
           command: cargo build --all --all-targets
