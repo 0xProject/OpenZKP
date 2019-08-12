@@ -23,7 +23,6 @@ overflow_delimited_expr = true
 blank_lines_lower_bound = 0
 normalize_doc_attributes = true
 
-// TODO - fix the ci
 ignore = [
     "substrate-node",
 ]
