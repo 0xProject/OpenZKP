@@ -6,6 +6,8 @@ edition = "2018"
 
 [dependencies]
 u256 =  { path = "../u256" }
+ecc = { path = "../ecc" }
+starkdex = { path = "../starkdex" }
 primefield =  { path = "../primefield" }
 crossbeam = "0.3.0"
 rayon = "1.0.3"

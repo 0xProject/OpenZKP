@@ -8,3 +8,4 @@ pub mod wrappers;
 
 pub use orders::{hash_maker, hash_taker, MakerMessage};
 pub use pedersen::{hash, old_hash};
+pub use pedersen_points::PEDERSEN_POINTS;

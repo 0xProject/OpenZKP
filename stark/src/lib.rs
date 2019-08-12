@@ -9,6 +9,7 @@ mod hashable;
 mod masked_keccak;
 mod merkle;
 mod mmap_vec;
+mod pedersen_merkle;
 mod polynomial;
 mod proofs;
 mod trace_table;
