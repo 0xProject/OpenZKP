@@ -45,38 +45,17 @@ jobs:
       - run:
           name: Linting
           command: |
-            cargo +nightly-2019-07-31 fmt -p ecc -- --check
-            cargo clippy -p ecc --all-targets
-            
-            cargo +nightly-2019-07-31 fmt -p primefield -- --check
-            cargo clippy -p primefield --all-targets
-
-            cargo +nightly-2019-07-31 fmt -p starkdex -- --check
-            cargo clippy -p starkdex --all-targets
-
-            cargo +nightly-2019-07-31 fmt -p starkcrypto-wasm -- --check
-            cargo clippy -p starkcrypto-wasm --all-targets
-
-            cargo +nightly-2019-07-31 fmt -p stark -- --check
-            cargo clippy -p stark --all-targets
-
-            cargo +nightly-2019-07-31 fmt -p macros-decl -- --check
-            cargo clippy -p macros-decl --all-targets
-
-            cargo +nightly-2019-07-31 fmt -p macros-impl -- --check
-            cargo clippy -p macros-impl --all-targets
-
-            cargo +nightly-2019-07-31 fmt -p macros-lib -- --check
-            cargo clippy -p macros-lib --all-targets
+            cargo +nightly-2019-07-31 fmt -p ecc primefield starkdex starkcrypto-wasm stark macros-decl macros-impl macros-lib -- --check
+            cargo clippy -p ecc primefield starkdex starkcrypto-wasm stark macros-decl macros-impl macros-lib --all-targets
       - run:
           name: Build all targets
           command: |
-            cargo build --all --exclude substrate-node --all-targets
+            cargo build -p ecc primefield starkdex starkcrypto-wasm stark macros-decl macros-impl macros-lib --all-targets
       - run:
           name: Test in debug and release mode
           command: |
-            cargo test --all --exclude substrate-node -- --nocapture
-            cargo test --release --exclude substrate-node -- --nocapture
+            cargo test --debug -p ecc primefield starkdex starkcrypto-wasm stark macros-decl macros-impl macros-lib -- --nocapture
+            cargo test --release -p ecc primefield starkdex starkcrypto-wasm stark macros-decl macros-impl macros-lib -- --nocapture
       - run:
           name: Run benchmarks as tests
           command: |
