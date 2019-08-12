@@ -70,7 +70,9 @@ jobs:
             cargo clippy -p macros-lib --all-targets
       - run:
           name: Build all targets
-          command: cargo build --all --all-targets
+          command: |
+            ./substrate-node/scripts/init.sh
+            cargo build --all --all-targets
       - run:
           name: Test in debug and release mode
           command: |
