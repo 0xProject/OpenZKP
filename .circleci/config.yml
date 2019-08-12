@@ -71,13 +71,12 @@ jobs:
       - run:
           name: Build all targets
           command: |
-            ./substrate-node/scripts/init.sh
-            cargo build --all --all-targets
+            cargo build --all --exclude substrate-node --all-targets
       - run:
           name: Test in debug and release mode
           command: |
-            cargo test --all -- --nocapture
-            cargo test --release -- --nocapture
+            cargo test --all --exclude substrate-node -- --nocapture
+            cargo test --release --exclude substrate-node -- --nocapture
       - run:
           name: Run benchmarks as tests
           command: |
