@@ -29,7 +29,6 @@ jobs:
             rustup component add rustfmt clippy
             rustup toolchain install nightly-2019-07-31
             rustup component add rustfmt --toolchain nightly-2019-07-31
-            ./substrate-node/scripts/init.sh
           no_output_timeout: 1800s
       - run:
           name: Clean build
@@ -41,6 +40,7 @@ jobs:
       - run:
           name: Linting
           command: |
+            ./substrate-node/scripts/init.sh
             cargo +nightly-2019-07-31 fmt --all -- --check
             cargo clippy --all --all-targets
       - run:
