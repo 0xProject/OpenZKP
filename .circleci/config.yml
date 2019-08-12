@@ -33,6 +33,7 @@ jobs:
       - run:
           name: Clean build
           command: |
+            ./substrate-node/scripts/init.sh
             # Clean workspace projects  but not dependencies.
             WORKSPACE=$(cargo metadata --format-version 1 | jq --raw-output '.workspace_members[] | match("^(\\w.+)\\ \\d";"g") | .captures[0].string')
             echo "Workspace projects: " $WORKSPACE
@@ -40,7 +41,6 @@ jobs:
       - run:
           name: Linting
           command: |
-            ./substrate-node/scripts/init.sh
             cargo +nightly-2019-07-31 fmt --all -- --check
             cargo clippy --all --all-targets
       - run:
