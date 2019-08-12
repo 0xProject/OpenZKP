@@ -22,12 +22,12 @@ jobs:
             sudo apt-get update
             sudo apt-get install jq
             sudo apt-get install -y gcc g++
-            sudo apt-get install cmake 
-            sudo apt-get install pkg-config 
+            sudo apt-get install -y cmake 
+            sudo apt-get install -y pkg-config 
             sudo apt-get install libssl-dev 
             sudo apt-get install git 
-            sudo apt-get install clang 
-            sudo apt-get install libclang-dev
+            sudo apt-get install -y clang 
+            sudo apt-get install -y libclang-dev
             rustup update nightly
             rustup target add wasm32-unknown-unknown --toolchain nightly
             rustup update stable
