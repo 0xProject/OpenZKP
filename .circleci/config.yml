@@ -14,7 +14,7 @@ jobs:
       - run: 
           name: Installing rust and substrate dependancies
           command: |
-                sudo apt-get update
+                apt-get update
                 curl https://getsubstrate.io -sSf | bash
                 curl https://sh.rustup.rs -sSf | sh -s -- -y
                 rustup update stable
