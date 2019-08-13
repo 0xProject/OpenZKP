@@ -3,19 +3,10 @@ jobs:
   build:
     docker:
       - image: phusion/baseimage:0.11
-    environment:
-      - RUST_BACKTRACE: 1
-      - RUSTFLAGS: -Dwarnings
     steps:
       - checkout
-      - run:
-          name: Install rust
-          command: |
-            curl https://sh.rustup.rs -sSf | sh -s -- -y
-            rustup update nightly
-            rustup target add wasm32-unknown-unknown --toolchain nightly
-            rustup update stable
-            cargo install --git https://github.com/alexcrichton/wasm-gc
+      - run: apt-get update
+      - run: ./scripts/init.sh
       - restore_cache:
           key: project-cache
       - run:
@@ -27,8 +18,6 @@ jobs:
       - run:
           name: Setup build environment
           command: |
-            sudo apt-get update
-            sudo apt install -y build-essential cmake make pkg-config libssl-dev openssl git clang libclang-dev
             rustup component add rustfmt clippy
             rustup toolchain install nightly-2019-07-31
             rustup component add rustfmt --toolchain nightly-2019-07-31
