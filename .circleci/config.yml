@@ -9,10 +9,6 @@ jobs:
 
     steps:
       - checkout
-      - run: 
-          name: Substrate dependancies
-          command: |
-                curl https://getsubstrate.io -sSf | bash
       - restore_cache:
           key: project-cache
       - run:
@@ -28,6 +24,10 @@ jobs:
             rustup toolchain install nightly-2019-07-31
             rustup component add rustfmt --toolchain nightly-2019-07-31
           no_output_timeout: 1800s
+      - run: 
+          name: Substrate dependancies
+          command: |
+                curl https://getsubstrate.io -sSf | bash
       - run:
           name: Clean build
           command: |
