@@ -8,6 +8,14 @@ jobs:
       - RUSTFLAGS: -Dwarnings
     steps:
       - checkout
+      - run:
+          name: Install rust
+          command: |
+            curl https://sh.rustup.rs -sSf | sh -s -- -y
+            rustup update nightly
+            rustup target add wasm32-unknown-unknown --toolchain nightly
+            rustup update stable
+            cargo install --git https://github.com/alexcrichton/wasm-gc
       - restore_cache:
           key: project-cache
       - run:
@@ -21,11 +29,6 @@ jobs:
           command: |
             sudo apt-get update
             sudo apt install -y build-essential cmake make pkg-config libssl-dev openssl git clang libclang-dev
-            curl https://sh.rustup.rs -sSf | sh -s -- -y
-            rustup update nightly
-            rustup target add wasm32-unknown-unknown --toolchain nightly
-            rustup update stable
-            cargo install --git https://github.com/alexcrichton/wasm-gc
             rustup component add rustfmt clippy
             rustup toolchain install nightly-2019-07-31
             rustup component add rustfmt --toolchain nightly-2019-07-31
