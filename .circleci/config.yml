@@ -12,7 +12,6 @@ jobs:
       - run: 
           name: Substrate dependancies
           command: |
-                apt-get update
                 curl https://getsubstrate.io -sSf | bash
       - restore_cache:
           key: project-cache
