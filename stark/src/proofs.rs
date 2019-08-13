@@ -5,14 +5,17 @@ use crate::{
     hash::Hash,
     hashable::Hashable,
     merkle::{self, make_tree},
-    polynomial::eval_poly,
+    polynomial::DensePolynomial,
     utils::Reversible,
     TraceTable,
 };
 use itertools::Itertools;
 use primefield::{invert_batch, FieldElement};
 use rayon::prelude::*;
-use std::marker::{Send, Sync};
+use std::{
+    cmp::max,
+    marker::{Send, Sync},
+};
 use u256::U256;
 
 // This trait is for objects where the object is grouped into hashable sets
@@ -358,7 +361,7 @@ fn get_indices(num: usize, bits: u32, proof: &mut ProverChannel) -> Vec<usize> {
 pub fn geometric_series(base: &FieldElement, step: &FieldElement, len: usize) -> Vec<FieldElement> {
     const PARALLELIZATION: usize = 16_usize;
     // OPT - Set based on the cores available and how well the work is spread
-    let step_len = len / PARALLELIZATION;
+    let step_len = max(1, len / PARALLELIZATION);
     let mut range = vec![FieldElement::ZERO; len];
     range
         .par_chunks_mut(step_len)
@@ -453,10 +456,11 @@ fn get_out_of_domain_information<Public>(
     let oods_point: FieldElement = proof.get_random();
     let oods_point_g = &oods_point * g;
     let mut oods_values = Vec::with_capacity(2 * trace_poly.len() + 1);
-    for item in trace_poly.iter() {
-        let mut evaled = eval_poly(oods_point.clone(), item);
+    for item in trace_poly {
+        let trace_polynomial = DensePolynomial::new(item);
+        let mut evaled = trace_polynomial.evaluate(&oods_point);
         oods_values.push(evaled.clone());
-        evaled = eval_poly(oods_point_g.clone(), item);
+        evaled = trace_polynomial.evaluate(&oods_point_g);
         oods_values.push(evaled.clone());
     }
 
@@ -876,21 +880,19 @@ mod tests {
         assert_eq!(trace[(1000, 0)], public.value);
 
         let TPn = interpolate_trace_table(&trace);
-        let TP0 = TPn[0].as_slice();
-        let TP1 = TPn[1].as_slice();
+        let TP0 = DensePolynomial::new(&TPn[0]);
+        let TP1 = DensePolynomial::new(&TPn[1]);
         // Checks that the trace table polynomial interpolation is working
-        assert_eq!(eval_poly(trace_x[1000].clone(), TP0), trace[(1000, 0)]);
+        assert_eq!(TP0.evaluate(&trace_x[1000]), trace[(1000, 0)]);
 
         let TPn_reference: Vec<&[FieldElement]> = TPn.iter().map(|x| x.as_slice()).collect();
         let LDEn = calculate_low_degree_extensions(TPn_reference.as_slice(), &params, &eval_x);
 
         // Checks that the low degree extension calculation is working
-        let LDE0 = LDEn[0].as_slice();
-        let LDE1 = LDEn[1].as_slice();
         let i = 13644usize;
         let reverse_i = i.bit_reverse_at(eval_domain_size);
-        assert_eq!(eval_poly(eval_offset_x[reverse_i].clone(), TP0), LDE0[i]);
-        assert_eq!(eval_poly(eval_offset_x[reverse_i].clone(), TP1), LDE1[i]);
+        assert_eq!(TP0.evaluate(&eval_offset_x[reverse_i]), LDEn[0][i]);
+        assert_eq!(TP1.evaluate(&eval_offset_x[reverse_i]), LDEn[1][i]);
 
         // Checks that the groupable trait is properly grouping for &[Vec<FieldElement>]
         assert_eq!(
