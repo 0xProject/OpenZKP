@@ -1,6 +1,5 @@
-# substrate-node
-
-A new SRML-based Substrate node, ready for hacking.
+# Our substrate node
+This package is a thin node template from the substrate team which we are modifying to run the STARK based exchange chain. Please see below for the node building and deploying instructions from the Substrate team :
 
 # Building
 
