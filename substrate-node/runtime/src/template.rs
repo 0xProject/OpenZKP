@@ -1,3 +1,5 @@
+#[allow(unused_imports)] // TODO - Remove when used
+use starkdex::wrappers::*;
 /// A runtime module template with necessary imports
 
 /// Feel free to remove or edit this file as needed.
