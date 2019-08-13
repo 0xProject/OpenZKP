@@ -258,7 +258,7 @@ impl Neg for &FieldElement {
 
     #[inline(always)]
     fn neg(self) -> Self::Output {
-        FieldElement::from_montgomery(FieldElement::MODULUS - &self.0)
+        FieldElement::ZERO - self
     }
 }
 
@@ -275,12 +275,10 @@ impl AddAssign<&FieldElement> for FieldElement {
 impl SubAssign<&FieldElement> for FieldElement {
     #[inline(always)]
     fn sub_assign(&mut self, rhs: &FieldElement) {
-        if self.0 >= rhs.0 {
-            self.0 -= &rhs.0;
-        } else {
-            self.0 -= &rhs.0;
+        if self.0 < rhs.0 {
             self.0 += &FieldElement::MODULUS;
         }
+        self.0 -= &rhs.0;
     }
 }
 
@@ -353,6 +351,11 @@ mod tests {
             FieldElement::ONE + FieldElement::NEGATIVE_ONE,
             FieldElement::ZERO
         );
+    }
+
+    #[test]
+    fn minus_zero_equals_zero() {
+        assert_eq!(-&FieldElement::ZERO, FieldElement::ZERO);
     }
 
     #[test]
