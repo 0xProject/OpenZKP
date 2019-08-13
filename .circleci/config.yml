@@ -3,12 +3,15 @@ jobs:
   build:
     docker:
       - image: phusion/baseimage:0.11
+    environment:
+      DEBUG_BUILD: true
+      DEBIAN_FRONTEND: noninteractive
     steps:
       - checkout
-      - run: apt-get update
-      - run: ./scripts/init.sh
       - restore_cache:
           key: project-cache
+      - run: apt-get update
+      - run: ./scripts/init.sh
       - run:
           name: Version information
           command: |
