@@ -275,12 +275,10 @@ impl AddAssign<&FieldElement> for FieldElement {
 impl SubAssign<&FieldElement> for FieldElement {
     #[inline(always)]
     fn sub_assign(&mut self, rhs: &FieldElement) {
-        if self.0 >= rhs.0 {
-            self.0 -= &rhs.0;
-        } else {
-            self.0 -= &rhs.0;
+        if self.0 < rhs.0 {
             self.0 += &FieldElement::MODULUS;
         }
+        self.0 -= &rhs.0;
     }
 }
 
