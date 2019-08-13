@@ -258,7 +258,7 @@ impl Neg for &FieldElement {
 
     #[inline(always)]
     fn neg(self) -> Self::Output {
-        FieldElement::from_montgomery(FieldElement::MODULUS - &self.0)
+        FieldElement::ZERO - self
     }
 }
 
