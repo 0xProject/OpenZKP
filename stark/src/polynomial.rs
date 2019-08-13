@@ -169,13 +169,6 @@ mod tests {
     }
 
     #[test]
-    fn example_multiplication() {
-        let p_1 = dense_polynomial(&[1, 2]);
-        let p_2 = dense_polynomial(&[1, 2, 3, 4]);
-        assert_eq!(p_1 * p_2, dense_polynomial(&[1, 4, 7, 10, 8, 0, 0, 0]));
-    }
-
-    #[test]
     fn example_scalar_multiplication() {
         let c = FieldElement::from(-2);
         let p = dense_polynomial(&[1, 2, 5, -7]);
