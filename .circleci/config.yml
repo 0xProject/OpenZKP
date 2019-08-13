@@ -20,7 +20,7 @@ jobs:
           name: Setup build environment
           command: |
             sudo apt-get update
-            sudo apt install -y build-essential cmake pkg-config libssl-dev openssl git clang libclang-dev
+            sudo apt install -y build-essential cmake make pkg-config libssl-dev openssl git clang libclang-dev
             rustup update nightly
             rustup target add wasm32-unknown-unknown --toolchain nightly
             rustup update stable
