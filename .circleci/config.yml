@@ -12,7 +12,7 @@ jobs:
       - restore_cache:
           key: project-cache
       - run: apt-get update
-      - run: ~/starkcrypto/scripts/init.sh
+      - run: ./scripts/init.sh
       - run:
           name: Version information
           command: |
