@@ -29,6 +29,7 @@ jobs:
           command: |
                 rustup toolchain install nightly
                 ./substrate-node/scripts/init.sh
+                sudo apt install cmake pkg-config libssl-dev git clang libclang-dev
                 sudo apt install -y binfmt-support clang-3.8 cmake-data libarchive13 libclang-3.8-dev libclang-common-3.8-dev libclang1-3.8 libjsoncpp1 libllvm3.8 libobjc-6-dev libobjc4 libpipeline1 libuv1 llvm-3.8 llvm-3.8-dev llvm-3.8-runtime
       - run:
           name: Clean build
