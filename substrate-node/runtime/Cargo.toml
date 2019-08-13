@@ -22,9 +22,6 @@ std = [
     'offchain-primitives/std',
 ]
 
-[dependencies]
-starkdex = { path = "../../starkdex" }
-
 [package]
 authors = ['Parity Technologies <admin@parity.io>']
 edition = '2018'
