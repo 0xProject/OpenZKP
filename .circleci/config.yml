@@ -3,12 +3,12 @@ jobs:
   build:
     docker:
       - image: phusion/baseimage:0.11
-    environment:
-      DEBUG_BUILD: true
-      DEBIAN_FRONTEND: noninteractive
+        environment:
+          DEBUG_BUILD: true
+          DEBIAN_FRONTEND: noninteractive
 
     working_directory: ~/starkcrypto
-    
+
     steps:
       - checkout
       - run: apt-get update
