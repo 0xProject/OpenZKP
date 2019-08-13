@@ -45,7 +45,8 @@ jobs:
       - run:
           name: Build all targets
           command: |
-            cargo build substrate-node
+            cargo build -p ecc -p primefield -p starkdex -p starkcrypto-wasm -p stark -p macros-decl -p macros-impl -p macros-lib  --all-targets
+            cargo build -p substrate-node
       - run:
           name: Test in debug and release mode
           command: |
