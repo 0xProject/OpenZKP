@@ -2,17 +2,14 @@ version: 2
 jobs:
   build:
     docker:
-      - image: phusion/baseimage:0.11
+      - image: circleci/rust:latest
     environment:
-      DEBUG_BUILD: true
-      DEBIAN_FRONTEND: noninteractive
-    working_directory: ~/starkcrypto
+      - RUST_BACKTRACE: 1
+      - RUSTFLAGS: -Dwarnings
     steps:
       - checkout
       - restore_cache:
           key: project-cache
-      - run: apt-get update
-      - run: sudo ~/starkcrypto/scripts/init.sh
       - run:
           name: Version information
           command: |
@@ -22,6 +19,12 @@ jobs:
       - run:
           name: Setup build environment
           command: |
+            sudo apt-get update
+            brew install cmake pkg-config openssl git llvm
+            rustup update nightly
+            rustup target add wasm32-unknown-unknown --toolchain nightly
+            rustup update stable
+            cargo install --git https://github.com/alexcrichton/wasm-gc
             rustup component add rustfmt clippy
             rustup toolchain install nightly-2019-07-31
             rustup component add rustfmt --toolchain nightly-2019-07-31
@@ -41,7 +44,7 @@ jobs:
       - run:
           name: Build all targets
           command: |
-            cargo build --all  --all-targets
+            cargo build -p ecc -p primefield -p starkdex -p starkcrypto-wasm -p stark -p macros-decl -p macros-impl -p macros-lib  --all-targets
       - run:
           name: Test in debug and release mode
           command: |
