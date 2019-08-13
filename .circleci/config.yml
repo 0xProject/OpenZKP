@@ -28,7 +28,7 @@ jobs:
           name: Substrate dependancies
           command: |
                 rustup toolchain install nightly
-                ./substrate-node/init.sh
+                ./substrate-node/scripts/init.sh
                 sudo curl https://getsubstrate.io -sSf | bash
       - run:
           name: Clean build
