@@ -6,9 +6,6 @@ PROJECT_ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null && pwd )"
 
 export CARGO_INCREMENTAL=0
 
-bold=$(tput bold)
-normal=$(tput sgr0)
-
 # Save current directory.
 pushd . >/dev/null
 
