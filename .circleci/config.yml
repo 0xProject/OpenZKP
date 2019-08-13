@@ -2,7 +2,7 @@ version: 2
 jobs:
   build:
     docker:
-      - image: circleci/rust:latest
+      - image: phusion/baseimage:0.11
     environment:
       - RUST_BACKTRACE: 1
       - RUSTFLAGS: -Dwarnings
@@ -21,6 +21,7 @@ jobs:
           command: |
             sudo apt-get update
             sudo apt install -y build-essential cmake make pkg-config libssl-dev openssl git clang libclang-dev
+            curl https://sh.rustup.rs -sSf | sh -s -- -y
             rustup update nightly
             rustup target add wasm32-unknown-unknown --toolchain nightly
             rustup update stable
