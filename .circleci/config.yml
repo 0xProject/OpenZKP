@@ -11,8 +11,14 @@ jobs:
 
     steps:
       - checkout
-      - run: apt-get update
-      - run: ~/starkcrypto/scripts/init.sh
+      - run: |
+        sudo apt-get update
+        sudo apt install  -y build-essential cmake pkg-config libssl-dev openssl git clang libclang-dev
+        curl https://sh.rustup.rs -sSf | sh -s -- -y
+        rustup update stable
+        rustup update nightly
+        rustup target add wasm32-unknown-unknown --toolchain nightly
+        cargo install --git https://github.com/alexcrichton/wasm-gc
       - restore_cache:
           key: project-cache
       - run:
