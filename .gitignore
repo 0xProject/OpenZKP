@@ -19,3 +19,6 @@ wasm-pack.log
 
 # Vim swap files
 *.swp
+
+# Ignore the substrate ui for now
+substrate-ui
