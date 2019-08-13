@@ -2,17 +2,15 @@ version: 2
 jobs:
   build:
     docker:
-      - image: phusion/baseimage:0.11
-        environment:
-          DEBUG_BUILD: true
-          DEBIAN_FRONTEND: noninteractive
-
-    working_directory: ~/starkcrypto
+      - image: circleci/rust:latest
+    environment:
+      - RUST_BACKTRACE: 1
+      - RUSTFLAGS: -Dwarnings
 
     steps:
       - checkout
       - run: 
-          name: Installing rust and substrate dependancies
+          name: Substrate dependancies
           command: |
                 apt-get update
                 curl https://getsubstrate.io -sSf | bash
