@@ -13,7 +13,7 @@ impl DensePolynomial {
     }
 
     // Note that the length of a polynomial is not its degree, because the leading
-    // term of a DensePolynomial can be zero.
+    // coefficient of a DensePolynomial can be zero.
     fn len(&self) -> usize {
         self.0.len()
     }
@@ -108,9 +108,7 @@ impl Arbitrary for DensePolynomial {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use macros_decl::{field_element, u256h};
     use quickcheck_macros::quickcheck;
-    use u256::U256;
 
     fn dense_polynomial(coefficients: &[isize]) -> DensePolynomial {
         DensePolynomial(
