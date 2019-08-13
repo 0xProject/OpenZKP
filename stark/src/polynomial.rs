@@ -184,7 +184,7 @@ mod tests {
         for i in 0..x.len() {
             assert_eq!(x.0[i], y.0[i]);
         }
-        &a - &b == &FieldElement::from(-1) * &(b - a) // I think there's a bug, where we don't always truncate the remainder when multiplying field elements?
+        &a - &b == &FieldElement::from(-1) * &(b - a)
     }
 
     #[quickcheck]
