@@ -50,12 +50,12 @@ jobs:
       - run:
           name: Build all targets
           command: |
-            cargo build -p ecc primefield starkdex starkcrypto-wasm stark macros-decl macros-impl macros-lib --all-targets
+            cargo build -p ecc -p primefield -p starkdex -p starkcrypto-wasm -p stark -p macros-decl -p macros-impl -p macros-lib  --all-targets
       - run:
           name: Test in debug and release mode
           command: |
-            cargo test --debug -p ecc primefield starkdex starkcrypto-wasm stark macros-decl macros-impl macros-lib -- --nocapture
-            cargo test --release -p ecc primefield starkdex starkcrypto-wasm stark macros-decl macros-impl macros-lib -- --nocapture
+            cargo test -p ecc -p primefield -p starkdex -p starkcrypto-wasm -p stark -p macros-decl -p macros-impl -p macros-lib -- --nocapture
+            cargo test --release -p ecc -p primefield -p starkdex -p starkcrypto-wasm -p stark -p macros-decl -p macros-impl -p macros-lib -- --nocapture
       - run:
           name: Run benchmarks as tests
           command: |
