@@ -6,13 +6,15 @@ jobs:
     environment:
       DEBUG_BUILD: true
       DEBIAN_FRONTEND: noninteractive
+
     working_directory: ~/starkcrypto
+    
     steps:
       - checkout
+      - run: apt-get update
+      - run: ~/starkcrypto/scripts/init.sh
       - restore_cache:
           key: project-cache
-      - run: apt-get update
-      - run: ./scripts/init.sh
       - run:
           name: Version information
           command: |
