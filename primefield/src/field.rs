@@ -356,6 +356,11 @@ mod tests {
     }
 
     #[test]
+    fn minus_zero_equals_zero() {
+        assert_eq!(-&FieldElement::ZERO, FieldElement::ZERO);
+    }
+
+    #[test]
     fn test_add() {
         let a = field_element!("06eabe184aa9caca2e17f6073bcc10bb9714c0e3866ff00e0d386f4396392852");
         let b = field_element!("0313000a764a9a5514efc99070de3f70586794f9bb0add62ac689763aadea7e8");
