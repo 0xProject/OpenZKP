@@ -17,7 +17,7 @@ where
     VerifierChannel: Replayable<Public>,
     VerifierChannel: Replayable<Hash>,
 {
-    let omega = FieldElement::root(U256::from(trace_len * params.blowup)).unwrap();
+    let omega = FieldElement::root(trace_len * params.blowup).unwrap();
     let eval_domain_size = trace_len * params.blowup;
 
     let eval_x = geometric_series(&FieldElement::ONE, &omega, eval_domain_size);
@@ -223,10 +223,10 @@ where
 
     // Checks that the calculated fri folded queries are the points interpolated by
     // the decommited polynomial.
-    let interp_root = FieldElement::root(len.into()).unwrap();
+    let interp_root = FieldElement::root(len).unwrap();
     for key in previous_indices.iter() {
         let calculated = fri_folds[key].clone();
-        let x_pow = interp_root.pow(key.bit_reverse_at(len).into());
+        let x_pow = interp_root.pow(key.bit_reverse_at(len));
         let committed = DensePolynomial::new(&last_layer_coefficient).evaluate(&x_pow);
 
         if committed != calculated.clone() {
@@ -307,8 +307,8 @@ fn out_of_domain_element(
         .collect();
     let constraint_point = FieldElement::from_montgomery(constraint_point_u.clone());
     let x_transform = x_cord * FieldElement::GENERATOR;
-    let omega = FieldElement::root(U256::from(eval_domain_size)).unwrap();
-    let g = omega.pow(blowup.into());
+    let omega = FieldElement::root(eval_domain_size).unwrap();
+    let g = omega.pow(blowup);
     let mut r = FieldElement::ZERO;
 
     for x in 0..poly_points.len() {
