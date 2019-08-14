@@ -247,11 +247,7 @@ mod tests {
     }
 
     #[quickcheck]
-    fn distributivity(
-        a: DensePolynomial,
-        b: DensePolynomial,
-        c: DensePolynomial,
-    ) -> bool {
-         &a * &b + &a * &c == a * (b + c)
+    fn distributivity(a: DensePolynomial, b: DensePolynomial, c: DensePolynomial) -> bool {
+        &a * &b + &a * &c == a * (b + c)
     }
 }
