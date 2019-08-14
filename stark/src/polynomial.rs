@@ -166,6 +166,7 @@ impl SparsePolynomial {
     }
 }
 
+#[allow(clippy::suspicious_op_assign_impl)] // Allows us to use `+` here.
 impl MulAssign<SparsePolynomial> for DensePolynomial {
     fn mul_assign(&mut self, other: SparsePolynomial) {
         let mut result = vec![FieldElement::ZERO; self.len() + other.degree()];
@@ -181,6 +182,7 @@ impl MulAssign<SparsePolynomial> for DensePolynomial {
 
 // This assumes that the sparse polynomial exactly divides the dense one, and
 // will panic if that is not the case.
+#[allow(clippy::suspicious_op_assign_impl)] // Allows us to use `*` here.
 impl DivAssign<SparsePolynomial> for DensePolynomial {
     fn div_assign(&mut self, denominator: SparsePolynomial) {
         if self.len() == 1 && self.0[0].is_zero() {
