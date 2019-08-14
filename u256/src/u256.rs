@@ -6,7 +6,7 @@ use crate::{
     utils::{adc, div_2_1, mac, sbb},
 };
 use macros_decl::u256h;
-use std::{
+use core::{
     cmp::Ordering,
     fmt,
     num::Wrapping,
@@ -16,16 +16,20 @@ use std::{
     },
     u64,
 };
+use crate::lib::ToString;
+use crate::lib::String;
+use crate::lib::format;
+
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ParseError {
     Empty,
     Overflow,
-    InnerError(std::num::ParseIntError),
+    InnerError(core::num::ParseIntError),
 }
 
-impl From<std::num::ParseIntError> for ParseError {
-    fn from(error: std::num::ParseIntError) -> Self {
+impl From<core::num::ParseIntError> for ParseError {
+    fn from(error: core::num::ParseIntError) -> Self {
         ParseError::InnerError(error)
     }
 }

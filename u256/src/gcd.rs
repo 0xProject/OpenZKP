@@ -62,7 +62,7 @@ fn lehmer_update(a0: &mut U256, a1: &mut U256, Matrix(q00, q01, q10, q11, even):
         mat_mul(a0, a1, (*q00, *q01, *q10, *q11));
     } else {
         mat_mul(a0, a1, (*q10, *q11, *q00, *q01));
-        std::mem::swap(a0, a1);
+        core::mem::swap(a0, a1);
     }
 }
 
@@ -324,7 +324,7 @@ fn lehmer_double(mut r0: U256, mut r1: U256) -> Matrix {
 /// full precission cofactors.
 pub fn gcd(mut r0: U256, mut r1: U256) -> U256 {
     if r1 > r0 {
-        std::mem::swap(&mut r0, &mut r1);
+        core::mem::swap(&mut r0, &mut r1);
     }
     debug_assert!(r0 >= r1);
     while r1 != U256::ZERO {
@@ -363,7 +363,7 @@ pub fn gcd(mut r0: U256, mut r1: U256) -> U256 {
 pub fn gcd_extended(mut r0: U256, mut r1: U256) -> (U256, U256, U256, bool) {
     let swapped = r1 > r0;
     if swapped {
-        std::mem::swap(&mut r0, &mut r1);
+        core::mem::swap(&mut r0, &mut r1);
     }
     debug_assert!(r0 >= r1);
     let mut s0 = U256::ONE;
@@ -404,7 +404,7 @@ pub fn gcd_extended(mut r0: U256, mut r1: U256) -> (U256, U256, U256, bool) {
         s0 = U256::ZERO - s0;
     }
     if swapped {
-        std::mem::swap(&mut s0, &mut t0);
+        core::mem::swap(&mut s0, &mut t0);
         even = !even;
     }
     (r0, s0, t0, even)
@@ -518,7 +518,7 @@ mod tests {
         // Prepare valid inputs
         a |= 1u64 << 63;
         if b > a {
-            std::mem::swap(&mut a, &mut b)
+            core::mem::swap(&mut a, &mut b)
         }
 
         // Call the function under test
