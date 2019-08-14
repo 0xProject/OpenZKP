@@ -7,6 +7,8 @@ use u256::{commutative_binop, noncommutative_binop};
 pub struct DensePolynomial(Vec<FieldElement>);
 
 impl DensePolynomial {
+    // Coefficents are in order of ascending degree. E.g. &[1, 2] corresponds to the
+    // polynomial f(x) = 1 + 2x.
     pub fn new(coefficients: &[FieldElement]) -> Self {
         assert!(coefficients.len().is_power_of_two());
         Self(coefficients.to_vec())
@@ -28,8 +30,8 @@ impl DensePolynomial {
     }
 }
 
-// Note that it's faster to add shorter DensePolynomial's to longer ones, rather
-// than vice versa.
+// OPT: Write an Add<DensePolynomial> uses the fact that it's faster to add
+// shorter DensePolynomial's to longer ones, rather than vice versa.
 impl AddAssign<&DensePolynomial> for DensePolynomial {
     fn add_assign(&mut self, other: &DensePolynomial) {
         self.0
