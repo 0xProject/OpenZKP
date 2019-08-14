@@ -69,7 +69,7 @@ impl SubAssign<&Self> for DensePolynomial {
     }
 }
 
-#[allow(clippy::suspicious_op_assign_impl)]  // Allow use of subtraction in this implementation.
+#[allow(clippy::suspicious_op_assign_impl)] // Allow use of subtraction in this implementation.
 impl MulAssign<&Self> for DensePolynomial {
     fn mul_assign(&mut self, other: &Self) {
         let result_length = 2 * max(self.len(), other.len());
