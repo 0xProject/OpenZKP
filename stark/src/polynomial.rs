@@ -37,7 +37,8 @@ impl DensePolynomial {
         result
     }
 
-    // Removes trailing zeros or appends them so that the length is a power of two.
+    // Removes trailing zeros or appends them so that the length is minimal and a
+    // power of two.
     fn canonicalize(&mut self) {
         let last_nonzero_index = match self.0.iter().enumerate().rev().find(|(_, x)| !x.is_zero()) {
             Some((i, _)) => i,
@@ -60,7 +61,7 @@ impl AddAssign<&DensePolynomial> for DensePolynomial {
         if self.len() < other.len() {
             self.0.extend_from_slice(&other.0[self.len()..]);
         }
-        assert!(self.len().is_power_of_two());
+        self.canonicalize();
     }
 }
 
@@ -79,7 +80,7 @@ impl SubAssign<&Self> for DensePolynomial {
                 .map(|c| c.neg_assign())
                 .collect::<Vec<_>>();
         }
-        assert!(self.len().is_power_of_two());
+        self.canonicalize();
     }
 }
 
@@ -102,6 +103,7 @@ impl MulAssign<&Self> for DensePolynomial {
             .map(|(x, y)| *x *= y)
             .collect::<Vec<_>>();
         self.0 = ifft(&self.0);
+        self.canonicalize();
     }
 }
 
@@ -258,12 +260,14 @@ mod tests {
     use quickcheck_macros::quickcheck;
 
     fn dense_polynomial(coefficients: &[isize]) -> DensePolynomial {
-        DensePolynomial(
+        let mut p = DensePolynomial(
             coefficients
                 .iter()
                 .map(|c| FieldElement::from(*c))
                 .collect(),
-        )
+        );
+        p.canonicalize();
+        p
     }
 
     fn sparse_polynomial(coefficients_and_degrees: &[(isize, usize)]) -> SparsePolynomial {
@@ -418,14 +422,10 @@ mod tests {
     }
 
     #[quickcheck]
-    fn addition_subtraction_inverse(
-        a: DensePolynomial,
-        b: DensePolynomial,
-        x: FieldElement,
-    ) -> bool {
+    fn addition_subtraction_inverse(a: DensePolynomial, b: DensePolynomial) -> bool {
         // We cannot directly check for equality of the two sides because adding and
         // subtracting b can change the length of a.
-        (&a + &b - b).evaluate(&x) == a.evaluate(&x)
+        &a + &b - b == a
     }
 
     #[quickcheck]
