@@ -38,7 +38,7 @@ fn tonelli_shanks(a: &FieldElement) -> FieldElement {
 
     let mut c: FieldElement = INITIAL_C;
     // OPT: Raising a to a fixed power is a good candidate for an addition chain.
-    let mut root: FieldElement = a.pow(SIGNIFICAND + U256::ONE >> 1);
+    let mut root: FieldElement = a.pow((SIGNIFICAND + U256::ONE) >> 1);
 
     for i in 1..BINARY_EXPONENT {
         // OPT: Precompute the inverse of a.
