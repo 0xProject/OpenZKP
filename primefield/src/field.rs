@@ -507,7 +507,7 @@ mod tests {
 
     #[test]
     fn zeroth_root_of_unity() {
-        assert_eq!(FieldElement::root(0.into()).unwrap(), FieldElement::ONE);
+        assert_eq!(FieldElement::root(0).unwrap(), FieldElement::ONE);
     }
 
     #[test]
