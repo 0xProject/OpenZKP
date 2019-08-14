@@ -177,6 +177,8 @@ impl MulAssign<SparsePolynomial> for DensePolynomial {
     }
 }
 
+// This assumes that the sparse polynomial exactly divides the dense one, and
+// will panic if that is not the case.
 impl DivAssign<SparsePolynomial> for DensePolynomial {
     fn div_assign(&mut self, denominator: SparsePolynomial) {
         if self.len() == 1 && self.0[0].is_zero() {
