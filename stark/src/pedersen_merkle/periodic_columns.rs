@@ -1038,7 +1038,7 @@ pub const RIGHT_Y_COEFFICIENTS: [FieldElement; 256] = [
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{polynomial::eval_poly, proofs::geometric_series};
+    use crate::{polynomial::DensePolynomial, proofs::geometric_series};
     use ecc::Affine;
     use starkdex::PEDERSEN_POINTS;
 
@@ -1048,8 +1048,8 @@ mod tests {
         let evaluation_points = geometric_series(&FieldElement::ONE, &omega, 252);
         let left_points = evaluation_points.into_iter().map(|f: FieldElement| {
             Affine::Point {
-                x: eval_poly(f.clone(), &LEFT_X_COEFFICIENTS),
-                y: eval_poly(f, &LEFT_Y_COEFFICIENTS),
+                x: DensePolynomial::new(&LEFT_X_COEFFICIENTS).evaluate(&f),
+                y: DensePolynomial::new(&LEFT_Y_COEFFICIENTS).evaluate(&f),
             }
         });
 
@@ -1064,8 +1064,8 @@ mod tests {
         let evaluation_points = geometric_series(&FieldElement::ONE, &omega, 252);
         let right_points = evaluation_points.into_iter().map(|f: FieldElement| {
             Affine::Point {
-                x: eval_poly(f.clone(), &RIGHT_X_COEFFICIENTS),
-                y: eval_poly(f, &RIGHT_Y_COEFFICIENTS),
+                x: DensePolynomial::new(&RIGHT_X_COEFFICIENTS).evaluate(&f),
+                y: DensePolynomial::new(&RIGHT_Y_COEFFICIENTS).evaluate(&f),
             }
         });
 

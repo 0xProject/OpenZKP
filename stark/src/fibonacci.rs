@@ -1,6 +1,6 @@
 use crate::{
     channel::*,
-    polynomial::eval_poly,
+    polynomial::DensePolynomial,
     proofs::{geometric_series, Constraint},
     utils::Reversible,
     TraceTable,
@@ -169,22 +169,24 @@ pub fn eval_c_direct(
     let g = FieldElement::root(U256::from(trace_len)).unwrap();
     let value = public.value.clone();
 
-    let eval_P0 = |x: FieldElement| -> FieldElement { eval_poly(x, polynomials[0]) };
-    let eval_P1 = |x: FieldElement| -> FieldElement { eval_poly(x, polynomials[1]) };
+    let eval_P0 =
+        |x: &FieldElement| -> FieldElement { DensePolynomial::new(polynomials[0]).evaluate(x) };
+    let eval_P1 =
+        |x: &FieldElement| -> FieldElement { DensePolynomial::new(polynomials[1]).evaluate(x) };
     let eval_C0 = |x: FieldElement| -> FieldElement {
-        ((eval_P0(&x * &g) - eval_P1(x.clone())) * (&x - &g.pow(U256::from(trace_len - 1))))
+        ((eval_P0(&(&x * &g)) - eval_P1(&x)) * (&x - &g.pow(U256::from(trace_len - 1))))
             / (&x.pow(U256::from(trace_len)) - FieldElement::ONE)
     };
     let eval_C1 = |x: FieldElement| -> FieldElement {
-        ((eval_P1(&x * &g) - eval_P0(x.clone()) - eval_P1(x.clone()))
+        ((eval_P1(&(&x * &g)) - eval_P0(&x) - eval_P1(&x))
             * (&x - (&g.pow(U256::from(trace_len - 1)))))
             / (&x.pow(U256::from(trace_len)) - FieldElement::ONE)
     };
     let eval_C2 = |x: FieldElement| -> FieldElement {
-        ((eval_P0(x.clone()) - FieldElement::ONE) * FieldElement::ONE) / (&x - FieldElement::ONE)
+        ((eval_P0(&x) - FieldElement::ONE) * FieldElement::ONE) / (&x - FieldElement::ONE)
     };
     let eval_C3 = |x: FieldElement| -> FieldElement {
-        (eval_P0(x.clone()) - &value) / (&x - &g.pow(public.index.into()))
+        (eval_P0(&x) - &value) / (&x - &g.pow(public.index.into()))
     };
 
     let deg_adj = |degree_bound, constraint_degree, numerator_degree, denominator_degree| {

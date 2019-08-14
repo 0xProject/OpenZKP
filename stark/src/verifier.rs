@@ -1,4 +1,4 @@
-use crate::{channel::*, hash::*, merkle::*, polynomial::eval_poly, proofs::*, utils::*};
+use crate::{channel::*, hash::*, merkle::*, polynomial::DensePolynomial, proofs::*, utils::*};
 use itertools::Itertools;
 use primefield::FieldElement;
 use std::{collections::HashMap, convert::TryInto};
@@ -227,14 +227,14 @@ where
     for key in previous_indices.iter() {
         let calculated = fri_folds[key].clone();
         let x_pow = interp_root.pow(key.bit_reverse_at(len).into());
-        let committed = eval_poly(x_pow, last_layer_coefficient.as_slice());
+        let committed = DensePolynomial::new(&last_layer_coefficient).evaluate(&x_pow);
 
         if committed != calculated.clone() {
             return false;
         }
     }
 
-    // Checks that the oods point calculation matches the constrain calculation
+    // Checks that the oods point calculation matches the constraint calculation
     // TODO
 
     true
