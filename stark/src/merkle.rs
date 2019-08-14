@@ -8,6 +8,33 @@ use std::{
     ops::Index,
 };
 
+// Only internal nodes are stored, not the leaves
+// TODO: We could create a sparse tree where the first n layers are skipped.
+#[derive(Clone, Debug)]
+pub struct MerkleTree<Leaf: Hashable> {
+    leaf_type:     PhantomData<Leaf>,
+    depth:         usize,
+    depth_omitted: usize,
+    nodes:         Vec<Hash>,
+}
+
+#[derive(Clone, Debug)]
+pub struct MerkleRoot {
+    root: Hash,
+}
+
+#[derive(Clone, Debug)]
+pub struct MerkleProof {
+    decommitments: Vec<Hash>,
+}
+
+#[derive(Clone, Debug)]
+pub struct MerkleTreeBuilder<Leaf: Hashable> {
+    bottom: Vec<Hash>,
+    stack:  Vec<Hash>,
+    cursor: Option<MerkleIndex>,
+}
+
 #[derive(Clone, Debug)]
 struct MerkleNode<'a>(&'a Hash, &'a Hash);
 
@@ -20,17 +47,6 @@ impl Hashable for MerkleNode<'_> {
     }
 }
 
-// Only internal nodes are stored, not the leaves
-// TODO: We could create a sparse tree where the first n layers are skipped.
-#[derive(Clone, Debug)]
-pub struct MerkleTree<Leaf: Hashable> {
-    num_leafs: usize,
-    cursor:    Option<MerkleIndex>,
-    depth:     usize,
-    nodes:     Vec<Hash>,
-    leaf_type: PhantomData<Leaf>,
-}
-
 impl<Leaf: Hashable> Index<MerkleIndex> for MerkleTree<Leaf> {
     type Output = Hash;
 
@@ -39,13 +55,7 @@ impl<Leaf: Hashable> Index<MerkleIndex> for MerkleTree<Leaf> {
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct MerkleProof {
-    decommitments: Vec<Hash>,
-}
-
-#[allow(dead_code)] // TODO: Remove
-impl<Leaf: Hashable> MerkleTree<Leaf> {
+impl<Leaf: Hashable> MerkleTreeBuilder<Leaf> {
     pub fn new(size: usize) -> Self {
         assert!(size.is_power_of_two());
         let depth = size.trailing_zeros() as usize;
@@ -58,15 +68,8 @@ impl<Leaf: Hashable> MerkleTree<Leaf> {
         }
     }
 
-    pub fn from_iter<Iter>(iter: Iter) -> Self
-    where
-        Iter: ExactSizeIterator<Item = Leaf>,
-    {
-        let mut tree = MerkleTree::new(iter.len());
-        for leaf in iter {
-            tree.append(&leaf);
-        }
-        tree
+    pub fn finalize(self) -> MerkleTree {
+        //
     }
 
     /// Incrementally compute the tree by advancing the cursor
@@ -81,8 +84,14 @@ impl<Leaf: Hashable> MerkleTree<Leaf> {
                 MerkleNode(&self[cursor.left_child()], &self[cursor.right_child()]).hash()
         }
     }
+}
 
-    pub fn root(&self) -> &Hash {
+impl<Leaf: Hashable> MerkleTree<Leaf> {
+    pub fn build(size: usize) -> MerkleTreeBuilder {
+        MerkleTree::new(size)
+    }
+
+    pub fn root(&self) -> MerkleRoot {
         &self[MerkleIndex::root()]
     }
 
@@ -131,9 +140,11 @@ impl<Leaf: Hashable> MerkleTree<Leaf> {
 
         MerkleProof { decommitments }
     }
+}
 
+impl<Leaf: Hashable> MerkleRoot<Leaf> {
     pub fn verify<'a>(
-        _root: &Hash,
+        &self,
         _indices: &[usize],
         _leafs: &Fn(usize) -> &'a Leaf,
         _proof: &MerkleProof,
