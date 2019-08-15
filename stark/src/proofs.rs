@@ -13,6 +13,7 @@ use itertools::Itertools;
 use primefield::{invert_batch, FieldElement};
 use rayon::prelude::*;
 use std::{
+    cmp::max,
     marker::{Send, Sync},
     prelude::v1::*,
     vec,
