@@ -33,7 +33,7 @@ decl_storage! {
         // Just a dummy storage item.
         // Here we are declaring a StorageValue, `Something` as a Option<u32>
         // `get(something)` is the default getter which returns either the stored `u32` or `None` if nothing stored
-        Something get(something): Option<u32>;
+        Something get(something): Option<[u8; 32]>;
     }
 }
 
@@ -47,57 +47,58 @@ decl_module! {
         // Just a dummy entry point.
         // function that can be called by the external world as an extrinsics call
         // takes a parameter of the type `AccountId`, stores it and emits an event
-        pub fn do_something(origin, something: u32) -> Result {
+        pub fn do_something(origin, at: usize) -> Result {
             // TODO: You only need this if you want to check it was signed.
             let who = ensure_signed(origin)?;
 
-
-            let public = PublicInput {
-                index: 1000,
-                value: FieldElement::from(u256h!(
-                    "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
-                )),
-            };
             let private = PrivateInput {
-                secret: FieldElement::from(u256h!(
-                    "00000000000000000000000000000000000000000000000000000000cafebabe"
-                )),
-            };
-            let actual = stark_proof(
-                &get_trace_table(1024, &private),
-                &get_constraint(),
-                &public,
-                &ProofParams {
-                    blowup:                   16,
-                    pow_bits:                 12,
-                    queries:                  20,
-                    fri_layout:               vec![3, 2],
-                    constraints_degree_bound: 2,
-                },
-            );
+            secret: FieldElement::from(u256h!(
+                "00000000000000000000000000000000000000000000000f00dbabe0cafebabe"
+            )),
+        };
+        let tt = get_trace_table(1024, &private);
+        let public = PublicInput {
+            index: at,
+            value: tt[(at, 0)].clone(),
+        };
+        let actual = stark_proof(
+            &get_trace_table(1024, &private),
+            &get_constraint(),
+            &public,
+            &ProofParams {
+                blowup:                   16, 
+                pow_bits:                 12,
+                queries:                  20,
+                fri_layout:               vec![3, 2],
+                constraints_degree_bound: 1,
+            },
+        );
 
-            if check_proof(
-                actual,
-                &get_constraint(),
-                &public,
-                &ProofParams {
-                    blowup:                   16,
-                    pow_bits:                 12,
-                    queries:                  20,
-                    fri_layout:               vec![3, 2],
-                    constraints_degree_bound: 2,
-                },
-                2,
-                1024
-            ) {
-                // TODO: Code to execute when something calls this.
-                // For example: the following line stores the passed in u32 in the storage
-                <Something<T>>::put(something);
+        let digest = actual.coin.digest.clone();
 
-                // here we are raising the Something event
-                Self::deposit_event(RawEvent::SomethingStored(something, who));
-            }
-            Ok(())
+        if check_proof(
+            actual,
+            &get_constraint(),
+            &public,
+            &ProofParams {
+                blowup:                   16,
+                pow_bits:                 12,
+                queries:                  20,
+                fri_layout:               vec![3, 2],
+                constraints_degree_bound: 1,
+            },
+            2,
+            1024
+        ) {
+            // TODO: Code to execute when something calls this.
+            // For example: the following line stores the passed in u32 in the storage
+
+            <Something<T>>::put(digest);
+
+            // here we are raising the Something event
+            Self::deposit_event(RawEvent::SomethingStored(at, who));
+        }
+        Ok(())
         }
     }
 }
@@ -110,7 +111,7 @@ decl_event!(
         // Just a dummy event.
         // Event `Something` is declared with a parameter of the type `u32` and `AccountId`
         // To emit this event, we call the deposit funtion, from our runtime funtions
-        SomethingStored(u32, AccountId),
+        SomethingStored(usize, AccountId),
     }
 );
 
