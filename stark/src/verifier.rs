@@ -1,3 +1,4 @@
+use std::prelude::v1::*;
 use crate::{channel::*, hash::*, merkle::*, polynomial::eval_poly, proofs::*, utils::*};
 use itertools::Itertools;
 use primefield::FieldElement;

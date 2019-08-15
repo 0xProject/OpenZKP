@@ -1,3 +1,5 @@
+use std::prelude::v1::*;
+use std::vec;
 use crate::{hash::Hash, hashable::Hashable, masked_keccak::MaskedKeccak, proofs::*};
 use rayon::prelude::*;
 use std::marker::Sync;

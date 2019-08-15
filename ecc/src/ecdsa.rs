@@ -1,3 +1,4 @@
+use std::prelude::v1::*;
 use crate::{
     curve::Affine,
     wnaf::{base_mul, double_base_mul, window_table_affine},

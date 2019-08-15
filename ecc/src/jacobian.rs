@@ -1,3 +1,4 @@
+use std::prelude::v1::*;
 use crate::{curve::Affine, curve_operations};
 use primefield::FieldElement;
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};

@@ -1,3 +1,5 @@
+use std::prelude::v1::*; 
+use std::vec;
 use crate::{
     channel::*,
     polynomial::eval_poly,

@@ -1,3 +1,4 @@
+use std::prelude::v1::*;
 use memmap::{MmapMut, MmapOptions};
 use std::{
     marker::PhantomData,

@@ -1,3 +1,4 @@
+use std::prelude::v1::*;
 use crate::{hash::Hash, masked_keccak::MaskedKeccak};
 use primefield::FieldElement;
 use u256::U256;

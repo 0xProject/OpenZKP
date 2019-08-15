@@ -1,3 +1,4 @@
+use std::prelude::v1::*;
 use crate::{
     commutative_binop,
     division::{divrem_nby1, divrem_nbym},
@@ -6,7 +7,7 @@ use crate::{
     utils::{adc, div_2_1, mac, sbb},
 };
 use macros_decl::u256h;
-use core::{
+use std::{
     cmp::Ordering,
     fmt,
     num::Wrapping,
@@ -16,10 +17,7 @@ use core::{
     },
     u64,
 };
-use crate::lib::ToString;
-use crate::lib::String;
-use crate::lib::format;
-
+use std::format;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ParseError {

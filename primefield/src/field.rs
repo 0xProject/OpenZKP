@@ -1,11 +1,11 @@
+use std::prelude::v1::*;
 use crate::{montgomery::*, square_root::square_root};
 use macros_decl::u256h;
 use std::{
     fmt,
     ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
-use u256::{commutative_binop, noncommutative_binop, U256};
-
+use u256::{commutative_binop, noncommutative_binop, U256}; 
 // TODO: Implement Serde
 
 #[derive(PartialEq, Eq, Clone)]
@@ -295,7 +295,7 @@ impl DivAssign<&FieldElement> for FieldElement {
     }
 }
 
-impl std::iter::Product for FieldElement {
+impl core::iter::Product for FieldElement {
     fn product<I: Iterator<Item = FieldElement>>(iter: I) -> FieldElement {
         iter.fold(FieldElement::ONE, Mul::mul)
     }

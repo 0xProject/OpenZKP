@@ -1,5 +1,13 @@
 #[allow(unused_imports)] // TODO - Remove when used
 use starkdex::wrappers::*;
+use stark::{
+    check_proof,
+    fibonacci::{get_constraint, get_trace_table, PrivateInput, PublicInput},
+    stark_proof, ProofParams,
+};
+use macros_decl::u256h;
+use u256::U256;
+use primefield::{FieldElement};
 /// A runtime module template with necessary imports
 
 /// Feel free to remove or edit this file as needed.
@@ -43,12 +51,52 @@ decl_module! {
             // TODO: You only need this if you want to check it was signed.
             let who = ensure_signed(origin)?;
 
-            // TODO: Code to execute when something calls this.
-            // For example: the following line stores the passed in u32 in the storage
-            <Something<T>>::put(something);
 
-            // here we are raising the Something event
-            Self::deposit_event(RawEvent::SomethingStored(something, who));
+            let public = PublicInput {
+                index: 1000,
+                value: FieldElement::from(u256h!(
+                    "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
+                )),
+            };
+            let private = PrivateInput {
+                secret: FieldElement::from(u256h!(
+                    "00000000000000000000000000000000000000000000000000000000cafebabe"
+                )),
+            };
+            let actual = stark_proof(
+                &get_trace_table(1024, &private),
+                &get_constraint(),
+                &public,
+                &ProofParams {
+                    blowup:                   16,
+                    pow_bits:                 12,
+                    queries:                  20,
+                    fri_layout:               vec![3, 2],
+                    constraints_degree_bound: 2,
+                },
+            );
+
+            if check_proof(
+                actual,
+                &get_constraint(),
+                &public,
+                &ProofParams {
+                    blowup:                   16,
+                    pow_bits:                 12,
+                    queries:                  20,
+                    fri_layout:               vec![3, 2],
+                    constraints_degree_bound: 2,
+                },
+                2,
+                1024
+            ) {
+                // TODO: Code to execute when something calls this.
+                // For example: the following line stores the passed in u32 in the storage
+                <Something<T>>::put(something);
+
+                // here we are raising the Something event
+                Self::deposit_event(RawEvent::SomethingStored(something, who));
+            }
             Ok(())
         }
     }

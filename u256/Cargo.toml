@@ -10,6 +10,7 @@ itertools = "0.8.0"
 crunchy = "0.2.2"
 quickcheck = { version = "0.8", optional = true }
 macros-decl = { path = "../macros_decl" }
+no-std-compat = { version = "0.1.0", features = [ "alloc" ] }
 
 [dev-dependencies]
 criterion = "0.2.10"
@@ -21,19 +22,5 @@ name = "benchmark"
 harness = false
 
 [features]
-default = ["std"]
-
-# Provide impls for common standard library types like Vec<T> and HashMap<K, V>.
-# Requires a dependency on the Rust standard library.
-std = []
-
-# Provide impls for types that require unstable functionality. For tracking and
-# discussion of unstable functionality please refer to this issue:
-#
-#    https://github.com/serde-rs/serde/issues/812
-unstable = []
-
-# Opt into impls for Rc<T> and Arc<T>. Serializing and deserializing these types
-# does not preserve identity and may result in multiple copies of the same data.
-# Be sure that this is what you want before enabling this feature.
-rc = []
+default = ["std"] # Default to using the std
+std = [ "no-std-compat/std" ]

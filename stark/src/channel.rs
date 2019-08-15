@@ -1,3 +1,4 @@
+use std::prelude::v1::*;
 use crate::hash::Hash;
 use macros_decl::{hex, u256h};
 use primefield::FieldElement;

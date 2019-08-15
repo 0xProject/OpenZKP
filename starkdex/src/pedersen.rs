@@ -1,3 +1,4 @@
+use std::prelude::v1::*;
 use crate::pedersen_points::PEDERSEN_POINTS;
 use ecc::{Affine, Jacobian};
 use macros_decl::u256h;
