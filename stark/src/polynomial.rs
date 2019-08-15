@@ -1,9 +1,13 @@
+use crate::fft::{fft, ifft};
 use primefield::FieldElement;
 use rayon::prelude::*;
-use std::ops::{Add, AddAssign, Mul, MulAssign, Sub, SubAssign};
+use std::{
+    cmp::max,
+    ops::{Add, AddAssign, Mul, MulAssign, Sub, SubAssign},
+};
 use u256::{commutative_binop, noncommutative_binop};
 
-#[cfg_attr(test, derive(Debug, PartialEq, Clone))]
+#[derive(Debug, PartialEq, Clone)]
 pub struct DensePolynomial(Vec<FieldElement>);
 
 impl DensePolynomial {
@@ -46,8 +50,8 @@ impl AddAssign<&DensePolynomial> for DensePolynomial {
     }
 }
 
-impl SubAssign<&DensePolynomial> for DensePolynomial {
-    fn sub_assign(&mut self, other: &DensePolynomial) {
+impl SubAssign<&Self> for DensePolynomial {
+    fn sub_assign(&mut self, other: &Self) {
         self.0
             .par_iter_mut()
             .zip(&other.0)
@@ -65,7 +69,30 @@ impl SubAssign<&DensePolynomial> for DensePolynomial {
     }
 }
 
+#[allow(clippy::suspicious_op_assign_impl)] // Allow use of subtraction in this implementation.
+impl MulAssign<&Self> for DensePolynomial {
+    fn mul_assign(&mut self, other: &Self) {
+        let result_length = 2 * max(self.len(), other.len());
+
+        self.0
+            .extend_from_slice(&vec![FieldElement::ZERO; result_length - self.len()]);
+        self.0 = fft(&self.0);
+
+        let mut other_coefficients = other.0.clone();
+        other_coefficients
+            .extend_from_slice(&vec![FieldElement::ZERO; result_length - other.len()]);
+
+        self.0
+            .par_iter_mut()
+            .zip(&fft(&other_coefficients))
+            .map(|(x, y)| *x *= y)
+            .collect::<Vec<_>>();
+        self.0 = ifft(&self.0);
+    }
+}
+
 commutative_binop!(DensePolynomial, Add, add, AddAssign, add_assign);
+commutative_binop!(DensePolynomial, Mul, mul, MulAssign, mul_assign);
 noncommutative_binop!(DensePolynomial, Sub, sub, SubAssign, sub_assign);
 
 impl Mul<&DensePolynomial> for &FieldElement {
@@ -142,6 +169,13 @@ mod tests {
     }
 
     #[test]
+    fn example_multiplication() {
+        let p_1 = dense_polynomial(&[1, 2]);
+        let p_2 = dense_polynomial(&[1, 2, 3, 4]);
+        assert_eq!(p_1 * p_2, dense_polynomial(&[1, 4, 7, 10, 8, 0, 0, 0]));
+    }
+
+    #[test]
     fn example_scalar_multiplication() {
         let c = FieldElement::from(-2);
         let p = dense_polynomial(&[1, 2, 5, -7]);
@@ -160,6 +194,15 @@ mod tests {
         x: FieldElement,
     ) -> bool {
         a.evaluate(&x) - b.evaluate(&x) == (a - b).evaluate(&x)
+    }
+
+    #[quickcheck]
+    fn product_evaluation_equivalence(
+        a: DensePolynomial,
+        b: DensePolynomial,
+        x: FieldElement,
+    ) -> bool {
+        a.evaluate(&x) * b.evaluate(&x) == (a * b).evaluate(&x)
     }
 
     #[quickcheck]
@@ -188,6 +231,11 @@ mod tests {
     }
 
     #[quickcheck]
+    fn product_commutivity(a: DensePolynomial, b: DensePolynomial) -> bool {
+        &a * &b == b * a
+    }
+
+    #[quickcheck]
     fn addition_subtraction_inverse(
         a: DensePolynomial,
         b: DensePolynomial,
@@ -196,5 +244,10 @@ mod tests {
         // We cannot directly check for equality of the two sides because adding and
         // subtracting b can change the length of a.
         (&a + &b - b).evaluate(&x) == a.evaluate(&x)
+    }
+
+    #[quickcheck]
+    fn distributivity(a: DensePolynomial, b: DensePolynomial, c: DensePolynomial) -> bool {
+        &a * &b + &a * &c == a * (b + c)
     }
 }

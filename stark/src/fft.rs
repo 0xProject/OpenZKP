@@ -2,6 +2,15 @@ use crate::utils::Reversible;
 use primefield::FieldElement;
 use u256::U256;
 
+pub fn fft(a: &[FieldElement]) -> Vec<FieldElement> {
+    let mut result = a.to_vec();
+    let root =
+        FieldElement::root(U256::from(result.len())).expect("No root of unity for input length");
+    bit_reversal_fft(result.as_mut_slice(), root);
+    bit_reversal_permute(result.as_mut_slice());
+    result
+}
+
 // TODO: Create a dedicated type for bit reversed vectors
 pub fn fft_cofactor_bit_reversed(a: &[FieldElement], cofactor: &FieldElement) -> Vec<FieldElement> {
     let mut result = a.to_vec();
@@ -93,15 +102,6 @@ mod tests {
     use crate::polynomial::DensePolynomial;
     use macros_decl::u256h;
     use quickcheck_macros::quickcheck;
-
-    fn fft(a: &[FieldElement]) -> Vec<FieldElement> {
-        let mut result = a.to_vec();
-        let root = FieldElement::root(U256::from(result.len()))
-            .expect("No root of unity for input length");
-        bit_reversal_fft(result.as_mut_slice(), root);
-        bit_reversal_permute(result.as_mut_slice());
-        result
-    }
 
     #[test]
     fn fft_one_element_test() {
