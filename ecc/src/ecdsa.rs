@@ -1,11 +1,10 @@
-use std::prelude::v1::*;
 use crate::{
     curve::Affine,
     wnaf::{base_mul, double_base_mul, window_table_affine},
     GENERATOR, ORDER,
 };
 use lazy_static::*;
-use std::default::Default;
+use std::{default::Default, prelude::v1::*};
 use tiny_keccak::sha3_256;
 use u256::U256;
 

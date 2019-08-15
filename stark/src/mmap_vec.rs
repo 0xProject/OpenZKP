@@ -1,9 +1,9 @@
-use std::prelude::v1::*;
 use memmap::{MmapMut, MmapOptions};
 use std::{
     marker::PhantomData,
     mem::size_of,
     ops::{Deref, DerefMut},
+    prelude::v1::*,
     slice,
 };
 use tempfile::tempfile;

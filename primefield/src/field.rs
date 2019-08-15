@@ -1,11 +1,11 @@
-use std::prelude::v1::*;
 use crate::{montgomery::*, square_root::square_root};
 use macros_decl::u256h;
 use std::{
     fmt,
     ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign},
+    prelude::v1::*,
 };
-use u256::{commutative_binop, noncommutative_binop, U256}; 
+use u256::{commutative_binop, noncommutative_binop, U256};
 // TODO: Implement Serde
 
 #[derive(PartialEq, Eq, Clone)]

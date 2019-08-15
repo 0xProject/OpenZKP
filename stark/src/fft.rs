@@ -1,6 +1,6 @@
-use std::prelude::v1::*;
 use crate::utils::Reversible;
 use primefield::FieldElement;
+use std::prelude::v1::*;
 use u256::U256;
 
 // TODO: Create a dedicated type for bit reversed vectors

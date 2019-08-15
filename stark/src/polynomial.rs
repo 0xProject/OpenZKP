@@ -1,5 +1,5 @@
-use std::prelude::v1::*;
 use primefield::FieldElement;
+use std::prelude::v1::*;
 
 pub fn eval_poly(x: FieldElement, coefficients: &[FieldElement]) -> FieldElement {
     let mut b = FieldElement::ZERO;

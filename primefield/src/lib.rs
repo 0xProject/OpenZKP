@@ -11,6 +11,5 @@ pub use field::FieldElement;
 // TODO: Make member functions of FieldElement?
 pub use field::invert_batch;
 
-
 // Std/no-std imports
 extern crate no_std_compat as std;

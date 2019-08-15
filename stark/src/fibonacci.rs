@@ -1,5 +1,3 @@
-use std::prelude::v1::*; 
-use std::vec;
 use crate::{
     channel::*,
     polynomial::eval_poly,
@@ -9,7 +7,7 @@ use crate::{
 };
 use primefield::{invert_batch, FieldElement};
 use rayon::prelude::*;
-use std::convert::TryInto;
+use std::{convert::TryInto, prelude::v1::*, vec};
 use u256::U256;
 
 #[allow(dead_code)] // TODO

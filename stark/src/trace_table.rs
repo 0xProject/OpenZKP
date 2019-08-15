@@ -1,7 +1,9 @@
-use std::prelude::v1::*;
 use crate::mmap_vec::MmapVec;
 use primefield::FieldElement;
-use std::ops::{Index, IndexMut};
+use std::{
+    ops::{Index, IndexMut},
+    prelude::v1::*,
+};
 
 pub struct TraceTable {
     trace_length: usize,

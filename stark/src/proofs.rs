@@ -1,5 +1,3 @@
-use std::prelude::v1::*;
-use std::vec;
 use crate::{
     channel::{ProverChannel, RandomGenerator, Writable},
     fft::{bit_reversal_permute, fft_cofactor_bit_reversed, ifft},
@@ -14,7 +12,11 @@ use crate::{
 use itertools::Itertools;
 use primefield::{invert_batch, FieldElement};
 use rayon::prelude::*;
-use std::marker::{Send, Sync};
+use std::{
+    marker::{Send, Sync},
+    prelude::v1::*,
+    vec,
+};
 use u256::U256;
 
 // This trait is for objects where the object is grouped into hashable sets

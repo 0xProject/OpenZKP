@@ -8,7 +8,6 @@ mod wnaf;
 
 extern crate no_std_compat as std;
 
-
 pub use curve::Affine;
 pub use jacobian::Jacobian;
 pub use wnaf::{base_mul, double_base_mul, double_mul, mul, window_table_affine};
