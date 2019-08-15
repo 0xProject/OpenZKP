@@ -7,7 +7,7 @@ use std::{
 };
 use u256::{commutative_binop, noncommutative_binop};
 
-#[cfg_attr(test, derive(Debug, PartialEq, Clone))]
+#[derive(Debug, PartialEq, Clone)]
 pub struct DensePolynomial(Vec<FieldElement>);
 
 impl DensePolynomial {

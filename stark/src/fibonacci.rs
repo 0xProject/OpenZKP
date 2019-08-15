@@ -169,25 +169,21 @@ pub fn eval_c_direct(
     let g = FieldElement::root(U256::from(trace_len)).unwrap();
     let value = public.value.clone();
 
-    let eval_P0 =
-        |x: &FieldElement| -> FieldElement { DensePolynomial::new(polynomials[0]).evaluate(x) };
-    let eval_P1 =
-        |x: &FieldElement| -> FieldElement { DensePolynomial::new(polynomials[1]).evaluate(x) };
-    let eval_C0 = |x: FieldElement| -> FieldElement {
+    let eval_P0 = |x: &FieldElement| DensePolynomial::new(polynomials[0]).evaluate(x);
+    let eval_P1 = |x: &FieldElement| DensePolynomial::new(polynomials[1]).evaluate(x);
+    let eval_C0 = |x: FieldElement| {
         ((eval_P0(&(&x * &g)) - eval_P1(&x)) * (&x - &g.pow(U256::from(trace_len - 1))))
             / (&x.pow(U256::from(trace_len)) - FieldElement::ONE)
     };
-    let eval_C1 = |x: FieldElement| -> FieldElement {
+    let eval_C1 = |x: FieldElement| {
         ((eval_P1(&(&x * &g)) - eval_P0(&x) - eval_P1(&x))
             * (&x - (&g.pow(U256::from(trace_len - 1)))))
             / (&x.pow(U256::from(trace_len)) - FieldElement::ONE)
     };
-    let eval_C2 = |x: FieldElement| -> FieldElement {
+    let eval_C2 = |x: FieldElement| {
         ((eval_P0(&x) - FieldElement::ONE) * FieldElement::ONE) / (&x - FieldElement::ONE)
     };
-    let eval_C3 = |x: FieldElement| -> FieldElement {
-        (eval_P0(&x) - &value) / (&x - &g.pow(public.index.into()))
-    };
+    let eval_C3 = |x: FieldElement| (eval_P0(&x) - &value) / (&x - &g.pow(public.index.into()));
 
     let deg_adj = |degree_bound, constraint_degree, numerator_degree, denominator_degree| {
         degree_bound + denominator_degree - 1 - constraint_degree - numerator_degree
