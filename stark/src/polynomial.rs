@@ -6,7 +6,7 @@ use std::{
     collections::BTreeMap,
     ops::{Add, AddAssign, DivAssign, Mul, MulAssign, Sub, SubAssign},
 };
-use u256::{commutative_binop, noncommutative_binop, U256};
+use u256::{commutative_binop, noncommutative_binop};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct DensePolynomial(Vec<FieldElement>);
