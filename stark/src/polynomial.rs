@@ -6,7 +6,7 @@ use std::{
     collections::BTreeMap,
     ops::{Add, AddAssign, DivAssign, Mul, MulAssign, Sub, SubAssign},
 };
-use u256::{commutative_binop, noncommutative_binop};
+use u256::{commutative_binop, noncommutative_binop, U256};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct DensePolynomial(Vec<FieldElement>);
@@ -157,6 +157,14 @@ impl SparsePolynomial {
             .0
     }
 
+    pub fn evaluate(&self, x: &FieldElement) -> FieldElement {
+        let mut result = FieldElement::ZERO;
+        for (degree, coefficient) in self.0.iter() {
+            result += coefficient * x.pow(U256::from(*degree));
+        }
+        result
+    }
+
     fn leading_coefficient(&self) -> &FieldElement {
         self.0
             .iter()
@@ -206,19 +214,6 @@ impl DivAssign<SparsePolynomial> for DensePolynomial {
         }
         self.0.drain(0..denominator_degree);
         self.canonicalize();
-    }
-}
-
-#[cfg(test)]
-use u256::U256;
-#[cfg(test)]
-impl SparsePolynomial {
-    pub fn evaluate(&self, x: &FieldElement) -> FieldElement {
-        let mut result = FieldElement::ZERO;
-        for (degree, coefficient) in self.0.iter() {
-            result += coefficient * x.pow(U256::from(*degree));
-        }
-        result
     }
 }
 
