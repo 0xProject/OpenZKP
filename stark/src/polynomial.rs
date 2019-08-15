@@ -160,7 +160,7 @@ impl SparsePolynomial {
     pub fn evaluate(&self, x: &FieldElement) -> FieldElement {
         let mut result = FieldElement::ZERO;
         for (degree, coefficient) in self.0.iter() {
-            result += coefficient * x.pow(U256::from(*degree));
+            result += coefficient * x.pow(*degree);
         }
         result
     }
