@@ -38,11 +38,11 @@ fn tonelli_shanks(a: &FieldElement) -> FieldElement {
 
     let mut c: FieldElement = INITIAL_C;
     // OPT: Raising a to a fixed power is a good candidate for an addition chain.
-    let mut root: FieldElement = a.pow((SIGNIFICAND + U256::from(1u128)) >> 1);
+    let mut root: FieldElement = a.pow((SIGNIFICAND + U256::ONE) >> 1);
 
     for i in 1..BINARY_EXPONENT {
         // OPT: Precompute the inverse of a.
-        if (root.square() / a).pow(U256::from(1u128) << (BINARY_EXPONENT - i - 1))
+        if (root.square() / a).pow(U256::ONE << (BINARY_EXPONENT - i - 1))
             == FieldElement::NEGATIVE_ONE
         {
             root *= &c;
@@ -62,7 +62,7 @@ mod tests {
     fn binary_exponent_is_correct() {
         assert_eq!(
             BINARY_EXPONENT,
-            (FieldElement::MODULUS - U256::from(1u128)).trailing_zeros()
+            (FieldElement::MODULUS - U256::ONE).trailing_zeros()
         );
     }
 
@@ -70,7 +70,7 @@ mod tests {
     fn significand_is_correct() {
         assert_eq!(
             SIGNIFICAND << BINARY_EXPONENT,
-            FieldElement::MODULUS - U256::from(1u128)
+            FieldElement::MODULUS - U256::ONE
         );
     }
 

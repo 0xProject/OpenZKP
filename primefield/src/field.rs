@@ -84,7 +84,8 @@ impl FieldElement {
         *self = self.neg()
     }
 
-    pub fn pow(&self, exponent: U256) -> FieldElement {
+    pub fn pow<T: Into<U256>>(&self, exponent: T) -> FieldElement {
+        let exponent: U256 = exponent.into();
         let mut result = FieldElement::ONE;
         let mut square = self.clone();
         let mut remaining_exponent = exponent;
@@ -99,7 +100,8 @@ impl FieldElement {
     }
 
     // OPT: replace this with a constant array of roots of unity.
-    pub fn root(n: U256) -> Option<FieldElement> {
+    pub fn root<T: Into<U256>>(n: T) -> Option<FieldElement> {
+        let n: U256 = n.into();
         if n.is_zero() {
             return Some(FieldElement::ONE);
         }
@@ -480,22 +482,22 @@ mod tests {
 
     #[quickcheck]
     fn pow_0(a: FieldElement) -> bool {
-        a.pow(0.into()) == FieldElement::ONE
+        a.pow(0) == FieldElement::ONE
     }
 
     #[quickcheck]
     fn pow_1(a: FieldElement) -> bool {
-        a.pow(1.into()) == a
+        a.pow(1) == a
     }
 
     #[quickcheck]
     fn pow_2(a: FieldElement) -> bool {
-        a.pow(2.into()) == a.square()
+        a.pow(2) == a.square()
     }
 
     #[quickcheck]
     fn pow_n(a: FieldElement, n: usize) -> bool {
-        a.pow(n.into()) == repeat_n(a, n).product()
+        a.pow(n) == repeat_n(a, n).product()
     }
 
     #[quickcheck]
@@ -505,7 +507,7 @@ mod tests {
 
     #[test]
     fn zeroth_root_of_unity() {
-        assert_eq!(FieldElement::root(0.into()).unwrap(), FieldElement::ONE);
+        assert_eq!(FieldElement::root(0).unwrap(), FieldElement::ONE);
     }
 
     #[test]

@@ -5,7 +5,7 @@ use crate::{
     hash::Hash,
     hashable::Hashable,
     merkle::{self, make_tree},
-    polynomial::eval_poly,
+    polynomial::DensePolynomial,
     utils::Reversible,
     TraceTable,
 };
@@ -196,8 +196,7 @@ where
     // Compute some constants.
     let g = trace.generator();
     let eval_domain_size = trace.num_rows() * params.blowup;
-    let omega =
-        FieldElement::root(eval_domain_size.into()).expect("No generator for extended domain.");
+    let omega = FieldElement::root(eval_domain_size).expect("No generator for extended domain.");
     let eval_x = geometric_series(&FieldElement::ONE, &omega, eval_domain_size);
 
     // Initialize a proof channel with the public input.
@@ -362,13 +361,13 @@ fn get_indices(num: usize, bits: u32, proof: &mut ProverChannel) -> Vec<usize> {
 pub fn geometric_series(base: &FieldElement, step: &FieldElement, len: usize) -> Vec<FieldElement> {
     const PARALLELIZATION: usize = 16_usize;
     // OPT - Set based on the cores available and how well the work is spread
-    let step_len = len / PARALLELIZATION;
+    let step_len = max(1, len / PARALLELIZATION);
     let mut range = vec![FieldElement::ZERO; len];
     range
         .par_chunks_mut(step_len)
         .enumerate()
         .for_each(|(i, slice)| {
-            let mut hold = base * step.pow(U256::from(i * step_len));
+            let mut hold = base * step.pow(i * step_len);
             for element in slice.iter_mut() {
                 *element = hold.clone();
                 hold *= step;
@@ -396,14 +395,14 @@ fn calculate_low_degree_extensions(
     eval_x: &[FieldElement],
 ) -> Vec<Vec<FieldElement>> {
     let trace_len = trace_poly[0].len();
-    let omega = FieldElement::root(U256::from(trace_len * params.blowup)).unwrap();
+    let omega = FieldElement::root(trace_len * params.blowup).unwrap();
     let gen = FieldElement::GENERATOR;
 
     let mut trace_lde = vec![Vec::with_capacity(eval_x.len()); trace_poly.len()];
     trace_lde.par_iter_mut().enumerate().for_each(|(x, col)| {
         for index in 0..params.blowup {
             let reverse_index = index.bit_reverse_at(params.blowup);
-            let cofactor = &gen * omega.pow(U256::from(reverse_index));
+            let cofactor = &gen * omega.pow(reverse_index);
             col.extend(fft_cofactor_bit_reversed(trace_poly[x], &cofactor));
         }
     });
@@ -422,7 +421,7 @@ fn calculate_constraints_on_domain<Public>(
     let mut constraint_lde;
     let trace_len = trace_poly[0].len();
     let mut x = FieldElement::GENERATOR;
-    let omega = FieldElement::root(U256::from(trace_len * blowup)).unwrap();
+    let omega = FieldElement::root(trace_len * blowup).unwrap();
     let eval_domain_size = trace_len * blowup;
 
     match constraints.eval_loop {
@@ -457,10 +456,11 @@ fn get_out_of_domain_information<Public>(
     let oods_point: FieldElement = proof.get_random();
     let oods_point_g = &oods_point * g;
     let mut oods_values = Vec::with_capacity(2 * trace_poly.len() + 1);
-    for item in trace_poly.iter() {
-        let mut evaled = eval_poly(oods_point.clone(), item);
+    for item in trace_poly {
+        let trace_polynomial = DensePolynomial::new(item);
+        let mut evaled = trace_polynomial.evaluate(&oods_point);
         oods_values.push(evaled.clone());
-        evaled = eval_poly(oods_point_g.clone(), item);
+        evaled = trace_polynomial.evaluate(&oods_point_g);
         oods_values.push(evaled.clone());
     }
 
@@ -497,8 +497,8 @@ fn calculate_out_of_domain_constraints(
 ) -> Vec<FieldElement> {
     let eval_domain_size = eval_x.len();
     let trace_len = eval_domain_size / blowup;
-    let omega = FieldElement::root(U256::from(trace_len * blowup)).unwrap();
-    let trace_generator = omega.pow(U256::from(blowup));
+    let omega = FieldElement::root(trace_len * blowup).unwrap();
+    let trace_generator = omega.pow(blowup);
 
     let mut oods_constraint_lde = Vec::with_capacity(eval_domain_size);
     let domain_shift = FieldElement::GENERATOR;
@@ -880,21 +880,19 @@ mod tests {
         assert_eq!(trace[(1000, 0)], public.value);
 
         let TPn = interpolate_trace_table(&trace);
-        let TP0 = TPn[0].as_slice();
-        let TP1 = TPn[1].as_slice();
+        let TP0 = DensePolynomial::new(&TPn[0]);
+        let TP1 = DensePolynomial::new(&TPn[1]);
         // Checks that the trace table polynomial interpolation is working
-        assert_eq!(eval_poly(trace_x[1000].clone(), TP0), trace[(1000, 0)]);
+        assert_eq!(TP0.evaluate(&trace_x[1000]), trace[(1000, 0)]);
 
         let TPn_reference: Vec<&[FieldElement]> = TPn.iter().map(|x| x.as_slice()).collect();
         let LDEn = calculate_low_degree_extensions(TPn_reference.as_slice(), &params, &eval_x);
 
         // Checks that the low degree extension calculation is working
-        let LDE0 = LDEn[0].as_slice();
-        let LDE1 = LDEn[1].as_slice();
         let i = 13644usize;
         let reverse_i = i.bit_reverse_at(eval_domain_size);
-        assert_eq!(eval_poly(eval_offset_x[reverse_i].clone(), TP0), LDE0[i]);
-        assert_eq!(eval_poly(eval_offset_x[reverse_i].clone(), TP1), LDE1[i]);
+        assert_eq!(TP0.evaluate(&eval_offset_x[reverse_i]), LDEn[0][i]);
+        assert_eq!(TP1.evaluate(&eval_offset_x[reverse_i]), LDEn[1][i]);
 
         // Checks that the groupable trait is properly grouping for &[Vec<FieldElement>]
         assert_eq!(
