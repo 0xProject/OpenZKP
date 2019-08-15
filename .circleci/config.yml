@@ -6,6 +6,7 @@ jobs:
     environment:
       - RUST_BACKTRACE: 1
       - RUSTFLAGS: -Dwarnings
+
     steps:
       - checkout
       - restore_cache:
@@ -19,22 +20,20 @@ jobs:
       - run:
           name: Setup build environment
           command: |
-            sudo apt-get update
-            sudo apt-get install jq
-            sudo apt-get install -y cmake 
-            sudo apt-get install -y pkg-config 
-            sudo apt-get install libssl-dev 
-            sudo apt-get install git 
-            sudo apt-get install -y clang 
-            sudo apt-get install -y libclang-dev
-            rustup update nightly
-            rustup target add wasm32-unknown-unknown --toolchain nightly
-            rustup update stable
-            cargo install --git https://github.com/alexcrichton/wasm-gc
             rustup component add rustfmt clippy
             rustup toolchain install nightly-2019-07-31
             rustup component add rustfmt --toolchain nightly-2019-07-31
           no_output_timeout: 1800s
+      - run: 
+          name: Substrate dependancies
+          command: |
+                rustup toolchain install nightly
+                ./substrate-node/scripts/init.sh
+                sudo apt install cmake pkg-config libssl-dev git clang libclang-dev
+                sudo apt install -y binfmt-support clang-3.8 cmake-data libarchive13 libclang-3.8-dev libclang-common-3.8-dev libclang1-3.8 libjsoncpp1 libllvm3.8 libobjc-6-dev libobjc4 libpipeline1 libuv1 llvm-3.8 llvm-3.8-dev llvm-3.8-runtime
+                cd substrate-node
+                ./scripts/build.sh
+                cd ..
       - run:
           name: Clean build
           command: |
@@ -50,7 +49,7 @@ jobs:
       - run:
           name: Build all targets
           command: |
-            cargo build -p ecc -p primefield -p starkdex -p starkcrypto-wasm -p stark -p macros-decl -p macros-impl -p macros-lib  --all-targets
+            cargo build --release --all --all-targets
       - run:
           name: Test in debug and release mode
           command: |

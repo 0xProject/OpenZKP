@@ -11,6 +11,7 @@ std = [
     'executive/std',
     'aura/std',
     'indices/std',
+    'inherents/std',
     'primitives/std',
     'system/std',
     'timestamp/std',
@@ -154,4 +155,10 @@ rev = 'fc206f3a009b64fc746202e5b4c701bf7e24d1f1'
 default_features = false
 git = 'https://github.com/paritytech/substrate.git'
 package = 'sr-version'
+rev = 'fc206f3a009b64fc746202e5b4c701bf7e24d1f1'
+
+[dependencies.inherents]
+default_features = false
+git = 'https://github.com/paritytech/substrate.git'
+package = 'substrate-inherents'
 rev = 'fc206f3a009b64fc746202e5b4c701bf7e24d1f1'
