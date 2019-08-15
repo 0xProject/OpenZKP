@@ -1044,7 +1044,7 @@ mod tests {
 
     #[test]
     fn left_coefficients_match() {
-        let omega: FieldElement = FieldElement::root(U256::from(256)).unwrap();
+        let omega: FieldElement = FieldElement::root(LEFT_X_COEFFICIENTS.len()).unwrap();
         let evaluation_points = geometric_series(&FieldElement::ONE, &omega, 252);
         let left_points = evaluation_points.into_iter().map(|f: FieldElement| {
             Affine::Point {
@@ -1060,7 +1060,7 @@ mod tests {
 
     #[test]
     fn right_coefficients_match() {
-        let omega: FieldElement = FieldElement::root(U256::from(256)).unwrap();
+        let omega: FieldElement = FieldElement::root(RIGHT_X_COEFFICIENTS.len()).unwrap();
         let evaluation_points = geometric_series(&FieldElement::ONE, &omega, 252);
         let right_points = evaluation_points.into_iter().map(|f: FieldElement| {
             Affine::Point {

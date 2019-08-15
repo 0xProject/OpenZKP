@@ -31,7 +31,7 @@ impl TraceTable {
     }
 
     pub fn generator(&self) -> FieldElement {
-        FieldElement::root(self.trace_length.into()).expect("No generator for trace table length.")
+        FieldElement::root(self.trace_length).expect("No generator for trace table length.")
     }
 
     pub fn iter_row(&self, i: usize) -> impl Iterator<Item = &FieldElement> {

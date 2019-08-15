@@ -73,18 +73,18 @@ pub fn eval_whole_loop(
     assert!(eval_domain_size % beta == 0);
     let trace_len = eval_domain_size / beta;
 
-    let omega = FieldElement::root(U256::from(trace_len * beta)).unwrap();
-    let g = omega.pow(U256::from(beta));
+    let omega = FieldElement::root(trace_len * beta).unwrap();
+    let g = omega.pow(beta);
     let gen = FieldElement::GENERATOR;
 
     let mut CC = Vec::with_capacity(eval_domain_size);
-    let g_trace = g.pow(U256::from(trace_len - 1));
-    let g_claim = g.pow(U256::from(public.index));
+    let g_trace = g.pow(trace_len - 1);
+    let g_claim = g.pow(public.index);
     let x = gen.clone();
-    let x_trace = (&x).pow(U256::from(trace_len));
-    let x_1023 = (&x).pow(U256::from(trace_len - 1));
-    let omega_trace = (&omega).pow(U256::from(trace_len));
-    let omega_1023 = (&omega).pow(U256::from(trace_len - 1));
+    let x_trace = (&x).pow(trace_len);
+    let x_1023 = (&x).pow(trace_len - 1);
+    let omega_trace = (&omega).pow(trace_len);
+    let omega_1023 = (&omega).pow(trace_len - 1);
 
     let x_omega_cycle = geometric_series(&x, &omega, eval_domain_size);
     let x_trace_cycle = geometric_series(&x_trace, &omega_trace, eval_domain_size);
@@ -166,24 +166,23 @@ pub fn eval_c_direct(
     constraint_coefficients: &[FieldElement],
 ) -> FieldElement {
     let trace_len = polynomials[0].len();
-    let g = FieldElement::root(U256::from(trace_len)).unwrap();
+    let g = FieldElement::root(trace_len).unwrap();
     let value = public.value.clone();
 
     let eval_P0 = |x: &FieldElement| DensePolynomial::new(polynomials[0]).evaluate(x);
     let eval_P1 = |x: &FieldElement| DensePolynomial::new(polynomials[1]).evaluate(x);
     let eval_C0 = |x: FieldElement| {
-        ((eval_P0(&(&x * &g)) - eval_P1(&x)) * (&x - &g.pow(U256::from(trace_len - 1))))
-            / (&x.pow(U256::from(trace_len)) - FieldElement::ONE)
+        ((eval_P0(&(&x * &g)) - eval_P1(&x)) * (&x - &g.pow(trace_len - 1)))
+            / (&x.pow(trace_len) - FieldElement::ONE)
     };
     let eval_C1 = |x: FieldElement| {
-        ((eval_P1(&(&x * &g)) - eval_P0(&x) - eval_P1(&x))
-            * (&x - (&g.pow(U256::from(trace_len - 1)))))
-            / (&x.pow(U256::from(trace_len)) - FieldElement::ONE)
+        ((eval_P1(&(&x * &g)) - eval_P0(&x) - eval_P1(&x)) * (&x - (&g.pow(trace_len - 1))))
+            / (&x.pow(trace_len) - FieldElement::ONE)
     };
     let eval_C2 = |x: FieldElement| {
         ((eval_P0(&x) - FieldElement::ONE) * FieldElement::ONE) / (&x - FieldElement::ONE)
     };
-    let eval_C3 = |x: FieldElement| (eval_P0(&x) - &value) / (&x - &g.pow(public.index.into()));
+    let eval_C3 = |x: FieldElement| (eval_P0(&x) - &value) / (&x - &g.pow(public.index));
 
     let deg_adj = |degree_bound, constraint_degree, numerator_degree, denominator_degree| {
         degree_bound + denominator_degree - 1 - constraint_degree - numerator_degree
@@ -195,39 +194,29 @@ pub fn eval_c_direct(
         r += &constraint_coefficients[0] * &eval_C0(x.clone());
         r += &constraint_coefficients[1]
             * &eval_C0(x.clone())
-            * (&x).pow(U256::from(deg_adj(
+            * (&x).pow(deg_adj(
                 composition_degree_bound,
                 trace_len - 1,
                 1,
                 trace_len,
-            )));
+            ));
         r += &constraint_coefficients[2] * &eval_C1(x.clone());
         r += &constraint_coefficients[3]
             * &eval_C1(x.clone())
-            * (&x).pow(U256::from(deg_adj(
+            * (&x).pow(deg_adj(
                 composition_degree_bound,
                 trace_len - 1,
                 1,
                 trace_len,
-            )));
+            ));
         r += &constraint_coefficients[4] * &eval_C2(x.clone());
         r += &constraint_coefficients[5]
             * &eval_C2(x.clone())
-            * x.pow(U256::from(deg_adj(
-                composition_degree_bound,
-                trace_len - 1,
-                0,
-                1,
-            )));
+            * x.pow(deg_adj(composition_degree_bound, trace_len - 1, 0, 1));
         r += &constraint_coefficients[6] * (eval_C3)(x.clone());
         r += &constraint_coefficients[7]
             * &eval_C3(x.clone())
-            * x.pow(U256::from(deg_adj(
-                composition_degree_bound,
-                trace_len - 1,
-                0,
-                1,
-            )));
+            * x.pow(deg_adj(composition_degree_bound, trace_len - 1, 0, 1));
         r
     };
     eval_C(x.clone())

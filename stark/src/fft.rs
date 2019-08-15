@@ -5,7 +5,7 @@ use u256::U256;
 pub fn fft(a: &[FieldElement]) -> Vec<FieldElement> {
     let mut result = a.to_vec();
     let root =
-        FieldElement::root(U256::from(result.len())).expect("No root of unity for input length");
+        FieldElement::root(result.len()).expect("No root of unity for input length");
     bit_reversal_fft(result.as_mut_slice(), root);
     bit_reversal_permute(result.as_mut_slice());
     result
@@ -20,8 +20,7 @@ pub fn fft_cofactor_bit_reversed(a: &[FieldElement], cofactor: &FieldElement) ->
         c *= cofactor;
     }
 
-    let root =
-        FieldElement::root(U256::from(result.len())).expect("No root of unity for input length");
+    let root = FieldElement::root(result.len()).expect("No root of unity for input length");
     bit_reversal_fft(result.as_mut_slice(), root);
     result
 }
@@ -48,13 +47,13 @@ pub fn ifft(a: &[FieldElement]) -> Vec<FieldElement> {
 fn bit_reversal_fft(coefficients: &mut [FieldElement], root: FieldElement) {
     let n_elements = coefficients.len();
     debug_assert!(n_elements.is_power_of_two());
-    debug_assert!(root.pow(U256::from(n_elements)).is_one());
+    debug_assert!(root.pow(n_elements).is_one());
     for layer in 0..n_elements.trailing_zeros() {
         let n_blocks = 1 << layer;
         let mut twiddle_factor = FieldElement::ONE;
         // OPT: In place combined update like gcd::mat_mul.
         let block_size = n_elements >> (layer + 1);
-        let twiddle_factor_update = root.pow(U256::from(block_size));
+        let twiddle_factor_update = root.pow(block_size);
         for block in 0..n_blocks {
             // TODO: Do without casts.
             let block_start = 2 * reverse(block as u64, layer) as usize * block_size;
@@ -126,13 +125,7 @@ mod tests {
             FieldElement::from_hex_str("9986432"),
         ];
         let expected: Vec<FieldElement> = (0..4u64)
-            .map(|i| {
-                DensePolynomial::new(&v).evaluate(
-                    &FieldElement::root(U256::from(4))
-                        .unwrap()
-                        .pow(U256::from(i)),
-                )
-            })
+            .map(|i| DensePolynomial::new(&v).evaluate(&FieldElement::root(4).unwrap().pow(i)))
             .collect();
 
         assert_eq!(fft(&v), expected);
@@ -150,9 +143,9 @@ mod tests {
             FieldElement::from_hex_str("31234230"),
             FieldElement::from_hex_str("99864321"),
         ];
-        let eighth_root_of_unity = FieldElement::root(U256::from(8)).unwrap();
+        let eighth_root_of_unity = FieldElement::root(8).unwrap();
         let expected: Vec<FieldElement> = (0..8u64)
-            .map(|i| DensePolynomial::new(&v).evaluate(&eighth_root_of_unity.pow(U256::from(i))))
+            .map(|i| DensePolynomial::new(&v).evaluate(&eighth_root_of_unity.pow(i)))
             .collect();
 
         assert_eq!(fft(&v), expected);
@@ -196,10 +189,7 @@ mod tests {
         let mut res = fft(&vector);
 
         for (i, x) in fft(&vector).into_iter().enumerate() {
-            assert_eq!(
-                x,
-                DensePolynomial::new(&vector).evaluate(&root.pow(U256::from(i)))
-            );
+            assert_eq!(x, DensePolynomial::new(&vector).evaluate(&root.pow(i)));
         }
 
         assert_eq!(

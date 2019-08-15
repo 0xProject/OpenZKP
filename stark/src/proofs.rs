@@ -195,8 +195,7 @@ where
     // Compute some constants.
     let g = trace.generator();
     let eval_domain_size = trace.num_rows() * params.blowup;
-    let omega =
-        FieldElement::root(eval_domain_size.into()).expect("No generator for extended domain.");
+    let omega = FieldElement::root(eval_domain_size).expect("No generator for extended domain.");
     let eval_x = geometric_series(&FieldElement::ONE, &omega, eval_domain_size);
 
     // Initialize a proof channel with the public input.
@@ -367,7 +366,7 @@ pub fn geometric_series(base: &FieldElement, step: &FieldElement, len: usize) ->
         .par_chunks_mut(step_len)
         .enumerate()
         .for_each(|(i, slice)| {
-            let mut hold = base * step.pow(U256::from(i * step_len));
+            let mut hold = base * step.pow(i * step_len);
             for element in slice.iter_mut() {
                 *element = hold.clone();
                 hold *= step;
@@ -395,14 +394,14 @@ fn calculate_low_degree_extensions(
     eval_x: &[FieldElement],
 ) -> Vec<Vec<FieldElement>> {
     let trace_len = trace_poly[0].len();
-    let omega = FieldElement::root(U256::from(trace_len * params.blowup)).unwrap();
+    let omega = FieldElement::root(trace_len * params.blowup).unwrap();
     let gen = FieldElement::GENERATOR;
 
     let mut trace_lde = vec![Vec::with_capacity(eval_x.len()); trace_poly.len()];
     trace_lde.par_iter_mut().enumerate().for_each(|(x, col)| {
         for index in 0..params.blowup {
             let reverse_index = index.bit_reverse_at(params.blowup);
-            let cofactor = &gen * omega.pow(U256::from(reverse_index));
+            let cofactor = &gen * omega.pow(reverse_index);
             col.extend(fft_cofactor_bit_reversed(trace_poly[x], &cofactor));
         }
     });
@@ -421,7 +420,7 @@ fn calculate_constraints_on_domain<Public>(
     let mut constraint_lde;
     let trace_len = trace_poly[0].len();
     let mut x = FieldElement::GENERATOR;
-    let omega = FieldElement::root(U256::from(trace_len * blowup)).unwrap();
+    let omega = FieldElement::root(trace_len * blowup).unwrap();
     let eval_domain_size = trace_len * blowup;
 
     match constraints.eval_loop {
@@ -497,8 +496,8 @@ fn calculate_out_of_domain_constraints(
 ) -> Vec<FieldElement> {
     let eval_domain_size = eval_x.len();
     let trace_len = eval_domain_size / blowup;
-    let omega = FieldElement::root(U256::from(trace_len * blowup)).unwrap();
-    let trace_generator = omega.pow(U256::from(blowup));
+    let omega = FieldElement::root(trace_len * blowup).unwrap();
+    let trace_generator = omega.pow(blowup);
 
     let mut oods_constraint_lde = Vec::with_capacity(eval_domain_size);
     let domain_shift = FieldElement::GENERATOR;
