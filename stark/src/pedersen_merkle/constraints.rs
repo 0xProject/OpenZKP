@@ -657,9 +657,24 @@ pub fn get_coefficients() -> Vec<FieldElement> {
 mod test {
     use super::*;
     use crate::{
-        pedersen_merkle::proof::{get_extended_trace_table, get_trace_polynomials},
         proofs::get_constraint_polynomial,
     };
+    use super::*;
+    use crate::{
+        pedersen_merkle::{
+            inputs::{starkware_private_input, STARKWARE_PUBLIC_INPUT},
+            trace_table::get_trace_table,
+        },
+        proofs::{
+            calculate_low_degree_extensions, interpolate_trace_table, Merkleizable, ProofParams,
+        },
+    };
+    use macros_decl::{hex, u256h};
+
+    fn get_trace_polynomials() -> Vec<DensePolynomial> {
+        let trace_table = get_trace_table(&STARKWARE_PUBLIC_INPUT, &starkware_private_input());
+        interpolate_trace_table(&trace_table)
+    }
 
     #[test]
     fn pedersen_coordinates_are_correct() {
@@ -793,7 +808,7 @@ mod test {
     fn new_matches_old_constraints() {
         let trace_polynomials = get_trace_polynomials();
 
-        let constraints = get_pedersen_merkle_constraints(&get_public_input());
+        let constraints = get_pedersen_merkle_constraints(&STARKWARE_PUBLIC_INPUT);
         let mut constraint_coefficients = vec![FieldElement::ZERO; 100];
         for i in 0..2 * constraints.len() {
             constraint_coefficients[i] = FieldElement::ONE;
@@ -809,7 +824,7 @@ mod test {
         );
 
         let constraint_polynomial =
-            get_constraint_polynomial(&trace_polynomials, &constraints, &constraint_coefficients);
+            get_constraint_polynomial(&trace_polynomials, &constraints, &constraint_coefficients, 2);
         let new = constraint_polynomial.evaluate(&x);
 
         assert_eq!(old, new);
@@ -819,8 +834,9 @@ mod test {
     fn wayne() {
         let constraint_polynomial = get_constraint_polynomial(
             &get_trace_polynomials(),
-            &get_pedersen_merkle_constraints(&get_public_input()),
+            &get_pedersen_merkle_constraints(&STARKWARE_PUBLIC_INPUT),
             &get_coefficients(),
+            2,
         );
 
         let oods_point = FieldElement::from_hex_str(
@@ -839,8 +855,9 @@ mod test {
     fn oods_2() {
         let constraint_polynomial = get_constraint_polynomial(
             &get_trace_polynomials(),
-            &get_pedersen_merkle_constraints(&get_public_input()),
+            &get_pedersen_merkle_constraints(&STARKWARE_PUBLIC_INPUT),
             &get_coefficients(),
+            2,
         );
 
         let oods_point = FieldElement::from_hex_str(
