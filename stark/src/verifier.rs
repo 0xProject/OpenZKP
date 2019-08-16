@@ -13,7 +13,7 @@ pub fn check_proof<Public>(
     trace_len: usize,
 ) -> bool
 where
-    Public: PartialEq + Clone + Into<Vec<u8>>, 
+    Public: PartialEq + Clone + Into<Vec<u8>>,
     VerifierChannel: Replayable<Public> + Replayable<Hash>,
 {
     let omega = FieldElement::root(trace_len * params.blowup).unwrap();
