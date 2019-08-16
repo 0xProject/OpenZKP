@@ -360,20 +360,17 @@ fn evalute_polynomial_on_domain(
         .expect("No generator for extended_domain_length.");
     let shift_factor = FieldElement::GENERATOR;
 
-    let mut result: Vec<FieldElement> = Vec::with_capacity(extended_domain_length);
+    let mut result: MmapVec<FieldElement> = MmapVec::with_capacity(extended_domain_length);
     for index in 0..blowup {
         let reverse_index = index.bit_reverse_at(blowup);
         let cofactor =
             &shift_factor * extended_domain_generator.pow(U256::from(reverse_index as u64));
-        result.extend(fft_cofactor_bit_reversed(
+        result.extend(&fft_cofactor_bit_reversed(
             constraint_polynomial.coefficients(),
             &cofactor,
         ));
     }
-
-    let mut m = MmapVec::with_capacity(result.len());
-    m.extend(&result);
-    m
+    result
 }
 
 pub fn get_constraint_polynomial(
