@@ -5,7 +5,7 @@ commands:
     steps:
       - run:
           name: Allow CirceCI to write cargo home (workaround)
-          command: sudo mkdir /usr/local/cargo && sudo chown -R circleci /usr/local/cargo
+          command: sudo mkdir -p /usr/local/cargo && sudo chown -R circleci /usr/local/cargo
       - restore_cache:
           name: Restore cargo home cache
           key: cargo-home-v1-{{ arch }}
