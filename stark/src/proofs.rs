@@ -646,7 +646,7 @@ mod tests {
         fibonacci::{get_fibonacci_constraints, get_trace_table, PrivateInput, PublicInput},
         verifier::check_proof,
     };
-    use macros_decl::{hex, u256h};
+    use macros_decl::{field_element, hex, u256h};
     use u256::U256;
 
     #[test]
@@ -667,7 +667,8 @@ mod tests {
             tt[(1000, 0)],
             field_element!("04d5f1f669b34fb7252d5a9d0d9786b2638c27eaa04e820b38b088057960cca1")
         );
-        let actual = stark_proof(&tt, &get_constraint(), &public, &ProofParams {
+        let constraints = &get_fibonacci_constraints(&public);
+        let actual = stark_proof(&tt, &constraints, &public, &ProofParams {
             blowup:                   16,
             pow_bits:                 0,
             queries:                  20,
