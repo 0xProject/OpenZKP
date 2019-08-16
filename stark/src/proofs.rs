@@ -4,6 +4,7 @@ use crate::{
     hash::Hash,
     hashable::Hashable,
     merkle::{self, make_tree},
+    mmap_vec::MmapVec,
     polynomial::{DensePolynomial, SparsePolynomial},
     utils::Reversible,
     TraceTable,
@@ -101,7 +102,7 @@ impl Groupable<Vec<U256>> for (usize, &[FieldElement]) {
     }
 }
 
-impl Groupable<Vec<U256>> for &[Vec<FieldElement>] {
+impl Groupable<Vec<U256>> for &[MmapVec<FieldElement>] {
     fn make_group(&self, index: usize) -> Vec<U256> {
         let mut ret = Vec::with_capacity(self.len());
         for item in self.iter() {
@@ -340,10 +341,9 @@ pub fn interpolate_trace_table(table: &TraceTable) -> Vec<DensePolynomial> {
 fn calculate_low_degree_extensions(
     trace_polynomials: &[DensePolynomial],
     blowup: usize,
-) -> Vec<Vec<FieldElement>> {
-    let extended_domain_length = trace_polynomials[0].len() * blowup;
-    let mut low_degree_extensions: Vec<Vec<FieldElement>> =
-        vec![Vec::with_capacity(extended_domain_length); trace_polynomials.len()];
+) -> Vec<MmapVec<FieldElement>> {
+    let mut low_degree_extensions: Vec<MmapVec<FieldElement>> =
+        Vec::with_capacity(trace_polynomials.len());
     trace_polynomials
         .par_iter()
         .map(|p| evalute_polynomial_on_domain(&p, blowup))
@@ -354,7 +354,7 @@ fn calculate_low_degree_extensions(
 fn evalute_polynomial_on_domain(
     constraint_polynomial: &DensePolynomial,
     blowup: usize,
-) -> Vec<FieldElement> {
+) -> MmapVec<FieldElement> {
     let extended_domain_length = constraint_polynomial.len() * blowup;
     let extended_domain_generator = FieldElement::root(extended_domain_length)
         .expect("No generator for extended_domain_length.");
@@ -370,7 +370,10 @@ fn evalute_polynomial_on_domain(
             &cofactor,
         ));
     }
-    result
+
+    let mut m = MmapVec::with_capacity(result.len());
+    m.extend(&result);
+    m
 }
 
 pub fn get_constraint_polynomial(
