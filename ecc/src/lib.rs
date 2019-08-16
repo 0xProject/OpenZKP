@@ -1,9 +1,13 @@
 // TODO: #![deny(missing_docs)]
 #![warn(clippy::all)]
 #![deny(warnings)]
+#![cfg_attr(not(feature = "std"), no_std)]
 mod curve;
 mod jacobian;
 mod wnaf;
+
+#[cfg(not(feature = "std"))]
+extern crate no_std_compat as std;
 
 pub use curve::Affine;
 pub use jacobian::Jacobian;

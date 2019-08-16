@@ -11,6 +11,7 @@ std = [
     'executive/std',
     'aura/std',
     'indices/std',
+    'inherents/std',
     'primitives/std',
     'system/std',
     'timestamp/std',
@@ -23,7 +24,11 @@ std = [
 ]
 
 [dependencies]
-starkdex = { path = "../../starkdex" }
+starkdex = { path = "../../starkdex", default_features = false }
+stark = { path = "../../stark", default_features = false}
+primefield = { path = "../../primefield", default_features = false}
+u256 = { path = "../../u256", default_features = false}
+macros-decl = { path = "../../macros_decl" }
 
 [package]
 authors = ['Parity Technologies <admin@parity.io>']
@@ -150,4 +155,10 @@ rev = 'fc206f3a009b64fc746202e5b4c701bf7e24d1f1'
 default_features = false
 git = 'https://github.com/paritytech/substrate.git'
 package = 'sr-version'
+rev = 'fc206f3a009b64fc746202e5b4c701bf7e24d1f1'
+
+[dependencies.inherents]
+default_features = false
+git = 'https://github.com/paritytech/substrate.git'
+package = 'substrate-inherents'
 rev = 'fc206f3a009b64fc746202e5b4c701bf7e24d1f1'

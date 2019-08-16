@@ -5,15 +5,23 @@ authors = ["Remco Bloemen <remco@0x.org>"]
 edition = "2018"
 
 [dependencies]
-u256 =  { path = "../u256" }
 hex = ""
 itertools = "0.8.0"
 crunchy = "0.2.2"
 quickcheck = {version = "0.8", optional = true}
 macros-decl = { path = "../macros_decl" }
 
+# no-std dependencies
+[target.'cfg(not(feature="std"))'.dependencies]
+no-std-compat = { version = "0.1.0", features = [ "alloc" ] }
+u256 =  { path = "../u256", default-features = false}
+
+# std dependencies
+[target.'cfg(feature="std")'.dependencies]
+u256 =  { path = "../u256"}
+
 [dev-dependencies]
-u256 =  { path = "../u256", features = ["quickcheck"] }
+u256 =  { path = "../u256", features = ["quickcheck"]} 
 criterion = "0.2.10"
 quickcheck = "0.8"
 quickcheck_macros = "0.8"
@@ -21,3 +29,7 @@ quickcheck_macros = "0.8"
 [[bench]]
 name = "benchmark"
 harness = false
+
+[features]
+default = [ "std" ] # Default to using the std
+std = [ "no-std-compat/std" ]

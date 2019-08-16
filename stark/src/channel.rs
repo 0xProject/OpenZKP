@@ -2,6 +2,7 @@ use crate::hash::Hash;
 use macros_decl::{hex, u256h};
 use primefield::FieldElement;
 use rayon::prelude::*;
+use std::prelude::v1::*;
 use tiny_keccak::Keccak;
 use u256::U256;
 

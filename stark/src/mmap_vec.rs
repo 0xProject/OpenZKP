@@ -3,6 +3,7 @@ use std::{
     marker::PhantomData,
     mem::size_of,
     ops::{Deref, DerefMut},
+    prelude::v1::*,
     slice,
 };
 use tempfile::tempfile;

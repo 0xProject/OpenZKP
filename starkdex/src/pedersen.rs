@@ -2,6 +2,7 @@ use crate::pedersen_points::PEDERSEN_POINTS;
 use ecc::{Affine, Jacobian};
 use macros_decl::u256h;
 use primefield::FieldElement;
+use std::prelude::v1::*;
 use u256::U256;
 
 // x = 0x049ee3eba8c1600700ee1b87eb599f16716b0b1022947733551fde4050ca6804

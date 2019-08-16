@@ -1,6 +1,6 @@
 use crate::{channel::*, polynomial::SparsePolynomial, proofs::Constraint, TraceTable};
 use primefield::FieldElement;
-use std::convert::TryInto;
+use std::{convert::TryInto, prelude::v1::*, vec};
 use u256::U256;
 
 #[allow(dead_code)] // TODO

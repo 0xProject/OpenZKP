@@ -1,3 +1,4 @@
+use std::prelude::v1::*;
 use crate::{
     commutative_binop,
     division::{divrem_nby1, divrem_nbym},
@@ -16,16 +17,17 @@ use std::{
     },
     u64,
 };
+use std::format;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ParseError {
     Empty,
     Overflow,
-    InnerError(std::num::ParseIntError),
+    InnerError(core::num::ParseIntError),
 }
 
-impl From<std::num::ParseIntError> for ParseError {
-    fn from(error: std::num::ParseIntError) -> Self {
+impl From<core::num::ParseIntError> for ParseError {
+    fn from(error: core::num::ParseIntError) -> Self {
         ParseError::InnerError(error)
     }
 }

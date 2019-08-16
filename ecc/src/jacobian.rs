@@ -1,6 +1,9 @@
 use crate::{curve::Affine, curve_operations};
 use primefield::FieldElement;
-use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
+use std::{
+    ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
+    prelude::v1::*,
+};
 use u256::{commutative_binop, noncommutative_binop, U256};
 
 // See http://www.hyperelliptic.org/EFD/g1p/auto-shortw-jacobian.html

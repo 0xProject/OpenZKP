@@ -1,6 +1,9 @@
 use crate::BETA;
 use primefield::FieldElement;
-use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
+use std::{
+    ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
+    prelude::v1::*,
+};
 use u256::{commutative_binop, noncommutative_binop, U256};
 
 #[derive(PartialEq, Eq, Clone, Debug)]

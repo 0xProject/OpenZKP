@@ -1,5 +1,5 @@
 use crate::utils::{adc, msb};
-use std::u64;
+use core::u64;
 
 #[inline(always)]
 const fn val_2(lo: u64, hi: u64) -> u128 {

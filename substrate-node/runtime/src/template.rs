@@ -1,5 +1,12 @@
 #[allow(unused_imports)] // TODO - Remove when used
 use starkdex::wrappers::*;
+use stark::{
+    fibonacci::{get_fibonacci_constraints, get_trace_table, PrivateInput, PublicInput},
+    stark_proof, ProofParams, check_proof
+};
+use macros_decl::u256h;
+use u256::U256;
+use primefield::{FieldElement};
 /// A runtime module template with necessary imports
 
 /// Feel free to remove or edit this file as needed.
@@ -25,7 +32,7 @@ decl_storage! {
         // Just a dummy storage item.
         // Here we are declaring a StorageValue, `Something` as a Option<u32>
         // `get(something)` is the default getter which returns either the stored `u32` or `None` if nothing stored
-        Something get(something): Option<u32>;
+        Something get(something): Option<[u8; 32]>;
     }
 }
 
@@ -39,17 +46,58 @@ decl_module! {
         // Just a dummy entry point.
         // function that can be called by the external world as an extrinsics call
         // takes a parameter of the type `AccountId`, stores it and emits an event
-        pub fn do_something(origin, something: u32) -> Result {
+        pub fn do_something(origin, at: usize) -> Result {
             // TODO: You only need this if you want to check it was signed.
             let who = ensure_signed(origin)?;
 
+            let private = PrivateInput {
+            secret: FieldElement::from(u256h!(
+                "00000000000000000000000000000000000000000000000f00dbabe0cafebabe"
+            )),
+        };
+        let tt = get_trace_table(1024, &private);
+        let public = PublicInput {
+            index: at,
+            value: tt[(at, 0)].clone(),
+        };
+        let actual = stark_proof(
+            &get_trace_table(1024, &private),
+            &get_fibonacci_constraints(&public),
+            &public,
+            &ProofParams {
+                blowup:                   16, 
+                pow_bits:                 12,
+                queries:                  20,
+                fri_layout:               vec![3, 2],
+                constraints_degree_bound: 1,
+            },
+        );
+
+        let digest = actual.coin.digest.clone();
+
+        if check_proof(
+            actual,
+            &get_fibonacci_constraints(&public),
+            &public,
+            &ProofParams {
+                blowup:                   16,
+                pow_bits:                 12,
+                queries:                  20,
+                fri_layout:               vec![3, 2],
+                constraints_degree_bound: 1,
+            },
+            2,
+            1024
+        ) {
             // TODO: Code to execute when something calls this.
             // For example: the following line stores the passed in u32 in the storage
-            <Something<T>>::put(something);
+
+            <Something<T>>::put(digest);
 
             // here we are raising the Something event
-            Self::deposit_event(RawEvent::SomethingStored(something, who));
-            Ok(())
+            Self::deposit_event(RawEvent::SomethingStored(at, who));
+        }
+        Ok(())
         }
     }
 }
@@ -62,7 +110,7 @@ decl_event!(
         // Just a dummy event.
         // Event `Something` is declared with a parameter of the type `u32` and `AccountId`
         // To emit this event, we call the deposit funtion, from our runtime funtions
-        SomethingStored(u32, AccountId),
+        SomethingStored(usize, AccountId),
     }
 );
 
@@ -124,7 +172,7 @@ mod tests {
             // calling the `do_something` function with a value 42
             assert_ok!(TemplateModule::do_something(Origin::signed(1), 42));
             // asserting that the stored value is equal to what we stored
-            assert_eq!(TemplateModule::something(), Some(42));
+            // assert_eq!(TemplateModule::something(), Some(42));
         });
     }
 }

@@ -5,10 +5,6 @@ authors = ["Remco Bloemen <remco@0x.org>"]
 edition = "2018"
 
 [dependencies]
-u256 =  { path = "../u256" }
-ecc = { path = "../ecc" }
-starkdex = { path = "../starkdex" }
-primefield =  { path = "../primefield" }
 crossbeam = "0.3.0"
 rayon = "1.0.3"
 hex = ""
@@ -19,6 +15,22 @@ crunchy = "0.2.2"
 memmap = ""
 tempfile = ""
 macros-decl = { path = "../macros_decl" }
+
+# no-std dependencies
+[target.'cfg(not(feature="std"))'.dependencies]
+no-std-compat = { version = "0.1.0", features = [ "alloc" ] }
+u256 =  { path = "../u256", default-features = false }
+ecc = { path = "../ecc", default-features = false }
+starkdex = { path = "../starkdex", default-features = false }
+primefield =  { path = "../primefield", default-features = false }
+
+
+# std dependencies
+[target.'cfg(feature="std")'.dependencies]
+u256 =  { path = "../u256" }
+ecc = { path = "../ecc"}
+starkdex = { path = "../starkdex"}
+primefield =  { path = "../primefield"}
 
 [dev-dependencies]
 primefield = { path = "../primefield", features = ["quickcheck"]}
@@ -31,3 +43,7 @@ num_cpus = "1.10.1"
 [[bench]]
 name = "benchmark"
 harness = false
+
+[features]
+default = ["std"] # Default to using the std
+std = [ "no-std-compat/std" ]

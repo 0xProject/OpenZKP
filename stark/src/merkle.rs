@@ -1,6 +1,6 @@
 use crate::{hash::Hash, hashable::Hashable, masked_keccak::MaskedKeccak, proofs::*};
 use rayon::prelude::*;
-use std::marker::Sync;
+use std::{marker::Sync, prelude::v1::*, vec};
 
 struct MerkleNode<'a>(&'a Hash, &'a Hash);
 

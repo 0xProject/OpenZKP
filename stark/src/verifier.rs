@@ -1,7 +1,7 @@
 use crate::{channel::*, hash::*, merkle::*, polynomial::DensePolynomial, proofs::*, utils::*};
 use itertools::Itertools;
 use primefield::FieldElement;
-use std::{collections::HashMap, convert::TryInto};
+use std::{collections::HashMap, convert::TryInto, prelude::v1::*};
 use u256::U256;
 
 pub fn check_proof<Public>(

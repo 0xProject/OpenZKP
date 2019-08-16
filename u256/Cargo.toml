@@ -11,6 +11,9 @@ crunchy = "0.2.2"
 quickcheck = { version = "0.8", optional = true }
 macros-decl = { path = "../macros_decl" }
 
+[target.'cfg(not(feature="std"))'.dependencies]
+no-std-compat = { version = "0.1.0", features = [ "alloc" ] }
+
 [dev-dependencies]
 criterion = "0.2.10"
 quickcheck_macros = "0.8"
@@ -19,3 +22,7 @@ quickcheck = "0.8"
 [[bench]]
 name = "benchmark"
 harness = false
+
+[features]
+default = ["std"] # Default to using the std
+std = [ "no-std-compat/std" ]

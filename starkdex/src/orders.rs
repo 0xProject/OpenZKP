@@ -1,4 +1,5 @@
 use crate::pedersen::hash;
+use std::prelude::v1::*;
 use u256::U256;
 
 #[derive(Debug)]

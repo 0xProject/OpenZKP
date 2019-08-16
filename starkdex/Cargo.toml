@@ -5,13 +5,23 @@ authors = ["Remco Bloemen <remco@0x.org>"]
 edition = "2018"
 
 [dependencies]
-u256 =  { path = "../u256" }
-primefield =  { path = "../primefield" }
-ecc =  { path = "../ecc", features=["unsafe_ecdsa"]  }
 hex = ""
 itertools = "0.8.0"
 crunchy = "0.2.2"
 macros-decl = { path = "../macros_decl" }
+
+# no-std loading dependencies
+[target.'cfg(not(feature="std"))'.dependencies]
+no-std-compat = { version = "0.1.0", features = [ "alloc" ] }
+u256 =  { path = "../u256", default-features = false }
+primefield =  { path = "../primefield", default-features = false }
+ecc =  { path = "../ecc", features=["unsafe_ecdsa"], default-features = false  }
+
+# Std loading dependencies
+[target.'cfg(feature="std")'.dependencies]
+u256 =  { path = "../u256"}
+primefield =  { path = "../primefield"}
+ecc =  { path = "../ecc", features=["unsafe_ecdsa"]}
 
 [dev-dependencies]
 criterion = "0.2.10"
@@ -19,3 +29,7 @@ criterion = "0.2.10"
 [[bench]]
 name = "benchmark"
 harness = false
+
+[features]
+default = [ "std" ] # Default to using the std
+std = [ "no-std-compat/std" ]

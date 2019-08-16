@@ -1,6 +1,7 @@
 // TODO: #![deny(missing_docs)]
 #![warn(clippy::all)]
 #![deny(warnings)]
+#![cfg_attr(not(feature = "std"), no_std)]
 mod channel;
 mod fft;
 pub mod fibonacci;
@@ -26,3 +27,5 @@ pub use verifier::check_proof;
 // TODO: Avoid publicly exposing.
 pub use fft::fft_cofactor_bit_reversed;
 pub use merkle::make_tree;
+#[cfg(not(feature = "std"))]
+extern crate no_std_compat as std;
