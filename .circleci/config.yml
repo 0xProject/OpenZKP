@@ -48,6 +48,7 @@ jobs:
       - RUST_BACKTRACE: 1
       - RUSTFLAGS: -Dwarnings
       - NIGHTLY: nightly-2019-08-15
+      - PROJECTS: -p ecc -p primefield -p starkdex -p starkcrypto-wasm -p stark -p macros-decl -p macros-impl -p macros-lib
     steps:
       - checkout
       - restore-cargo-home-cache
@@ -65,22 +66,25 @@ jobs:
             rustup --version
           no_output_timeout: 1800s
       - run:
-          name: Build all targets
-          command: |
-            cargo build -p ecc -p primefield -p starkdex -p starkcrypto-wasm -p stark -p macros-decl -p macros-impl -p macros-lib  --all-targets
-            cargo +$NIGHTLY build -p ecc -p primefield -p starkdex -p starkcrypto-wasm -p stark -p macros-decl -p macros-impl -p macros-lib  --all-targets
+          name: Build all targets on stable
+          command: cargo build $PROJECTS  --all-targets
       - run:
-          name: Linting
-          command: |
-            cargo +$NIGHTLY fmt -p ecc primefield starkdex starkcrypto-wasm stark macros-decl macros-impl macros-lib -- --check
-            cargo clippy -p ecc -p primefield -p starkdex -p starkcrypto-wasm -p stark -p macros-decl -p macros-impl -p macros-lib --all-targets
+          name: Build all targets on nightly
+          command: cargo +$NIGHTLY build $PROJECTS  --all-targets
       - run:
-          name: Test in debug and release mode
-          command: |
-            cargo test -p ecc -p primefield -p starkdex -p starkcrypto-wasm -p stark -p macros-decl -p macros-impl -p macros-lib -- --nocapture
-            cargo test --release -p ecc -p primefield -p starkdex -p starkcrypto-wasm -p stark -p macros-decl -p macros-impl -p macros-lib -- --nocapture
+          name: Lint with rustformat nightly
+          command: cargo +$NIGHTLY fmt $PROJECTS -- --check
       - run:
-          name: Run benchmarks as tests
+          name: Lint with clippy
+          command: cargo clippy $PROJECTS --all-targets
+      - run:
+          name: Test debug build
+          command: cargo test $PROJECTS -- --nocapture
+      - run:
+          name: Test debug release build
+          command: cargo test --release $PROJECTS -- --nocapture
+      - run:
+          name: Test benchmarks
           command: |
             # Actually running the benchmarks on CI is too noisy. The results
             # would be meaningless. Instead we just run it to make sure they work.
