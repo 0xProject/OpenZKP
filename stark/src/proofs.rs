@@ -154,7 +154,7 @@ where
     for<'a> ProverChannel: Writable<&'a Hash>,
 {
     // Compute some constants.
-    let g = trace.generator();
+    let _g = trace.generator();
     let eval_domain_size = trace.num_rows() * params.blowup;
     let omega = FieldElement::root(eval_domain_size).expect("No generator for extended domain.");
     let eval_x = geometric_series(&FieldElement::ONE, &omega, eval_domain_size);
@@ -186,7 +186,7 @@ where
     }
 
     let constraint_polynomial =
-        get_constraint_polynomial(&trace_polynomials, constraints, &constraint_coefficients);
+        get_constraint_polynomial(&trace_polynomials, constraints, &constraint_coefficients, params.constraints_degree_bound);
 
     let constraint_lde = evalute_polynomial_on_domain(&constraint_polynomial, params.blowup);
 
@@ -371,22 +371,24 @@ pub fn get_constraint_polynomial(
     trace_polynomials: &[DensePolynomial],
     constraints: &[Constraint],
     constraint_coefficients: &[FieldElement],
+    constraints_degree_bound: usize,
 ) -> DensePolynomial {
-    let mut constraint_polynomial = DensePolynomial::new(&[]); // Use known trace length here....
+    let mut constraint_polynomial = DensePolynomial::new(&vec![FieldElement::ZERO; constraints_degree_bound]);
     let trace_length = trace_polynomials[0].len();
-    let trace_generator = FieldElement::root(U256::from(trace_length as u64)).unwrap();
     for (i, constraint) in constraints.iter().enumerate() {
         let mut p = (constraint.base)(trace_polynomials);
+        println!("{} starting!", { i });
         p *= constraint.numerator.clone();
+        println!("{} multiplied!", { i });
         p /= constraint.denominator.clone();
         constraint_polynomial += &(&constraint_coefficients[2 * i] * &p);
         p *= SparsePolynomial::new(&[(
             constraint_coefficients[2 * i + 1].clone(),
-            trace_length - p.len(),
+            constraints_degree_bound - p.len(),
         )]);
         constraint_polynomial += &(*&p);
         assert_eq!(p.len(), 2 * trace_length);
-        println!("{}", { i });
+        println!("{} finished!", { i });
     }
     constraint_polynomial
 }
@@ -636,7 +638,8 @@ fn decommit_fri_layers_and_trees(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fibonacci::{get_fibonacci_constraints, get_trace_table};
+    use crate::fibonacci::{get_fibonacci_constraints, get_trace_table, PublicInput, PrivateInput};
+    use crate::verifier::check_proof;
     use macros_decl::{hex, u256h};
     use u256::U256;
 
@@ -693,7 +696,7 @@ mod tests {
 
         assert!(check_proof(
             actual,
-            &get_constraint(),
+            &get_fibonacci_constraints(&public),
             &public,
             &ProofParams {
                 blowup: 16, /* TODO - The blowup in the fib constraints is hardcoded to 16,
@@ -733,7 +736,7 @@ mod tests {
 
         assert!(check_proof(
             actual,
-            &get_constraint(),
+            &constraints,
             &public,
             &ProofParams {
                 blowup:                   16,
@@ -786,7 +789,7 @@ mod tests {
         };
 
         let trace_len = 1024;
-        let constraints = get_fibonacci_constraints(trace_len, claim_value.clone(), claim_index);
+        let constraints = get_fibonacci_constraints(&public);
         let params = ProofParams {
             blowup:                   16,
             pow_bits:                 12,
@@ -821,7 +824,7 @@ mod tests {
         let TP0 = TPn[0].clone();
         let TP1 = TPn[1].clone();
         // Checks that the trace table polynomial interpolation is working
-        assert_eq!(TP0.evaluate(&trace_x[1000]), trace.elements[2000]);
+        assert_eq!(TP0.evaluate(&trace_x[1000]), trace[(1000, 0)]);
 
         let LDEn = calculate_low_degree_extensions(&TPn, params.blowup);
 
@@ -840,6 +843,8 @@ mod tests {
             (LDEn.as_slice().make_group(3243))[1].clone(),
             u256h!("03dbc6c47df0606997c2cefb20c4277caf2b76bca1d31c13432f71cdd93b3718")
         );
+
+        println!("hooray!");
 
         let tree = LDEn.merkleize();
         // Checks that the merklelizable implementation is working [implicit check of
@@ -879,8 +884,10 @@ mod tests {
 
         let LDEn_reference: Vec<&[FieldElement]> = LDEn.iter().map(|x| x.as_slice()).collect();
 
+        println!("yay!");
+
         let constraint_polynomial =
-            get_constraint_polynomial(&TPn, &constraints, &constraint_coefficients);
+            get_constraint_polynomial(&TPn, &constraints, &constraint_coefficients, params.constraints_degree_bound);
         assert_eq!(constraint_polynomial.len(), 1024);
         let CC = evalute_polynomial_on_domain(&constraint_polynomial, params.blowup);
         // Checks that our constraints are properly calculated on the domain

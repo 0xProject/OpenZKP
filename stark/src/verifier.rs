@@ -344,7 +344,7 @@ mod tests {
         };
         let actual = stark_proof(
             &get_trace_table(1024, &private),
-            &get_constraint(),
+            &get_fibonacci_constraints(&public),
             &public,
             &ProofParams {
                 blowup:                   16,
@@ -357,7 +357,7 @@ mod tests {
 
         assert!(check_proof(
             actual,
-            &get_constraint(),
+            &get_fibonacci_constraints(&public),
             &public,
             &ProofParams {
                 blowup:                   16,
