@@ -29,7 +29,7 @@ where
     // TODO: Make it work as channel.read()
     let low_degree_extension_root = Replayable::<Hash>::replay(&mut channel);
     let mut constraint_coefficients: Vec<FieldElement> = Vec::with_capacity(2 * constraints.len());
-    for _ in 0..10 {
+    for _ in constraints {
         constraint_coefficients.push(channel.get_random());
         constraint_coefficients.push(channel.get_random());
     }
