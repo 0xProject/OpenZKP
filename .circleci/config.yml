@@ -3,6 +3,9 @@ version: 2.1
 commands:
   restore-cargo-home-cache:
     steps:
+      - run:
+          name: Allow CirceCI to write cargo home (workaround)
+          command: sudo mkdir /usr/local/cargo && sudo chown -R circleci /usr/local/cargo
       - restore_cache:
           name: Restore cargo home cache
           key: cargo-home-v1-{{ arch }}
