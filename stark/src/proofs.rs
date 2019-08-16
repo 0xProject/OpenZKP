@@ -180,8 +180,9 @@ where
     //
 
     // Read constraint coefficients from the channel.
-    let mut constraint_coefficients = Vec::with_capacity(constraints.len());
+    let mut constraint_coefficients = Vec::with_capacity(2 * constraints.len());
     for _ in constraints {
+        constraint_coefficients.push(proof.get_random());
         constraint_coefficients.push(proof.get_random());
     }
 
@@ -354,8 +355,8 @@ fn evalute_polynomial_on_domain(
     blowup: usize,
 ) -> Vec<FieldElement> {
     let extended_domain_length = constraint_polynomial.len() * blowup;
-    let extended_domain_generator =
-        FieldElement::root(U256::from((extended_domain_length) as u64)).unwrap();
+    let extended_domain_generator = FieldElement::root(extended_domain_length)
+        .expect("No generator for extended_domain_length.");
     let shift_factor = FieldElement::GENERATOR;
 
     let mut result: Vec<FieldElement> = Vec::with_capacity(extended_domain_length);
@@ -408,9 +409,12 @@ fn get_out_of_domain_information(
     constraint_polynomial: &DensePolynomial,
 ) -> (FieldElement, Vec<FieldElement>, Vec<FieldElement>) {
     let oods_point: FieldElement = proof.get_random();
-    let g = FieldElement::from(u256h!(
-        "0659d83946a03edd72406af6711825f5653d9e35dc125289a206c054ec89c4f1"
-    ));
+    // let
+    // let g = FieldElement::from(u256h!(
+    //     "0659d83946a03edd72406af6711825f5653d9e35dc125289a206c054ec89c4f1" //
+    // this is wrong! ));
+    let g = FieldElement::root(trace_polynomials[0].len())
+        .expect("No root for trace polynomial length.");
     let oods_point_g = &oods_point * &g;
     let mut oods_values = Vec::with_capacity(2 * trace_polynomials.len() + 1);
     for trace_polynomial in trace_polynomials.iter() {
@@ -887,8 +891,9 @@ mod tests {
             u256h!("0529fc64b01be65623ef376bfa31d62b9a75ba2f51b5fda79e55e2ac05dfa80f")
         );
 
-        let mut constraint_coefficients = Vec::with_capacity(20);
-        for _ in 0..20 {
+        let mut constraint_coefficients = Vec::with_capacity(2 * constraints.len());
+        for _ in &constraints {
+            constraint_coefficients.push(proof.get_random());
             constraint_coefficients.push(proof.get_random());
         }
 
