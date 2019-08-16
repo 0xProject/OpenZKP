@@ -28,11 +28,7 @@ commands:
       - run:
           name: Setup sccache
           command: |
-            cargo install sccache --no-default-features || echo Already installed
-            # This configures Rust to use sccache.
-            echo 'export "RUSTC_WRAPPER"="sccache"' >> $BASH_ENV
-            # This is the maximum space sccache cache will use on disk.
-            echo 'export "SCCACHE_CACHE_SIZE"="1G"' >> $BASH_ENV
+            RUSTC_WRAPPER="" cargo install sccache --no-default-features || echo Already installed
             sccache --version
   save-sccache-cache:
     steps:
@@ -57,6 +53,8 @@ jobs:
     environment:
       - RUST_BACKTRACE: 1
       - RUSTFLAGS: -Dwarnings
+      - RUSTC_WRAPPER: sccache
+      - SCCACHE_CACHE_SIZE: 1G
       - NIGHTLY: nightly-2019-08-15
       - PROJECTS: -p ecc -p primefield -p starkdex -p starkcrypto-wasm -p stark -p macros-decl -p macros-impl -p macros-lib
     steps:
