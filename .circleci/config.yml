@@ -10,7 +10,15 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          key: project-cache
+          keys:
+          -  cargo-v1-{{ arch }}-{{ .Branch }}
+          -  cargo-v1-{{ arch }}
+          -  cargo-v1
+      - restore_cache:
+          keys:
+          -  target-v1-{{ arch }}-{{ .Branch }}
+          -  target-v1-{{ arch }}
+          -  target-v1
       - run:
           name: Version information
           command: |
@@ -62,9 +70,12 @@ jobs:
             echo "Workspace projects: " $WORKSPACE
             for MEMBER in $WORKSPACE; do cargo clean -p $MEMBER; done
       - save_cache:
-          key: project-cache
+          key: cargo-v1-{{ arch }}-{{ .Branch }}
           paths:
             - "~/.cargo"
+      - save_cache:
+          key: target-v1-{{ arch }}-{{ .Branch }}
+          paths:
             - "./target"
 workflows:
   version: 2
