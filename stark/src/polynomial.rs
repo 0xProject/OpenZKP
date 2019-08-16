@@ -167,6 +167,19 @@ impl SparsePolynomial {
         Self(map)
     }
 
+    pub fn periodic(coefficients: &[FieldElement], power: usize) -> Self {
+        let mut map = BTreeMap::new();
+        for (i, coefficient) in coefficients.iter().enumerate() {
+            assert!(!coefficient.is_zero());
+            match map.insert(i * power, coefficient.clone()) {
+                None => (),
+                Some(_) => panic!("Duplicate degrees found when constructing SparsePolynomial"),
+            };
+        }
+        assert!(!map.is_empty());
+        Self(map)
+    }
+
     pub fn degree(&self) -> usize {
         *self
             .0
@@ -236,6 +249,18 @@ impl DivAssign<SparsePolynomial> for DensePolynomial {
     }
 }
 
+impl Add<SparsePolynomial> for &DensePolynomial {
+    type Output = DensePolynomial;
+
+    fn add(self, other: SparsePolynomial) -> DensePolynomial {
+        let mut difference = self.0.clone();
+        for (degree, coefficient) in other.0.iter() {
+            difference[*degree] += coefficient;
+        }
+        DensePolynomial(difference)
+    }
+}
+
 impl Sub<SparsePolynomial> for &DensePolynomial {
     type Output = DensePolynomial;
 
@@ -245,6 +270,14 @@ impl Sub<SparsePolynomial> for &DensePolynomial {
             difference[*degree] -= coefficient;
         }
         DensePolynomial(difference)
+    }
+}
+
+impl Sub<&DensePolynomial> for SparsePolynomial {
+    type Output = DensePolynomial;
+
+    fn sub(self, other: &DensePolynomial) -> DensePolynomial {
+        &FieldElement::NEGATIVE_ONE * &(other - self)
     }
 }
 

@@ -11,19 +11,15 @@ pub struct PrivateInput {
     pub path:       Vec<FieldElement>,
 }
 
-#[cfg(test)]
 pub const STARKWARE_PUBLIC_INPUT: PublicInput = PublicInput {
     path_length: 8192,
     leaf:        field_element!("07232be75984588334afbec4006d672a67977ac7d6114cca9d957370df49a52d"),
     root:        field_element!("0779aed4d3452b88d754ff4eed01b257e63384752782b7efde2e0a9e6eb03423"),
 };
 
-#[cfg(test)]
 use macros_decl::field_element;
-#[cfg(test)]
 use u256::U256;
 
-#[cfg(test)]
 const STARKWARE_DIRECTIONS: [bool; 8192] = [
     true, false, true, true, true, false, true, true, true, false, false, true, false, false, true,
     true, false, true, true, true, false, false, false, false, true, true, true, false, true, true,
@@ -599,7 +595,6 @@ const STARKWARE_DIRECTIONS: [bool; 8192] = [
     false, false, true, false, false, true, true, true, true, false, false, false, false, false,
     false, true, false, true, true, true, false, false, false, true, false, true, true, true, true,
 ];
-#[cfg(test)]
 const STARKWARE_PATH: [FieldElement; 8192] = [
     field_element!("03d32d7aa484b0164725c6f3c6597b00bd8c51d1dc275fb0da021b9d3808870a"),
     field_element!("04a4a1a020f8f5a8a27e84762158d48e120468b82367a945893896d8630462e2"),
@@ -8794,7 +8789,6 @@ const STARKWARE_PATH: [FieldElement; 8192] = [
     field_element!("039c093067e9199d936b8a7cc7da7d6eb11701b9d7907933992875e2ff7560ab"),
     field_element!("0773a6f19c972f4e922b87c869122eaa7cdcfc6f7e51d82d33dcc0959f7ec521"),
 ];
-#[cfg(test)]
 pub fn starkware_private_input() -> PrivateInput {
     PrivateInput {
         directions: STARKWARE_DIRECTIONS.to_vec(),

@@ -1,3 +1,5 @@
+#[allow(warnings)]
+pub mod constraints;
 pub mod inputs;
 #[allow(dead_code)]
 pub mod periodic_columns;

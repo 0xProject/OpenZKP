@@ -1,286 +1,265 @@
 use crate::{
-    mmap_vec::MmapVec,
-    pedersen_merkle::input::{get_periodic_columns, get_public_input, PublicInput},
-    polynomial::Polynomial,
-    proofs::{geometric_series, Constraint, TraceTable},
+    pedersen_merkle::{
+        inputs::{starkware_private_input, PublicInput, STARKWARE_PUBLIC_INPUT},
+        periodic_columns::{
+            LEFT_X_COEFFICIENTS, LEFT_Y_COEFFICIENTS, RIGHT_X_COEFFICIENTS, RIGHT_Y_COEFFICIENTS,
+        },
+    },
+    polynomial::SparsePolynomial,
+    polynomial::DensePolynomial,
+    proofs::{geometric_series, Constraint},
 };
 use ecc::Affine;
-use hex_literal::*;
 use itertools::izip;
+use macros_decl::{field_element, u256h};
 use primefield::{invert_batch, FieldElement};
 use rayon::prelude::*;
 use starkdex::SHIFT_POINT;
-use u256::{u256h, U256};
-
-pub fn get_trace_table(length: usize, witness: FieldElement) -> TraceTable {
-    let mut elements = vec![FieldElement::ONE, witness];
-    for i in 1..length {
-        elements.push(elements[2 * i - 1].clone());
-        elements.push(&elements[2 * i - 2] + &elements[2 * i - 1]);
-    }
-    TraceTable::new(length, 2, elements)
-}
+use u256::U256;
 
 pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constraint> {
     let path_length = public_input.path_length;
     let trace_length = path_length * 256;
     let root = public_input.root.clone();
     let leaf = public_input.leaf.clone();
-    let field_element_bits = U256::from(252u64);
+    let field_element_bits = 252;
 
-    let g = FieldElement::root(U256::from(trace_length as u64)).unwrap();
-    let no_rows = Polynomial::new(&[FieldElement::ONE]);
-    let first_row = Polynomial::new(&[-&FieldElement::ONE, FieldElement::ONE]);
-    let last_row = Polynomial::new(&[
-        -&g.pow(U256::from(trace_length as u64 - 1)),
-        FieldElement::ONE,
+    let g = FieldElement::root(trace_length).unwrap();
+    let no_rows = SparsePolynomial::new(&[(FieldElement::ONE, 0)]);
+    let first_row = SparsePolynomial::new(&[(-&FieldElement::ONE, 0), (FieldElement::ONE, 1)]);
+    let last_row = SparsePolynomial::new(&[
+        (-&g.pow(trace_length - 1), 0),
+        (FieldElement::ONE, 1)
     ]);
-    let hash_end_rows = Polynomial::from_sparse(&[
-        (path_length, FieldElement::ONE),
-        (
-            0,
-            -&g.pow(U256::from((path_length * (trace_length - 1)) as u64)),
-        ),
+    let hash_end_rows = SparsePolynomial::new(&[
+        (FieldElement::ONE, path_length),
+        (-&g.pow(path_length * (trace_length - 1)), 0),
     ]);
-    let field_element_end_rows = Polynomial::from_sparse(&[
-        (
-            0,
-            -&g.pow(U256::from(field_element_bits * path_length as u64)),
-        ),
-        (path_length, FieldElement::ONE),
+    let field_element_end_rows = SparsePolynomial::new(&[
+        (-&g.pow(field_element_bits * path_length), 0),
+        (FieldElement::ONE, path_length),
     ]);
     let hash_start_rows =
-        Polynomial::from_sparse(&[(path_length, FieldElement::ONE), (0, -&FieldElement::ONE)]);
+        SparsePolynomial::new(&[(FieldElement::ONE, path_length), (-&FieldElement::ONE, 0)]);
     let every_row =
-        Polynomial::from_sparse(&[(trace_length, FieldElement::ONE), (0, -&FieldElement::ONE)]);
+        SparsePolynomial::new(&[(FieldElement::ONE, trace_length), (-&FieldElement::ONE, 0)]);
 
     let (shift_point_x, shift_point_y) = match SHIFT_POINT {
         Affine::Zero => panic!(),
         Affine::Point { x, y } => (x, y),
     };
 
-    let periodic_columns = get_periodic_columns();
-    let q_x_left_1 = Polynomial::periodic(&periodic_columns.left_x_coefficients, path_length);
-    let q_x_left_2 = Polynomial::periodic(&periodic_columns.left_x_coefficients, path_length);
-    let q_y_left = Polynomial::periodic(&periodic_columns.left_y_coefficients, path_length);
-    let q_x_right_1 = Polynomial::periodic(&periodic_columns.right_x_coefficients, path_length);
-    let q_x_right_2 = Polynomial::periodic(&periodic_columns.right_x_coefficients, path_length);
-    let q_y_right = Polynomial::periodic(&periodic_columns.right_y_coefficients, path_length);
+    let q_x_left_1 = SparsePolynomial::periodic(&LEFT_X_COEFFICIENTS, path_length);
+    let q_x_left_2 = SparsePolynomial::periodic(&LEFT_X_COEFFICIENTS, path_length);
+    let q_y_left = SparsePolynomial::periodic(&LEFT_Y_COEFFICIENTS, path_length);
+    let q_x_right_1 = SparsePolynomial::periodic(&RIGHT_X_COEFFICIENTS, path_length);
+    let q_x_right_2 = SparsePolynomial::periodic(&RIGHT_X_COEFFICIENTS, path_length);
+    let q_y_right = SparsePolynomial::periodic(&RIGHT_Y_COEFFICIENTS, path_length);
 
-    fn get_left_bit(
-        trace_polynomials: &[Polynomial],
-        trace_generator: &FieldElement,
-    ) -> Polynomial {
-        trace_polynomials[0].clone()
-            - &FieldElement::from(U256::from(2u64)) * &trace_polynomials[0].shift(trace_generator)
+    fn get_left_bit(trace_polynomials: &[DensePolynomial]) -> DensePolynomial {
+        &trace_polynomials[0] - &FieldElement::from(U256::from(2u64)) * &trace_polynomials[0].next()
     }
-    fn get_right_bit(
-        trace_polynomials: &[Polynomial],
-        trace_generator: &FieldElement,
-    ) -> Polynomial {
-        trace_polynomials[4].clone()
-            - &FieldElement::from(U256::from(2u64)) * &trace_polynomials[4].shift(trace_generator)
+    fn get_right_bit(trace_polynomials: &[DensePolynomial]) -> DensePolynomial {
+        &trace_polynomials[4] - &FieldElement::from(U256::from(2u64)) * &trace_polynomials[4].next()
     }
 
     vec![
         Constraint {
-            base:        Box::new(|tp, _| tp[0].clone()),
+            base:        Box::new(|tp| tp[0].clone()),
             numerator:   no_rows.clone(),
             denominator: no_rows.clone(),
         },
         Constraint {
-            base:        Box::new(|tp, _| tp[1].clone()),
+            base:        Box::new(|tp| tp[1].clone()),
             numerator:   no_rows.clone(),
             denominator: no_rows.clone(),
         },
         Constraint {
-            base:        Box::new(|tp, _| tp[2].clone()),
+            base:        Box::new(|tp| tp[2].clone()),
             numerator:   no_rows.clone(),
             denominator: no_rows.clone(),
         },
         Constraint {
-            base:        Box::new(|tp, _| tp[3].clone()),
+            base:        Box::new(|tp| tp[3].clone()),
             numerator:   no_rows.clone(),
             denominator: no_rows.clone(),
         },
         Constraint {
-            base:        Box::new(|tp, _| tp[4].clone()),
+            base:        Box::new(|tp| tp[4].clone()),
             numerator:   no_rows.clone(),
             denominator: no_rows.clone(),
         },
         Constraint {
-            base:        Box::new(|tp, _| tp[5].clone()),
+            base:        Box::new(|tp| tp[5].clone()),
             numerator:   no_rows.clone(),
             denominator: no_rows.clone(),
         },
         Constraint {
-            base:        Box::new(|tp, _| tp[6].clone()),
+            base:        Box::new(|tp| tp[6].clone()),
             numerator:   no_rows.clone(),
             denominator: no_rows.clone(),
         },
         Constraint {
-            base:        Box::new(|tp, _| tp[7].clone()),
+            base:        Box::new(|tp| tp[7].clone()),
             numerator:   no_rows.clone(),
             denominator: no_rows.clone(),
         },
         Constraint {
             // note that this is much more easily done in the frequency domain.
-            base:        Box::new(move |tp, _| {
-                (tp[0].clone() - Polynomial::constant(leaf.clone()))
-                    * (tp[4].clone() - Polynomial::constant(leaf.clone()))
+            base:        Box::new(move |tp| {
+                (&tp[0] - SparsePolynomial::new(&[(leaf.clone(), 0)]))
+                    * (&tp[4] - SparsePolynomial::new(&[(leaf.clone(), 0)]))
             }),
             numerator:   no_rows.clone(),
             denominator: first_row.clone(),
         },
         Constraint {
-            base:        Box::new(move |tp, _| Polynomial::constant(root.clone()) - tp[6].clone()),
+            base:        Box::new(move |tp| SparsePolynomial::new(&[(root.clone(), 0)]) - &tp[6]),
             numerator:   no_rows.clone(),
             denominator: last_row.clone(),
         },
         Constraint {
-            base:        Box::new(|tp, g| {
-                (tp[6].clone() - tp[0].shift(g)) * (tp[6].clone() - tp[4].shift(g))
-            }),
+            base:        Box::new(|tp| (&tp[6] - tp[0].next()) * (&tp[6] - tp[4].next())),
             numerator:   last_row.clone(),
             denominator: hash_end_rows.clone(),
         },
         Constraint {
-            base:        Box::new(move |tp, _| {
-                tp[6].clone() - Polynomial::constant(shift_point_x.clone())
+            base:        Box::new(move |tp| {
+                &tp[6] - SparsePolynomial::new(&[(shift_point_x.clone(), 0)])
             }),
             numerator:   no_rows.clone(),
             denominator: hash_start_rows.clone(),
         },
         Constraint {
-            base:        Box::new(move |tp, _| {
-                tp[7].clone() - Polynomial::constant(shift_point_y.clone())
+            base:        Box::new(move |tp| {
+                &tp[7] - SparsePolynomial::new(&[(shift_point_y.clone(), 0)])
             }),
             numerator:   no_rows.clone(),
             denominator: hash_start_rows.clone(),
         },
         Constraint {
-            base:        Box::new(|tp, g| {
-                let left_bit = get_left_bit(tp, g);
-                left_bit.clone() * (left_bit - Polynomial::constant(FieldElement::ONE))
+            base:        Box::new(|tp| {
+                let left_bit = get_left_bit(tp);
+                &left_bit * (&left_bit - SparsePolynomial::new(&[(FieldElement::ONE, 0)]))
             }),
             numerator:   hash_end_rows.clone(),
             denominator: every_row.clone(),
         },
         Constraint {
-            base:        Box::new(move |tp, g| {
-                let left_bit = get_left_bit(tp, g);
-                left_bit * (tp[7].clone() - q_y_left.clone())
-                    - tp[1].shift(g) * (tp[6].clone() - q_x_left_1.clone())
+            base:        Box::new(move |tp| {
+                let left_bit = get_left_bit(tp);
+                left_bit * (&tp[7] - q_y_left.clone())
+                    - tp[1].next() * (&tp[6] - q_x_left_1.clone())
             }),
             numerator:   hash_end_rows.clone(),
             denominator: every_row.clone(),
         },
         Constraint {
-            base:        Box::new(move |tp, g| {
-                let left_bit = get_left_bit(tp, g);
-                tp[1].shift(g) * tp[1].shift(g)
-                    - left_bit * (tp[6].clone() + q_x_left_2.clone() + tp[2].shift(g))
+            base:        Box::new(move |tp| {
+                let left_bit = get_left_bit(tp);
+                tp[1].next() * tp[1].next()
+                    - left_bit * (&tp[6] + q_x_left_2.clone() + tp[2].next())
             }),
             numerator:   hash_end_rows.clone(),
             denominator: every_row.clone(),
         },
         Constraint {
-            base:        Box::new(move |tp, g| {
-                let left_bit = get_left_bit(tp, g);
-                left_bit * (tp[7].clone() + tp[3].shift(g))
-                    - tp[1].shift(g) * (tp[6].clone() - tp[2].shift(g))
+            base:        Box::new(move |tp| {
+                let left_bit = get_left_bit(tp);
+                &left_bit * (tp[7].clone() + tp[3].next())
+                    - tp[1].next() * (tp[6].clone() - tp[2].next())
             }),
             numerator:   hash_end_rows.clone(),
             denominator: every_row.clone(),
         },
         Constraint {
-            base:        Box::new(move |tp, g| {
-                let left_bit = get_left_bit(tp, g);
-                (Polynomial::constant(FieldElement::ONE) - left_bit)
-                    * (tp[6].clone() - tp[2].shift(g))
+            base:        Box::new(move |tp| {
+                let left_bit = get_left_bit(tp);
+                (SparsePolynomial::new(&[(FieldElement::ONE, 0)]) - &left_bit)
+                    * (tp[6].clone() - tp[2].next())
             }),
             numerator:   hash_end_rows.clone(),
             denominator: every_row.clone(),
         },
         Constraint {
-            base:        Box::new(move |tp, g| {
-                let left_bit = get_left_bit(tp, g);
-                (Polynomial::constant(FieldElement::ONE) - left_bit)
-                    * (tp[7].clone() - tp[3].shift(g))
+            base:        Box::new(move |tp| {
+                let left_bit = get_left_bit(tp);
+                (SparsePolynomial::new(&[(FieldElement::ONE, 0)]) - &left_bit)
+                    * (tp[7].clone() - tp[3].next())
             }),
             numerator:   hash_end_rows.clone(),
             denominator: every_row.clone(),
         },
         Constraint {
-            base:        Box::new(move |tp, g| tp[0].clone()),
+            base:        Box::new(move |tp| tp[0].clone()),
             numerator:   no_rows.clone(),
             denominator: field_element_end_rows.clone(),
         },
         Constraint {
-            base:        Box::new(move |tp, g| tp[0].clone()),
+            base:        Box::new(move |tp| tp[0].clone()),
             numerator:   no_rows.clone(),
             denominator: hash_end_rows.clone(),
         },
         Constraint {
-            base:        Box::new(|tp, g| {
-                let right_bit = get_right_bit(tp, g);
-                right_bit.clone() * (right_bit - Polynomial::constant(FieldElement::ONE))
+            base:        Box::new(|tp| {
+                let right_bit = get_right_bit(tp);
+                right_bit.clone() * (&right_bit - SparsePolynomial::new(&[(FieldElement::ONE, 0)]))
             }),
             numerator:   hash_end_rows.clone(),
             denominator: every_row.clone(),
         },
         Constraint {
-            base:        Box::new(move |tp, g| {
-                let right_bit = get_right_bit(tp, g);
-                right_bit * (tp[3].shift(g) - q_y_right.clone())
-                    - tp[5].shift(g) * (tp[2].shift(g) - q_x_right_1.clone())
+            base:        Box::new(move |tp| {
+                let right_bit = get_right_bit(tp);
+                right_bit * (&tp[3].next() - q_y_right.clone())
+                    - tp[5].next() * (&tp[2].next() - q_x_right_1.clone())
             }),
             numerator:   hash_end_rows.clone(),
             denominator: every_row.clone(),
         },
         Constraint {
-            base:        Box::new(move |tp, g| {
-                let right_bit = get_right_bit(tp, g);
-                tp[5].shift(g) * tp[5].shift(g)
-                    - right_bit * (tp[2].shift(g) + q_x_right_2.clone() + tp[6].shift(g))
+            base:        Box::new(move |tp| {
+                let right_bit = get_right_bit(tp);
+                tp[5].next() * tp[5].next()
+                    - right_bit * (&tp[2].next() + q_x_right_2.clone() + tp[6].next())
             }),
             numerator:   hash_end_rows.clone(),
             denominator: every_row.clone(),
         },
         Constraint {
-            base:        Box::new(move |tp, g| {
-                let right_bit = get_right_bit(tp, g);
-                right_bit * (tp[3].shift(g) + tp[7].shift(g))
-                    - tp[5].shift(g) * (tp[2].shift(g) - tp[6].shift(g))
+            base:        Box::new(move |tp| {
+                let right_bit = get_right_bit(tp);
+                &right_bit * (tp[3].next() + tp[7].next())
+                    - tp[5].next() * (tp[2].next() - tp[6].next())
             }),
             numerator:   hash_end_rows.clone(),
             denominator: every_row.clone(),
         },
         Constraint {
-            base:        Box::new(move |tp, g| {
-                let right_bit = get_right_bit(tp, g);
-                (Polynomial::constant(FieldElement::ONE) - right_bit)
-                    * (tp[2].shift(g) - tp[6].shift(g))
+            base:        Box::new(move |tp| {
+                let right_bit = get_right_bit(tp);
+                (SparsePolynomial::new(&[(FieldElement::ONE, 0)]) - &right_bit)
+                    * (tp[2].next() - tp[6].next())
             }),
             numerator:   hash_end_rows.clone(),
             denominator: every_row.clone(),
         },
         Constraint {
-            base:        Box::new(move |tp, g| {
-                let right_bit = get_right_bit(tp, g);
-                (Polynomial::constant(FieldElement::ONE) - right_bit)
-                    * (tp[3].shift(g) - tp[7].shift(g))
+            base:        Box::new(move |tp| {
+                let right_bit = get_right_bit(tp);
+                (SparsePolynomial::new(&[(FieldElement::ONE, 0)]) - &right_bit)
+                    * (tp[3].next() - tp[7].next())
             }),
             numerator:   hash_end_rows.clone(),
             denominator: every_row.clone(),
         },
         Constraint {
-            base:        Box::new(move |tp, g| tp[4].clone()),
+            base:        Box::new(move |tp| tp[4].clone()),
             numerator:   no_rows.clone(),
             denominator: field_element_end_rows.clone(),
         },
         Constraint {
-            base:        Box::new(move |tp, g| tp[4].clone()),
+            base:        Box::new(move |tp| tp[4].clone()),
             numerator:   no_rows.clone(),
             denominator: hash_end_rows.clone(),
         },
@@ -301,32 +280,27 @@ struct Subrow {
 
 fn get_pedersen_coordinates(
     x: &FieldElement,
-    path_length: &U256,
+    path_length: usize,
 ) -> (FieldElement, FieldElement, FieldElement, FieldElement) {
-    let periodic_columns = get_periodic_columns();
-
-    let q_x_left = Polynomial::new(&periodic_columns.left_x_coefficients)
-        .evaluate(&x.pow(path_length.clone()));
-    let q_y_left = Polynomial::new(&periodic_columns.left_y_coefficients)
-        .evaluate(&x.pow(path_length.clone()));
-
-    let q_x_right = Polynomial::new(&periodic_columns.right_x_coefficients)
-        .evaluate(&x.pow(path_length.clone()));
-
-    let q_y_right = Polynomial::new(&periodic_columns.right_y_coefficients)
-        .evaluate(&x.pow(path_length.clone()));
-
+    let q_x_left =
+        SparsePolynomial::periodic(&LEFT_X_COEFFICIENTS, path_length).evaluate(&x);
+    let q_y_left =
+        SparsePolynomial::periodic(&LEFT_X_COEFFICIENTS, path_length).evaluate(&x);
+    let q_x_right = SparsePolynomial::periodic(&LEFT_X_COEFFICIENTS, path_length)
+        .evaluate(&x);
+    let q_y_right = SparsePolynomial::periodic(&LEFT_X_COEFFICIENTS, path_length)
+        .evaluate(&x);
     (q_x_left, q_y_left, q_x_right, q_y_right)
 }
 
 pub fn eval_c_direct(
     x: &FieldElement,
-    polynomials: &[Polynomial],
+    polynomials: &[DensePolynomial],
     _claim_index: usize,
     _claim: FieldElement,
     coefficients: &[FieldElement],
 ) -> FieldElement {
-    let public_input = get_public_input();
+    let public_input = STARKWARE_PUBLIC_INPUT;
     let path_length = U256::from(public_input.path_length as u64);
     let trace_length = U256::from(256u64) * &path_length;
 
@@ -395,7 +369,7 @@ pub fn eval_c_direct(
         Affine::Point { x, y } => (x, y),
     };
 
-    let (q_x_left, q_y_left, q_x_right, q_y_right) = get_pedersen_coordinates(&x, &path_length);
+    let (q_x_left, q_y_left, q_x_right, q_y_right) = get_pedersen_coordinates(&x, 8192);
 
     let constraints = vec![
         this.left.source.clone(),
@@ -692,10 +666,9 @@ mod test {
         let oods_point = FieldElement::from_hex_str(
             "0x273966fc4697d1762d51fe633f941e92f87bdda124cf7571007a4681b140c05",
         );
-        let path_length = U256::from(8192u64);
 
         let (q_x_left, q_y_left, q_x_right, q_y_right) =
-            get_pedersen_coordinates(&oods_point, &path_length);
+            get_pedersen_coordinates(&oods_point, 8192);
 
         assert_eq!(
             q_x_left,
