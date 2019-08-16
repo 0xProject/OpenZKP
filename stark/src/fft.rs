@@ -4,8 +4,7 @@ use u256::U256;
 
 pub fn fft(a: &[FieldElement]) -> Vec<FieldElement> {
     let mut result = a.to_vec();
-    let root =
-        FieldElement::root(result.len()).expect("No root of unity for input length");
+    let root = FieldElement::root(result.len()).expect("No root of unity for input length");
     bit_reversal_fft(result.as_mut_slice(), root);
     bit_reversal_permute(result.as_mut_slice());
     result
