@@ -4,7 +4,7 @@ use macros_decl::u256h;
 use primefield::FieldElement;
 use stark::{
     fibonacci::{get_constraint, get_trace_table, PrivateInput, PublicInput},
-    stark_proof, ProofParams,
+    get_fibonacci_constraints, get_trace_table, stark_proof, ProofParams,
 };
 use std::time::Instant;
 use u256::U256;

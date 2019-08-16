@@ -6,7 +6,7 @@ use u256::U256;
 
 pub fn check_proof<Public>(
     proposed_proof: ProverChannel,
-    constraints: &Constraint<Public>,
+    constraints: &[Constraint],
     public: &Public,
     params: &ProofParams,
     trace_cols: usize,
@@ -32,9 +32,8 @@ where
     // Get the low degree root commitment, and constraint root commitment
     // TODO: Make it work as channel.read()
     let low_degree_extension_root = Replayable::<Hash>::replay(&mut channel);
-    let mut constraint_coefficients: Vec<FieldElement> =
-        Vec::with_capacity(constraints.num_constraints);
-    for _i in 0..constraints.num_constraints {
+    let mut constraint_coefficients: Vec<FieldElement> = Vec::with_capacity(constraints.len());
+    for _ in constraints {
         constraint_coefficients.push(channel.get_random());
     }
     let constraint_evaluated_root = Replayable::<Hash>::replay(&mut channel);

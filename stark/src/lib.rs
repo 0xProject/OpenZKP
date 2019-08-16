@@ -1,6 +1,6 @@
 // TODO: #![deny(missing_docs)]
 #![warn(clippy::all)]
-#![deny(warnings)]
+// #![deny(warnings)]
 mod channel;
 mod fft;
 pub mod fibonacci;
@@ -21,6 +21,9 @@ pub use trace_table::TraceTable;
 pub use merkle::verify;
 pub use proofs::{stark_proof, ProofParams};
 pub use verifier::check_proof;
+
+// Example system
+pub use fibonacci::{get_fibonacci_constraints, get_trace_table};
 
 // Exports for benchmarking
 // TODO: Avoid publicly exposing.

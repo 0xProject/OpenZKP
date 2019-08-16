@@ -11,7 +11,7 @@ use u256::{commutative_binop, noncommutative_binop};
 #[derive(Debug, PartialEq, Clone)]
 pub struct DensePolynomial(Vec<FieldElement>);
 
-#[cfg_attr(test, derive(Debug, PartialEq, Clone))]
+#[derive(Debug, PartialEq, Clone)]
 pub struct SparsePolynomial(BTreeMap<usize, FieldElement>);
 
 impl DensePolynomial {
@@ -24,7 +24,7 @@ impl DensePolynomial {
 
     // Note that the length of a polynomial is not its degree, because the leading
     // coefficient of a DensePolynomial can be zero.
-    fn len(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.0.len()
     }
 
@@ -37,6 +37,11 @@ impl DensePolynomial {
         result
     }
 
+    // HAHAHA fix this!!!
+    pub fn next(&self) -> DensePolynomial {
+        self.clone()
+    }
+
     // Removes trailing zeros or appends them so that the length is minimal and a
     // power of two.
     fn canonicalize(&mut self) {
@@ -46,6 +51,10 @@ impl DensePolynomial {
         };
         let new_length = (last_nonzero_index + 1).next_power_of_two();
         self.0.resize(new_length, FieldElement::ZERO);
+    }
+
+    pub fn coefficients(&self) -> &[FieldElement] {
+        &self.0
     }
 }
 
@@ -214,6 +223,15 @@ impl DivAssign<SparsePolynomial> for DensePolynomial {
         }
         self.0.drain(0..denominator_degree);
         self.canonicalize();
+    }
+}
+
+// LOL fix this!!!
+impl Sub<SparsePolynomial> for &DensePolynomial {
+    type Output = DensePolynomial;
+
+    fn sub(self, other: SparsePolynomial) -> DensePolynomial {
+        self.clone()
     }
 }
 
