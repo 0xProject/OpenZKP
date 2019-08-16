@@ -21,7 +21,7 @@ commands:
       - run:
           name: Setup sccache
           command: |
-            cargo install sccache --no-default-features
+            cargo install sccache --no-default-features || echo Already installed
             # This configures Rust to use sccache.
             echo 'export "RUSTC_WRAPPER"="sccache"' >> $BASH_ENV
             # This is the maximum space sccache cache will use on disk.
