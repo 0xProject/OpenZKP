@@ -1,34 +1,29 @@
 version: 2.1
 
 commands:
-  setup-sccache:
+  restore-cargo-home-cache:
     steps:
       - restore_cache:
-          name: Restore sccache install
-          key: sccache-bins-v1-{{ arch }}
+          name: Restore cargo home cache
+          key: cargo-home-v1-{{ arch }}
+  save-cargo-home-cache:
+    steps:
+      - save_cache:
+          name: Save cargo home cache
+          key: cargo-home-v1-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ epoch }}
+          paths:
+            - "$CARGO_HOME"
+  setup-sccache:
+    steps:
       - run:
           name: Install sccache
           command: |
-            cargo install sccache
+            cargo install sccache --no-default-features
             # This configures Rust to use sccache.
             echo 'export "RUSTC_WRAPPER"="sccache"' >> $BASH_ENV
             # This is the maximum space sccache cache will use on disk.
             echo 'export "SCCACHE_CACHE_SIZE"="1G"' >> $BASH_ENV
             sccache --version
-            ls -R $HOME/.cargo
-      - save_cache:
-          name: Save sccache cache
-          # We use {{ epoch }} to always upload a fresh cache:
-          # Of course, restore_cache will not find this exact key,
-          # but it will fall back to the closest key (aka the most recent).
-          # See https://discuss.circleci.com/t/add-mechanism-to-update-existing-cache-key/9014/13
-          key: sccache-bins-v1-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ epoch }}
-          paths:
-            # TODO: What else?
-            - "$HOME/.cache/bin/sccache"
-      - restore_cache:
-          name: Restore sccache cache
-          key: sccache-cache-v1-{{ arch }}-{{ .Environment.CIRCLE_JOB }}
   save-sccache-cache:
     steps:
       - run:
@@ -55,6 +50,7 @@ jobs:
       - NIGHTLY: nightly-2019-08-15
     steps:
       - checkout
+      - restore-cargo-home-cache
       - setup-sccache
       - run:
           name: Setup build environment
@@ -89,6 +85,7 @@ jobs:
             # would be meaningless. Instead we just run it to make sure they work.
             cargo bench --bench benchmark -- --test
       - save-sccache-cache
+      - save-cargo-home-cache
 
 workflows:
   version: 2
