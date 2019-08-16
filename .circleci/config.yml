@@ -34,9 +34,9 @@ commands:
   save-sccache-cache:
     steps:
       - run:
-        name: SCCache statistics
-        commands: |
-          sccache --show-stats
+          name: sccache statistics
+          commands: |
+            sccache --show-stats
       - save_cache:
           name: Save sccache cache
           # We use {{ epoch }} to always upload a fresh cache:
