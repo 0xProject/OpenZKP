@@ -205,7 +205,7 @@ where
     // Read the out of domain sampling point from the channel.
     // (and do a bunch more things)
     // TODO: expand
-    let (oods_point, oods_coefficients, _oods_values) =
+    let (oods_point, oods_coefficients) =
         get_out_of_domain_information(&mut proof, &trace_polynomials, &constraint_polynomial);
 
     // Divide out the OODS points from the constraints and combine.
@@ -421,10 +421,10 @@ fn get_out_of_domain_information(
     }
 
     let mut oods_coefficients = Vec::with_capacity(2 * trace_polynomials.len() + 1);
-    for _i in 0..=2 * trace_polynomials.len() {
+    for _ in 0..=2 * trace_polynomials.len() {
         oods_coefficients.push(proof.get_random());
     }
-    (oods_point, oods_coefficients, oods_values)
+    (oods_point, oods_coefficients)
 }
 
 fn divide_out_point(p: &DensePolynomial, x: &FieldElement) -> DensePolynomial {
@@ -920,7 +920,7 @@ mod tests {
         );
         proof.write(&c_tree[1]);
 
-        let (oods_point, oods_coefficients, _oods_values) =
+        let (oods_point, oods_coefficients) =
             get_out_of_domain_information(&mut proof, &TPn, &constraint_polynomial);
         // Checks that we have derived the right out of domain sample point
         assert_eq!(
