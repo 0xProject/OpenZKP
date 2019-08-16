@@ -480,11 +480,12 @@ fn calculate_out_of_domain_constraints(
                 r += &oods_coefficients[2 * i] * (&x[index] - &oods_values[2 * i]) * a;
                 r += &oods_coefficients[2 * i + 1] * (&x[index] - &oods_values[2 * i + 1]) * b;
             }
-            r += &oods_coefficients[oods_coefficients.len() - 1]
-                * (&constraint_on_extended_domain[index]
-                    - &oods_values[oods_coefficients.len() - 1])
-                * a;
 
+            let constraint_coefficient = &oods_coefficients[oods_coefficients.len() - 1];
+            let constraint_oods_value = &oods_values[oods_coefficients.len() - 1];
+            r += constraint_coefficient
+                * (&constraint_on_extended_domain[index] - constraint_oods_value)
+                * a;
             r
         })
         .collect_into_vec(&mut oods_constraint_lde);
