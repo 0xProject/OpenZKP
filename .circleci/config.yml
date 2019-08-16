@@ -5,7 +5,9 @@ commands:
     steps:
       - run:
           name: Allow CirceCI to write cargo home (workaround)
-          command: sudo mkdir -p /usr/local/cargo && sudo chown -R circleci /usr/local/cargo
+          command: |
+            sudo mkdir -p /usr/local/cargo
+            sudo chown -R circleci /usr/local/cargo
       - restore_cache:
           name: Restore cargo home cache
           key: cargo-home-v1-{{ arch }}
@@ -63,10 +65,11 @@ jobs:
             rustup toolchain install $NIGHTLY
             rustup target add wasm32-unknown-unknown --toolchain $NIGHTLY
             rustup component add rustfmt --toolchain $NIGHTLY
-            cargo install --git https://github.com/alexcrichton/wasm-gc
+            cargo install --git https://github.com/alexcrichton/wasm-gc || echo Already installed
             rustc --version
             cargo --version
             rustup --version
+            wasm-gc --help > /dev/null # Run it to make sure it's executable
           no_output_timeout: 1800s
       - run:
           name: Build all targets on stable
