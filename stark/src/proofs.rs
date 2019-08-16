@@ -10,7 +10,7 @@ use crate::{
     TraceTable,
 };
 use itertools::Itertools;
-use macros_decl::u256h;
+use macros_decl::{hex, u256h};
 use primefield::{invert_batch, FieldElement};
 use rayon::prelude::*;
 use std::{
@@ -163,6 +163,11 @@ where
     let mut proof = ProverChannel::new();
     proof.write(public);
 
+    assert_eq!(
+        proof.coin.digest,
+        hex!("c891a11ddbc6c425fad523a7a4aeafa505d7aa1638cfffbd5b747100bc69e367")
+    );
+
     // 1. Trace commitment.
     //
 
@@ -175,6 +180,23 @@ where
     // and write the root to the channel.
     let tree = trace_lde.as_slice().merkleize();
     proof.write(&tree[1]);
+
+    assert_eq!(
+        tree[1].as_bytes(),
+        hex!("018dc61f748b1a6c440827876f30f63cb6c4c188000000000000000000000000")
+    );
+
+    assert_eq!(
+        proof.coin.digest,
+        hex!("b7d80385fa0c8879473cdf987ea7970bb807aec78bb91af39a1504d965ad8e92")
+    );
+
+    let test_element: FieldElement = proof.get_random();
+    // Checks that the channel is pulling field elements properly
+    assert_eq!(
+        U256::from(test_element),
+        u256h!("0529fc64b01be65623ef376bfa31d62b9a75ba2f51b5fda79e55e2ac05dfa80f")
+    );
 
     // 2. Constraint commitment
     //
@@ -195,6 +217,23 @@ where
 
     let constraint_lde = evalute_polynomial_on_domain(&constraint_polynomial, params.blowup);
 
+    assert_eq!(
+        constraint_lde[123.bit_reverse_at(eval_domain_size)].clone(),
+        FieldElement::from_montgomery(u256h!(
+            "019fb62b06446e919d7909f4896febce72978ff860e1ed61b4418091617677d3"
+        ))
+    );
+
+    // Construct a merkle tree over the LDE combined constraints
+    // and write the root to the channel.
+    let c_tree = constraint_lde.as_slice().merkleize();
+    proof.write(&c_tree[1]);
+
+    assert_eq!(
+        c_tree[1].as_bytes(),
+        hex!("46318de7dbdafda87c1052d50989d15f8e61a5b8000000000000000000000000")
+    );
+
     // 3. Out of domain sampling
     //
 
@@ -203,6 +242,10 @@ where
     // TODO: expand
     let (oods_point, oods_coefficients, oods_values) =
         get_out_of_domain_information(&mut proof, &trace_polynomials, &constraint_polynomial);
+    assert_eq!(
+        U256::from(oods_point.clone()),
+        u256h!("031dc8fc2f57e3f39f6951a04a04294a7c63c988573dc058eea4cbf3e6268353")
+    );
 
     // Divide out the OODS points from the constraints and combine.
     let oods_constraint_lde = calculate_out_of_domain_constraints(
@@ -223,9 +266,24 @@ where
         eval_x.as_slice(),
     );
 
+    assert_eq!(
+        fri_trees[0][1].as_bytes(),
+        hex!("f5110a80f0fabf114678f7e643a2be01f88661fe000000000000000000000000")
+    );
+
+    assert_eq!(
+        fri_trees[1][1].as_bytes(),
+        hex!("27ad2f6a19d18a7e4535905f1ee0bf0d39e8e444000000000000000000000000")
+    );
+    assert_eq!(
+        proof.coin.digest,
+        hex!("e2c7e50f3d1dcaad74678d8abb489675849ead08e2f848429a136304d9550bb6")
+    );
+
     // 5. Proof of work
     let proof_of_work = proof.pow_find_nonce(params.pow_bits);
     debug_assert!(&proof.pow_verify(proof_of_work, params.pow_bits));
+    assert_eq!(proof_of_work, 3465);
     proof.write(proof_of_work);
 
     // 6. Query decommitments
@@ -237,6 +295,7 @@ where
         64 - eval_domain_size.leading_zeros() - 1,
         &mut proof,
     );
+    assert_eq!(query_indices[19], 16056);
 
     // Decommit the trace table values.
     decommit_with_queries_and_proof(
@@ -245,13 +304,22 @@ where
         tree.as_slice(),
         &mut proof,
     );
+    assert_eq!(
+        proof.coin.digest,
+        hex!("804a12f5f778c9d2b076d07a8c516dd8e1a57c35ef2df10f55df58764812799d")
+    );
 
     // Decommit the constraint values
     decommit_with_queries_and_proof(
         query_indices.as_slice(),
         constraint_lde.as_slice(),
-        tree.as_slice(),
+        c_tree.as_slice(),
         &mut proof,
+    );
+    // this one fails....
+    assert_eq!(
+        proof.coin.digest,
+        hex!("ea73885255f98e9a51f6549fb74e076181971e426190660cdc45bac337423cb6")
     );
 
     // Decommit the FRI layer values
@@ -261,6 +329,10 @@ where
         query_indices.as_slice(),
         &params,
         &mut proof,
+    );
+    assert_eq!(
+        proof.coin.digest,
+        hex!("3d3b54ffd1c5e6f579648398b4a9bb67166d83d24c76e6adf74fa0feaf4e16d9")
     );
 
     // Q.E.D.
@@ -409,6 +481,10 @@ fn get_out_of_domain_information(
     constraint_polynomial: &DensePolynomial,
 ) -> (FieldElement, Vec<FieldElement>, Vec<FieldElement>) {
     let oods_point: FieldElement = proof.get_random();
+    assert_eq!(
+        U256::from(oods_point.clone()),
+        u256h!("031dc8fc2f57e3f39f6951a04a04294a7c63c988573dc058eea4cbf3e6268353")
+    );
     // let
     // let g = FieldElement::from(u256h!(
     //     "0659d83946a03edd72406af6711825f5653d9e35dc125289a206c054ec89c4f1" //
@@ -657,7 +733,7 @@ mod tests {
         fibonacci::{get_fibonacci_constraints, get_trace_table, PrivateInput, PublicInput},
         verifier::check_proof,
     };
-    use macros_decl::{hex, u256h};
+    use macros_decl::u256h;
     use u256::U256;
 
     #[test]
@@ -673,7 +749,9 @@ mod tests {
             value: tt[(1000, 0)].clone(),
         };
         let constraints = &get_fibonacci_constraints(&public);
-        let expected = hex!("fcf1924f84656e5068ab9cbd44ae084b235bb990eefc0fd0183c77d5645e830e");
+        // let expected = hex!("fcf1924f84656e5068ab9cbd44ae084b235bb990eefc0fd0183c77d5645e830e");
+        let expected = hex!("3d3b54ffd1c5e6f579648398b4a9bb67166d83d24c76e6adf74fa0feaf4e16d9");
+
         let actual = stark_proof(&tt, &constraints, &public, &ProofParams {
             blowup:                   16,
             pow_bits:                 12,
