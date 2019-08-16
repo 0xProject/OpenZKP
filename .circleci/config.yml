@@ -26,8 +26,6 @@ commands:
           paths:
             # TODO: What else?
             - "$HOME/.cache/bin/sccache"
-  restore-sccache-cache:
-    steps:
       - restore_cache:
           name: Restore sccache cache
           key: sccache-cache-v1-{{ arch }}-{{ .Environment.CIRCLE_JOB }}
@@ -58,7 +56,6 @@ jobs:
     steps:
       - checkout
       - setup-sccache
-      - restore-sccache-cache
       - run:
           name: Setup build environment
           command: |
