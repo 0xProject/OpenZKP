@@ -3,6 +3,9 @@ version: 2.1
 commands:
   setup-sccache:
     steps:
+      - restore_cache:
+          name: Restore sccache install
+          key: sccache-bins-v1-{{ arch }}
       - run:
           name: Install sccache
           command: |
@@ -12,6 +15,17 @@ commands:
             # This is the maximum space sccache cache will use on disk.
             echo 'export "SCCACHE_CACHE_SIZE"="1G"' >> $BASH_ENV
             sccache --version
+            ls -R $HOME/.cargo
+      - save_cache:
+          name: Save sccache cache
+          # We use {{ epoch }} to always upload a fresh cache:
+          # Of course, restore_cache will not find this exact key,
+          # but it will fall back to the closest key (aka the most recent).
+          # See https://discuss.circleci.com/t/add-mechanism-to-update-existing-cache-key/9014/13
+          key: sccache-bins-v1-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ epoch }}
+          paths:
+            # TODO: What else?
+            - "$HOME/.cache/bin/sccache"
   restore-sccache-cache:
     steps:
       - restore_cache:
