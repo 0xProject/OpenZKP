@@ -109,6 +109,70 @@ pub fn get_fibonacci_constraints(public_input: &PublicInput) -> Vec<Constraint> 
     ]
 }
 
+// TODO: Naming
+#[allow(non_snake_case)]
+pub fn eval_c_direct(
+    x: &FieldElement,
+    polynomials: &[DensePolynomial],
+    public: &PublicInput,
+    constraint_coefficients: &[FieldElement],
+) -> FieldElement {
+    let trace_len = polynomials[0].len();
+    let g = FieldElement::root(trace_len).unwrap();
+    let value = public.value.clone();
+
+    let eval_P0 = |x: &FieldElement| polynomials[0].evaluate(x);
+    let eval_P1 = |x: &FieldElement| polynomials[1].evaluate(x);
+    let eval_C0 = |x: FieldElement| {
+        ((eval_P0(&(&x * &g)) - eval_P1(&x)) * (&x - &g.pow(trace_len - 1)))
+            / (&x.pow(trace_len) - FieldElement::ONE)
+    };
+    let eval_C1 = |x: FieldElement| {
+        ((eval_P1(&(&x * &g)) - eval_P0(&x) - eval_P1(&x)) * (&x - (&g.pow(trace_len - 1))))
+            / (&x.pow(trace_len) - FieldElement::ONE)
+    };
+    let eval_C2 = |x: FieldElement| {
+        ((eval_P0(&x) - FieldElement::ONE) * FieldElement::ONE) / (&x - FieldElement::ONE)
+    };
+    let eval_C3 = |x: FieldElement| (eval_P0(&x) - &value) / (&x - &g.pow(public.index));
+
+    let deg_adj = |degree_bound, constraint_degree, numerator_degree, denominator_degree| {
+        degree_bound + denominator_degree - 1 - constraint_degree - numerator_degree
+    };
+
+    let eval_C = |x: FieldElement| -> FieldElement {
+        let composition_degree_bound = trace_len;
+        let mut r = FieldElement::ZERO;
+        r += &constraint_coefficients[0] * &eval_C0(x.clone());
+        r += &constraint_coefficients[1]
+            * &eval_C0(x.clone())
+            * (&x).pow(deg_adj(
+                composition_degree_bound,
+                trace_len - 1,
+                1,
+                trace_len,
+            ));
+        r += &constraint_coefficients[2] * &eval_C1(x.clone());
+        r += &constraint_coefficients[3]
+            * &eval_C1(x.clone())
+            * (&x).pow(deg_adj(
+                composition_degree_bound,
+                trace_len - 1,
+                1,
+                trace_len,
+            ));
+        r += &constraint_coefficients[4] * &eval_C2(x.clone());
+        r += &constraint_coefficients[5]
+            * &eval_C2(x.clone())
+            * x.pow(deg_adj(composition_degree_bound, trace_len - 1, 0, 1));
+        r += &constraint_coefficients[6] * (eval_C3)(x.clone());
+        r += &constraint_coefficients[7]
+            * &eval_C3(x.clone())
+            * x.pow(deg_adj(composition_degree_bound, trace_len - 1, 0, 1));
+        r
+    };
+    eval_C(x.clone())
+}
 
 #[cfg(test)]
 mod tests {
@@ -116,45 +180,51 @@ mod tests {
     use crate::proofs::{get_constraint_polynomial, interpolate_trace_table};
     #[test]
     fn mason() {
-        let x = FieldElement::ZERO;
+        let x = FieldElement::GENERATOR;
         let claim = FieldElement::from(u256h!(
-
-"0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
+            "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
         ));
 
-        let witness = FieldElement::from(u256h!(
+        let private_input = PrivateInput {
+            secret: FieldElement::from(u256h!(
+                "00000000000000000000000000000000000000000000000000000000cafebabe"
+            )),
+        };
 
-"00000000000000000000000000000000000000000000000000000000cafebabe"
-        ));
-        let trace_table = get_trace_table(1024, witness);
+        let trace_table = get_trace_table(1024, &private_input);
         let trace_polynomials = interpolate_trace_table(&trace_table);
 
         let mut constraint_coefficients = vec![FieldElement::ZERO; 20];
-        constraint_coefficients[0] = FieldElement::ONE;
+        // constraint_coefficients[0] = FieldElement::ONE;
         constraint_coefficients[1] = FieldElement::ONE;
-        constraint_coefficients[2] = FieldElement::ONE;
-        constraint_coefficients[3] = FieldElement::ONE;
-        constraint_coefficients[4] = FieldElement::ONE;
-        constraint_coefficients[5] = FieldElement::ONE;
-        constraint_coefficients[6] = FieldElement::ONE;
+        // constraint_coefficients[2] = FieldElement::ONE;
+        // constraint_coefficients[3] = FieldElement::ONE;
+        // constraint_coefficients[4] = FieldElement::ONE;
+        // constraint_coefficients[5] = FieldElement::ONE;
+        // constraint_coefficients[6] = FieldElement::ONE;
+        // constraint_coefficients[7] = FieldElement::NEGATIVE_ONE;
+
+        let public_input = PublicInput {
+            index: 1000,
+            value: trace_table[(1000, 0)].clone(),
+        };
 
         let old = eval_c_direct(
             &x,
             &trace_polynomials,
-            1000usize,
-            claim.clone(),
+            &public_input,
             &constraint_coefficients,
         );
-
-        let p = SparsePolynomial::new(&[FieldElement::ONE,
--&FieldElement::ONE]);         assert_eq!(p.evaluate(&FieldElement::ONE),
-FieldElement::ZERO);
 
         let constraint_polynomial = get_constraint_polynomial(
             &trace_polynomials,
-            &get_fibonacci_constraints(1024, claim, 1000usize),
+            &get_fibonacci_constraints(&public_input),
             &constraint_coefficients,
+            1,
         );
+
+        assert_eq!(constraint_polynomial.len(), 1024);
+
         let new = constraint_polynomial.evaluate(&x);
 
         assert_eq!(old, new);

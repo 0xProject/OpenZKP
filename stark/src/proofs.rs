@@ -185,8 +185,12 @@ where
         constraint_coefficients.push(proof.get_random());
     }
 
-    let constraint_polynomial =
-        get_constraint_polynomial(&trace_polynomials, constraints, &constraint_coefficients, params.constraints_degree_bound);
+    let constraint_polynomial = get_constraint_polynomial(
+        &trace_polynomials,
+        constraints,
+        &constraint_coefficients,
+        params.constraints_degree_bound,
+    );
 
     let constraint_lde = evalute_polynomial_on_domain(&constraint_polynomial, params.blowup);
 
@@ -316,7 +320,7 @@ pub fn geometric_series(base: &FieldElement, step: &FieldElement, len: usize) ->
     range
 }
 
-fn interpolate_trace_table(table: &TraceTable) -> Vec<DensePolynomial> {
+pub fn interpolate_trace_table(table: &TraceTable) -> Vec<DensePolynomial> {
     let mut result: Vec<DensePolynomial> = Vec::with_capacity(table.num_columns());
     (0..table.num_columns())
         .into_par_iter()
@@ -373,7 +377,8 @@ pub fn get_constraint_polynomial(
     constraint_coefficients: &[FieldElement],
     constraints_degree_bound: usize,
 ) -> DensePolynomial {
-    let mut constraint_polynomial = DensePolynomial::new(&vec![FieldElement::ZERO; constraints_degree_bound]);
+    let mut constraint_polynomial =
+        DensePolynomial::new(&vec![FieldElement::ZERO; constraints_degree_bound]);
     let trace_length = trace_polynomials[0].len();
     for (i, constraint) in constraints.iter().enumerate() {
         let mut p = (constraint.base)(trace_polynomials);
@@ -383,9 +388,13 @@ pub fn get_constraint_polynomial(
         p /= constraint.denominator.clone();
         println!("{} divided!", { i });
         constraint_polynomial += &(&constraint_coefficients[2 * i] * &p);
+        if i == 2 {
+            assert_eq!(p.len(), 1024)
+        }
         p *= SparsePolynomial::new(&[(
             constraint_coefficients[2 * i + 1].clone(),
-            constraints_degree_bound * trace_length - p.len(),
+            (constraints_degree_bound - 1) * trace_length + constraint.denominator.degree()
+                - constraint.numerator.degree(),
         )]);
         constraint_polynomial += &p;
         println!("{} finished!", { i });
@@ -638,8 +647,10 @@ fn decommit_fri_layers_and_trees(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fibonacci::{get_fibonacci_constraints, get_trace_table, PublicInput, PrivateInput};
-    use crate::verifier::check_proof;
+    use crate::{
+        fibonacci::{get_fibonacci_constraints, get_trace_table, PrivateInput, PublicInput},
+        verifier::check_proof,
+    };
     use macros_decl::{hex, u256h};
     use u256::U256;
 
@@ -711,7 +722,6 @@ mod tests {
             1024
         ));
     }
-
 
     #[test]
     fn fib_test_4096() {
@@ -886,8 +896,12 @@ mod tests {
 
         println!("yay!");
 
-        let constraint_polynomial =
-            get_constraint_polynomial(&TPn, &constraints, &constraint_coefficients, params.constraints_degree_bound);
+        let constraint_polynomial = get_constraint_polynomial(
+            &TPn,
+            &constraints,
+            &constraint_coefficients,
+            params.constraints_degree_bound,
+        );
         assert_eq!(constraint_polynomial.len(), 1024);
         let CC = evalute_polynomial_on_domain(&constraint_polynomial, params.blowup);
         // Checks that our constraints are properly calculated on the domain

@@ -39,7 +39,8 @@ impl DensePolynomial {
 
     pub fn next(&self) -> Self {
         // Note we're assuming that the polynomial has length equal to the trace length.
-        let trace_generator = FieldElement::root(self.len()).expect("DensePolynomial length doesn't have generator.");
+        let trace_generator =
+            FieldElement::root(self.len()).expect("DensePolynomial length doesn't have generator.");
         let mut shifted_coefficients = self.0.clone();
         let mut power = FieldElement::ONE;
         for coefficient in shifted_coefficients.iter_mut() {
@@ -154,7 +155,7 @@ impl SparsePolynomial {
     pub fn new(coefficients_and_degrees: &[(FieldElement, usize)]) -> Self {
         let mut map = BTreeMap::new();
         for (coefficient, degree) in coefficients_and_degrees {
-            assert!(!coefficient.is_zero());
+            // assert!(!coefficient.is_zero());
             match map.insert(*degree, coefficient.clone()) {
                 None => (),
                 Some(_) => panic!("Duplicate degrees found when constructing SparsePolynomial"),
