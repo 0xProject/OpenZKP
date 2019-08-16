@@ -12,7 +12,7 @@ commands:
           name: Save cargo home cache
           key: cargo-home-v1-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ epoch }}
           paths:
-            - "$CARGO_HOME"
+            - /usr/local/cargo
   setup-sccache:
     steps:
       - run:
@@ -27,7 +27,7 @@ commands:
   save-sccache-cache:
     steps:
       - run:
-          name: sccache statistics
+          name: Show sccache statistics
           command: |
             sccache --show-stats
       - save_cache:
@@ -67,10 +67,10 @@ jobs:
           no_output_timeout: 1800s
       - run:
           name: Build all targets on stable
-          command: cargo build $PROJECTS  --all-targets
+          command: cargo build $PROJECTS --all-targets
       - run:
           name: Build all targets on nightly
-          command: cargo +$NIGHTLY build $PROJECTS  --all-targets
+          command: cargo +$NIGHTLY build $PROJECTS --all-targets
       - run:
           name: Lint with rustformat nightly
           command: cargo +$NIGHTLY fmt $PROJECTS -- --check
