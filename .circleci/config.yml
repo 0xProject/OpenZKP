@@ -16,7 +16,7 @@ commands:
   setup-sccache:
     steps:
       - run:
-          name: Install sccache
+          name: Setup sccache
           command: |
             cargo install sccache --no-default-features
             # This configures Rust to use sccache.
@@ -68,6 +68,7 @@ jobs:
           name: Build all targets
           command: |
             cargo build -p ecc -p primefield -p starkdex -p starkcrypto-wasm -p stark -p macros-decl -p macros-impl -p macros-lib  --all-targets
+            cargo +$NIGHTLY build -p ecc -p primefield -p starkdex -p starkcrypto-wasm -p stark -p macros-decl -p macros-impl -p macros-lib  --all-targets
       - run:
           name: Linting
           command: |
