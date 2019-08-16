@@ -11,7 +11,7 @@ use primefield::FieldElement;
 use rayon::ThreadPoolBuilder;
 use stark::{
     check_proof, fft_cofactor_bit_reversed,
-    fibonacci::{get_constraint, get_trace_table, PrivateInput, PublicInput},
+    fibonacci::{get_fibonacci_constraints, get_trace_table, PrivateInput, PublicInput},
     make_tree, stark_proof, ProofParams,
 };
 use std::{convert::TryInto, marker::Send};
@@ -127,7 +127,7 @@ fn proof_make(crit: &mut Criterion) {
         bench.iter(|| {
             black_box(stark_proof(
                 &get_trace_table(1024, &private),
-                &get_constraint(),
+                &get_fibonacci_constraints(&public),
                 &public,
                 &ProofParams {
                     blowup:                   16,
@@ -156,7 +156,7 @@ fn proof_check(crit: &mut Criterion) {
 
     let proof = stark_proof(
         &get_trace_table(1024, &private),
-        &get_constraint(),
+        &get_fibonacci_constraints(&public),
         &public,
         &ProofParams {
             blowup:                   16,
@@ -171,7 +171,7 @@ fn proof_check(crit: &mut Criterion) {
         bench.iter(|| {
             black_box(check_proof(
                 proof.clone(),
-                &get_constraint(),
+                &get_fibonacci_constraints(&public),
                 &public,
                 &ProofParams {
                     blowup:                   16,

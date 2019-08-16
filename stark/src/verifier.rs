@@ -6,7 +6,7 @@ use u256::U256;
 
 pub fn check_proof<Public>(
     proposed_proof: ProverChannel,
-    constraints: &Constraint<Public>,
+    constraints: &[Constraint],
     public: &Public,
     params: &ProofParams,
     trace_cols: usize,
@@ -28,9 +28,9 @@ where
     // Get the low degree root commitment, and constraint root commitment
     // TODO: Make it work as channel.read()
     let low_degree_extension_root = Replayable::<Hash>::replay(&mut channel);
-    let mut constraint_coefficients: Vec<FieldElement> =
-        Vec::with_capacity(constraints.num_constraints);
-    for _i in 0..constraints.num_constraints {
+    let mut constraint_coefficients: Vec<FieldElement> = Vec::with_capacity(2 * constraints.len());
+    for _ in constraints {
+        constraint_coefficients.push(channel.get_random());
         constraint_coefficients.push(channel.get_random());
     }
     let constraint_evaluated_root = Replayable::<Hash>::replay(&mut channel);
@@ -339,29 +339,30 @@ mod tests {
                 "00000000000000000000000000000000000000000000000000000000cafebabe"
             )),
         };
+        let constraints = &get_fibonacci_constraints(&public);
         let actual = stark_proof(
             &get_trace_table(1024, &private),
-            &get_constraint(),
+            &constraints,
             &public,
             &ProofParams {
                 blowup:                   16,
                 pow_bits:                 12,
                 queries:                  20,
                 fri_layout:               vec![3, 2],
-                constraints_degree_bound: 2,
+                constraints_degree_bound: 1,
             },
         );
 
         assert!(check_proof(
             actual,
-            &get_constraint(),
+            &constraints,
             &public,
             &ProofParams {
                 blowup:                   16,
                 pow_bits:                 12,
                 queries:                  20,
                 fri_layout:               vec![3, 2],
-                constraints_degree_bound: 2,
+                constraints_degree_bound: 1,
             },
             2,
             1024

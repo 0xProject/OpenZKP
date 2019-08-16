@@ -11,7 +11,7 @@ use u256::{commutative_binop, noncommutative_binop};
 #[derive(Debug, PartialEq, Clone)]
 pub struct DensePolynomial(Vec<FieldElement>);
 
-#[cfg_attr(test, derive(Debug, PartialEq, Clone))]
+#[derive(Debug, PartialEq, Clone)]
 pub struct SparsePolynomial(BTreeMap<usize, FieldElement>);
 
 impl DensePolynomial {
@@ -24,7 +24,7 @@ impl DensePolynomial {
 
     // Note that the length of a polynomial is not its degree, because the leading
     // coefficient of a DensePolynomial can be zero.
-    fn len(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.0.len()
     }
 
@@ -37,6 +37,20 @@ impl DensePolynomial {
         result
     }
 
+    pub fn next(&self) -> Self {
+        // TODO: implement this without assuming that the polynomial has length equal to
+        // the trace length.
+        let trace_generator =
+            FieldElement::root(self.len()).expect("DensePolynomial length doesn't have generator.");
+        let mut shifted_coefficients = self.0.clone();
+        let mut power = FieldElement::ONE;
+        for coefficient in shifted_coefficients.iter_mut() {
+            *coefficient *= &power;
+            power *= &trace_generator;
+        }
+        Self(shifted_coefficients)
+    }
+
     // Removes trailing zeros or appends them so that the length is minimal and a
     // power of two.
     fn canonicalize(&mut self) {
@@ -46,6 +60,10 @@ impl DensePolynomial {
         };
         let new_length = (last_nonzero_index + 1).next_power_of_two();
         self.0.resize(new_length, FieldElement::ZERO);
+    }
+
+    pub fn coefficients(&self) -> &[FieldElement] {
+        &self.0
     }
 }
 
@@ -214,6 +232,18 @@ impl DivAssign<SparsePolynomial> for DensePolynomial {
         }
         self.0.drain(0..denominator_degree);
         self.canonicalize();
+    }
+}
+
+impl Sub<SparsePolynomial> for &DensePolynomial {
+    type Output = DensePolynomial;
+
+    fn sub(self, other: SparsePolynomial) -> DensePolynomial {
+        let mut difference = self.0.clone();
+        for (degree, coefficient) in other.0.iter() {
+            difference[*degree] -= coefficient;
+        }
+        DensePolynomial(difference)
     }
 }
 

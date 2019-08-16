@@ -1,11 +1,10 @@
 use crate::{
     channel::{ProverChannel, RandomGenerator, Writable},
     fft::{bit_reversal_permute, fft_cofactor_bit_reversed, ifft},
-    fibonacci::PublicInput,
     hash::Hash,
     hashable::Hashable,
     merkle::{self, make_tree},
-    polynomial::DensePolynomial,
+    polynomial::{DensePolynomial, SparsePolynomial},
     utils::Reversible,
     TraceTable,
 };
@@ -79,50 +78,10 @@ pub struct ProofParams {
     pub constraints_degree_bound: usize,
 }
 
-// This struct contains two evaluation systems which allow different
-// functionality, first it contains a default function which directly evaluates
-// the constraint function Second it contains a function designed to be used as
-// the core of a loop on precomputed values to get the C function. If the proof
-// system wants to used a looped eval for speedup it can set the loop bool to
-// true, otherwise the system will perform all computation directly
-#[allow(clippy::type_complexity)]
-pub struct Constraint<'a, Public> {
-    pub num_constraints: usize,
-    pub eval: &'a dyn Fn(
-        &FieldElement,      // X point
-        &[&[FieldElement]], // Polynomials
-        &Public,            // Public input
-        &[FieldElement],    // Constraint_coefficient
-    ) -> FieldElement,
-    pub eval_loop: Option<
-        &'a dyn Fn(
-            &[&[FieldElement]], // Evaluated polynomials (LDEn)
-            &[FieldElement],    // Constraint Coefficents
-            &Public,            // Public input
-        ) -> Vec<FieldElement>,
-    >,
-}
-
-impl<'a> Constraint<'a, PublicInput> {
-    #[allow(clippy::type_complexity)]
-    pub fn new(
-        num_constraints: usize,
-        eval: &'a dyn Fn(
-            &FieldElement,
-            &[&[FieldElement]],
-            &PublicInput,
-            &[FieldElement],
-        ) -> FieldElement,
-        eval_loop: Option<
-            &'a dyn Fn(&[&[FieldElement]], &[FieldElement], &PublicInput) -> Vec<FieldElement>,
-        >,
-    ) -> Self {
-        Self {
-            num_constraints,
-            eval,
-            eval_loop,
-        }
-    }
+pub struct Constraint {
+    pub base:        Box<dyn Fn(&[DensePolynomial]) -> DensePolynomial>,
+    pub denominator: SparsePolynomial,
+    pub numerator:   SparsePolynomial,
 }
 
 // This groupable impl allows the fri tree layers to get grouped and use the
@@ -184,7 +143,7 @@ where
 
 pub fn stark_proof<Public>(
     trace: &TraceTable,
-    constraints: &Constraint<Public>,
+    constraints: &[Constraint],
     public: &Public,
     params: &ProofParams,
 ) -> ProverChannel
@@ -193,7 +152,6 @@ where
     for<'a> ProverChannel: Writable<&'a Hash>,
 {
     // Compute some constants.
-    let g = trace.generator();
     let eval_domain_size = trace.num_rows() * params.blowup;
     let omega = FieldElement::root(eval_domain_size).expect("No generator for extended domain.");
     let eval_x = geometric_series(&FieldElement::ONE, &omega, eval_domain_size);
@@ -206,11 +164,8 @@ where
     //
 
     // Compute the low degree extension of the trace table.
-    let trace_coefficients = interpolate_trace_table(&trace);
-    let trace_coefficients: Vec<&[FieldElement]> =
-        trace_coefficients.iter().map(|x| x.as_slice()).collect();
-    let trace_lde =
-        calculate_low_degree_extensions(trace_coefficients.as_slice(), &params, &eval_x);
+    let trace_polynomials = interpolate_trace_table(&trace);
+    let trace_lde = calculate_low_degree_extensions(&trace_polynomials, params.blowup);
     let trace_lde_ref: Vec<&[FieldElement]> = trace_lde.iter().map(|x| x.as_slice()).collect();
 
     // Construct a merkle tree over the LDE trace
@@ -222,21 +177,20 @@ where
     //
 
     // Read constraint coefficients from the channel.
-    let mut constraint_coefficients = Vec::with_capacity(constraints.num_constraints);
-    for _i in 0..constraints.num_constraints {
+    let mut constraint_coefficients = Vec::with_capacity(2 * constraints.len());
+    for _ in constraints {
+        constraint_coefficients.push(proof.get_random());
         constraint_coefficients.push(proof.get_random());
     }
 
-    // Combine the constraint polynomials using the coefficients.
-    let constraint_lde = calculate_constraints_on_domain(
-        trace_coefficients.as_slice(),
-        trace_lde_ref.as_slice(),
+    let constraint_polynomial = get_constraint_polynomial(
+        &trace_polynomials,
         constraints,
-        constraint_coefficients.as_slice(),
-        public,
-        params.blowup,
+        &constraint_coefficients,
+        params.constraints_degree_bound,
     );
 
+    let constraint_lde = evalute_polynomial_on_domain(&constraint_polynomial, params.blowup);
     // Construct a merkle tree over the LDE combined constraints
     // and write the root to the channel.
     let c_tree = constraint_lde.as_slice().merkleize();
@@ -248,15 +202,8 @@ where
     // Read the out of domain sampling point from the channel.
     // (and do a bunch more things)
     // TODO: expand
-    let (oods_point, oods_coefficients, oods_values) = get_out_of_domain_information(
-        &mut proof,
-        trace_coefficients.as_slice(),
-        constraint_coefficients.as_slice(),
-        public,
-        &constraints,
-        &g,
-        &params,
-    );
+    let (oods_point, oods_coefficients, oods_values) =
+        get_out_of_domain_information(&mut proof, &trace_polynomials, &constraint_polynomial);
 
     // Divide out the OODS points from the constraints and combine.
     let oods_constraint_lde = calculate_out_of_domain_constraints(
@@ -375,111 +322,106 @@ pub fn geometric_series(base: &FieldElement, step: &FieldElement, len: usize) ->
     range
 }
 
-fn interpolate_trace_table(table: &TraceTable) -> Vec<Vec<FieldElement>> {
-    let mut result = vec![Vec::new(); table.num_columns()];
+pub fn interpolate_trace_table(table: &TraceTable) -> Vec<DensePolynomial> {
+    let mut result: Vec<DensePolynomial> = Vec::with_capacity(table.num_columns());
     (0..table.num_columns())
         .into_par_iter()
         // OPT: Use and FFT that can transform the entire table in one pass,
         // working on whole rows at a time. That is, it is vectorized over rows.
         // OPT: Use an in-place FFT. We don't need the trace table after this,
         // so it can be replaced by a matrix of coefficients.
-        .map(|j| ifft(table.column_to_mmapvec(j).as_slice()))
+        // OPT: Avoid double vector allocation here. Implement From<Vec<FieldElement>> for
+        // DensePolynomial?
+        .map(|j| DensePolynomial::new(&ifft(table.column_to_mmapvec(j).as_slice())))
         .collect_into_vec(&mut result);
     result
 }
 
 fn calculate_low_degree_extensions(
-    trace_poly: &[&[FieldElement]],
-    params: &ProofParams,
-    eval_x: &[FieldElement],
+    trace_polynomials: &[DensePolynomial],
+    blowup: usize,
 ) -> Vec<Vec<FieldElement>> {
-    let trace_len = trace_poly[0].len();
-    let omega = FieldElement::root(trace_len * params.blowup).unwrap();
-    let gen = FieldElement::GENERATOR;
-
-    let mut trace_lde = vec![Vec::with_capacity(eval_x.len()); trace_poly.len()];
-    trace_lde.par_iter_mut().enumerate().for_each(|(x, col)| {
-        for index in 0..params.blowup {
-            let reverse_index = index.bit_reverse_at(params.blowup);
-            let cofactor = &gen * omega.pow(reverse_index);
-            col.extend(fft_cofactor_bit_reversed(trace_poly[x], &cofactor));
-        }
-    });
-
-    trace_lde
+    let extended_domain_length = trace_polynomials[0].len() * blowup;
+    let mut low_degree_extensions: Vec<Vec<FieldElement>> =
+        vec![Vec::with_capacity(extended_domain_length); trace_polynomials.len()];
+    trace_polynomials
+        .par_iter()
+        .map(|p| evalute_polynomial_on_domain(&p, blowup))
+        .collect_into_vec(&mut low_degree_extensions);
+    low_degree_extensions
 }
 
-fn calculate_constraints_on_domain<Public>(
-    trace_poly: &[&[FieldElement]],
-    lde_poly: &[&[FieldElement]],
-    constraints: &Constraint<Public>,
-    constraint_coefficients: &[FieldElement],
-    public: &Public,
+fn evalute_polynomial_on_domain(
+    constraint_polynomial: &DensePolynomial,
     blowup: usize,
 ) -> Vec<FieldElement> {
-    let mut constraint_lde;
-    let trace_len = trace_poly[0].len();
-    let mut x = FieldElement::GENERATOR;
-    let omega = FieldElement::root(trace_len * blowup).unwrap();
-    let eval_domain_size = trace_len * blowup;
+    let extended_domain_length = constraint_polynomial.len() * blowup;
+    let extended_domain_generator = FieldElement::root(extended_domain_length)
+        .expect("No generator for extended_domain_length.");
+    let shift_factor = FieldElement::GENERATOR;
 
-    match constraints.eval_loop {
-        Some(x) => constraint_lde = (x)(lde_poly, constraint_coefficients, public),
-        None => {
-            constraint_lde = vec![FieldElement::ZERO; eval_domain_size];
-            for constraint_element in constraint_lde.iter_mut() {
-                *constraint_element = (constraints.eval)(
-                    // This will perform the polynomial evaluation on each step
-                    &x,
-                    trace_poly,
-                    public,
-                    constraint_coefficients,
-                );
-
-                x *= &omega;
-            }
-        }
+    let mut result: Vec<FieldElement> = Vec::with_capacity(extended_domain_length);
+    for index in 0..blowup {
+        let reverse_index = index.bit_reverse_at(blowup);
+        let cofactor =
+            &shift_factor * extended_domain_generator.pow(U256::from(reverse_index as u64));
+        result.extend(fft_cofactor_bit_reversed(
+            constraint_polynomial.coefficients(),
+            &cofactor,
+        ));
     }
-    constraint_lde
+    result
 }
 
-fn get_out_of_domain_information<Public>(
-    proof: &mut ProverChannel,
-    trace_poly: &[&[FieldElement]],
+pub fn get_constraint_polynomial(
+    trace_polynomials: &[DensePolynomial],
+    constraints: &[Constraint],
     constraint_coefficients: &[FieldElement],
-    public: &Public,
-    constraints: &Constraint<Public>,
-    g: &FieldElement,
-    params: &ProofParams,
+    constraints_degree_bound: usize,
+) -> DensePolynomial {
+    let mut constraint_polynomial =
+        DensePolynomial::new(&vec![FieldElement::ZERO; constraints_degree_bound]);
+    let trace_length = trace_polynomials[0].len();
+    for (i, constraint) in constraints.iter().enumerate() {
+        let mut p = (constraint.base)(trace_polynomials);
+        p *= constraint.numerator.clone();
+        p /= constraint.denominator.clone();
+        constraint_polynomial += &(&constraint_coefficients[2 * i] * &p);
+        p *= SparsePolynomial::new(&[(
+            FieldElement::ONE,
+            (constraints_degree_bound - 1) * trace_length + constraint.denominator.degree()
+                - constraint.numerator.degree(),
+        )]);
+        constraint_polynomial += &constraint_coefficients[2 * i + 1] * &p;
+    }
+    constraint_polynomial
+}
+
+fn get_out_of_domain_information(
+    proof: &mut ProverChannel,
+    trace_polynomials: &[DensePolynomial],
+    constraint_polynomial: &DensePolynomial,
 ) -> (FieldElement, Vec<FieldElement>, Vec<FieldElement>) {
     let oods_point: FieldElement = proof.get_random();
-    let oods_point_g = &oods_point * g;
-    let mut oods_values = Vec::with_capacity(2 * trace_poly.len() + 1);
-    for item in trace_poly {
-        let trace_polynomial = DensePolynomial::new(item);
+    let g = FieldElement::root(trace_polynomials[0].len())
+        .expect("No root for trace polynomial length.");
+    let oods_point_g = &oods_point * &g;
+    let mut oods_values = Vec::with_capacity(2 * trace_polynomials.len() + 1);
+    for trace_polynomial in trace_polynomials.iter() {
         let mut evaled = trace_polynomial.evaluate(&oods_point);
         oods_values.push(evaled.clone());
         evaled = trace_polynomial.evaluate(&oods_point_g);
         oods_values.push(evaled.clone());
     }
 
-    let mut current_oods = oods_point.clone();
-    for _ in 0..params.constraints_degree_bound {
-        oods_values.push((constraints.eval)(
-            &current_oods,
-            trace_poly,
-            public,
-            constraint_coefficients,
-        )); // Gets eval_C of the oods points via direct computation
-        current_oods *= g;
-    }
+    oods_values.push(constraint_polynomial.evaluate(&oods_point));
 
     for v in oods_values.iter() {
         proof.write(v);
     }
 
-    let mut oods_coefficients = Vec::with_capacity(2 * trace_poly.len() + 1);
-    for _i in 0..=2 * trace_poly.len() {
+    let mut oods_coefficients = Vec::with_capacity(2 * trace_polynomials.len() + 1);
+    for _i in 0..=2 * trace_polynomials.len() {
         oods_coefficients.push(proof.get_random());
     }
     (oods_point, oods_coefficients, oods_values)
@@ -700,7 +642,10 @@ fn decommit_fri_layers_and_trees(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{fibonacci::*, verifier::*};
+    use crate::{
+        fibonacci::{get_fibonacci_constraints, get_trace_table, PrivateInput, PublicInput},
+        verifier::check_proof,
+    };
     use macros_decl::{field_element, hex, u256h};
     use u256::U256;
 
@@ -722,7 +667,8 @@ mod tests {
             tt[(1000, 0)],
             field_element!("04d5f1f669b34fb7252d5a9d0d9786b2638c27eaa04e820b38b088057960cca1")
         );
-        let actual = stark_proof(&tt, &get_constraint(), &public, &ProofParams {
+        let constraints = &get_fibonacci_constraints(&public);
+        let actual = stark_proof(&tt, &constraints, &public, &ProofParams {
             blowup:                   16,
             pow_bits:                 0,
             queries:                  20,
@@ -762,8 +708,10 @@ mod tests {
             index: 1000,
             value: tt[(1000, 0)].clone(),
         };
+        let constraints = &get_fibonacci_constraints(&public);
         let expected = hex!("fcf1924f84656e5068ab9cbd44ae084b235bb990eefc0fd0183c77d5645e830e");
-        let actual = stark_proof(&tt, &get_constraint(), &public, &ProofParams {
+
+        let actual = stark_proof(&tt, &constraints, &public, &ProofParams {
             blowup:                   16,
             pow_bits:                 12,
             queries:                  20,
@@ -787,7 +735,7 @@ mod tests {
         };
         let actual = stark_proof(
             &get_trace_table(1024, &private),
-            &get_constraint(),
+            &get_fibonacci_constraints(&public),
             &public,
             &ProofParams {
                 blowup: 16, /* TODO - The blowup in the fib constraints is hardcoded to 16,
@@ -802,7 +750,7 @@ mod tests {
 
         assert!(check_proof(
             actual,
-            &get_constraint(),
+            &get_fibonacci_constraints(&public),
             &public,
             &ProofParams {
                 blowup: 16, /* TODO - The blowup in the fib constraints is hardcoded to 16,
@@ -830,7 +778,8 @@ mod tests {
             index: 4000,
             value: tt[(4000, 0)].clone(),
         };
-        let actual = stark_proof(&tt, &get_constraint(), &public, &ProofParams {
+        let constraints = get_fibonacci_constraints(&public);
+        let actual = stark_proof(&tt, &constraints, &public, &ProofParams {
             blowup:                   16,
             pow_bits:                 12,
             queries:                  20,
@@ -840,7 +789,7 @@ mod tests {
 
         assert!(check_proof(
             actual,
-            &get_constraint(),
+            &constraints,
             &public,
             &ProofParams {
                 blowup:                   16,
@@ -892,7 +841,8 @@ mod tests {
             )),
         };
 
-        let constraints = get_constraint();
+        let trace_len = 1024;
+        let constraints = get_fibonacci_constraints(&public);
         let params = ProofParams {
             blowup:                   16,
             pow_bits:                 12,
@@ -901,7 +851,6 @@ mod tests {
             constraints_degree_bound: 1,
         };
 
-        let trace_len = 1024;
         let omega = FieldElement::from(u256h!(
             "0393a32b34832dbad650df250f673d7c5edd09f076fc314a3e5a42f0606082e1"
         ));
@@ -925,13 +874,12 @@ mod tests {
         assert_eq!(trace[(1000, 0)], public.value);
 
         let TPn = interpolate_trace_table(&trace);
-        let TP0 = DensePolynomial::new(&TPn[0]);
-        let TP1 = DensePolynomial::new(&TPn[1]);
+        let TP0 = TPn[0].clone();
+        let TP1 = TPn[1].clone();
         // Checks that the trace table polynomial interpolation is working
         assert_eq!(TP0.evaluate(&trace_x[1000]), trace[(1000, 0)]);
 
-        let TPn_reference: Vec<&[FieldElement]> = TPn.iter().map(|x| x.as_slice()).collect();
-        let LDEn = calculate_low_degree_extensions(TPn_reference.as_slice(), &params, &eval_x);
+        let LDEn = calculate_low_degree_extensions(&TPn, params.blowup);
 
         // Checks that the low degree extension calculation is working
         let i = 13644usize;
@@ -974,20 +922,21 @@ mod tests {
             hex!("b7d80385fa0c8879473cdf987ea7970bb807aec78bb91af39a1504d965ad8e92")
         );
 
-        let mut constraint_coefficients = Vec::with_capacity(constraints.num_constraints);
-        for _i in 0..constraints.num_constraints {
+        let mut constraint_coefficients = Vec::with_capacity(2 * constraints.len());
+        for _ in &constraints {
+            constraint_coefficients.push(proof.get_random());
             constraint_coefficients.push(proof.get_random());
         }
 
         let LDEn_reference: Vec<&[FieldElement]> = LDEn.iter().map(|x| x.as_slice()).collect();
-        let CC = calculate_constraints_on_domain(
-            TPn_reference.as_slice(),
-            LDEn_reference.as_slice(),
+        let constraint_polynomial = get_constraint_polynomial(
+            &TPn,
             &constraints,
-            constraint_coefficients.as_slice(),
-            &public,
-            params.blowup,
+            &constraint_coefficients,
+            params.constraints_degree_bound,
         );
+        assert_eq!(constraint_polynomial.len(), 1024);
+        let CC = evalute_polynomial_on_domain(&constraint_polynomial, params.blowup);
         // Checks that our constraints are properly calculated on the domain
         assert_eq!(
             CC[123.bit_reverse_at(eval_domain_size)].clone(),
@@ -1003,15 +952,8 @@ mod tests {
         );
         proof.write(&c_tree[1]);
 
-        let (oods_point, oods_coefficients, oods_values) = get_out_of_domain_information(
-            &mut proof,
-            TPn_reference.as_slice(),
-            constraint_coefficients.as_slice(),
-            &public,
-            &constraints,
-            &g,
-            &params,
-        );
+        let (oods_point, oods_coefficients, oods_values) =
+            get_out_of_domain_information(&mut proof, &TPn, &constraint_polynomial);
         // Checks that we have derived the right out of domain sample point
         assert_eq!(
             U256::from(oods_point.clone()),
