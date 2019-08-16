@@ -23,7 +23,10 @@ use u256::U256;
 // being the max index [ie the one which if you iterate up to it splits the
 // whole range]
 pub trait Groupable<LeafType: Hashable> {
-    fn make_group(&self, index: usize) -> LeafType;
+    fn get_leaf_hash(&self, index: usize) -> Hash {
+        self.get_leaf(index).hash()
+    }
+    fn get_leaf(&self, index: usize) -> LeafType;
     fn domain_size(&self) -> usize;
 }
 
@@ -88,7 +91,7 @@ pub struct Constraint {
 // This groupable impl allows the fri tree layers to get grouped and use the
 // same merkleize system
 impl Groupable<Vec<U256>> for (usize, &[FieldElement]) {
-    fn make_group(&self, index: usize) -> Vec<U256> {
+    fn get_leaf(&self, index: usize) -> Vec<U256> {
         let (coset_size, layer) = *self;
         let mut internal_leaf = Vec::with_capacity(coset_size);
         for j in 0..coset_size {
@@ -103,7 +106,7 @@ impl Groupable<Vec<U256>> for (usize, &[FieldElement]) {
 }
 
 impl Groupable<Vec<U256>> for &[MmapVec<FieldElement>] {
-    fn make_group(&self, index: usize) -> Vec<U256> {
+    fn get_leaf(&self, index: usize) -> Vec<U256> {
         let mut ret = Vec::with_capacity(self.len());
         for item in self.iter() {
             ret.push(item[index].as_montgomery().clone())
@@ -117,7 +120,7 @@ impl Groupable<Vec<U256>> for &[MmapVec<FieldElement>] {
 }
 
 impl Groupable<U256> for &[FieldElement] {
-    fn make_group(&self, index: usize) -> U256 {
+    fn get_leaf(&self, index: usize) -> U256 {
         self[index].as_montgomery().clone()
     }
 
@@ -136,7 +139,7 @@ where
         let mut leaves = Vec::with_capacity(eval_domain_size);
         (0..eval_domain_size)
             .into_par_iter()
-            .map(|index| self.make_group(index))
+            .map(|index| self.get_leaf_hash(index))
             .collect_into_vec(&mut leaves);
         make_tree(leaves.as_slice())
     }
@@ -574,7 +577,7 @@ fn decommit_with_queries_and_proof<R: Hashable, T: Groupable<R>>(
     ProverChannel: Writable<R>,
 {
     for &index in queries.iter() {
-        proof.write((&source).make_group(index));
+        proof.write((&source).get_leaf(index));
     }
     decommit_proof(merkle::proof(tree, queries, source), proof);
 }
@@ -886,16 +889,6 @@ mod tests {
         let reverse_i = i.bit_reverse_at(eval_domain_size);
         assert_eq!(TP0.evaluate(&eval_offset_x[reverse_i]), LDEn[0][i]);
         assert_eq!(TP1.evaluate(&eval_offset_x[reverse_i]), LDEn[1][i]);
-
-        // Checks that the groupable trait is properly grouping for &[Vec<FieldElement>]
-        assert_eq!(
-            (LDEn.as_slice().make_group(3243))[0].clone(),
-            u256h!("01ddd9e389a326817ad1d2a5311e1bc2cf7fa734ebdc2961085b5acfa87a58ff")
-        );
-        assert_eq!(
-            (LDEn.as_slice().make_group(3243))[1].clone(),
-            u256h!("03dbc6c47df0606997c2cefb20c4277caf2b76bca1d31c13432f71cdd93b3718")
-        );
 
         let tree = LDEn.merkleize();
         // Checks that the merklelizable implementation is working [implicit check of

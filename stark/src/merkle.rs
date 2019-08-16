@@ -91,18 +91,18 @@ pub fn proof<R: Hashable, T: Groupable<R>>(
             match prophet {
                 Some(x) => {
                     if **x != index + 1 {
-                        decommitment.push(source.make_group(index + 1).hash());
+                        decommitment.push(source.get_leaf_hash(index + 1));
                     } else {
                         excluded_pair = true;
                     }
                 }
                 None => {
-                    decommitment.push(source.make_group(index + 1).hash());
+                    decommitment.push(source.get_leaf_hash(index + 1));
                 }
             }
         } else if !excluded_pair {
             known[num_leaves - 1 + index % num_leaves] = true;
-            decommitment.push(source.make_group(index - 1).hash());
+            decommitment.push(source.get_leaf_hash(index - 1));
         } else {
             known[num_leaves - 1 + index % num_leaves] = true;
             excluded_pair = false;
@@ -278,7 +278,7 @@ mod tests {
     use u256::U256;
 
     impl Groupable<U256> for &[U256] {
-        fn make_group(&self, index: usize) -> U256 {
+        fn get_leaf(&self, index: usize) -> U256 {
             self[index].clone()
         }
 
