@@ -19,6 +19,10 @@ commands:
           key: sccache-cache-v1-{{ arch }}-{{ .Environment.CIRCLE_JOB }}
   save-sccache-cache:
     steps:
+      - run:
+        name: SCCache statistics
+        commands: |
+          sccache --show-stats
       - save_cache:
           name: Save sccache cache
           # We use {{ epoch }} to always upload a fresh cache:
@@ -54,14 +58,14 @@ jobs:
             rustup --version
           no_output_timeout: 1800s
       - run:
+          name: Build all targets
+          command: |
+            cargo build -p ecc -p primefield -p starkdex -p starkcrypto-wasm -p stark -p macros-decl -p macros-impl -p macros-lib  --all-targets
+      - run:
           name: Linting
           command: |
             cargo +$NIGHTLY fmt -p ecc primefield starkdex starkcrypto-wasm stark macros-decl macros-impl macros-lib -- --check
             cargo clippy -p ecc -p primefield -p starkdex -p starkcrypto-wasm -p stark -p macros-decl -p macros-impl -p macros-lib --all-targets
-      - run:
-          name: Build all targets
-          command: |
-            cargo build -p ecc -p primefield -p starkdex -p starkcrypto-wasm -p stark -p macros-decl -p macros-impl -p macros-lib  --all-targets
       - run:
           name: Test in debug and release mode
           command: |
