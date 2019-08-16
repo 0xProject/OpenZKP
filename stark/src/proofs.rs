@@ -701,8 +701,54 @@ fn decommit_fri_layers_and_trees(
 mod tests {
     use super::*;
     use crate::{fibonacci::*, verifier::*};
-    use macros_decl::{hex, u256h};
+    use macros_decl::{field_element, hex, u256h};
     use u256::U256;
+
+    #[test]
+    fn starkware_fibonacci() {
+        // All the constants for this tests are copied from files in
+        // https://github.com/0xProject/evm-verifier/commit/9bf369139b0edc23ab7ab7e8db8164c5a05a83df.
+        // Copied from solidity/contracts/fibonacci/fibonacci_private_input1.json
+        let private = PrivateInput {
+            secret: field_element!("83d36de9"),
+        };
+        let tt = get_trace_table(1024, &private);
+        let public = PublicInput {
+            index: 1000,
+            value: tt[(1000, 0)].clone(),
+        };
+        // Copied from solidity/contracts/fibonacci/fibonacci_public_input1.json
+        assert_eq!(
+            tt[(1000, 0)],
+            field_element!("04d5f1f669b34fb7252d5a9d0d9786b2638c27eaa04e820b38b088057960cca1")
+        );
+        let actual = stark_proof(&tt, &get_constraint(), &public, &ProofParams {
+            blowup:                   16,
+            pow_bits:                 0,
+            queries:                  20,
+            fri_layout:               vec![3, 2],
+            constraints_degree_bound: 1,
+        });
+
+        // Commitment hashes from
+        // solidity/test/fibonacci/proof/fibonacci_proof_annotations.txt
+        assert_eq!(
+            actual.proof[0..32],
+            hex!("4ef92de4d2d3594d35f0123ed8187d60542188f5000000000000000000000000")
+        );
+        assert_eq!(
+            actual.proof[32..64],
+            hex!("f2f6338add62aac3311361aa5d4cf2da2ae04fb6000000000000000000000000")
+        );
+        assert_eq!(
+            actual.proof[224..256],
+            hex!("e793b5a749cf7d10eb2d43faf4ab472f3ed20c1e000000000000000000000000")
+        );
+        assert_eq!(
+            actual.proof[256..288],
+            hex!("2333baba2fa0573e00bca54c2b5508f540a37781000000000000000000000000")
+        );
+    }
 
     #[test]
     fn fib_test_1024_python_witness() {
