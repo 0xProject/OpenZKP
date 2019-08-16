@@ -1,21 +1,26 @@
 version: 2.1
 
 commands:
-  restore-cargo-home-cache:
+  restore-toolchain-cache:
     steps:
       - run:
-          name: Allow CirceCI to write cargo home (workaround)
+          name: Allow CirceCI to write toolchain (workaround)
           command: |
             sudo mkdir -p /usr/local/{cargo,rustup}
             sudo chown -R circleci /usr/local/{cargo,rustup}
       - restore_cache:
-          name: Restore cargo home cache
-          key: cargo-home-v1-{{ arch }}
-  save-cargo-home-cache:
+          name: Restore toolchain cache
+          keys: 
+            - toolchain-v1-{{ arch }}-{{ .Environment.CIRCLE_JOB }}
+            - toolchain-v1-{{ arch }}
+  save-toolchain-cache:
     steps:
+      - run:
+          name: Generate toolchain cache key
+          command: sha256sum /usr/local/rustup/toolchains/*/bin/* /usr/local/cargo/bin/* > CARGO_HOME_CACHE_KEY
       - save_cache:
-          name: Save cargo home cache
-          key: cargo-home-v1-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ epoch }}
+          name: Save toolchain cache
+          key: toolchain-v1-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ checksum "CARGO_HOME_CACHE_KEY" }}
           paths:
             - /usr/local/cargo
             - /usr/local/rustup
@@ -60,10 +65,10 @@ jobs:
       - PROJECTS: -p ecc -p primefield -p starkdex -p starkcrypto-wasm -p stark -p macros-decl -p macros-impl -p macros-lib
     steps:
       - checkout
-      - restore-cargo-home-cache
+      - restore-toolchain-cache
       - setup-sccache
       - run:
-          name: Setup build environment
+          name: Setup toolchain
           command: |
             rustup component add rustfmt clippy
             rustup toolchain install $NIGHTLY
@@ -108,7 +113,7 @@ jobs:
             # Exclude benchmarks that compare against external crates (pulls in a lot of deps)
             cargo bench --bench benchmark --all --exclude primefield/benchmarks -- --test
       - save-sccache-cache
-      - save-cargo-home-cache
+      - save-toolchain-cache
 
 workflows:
   version: 2
