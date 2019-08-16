@@ -413,6 +413,7 @@ fn get_out_of_domain_information(
     // let g = FieldElement::from(u256h!(
     //     "0659d83946a03edd72406af6711825f5653d9e35dc125289a206c054ec89c4f1" //
     // this is wrong! ));
+    assert_eq!(trace_polynomials[0].len(), 1024);
     let g = FieldElement::root(trace_polynomials[0].len())
         .expect("No root for trace polynomial length.");
     let oods_point_g = &oods_point * &g;
@@ -423,6 +424,7 @@ fn get_out_of_domain_information(
         evaled = trace_polynomial.evaluate(&oods_point_g);
         oods_values.push(evaled.clone());
     }
+
     oods_values.push(constraint_polynomial.evaluate(&oods_point));
 
     for v in oods_values.iter() {
