@@ -66,6 +66,18 @@ impl DensePolynomial {
     pub fn coefficients(&self) -> &[FieldElement] {
         &self.0
     }
+
+    pub fn square(&self) -> DensePolynomial {
+        let mut result = self.0.clone();
+        result.extend_from_slice(&vec![FieldElement::ZERO; self.len()]);
+        result = fft(&result);
+        result
+            .par_iter_mut()
+            .map(|x| *x = x.square())
+            .collect::<Vec<_>>();
+        result = ifft(&result);
+        Self(result)
+    }
 }
 
 // OPT: Write an Add<DensePolynomial> uses the fact that it's faster to add
