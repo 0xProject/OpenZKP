@@ -188,14 +188,14 @@ where
         constraint_coefficients.push(proof.get_random());
     }
 
-    let constraint_polynomial = get_constraint_polynomial(
+    let constraint_polynomials = get_constraint_polynomials(
         &trace_polynomials,
         constraints,
         &constraint_coefficients,
         params.constraints_degree_bound,
     );
 
-    let constraint_lde = evalute_polynomial_on_domain(&constraint_polynomial, params.blowup);
+    let constraint_lde = calculate_low_degree_extensions(&constraint_polynomials, params.blowup);
     // Construct a merkle tree over the LDE combined constraints
     // and write the root to the channel.
     let c_tree = constraint_lde.as_slice().merkleize();
@@ -208,12 +208,12 @@ where
     // (and do a bunch more things)
     // TODO: expand
     let (oods_point, oods_coefficients) =
-        get_out_of_domain_information(&mut proof, &trace_polynomials, &constraint_polynomial);
+        get_out_of_domain_information(&mut proof, &trace_polynomials, &constraint_polynomials);
 
     // Divide out the OODS points from the constraints and combine.
     let oods_constraint_lde = calculate_fri_polynomial(
         &trace_polynomials,
-        &constraint_polynomial,
+        &constraint_polynomials,
         &oods_point,
         &oods_coefficients,
         params.blowup,
@@ -375,12 +375,12 @@ fn evalute_polynomial_on_domain(
     result
 }
 
-pub fn get_constraint_polynomial(
+pub fn get_constraint_polynomials(
     trace_polynomials: &[DensePolynomial],
     constraints: &[Constraint],
     constraint_coefficients: &[FieldElement],
     constraints_degree_bound: usize,
-) -> DensePolynomial {
+) -> Vec<DensePolynomial> {
     let mut constraint_polynomial =
         DensePolynomial::new(&vec![FieldElement::ZERO; constraints_degree_bound]);
     let trace_length = trace_polynomials[0].len();
@@ -396,13 +396,13 @@ pub fn get_constraint_polynomial(
         )]);
         constraint_polynomial += &constraint_coefficients[2 * i + 1] * &p;
     }
-    constraint_polynomial
+    vec![constraint_polynomial]
 }
 
 fn get_out_of_domain_information(
     proof: &mut ProverChannel,
     trace_polynomials: &[DensePolynomial],
-    constraint_polynomial: &DensePolynomial,
+    constraint_polynomials: &[DensePolynomial],
 ) -> (FieldElement, Vec<FieldElement>) {
     let oods_point: FieldElement = proof.get_random();
     let g = FieldElement::root(trace_polynomials[0].len())
@@ -415,8 +415,9 @@ fn get_out_of_domain_information(
         evaled = trace_polynomial.evaluate(&oods_point_g);
         oods_values.push(evaled.clone());
     }
-
-    oods_values.push(constraint_polynomial.evaluate(&oods_point));
+    for constraint_polynomial in constraint_polynomials {
+        oods_values.push(constraint_polynomial.evaluate(&oods_point));
+    }
 
     for v in oods_values.iter() {
         proof.write(v);
@@ -438,7 +439,7 @@ fn divide_out_point(p: &DensePolynomial, x: &FieldElement) -> DensePolynomial {
 
 fn calculate_fri_polynomial(
     trace_polynomials: &[DensePolynomial],
-    constraint_polynomial: &DensePolynomial,
+    constraint_polynomials: &[DensePolynomial],
     oods_point: &FieldElement,
     oods_coefficients: &[FieldElement],
     blowup: usize,
@@ -455,8 +456,11 @@ fn calculate_fri_polynomial(
             * &divide_out_point(trace_polynomial, &shifted_oods_point);
     }
 
-    fri_polynomial += &oods_coefficients[oods_coefficients.len() - 1]
-        * &divide_out_point(constraint_polynomial, oods_point);
+    let offset = 2 * trace_polynomials.len();
+    for (i, constraint_polynomial) in constraint_polynomials.iter().enumerate() {
+        fri_polynomial +=
+            &oods_coefficients[offset + i] * &divide_out_point(constraint_polynomial, oods_point);
+    }
 
     evalute_polynomial_on_domain(&fri_polynomial, blowup).to_vec()
 }
@@ -899,17 +903,18 @@ mod tests {
             constraint_coefficients.push(proof.get_random());
         }
 
-        let constraint_polynomial = get_constraint_polynomial(
+        let constraint_polynomials = get_constraint_polynomials(
             &TPn,
             &constraints,
             &constraint_coefficients,
             params.constraints_degree_bound,
         );
-        assert_eq!(constraint_polynomial.len(), 1024);
-        let CC = evalute_polynomial_on_domain(&constraint_polynomial, params.blowup);
+        assert_eq!(constraint_polynomials.len(), 1);
+        assert_eq!(constraint_polynomials[0].len(), 1024);
+        let CC = calculate_low_degree_extensions(&constraint_polynomials, params.blowup);
         // Checks that our constraints are properly calculated on the domain
         assert_eq!(
-            CC[123.bit_reverse_at(eval_domain_size)].clone(),
+            CC[0][123.bit_reverse_at(eval_domain_size)].clone(),
             field_element!("05b841208b357e29ac1fe7a654efebe1ae152104571e695f311a353d4d5cabfb")
         );
 
@@ -923,7 +928,7 @@ mod tests {
         proof.write(&c_tree[1]);
 
         let (oods_point, oods_coefficients) =
-            get_out_of_domain_information(&mut proof, &TPn, &constraint_polynomial);
+            get_out_of_domain_information(&mut proof, &TPn, &constraint_polynomials);
         // Checks that we have derived the right out of domain sample point
         assert_eq!(
             U256::from(oods_point.clone()),
@@ -938,7 +943,7 @@ mod tests {
 
         let CO = calculate_fri_polynomial(
             &TPn,
-            &constraint_polynomial,
+            &constraint_polynomials,
             &oods_point,
             &oods_coefficients,
             params.blowup,
