@@ -1,11 +1,11 @@
 use crate::{
     channel::{ProverChannel, RandomGenerator, Writable},
     fft::{bit_reversal_permute, fft_cofactor_bit_reversed, ifft},
-    fibonacci::PublicInput,
     hash::Hash,
     hashable::Hashable,
     merkle::{self, make_tree},
-    polynomial::DensePolynomial,
+    mmap_vec::MmapVec,
+    polynomial::{DensePolynomial, SparsePolynomial},
     utils::Reversible,
     TraceTable,
 };
@@ -25,7 +25,10 @@ use u256::U256;
 // being the max index [ie the one which if you iterate up to it splits the
 // whole range]
 pub trait Groupable<LeafType: Hashable> {
-    fn make_group(&self, index: usize) -> LeafType;
+    fn get_leaf_hash(&self, index: usize) -> Hash {
+        self.get_leaf(index).hash()
+    }
+    fn get_leaf(&self, index: usize) -> LeafType;
     fn domain_size(&self) -> usize;
 }
 
@@ -81,56 +84,16 @@ pub struct ProofParams {
     pub constraints_degree_bound: usize,
 }
 
-// This struct contains two evaluation systems which allow different
-// functionality, first it contains a default function which directly evaluates
-// the constraint function Second it contains a function designed to be used as
-// the core of a loop on precomputed values to get the C function. If the proof
-// system wants to used a looped eval for speedup it can set the loop bool to
-// true, otherwise the system will perform all computation directly
-#[allow(clippy::type_complexity)]
-pub struct Constraint<'a, Public> {
-    pub num_constraints: usize,
-    pub eval: &'a dyn Fn(
-        &FieldElement,      // X point
-        &[&[FieldElement]], // Polynomials
-        &Public,            // Public input
-        &[FieldElement],    // Constraint_coefficient
-    ) -> FieldElement,
-    pub eval_loop: Option<
-        &'a dyn Fn(
-            &[&[FieldElement]], // Evaluated polynomials (LDEn)
-            &[FieldElement],    // Constraint Coefficents
-            &Public,            // Public input
-        ) -> Vec<FieldElement>,
-    >,
-}
-
-impl<'a> Constraint<'a, PublicInput> {
-    #[allow(clippy::type_complexity)]
-    pub fn new(
-        num_constraints: usize,
-        eval: &'a dyn Fn(
-            &FieldElement,
-            &[&[FieldElement]],
-            &PublicInput,
-            &[FieldElement],
-        ) -> FieldElement,
-        eval_loop: Option<
-            &'a dyn Fn(&[&[FieldElement]], &[FieldElement], &PublicInput) -> Vec<FieldElement>,
-        >,
-    ) -> Self {
-        Self {
-            num_constraints,
-            eval,
-            eval_loop,
-        }
-    }
+pub struct Constraint {
+    pub base:        Box<dyn Fn(&[DensePolynomial]) -> DensePolynomial>,
+    pub denominator: SparsePolynomial,
+    pub numerator:   SparsePolynomial,
 }
 
 // This groupable impl allows the fri tree layers to get grouped and use the
 // same merkleize system
 impl Groupable<Vec<U256>> for (usize, &[FieldElement]) {
-    fn make_group(&self, index: usize) -> Vec<U256> {
+    fn get_leaf(&self, index: usize) -> Vec<U256> {
         let (coset_size, layer) = *self;
         let mut internal_leaf = Vec::with_capacity(coset_size);
         for j in 0..coset_size {
@@ -144,8 +107,8 @@ impl Groupable<Vec<U256>> for (usize, &[FieldElement]) {
     }
 }
 
-impl Groupable<Vec<U256>> for &[Vec<FieldElement>] {
-    fn make_group(&self, index: usize) -> Vec<U256> {
+impl Groupable<Vec<U256>> for &[MmapVec<FieldElement>] {
+    fn get_leaf(&self, index: usize) -> Vec<U256> {
         let mut ret = Vec::with_capacity(self.len());
         for item in self.iter() {
             ret.push(item[index].as_montgomery().clone())
@@ -159,7 +122,7 @@ impl Groupable<Vec<U256>> for &[Vec<FieldElement>] {
 }
 
 impl Groupable<U256> for &[FieldElement] {
-    fn make_group(&self, index: usize) -> U256 {
+    fn get_leaf(&self, index: usize) -> U256 {
         self[index].as_montgomery().clone()
     }
 
@@ -178,7 +141,7 @@ where
         let mut leaves = Vec::with_capacity(eval_domain_size);
         (0..eval_domain_size)
             .into_par_iter()
-            .map(|index| self.make_group(index))
+            .map(|index| self.get_leaf_hash(index))
             .collect_into_vec(&mut leaves);
         make_tree(leaves.as_slice())
     }
@@ -186,7 +149,7 @@ where
 
 pub fn stark_proof<Public>(
     trace: &TraceTable,
-    constraints: &Constraint<Public>,
+    constraints: &[Constraint],
     public: &Public,
     params: &ProofParams,
 ) -> ProverChannel
@@ -195,7 +158,6 @@ where
     for<'a> ProverChannel: Writable<&'a Hash>,
 {
     // Compute some constants.
-    let g = trace.generator();
     let eval_domain_size = trace.num_rows() * params.blowup;
     let omega = FieldElement::root(eval_domain_size).expect("No generator for extended domain.");
     let eval_x = geometric_series(&FieldElement::ONE, &omega, eval_domain_size);
@@ -208,11 +170,8 @@ where
     //
 
     // Compute the low degree extension of the trace table.
-    let trace_coefficients = interpolate_trace_table(&trace);
-    let trace_coefficients: Vec<&[FieldElement]> =
-        trace_coefficients.iter().map(|x| x.as_slice()).collect();
-    let trace_lde =
-        calculate_low_degree_extensions(trace_coefficients.as_slice(), &params, &eval_x);
+    let trace_polynomials = interpolate_trace_table(&trace);
+    let trace_lde = calculate_low_degree_extensions(&trace_polynomials, params.blowup);
     let trace_lde_ref: Vec<&[FieldElement]> = trace_lde.iter().map(|x| x.as_slice()).collect();
 
     // Construct a merkle tree over the LDE trace
@@ -224,21 +183,20 @@ where
     //
 
     // Read constraint coefficients from the channel.
-    let mut constraint_coefficients = Vec::with_capacity(constraints.num_constraints);
-    for _i in 0..constraints.num_constraints {
+    let mut constraint_coefficients = Vec::with_capacity(2 * constraints.len());
+    for _ in constraints {
+        constraint_coefficients.push(proof.get_random());
         constraint_coefficients.push(proof.get_random());
     }
 
-    // Combine the constraint polynomials using the coefficients.
-    let constraint_lde = calculate_constraints_on_domain(
-        trace_coefficients.as_slice(),
-        trace_lde_ref.as_slice(),
+    let constraint_polynomial = get_constraint_polynomial(
+        &trace_polynomials,
         constraints,
-        constraint_coefficients.as_slice(),
-        public,
-        params.blowup,
+        &constraint_coefficients,
+        params.constraints_degree_bound,
     );
 
+    let constraint_lde = evalute_polynomial_on_domain(&constraint_polynomial, params.blowup);
     // Construct a merkle tree over the LDE combined constraints
     // and write the root to the channel.
     let c_tree = constraint_lde.as_slice().merkleize();
@@ -250,15 +208,8 @@ where
     // Read the out of domain sampling point from the channel.
     // (and do a bunch more things)
     // TODO: expand
-    let (oods_point, oods_coefficients, oods_values) = get_out_of_domain_information(
-        &mut proof,
-        trace_coefficients.as_slice(),
-        constraint_coefficients.as_slice(),
-        public,
-        &constraints,
-        &g,
-        &params,
-    );
+    let (oods_point, oods_coefficients, oods_values) =
+        get_out_of_domain_information(&mut proof, &trace_polynomials, &constraint_polynomial);
 
     // Divide out the OODS points from the constraints and combine.
     let oods_constraint_lde = calculate_out_of_domain_constraints(
@@ -377,111 +328,105 @@ pub fn geometric_series(base: &FieldElement, step: &FieldElement, len: usize) ->
     range
 }
 
-fn interpolate_trace_table(table: &TraceTable) -> Vec<Vec<FieldElement>> {
-    let mut result = vec![Vec::new(); table.num_columns()];
+pub fn interpolate_trace_table(table: &TraceTable) -> Vec<DensePolynomial> {
+    let mut result: Vec<DensePolynomial> = Vec::with_capacity(table.num_columns());
     (0..table.num_columns())
         .into_par_iter()
         // OPT: Use and FFT that can transform the entire table in one pass,
         // working on whole rows at a time. That is, it is vectorized over rows.
         // OPT: Use an in-place FFT. We don't need the trace table after this,
         // so it can be replaced by a matrix of coefficients.
-        .map(|j| ifft(table.column_to_mmapvec(j).as_slice()))
+        // OPT: Avoid double vector allocation here. Implement From<Vec<FieldElement>> for
+        // DensePolynomial?
+        .map(|j| DensePolynomial::new(&ifft(table.column_to_mmapvec(j).as_slice())))
         .collect_into_vec(&mut result);
     result
 }
 
 fn calculate_low_degree_extensions(
-    trace_poly: &[&[FieldElement]],
-    params: &ProofParams,
-    eval_x: &[FieldElement],
-) -> Vec<Vec<FieldElement>> {
-    let trace_len = trace_poly[0].len();
-    let omega = FieldElement::root(trace_len * params.blowup).unwrap();
-    let gen = FieldElement::GENERATOR;
-
-    let mut trace_lde = vec![Vec::with_capacity(eval_x.len()); trace_poly.len()];
-    trace_lde.par_iter_mut().enumerate().for_each(|(x, col)| {
-        for index in 0..params.blowup {
-            let reverse_index = index.bit_reverse_at(params.blowup);
-            let cofactor = &gen * omega.pow(reverse_index);
-            col.extend(fft_cofactor_bit_reversed(trace_poly[x], &cofactor));
-        }
-    });
-
-    trace_lde
-}
-
-fn calculate_constraints_on_domain<Public>(
-    trace_poly: &[&[FieldElement]],
-    lde_poly: &[&[FieldElement]],
-    constraints: &Constraint<Public>,
-    constraint_coefficients: &[FieldElement],
-    public: &Public,
+    trace_polynomials: &[DensePolynomial],
     blowup: usize,
-) -> Vec<FieldElement> {
-    let mut constraint_lde;
-    let trace_len = trace_poly[0].len();
-    let mut x = FieldElement::GENERATOR;
-    let omega = FieldElement::root(trace_len * blowup).unwrap();
-    let eval_domain_size = trace_len * blowup;
-
-    match constraints.eval_loop {
-        Some(x) => constraint_lde = (x)(lde_poly, constraint_coefficients, public),
-        None => {
-            constraint_lde = vec![FieldElement::ZERO; eval_domain_size];
-            for constraint_element in constraint_lde.iter_mut() {
-                *constraint_element = (constraints.eval)(
-                    // This will perform the polynomial evaluation on each step
-                    &x,
-                    trace_poly,
-                    public,
-                    constraint_coefficients,
-                );
-
-                x *= &omega;
-            }
-        }
-    }
-    constraint_lde
+) -> Vec<MmapVec<FieldElement>> {
+    let mut low_degree_extensions: Vec<MmapVec<FieldElement>> =
+        Vec::with_capacity(trace_polynomials.len());
+    trace_polynomials
+        .par_iter()
+        .map(|p| evalute_polynomial_on_domain(&p, blowup))
+        .collect_into_vec(&mut low_degree_extensions);
+    low_degree_extensions
 }
 
-fn get_out_of_domain_information<Public>(
-    proof: &mut ProverChannel,
-    trace_poly: &[&[FieldElement]],
+fn evalute_polynomial_on_domain(
+    constraint_polynomial: &DensePolynomial,
+    blowup: usize,
+) -> MmapVec<FieldElement> {
+    let extended_domain_length = constraint_polynomial.len() * blowup;
+    let extended_domain_generator = FieldElement::root(extended_domain_length)
+        .expect("No generator for extended_domain_length.");
+    let shift_factor = FieldElement::GENERATOR;
+
+    let mut result: MmapVec<FieldElement> = MmapVec::with_capacity(extended_domain_length);
+    for index in 0..blowup {
+        let reverse_index = index.bit_reverse_at(blowup);
+        let cofactor =
+            &shift_factor * extended_domain_generator.pow(U256::from(reverse_index as u64));
+        result.extend(&fft_cofactor_bit_reversed(
+            constraint_polynomial.coefficients(),
+            &cofactor,
+        ));
+    }
+    result
+}
+
+pub fn get_constraint_polynomial(
+    trace_polynomials: &[DensePolynomial],
+    constraints: &[Constraint],
     constraint_coefficients: &[FieldElement],
-    public: &Public,
-    constraints: &Constraint<Public>,
-    g: &FieldElement,
-    params: &ProofParams,
+    constraints_degree_bound: usize,
+) -> DensePolynomial {
+    let mut constraint_polynomial =
+        DensePolynomial::new(&vec![FieldElement::ZERO; constraints_degree_bound]);
+    let trace_length = trace_polynomials[0].len();
+    for (i, constraint) in constraints.iter().enumerate() {
+        let mut p = (constraint.base)(trace_polynomials);
+        p *= constraint.numerator.clone();
+        p /= constraint.denominator.clone();
+        constraint_polynomial += &(&constraint_coefficients[2 * i] * &p);
+        p *= SparsePolynomial::new(&[(
+            FieldElement::ONE,
+            (constraints_degree_bound - 1) * trace_length + constraint.denominator.degree()
+                - constraint.numerator.degree(),
+        )]);
+        constraint_polynomial += &constraint_coefficients[2 * i + 1] * &p;
+    }
+    constraint_polynomial
+}
+
+fn get_out_of_domain_information(
+    proof: &mut ProverChannel,
+    trace_polynomials: &[DensePolynomial],
+    constraint_polynomial: &DensePolynomial,
 ) -> (FieldElement, Vec<FieldElement>, Vec<FieldElement>) {
     let oods_point: FieldElement = proof.get_random();
-    let oods_point_g = &oods_point * g;
-    let mut oods_values = Vec::with_capacity(2 * trace_poly.len() + 1);
-    for item in trace_poly {
-        let trace_polynomial = DensePolynomial::new(item);
+    let g = FieldElement::root(trace_polynomials[0].len())
+        .expect("No root for trace polynomial length.");
+    let oods_point_g = &oods_point * &g;
+    let mut oods_values = Vec::with_capacity(2 * trace_polynomials.len() + 1);
+    for trace_polynomial in trace_polynomials.iter() {
         let mut evaled = trace_polynomial.evaluate(&oods_point);
         oods_values.push(evaled.clone());
         evaled = trace_polynomial.evaluate(&oods_point_g);
         oods_values.push(evaled.clone());
     }
 
-    let mut current_oods = oods_point.clone();
-    for _ in 0..params.constraints_degree_bound {
-        oods_values.push((constraints.eval)(
-            &current_oods,
-            trace_poly,
-            public,
-            constraint_coefficients,
-        )); // Gets eval_C of the oods points via direct computation
-        current_oods *= g;
-    }
+    oods_values.push(constraint_polynomial.evaluate(&oods_point));
 
     for v in oods_values.iter() {
         proof.write(v);
     }
 
-    let mut oods_coefficients = Vec::with_capacity(2 * trace_poly.len() + 1);
-    for _i in 0..=2 * trace_poly.len() {
+    let mut oods_coefficients = Vec::with_capacity(2 * trace_polynomials.len() + 1);
+    for _i in 0..=2 * trace_polynomials.len() {
         oods_coefficients.push(proof.get_random());
     }
     (oods_point, oods_coefficients, oods_values)
@@ -634,7 +579,7 @@ fn decommit_with_queries_and_proof<R: Hashable, T: Groupable<R>>(
     ProverChannel: Writable<R>,
 {
     for &index in queries.iter() {
-        proof.write((&source).make_group(index));
+        proof.write((&source).get_leaf(index));
     }
     decommit_proof(merkle::proof(tree, queries, source), proof);
 }
@@ -702,9 +647,59 @@ fn decommit_fri_layers_and_trees(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{fibonacci::*, verifier::*};
-    use macros_decl::{hex, u256h};
+    use crate::{
+        fibonacci::{get_fibonacci_constraints, get_trace_table, PrivateInput, PublicInput},
+        verifier::check_proof,
+    };
+    use macros_decl::{field_element, hex, u256h};
     use u256::U256;
+
+    #[test]
+    fn starkware_fibonacci() {
+        // All the constants for this tests are copied from files in
+        // https://github.com/0xProject/evm-verifier/commit/9bf369139b0edc23ab7ab7e8db8164c5a05a83df.
+        // Copied from solidity/contracts/fibonacci/fibonacci_private_input1.json
+        let private = PrivateInput {
+            secret: field_element!("83d36de9"),
+        };
+        let tt = get_trace_table(1024, &private);
+        let public = PublicInput {
+            index: 1000,
+            value: tt[(1000, 0)].clone(),
+        };
+        // Copied from solidity/contracts/fibonacci/fibonacci_public_input1.json
+        assert_eq!(
+            tt[(1000, 0)],
+            field_element!("04d5f1f669b34fb7252d5a9d0d9786b2638c27eaa04e820b38b088057960cca1")
+        );
+        let constraints = &get_fibonacci_constraints(&public);
+        let actual = stark_proof(&tt, &constraints, &public, &ProofParams {
+            blowup:                   16,
+            pow_bits:                 0,
+            queries:                  20,
+            fri_layout:               vec![3, 2],
+            constraints_degree_bound: 1,
+        });
+
+        // Commitment hashes from
+        // solidity/test/fibonacci/proof/fibonacci_proof_annotations.txt
+        assert_eq!(
+            actual.proof[0..32],
+            hex!("4ef92de4d2d3594d35f0123ed8187d60542188f5000000000000000000000000")
+        );
+        assert_eq!(
+            actual.proof[32..64],
+            hex!("f2f6338add62aac3311361aa5d4cf2da2ae04fb6000000000000000000000000")
+        );
+        assert_eq!(
+            actual.proof[224..256],
+            hex!("e793b5a749cf7d10eb2d43faf4ab472f3ed20c1e000000000000000000000000")
+        );
+        assert_eq!(
+            actual.proof[256..288],
+            hex!("2333baba2fa0573e00bca54c2b5508f540a37781000000000000000000000000")
+        );
+    }
 
     #[test]
     fn fib_test_1024_python_witness() {
@@ -718,8 +713,10 @@ mod tests {
             index: 1000,
             value: tt[(1000, 0)].clone(),
         };
+        let constraints = &get_fibonacci_constraints(&public);
         let expected = hex!("fcf1924f84656e5068ab9cbd44ae084b235bb990eefc0fd0183c77d5645e830e");
-        let actual = stark_proof(&tt, &get_constraint(), &public, &ProofParams {
+
+        let actual = stark_proof(&tt, &constraints, &public, &ProofParams {
             blowup:                   16,
             pow_bits:                 12,
             queries:                  20,
@@ -743,7 +740,7 @@ mod tests {
         };
         let actual = stark_proof(
             &get_trace_table(1024, &private),
-            &get_constraint(),
+            &get_fibonacci_constraints(&public),
             &public,
             &ProofParams {
                 blowup: 16, /* TODO - The blowup in the fib constraints is hardcoded to 16,
@@ -758,7 +755,7 @@ mod tests {
 
         assert!(check_proof(
             actual,
-            &get_constraint(),
+            &get_fibonacci_constraints(&public),
             &public,
             &ProofParams {
                 blowup: 16, /* TODO - The blowup in the fib constraints is hardcoded to 16,
@@ -786,7 +783,8 @@ mod tests {
             index: 4000,
             value: tt[(4000, 0)].clone(),
         };
-        let actual = stark_proof(&tt, &get_constraint(), &public, &ProofParams {
+        let constraints = get_fibonacci_constraints(&public);
+        let actual = stark_proof(&tt, &constraints, &public, &ProofParams {
             blowup:                   16,
             pow_bits:                 12,
             queries:                  20,
@@ -796,7 +794,7 @@ mod tests {
 
         assert!(check_proof(
             actual,
-            &get_constraint(),
+            &constraints,
             &public,
             &ProofParams {
                 blowup:                   16,
@@ -848,7 +846,8 @@ mod tests {
             )),
         };
 
-        let constraints = get_constraint();
+        let trace_len = 1024;
+        let constraints = get_fibonacci_constraints(&public);
         let params = ProofParams {
             blowup:                   16,
             pow_bits:                 12,
@@ -857,7 +856,6 @@ mod tests {
             constraints_degree_bound: 1,
         };
 
-        let trace_len = 1024;
         let omega = FieldElement::from(u256h!(
             "0393a32b34832dbad650df250f673d7c5edd09f076fc314a3e5a42f0606082e1"
         ));
@@ -881,13 +879,12 @@ mod tests {
         assert_eq!(trace[(1000, 0)], public.value);
 
         let TPn = interpolate_trace_table(&trace);
-        let TP0 = DensePolynomial::new(&TPn[0]);
-        let TP1 = DensePolynomial::new(&TPn[1]);
+        let TP0 = TPn[0].clone();
+        let TP1 = TPn[1].clone();
         // Checks that the trace table polynomial interpolation is working
         assert_eq!(TP0.evaluate(&trace_x[1000]), trace[(1000, 0)]);
 
-        let TPn_reference: Vec<&[FieldElement]> = TPn.iter().map(|x| x.as_slice()).collect();
-        let LDEn = calculate_low_degree_extensions(TPn_reference.as_slice(), &params, &eval_x);
+        let LDEn = calculate_low_degree_extensions(&TPn, params.blowup);
 
         // Checks that the low degree extension calculation is working
         let i = 13644usize;
@@ -897,11 +894,11 @@ mod tests {
 
         // Checks that the groupable trait is properly grouping for &[Vec<FieldElement>]
         assert_eq!(
-            (LDEn.as_slice().make_group(3243))[0].clone(),
+            (LDEn.as_slice().get_leaf(3243))[0].clone(),
             u256h!("01ddd9e389a326817ad1d2a5311e1bc2cf7fa734ebdc2961085b5acfa87a58ff")
         );
         assert_eq!(
-            (LDEn.as_slice().make_group(3243))[1].clone(),
+            (LDEn.as_slice().get_leaf(3243))[1].clone(),
             u256h!("03dbc6c47df0606997c2cefb20c4277caf2b76bca1d31c13432f71cdd93b3718")
         );
 
@@ -929,63 +926,49 @@ mod tests {
             proof.coin.digest,
             hex!("b7d80385fa0c8879473cdf987ea7970bb807aec78bb91af39a1504d965ad8e92")
         );
-        let test_element: FieldElement = proof.get_random();
-        // Checks that the channel is pulling field elements properly
-        assert_eq!(
-            U256::from(test_element),
-            u256h!("0529fc64b01be65623ef376bfa31d62b9a75ba2f51b5fda79e55e2ac05dfa80f")
-        );
 
-        let mut constraint_coefficients = Vec::with_capacity(constraints.num_constraints);
-        for _i in 0..constraints.num_constraints {
+        let mut constraint_coefficients = Vec::with_capacity(2 * constraints.len());
+        for _ in &constraints {
+            constraint_coefficients.push(proof.get_random());
             constraint_coefficients.push(proof.get_random());
         }
 
         let LDEn_reference: Vec<&[FieldElement]> = LDEn.iter().map(|x| x.as_slice()).collect();
-        let CC = calculate_constraints_on_domain(
-            TPn_reference.as_slice(),
-            LDEn_reference.as_slice(),
+        let constraint_polynomial = get_constraint_polynomial(
+            &TPn,
             &constraints,
-            constraint_coefficients.as_slice(),
-            &public,
-            params.blowup,
+            &constraint_coefficients,
+            params.constraints_degree_bound,
         );
+        assert_eq!(constraint_polynomial.len(), 1024);
+        let CC = evalute_polynomial_on_domain(&constraint_polynomial, params.blowup);
         // Checks that our constraints are properly calculated on the domain
         assert_eq!(
             CC[123.bit_reverse_at(eval_domain_size)].clone(),
-            FieldElement::from_montgomery(u256h!(
-                "019fb62b06446e919d7909f4896febce72978ff860e1ed61b4418091617677d3"
-            ))
+            field_element!("05b841208b357e29ac1fe7a654efebe1ae152104571e695f311a353d4d5cabfb")
         );
 
         let c_tree = CC.as_slice().merkleize();
         // Checks both that the merkle tree is working for this groupable type and that
         // the constraints are properly calculated on the domain
         assert_eq!(
-            c_tree[1].as_bytes(),
-            hex!("46318de7dbdafda87c1052d50989d15f8e61a5b8000000000000000000000000")
+            hex::encode(c_tree[1].as_bytes()),
+            "e276ce1357d4030a4c84cdfdb4dd77845d3f80e9000000000000000000000000"
         );
         proof.write(&c_tree[1]);
 
-        let (oods_point, oods_coefficients, oods_values) = get_out_of_domain_information(
-            &mut proof,
-            TPn_reference.as_slice(),
-            constraint_coefficients.as_slice(),
-            &public,
-            &constraints,
-            &g,
-            &params,
-        );
+        let (oods_point, oods_coefficients, oods_values) =
+            get_out_of_domain_information(&mut proof, &TPn, &constraint_polynomial);
         // Checks that we have derived the right out of domain sample point
         assert_eq!(
             U256::from(oods_point.clone()),
-            u256h!("031dc8fc2f57e3f39f6951a04a04294a7c63c988573dc058eea4cbf3e6268353")
+            u256h!("05d677ea387ec4ebd08ec49c414f53f569f406f51e28db2c566fdd99537a97e4")
         );
         // Checks that our get out of domain function call has written the right values
         // to the proof
         assert_eq!(
-            proof.coin.digest,
-            hex!("f556f04f342598411b5626a797a114a64b3a15a5ab0d4f2a6b350b941d56d071")
+            hex::encode(proof.coin.digest),
+            "c1b7a613149f857c524a724ebb54121352b9e720bf794ecebf2d78ee4e3f938b"
         );
 
         let CO = calculate_out_of_domain_constraints(
@@ -1000,9 +983,7 @@ mod tests {
         // Checks that our out of domain evaluated constraints calculated right
         assert_eq!(
             CO[4321.bit_reverse_at(eval_domain_size)].clone(),
-            FieldElement::from_montgomery(u256h!(
-                "023b8ba264d4a1255e1dedd6e5819e86230562b85d5a7af8fb994053a2debdde"
-            ))
+            field_element!("03c6b730c58b55f44bbf3cb7ea82b2e6a0a8b23558e908b5466dfe42e821ee96")
         );
 
         let (fri_layers, fri_trees) =
@@ -1010,24 +991,24 @@ mod tests {
 
         // Checks that the first fri merkle tree root is right
         assert_eq!(
-            fri_trees[0][1].as_bytes(),
-            hex!("f5110a80f0fabf114678f7e643a2be01f88661fe000000000000000000000000")
+            hex::encode(fri_trees[0][1].as_bytes()),
+            "620a934880b6c7d893acf17a21cc9c10058a7add000000000000000000000000"
         );
         // Checks that the second fri merkle tree root is right
         assert_eq!(
-            fri_trees[1][1].as_bytes(),
-            hex!("27ad2f6a19d18a7e4535905f1ee0bf0d39e8e444000000000000000000000000")
+            hex::encode(fri_trees[1][1].as_bytes()),
+            "effd58adf9f2dac6bfd338772d0d7750c0c6f8b2000000000000000000000000"
         );
         // Checks that the fri layering function decommited the right values.
         assert_eq!(
-            proof.coin.digest,
-            hex!("e2c7e50f3d1dcaad74678d8abb489675849ead08e2f848429a136304d9550bb6")
+            hex::encode(proof.coin.digest),
+            "3c6cecef72873e7d73933e73279d36ca77c5a0c7497311eba735722549238334"
         );
 
         let proof_of_work = proof.pow_find_nonce(params.pow_bits);
         // Checks that the pow function is working [may also fail if the previous steps
         // have perturbed the channel's random]
-        assert_eq!(proof_of_work, 3465);
+        assert_eq!(proof_of_work, 281);
         proof.write(proof_of_work);
 
         let query_indices = get_indices(
@@ -1036,7 +1017,7 @@ mod tests {
             &mut proof,
         );
         // Checks that the get query_indices is working
-        assert_eq!(query_indices[19], 16056);
+        assert_eq!(query_indices[19], 16377);
 
         decommit_with_queries_and_proof(
             query_indices.as_slice(),
@@ -1046,8 +1027,8 @@ mod tests {
         );
         // Checks that our first decommitment is successful
         assert_eq!(
-            proof.coin.digest,
-            hex!("804a12f5f778c9d2b076d07a8c516dd8e1a57c35ef2df10f55df58764812799d")
+            hex::encode(proof.coin.digest),
+            "c0bf8d8ba4d15bd0e73892e3d6e90bd4f477f9135a7be39ba7e9471e6ac68a44"
         );
 
         decommit_with_queries_and_proof(
@@ -1058,8 +1039,8 @@ mod tests {
         );
         // Checks that our second decommitment is successful
         assert_eq!(
-            proof.coin.digest,
-            hex!("ea73885255f98e9a51f6549fb74e076181971e426190660cdc45bac337423cb6")
+            hex::encode(proof.coin.digest),
+            "f2d3e6593dc23fa32655040ad5023739e15fff1d645bb809467cfccb676d6343"
         );
 
         decommit_fri_layers_and_trees(
@@ -1071,8 +1052,8 @@ mod tests {
         );
         // Checks that our fri decommitment is successful
         assert_eq!(
-            proof.coin.digest,
-            hex!("3d3b54ffd1c5e6f579648398b4a9bb67166d83d24c76e6adf74fa0feaf4e16d9")
+            hex::encode(proof.coin.digest),
+            "fcf1924f84656e5068ab9cbd44ae084b235bb990eefc0fd0183c77d5645e830e"
         );
     }
 }

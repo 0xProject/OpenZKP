@@ -1,9 +1,8 @@
 #[allow(unused_imports)] // TODO - Remove when used
 use starkdex::wrappers::*;
 use stark::{
-    check_proof,
-    fibonacci::{get_constraint, get_trace_table, PrivateInput, PublicInput},
-    stark_proof, ProofParams,
+    fibonacci::{get_fibonacci_constraints, get_trace_table, PrivateInput, PublicInput},
+    stark_proof, ProofParams, check_proof
 };
 use macros_decl::u256h;
 use u256::U256;
@@ -63,7 +62,7 @@ decl_module! {
         };
         let actual = stark_proof(
             &get_trace_table(1024, &private),
-            &get_constraint(),
+            &get_fibonacci_constraints(&public),
             &public,
             &ProofParams {
                 blowup:                   16, 
@@ -78,7 +77,7 @@ decl_module! {
 
         if check_proof(
             actual,
-            &get_constraint(),
+            &get_fibonacci_constraints(&public),
             &public,
             &ProofParams {
                 blowup:                   16,
