@@ -69,6 +69,9 @@ jobs:
           name: Build all targets on stable
           command: cargo build $PROJECTS --all-targets
       - run:
+          name: Build all targets on stable in release mode
+          command: cargo build --release $PROJECTS --all-targets
+      - run:
           name: Build all targets on nightly
           command: cargo +$NIGHTLY build $PROJECTS --all-targets
       - run:
