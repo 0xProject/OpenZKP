@@ -14,5 +14,5 @@ pub use crate::u256::U256;
 
 // TODO: Make member functions of U256?
 pub use gcd::{gcd, gcd_extended};
-
+#[cfg(not(feature = "std"))]
 extern crate no_std_compat as std;

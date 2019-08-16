@@ -6,6 +6,7 @@ mod curve;
 mod jacobian;
 mod wnaf;
 
+#[cfg(not(feature = "std"))]
 extern crate no_std_compat as std;
 
 pub use curve::Affine;

@@ -12,4 +12,5 @@ pub use field::FieldElement;
 pub use field::invert_batch;
 
 // Std/no-std imports
+#[cfg(not(feature = "std"))]
 extern crate no_std_compat as std;
