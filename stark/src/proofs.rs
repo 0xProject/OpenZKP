@@ -170,7 +170,6 @@ where
     // Compute the low degree extension of the trace table.
     let trace_polynomials = interpolate_trace_table(&trace);
     let trace_lde = calculate_low_degree_extensions(&trace_polynomials, params.blowup);
-    let trace_lde_ref: Vec<&[FieldElement]> = trace_lde.iter().map(|x| x.as_slice()).collect();
 
     // Construct a merkle tree over the LDE trace
     // and write the root to the channel.
@@ -211,7 +210,7 @@ where
 
     // Divide out the OODS points from the constraints and combine.
     let oods_constraint_lde = calculate_out_of_domain_constraints(
-        trace_lde_ref.as_slice(),
+        &trace_lde,
         constraint_lde.as_slice(),
         &oods_point,
         oods_coefficients.as_slice(),
@@ -431,7 +430,7 @@ fn get_out_of_domain_information(
 }
 
 fn calculate_out_of_domain_constraints(
-    lde_poly: &[&[FieldElement]],
+    lde_poly: &[MmapVec<FieldElement>],
     constraint_on_domain: &[FieldElement],
     oods_point: &FieldElement,
     oods_coefficients: &[FieldElement],
@@ -931,7 +930,6 @@ mod tests {
             constraint_coefficients.push(proof.get_random());
         }
 
-        let LDEn_reference: Vec<&[FieldElement]> = LDEn.iter().map(|x| x.as_slice()).collect();
         let constraint_polynomial = get_constraint_polynomial(
             &TPn,
             &constraints,
@@ -970,7 +968,7 @@ mod tests {
         );
 
         let CO = calculate_out_of_domain_constraints(
-            LDEn_reference.as_slice(),
+            &LDEn,
             CC.as_slice(),
             &oods_point,
             oods_coefficients.as_slice(),
