@@ -20,6 +20,11 @@ commands:
             - /usr/local/cargo
   setup-sccache:
     steps:
+      - restore_cache:
+          name: Restore sccache cache
+          keys: 
+            - sccache-cache-v1-{{ arch }}-{{ .Environment.CIRCLE_JOB }}
+            - sccache-cache-v1-{{ arch }}
       - run:
           name: Setup sccache
           command: |
