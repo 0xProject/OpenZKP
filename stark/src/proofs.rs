@@ -10,7 +10,7 @@ use crate::{
     TraceTable,
 };
 use itertools::Itertools;
-use primefield::{invert_batch, FieldElement};
+use primefield::FieldElement;
 use rayon::prelude::*;
 use std::{
     cmp::max,
@@ -401,7 +401,7 @@ fn get_out_of_domain_information(
     proof: &mut ProverChannel,
     trace_polynomials: &[DensePolynomial],
     constraint_polynomial: &DensePolynomial,
-) -> (FieldElement, Vec<FieldElement>, Vec<FieldElement>) {
+) -> (FieldElement, Vec<FieldElement>) {
     let oods_point: FieldElement = proof.get_random();
     let g = FieldElement::root(trace_polynomials[0].len())
         .expect("No root for trace polynomial length.");
