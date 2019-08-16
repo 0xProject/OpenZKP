@@ -79,7 +79,7 @@ pub struct ProofParams {
 }
 
 pub struct Constraint {
-    pub base:        Box<Fn(&[DensePolynomial]) -> DensePolynomial>,
+    pub base:        Box<dyn Fn(&[DensePolynomial]) -> DensePolynomial>,
     pub denominator: SparsePolynomial,
     pub numerator:   SparsePolynomial,
 }
