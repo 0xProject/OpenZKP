@@ -35,13 +35,6 @@ jobs:
             cargo install --git https://github.com/alexcrichton/wasm-gc
           no_output_timeout: 1800s
       - run:
-          name: Clean build
-          command: |
-            # Clean workspace projects but not dependencies.
-            WORKSPACE=$(cargo metadata --format-version 1 | jq --raw-output '.workspace_members[] | match("^(\\w.+)\\ \\d";"g") | .captures[0].string')
-            echo "Workspace projects: " $WORKSPACE
-            for MEMBER in $WORKSPACE; do cargo clean -p $MEMBER; done
-      - run:
           name: Linting
           command: |
             cargo +$NIGHTLY fmt -p ecc primefield starkdex starkcrypto-wasm stark macros-decl macros-impl macros-lib -- --check
