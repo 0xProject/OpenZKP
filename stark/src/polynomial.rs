@@ -37,9 +37,16 @@ impl DensePolynomial {
         result
     }
 
-    // HAHAHA fix this!!!
-    pub fn next(&self) -> DensePolynomial {
-        self.clone()
+    pub fn next(&self) -> Self {
+        // Note we're assuming that the polynomial has length equal to the trace length.
+        let trace_generator = FieldElement::root(self.len()).expect("DensePolynomial length doesn't have generator.");
+        let mut shifted_coefficients = self.0.clone();
+        let mut power = FieldElement::ONE;
+        for coefficient in shifted_coefficients.iter_mut() {
+            *coefficient *= &power;
+            power *= &trace_generator;
+        }
+        Self(shifted_coefficients)
     }
 
     // Removes trailing zeros or appends them so that the length is minimal and a
@@ -226,12 +233,15 @@ impl DivAssign<SparsePolynomial> for DensePolynomial {
     }
 }
 
-// LOL fix this!!!
 impl Sub<SparsePolynomial> for &DensePolynomial {
     type Output = DensePolynomial;
 
     fn sub(self, other: SparsePolynomial) -> DensePolynomial {
-        self.clone()
+        let mut difference = self.0.clone();
+        for (degree, coefficient) in other.0.iter() {
+            difference[*degree] -= coefficient;
+        }
+        DensePolynomial(difference)
     }
 }
 

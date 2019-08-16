@@ -381,13 +381,13 @@ pub fn get_constraint_polynomial(
         p *= constraint.numerator.clone();
         println!("{} multiplied!", { i });
         p /= constraint.denominator.clone();
+        println!("{} divided!", { i });
         constraint_polynomial += &(&constraint_coefficients[2 * i] * &p);
         p *= SparsePolynomial::new(&[(
             constraint_coefficients[2 * i + 1].clone(),
-            constraints_degree_bound - p.len(),
+            constraints_degree_bound * trace_length - p.len(),
         )]);
-        constraint_polynomial += &(*&p);
-        assert_eq!(p.len(), 2 * trace_length);
+        constraint_polynomial += &p;
         println!("{} finished!", { i });
     }
     constraint_polynomial
@@ -897,6 +897,7 @@ mod tests {
                 "019fb62b06446e919d7909f4896febce72978ff860e1ed61b4418091617677d3"
             ))
         );
+        println!("gogogogo!");
 
         let c_tree = CC.as_slice().merkleize();
         // Checks both that the merkle tree is working for this groupable type and that

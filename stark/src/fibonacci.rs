@@ -85,7 +85,7 @@ pub fn get_fibonacci_constraints(public_input: &PublicInput) -> Vec<Constraint> 
 
     vec![
         Constraint {
-            base:        Box::new(|tp| &tp[0] - &tp[1]),
+            base:        Box::new(|tp| tp[0].next() - &tp[1]),
             numerator:   last_row.clone(),
             denominator: every_row.clone(),
         },
@@ -108,53 +108,55 @@ pub fn get_fibonacci_constraints(public_input: &PublicInput) -> Vec<Constraint> 
         },
     ]
 }
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use crate::proofs::{get_constraint_polynomial, interpolate_trace_table};
-//     #[test]
-//     fn mason() {
-//         let x = FieldElement::ZERO;
-//         let claim = FieldElement::from(u256h!(
-//
-// "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
-//         ));
-//
-//         let witness = FieldElement::from(u256h!(
-//
-// "00000000000000000000000000000000000000000000000000000000cafebabe"
-//         ));
-//         let trace_table = get_trace_table(1024, witness);
-//         let trace_polynomials = interpolate_trace_table(&trace_table);
-//
-//         let mut constraint_coefficients = vec![FieldElement::ZERO; 20];
-//         constraint_coefficients[0] = FieldElement::ONE;
-//         constraint_coefficients[1] = FieldElement::ONE;
-//         constraint_coefficients[2] = FieldElement::ONE;
-//         constraint_coefficients[3] = FieldElement::ONE;
-//         constraint_coefficients[4] = FieldElement::ONE;
-//         constraint_coefficients[5] = FieldElement::ONE;
-//         constraint_coefficients[6] = FieldElement::ONE;
-//
-//         let old = eval_c_direct(
-//             &x,
-//             &trace_polynomials,
-//             1000usize,
-//             claim.clone(),
-//             &constraint_coefficients,
-//         );
-//
-//         let p = SparsePolynomial::new(&[FieldElement::ONE,
-// -&FieldElement::ONE]);         assert_eq!(p.evaluate(&FieldElement::ONE),
-// FieldElement::ZERO);
-//
-//         let constraint_polynomial = get_constraint_polynomial(
-//             &trace_polynomials,
-//             &get_fibonacci_constraints(1024, claim, 1000usize),
-//             &constraint_coefficients,
-//         );
-//         let new = constraint_polynomial.evaluate(&x);
-//
-//         assert_eq!(old, new);
-//     }
-// }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::proofs::{get_constraint_polynomial, interpolate_trace_table};
+    #[test]
+    fn mason() {
+        let x = FieldElement::ZERO;
+        let claim = FieldElement::from(u256h!(
+
+"0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
+        ));
+
+        let witness = FieldElement::from(u256h!(
+
+"00000000000000000000000000000000000000000000000000000000cafebabe"
+        ));
+        let trace_table = get_trace_table(1024, witness);
+        let trace_polynomials = interpolate_trace_table(&trace_table);
+
+        let mut constraint_coefficients = vec![FieldElement::ZERO; 20];
+        constraint_coefficients[0] = FieldElement::ONE;
+        constraint_coefficients[1] = FieldElement::ONE;
+        constraint_coefficients[2] = FieldElement::ONE;
+        constraint_coefficients[3] = FieldElement::ONE;
+        constraint_coefficients[4] = FieldElement::ONE;
+        constraint_coefficients[5] = FieldElement::ONE;
+        constraint_coefficients[6] = FieldElement::ONE;
+
+        let old = eval_c_direct(
+            &x,
+            &trace_polynomials,
+            1000usize,
+            claim.clone(),
+            &constraint_coefficients,
+        );
+
+        let p = SparsePolynomial::new(&[FieldElement::ONE,
+-&FieldElement::ONE]);         assert_eq!(p.evaluate(&FieldElement::ONE),
+FieldElement::ZERO);
+
+        let constraint_polynomial = get_constraint_polynomial(
+            &trace_polynomials,
+            &get_fibonacci_constraints(1024, claim, 1000usize),
+            &constraint_coefficients,
+        );
+        let new = constraint_polynomial.evaluate(&x);
+
+        assert_eq!(old, new);
+    }
+}
