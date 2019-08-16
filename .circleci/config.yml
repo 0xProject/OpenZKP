@@ -81,7 +81,7 @@ jobs:
           name: Test debug build
           command: cargo test $PROJECTS -- --nocapture
       - run:
-          name: Test debug release build
+          name: Test release build
           command: cargo test --release $PROJECTS -- --nocapture
       - run:
           name: Test benchmarks
