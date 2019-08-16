@@ -112,7 +112,6 @@ impl ProverChannel {
 
     pub fn initialize(&mut self, seed: &[u8]) {
         self.coin.seed(seed);
-        self.proof = Vec::from(seed);
     }
 
     pub fn pow_verify(&self, nonce: u64, pow_bits: u8) -> bool {
@@ -138,9 +137,7 @@ impl VerifierChannel {
     }
 
     pub fn initialize(&mut self, seed: &[u8]) {
-        assert_eq!(*seed, self.proof[..seed.len()]);
         self.coin.seed(seed);
-        self.proof_index = seed.len();
     }
 
     pub fn pow_verify(&self, nonce: u64, pow_bits: u8) -> bool {

@@ -13,9 +13,8 @@ pub fn check_proof<Public>(
     trace_len: usize,
 ) -> bool
 where
-    Public: PartialEq + Clone,
-    VerifierChannel: Replayable<Public>,
-    VerifierChannel: Replayable<Hash>,
+    Public: PartialEq + Clone + Into<Vec<u8>>,
+    VerifierChannel: Replayable<Public> + Replayable<Hash>,
 {
     let omega = FieldElement::root(trace_len * params.blowup).unwrap();
     let eval_domain_size = trace_len * params.blowup;
@@ -23,11 +22,8 @@ where
     let eval_x = geometric_series(&FieldElement::ONE, &omega, eval_domain_size);
 
     let mut channel = VerifierChannel::new(proposed_proof.proof.clone());
-    let seen_public: Public = channel.replay();
-    if seen_public != public.clone() {
-        return false;
-    }
-    // TOOD: Initialize verifier channel here.
+    let bytes: Vec<u8> = public.clone().into();
+    channel.initialize(&bytes);
 
     // Get the low degree root commitment, and constraint root commitment
     // TODO: Make it work as channel.read()
