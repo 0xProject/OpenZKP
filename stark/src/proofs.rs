@@ -430,8 +430,8 @@ fn get_out_of_domain_information(
 }
 
 fn calculate_out_of_domain_constraints(
-    lde_poly: &[MmapVec<FieldElement>],
-    constraint_on_domain: &[FieldElement],
+    trace_on_extended_domain: &[MmapVec<FieldElement>],
+    constraint_on_extended_domain: &[FieldElement],
     oods_point: &FieldElement,
     oods_coefficients: &[FieldElement],
     oods_values: &[FieldElement],
@@ -476,14 +476,13 @@ fn calculate_out_of_domain_constraints(
             let b = &x_oods_cycle_g[i];
             let mut r = FieldElement::ZERO;
 
-            for x in 0..lde_poly.len() {
-                r += &oods_coefficients[2 * x] * (&lde_poly[x][index] - &oods_values[2 * x]) * a;
-                r += &oods_coefficients[2 * x + 1]
-                    * (&lde_poly[x][index] - &oods_values[2 * x + 1])
-                    * b;
+            for (i, x) in trace_on_extended_domain.iter().enumerate() {
+                r += &oods_coefficients[2 * i] * (&x[index] - &oods_values[2 * i]) * a;
+                r += &oods_coefficients[2 * i + 1] * (&x[index] - &oods_values[2 * i + 1]) * b;
             }
             r += &oods_coefficients[oods_coefficients.len() - 1]
-                * (&constraint_on_domain[index] - &oods_values[oods_coefficients.len() - 1])
+                * (&constraint_on_extended_domain[index]
+                    - &oods_values[oods_coefficients.len() - 1])
                 * a;
 
             r
