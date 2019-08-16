@@ -92,7 +92,7 @@ jobs:
       - run:
           name: Build benchmarks
           # Exclude benchmarks that compare against external crates (pulls in a lot of deps)
-          command: cargo bench --bench benchmark --all --exclude primefield/benchmarks --no-run
+          command: cargo bench --bench benchmark --all --exclude primefield-benchmarks --no-run
       - run:
           name: Lint with rustformat nightly
           command: cargo +$NIGHTLY fmt $PROJECTS -- --check
@@ -111,7 +111,7 @@ jobs:
             # Actually running the benchmarks on CI is too noisy. The results
             # would be meaningless. Instead we just run it to make sure they work.
             # Exclude benchmarks that compare against external crates (pulls in a lot of deps)
-            cargo bench --bench benchmark --all --exclude primefield/benchmarks -- --test
+            cargo bench --bench benchmark --all --exclude primefield-benchmarks -- --test
       - save-sccache-cache
       - save-toolchain-cache
 
