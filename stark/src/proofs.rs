@@ -340,7 +340,7 @@ pub fn interpolate_trace_table(table: &TraceTable) -> Vec<DensePolynomial> {
     result
 }
 
-fn calculate_low_degree_extensions(
+pub fn calculate_low_degree_extensions(
     trace_polynomials: &[DensePolynomial],
     blowup: usize,
 ) -> Vec<MmapVec<FieldElement>> {
@@ -353,7 +353,7 @@ fn calculate_low_degree_extensions(
     low_degree_extensions
 }
 
-fn evalute_polynomial_on_domain(
+pub fn evalute_polynomial_on_domain(
     constraint_polynomial: &DensePolynomial,
     blowup: usize,
 ) -> MmapVec<FieldElement> {
