@@ -85,7 +85,7 @@ jobs:
           command: cargo +$NIGHTLY build $PROJECTS --all-targets
       - run:
           name: Build benchmarks
-          command: bench --bench benchmark -- --test
+          command: cargo bench --bench benchmark --no-run
       - run:
           name: Lint with rustformat nightly
           command: cargo +$NIGHTLY fmt $PROJECTS -- --check
