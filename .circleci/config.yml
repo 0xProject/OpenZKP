@@ -73,14 +73,6 @@ jobs:
             # Actually running the benchmarks on CI is too noisy. The results
             # would be meaningless. Instead we just run it to make sure they work.
             cargo bench --bench benchmark -- --test
-      # TODO: Coverage
-      - run:
-          name: Clean build
-          command: |
-            # Clean workspace projects but not dependencies.
-            WORKSPACE=$(cargo metadata --format-version 1 | jq --raw-output '.workspace_members[] | match("^(\\w.+)\\ \\d";"g") | .captures[0].string')
-            echo "Workspace projects: " $WORKSPACE
-            for MEMBER in $WORKSPACE; do cargo clean -p $MEMBER; done
       - save-sccache-cache
 
 workflows:
