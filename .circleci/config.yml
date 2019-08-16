@@ -33,7 +33,7 @@ commands:
     steps:
       - run:
           name: sccache statistics
-          commands: |
+          command: |
             sccache --show-stats
       - save_cache:
           name: Save sccache cache
