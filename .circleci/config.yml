@@ -6,6 +6,7 @@ jobs:
     environment:
       - RUST_BACKTRACE: 1
       - RUSTFLAGS: -Dwarnings
+      - NIGHTLY: nightly-2019-07-31
     steps:
       - checkout
       - restore_cache:
@@ -19,21 +20,11 @@ jobs:
       - run:
           name: Setup build environment
           command: |
-            sudo apt-get update
-            sudo apt-get install jq
-            sudo apt-get install -y cmake 
-            sudo apt-get install -y pkg-config 
-            sudo apt-get install libssl-dev 
-            sudo apt-get install git 
-            sudo apt-get install -y clang 
-            sudo apt-get install -y libclang-dev
-            rustup update nightly
-            rustup target add wasm32-unknown-unknown --toolchain nightly
-            rustup update stable
-            cargo install --git https://github.com/alexcrichton/wasm-gc
             rustup component add rustfmt clippy
-            rustup toolchain install nightly-2019-07-31
-            rustup component add rustfmt --toolchain nightly-2019-07-31
+            rustup toolchain install $NIGHTLY
+            rustup target add wasm32-unknown-unknown --toolchain $NIGHTLY
+            rustup component add rustfmt --toolchain $NIGHTLY
+            cargo install --git https://github.com/alexcrichton/wasm-gc
           no_output_timeout: 1800s
       - run:
           name: Clean build
@@ -45,7 +36,7 @@ jobs:
       - run:
           name: Linting
           command: |
-            cargo +nightly-2019-07-31 fmt -p ecc primefield starkdex starkcrypto-wasm stark macros-decl macros-impl macros-lib -- --check
+            cargo +$NIGHTLY fmt -p ecc primefield starkdex starkcrypto-wasm stark macros-decl macros-impl macros-lib -- --check
             cargo clippy -p ecc -p primefield -p starkdex -p starkcrypto-wasm -p stark -p macros-decl -p macros-impl -p macros-lib --all-targets
       - run:
           name: Build all targets
