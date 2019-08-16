@@ -6,7 +6,7 @@ jobs:
     environment:
       - RUST_BACKTRACE: 1
       - RUSTFLAGS: -Dwarnings
-      - NIGHTLY: nightly-2019-07-31
+      - NIGHTLY: nightly-2019-08-15
     steps:
       - checkout
       - restore_cache:
