@@ -890,6 +890,16 @@ mod tests {
         assert_eq!(TP0.evaluate(&eval_offset_x[reverse_i]), LDEn[0][i]);
         assert_eq!(TP1.evaluate(&eval_offset_x[reverse_i]), LDEn[1][i]);
 
+        // Checks that the groupable trait is properly grouping for &[Vec<FieldElement>]
+        assert_eq!(
+            (LDEn.as_slice().get_leaf(3243))[0].clone(),
+            u256h!("01ddd9e389a326817ad1d2a5311e1bc2cf7fa734ebdc2961085b5acfa87a58ff")
+        );
+        assert_eq!(
+            (LDEn.as_slice().get_leaf(3243))[1].clone(),
+            u256h!("03dbc6c47df0606997c2cefb20c4277caf2b76bca1d31c13432f71cdd93b3718")
+        );
+
         let tree = LDEn.merkleize();
         // Checks that the merklelizable implementation is working [implicit check of
         // most previous steps]

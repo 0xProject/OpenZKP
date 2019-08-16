@@ -242,12 +242,6 @@ impl Writable<&Hash> for ProverChannel {
     }
 }
 
-impl Writable<Hash> for ProverChannel {
-    fn write(&mut self, data: Hash) {
-        self.write(data.as_bytes());
-    }
-}
-
 impl Writable<u64> for ProverChannel {
     fn write(&mut self, data: u64) {
         self.write(&data.to_be_bytes()[..]);
