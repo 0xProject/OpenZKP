@@ -75,8 +75,6 @@ rev = 'fc206f3a009b64fc746202e5b4c701bf7e24d1f1'
 
 [build-dependencies]
 vergen = '3'
-[profile.release]
-panic = 'unwind'
 
 [[bin]]
 name = 'substrate-node'
