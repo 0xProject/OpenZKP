@@ -386,15 +386,22 @@ pub fn get_constraint_polynomials(
     let trace_length = trace_polynomials[0].len();
     for (i, constraint) in constraints.iter().enumerate() {
         let mut p = (constraint.base)(trace_polynomials);
+        let base_length = p.len();
+        if i == 8 {
+            assert_eq!(base_length, 2 * trace_length)
+        }
         p *= constraint.numerator.clone();
         p /= constraint.denominator.clone();
         constraint_polynomial += &(&constraint_coefficients[2 * i] * &p);
-        p *= SparsePolynomial::new(&[(
-            FieldElement::ONE,
-            (constraints_degree_bound - 1) * trace_length + constraint.denominator.degree()
-                - constraint.numerator.degree(),
-        )]);
+        let adjustment_degree = constraints_degree_bound * trace_length - base_length
+            + constraint.denominator.degree()
+            - constraint.numerator.degree();
+        p *= SparsePolynomial::new(&[(FieldElement::ONE, adjustment_degree)]);
+        if i == 8 {
+            assert_eq!(adjustment_degree, 1)
+        }
         constraint_polynomial += &constraint_coefficients[2 * i + 1] * &p;
+        println!("{}", i);
     }
     vec![constraint_polynomial]
 }

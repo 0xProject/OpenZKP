@@ -5,8 +5,7 @@ use crate::{
             LEFT_X_COEFFICIENTS, LEFT_Y_COEFFICIENTS, RIGHT_X_COEFFICIENTS, RIGHT_Y_COEFFICIENTS,
         },
     },
-    polynomial::SparsePolynomial,
-    polynomial::DensePolynomial,
+    polynomial::{DensePolynomial, SparsePolynomial},
     proofs::{geometric_series, Constraint},
 };
 use ecc::Affine;
@@ -27,10 +26,7 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constr
     let g = FieldElement::root(trace_length).unwrap();
     let no_rows = SparsePolynomial::new(&[(FieldElement::ONE, 0)]);
     let first_row = SparsePolynomial::new(&[(-&FieldElement::ONE, 0), (FieldElement::ONE, 1)]);
-    let last_row = SparsePolynomial::new(&[
-        (-&g.pow(trace_length - 1), 0),
-        (FieldElement::ONE, 1)
-    ]);
+    let last_row = SparsePolynomial::new(&[(-&g.pow(trace_length - 1), 0), (FieldElement::ONE, 1)]);
     let hash_end_rows = SparsePolynomial::new(&[
         (FieldElement::ONE, path_length),
         (-&g.pow(path_length * (trace_length - 1)), 0),
@@ -105,7 +101,6 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constr
             denominator: no_rows.clone(),
         },
         Constraint {
-            // note that this is much more easily done in the frequency domain.
             base:        Box::new(move |tp| {
                 (&tp[0] - SparsePolynomial::new(&[(leaf.clone(), 0)]))
                     * (&tp[4] - SparsePolynomial::new(&[(leaf.clone(), 0)]))
@@ -282,14 +277,10 @@ fn get_pedersen_coordinates(
     x: &FieldElement,
     path_length: usize,
 ) -> (FieldElement, FieldElement, FieldElement, FieldElement) {
-    let q_x_left =
-        SparsePolynomial::periodic(&LEFT_X_COEFFICIENTS, path_length).evaluate(&x);
-    let q_y_left =
-        SparsePolynomial::periodic(&LEFT_X_COEFFICIENTS, path_length).evaluate(&x);
-    let q_x_right = SparsePolynomial::periodic(&LEFT_X_COEFFICIENTS, path_length)
-        .evaluate(&x);
-    let q_y_right = SparsePolynomial::periodic(&LEFT_X_COEFFICIENTS, path_length)
-        .evaluate(&x);
+    let q_x_left = SparsePolynomial::periodic(&LEFT_X_COEFFICIENTS, path_length).evaluate(&x);
+    let q_y_left = SparsePolynomial::periodic(&LEFT_Y_COEFFICIENTS, path_length).evaluate(&x);
+    let q_x_right = SparsePolynomial::periodic(&RIGHT_X_COEFFICIENTS, path_length).evaluate(&x);
+    let q_y_right = SparsePolynomial::periodic(&RIGHT_Y_COEFFICIENTS, path_length).evaluate(&x);
     (q_x_left, q_y_left, q_x_right, q_y_right)
 }
 
@@ -657,16 +648,13 @@ pub fn get_coefficients() -> Vec<FieldElement> {
 mod test {
     use super::*;
     use crate::{
-        proofs::get_constraint_polynomial,
-    };
-    use super::*;
-    use crate::{
         pedersen_merkle::{
             inputs::{starkware_private_input, STARKWARE_PUBLIC_INPUT},
             trace_table::get_trace_table,
         },
         proofs::{
-            calculate_low_degree_extensions, interpolate_trace_table, Merkleizable, ProofParams,
+            calculate_low_degree_extensions, get_constraint_polynomial, interpolate_trace_table,
+            Merkleizable, ProofParams,
         },
     };
     use macros_decl::{hex, u256h};
@@ -710,35 +698,6 @@ mod test {
             )
         );
     }
-
-    // #[test]
-    // fn evals_match() {
-    //     let coefficients = get_coefficients();
-    //
-    //     let trace_polynomials = get_trace_polynomials();
-    //     let trace_polynomial_references: Vec<&[FieldElement]> =
-    //         trace_polynomials.iter().map(|x| x.as_slice()).collect();
-    //
-    //     let direct_result = eval_c_direct(
-    //         &FieldElement::GENERATOR,
-    //         &trace_polynomial_references,
-    //         0usize,             // not used
-    //         FieldElement::ZERO, // not used
-    //         &coefficients,
-    //     );
-    //
-    //     let extended_trace_table = get_extended_trace_table();
-    //     let extended_trace_table_references: Vec<&[FieldElement]> =
-    //         extended_trace_table.iter().map(|x| x.as_slice()).collect();
-    //     let whole_loop_result = eval_whole_loop(
-    //         &extended_trace_table_references,
-    //         &coefficients,
-    //         0usize,              // unused
-    //         &FieldElement::ZERO, // unused
-    //     );
-    //
-    //     assert_eq!(whole_loop_result[0], direct_result);
-    // }
 
     #[test]
     fn eval_c_direct_is_correct() {
@@ -808,7 +767,8 @@ mod test {
     fn new_matches_old_constraints() {
         let trace_polynomials = get_trace_polynomials();
 
-        let constraints = get_pedersen_merkle_constraints(&STARKWARE_PUBLIC_INPUT);
+        let mut constraints = get_pedersen_merkle_constraints(&STARKWARE_PUBLIC_INPUT);
+        constraints.truncate(9);
         let mut constraint_coefficients = vec![FieldElement::ZERO; 100];
         for i in 0..2 * constraints.len() {
             constraint_coefficients[i] = FieldElement::ONE;
@@ -823,8 +783,12 @@ mod test {
             &constraint_coefficients,
         );
 
-        let constraint_polynomial =
-            get_constraint_polynomial(&trace_polynomials, &constraints, &constraint_coefficients, 2);
+        let constraint_polynomial = get_constraint_polynomial(
+            &trace_polynomials,
+            &constraints,
+            &constraint_coefficients,
+            2,
+        );
         let new = constraint_polynomial.evaluate(&x);
 
         assert_eq!(old, new);
