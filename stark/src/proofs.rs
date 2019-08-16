@@ -973,12 +973,6 @@ mod tests {
             proof.coin.digest,
             hex!("b7d80385fa0c8879473cdf987ea7970bb807aec78bb91af39a1504d965ad8e92")
         );
-        let test_element: FieldElement = proof.get_random();
-        // Checks that the channel is pulling field elements properly
-        assert_eq!(
-            U256::from(test_element),
-            u256h!("0529fc64b01be65623ef376bfa31d62b9a75ba2f51b5fda79e55e2ac05dfa80f")
-        );
 
         let mut constraint_coefficients = Vec::with_capacity(constraints.num_constraints);
         for _i in 0..constraints.num_constraints {
@@ -997,17 +991,15 @@ mod tests {
         // Checks that our constraints are properly calculated on the domain
         assert_eq!(
             CC[123.bit_reverse_at(eval_domain_size)].clone(),
-            FieldElement::from_montgomery(u256h!(
-                "019fb62b06446e919d7909f4896febce72978ff860e1ed61b4418091617677d3"
-            ))
+            field_element!("05b841208b357e29ac1fe7a654efebe1ae152104571e695f311a353d4d5cabfb")
         );
 
         let c_tree = CC.as_slice().merkleize();
         // Checks both that the merkle tree is working for this groupable type and that
         // the constraints are properly calculated on the domain
         assert_eq!(
-            c_tree[1].as_bytes(),
-            hex!("46318de7dbdafda87c1052d50989d15f8e61a5b8000000000000000000000000")
+            hex::encode(c_tree[1].as_bytes()),
+            "e276ce1357d4030a4c84cdfdb4dd77845d3f80e9000000000000000000000000"
         );
         proof.write(&c_tree[1]);
 
@@ -1023,13 +1015,13 @@ mod tests {
         // Checks that we have derived the right out of domain sample point
         assert_eq!(
             U256::from(oods_point.clone()),
-            u256h!("031dc8fc2f57e3f39f6951a04a04294a7c63c988573dc058eea4cbf3e6268353")
+            u256h!("05d677ea387ec4ebd08ec49c414f53f569f406f51e28db2c566fdd99537a97e4")
         );
         // Checks that our get out of domain function call has written the right values
         // to the proof
         assert_eq!(
-            proof.coin.digest,
-            hex!("f556f04f342598411b5626a797a114a64b3a15a5ab0d4f2a6b350b941d56d071")
+            hex::encode(proof.coin.digest),
+            "c1b7a613149f857c524a724ebb54121352b9e720bf794ecebf2d78ee4e3f938b"
         );
 
         let CO = calculate_out_of_domain_constraints(
@@ -1044,9 +1036,7 @@ mod tests {
         // Checks that our out of domain evaluated constraints calculated right
         assert_eq!(
             CO[4321.bit_reverse_at(eval_domain_size)].clone(),
-            FieldElement::from_montgomery(u256h!(
-                "023b8ba264d4a1255e1dedd6e5819e86230562b85d5a7af8fb994053a2debdde"
-            ))
+            field_element!("03c6b730c58b55f44bbf3cb7ea82b2e6a0a8b23558e908b5466dfe42e821ee96")
         );
 
         let (fri_layers, fri_trees) =
@@ -1054,24 +1044,24 @@ mod tests {
 
         // Checks that the first fri merkle tree root is right
         assert_eq!(
-            fri_trees[0][1].as_bytes(),
-            hex!("f5110a80f0fabf114678f7e643a2be01f88661fe000000000000000000000000")
+            hex::encode(fri_trees[0][1].as_bytes()),
+            "620a934880b6c7d893acf17a21cc9c10058a7add000000000000000000000000"
         );
         // Checks that the second fri merkle tree root is right
         assert_eq!(
-            fri_trees[1][1].as_bytes(),
-            hex!("27ad2f6a19d18a7e4535905f1ee0bf0d39e8e444000000000000000000000000")
+            hex::encode(fri_trees[1][1].as_bytes()),
+            "effd58adf9f2dac6bfd338772d0d7750c0c6f8b2000000000000000000000000"
         );
         // Checks that the fri layering function decommited the right values.
         assert_eq!(
-            proof.coin.digest,
-            hex!("e2c7e50f3d1dcaad74678d8abb489675849ead08e2f848429a136304d9550bb6")
+            hex::encode(proof.coin.digest),
+            "3c6cecef72873e7d73933e73279d36ca77c5a0c7497311eba735722549238334"
         );
 
         let proof_of_work = proof.pow_find_nonce(params.pow_bits);
         // Checks that the pow function is working [may also fail if the previous steps
         // have perturbed the channel's random]
-        assert_eq!(proof_of_work, 3465);
+        assert_eq!(proof_of_work, 281);
         proof.write(proof_of_work);
 
         let query_indices = get_indices(
@@ -1080,7 +1070,7 @@ mod tests {
             &mut proof,
         );
         // Checks that the get query_indices is working
-        assert_eq!(query_indices[19], 16056);
+        assert_eq!(query_indices[19], 16377);
 
         decommit_with_queries_and_proof(
             query_indices.as_slice(),
@@ -1090,8 +1080,8 @@ mod tests {
         );
         // Checks that our first decommitment is successful
         assert_eq!(
-            proof.coin.digest,
-            hex!("804a12f5f778c9d2b076d07a8c516dd8e1a57c35ef2df10f55df58764812799d")
+            hex::encode(proof.coin.digest),
+            "c0bf8d8ba4d15bd0e73892e3d6e90bd4f477f9135a7be39ba7e9471e6ac68a44"
         );
 
         decommit_with_queries_and_proof(
@@ -1102,8 +1092,8 @@ mod tests {
         );
         // Checks that our second decommitment is successful
         assert_eq!(
-            proof.coin.digest,
-            hex!("ea73885255f98e9a51f6549fb74e076181971e426190660cdc45bac337423cb6")
+            hex::encode(proof.coin.digest),
+            "f2d3e6593dc23fa32655040ad5023739e15fff1d645bb809467cfccb676d6343"
         );
 
         decommit_fri_layers_and_trees(
@@ -1115,8 +1105,8 @@ mod tests {
         );
         // Checks that our fri decommitment is successful
         assert_eq!(
-            proof.coin.digest,
-            hex!("3d3b54ffd1c5e6f579648398b4a9bb67166d83d24c76e6adf74fa0feaf4e16d9")
+            hex::encode(proof.coin.digest),
+            "fcf1924f84656e5068ab9cbd44ae084b235bb990eefc0fd0183c77d5645e830e"
         );
     }
 }
