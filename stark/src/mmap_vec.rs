@@ -8,7 +8,6 @@ use std::{
 };
 use tempfile::tempfile;
 
-#[allow(dead_code)]
 pub struct MmapVec<T: Clone> {
     mmap:     MmapMut,
     length:   usize,
@@ -16,7 +15,6 @@ pub struct MmapVec<T: Clone> {
     _t:       PhantomData<T>,
 }
 
-#[allow(dead_code)]
 impl<T: Clone> MmapVec<T> {
     pub fn with_capacity(capacity: usize) -> MmapVec<T> {
         debug_assert!(capacity > 0);
