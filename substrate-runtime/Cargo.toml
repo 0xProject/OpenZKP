@@ -30,11 +30,11 @@ std = [
 ]
 
 [dependencies]
-starkdex = { path = "../../starkdex", default_features = false }
-stark = { path = "../../stark", default_features = false}
-primefield = { path = "../../primefield", default_features = false}
-u256 = { path = "../../u256", default_features = false}
-macros-decl = { path = "../../macros_decl" }
+starkdex = { path = "../starkdex", default_features = false }
+stark = { path = "../stark", default_features = false}
+primefield = { path = "../primefield", default_features = false}
+u256 = { path = "../u256", default_features = false}
+macros-decl = { path = "../macros_decl" }
 
 [dependencies.aura]
 default_features = false
