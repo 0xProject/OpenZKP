@@ -213,17 +213,17 @@ where
 
     // assert_eq!(
     //     oods_point,
-    //     field_element!("0273966fc4697d1762d51fe633f941e92f87bdda124cf7571007a4681b140c05")
-    // );
+    //     field_element!("
+    // 0273966fc4697d1762d51fe633f941e92f87bdda124cf7571007a4681b140c05") );
     //
     // assert_eq!(
     //     oods_coefficients[0],
-    //     field_element!("0256abb9c4913b285d9e958e29a09560718edc37e228015cdc16da6ac88def6e")
-    // );
+    //     field_element!("
+    // 0256abb9c4913b285d9e958e29a09560718edc37e228015cdc16da6ac88def6e") );
     // assert_eq!(
     //     oods_coefficients[17],
-    //     field_element!("0404bcdb938e58babd31087e56b3db59fbaa70e1588f751f0f0a30e1e401f653")
-    // );
+    //     field_element!("
+    // 0404bcdb938e58babd31087e56b3db59fbaa70e1588f751f0f0a30e1e401f653") );
 
     // Divide out the OODS points from the constraints and combine.
     let oods_constraint_lde = calculate_fri_polynomial(
@@ -441,8 +441,6 @@ fn get_out_of_domain_information(
     println!("{}", i);
     let oods_point: FieldElement = proof.get_random();
 
-    // assert_eq!(oods_point, field_element!("0273966fc4697d1762d51fe633f941e92f87bdda124cf7571007a4681b140c05"));
-
     let g = FieldElement::root(trace_polynomials[0].len())
         .expect("No root for trace polynomial length.");
     let oods_point_g = &oods_point * &g;
@@ -454,24 +452,13 @@ fn get_out_of_domain_information(
         oods_values.push(evaled.clone());
     }
     for constraint_polynomial in constraint_polynomials {
-        oods_values.push(constraint_polynomial.evaluate(&oods_point.pow(constraint_polynomials.len())));
+        oods_values
+            .push(constraint_polynomial.evaluate(&oods_point.pow(constraint_polynomials.len())));
     }
-
-    // assert_eq!(oods_values.len(), 18);
-    // assert_eq!(oods_values[0], field_element!("01c55a628c340086e7b03b833483a41e49232f2eb3cf7efe399af42d36026793"));
-    // assert_eq!(oods_values[1], field_element!("06a5fac2d52aad81e922c8e21515d3b93e2184137af76cec9ee16428bb3d8742"));
-    // assert_eq!(oods_values[2], field_element!("037166910df8fec267b29d203031fb13e7f6da72863d9fe77e8a735d6a1e79a5"));
-    // assert_eq!(oods_values[3], field_element!("00b9a28b911c2aaef882a6dfb7ff291cc98afe46d39c04cc7add60167d28320f"));
-    // assert_eq!(oods_values[4], field_element!("0221a5558fb6b1bcc8a61ba4aae7e0646ff4d7690e58a64cc53fdff836a3bc18"));
-    // assert_eq!(oods_values[5], field_element!("0336b6efed32a340ec120f4eb8124a70df35548e8a0f71d207cd746bcc815606"));
-    // assert_eq!(oods_values[15], field_element!("0544e59775ac2833e4c353ec09dd296cbc7b2c9cbd6642da40859d64c534ce79"));
-    // assert_eq!(oods_values[16], field_element!("007370f59cb5af66e4183bc0c5d206e7f6c2be944366ad42a4d8bccd5417499f"));
 
     for v in oods_values.iter() {
         proof.write(v);
     }
-    // assert_eq!(oods_values[16], field_element!("007370f59cb5af66e4183bc0c5d206e7f6c2be944366ad42a4d8bccd5417499f"));
-    // assert_eq!(oods_values[17], field_element!("004b32254637e364a6649ed013dd993dc0acd08ba4d360ddac758e931dcc531d"));
 
     let mut oods_coefficients =
         Vec::with_capacity(2 * trace_polynomials.len() + constraint_polynomials.len());
@@ -512,10 +499,13 @@ fn calculate_fri_polynomial(
     }
 
     let offset = 2 * trace_polynomials.len();
-    let derp = constraint_polynomials.len();
+    let constraints_degree_bound = constraint_polynomials.len();
     for (i, constraint_polynomial) in constraint_polynomials.iter().enumerate() {
-        fri_polynomial +=
-            &oods_coefficients[offset + i] * &divide_out_point(constraint_polynomial, &oods_point.pow(derp));
+        fri_polynomial += &oods_coefficients[offset + i]
+            * &divide_out_point(
+                constraint_polynomial,
+                &oods_point.pow(constraints_degree_bound),
+            );
     }
 
     evalute_polynomial_on_domain(&fri_polynomial, blowup).to_vec()
@@ -547,7 +537,7 @@ fn perform_fri_layering(
     for (k, &x) in params.fri_layout.iter().enumerate().dropping_back(1) {
         let mut eval_point = if x == 0 {
             FieldElement::ONE
-            // this does happen i guess?
+        // this does happen i guess?
         } else {
             proof.get_random()
         };
