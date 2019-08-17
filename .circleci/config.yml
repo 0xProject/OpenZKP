@@ -94,6 +94,16 @@ jobs:
           # Exclude benchmarks that compare against external crates (pulls in a lot of deps)
           command: cargo bench --bench benchmark --all --exclude primefield-benchmarks --no-run
       - run:
+          name: Build wasm substrate runtime
+          command: |
+            cd substrate-node/runtime/wasm
+            CARGO_INCREMENTAL=0 RUSTFLAGS="$RUSTFLAGS -C link-arg=--export-table" cargo +$NIGHTLY build --target=wasm32-unknown-unknown --release
+            cd target/wasm32-unknown-unknown/release
+            for i in substrate_node_runtime_wasm
+            do
+              wasm-gc $i.wasm $i.compact.wasm
+            done
+      - run:
           name: Lint with rustformat nightly
           command: cargo +$NIGHTLY fmt $PROJECTS -- --check
       - run:
