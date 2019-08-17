@@ -10,7 +10,6 @@ use crate::{
     TraceTable,
 };
 use itertools::Itertools;
-// use macros_decl::field_element;
 use primefield::FieldElement;
 use rayon::prelude::*;
 use std::{
@@ -211,20 +210,6 @@ where
     let (oods_point, oods_coefficients) =
         get_out_of_domain_information(&mut proof, &trace_polynomials, &constraint_polynomials);
 
-    // assert_eq!(
-    //     oods_point,
-    //     field_element!("
-    // 0273966fc4697d1762d51fe633f941e92f87bdda124cf7571007a4681b140c05") );
-    //
-    // assert_eq!(
-    //     oods_coefficients[0],
-    //     field_element!("
-    // 0256abb9c4913b285d9e958e29a09560718edc37e228015cdc16da6ac88def6e") );
-    // assert_eq!(
-    //     oods_coefficients[17],
-    //     field_element!("
-    // 0404bcdb938e58babd31087e56b3db59fbaa70e1588f751f0f0a30e1e401f653") );
-
     // Divide out the OODS points from the constraints and combine.
     let oods_constraint_lde = calculate_fri_polynomial(
         &trace_polynomials,
@@ -256,8 +241,6 @@ where
         64 - eval_domain_size.leading_zeros() - 1,
         &mut proof,
     );
-
-    // assert_eq!(query_indices[0], 4234798);
 
     // Decommit the trace table values.
     decommit_with_queries_and_proof(
@@ -537,7 +520,6 @@ fn perform_fri_layering(
     for (k, &x) in params.fri_layout.iter().enumerate().dropping_back(1) {
         let mut eval_point = if x == 0 {
             FieldElement::ONE
-        // this does happen i guess?
         } else {
             proof.get_random()
         };
@@ -577,14 +559,12 @@ fn perform_fri_layering(
     // Gets the coefficient representation of the last number of fri reductions
 
     let last_layer_degree_bound = trace_len / (2_usize.pow(halvings as u32));
-    // assert_eq!(last_layer_degree_bound, 128);
 
     let mut last_layer = fri[fri.len() - 1].clone();
     bit_reversal_permute(&mut last_layer);
     let mut last_layer_coefficient = ifft(&last_layer);
     last_layer_coefficient.truncate(last_layer_degree_bound);
     proof.write(last_layer_coefficient.as_slice());
-    // assert_eq!(last_layer_coefficient.len(), last_layer_degree_bound);
     (fri, fri_trees)
 }
 
