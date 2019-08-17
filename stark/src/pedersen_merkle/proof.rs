@@ -105,11 +105,14 @@ mod tests {
         let constraint_polynomials =
             get_constraint_polynomials(&trace_polynomials, &constraints, &get_coefficients(), 2);
 
-        let constraint_lde =
-            calculate_low_degree_extensions(&constraint_polynomials, proof_parameters.blowup);
-
         let extended_constraint_table =
             calculate_low_degree_extensions(&constraint_polynomials, proof_parameters.blowup);
+
+        let extended_constraint_tree = extended_constraint_table.merkleize();
+        assert_eq!(
+            extended_constraint_tree[1].as_bytes(),
+            hex!("2e821fe1f3062acdbd3a4bd0be2293f4264abc7b000000000000000000000000")
+        );
     }
 }
 
@@ -167,8 +170,8 @@ mod tests {
 //                 let reverse_i = i.bit_reverse() >> (64 - 4);
 //                 let cofactor =
 //                     &evaluation_offset *
-// evaluation_generator.pow(U256::from(reverse_i as u64));                 
-// fft_cofactor_bit_reversed(&p.reverse_coefficients(), &cofactor)             
+// evaluation_generator.pow(U256::from(reverse_i as u64));
+// fft_cofactor_bit_reversed(&p.reverse_coefficients(), &cofactor)
 // })             .collect_into_vec(&mut cosets);
 //         for (extended_trace_column, coset) in
 // constraint_polynomial_on_extended_domain             .iter_mut()

@@ -400,7 +400,20 @@ pub fn get_constraint_polynomials(
         constraint_polynomial += &constraint_coefficients[2 * i + 1] * &p;
         println!("{}", i);
     }
-    vec![constraint_polynomial]
+
+    let mut constraint_polynomials: Vec<Vec<FieldElement>> = vec![vec![]; constraints_degree_bound];
+    for chunk in constraint_polynomial
+        .coefficients()
+        .chunks(constraints_degree_bound)
+    {
+        for (i, coefficient) in chunk.iter().enumerate() {
+            constraint_polynomials[i].push(coefficient.clone());
+        }
+    }
+    constraint_polynomials
+        .iter()
+        .map(|x| DensePolynomial::new(x))
+        .collect()
 }
 
 fn get_out_of_domain_information(
