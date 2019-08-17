@@ -27,9 +27,9 @@ extern crate no_std_compat as std;
 
 // Conditionally include MmapVec. If the feature is disabled substitute Vec
 // instead.
-//#[cfg(feature = "mmap")]
-// mod mmap_vec;
-//#[cfg(not(feature = "mmap"))]
+#[cfg(feature = "mmap")]
+mod mmap_vec;
+#[cfg(not(feature = "mmap"))]
 mod mmap_vec {
     pub use std::vec::Vec as MmapVec;
 }
