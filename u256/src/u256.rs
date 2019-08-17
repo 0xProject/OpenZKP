@@ -1,4 +1,3 @@
-use std::prelude::v1::*;
 use crate::{
     commutative_binop,
     division::{divrem_nby1, divrem_nbym},
@@ -9,15 +8,15 @@ use crate::{
 use macros_decl::u256h;
 use std::{
     cmp::Ordering,
-    fmt,
+    fmt, format,
     num::Wrapping,
     ops::{
         Add, AddAssign, BitAnd, BitAndAssign, Div, DivAssign, Mul, MulAssign, Rem, RemAssign, Shl,
         ShlAssign, Shr, ShrAssign, Sub, SubAssign,
     },
+    prelude::v1::*,
     u64,
 };
-use std::format;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ParseError {
