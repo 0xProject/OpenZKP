@@ -8,11 +8,15 @@ mod tests {
             inputs::{starkware_private_input, STARKWARE_PUBLIC_INPUT},
             trace_table::get_trace_table,
         },
+        channel::ProverChannel,
         proofs::{
             calculate_low_degree_extensions, get_constraint_polynomials, interpolate_trace_table,
             Merkleizable, ProofParams,
         },
+        hash::Hash,
     };
+    use crate::channel::RandomGenerator;
+    use crate::channel::Writable;
     use macros_decl::{field_element, hex, u256h};
     use primefield::FieldElement;
     use u256::U256;
@@ -113,5 +117,20 @@ mod tests {
             extended_constraint_tree[1].as_bytes(),
             hex!("2e821fe1f3062acdbd3a4bd0be2293f4264abc7b000000000000000000000000")
         );
+    }
+
+    #[test]
+    fn starkware_pedersen_merkle() {
+        let public_input = STARKWARE_PUBLIC_INPUT;
+        let private_input = starkware_private_input();
+
+        let mut proof = ProverChannel::new();
+        proof.write(&public_input);
+        proof.write(&Hash::new(hex!(
+            "b00a4c7f03959e01df2504fb73d2b238a8ab08b2000000000000000000000000"
+        )));
+
+        let x: FieldElement = proof.get_random();
+        assert_eq!(x, get_coefficients()[0]);
     }
 }

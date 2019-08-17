@@ -1,3 +1,4 @@
+use crate::channel::{ProverChannel, Writable};
 use primefield::FieldElement;
 
 pub struct PublicInput {
@@ -9,6 +10,17 @@ pub struct PublicInput {
 pub struct PrivateInput {
     pub directions: Vec<bool>,
     pub path:       Vec<FieldElement>,
+}
+
+impl Writable<&PublicInput> for ProverChannel {
+    fn write(&mut self, public_input: &PublicInput) {
+        let mut bytes: Vec<u8> = vec![];
+        bytes.extend_from_slice(&public_input.path_length.to_be_bytes());
+        bytes.extend_from_slice(&public_input.root.as_montgomery().to_bytes_be());
+        bytes.extend_from_slice(&public_input.leaf.as_montgomery().to_bytes_be());
+        self.initialize(&bytes);
+        self.proof.clear();
+    }
 }
 
 pub const STARKWARE_PUBLIC_INPUT: PublicInput = PublicInput {
