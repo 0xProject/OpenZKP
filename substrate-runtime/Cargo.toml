@@ -1,3 +1,9 @@
+[package]
+authors = ['Parity Technologies <admin@parity.io>']
+edition = '2018'
+name = 'substrate-node-runtime'
+version = '1.0.0'
+
 [features]
 default = ['std']
 std = [
@@ -30,11 +36,6 @@ primefield = { path = "../../primefield", default_features = false}
 u256 = { path = "../../u256", default_features = false}
 macros-decl = { path = "../../macros_decl" }
 
-[package]
-authors = ['Parity Technologies <admin@parity.io>']
-edition = '2018'
-name = 'substrate-node-runtime'
-version = '1.0.0'
 [dependencies.aura]
 default_features = false
 git = 'https://github.com/paritytech/substrate.git'

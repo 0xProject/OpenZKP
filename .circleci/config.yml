@@ -103,12 +103,17 @@ jobs:
             do
               wasm-gc $i.wasm $i.compact.wasm
             done
+            # TODO: Copy to root folder or something
+            # TODO: Update include location in substrate-note for native support
+            # TODO: 
       - run:
           name: Lint with rustformat nightly
           command: cargo +$NIGHTLY fmt $PROJECTS -- --check
+          # TODO: Also cover substrate projects
       - run:
           name: Lint with clippy
           command: cargo clippy $PROJECTS --all-targets
+          # TODO: Also cover substrate projects
       - run:
           name: Test debug build
           command: cargo test $PROJECTS -- --nocapture

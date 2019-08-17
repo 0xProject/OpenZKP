@@ -1,28 +1,6 @@
 # Our substrate node
 This package is a thin node template from the substrate team which we are modifying to run the STARK based exchange chain. Please see below for the node building and deploying instructions from the Substrate team :
 
-# Building
-
-Install Rust:
-
-```bash
-curl https://sh.rustup.rs -sSf | sh
-```
-
-Install required tools:
-
-```bash
-./scripts/init.sh
-```
-
-Build the WebAssembly binary:
-
-```bash
-./scripts/build.sh
-```
-
-Build all native code:
-
 ```bash
 cargo build
 ```
