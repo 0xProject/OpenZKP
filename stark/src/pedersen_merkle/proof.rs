@@ -1,29 +1,20 @@
 #[cfg(test)]
 mod tests {
     use crate::{
-        channel::{ProverChannel, RandomGenerator, Writable},
-        hash::Hash,
-        merkle::make_tree,
-        mmap_vec::MmapVec,
         pedersen_merkle::{
             constraints::get_pedersen_merkle_constraints,
             inputs::{starkware_private_input, STARKWARE_PUBLIC_INPUT},
             trace_table::get_trace_table,
         },
-        proofs::{
-            calculate_low_degree_extensions, get_constraint_polynomials, interpolate_trace_table,
-            stark_proof, Merkleizable, ProofParams,
-        },
+        proofs::{stark_proof, ProofParams},
     };
-    use macros_decl::{field_element, hex, u256h};
-    use primefield::FieldElement;
-    use u256::U256;
+    use macros_decl::hex;
 
     #[test]
     fn starkware_pedersen_merkle() {
         let public_input = STARKWARE_PUBLIC_INPUT;
         let private_input = starkware_private_input();
-        let trace_table = get_trace_table(&STARKWARE_PUBLIC_INPUT, &starkware_private_input());
+        let trace_table = get_trace_table(&public_input, &private_input);
 
         let constraints = &get_pedersen_merkle_constraints(&public_input);
 
