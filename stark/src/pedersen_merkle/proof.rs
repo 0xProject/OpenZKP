@@ -11,6 +11,7 @@ mod tests {
     use macros_decl::hex;
 
     #[test]
+    #[ignore]
     fn starkware_pedersen_merkle() {
         let public_input = STARKWARE_PUBLIC_INPUT;
         let private_input = starkware_private_input();
