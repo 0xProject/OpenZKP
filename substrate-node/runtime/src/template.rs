@@ -1,12 +1,12 @@
+use macros_decl::u256h;
+use primefield::FieldElement;
+use stark::{
+    check_proof,
+    fibonacci::{get_fibonacci_constraints, get_trace_table, PrivateInput, PublicInput},
+    stark_proof, ProofParams,
+};
 #[allow(unused_imports)] // TODO - Remove when used
 use starkdex::wrappers::*;
-use stark::{
-    fibonacci::{get_fibonacci_constraints, get_trace_table, PrivateInput, PublicInput},
-    stark_proof, ProofParams, check_proof
-};
-use macros_decl::u256h;
-use u256::U256;
-use primefield::{FieldElement};
 /// A runtime module template with necessary imports
 
 /// Feel free to remove or edit this file as needed.
@@ -17,6 +17,7 @@ use primefield::{FieldElement};
 /// https://github.com/paritytech/substrate/blob/master/srml/example/src/lib.rs
 use support::{decl_event, decl_module, decl_storage, dispatch::Result, StorageValue};
 use system::ensure_signed;
+use u256::U256;
 
 /// The module's configuration trait.
 pub trait Trait: system::Trait {
@@ -65,7 +66,7 @@ decl_module! {
             &get_fibonacci_constraints(&public),
             &public,
             &ProofParams {
-                blowup:                   16, 
+                blowup:                   16,
                 pow_bits:                 12,
                 queries:                  20,
                 fri_layout:               vec![3, 2],
