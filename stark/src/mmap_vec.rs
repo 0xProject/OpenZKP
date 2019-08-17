@@ -45,16 +45,6 @@ impl<T: Clone> MmapVec<T> {
         self[end] = next;
     }
 
-    pub fn extend(&mut self, other: &[T]) {
-        let old_length = self.length;
-        let new_length = old_length + other.len();
-        if new_length > self.capacity {
-            panic!("MmapVec cannot be extended beyond capacity")
-        }
-        self.length = new_length;
-        self[old_length..new_length].clone_from_slice(other);
-    }
-
     #[inline]
     pub fn as_slice(&self) -> &[T] {
         self
@@ -63,6 +53,25 @@ impl<T: Clone> MmapVec<T> {
     #[inline]
     pub fn as_mut_slice(&mut self) -> &mut [T] {
         self
+    }
+}
+
+impl<T: Clone> Extend<T> for MmapVec<T> {
+    fn extend<I: IntoIterator<Item = T>>(&mut self, iter: I) {
+        // The function signature is for compatibility with Vec::extend.
+        // OPT: Specialize for SliceIterator
+        for i in iter {
+            self.push(i)
+        }
+    }
+}
+
+impl<'a, T: 'a + Clone> Extend<&'a T> for MmapVec<T> {
+    fn extend<I: IntoIterator<Item = &'a T>>(&mut self, iter: I) {
+        // The function signature is for compatibility with Vec::extend.
+        for i in iter {
+            self.push(i.clone())
+        }
     }
 }
 
