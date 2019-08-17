@@ -398,7 +398,6 @@ pub fn get_constraint_polynomials(
             - constraint.numerator.degree();
         p *= SparsePolynomial::new(&[(FieldElement::ONE, adjustment_degree)]);
         constraint_polynomial += &constraint_coefficients[2 * i + 1] * &p;
-        println!("{}", i);
     }
 
     let mut constraint_polynomials: Vec<Vec<FieldElement>> = vec![vec![]; constraints_degree_bound];
@@ -421,7 +420,6 @@ fn get_out_of_domain_information(
     trace_polynomials: &[DensePolynomial],
     constraint_polynomials: &[DensePolynomial],
 ) -> (FieldElement, Vec<FieldElement>) {
-    println!("{}", i);
     let oods_point: FieldElement = proof.get_random();
 
     let g = FieldElement::root(trace_polynomials[0].len())

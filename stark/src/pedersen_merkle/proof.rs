@@ -118,21 +118,6 @@ mod tests {
     }
 
     #[test]
-    fn public_input_writable_correct() {
-        let public_input = STARKWARE_PUBLIC_INPUT;
-        let private_input = starkware_private_input();
-
-        let mut proof = ProverChannel::new();
-        proof.write(&public_input);
-        proof.write(&Hash::new(hex!(
-            "b00a4c7f03959e01df2504fb73d2b238a8ab08b2000000000000000000000000"
-        )));
-
-        let x: FieldElement = proof.get_random();
-        assert_eq!(x, get_coefficients()[0]);
-    }
-
-    #[test]
     fn starkware_pedersen_merkle() {
         let public_input = STARKWARE_PUBLIC_INPUT;
         let private_input = starkware_private_input();

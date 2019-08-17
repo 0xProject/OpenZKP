@@ -8813,3 +8813,35 @@ pub fn starkware_private_input() -> PrivateInput {
         path:       STARKWARE_PATH.to_vec(),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{
+        channel::{ProverChannel, RandomGenerator, Writable},
+        hash::Hash,
+    };
+    use macros_decl::{field_element, hex};
+    use primefield::FieldElement;
+    use u256::U256;
+
+    #[test]
+    fn public_input_writable_matches_starkware() {
+        // Test that our implementation of Writable for PublicInput matches StarkWare's
+        // by checking that the first random element we generate for the proof (the
+        // first constraint coefficient) matches the the one in
+        // pedersen_merkle_proof_annotations.txt.
+        let mut proof = ProverChannel::new();
+        proof.write(&STARKWARE_PUBLIC_INPUT);
+        
+        // This is /pedersen merkle/STARK/Original/Commit on Trace
+        proof.write(&Hash::new(hex!(
+            "b00a4c7f03959e01df2504fb73d2b238a8ab08b2000000000000000000000000"
+        )));
+
+        let first_random: FieldElement = proof.get_random();
+        let first_constraint_coefficient =
+            field_element!("0636ad17759a0cc671e906ef94553c10f7a2c012d7a2aa599875506f874c136a");
+        assert_eq!(first_random, first_constraint_coefficient);
+    }
+}
