@@ -367,7 +367,7 @@ fn evalute_polynomial_on_domain(
         let reverse_index = index.bit_reverse_at(blowup);
         let cofactor =
             &shift_factor * extended_domain_generator.pow(U256::from(reverse_index as u64));
-        result.extend(&fft_cofactor_bit_reversed(
+        result.extend(fft_cofactor_bit_reversed(
             constraint_polynomial.coefficients(),
             &cofactor,
         ));
