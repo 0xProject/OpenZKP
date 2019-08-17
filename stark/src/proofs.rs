@@ -353,7 +353,7 @@ pub fn calculate_low_degree_extensions(
     low_degree_extensions
 }
 
-pub fn evalute_polynomial_on_domain(
+fn evalute_polynomial_on_domain(
     constraint_polynomial: &DensePolynomial,
     blowup: usize,
 ) -> MmapVec<FieldElement> {
