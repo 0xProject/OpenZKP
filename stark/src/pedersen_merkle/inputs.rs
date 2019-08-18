@@ -8815,6 +8815,30 @@ pub fn starkware_private_input() -> PrivateInput {
 }
 
 #[cfg(test)]
+pub const SHORT_PUBLIC_INPUT: PublicInput = PublicInput {
+    path_length: 4,
+    leaf:        field_element!("00"),
+    root:        field_element!("0720d51348b23cb2ca2c3c279ad338b759cbe85aa986f1e3e6e5dad5fff30255"),
+};
+
+#[cfg(test)]
+const SHORT_DIRECTIONS: [bool; 4] = [true, false, true, true];
+#[cfg(test)]
+const SHORT_PATH: [FieldElement; 4] = [
+    field_element!("01"),
+    field_element!("02"),
+    field_element!("03"),
+    field_element!("04"),
+];
+#[cfg(test)]
+pub fn short_private_input() -> PrivateInput {
+    PrivateInput {
+        directions: SHORT_DIRECTIONS.to_vec(),
+        path:       SHORT_PATH.to_vec(),
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use crate::{

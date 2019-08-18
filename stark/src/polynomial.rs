@@ -169,7 +169,6 @@ impl SparsePolynomial {
     pub fn new(coefficients_and_degrees: &[(FieldElement, usize)]) -> Self {
         let mut map = BTreeMap::new();
         for (coefficient, degree) in coefficients_and_degrees {
-            assert!(!coefficient.is_zero());
             match map.insert(*degree, coefficient.clone()) {
                 None => (),
                 Some(_) => panic!("Duplicate degrees found when constructing SparsePolynomial"),
