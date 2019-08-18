@@ -1,0 +1,24 @@
+[package]
+authors = ['Parity Technologies <admin@parity.io>']
+edition = '2018'
+name = 'substrate-node-runtime-wasm'
+version = '1.0.0'
+
+# This project compiles to wasm and therefore has different build profiles
+[workspace]
+members = []
+
+[lib]
+crate-type = ['cdylib']
+
+[features]
+default = []
+std = ['substrate-node-runtime/std']
+
+[profile.release]
+lto = true
+panic = 'abort'
+
+[dependencies.substrate-node-runtime]
+default-features = false
+path = '..'

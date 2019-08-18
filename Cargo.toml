@@ -4,7 +4,6 @@ members = [
     "primefield/benchmarks",
     "ecc",
     "starkdex",
-    "wasm",
     "stark",
     "macros_decl",
     "macros_impl",
