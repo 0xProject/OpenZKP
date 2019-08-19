@@ -11,6 +11,7 @@ use crate::{
 use ecc::Affine;
 use primefield::FieldElement;
 use starkdex::SHIFT_POINT;
+use std::prelude::v1::*;
 use u256::U256;
 
 pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constraint> {

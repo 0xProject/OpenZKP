@@ -5,6 +5,7 @@ use crate::{
 use ecc::Affine;
 use primefield::FieldElement;
 use starkdex::{PEDERSEN_POINTS, SHIFT_POINT};
+use std::prelude::v1::*;
 use u256::U256;
 
 pub fn get_trace_table(public_input: &PublicInput, private_input: &PrivateInput) -> TraceTable {
