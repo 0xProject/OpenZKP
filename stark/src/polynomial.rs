@@ -66,6 +66,18 @@ impl DensePolynomial {
     pub fn coefficients(&self) -> &[FieldElement] {
         &self.0
     }
+
+    pub fn square(&self) -> DensePolynomial {
+        let mut result = self.0.clone();
+        result.extend_from_slice(&vec![FieldElement::ZERO; self.len()]);
+        result = fft(&result);
+        result
+            .par_iter_mut()
+            .map(|x| *x = x.square())
+            .collect::<Vec<_>>();
+        result = ifft(&result);
+        Self(result)
+    }
 }
 
 // OPT: Write an Add<DensePolynomial> uses the fact that it's faster to add
@@ -157,8 +169,20 @@ impl SparsePolynomial {
     pub fn new(coefficients_and_degrees: &[(FieldElement, usize)]) -> Self {
         let mut map = BTreeMap::new();
         for (coefficient, degree) in coefficients_and_degrees {
-            assert!(!coefficient.is_zero());
             match map.insert(*degree, coefficient.clone()) {
+                None => (),
+                Some(_) => panic!("Duplicate degrees found when constructing SparsePolynomial"),
+            };
+        }
+        assert!(!map.is_empty());
+        Self(map)
+    }
+
+    pub fn periodic(coefficients: &[FieldElement], power: usize) -> Self {
+        let mut map = BTreeMap::new();
+        for (i, coefficient) in coefficients.iter().enumerate() {
+            assert!(!coefficient.is_zero());
+            match map.insert(i * power, coefficient.clone()) {
                 None => (),
                 Some(_) => panic!("Duplicate degrees found when constructing SparsePolynomial"),
             };
@@ -236,6 +260,18 @@ impl DivAssign<SparsePolynomial> for DensePolynomial {
     }
 }
 
+impl Add<SparsePolynomial> for &DensePolynomial {
+    type Output = DensePolynomial;
+
+    fn add(self, other: SparsePolynomial) -> DensePolynomial {
+        let mut sum = self.0.clone();
+        for (degree, coefficient) in other.0.iter() {
+            sum[*degree] += coefficient;
+        }
+        DensePolynomial(sum)
+    }
+}
+
 impl Sub<SparsePolynomial> for &DensePolynomial {
     type Output = DensePolynomial;
 
@@ -245,6 +281,14 @@ impl Sub<SparsePolynomial> for &DensePolynomial {
             difference[*degree] -= coefficient;
         }
         DensePolynomial(difference)
+    }
+}
+
+impl Sub<&DensePolynomial> for SparsePolynomial {
+    type Output = DensePolynomial;
+
+    fn sub(self, other: &DensePolynomial) -> DensePolynomial {
+        &FieldElement::NEGATIVE_ONE * &(other - self)
     }
 }
 

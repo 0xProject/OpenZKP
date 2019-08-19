@@ -124,14 +124,22 @@ fn get_coordinates(p: &Affine) -> (&FieldElement, &FieldElement) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::pedersen_merkle::inputs::{starkware_private_input, STARKWARE_PUBLIC_INPUT};
+    use crate::pedersen_merkle::inputs::{
+        short_private_input, starkware_private_input, SHORT_PUBLIC_INPUT, STARKWARE_PUBLIC_INPUT,
+    };
 
     #[test]
-    fn trace_root_correct() {
+    fn starkware_inputs_consistent() {
         let trace = get_trace_table(&STARKWARE_PUBLIC_INPUT, &starkware_private_input());
         assert_eq!(
             trace[(trace.num_rows() - 1, 6)],
             STARKWARE_PUBLIC_INPUT.root
         );
+    }
+
+    #[test]
+    fn short_inputs_consistent() {
+        let trace = get_trace_table(&SHORT_PUBLIC_INPUT, &short_private_input());
+        assert_eq!(trace[(trace.num_rows() - 1, 6)], SHORT_PUBLIC_INPUT.root);
     }
 }

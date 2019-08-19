@@ -1,4 +1,57 @@
-version: 2
+version: 2.1
+
+commands:
+  restore-toolchain-cache:
+    steps:
+      - run:
+          name: Allow CirceCI to write toolchain (workaround)
+          command: |
+            sudo mkdir -p /usr/local/{cargo,rustup}
+            sudo chown -R circleci /usr/local/{cargo,rustup}
+      - restore_cache:
+          name: Restore toolchain cache
+          keys: 
+            - toolchain-v1-{{ arch }}-{{ .Environment.CIRCLE_JOB }}
+            - toolchain-v1-{{ arch }}
+  save-toolchain-cache:
+    steps:
+      - run:
+          name: Generate toolchain cache key
+          command: sha256sum /usr/local/rustup/toolchains/*/bin/* /usr/local/cargo/bin/* > TOOLCHAIN_CACHE_KEY
+      - save_cache:
+          name: Save toolchain cache
+          key: toolchain-v1-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ checksum "TOOLCHAIN_CACHE_KEY" }}
+          paths:
+            - /usr/local/cargo
+            - /usr/local/rustup
+  setup-sccache:
+    steps:
+      - restore_cache:
+          name: Restore sccache cache
+          keys: 
+            - sccache-cache-v1-{{ arch }}-{{ .Environment.CIRCLE_JOB }}
+            - sccache-cache-v1-{{ arch }}
+      - run:
+          name: Setup sccache
+          command: |
+            RUSTC_WRAPPER="" cargo install sccache --no-default-features || echo Already installed
+            sccache --version
+  save-sccache-cache:
+    steps:
+      - run:
+          name: Show sccache statistics
+          command: |
+            sccache --show-stats
+      - save_cache:
+          name: Save sccache cache
+          # We use {{ epoch }} to always upload a fresh cache:
+          # Of course, restore_cache will not find this exact key,
+          # but it will fall back to the closest key (aka the most recent).
+          # See https://discuss.circleci.com/t/add-mechanism-to-update-existing-cache-key/9014/13
+          key: sccache-cache-v1-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ epoch }}
+          paths:
+            - "~/.cache/sccache"
+
 jobs:
   build:
     docker:
@@ -6,68 +59,62 @@ jobs:
     environment:
       - RUST_BACKTRACE: 1
       - RUSTFLAGS: -Dwarnings
+      - RUSTC_WRAPPER: sccache
+      - SCCACHE_CACHE_SIZE: 1G
+      - NIGHTLY: nightly-2019-08-15
+      - PROJECTS: -p ecc -p primefield -p starkdex -p starkcrypto-wasm -p stark -p macros-decl -p macros-impl -p macros-lib
     steps:
       - checkout
-      - restore_cache:
-          key: project-cache
+      - restore-toolchain-cache
+      - setup-sccache
       - run:
-          name: Version information
+          name: Setup toolchain
           command: |
+            rustup component add rustfmt clippy
+            rustup toolchain install $NIGHTLY
+            rustup target add wasm32-unknown-unknown --toolchain $NIGHTLY
+            rustup component add rustfmt --toolchain $NIGHTLY
+            cargo install --git https://github.com/alexcrichton/wasm-gc || echo Already installed
             rustc --version
             cargo --version
             rustup --version
-      - run:
-          name: Setup build environment
-          command: |
-            sudo apt-get update
-            sudo apt-get install jq
-            sudo apt-get install -y cmake 
-            sudo apt-get install -y pkg-config 
-            sudo apt-get install libssl-dev 
-            sudo apt-get install git 
-            sudo apt-get install -y clang 
-            sudo apt-get install -y libclang-dev
-            rustup update nightly
-            rustup target add wasm32-unknown-unknown --toolchain nightly
-            rustup update stable
-            cargo install --git https://github.com/alexcrichton/wasm-gc
-            rustup component add rustfmt clippy
-            rustup toolchain install nightly-2019-07-31
-            rustup component add rustfmt --toolchain nightly-2019-07-31
+            wasm-gc --help > /dev/null # Run it to make sure it's executable
           no_output_timeout: 1800s
       - run:
-          name: Clean build
-          command: |
-            # Clean workspace projects but not dependencies.
-            WORKSPACE=$(cargo metadata --format-version 1 | jq --raw-output '.workspace_members[] | match("^(\\w.+)\\ \\d";"g") | .captures[0].string')
-            echo "Workspace projects: " $WORKSPACE
-            for MEMBER in $WORKSPACE; do cargo clean -p $MEMBER; done
+          name: Build all targets on stable
+          command: cargo build $PROJECTS --all-targets
       - run:
-          name: Linting
-          command: |
-            cargo +nightly-2019-07-31 fmt -p ecc primefield starkdex starkcrypto-wasm stark macros-decl macros-impl macros-lib -- --check
-            cargo clippy -p ecc -p primefield -p starkdex -p starkcrypto-wasm -p stark -p macros-decl -p macros-impl -p macros-lib --all-targets
+          name: Build all targets on stable in release mode
+          command: cargo build --release $PROJECTS --all-targets
       - run:
-          name: Build all targets
-          command: |
-            cargo build -p ecc -p primefield -p starkdex -p starkcrypto-wasm -p stark -p macros-decl -p macros-impl -p macros-lib  --all-targets
+          name: Build all targets on nightly
+          command: cargo +$NIGHTLY build $PROJECTS --all-targets
       - run:
-          name: Test in debug and release mode
-          command: |
-            cargo test -p ecc -p primefield -p starkdex -p starkcrypto-wasm -p stark -p macros-decl -p macros-impl -p macros-lib -- --nocapture
-            cargo test --release -p ecc -p primefield -p starkdex -p starkcrypto-wasm -p stark -p macros-decl -p macros-impl -p macros-lib -- --nocapture
+          name: Build benchmarks
+          # Exclude benchmarks that compare against external crates (pulls in a lot of deps)
+          command: cargo bench --bench benchmark --all --exclude primefield-benchmarks --no-run
       - run:
-          name: Run benchmarks as tests
+          name: Lint with rustformat nightly
+          command: cargo +$NIGHTLY fmt $PROJECTS -- --check
+      - run:
+          name: Lint with clippy
+          command: cargo clippy $PROJECTS --all-targets
+      - run:
+          name: Test debug build
+          command: cargo test $PROJECTS -- --nocapture
+      - run:
+          name: Test release build
+          command: cargo test --release $PROJECTS -- --nocapture
+      - run:
+          name: Test benchmarks
           command: |
             # Actually running the benchmarks on CI is too noisy. The results
             # would be meaningless. Instead we just run it to make sure they work.
-            cargo bench --bench benchmark -- --test
-      # TODO: Coverage
-      - save_cache:
-          key: project-cache
-          paths:
-            - "~/.cargo"
-            - "./target"
+            # Exclude benchmarks that compare against external crates (pulls in a lot of deps)
+            cargo bench --bench benchmark --all --exclude primefield-benchmarks -- --test
+      - save-sccache-cache
+      - save-toolchain-cache
+
 workflows:
   version: 2
   build:
