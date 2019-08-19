@@ -7,3 +7,7 @@ edition = "2018"
 [dependencies]
 proc-macro-hack = "0.5"
 macros-impl = { path = "../macros_impl" }
+
+[features]
+default = ["std"]
+std = []
