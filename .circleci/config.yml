@@ -90,11 +90,15 @@ jobs:
           # This forces the build to fail if an accidental dependency on `std`
           # exists. Wasm has a working std, so is not a suitable target here.
           # See: https://forge.rust-lang.org/platform-support.html
+          # We only build libraries and binaries, as we are not interested in
+          # the tests/benchmarks/examples working in no_std
           name: Check all targets on a platform that has no std
-          command: cargo check $PROJECTS --all-targets --no-default-features --target=thumbv7m-none-eabi
+          command: cargo check $PROJECTS --lib --bins  --no-default-features --target=thumbv7m-none-eabi
       - run:
+          # We only build libraries and binaries, as we are not interested in
+          # the tests/benchmarks/examples working in no_std
           name: Build all targets on stable (no std)
-          command: cargo build $PROJECTS --all-targets --no-default-features
+          command: cargo build $PROJECTS --lib --bins  --no-default-features
       - run:
           name: Build all targets on stable in release mode
           command: cargo build --release $PROJECTS --all-targets
