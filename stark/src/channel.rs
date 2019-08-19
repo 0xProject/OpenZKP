@@ -105,9 +105,9 @@ impl PublicCoin {
 
 impl From<Vec<u8>> for ProverChannel {
     fn from(proof_data: Vec<u8>) -> ProverChannel {
-        ProverChannel{
-            coin: PublicCoin::new(),
-            proof: proof_data
+        ProverChannel {
+            coin:  PublicCoin::new(),
+            proof: proof_data,
         }
     }
 }
