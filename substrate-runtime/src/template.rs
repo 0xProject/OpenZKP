@@ -1,5 +1,6 @@
 use macros_decl::u256h;
 use primefield::FieldElement;
+use rstd::prelude::*;
 use stark::{
     check_proof,
     fibonacci::{get_fibonacci_constraints, get_trace_table, PrivateInput, PublicInput},
@@ -7,6 +8,7 @@ use stark::{
 };
 #[allow(unused_imports)] // TODO - Remove when used
 use starkdex::wrappers::*;
+
 /// A runtime module template with necessary imports
 
 /// Feel free to remove or edit this file as needed.
