@@ -58,7 +58,8 @@ pub type BlockNumber = u64;
 pub type Nonce = u64;
 
 /// Used for the module template in `./template.rs`
-mod template;
+pub mod template;
+pub mod block_proof;
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't
 /// need to know the specifics of the runtime. They can then be made to be
@@ -200,6 +201,10 @@ impl template::Trait for Runtime {
     type Event = Event;
 }
 
+impl block_proof::Trait for Runtime {
+
+}
+
 construct_runtime!(
 	pub enum Runtime with Log(InternalLog: DigestItem<Hash, AuthorityId, AuthoritySignature>) where
 		Block = Block,
@@ -215,6 +220,7 @@ construct_runtime!(
 		Sudo: sudo,
 		// Used for the module template in `./template.rs`
 		TemplateModule: template::{Module, Call, Storage, Event<T>},
+        BlockProof: block_proof::{Module, Call, Storage, Inherent},
 	}
 );
 
