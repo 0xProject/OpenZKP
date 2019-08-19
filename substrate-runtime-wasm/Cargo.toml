@@ -11,14 +11,14 @@ members = []
 [lib]
 crate-type = ['cdylib']
 
+[dependencies]
+substrate-runtime = { path = '../substrate-runtime', default-features = false }
+
 [features]
 default = []
-std = ['substrate-node-runtime/std']
+std = ['substrate-runtime/std']
 
 [profile.release]
 lto = true
 panic = 'abort'
 
-[dependencies.substrate-node-runtime]
-default-features = false
-path = '..'

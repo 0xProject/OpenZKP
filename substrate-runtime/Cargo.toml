@@ -1,7 +1,7 @@
 [package]
 authors = ['Parity Technologies <admin@parity.io>']
 edition = '2018'
-name = 'substrate-node-runtime'
+name = 'substrate-runtime'
 version = '1.0.0'
 
 [features]
