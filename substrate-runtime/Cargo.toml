@@ -8,7 +8,7 @@ version = '1.0.0'
 default = ['std']
 std = [
     'parity-codec/std',
-    'primitives/std',
+    'runtime-primitives/std',
     'client/std',
     'rstd/std',
     'runtime-io/std',
@@ -26,6 +26,7 @@ std = [
     'serde',
     'safe-mix/std',
     'consensus-aura/std',
+    'consensus_authorities/std',
     'offchain-primitives/std',
     'stark/std',
     'starkdex/std',
