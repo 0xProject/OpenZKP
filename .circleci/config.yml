@@ -73,6 +73,7 @@ jobs:
             rustup component add rustfmt clippy
             rustup toolchain install $NIGHTLY
             rustup target add wasm32-unknown-unknown --toolchain $NIGHTLY
+            rustup target add thumbv7m-none-eabi --toolchain $NIGHTLY
             rustup component add rustfmt --toolchain $NIGHTLY
             cargo install --git https://github.com/alexcrichton/wasm-gc || echo Already installed
             rustc --version
@@ -83,6 +84,9 @@ jobs:
       - run:
           name: Build all targets on stable
           command: cargo build $PROJECTS --all-targets
+      - run:
+          name: Check all targets on a platform that has no std
+          command: cargo check $PROJECTS --all-targets --no-default-features --target=thumbv7m-none-eabi
       - run:
           name: Build all targets on stable (no std)
           command: cargo build $PROJECTS --all-targets --no-default-features
@@ -99,16 +103,10 @@ jobs:
       - run:
           name: Build wasm substrate runtime
           command: |
-            cd substrate-node/runtime/wasm
-            CARGO_INCREMENTAL=0 RUSTFLAGS="$RUSTFLAGS -C link-arg=--export-table" cargo +$NIGHTLY build --target=wasm32-unknown-unknown --release
-            cd target/wasm32-unknown-unknown/release
-            for i in substrate_node_runtime_wasm
-            do
-              wasm-gc $i.wasm $i.compact.wasm
-            done
-            # TODO: Copy to root folder or something
-            # TODO: Update include location in substrate-note for native support
-            # TODO: 
+            cd substrate-runtime-wasm
+            cargo +$NIGHTLY build --release
+            cp target/wasm32-unknown-unknown/release/runtime.wasm ./
+            wasm-gc $i.wasm $i.compact.wasm
       - run:
           name: Lint with rustformat nightly
           command: cargo +$NIGHTLY fmt $PROJECTS -- --check
