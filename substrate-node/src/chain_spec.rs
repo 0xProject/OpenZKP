@@ -1,11 +1,11 @@
+use crate::assets::RUNTIME_WASM;
+use ed25519::Public as AuthorityId;
 use primitives::{ed25519, sr25519, Pair};
-use substrate_node_runtime::{
+use substrate_runtime::{
     AccountId, BalancesConfig, ConsensusConfig, GenesisConfig, IndicesConfig, SudoConfig,
     TimestampConfig,
 };
 use substrate_service;
-
-use ed25519::Public as AuthorityId;
 
 // Note this is the URL for the telemetry server
 // const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
@@ -103,11 +103,7 @@ fn testnet_genesis(
 ) -> GenesisConfig {
     GenesisConfig {
         consensus: Some(ConsensusConfig {
-            code:        include_bytes!(
-                "../runtime/wasm/target/wasm32-unknown-unknown/release/\
-                 substrate_node_runtime_wasm.compact.wasm"
-            )
-            .to_vec(),
+            code:        RUNTIME_WASM.to_vec(),
             authorities: initial_authorities.clone(),
         }),
         system:    None,
