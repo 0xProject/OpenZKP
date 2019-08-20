@@ -515,11 +515,7 @@ fn perform_fri_layering(
     fri_trees.push(held_tree);
 
     for (k, &x) in params.fri_layout.iter().enumerate().dropping_back(1) {
-        let mut eval_point = if x == 0 {
-            FieldElement::ONE
-        } else {
-            proof.get_random()
-        };
+        let mut eval_point = proof.get_random();
         for _ in 0..x {
             layer = fri_layer(&layer, &eval_point, eval_domain_size, eval_x);
             fri.push(layer.clone());
