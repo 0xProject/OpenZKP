@@ -276,6 +276,7 @@ fn get_indices(num: usize, bits: u32, proof: &mut ProverChannel) -> Vec<usize> {
     query_indices
 }
 
+// TODO: move to utils.
 pub fn geometric_series(base: &FieldElement, step: &FieldElement, len: usize) -> Vec<FieldElement> {
     const PARALLELIZATION: usize = 16_usize;
     // OPT - Set based on the cores available and how well the work is spread
@@ -782,10 +783,8 @@ mod tests {
         assert_eq!(trace[(1000, 0)], public.value);
 
         let TPn = interpolate_trace_table(&trace);
-        let TP0 = TPn[0].clone();
-        let TP1 = TPn[1].clone();
         // Checks that the trace table polynomial interpolation is working
-        assert_eq!(TP0.evaluate(&g.pow(1000)), trace[(1000, 0)]);
+        assert_eq!(TPn[0].evaluate(&g.pow(1000)), trace[(1000, 0)]);
 
         let LDEn = calculate_low_degree_extensions(&TPn, params.blowup);
 
@@ -793,8 +792,8 @@ mod tests {
         let i = 13644usize;
         let reverse_i = i.bit_reverse_at(eval_domain_size);
         let eval_offset_x = geometric_series(&gen, &omega, eval_domain_size);
-        assert_eq!(TP0.evaluate(&eval_offset_x[reverse_i]), LDEn[0][i]);
-        assert_eq!(TP1.evaluate(&eval_offset_x[reverse_i]), LDEn[1][i]);
+        assert_eq!(TPn[0].evaluate(&eval_offset_x[reverse_i]), LDEn[0][i]);
+        assert_eq!(TPn[1].evaluate(&eval_offset_x[reverse_i]), LDEn[1][i]);
 
         // Checks that the groupable trait is properly grouping for &[Vec<FieldElement>]
         assert_eq!(
