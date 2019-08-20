@@ -600,19 +600,18 @@ fn decommit_fri_layers_and_trees(
     params: &ProofParams,
     proof: &mut ProverChannel,
 ) {
-    let mut fri_indices: Vec<usize> = query_indices.to_vec();
+    let mut previous_indices: Vec<usize> = query_indices.to_vec();
 
     for (layer, tree, n_reductions) in izip!(fri_layers, fri_trees, &params.fri_layout) {
         let fri_const = 2_usize.pow(*n_reductions as u32);
 
-        let previous_indices = fri_indices.clone();
-        fri_indices = fri_indices
+        let new_indices: Vec<usize> = previous_indices
             .iter()
-            .map(|x| x / fri_const
+            .map(|x| x / fri_const)
             .dedup()
             .collect();
 
-        for i in fri_indices.iter() {
+        for i in new_indices.iter() {
             for j in 0..fri_const {
                 let n = i * fri_const + j;
                 match previous_indices.binary_search(&n) {
@@ -621,11 +620,13 @@ fn decommit_fri_layers_and_trees(
                 };
             }
         }
-        let decommitment = merkle::proof(tree, &fri_indices, (fri_const, layer.as_slice()));
+        let decommitment = merkle::proof(tree, &new_indices, (fri_const, layer.as_slice()));
 
         for proof_element in decommitment.iter() {
             proof.write(proof_element);
         }
+
+        previous_indices = new_indices;
     }
 }
 
