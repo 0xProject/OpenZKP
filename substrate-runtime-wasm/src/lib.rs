@@ -2,4 +2,4 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-pub use substrate_node_runtime::*;
+pub use substrate_runtime::*;

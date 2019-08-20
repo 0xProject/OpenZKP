@@ -1,8 +1,14 @@
+[package]
+authors = ['Parity Technologies <admin@parity.io>']
+edition = '2018'
+name = 'substrate-runtime'
+version = '1.0.0'
+
 [features]
 default = ['std']
 std = [
     'parity-codec/std',
-    'primitives/std',
+    'runtime-primitives/std',
     'client/std',
     'rstd/std',
     'runtime-io/std',
@@ -20,21 +26,21 @@ std = [
     'serde',
     'safe-mix/std',
     'consensus-aura/std',
+    'consensus_authorities/std',
     'offchain-primitives/std',
+    'stark/std',
+    'starkdex/std',
 ]
 
 [dependencies]
-starkdex = { path = "../../starkdex", default_features = false }
-stark = { path = "../../stark", default_features = false}
-primefield = { path = "../../primefield", default_features = false}
-u256 = { path = "../../u256", default_features = false}
-macros-decl = { path = "../../macros_decl" }
+starkdex = { path = "../starkdex", default_features = false }
+stark = { path = "../stark", default_features = false }
+primefield = { path = "../primefield", default_features = false }
+u256 = { path = "../u256", default_features = false }
+macros-decl = { path = "../macros_decl" }
+safe-mix = { version = "1.0", default-features = false }
+serde = { version = "1.0", features = ["derive"], optional = true }
 
-[package]
-authors = ['Parity Technologies <admin@parity.io>']
-edition = '2018'
-name = 'substrate-node-runtime'
-version = '1.0.0'
 [dependencies.aura]
 default_features = false
 git = 'https://github.com/paritytech/substrate.git'
@@ -117,15 +123,6 @@ default_features = false
 git = 'https://github.com/paritytech/substrate.git'
 package = 'sr-primitives'
 rev = 'fc206f3a009b64fc746202e5b4c701bf7e24d1f1'
-
-[dependencies.safe-mix]
-default-features = false
-version = '1.0'
-
-[dependencies.serde]
-features = ['derive']
-optional = true
-version = '1.0'
 
 [dependencies.sudo]
 default_features = false

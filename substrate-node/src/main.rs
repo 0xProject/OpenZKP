@@ -3,6 +3,7 @@
 #![warn(missing_docs)]
 #![warn(unused_extern_crates)]
 
+mod assets;
 mod chain_spec;
 mod cli;
 mod service;
@@ -19,6 +20,7 @@ fn run() -> cli::error::Result<()> {
         description:     "substrate-node",
         support_url:     "support.anonymous.an",
     };
+
     cli::run(::std::env::args(), cli::Exit, version)
 }
 

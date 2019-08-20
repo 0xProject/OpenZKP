@@ -6,6 +6,7 @@ name = 'substrate-node'
 version = '1.0.0'
 
 [dependencies]
+substrate-runtime = { path = '../substrate-runtime' }
 error-chain = '0.12'
 exit-future = '0.1'
 futures = '0.1'
@@ -40,8 +41,6 @@ git = 'https://github.com/paritytech/substrate.git'
 package = 'substrate-network'
 rev = 'fc206f3a009b64fc746202e5b4c701bf7e24d1f1'
 
-[dependencies.substrate-node-runtime]
-path = 'runtime'
 
 [dependencies.primitives]
 git = 'https://github.com/paritytech/substrate.git'
