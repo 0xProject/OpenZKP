@@ -716,10 +716,10 @@ mod tests {
             field_element!("03"),
             field_element!("06"),
             field_element!("10"),
-            // field_element!("01"),
-            // field_element!("01"),
-            // field_element!("36"),
-            // field_element!("10"),
+            field_element!("01"),
+            field_element!("01"),
+            field_element!("36"),
+            field_element!("10"),
         ]);
         let c = &(FieldElement::GENERATOR + FieldElement::ONE);
         let blowup = 2;
