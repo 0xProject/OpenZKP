@@ -137,7 +137,12 @@ jobs:
             # Actually running the benchmarks on CI is too noisy. The results
             # would be meaningless. Instead we just run it to make sure they work.
             # Exclude benchmarks that compare against external crates (pulls in a lot of deps)
-            cargo bench --features bench --bench benchmark --all --exclude primefield-benchmarks -- --test
+            # HACK: We add 'bench' as a feature so dev-dependencies can be included as optional
+            # regular dependencies behind a feature flag. This solves problems with feature
+            # unification. 
+            # HACK: We can not specify --features=bench in a workspace environment, instead
+            # we enable all features (which makes sense from a test coverage perspective).
+            cargo bench --bench benchmark --all --exclude primefield-benchmarks --all-features -- --test
       - save-sccache-cache
       - save-toolchain-cache
 
