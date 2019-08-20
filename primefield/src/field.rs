@@ -297,12 +297,6 @@ impl DivAssign<&FieldElement> for FieldElement {
     }
 }
 
-impl core::iter::Sum for FieldElement {
-    fn sum<I: Iterator<Item = FieldElement>>(iter: I) -> FieldElement {
-        iter.fold(FieldElement::ZERO, Add::add)
-    }
-}
-
 impl core::iter::Product for FieldElement {
     fn product<I: Iterator<Item = FieldElement>>(iter: I) -> FieldElement {
         iter.fold(FieldElement::ONE, Mul::mul)

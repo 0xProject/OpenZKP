@@ -500,75 +500,26 @@ fn perform_fri_layering(
     proof: &mut ProverChannel,
     params: &ProofParams,
 ) -> (Vec<Vec<FieldElement>>, Vec<Vec<Hash>>) {
-    // let mut fri_trees: Vec<Vec<Hash>> =
-    // Vec::with_capacity(params.fri_layout.len()); let mut p =
-    // fri_polynomial.clone();
-    //
-    // for (i, &n_reductions) in params.fri_layout.iter().enumerate() {
-    //     let layer = evalute_polynomial_on_domain(&p, params.blowup).to_vec();
-    //     let tree = (2_usize.pow(n_reductions as u32),
-    // layer.as_slice()).merkleize();     proof.write(&tree[1]);
-    //     fri_trees.push(tree);
-    //
-    //     let mut coefficient = proof.get_random();
-    //     for _ in 0..n_reductions {
-    //         p = fri_fold(&p, &coefficient);
-    //         coefficient = coefficient.square();
-    //     }
-    // }
-    // proof.write(p.as_slice());
-
-    let mut layer = evalute_polynomial_on_domain(fri_polynomial, params.blowup).to_vec();
-    let eval_domain_size = layer.len();
-    debug_assert!(eval_domain_size.is_power_of_two());
-
-    let mut fri: Vec<Vec<FieldElement>> =
-        Vec::with_capacity(64 - (eval_domain_size.leading_zeros() as usize));
-    fri.push(layer.clone());
-
     let mut fri_trees: Vec<Vec<Hash>> = Vec::with_capacity(params.fri_layout.len());
-    let held_tree = (2_usize.pow(params.fri_layout[0] as u32), layer.as_slice()).merkleize();
-    proof.write(&held_tree[1]);
-    fri_trees.push(held_tree);
+    let mut fri_layers: Vec<Vec<FieldElement>> = Vec::with_capacity(params.fri_layout.len());
 
-    for (k, &x) in params.fri_layout.iter().enumerate().dropping_back(1) {
-        let mut eval_point = proof.get_random();
-        for _ in 0..x {
-            layer = fri_layer(&layer, &eval_point);
-            eval_point = eval_point.square();
+    let mut p = fri_polynomial.clone();
+    for (i, &n_reductions) in params.fri_layout.iter().enumerate() {
+        let layer = evalute_polynomial_on_domain(&p, params.blowup).to_vec();
+
+        let tree = (2_usize.pow(n_reductions as u32), layer.as_slice()).merkleize();
+        proof.write(&tree[1]);
+        fri_trees.push(tree);
+        fri_layers.push(layer);
+
+        let mut coefficient = proof.get_random();
+        for _ in 0..n_reductions {
+            p = fri_fold(&p, &coefficient);
+            coefficient = coefficient.square();
         }
-        fri.push(layer.clone());
-        let held_tree = (
-            2_usize.pow(params.fri_layout[k + 1] as u32),
-            layer.as_slice(),
-        )
-            .merkleize();
-
-        proof.write(&held_tree[1]);
-        fri_trees.push(held_tree);
     }
-
-    // Gets the coefficient representation of the last number of fri reductions
-    let mut eval_point = proof.get_random();
-    for _ in 0..params.fri_layout[params.fri_layout.len() - 1] {
-        layer = fri_layer(&layer, &eval_point);
-        fri.push(layer.clone());
-        eval_point = eval_point.square();
-    }
-
-    // Gets the coefficient representation of the last number of fri reductions
-
-    let trace_len = fri_polynomial.len();
-    let halvings: usize = params.fri_layout.iter().sum();
-    let last_layer_degree_bound = trace_len / (2_usize.pow(halvings as u32));
-
-    assert_eq!(layer.len(), params.blowup * last_layer_degree_bound);
-
-    bit_reversal_permute(&mut layer);
-    let mut last_layer_coefficient = ifft(&layer);
-    last_layer_coefficient.truncate(last_layer_degree_bound);
-    proof.write(last_layer_coefficient.as_slice());
-    (fri, fri_trees)
+    proof.write(p.shift(&FieldElement::GENERATOR).coefficients());
+    (fri_layers, fri_trees)
 }
 
 fn decommit_with_queries_and_proof<R: Hashable, T: Groupable<R>>(
