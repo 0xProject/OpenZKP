@@ -494,6 +494,7 @@ fn calculate_fri_polynomial(
     fri_polynomial
 }
 
+#[allow(warnings)]
 fn perform_fri_layering(
     fri_polynomial: &DensePolynomial,
     proof: &mut ProverChannel,
@@ -513,7 +514,6 @@ fn perform_fri_layering(
     proof.write(&held_tree[1]);
     fri_trees.push(held_tree);
 
-    let mut halvings = 0;
     for (k, &x) in params.fri_layout.iter().enumerate().dropping_back(1) {
         let mut eval_point = if x == 0 {
             FieldElement::ONE
@@ -533,7 +533,6 @@ fn perform_fri_layering(
 
         proof.write(&held_tree[1]);
         fri_trees.push(held_tree);
-        halvings += x;
     }
 
     // Gets the coefficient representation of the last number of fri reductions
@@ -543,12 +542,14 @@ fn perform_fri_layering(
         fri.push(layer.clone());
         eval_point = eval_point.square();
     }
-    halvings += params.fri_layout[params.fri_layout.len() - 1];
 
     // Gets the coefficient representation of the last number of fri reductions
 
     let trace_len = fri_polynomial.len();
+    let halvings: usize = params.fri_layout.iter().sum();
     let last_layer_degree_bound = trace_len / (2_usize.pow(halvings as u32));
+
+    assert_eq!(layer.len(), params.blowup * last_layer_degree_bound);
 
     bit_reversal_permute(&mut layer);
     let mut last_layer_coefficient = ifft(&layer);
