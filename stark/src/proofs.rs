@@ -262,36 +262,6 @@ where
     proof
 }
 
-// fn fri_fold(p: &DensePolynomial) -> DensePolynomial {
-//     let coefficients: Vec<FieldElement> = p
-//         .coefficients()
-//         .chunks_exact(2)
-//         .map(|pair: &[FieldElement]| &pair[0] + &pair[1])
-//         .collect();
-//     DensePolynomial::new(&coefficients)
-// }
-
-fn fri_layer(
-    previous: &[FieldElement],
-    evaluation_point: &FieldElement,
-    eval_domain_size: usize,
-    eval_x: &[FieldElement],
-) -> Vec<FieldElement> {
-    let len = previous.len();
-    let step = eval_domain_size / len;
-    let mut next = Vec::with_capacity(len / 2);
-    (0..(len / 2))
-        .into_par_iter()
-        .map(|index| {
-            let value = &previous[2 * index];
-            let neg_x_value = &previous[2 * index + 1];
-            let x_inv = &eval_x[index.bit_reverse_at(len / 2) * step].inv().unwrap();
-            (value + neg_x_value) + evaluation_point * x_inv * (value - neg_x_value)
-        })
-        .collect_into_vec(&mut next);
-    next
-}
-
 fn get_indices(num: usize, bits: u32, proof: &mut ProverChannel) -> Vec<usize> {
     let mut query_indices = Vec::with_capacity(num + 3);
     while query_indices.len() < num {
@@ -488,6 +458,36 @@ fn calculate_fri_polynomial(
             );
     }
     fri_polynomial
+}
+
+// fn fri_fold(p: &DensePolynomial) -> DensePolynomial {
+//     let coefficients: Vec<FieldElement> = p
+//         .coefficients()
+//         .chunks_exact(2)
+//         .map(|pair: &[FieldElement]| &pair[0] + &pair[1])
+//         .collect();
+//     DensePolynomial::new(&coefficients)
+// }
+
+fn fri_layer(
+    previous: &[FieldElement],
+    evaluation_point: &FieldElement,
+    eval_domain_size: usize,
+    eval_x: &[FieldElement],
+) -> Vec<FieldElement> {
+    let len = previous.len();
+    let step = eval_domain_size / len;
+    let mut next = Vec::with_capacity(len / 2);
+    (0..(len / 2))
+        .into_par_iter()
+        .map(|index| {
+            let value = &previous[2 * index];
+            let neg_x_value = &previous[2 * index + 1];
+            let x_inv = &eval_x[index.bit_reverse_at(len / 2) * step].inv().unwrap();
+            (value + neg_x_value) + evaluation_point * x_inv * (value - neg_x_value)
+        })
+        .collect_into_vec(&mut next);
+    next
 }
 
 #[allow(warnings)]
