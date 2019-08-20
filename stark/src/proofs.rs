@@ -9,8 +9,7 @@ use crate::{
     utils::Reversible,
     TraceTable,
 };
-use itertools::Itertools;
-use itertools::izip;
+use itertools::{izip, Itertools};
 use primefield::FieldElement;
 use rayon::prelude::*;
 use std::{
@@ -501,13 +500,14 @@ fn perform_fri_layering(
     proof: &mut ProverChannel,
     params: &ProofParams,
 ) -> (Vec<Vec<FieldElement>>, Vec<Vec<Hash>>) {
-    // let mut fri_trees: Vec<Vec<Hash>> = Vec::with_capacity(params.fri_layout.len());
-    // let mut p = fri_polynomial.clone();
+    // let mut fri_trees: Vec<Vec<Hash>> =
+    // Vec::with_capacity(params.fri_layout.len()); let mut p =
+    // fri_polynomial.clone();
     //
     // for (i, &n_reductions) in params.fri_layout.iter().enumerate() {
     //     let layer = evalute_polynomial_on_domain(&p, params.blowup).to_vec();
-    //     let tree = (2_usize.pow(n_reductions as u32), layer.as_slice()).merkleize();
-    //     proof.write(&tree[1]);
+    //     let tree = (2_usize.pow(n_reductions as u32),
+    // layer.as_slice()).merkleize();     proof.write(&tree[1]);
     //     fri_trees.push(tree);
     //
     //     let mut coefficient = proof.get_random();
@@ -602,34 +602,26 @@ fn decommit_fri_layers_and_trees(
 ) {
     let mut fri_indices: Vec<usize> = query_indices.to_vec();
 
-
     for (layer, tree, n_reductions) in izip!(fri_layers, fri_trees, &params.fri_layout) {
         let previous_indices = fri_indices.clone();
         fri_indices = fri_indices
-            .to_vec()
             .iter()
             .map(|x| x / 2_usize.pow(*n_reductions as u32))
+            .dedup()
             .collect();
-        fri_indices.dedup();
 
         let fri_const = 2_usize.pow(*n_reductions as u32);
 
         for i in fri_indices.iter() {
             for j in 0..fri_const {
                 let n = i * fri_const + j;
-
-                if previous_indices.binary_search(&n).is_ok() {
-                    continue;
-                } else {
-                    proof.write(&layer[n]);
-                }
+                match previous_indices.binary_search(&n) {
+                    Ok(_) => (),
+                    _ => proof.write(&layer[n]),
+                };
             }
         }
-        let decommitment = merkle::proof(
-            tree,
-            &fri_indices,
-            (fri_const, layer.as_slice()),
-        );
+        let decommitment = merkle::proof(tree, &fri_indices, (fri_const, layer.as_slice()));
 
         for proof_element in decommitment.iter() {
             proof.write(proof_element);
