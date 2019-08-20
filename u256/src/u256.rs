@@ -8,7 +8,6 @@ use crate::{
 use macros_decl::u256h;
 use std::{
     cmp::Ordering,
-    fmt, format,
     num::Wrapping,
     ops::{
         Add, AddAssign, BitAnd, BitAndAssign, Div, DivAssign, Mul, MulAssign, Rem, RemAssign, Shl,
@@ -17,6 +16,9 @@ use std::{
     prelude::v1::*,
     u64,
 };
+
+#[cfg(feature = "std")]
+use std::{fmt, format};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ParseError {
@@ -146,6 +148,7 @@ impl U256 {
         result.chars().rev().collect()
     }
 
+    #[cfg(feature = "std")]
     pub fn from_hex_str(s: &str) -> U256 {
         let byte_string = format!("{:0>64}", s.trim_start_matches("0x"));
         let bytes = hex::decode(byte_string).unwrap();
@@ -487,6 +490,7 @@ impl U256 {
     }
 }
 
+#[cfg(feature = "std")]
 impl fmt::Display for U256 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
@@ -497,6 +501,7 @@ impl fmt::Display for U256 {
     }
 }
 
+#[cfg(feature = "std")]
 impl fmt::Debug for U256 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
