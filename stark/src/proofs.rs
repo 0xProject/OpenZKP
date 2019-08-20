@@ -475,7 +475,6 @@ fn fri_layer(
 ) -> Vec<FieldElement> {
     let eval_domain_size = previous.len();
     let omega = FieldElement::root(eval_domain_size).unwrap();
-    let eval_x = geometric_series(&FieldElement::ONE, &omega, eval_domain_size);
 
     let mut next = Vec::with_capacity(eval_domain_size / 2);
     (0..(eval_domain_size / 2))
@@ -483,7 +482,7 @@ fn fri_layer(
         .map(|index| {
             let value = &previous[2 * index];
             let neg_x_value = &previous[2 * index + 1];
-            let x_inv = &eval_x[index.bit_reverse_at(eval_domain_size / 2)].inv().unwrap();
+            let x_inv = omega.pow(index.bit_reverse_at(eval_domain_size / 2)).inv().unwrap();
             (value + neg_x_value) + evaluation_point * x_inv * (value - neg_x_value)
         })
         .collect_into_vec(&mut next);
