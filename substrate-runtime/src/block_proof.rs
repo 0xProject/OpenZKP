@@ -1,5 +1,3 @@
-#![cfg_attr(not(feature = "std"), no_std)]
-
 #[cfg(feature = "std")]
 use inherents::ProvideInherentData;
 use inherents::{InherentData, InherentIdentifier, IsFatalError, ProvideInherent, RuntimeString};
@@ -55,12 +53,12 @@ impl InherentError {
     }
 }
 
-pub trait TknPriceInherentData {
-    fn tknprice_inherent_data(&self) -> Result<InherentType, RuntimeString>;
+pub trait ProofInherentData {
+    fn proof_inherent_data(&self) -> Result<InherentType, RuntimeString>;
 }
 
-impl TknPriceInherentData for InherentData {
-    fn tknprice_inherent_data(&self) -> Result<InherentType, RuntimeString> {
+impl ProofInherentData for InherentData {
+    fn proof_inherent_data(&self) -> Result<InherentType, RuntimeString> {
         self.get_data(&INHERENT_IDENTIFIER)
             .and_then(|r| r.ok_or_else(|| "Inherent data not found".into()))
     }
@@ -215,9 +213,7 @@ mod tests {
     use u256::U256;
 
     impl_outer_origin! {
-        pub enum Origin for Test {
-
-        }
+        pub enum Origin for Test { }
     }
 
     // For testing the module, we construct most of a mock runtime. This means
