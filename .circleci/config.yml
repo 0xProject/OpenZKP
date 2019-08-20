@@ -63,7 +63,7 @@ jobs:
       - SCCACHE_CACHE_SIZE: 1G
       - NIGHTLY: nightly-2019-08-15
       - PROJECTS: -p u256 -p primefield -p ecc -p starkdex -p stark -p macros-decl -p macros-impl -p macros-lib
-      - NO_STD_PROJECTS: macros_decl u256 primefield
+      - NO_STD_PROJECTS: macros_decl u256 primefield ecc
     steps:
       - checkout
       - restore-toolchain-cache
