@@ -603,14 +603,14 @@ fn decommit_fri_layers_and_trees(
     let mut fri_indices: Vec<usize> = query_indices.to_vec();
 
     for (layer, tree, n_reductions) in izip!(fri_layers, fri_trees, &params.fri_layout) {
+        let fri_const = 2_usize.pow(*n_reductions as u32);
+
         let previous_indices = fri_indices.clone();
         fri_indices = fri_indices
             .iter()
-            .map(|x| x / 2_usize.pow(*n_reductions as u32))
+            .map(|x| x / fri_const
             .dedup()
             .collect();
-
-        let fri_const = 2_usize.pow(*n_reductions as u32);
 
         for i in fri_indices.iter() {
             for j in 0..fri_const {
