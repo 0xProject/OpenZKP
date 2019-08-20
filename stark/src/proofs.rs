@@ -472,28 +472,6 @@ fn fri_fold(p: &DensePolynomial, c: &FieldElement) -> DensePolynomial {
     DensePolynomial::new(&coefficients).shift(&FieldElement::GENERATOR.inv().unwrap())
 }
 
-fn fri_layer(previous: &[FieldElement], evaluation_point: &FieldElement) -> Vec<FieldElement> {
-    let eval_domain_size = previous.len();
-    let omega = FieldElement::root(eval_domain_size).unwrap();
-
-    let mut next = Vec::with_capacity(eval_domain_size / 2);
-    (0..(eval_domain_size / 2))
-        .into_par_iter()
-        .map(|index| {
-            // these are not value and neg_value anymore, once you shift...
-            // need to redo polynomial math to figure out what they are...
-            let value = &previous[2 * index];
-            let neg_x_value = &previous[2 * index + 1];
-            let x_inv = omega
-                .pow(index.bit_reverse_at(eval_domain_size / 2))
-                .inv()
-                .unwrap();
-            (value + neg_x_value) + evaluation_point * x_inv * (value - neg_x_value)
-        })
-        .collect_into_vec(&mut next);
-    next
-}
-
 #[allow(warnings)]
 fn perform_fri_layering(
     fri_polynomial: &DensePolynomial,
@@ -661,29 +639,6 @@ mod tests {
             constraints_degree_bound: 1,
         });
         assert_eq!(actual.coin.digest, expected);
-    }
-
-    #[test]
-    fn fri_layer_new() {
-        let p = DensePolynomial::new(&[
-            field_element!("01"),
-            field_element!("03"),
-            field_element!("06"),
-            field_element!("10"),
-            field_element!("01"),
-            field_element!("01"),
-            field_element!("36"),
-            field_element!("10"),
-        ]);
-        let c = &(FieldElement::GENERATOR + FieldElement::ONE);
-        let blowup = 2;
-
-        let v = evalute_polynomial_on_domain(&p, blowup);
-        let x = fri_layer(&v, c);
-
-        let folded = evalute_polynomial_on_domain(&fri_fold(&p, c), blowup).to_vec();
-
-        assert_eq!(x, folded);
     }
 
     #[test]
