@@ -1,11 +1,15 @@
-use support::{decl_module, decl_storage, StorageValue};
+#![cfg_attr(not(feature = "std"), no_std)]
+
+use support::{
+	decl_module, decl_storage,
+    StorageValue,
+};
 use rstd::prelude::*;
-use rstd::{result};
+use rstd::result;
 use system::{ensure_inherent};
+use parity_codec::{Decode, Encode};
 #[cfg(feature = "std")]
-use parity_codec::{Encode, Decode};
-#[cfg(feature = "std")]
-use inherents::{ProvideInherentData};
+use inherents::ProvideInherentData;
 use inherents::{RuntimeString, InherentIdentifier, ProvideInherent, InherentData, IsFatalError};
 
 use stark::{
@@ -15,7 +19,8 @@ use stark::{
 
 pub const INHERENT_IDENTIFIER: InherentIdentifier = *b"tx0proof";
 
-#[derive(Debug, PartialEq, Encode, Decode, Default, Clone)]
+#[derive(PartialEq, Encode, Default, Clone, Decode)]
+#[cfg_attr(feature = "std", derive(Debug))]
 pub struct RecordedProof {
 	proof: Vec<u8>,
 	public: Vec<u8>,
@@ -93,6 +98,10 @@ decl_module! {
 			
 			let public : PublicInput = recorded.public.as_slice().into();
 
+			let mut no_macro_vec = Vec::new();
+			no_macro_vec.push(3);
+			no_macro_vec.push(2);
+
 			assert!(check_proof(
 				// TODO - From slice for prover channel/make verifier take Vec<u8>
 				recorded.proof.clone().into(),
@@ -103,7 +112,7 @@ decl_module! {
 					blowup: 				  16, 
 					pow_bits: 				  12,
 					queries:   				  20,
-					fri_layout:               vec![3, 2],
+					fri_layout:               no_macro_vec,
 					constraints_degree_bound: 1,
 				},
 				2,
@@ -156,6 +165,10 @@ impl<T: Trait> ProvideInherent for Module<T> {
 
 		let public : PublicInput = t.public.as_slice().into();
 
+		let mut no_macro_vec = Vec::new();
+		no_macro_vec.push(3);
+		no_macro_vec.push(2);
+
 		if check_proof(
             t.proof.into(),
             &get_fibonacci_constraints(&public),
@@ -164,7 +177,7 @@ impl<T: Trait> ProvideInherent for Module<T> {
                 blowup: 				  16, 
                 pow_bits: 				  12,
                 queries:   				  20,
-                fri_layout:               vec![3, 2],
+                fri_layout:               no_macro_vec,
                 constraints_degree_bound: 1,
             },
             2,
