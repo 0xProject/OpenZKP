@@ -74,7 +74,7 @@ jobs:
             rustup component add rustfmt clippy
             rustup toolchain install $NIGHTLY
             rustup target add wasm32-unknown-unknown --toolchain $NIGHTLY
-            rustup target add thumbv7m-none-eabi
+            rustup target add thumbv7m-none-eabi --toolchain $NIGHTLY
             rustup component add rustfmt --toolchain $NIGHTLY
             cargo install --git https://github.com/alexcrichton/wasm-gc || echo Already installed
             rustc --version
