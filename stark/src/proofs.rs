@@ -882,9 +882,10 @@ mod tests {
             &oods_coefficients,
         );
         // Checks that our out of domain evaluated constraints calculated right
+        let trace_generator = FieldElement::root(eval_domain_size).unwrap();
         assert_eq!(
-            CO.evaluate(&FieldElement::GENERATOR),
-            field_element!("06d33893b7ba6e555d9c4138e987b11a1ecc84da6b7f25afe750f17b867e75e7")
+            CO.evaluate(&(FieldElement::GENERATOR * trace_generator.pow(4321))),
+            field_element!("03c6b730c58b55f44bbf3cb7ea82b2e6a0a8b23558e908b5466dfe42e821ee96")
         );
 
         let (fri_layers, fri_trees) = perform_fri_layering(&CO, &mut proof, &params);

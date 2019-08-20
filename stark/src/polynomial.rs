@@ -478,11 +478,7 @@ mod tests {
     }
 
     #[quickcheck]
-    fn shift_evaluation_equivalence(
-        a: DensePolynomial,
-        s: FieldElement,
-        x: FieldElement,
-    ) -> bool {
+    fn shift_evaluation_equivalence(a: DensePolynomial, s: FieldElement, x: FieldElement) -> bool {
         a.shift(&s).evaluate(&x) == a.evaluate(&(s * x))
     }
 
