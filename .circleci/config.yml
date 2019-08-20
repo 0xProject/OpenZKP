@@ -134,10 +134,10 @@ jobs:
           # TODO: Also cover substrate projects
       - run:
           name: Test debug build
-          command: cargo test $PROJECTS -- --nocapture
+          command: cargo test --features test $PROJECTS -- --nocapture
       - run:
           name: Test release build
-          command: cargo test --release $PROJECTS -- --nocapture
+          command: cargo test --features test --release $PROJECTS -- --nocapture
       - run:
           name: Test benchmarks
           command: |
