@@ -496,9 +496,7 @@ fn perform_fri_layering(
     eval_x: &[FieldElement],
 ) -> (Vec<Vec<FieldElement>>, Vec<Vec<Hash>>) {
     let constraints_out_of_domain = evalute_polynomial_on_domain(fri_polynomial, params.blowup).to_vec();
-
     let eval_domain_size = constraints_out_of_domain.len();
-    let trace_len = eval_domain_size / params.blowup;
 
     debug_assert!(eval_domain_size.is_power_of_two());
     let mut fri: Vec<Vec<FieldElement>> =
@@ -555,6 +553,7 @@ fn perform_fri_layering(
 
     // Gets the coefficient representation of the last number of fri reductions
 
+    let trace_len = fri_polynomial.len();
     let last_layer_degree_bound = trace_len / (2_usize.pow(halvings as u32));
 
     let mut last_layer = fri[fri.len() - 1].clone();
@@ -975,7 +974,7 @@ mod tests {
         // Checks that our out of domain evaluated constraints calculated right
         assert_eq!(
             CO.evaluate(&FieldElement::GENERATOR),
-            field_element!("06d33893b7ba6e555d9c4138e987b11a1ecc84da6b7f25afe750f17b867e75e7x   ")
+            field_element!("06d33893b7ba6e555d9c4138e987b11a1ecc84da6b7f25afe750f17b867e75e7")
         );
 
         let (fri_layers, fri_trees) =
