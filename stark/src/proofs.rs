@@ -214,8 +214,7 @@ where
     );
 
     // 4. FRI layers
-    let (fri_layers, fri_trees) =
-        perform_fri_layering(&oods_polynomial, &mut proof, &params);
+    let (fri_layers, fri_trees) = perform_fri_layering(&oods_polynomial, &mut proof, &params);
 
     // 5. Proof of work
     let proof_of_work = proof.pow_find_nonce(params.pow_bits);
@@ -330,7 +329,8 @@ fn evalute_polynomial_on_domain(
     let extended_domain_length = constraint_polynomial.len() * blowup;
     let extended_domain_generator = FieldElement::root(extended_domain_length)
         .expect("No generator for extended_domain_length.");
-    let shift_factor = FieldElement::GENERATOR;
+    // hahaha fix this!
+    let shift_factor = FieldElement::GENERATOR; // oh jesus.... move this higher up, so that it's clear what's going on.
 
     let mut result: MmapVec<FieldElement> = MmapVec::with_capacity(extended_domain_length);
     for index in 0..blowup {
@@ -460,19 +460,19 @@ fn calculate_fri_polynomial(
     fri_polynomial
 }
 
-// fn fri_fold(p: &DensePolynomial) -> DensePolynomial {
-//     let coefficients: Vec<FieldElement> = p
-//         .coefficients()
-//         .chunks_exact(2)
-//         .map(|pair: &[FieldElement]| &pair[0] + &pair[1])
-//         .collect();
-//     DensePolynomial::new(&coefficients)
-// }
+fn fri_fold(p: &DensePolynomial, c: &FieldElement) -> DensePolynomial {
+    let shifted = p.shift(&FieldElement::GENERATOR);
+    let coefficients: Vec<FieldElement> = shifted
+        .coefficients()
+        .chunks_exact(2)
+        .map(|pair: &[FieldElement]| {
+            (FieldElement::ONE + FieldElement::ONE) * (&pair[0] + c * &pair[1])
+        })
+        .collect();
+    DensePolynomial::new(&coefficients).shift(&FieldElement::GENERATOR.inv().unwrap())
+}
 
-fn fri_layer(
-    previous: &[FieldElement],
-    evaluation_point: &FieldElement,
-) -> Vec<FieldElement> {
+fn fri_layer(previous: &[FieldElement], evaluation_point: &FieldElement) -> Vec<FieldElement> {
     let eval_domain_size = previous.len();
     let omega = FieldElement::root(eval_domain_size).unwrap();
 
@@ -480,9 +480,14 @@ fn fri_layer(
     (0..(eval_domain_size / 2))
         .into_par_iter()
         .map(|index| {
+            // these are not value and neg_value anymore, once you shift...
+            // need to redo polynomial math to figure out what they are...
             let value = &previous[2 * index];
             let neg_x_value = &previous[2 * index + 1];
-            let x_inv = omega.pow(index.bit_reverse_at(eval_domain_size / 2)).inv().unwrap();
+            let x_inv = omega
+                .pow(index.bit_reverse_at(eval_domain_size / 2))
+                .inv()
+                .unwrap();
             (value + neg_x_value) + evaluation_point * x_inv * (value - neg_x_value)
         })
         .collect_into_vec(&mut next);
@@ -702,6 +707,29 @@ mod tests {
             constraints_degree_bound: 1,
         });
         assert_eq!(actual.coin.digest, expected);
+    }
+
+    #[test]
+    fn fri_layer_new() {
+        let p = DensePolynomial::new(&[
+            field_element!("01"),
+            field_element!("03"),
+            field_element!("06"),
+            field_element!("10"),
+            // field_element!("01"),
+            // field_element!("01"),
+            // field_element!("36"),
+            // field_element!("10"),
+        ]);
+        let c = &(FieldElement::GENERATOR + FieldElement::ONE);
+        let blowup = 2;
+
+        let v = evalute_polynomial_on_domain(&p, blowup);
+        let x = fri_layer(&v, c);
+
+        let folded = evalute_polynomial_on_domain(&fri_fold(&p, c), blowup).to_vec();
+
+        assert_eq!(x, folded);
     }
 
     #[test]
@@ -953,8 +981,7 @@ mod tests {
             field_element!("06d33893b7ba6e555d9c4138e987b11a1ecc84da6b7f25afe750f17b867e75e7")
         );
 
-        let (fri_layers, fri_trees) =
-            perform_fri_layering(&CO, &mut proof, &params);
+        let (fri_layers, fri_trees) = perform_fri_layering(&CO, &mut proof, &params);
 
         // Checks that the first fri merkle tree root is right
         assert_eq!(
