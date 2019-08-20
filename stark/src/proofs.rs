@@ -600,15 +600,18 @@ fn decommit_fri_layers_and_trees(
     params: &ProofParams,
     proof: &mut ProverChannel,
 ) {
-    let mut fri_indices: Vec<usize> = query_indices
-        .to_vec()
-        .iter()
-        .map(|x| x / 2_usize.pow((params.fri_layout[0]) as u32))
-        .collect();
+    let mut fri_indices: Vec<usize> = query_indices.to_vec();
 
-    let mut previous_indices = query_indices.to_vec().clone();
-    for (k, next_tree) in fri_trees.iter().enumerate() {
-        let fri_const = 2_usize.pow(params.fri_layout[k] as u32);
+
+    for (layer, tree, n_reductions) in izip!(fri_layers, fri_trees, &params.fri_layout) {
+        let previous_indices = fri_indices.clone();
+        fri_indices = fri_indices
+            .to_vec()
+            .iter()
+            .map(|x| x / 2_usize.pow(*n_reductions as u32))
+            .collect();
+
+        let fri_const = 2_usize.pow(*n_reductions as u32);
 
         fri_indices.dedup();
         for i in fri_indices.iter() {
@@ -618,26 +621,26 @@ fn decommit_fri_layers_and_trees(
                 if previous_indices.binary_search(&n).is_ok() {
                     continue;
                 } else {
-                    proof.write(&fri_layers[k][n]);
+                    proof.write(&layer[n]);
                 }
             }
         }
         let decommitment = merkle::proof(
-            &next_tree,
+            tree,
             &(fri_indices.as_slice()),
-            (fri_const, fri_layers[k].as_slice()),
+            (fri_const, layer.as_slice()),
         );
 
         for proof_element in decommitment.iter() {
             proof.write(proof_element);
         }
-        previous_indices = fri_indices.clone();
-        if k + 1 < params.fri_layout.len() {
-            fri_indices = fri_indices
-                .iter()
-                .map(|ind| ind / 2_usize.pow((params.fri_layout[k + 1]) as u32))
-                .collect();
-        }
+        // previous_indices = fri_indices.clone();
+        // if k + 1 < params.fri_layout.len() {
+        //     fri_indices = fri_indices
+        //         .iter()
+        //         .map(|ind| ind / 2_usize.pow((params.fri_layout[k + 1]) as u32))
+        //         .collect();
+        // }
     }
 }
 
