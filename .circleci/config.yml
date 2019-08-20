@@ -112,7 +112,10 @@ jobs:
       - run:
           name: Build benchmarks
           # Exclude benchmarks that compare against external crates (pulls in a lot of deps)
-          command: cargo bench --features bench --bench benchmark --all --exclude primefield-benchmarks --no-run
+          command: |
+            # HACK: We can not specify --features=bench in a workspace environment, instead
+            # we enable all features (which makes sense from a test coverage perspective).
+            cargo bench --features bench --bench benchmark --all --exclude primefield-benchmarks --all-features --no-run
       - run:
           name: Build wasm substrate runtime
           command: |
