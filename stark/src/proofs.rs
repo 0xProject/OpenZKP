@@ -157,11 +157,6 @@ where
     for<'a> ProverChannel: Writable<&'a Public>,
     for<'a> ProverChannel: Writable<&'a Hash>,
 {
-    // Compute some constants.
-    let eval_domain_size = trace.num_rows() * params.blowup;
-    let omega = FieldElement::root(eval_domain_size).expect("No generator for extended domain.");
-    let eval_x = geometric_series(&FieldElement::ONE, &omega, eval_domain_size);
-
     // Initialize a proof channel with the public input.
     let mut proof = ProverChannel::new();
     proof.write(public);
@@ -220,7 +215,7 @@ where
 
     // 4. FRI layers
     let (fri_layers, fri_trees) =
-        perform_fri_layering(&oods_polynomial, &mut proof, &params, eval_x.as_slice());
+        perform_fri_layering(&oods_polynomial, &mut proof, &params);
 
     // 5. Proof of work
     let proof_of_work = proof.pow_find_nonce(params.pow_bits);
@@ -231,6 +226,7 @@ where
     //
 
     // Fetch query indices from channel.
+    let eval_domain_size = trace.num_rows() * params.blowup;
     let query_indices = get_indices(
         params.queries,
         64 - eval_domain_size.leading_zeros() - 1,
@@ -499,8 +495,12 @@ fn perform_fri_layering(
     fri_polynomial: &DensePolynomial,
     proof: &mut ProverChannel,
     params: &ProofParams,
-    eval_x: &[FieldElement],
 ) -> (Vec<Vec<FieldElement>>, Vec<Vec<Hash>>) {
+    let eval_domain_size = fri_polynomial.len() * params.blowup;
+    let omega = FieldElement::root(eval_domain_size).unwrap();
+    let eval_x = geometric_series(&FieldElement::ONE, &omega, eval_domain_size);
+
+
     let mut layer = evalute_polynomial_on_domain(fri_polynomial, params.blowup).to_vec();
     let eval_domain_size = layer.len();
     debug_assert!(eval_domain_size.is_power_of_two());
@@ -517,7 +517,7 @@ fn perform_fri_layering(
     for (k, &x) in params.fri_layout.iter().enumerate().dropping_back(1) {
         let mut eval_point = proof.get_random();
         for _ in 0..x {
-            layer = fri_layer(&layer, &eval_point, eval_domain_size, eval_x);
+            layer = fri_layer(&layer, &eval_point, eval_domain_size, &eval_x);
             fri.push(layer.clone());
             eval_point = eval_point.square();
         }
@@ -534,7 +534,7 @@ fn perform_fri_layering(
     // Gets the coefficient representation of the last number of fri reductions
     let mut eval_point = proof.get_random();
     for _ in 0..params.fri_layout[params.fri_layout.len() - 1] {
-        layer = fri_layer(&layer, &eval_point, eval_domain_size, eval_x);
+        layer = fri_layer(&layer, &eval_point, eval_domain_size, &eval_x);
         fri.push(layer.clone());
         eval_point = eval_point.square();
     }
@@ -968,7 +968,7 @@ mod tests {
         );
 
         let (fri_layers, fri_trees) =
-            perform_fri_layering(&CO, &mut proof, &params, eval_x.as_slice());
+            perform_fri_layering(&CO, &mut proof, &params);
 
         // Checks that the first fri merkle tree root is right
         assert_eq!(
