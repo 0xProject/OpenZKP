@@ -1,6 +1,6 @@
 use crate::{
     channel::{ProverChannel, RandomGenerator, Writable},
-    fft::{bit_reversal_permute, fft_cofactor_bit_reversed, ifft},
+    fft::{fft_cofactor_bit_reversed, ifft},
     hash::Hash,
     hashable::Hashable,
     merkle::{self, make_tree},
