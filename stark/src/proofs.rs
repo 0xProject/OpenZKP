@@ -10,6 +10,7 @@ use crate::{
     TraceTable,
 };
 use itertools::Itertools;
+use itertools::izip;
 use primefield::FieldElement;
 use rayon::prelude::*;
 use std::{
@@ -534,9 +535,9 @@ fn perform_fri_layering(
         let mut eval_point = proof.get_random();
         for _ in 0..x {
             layer = fri_layer(&layer, &eval_point);
-            fri.push(layer.clone());
             eval_point = eval_point.square();
         }
+        fri.push(layer.clone());
         let held_tree = (
             2_usize.pow(params.fri_layout[k + 1] as u32),
             layer.as_slice(),
@@ -605,13 +606,9 @@ fn decommit_fri_layers_and_trees(
         .map(|x| x / 2_usize.pow((params.fri_layout[0]) as u32))
         .collect();
 
-    let mut current_fri = 0;
     let mut previous_indices = query_indices.to_vec().clone();
     for (k, next_tree) in fri_trees.iter().enumerate() {
         let fri_const = 2_usize.pow(params.fri_layout[k] as u32);
-        if k != 0 {
-            current_fri += params.fri_layout[k - 1];
-        }
 
         fri_indices.dedup();
         for i in fri_indices.iter() {
@@ -621,14 +618,14 @@ fn decommit_fri_layers_and_trees(
                 if previous_indices.binary_search(&n).is_ok() {
                     continue;
                 } else {
-                    proof.write(&fri_layers[current_fri][n]);
+                    proof.write(&fri_layers[k][n]);
                 }
             }
         }
         let decommitment = merkle::proof(
             &next_tree,
             &(fri_indices.as_slice()),
-            (fri_const, fri_layers[current_fri].as_slice()),
+            (fri_const, fri_layers[k].as_slice()),
         );
 
         for proof_element in decommitment.iter() {
