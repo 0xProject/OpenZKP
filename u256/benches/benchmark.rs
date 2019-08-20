@@ -1,9 +1,5 @@
 #![warn(clippy::all)]
 #![deny(warnings)]
-
-#[cfg(not(feature = "bench"))]
-compile_error!("Building bench requires feature bench.");
-
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use macros_decl::u256h;
 use u256::U256;
