@@ -1,6 +1,6 @@
 // TODO: #![deny(missing_docs)]
 #![warn(clippy::all)]
-// #![deny(warnings)]
+#![deny(warnings)]
 #![cfg_attr(not(feature = "std"), no_std)]
 mod channel;
 mod fft;
