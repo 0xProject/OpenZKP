@@ -211,17 +211,16 @@ where
         get_out_of_domain_information(&mut proof, &trace_polynomials, &constraint_polynomials);
 
     // Divide out the OODS points from the constraints and combine.
-    let oods_constraint_lde = calculate_fri_polynomial(
+    let oods_polynomial = calculate_fri_polynomial(
         &trace_polynomials,
         &constraint_polynomials,
         &oods_point,
         &oods_coefficients,
-        params.blowup,
     );
 
     // 4. FRI layers
     let (fri_layers, fri_trees) = perform_fri_layering(
-        oods_constraint_lde.as_slice(),
+        &oods_polynomial,
         &mut proof,
         &params,
         eval_x.as_slice(),
@@ -465,8 +464,7 @@ fn calculate_fri_polynomial(
     constraint_polynomials: &[DensePolynomial],
     oods_point: &FieldElement,
     oods_coefficients: &[FieldElement],
-    blowup: usize,
-) -> Vec<FieldElement> {
+) -> DensePolynomial {
     let trace_length = trace_polynomials[0].len();
     let trace_generator = FieldElement::root(trace_length).unwrap();
     let shifted_oods_point = &trace_generator * oods_point;
@@ -488,16 +486,17 @@ fn calculate_fri_polynomial(
                 &oods_point.pow(constraints_degree_bound),
             );
     }
-
-    evalute_polynomial_on_domain(&fri_polynomial, blowup).to_vec()
+    fri_polynomial
 }
 
 fn perform_fri_layering(
-    constraints_out_of_domain: &[FieldElement],
+    fri_polynomial: &DensePolynomial,
     proof: &mut ProverChannel,
     params: &ProofParams,
     eval_x: &[FieldElement],
 ) -> (Vec<Vec<FieldElement>>, Vec<Vec<Hash>>) {
+    let constraints_out_of_domain = evalute_polynomial_on_domain(fri_polynomial, params.blowup).to_vec();
+
     let eval_domain_size = constraints_out_of_domain.len();
     let trace_len = eval_domain_size / params.blowup;
 
@@ -972,16 +971,15 @@ mod tests {
             &constraint_polynomials,
             &oods_point,
             &oods_coefficients,
-            params.blowup,
         );
         // Checks that our out of domain evaluated constraints calculated right
         assert_eq!(
-            CO[4321.bit_reverse_at(eval_domain_size)].clone(),
-            field_element!("03c6b730c58b55f44bbf3cb7ea82b2e6a0a8b23558e908b5466dfe42e821ee96")
+            CO.evaluate(&FieldElement::GENERATOR),
+            field_element!("06d33893b7ba6e555d9c4138e987b11a1ecc84da6b7f25afe750f17b867e75e7x   ")
         );
 
         let (fri_layers, fri_trees) =
-            perform_fri_layering(CO.as_slice(), &mut proof, &params, eval_x.as_slice());
+            perform_fri_layering(&CO, &mut proof, &params, eval_x.as_slice());
 
         // Checks that the first fri merkle tree root is right
         assert_eq!(
