@@ -86,8 +86,8 @@ jobs:
           name: Build all targets on stable
           command: cargo build $PROJECTS --all-targets
       - run:
-          # We try to build for Cortex-M3, not because we want to create IoT
-          # devices, but because there is no `std` available for this target.
+          # HACK: We try to build for Cortex-M3, not because we want to create
+          # IoT devices, but because there is no `std` available for this target.
           # This forces the build to fail if an accidental dependency on `std`
           # exists. Wasm has a working std, so is not a suitable target here.
           # See: https://forge.rust-lang.org/platform-support.html
@@ -95,6 +95,9 @@ jobs:
           # the tests/benchmarks/examples working in no_std
           name: Check no_std targets on a platform that has no std
           command: |
+            # HACK: We use a for loop here because cargo across multiple
+            # projects does not respect feature flags. This also helps
+            # identifying the failing project.
             for i in $NO_STD_PROJECTS; do
               pushd $i
               cargo +$NIGHTLY check --lib --bins --no-default-features --target=thumbv7m-none-eabi
