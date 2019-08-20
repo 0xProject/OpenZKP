@@ -219,12 +219,8 @@ where
     );
 
     // 4. FRI layers
-    let (fri_layers, fri_trees) = perform_fri_layering(
-        &oods_polynomial,
-        &mut proof,
-        &params,
-        eval_x.as_slice(),
-    );
+    let (fri_layers, fri_trees) =
+        perform_fri_layering(&oods_polynomial, &mut proof, &params, eval_x.as_slice());
 
     // 5. Proof of work
     let proof_of_work = proof.pow_find_nonce(params.pow_bits);
@@ -269,6 +265,15 @@ where
     // Q.E.D.
     proof
 }
+
+// fn fri_fold(p: &DensePolynomial) -> DensePolynomial {
+//     let coefficients: Vec<FieldElement> = p
+//         .coefficients()
+//         .chunks_exact(2)
+//         .map(|pair: &[FieldElement]| &pair[0] + &pair[1])
+//         .collect();
+//     DensePolynomial::new(&coefficients)
+// }
 
 fn fri_layer(
     previous: &[FieldElement],
@@ -495,19 +500,16 @@ fn perform_fri_layering(
     params: &ProofParams,
     eval_x: &[FieldElement],
 ) -> (Vec<Vec<FieldElement>>, Vec<Vec<Hash>>) {
-    let constraints_out_of_domain = evalute_polynomial_on_domain(fri_polynomial, params.blowup).to_vec();
-    let eval_domain_size = constraints_out_of_domain.len();
-
+    let mut layer = evalute_polynomial_on_domain(fri_polynomial, params.blowup).to_vec();
+    let eval_domain_size = layer.len();
     debug_assert!(eval_domain_size.is_power_of_two());
+
     let mut fri: Vec<Vec<FieldElement>> =
         Vec::with_capacity(64 - (eval_domain_size.leading_zeros() as usize));
-    fri.push(constraints_out_of_domain.to_vec());
+    fri.push(layer.clone());
+
     let mut fri_trees: Vec<Vec<Hash>> = Vec::with_capacity(params.fri_layout.len());
-    let held_tree = (
-        2_usize.pow(params.fri_layout[0] as u32),
-        fri[fri.len() - 1].as_slice(),
-    )
-        .merkleize();
+    let held_tree = (2_usize.pow(params.fri_layout[0] as u32), layer.as_slice()).merkleize();
     proof.write(&held_tree[1]);
     fri_trees.push(held_tree);
 
@@ -519,17 +521,13 @@ fn perform_fri_layering(
             proof.get_random()
         };
         for _ in 0..x {
-            fri.push(fri_layer(
-                &fri[fri.len() - 1].as_slice(),
-                &eval_point,
-                eval_domain_size,
-                eval_x,
-            ));
+            layer = fri_layer(&layer, &eval_point, eval_domain_size, eval_x);
+            fri.push(layer.clone());
             eval_point = eval_point.square();
         }
         let held_tree = (
             2_usize.pow(params.fri_layout[k + 1] as u32),
-            fri[fri.len() - 1].as_slice(),
+            layer.as_slice(),
         )
             .merkleize();
 
@@ -541,12 +539,8 @@ fn perform_fri_layering(
     // Gets the coefficient representation of the last number of fri reductions
     let mut eval_point = proof.get_random();
     for _ in 0..params.fri_layout[params.fri_layout.len() - 1] {
-        fri.push(fri_layer(
-            &fri[fri.len() - 1].as_slice(),
-            &eval_point,
-            eval_domain_size,
-            eval_x,
-        ));
+        layer = fri_layer(&layer, &eval_point, eval_domain_size, eval_x);
+        fri.push(layer.clone());
         eval_point = eval_point.square();
     }
     halvings += params.fri_layout[params.fri_layout.len() - 1];
@@ -556,9 +550,8 @@ fn perform_fri_layering(
     let trace_len = fri_polynomial.len();
     let last_layer_degree_bound = trace_len / (2_usize.pow(halvings as u32));
 
-    let mut last_layer = fri[fri.len() - 1].clone();
-    bit_reversal_permute(&mut last_layer);
-    let mut last_layer_coefficient = ifft(&last_layer);
+    bit_reversal_permute(&mut layer);
+    let mut last_layer_coefficient = ifft(&layer);
     last_layer_coefficient.truncate(last_layer_degree_bound);
     proof.write(last_layer_coefficient.as_slice());
     (fri, fri_trees)
