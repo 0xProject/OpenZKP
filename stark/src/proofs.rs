@@ -610,10 +610,10 @@ fn decommit_fri_layers_and_trees(
             .iter()
             .map(|x| x / 2_usize.pow(*n_reductions as u32))
             .collect();
+        fri_indices.dedup();
 
         let fri_const = 2_usize.pow(*n_reductions as u32);
 
-        fri_indices.dedup();
         for i in fri_indices.iter() {
             for j in 0..fri_const {
                 let n = i * fri_const + j;
@@ -627,20 +627,13 @@ fn decommit_fri_layers_and_trees(
         }
         let decommitment = merkle::proof(
             tree,
-            &(fri_indices.as_slice()),
+            &fri_indices,
             (fri_const, layer.as_slice()),
         );
 
         for proof_element in decommitment.iter() {
             proof.write(proof_element);
         }
-        // previous_indices = fri_indices.clone();
-        // if k + 1 < params.fri_layout.len() {
-        //     fri_indices = fri_indices
-        //         .iter()
-        //         .map(|ind| ind / 2_usize.pow((params.fri_layout[k + 1]) as u32))
-        //         .collect();
-        // }
     }
 }
 
