@@ -472,18 +472,18 @@ fn calculate_fri_polynomial(
 fn fri_layer(
     previous: &[FieldElement],
     evaluation_point: &FieldElement,
-    eval_domain_size: usize,
-    eval_x: &[FieldElement],
 ) -> Vec<FieldElement> {
-    let len = previous.len();
-    let step = eval_domain_size / len;
-    let mut next = Vec::with_capacity(len / 2);
-    (0..(len / 2))
+    let eval_domain_size = previous.len();
+    let omega = FieldElement::root(eval_domain_size).unwrap();
+    let eval_x = geometric_series(&FieldElement::ONE, &omega, eval_domain_size);
+
+    let mut next = Vec::with_capacity(eval_domain_size / 2);
+    (0..(eval_domain_size / 2))
         .into_par_iter()
         .map(|index| {
             let value = &previous[2 * index];
             let neg_x_value = &previous[2 * index + 1];
-            let x_inv = &eval_x[index.bit_reverse_at(len / 2) * step].inv().unwrap();
+            let x_inv = &eval_x[index.bit_reverse_at(eval_domain_size / 2)].inv().unwrap();
             (value + neg_x_value) + evaluation_point * x_inv * (value - neg_x_value)
         })
         .collect_into_vec(&mut next);
@@ -496,11 +496,6 @@ fn perform_fri_layering(
     proof: &mut ProverChannel,
     params: &ProofParams,
 ) -> (Vec<Vec<FieldElement>>, Vec<Vec<Hash>>) {
-    let eval_domain_size = fri_polynomial.len() * params.blowup;
-    let omega = FieldElement::root(eval_domain_size).unwrap();
-    let eval_x = geometric_series(&FieldElement::ONE, &omega, eval_domain_size);
-
-
     let mut layer = evalute_polynomial_on_domain(fri_polynomial, params.blowup).to_vec();
     let eval_domain_size = layer.len();
     debug_assert!(eval_domain_size.is_power_of_two());
@@ -517,7 +512,7 @@ fn perform_fri_layering(
     for (k, &x) in params.fri_layout.iter().enumerate().dropping_back(1) {
         let mut eval_point = proof.get_random();
         for _ in 0..x {
-            layer = fri_layer(&layer, &eval_point, eval_domain_size, &eval_x);
+            layer = fri_layer(&layer, &eval_point);
             fri.push(layer.clone());
             eval_point = eval_point.square();
         }
@@ -534,7 +529,7 @@ fn perform_fri_layering(
     // Gets the coefficient representation of the last number of fri reductions
     let mut eval_point = proof.get_random();
     for _ in 0..params.fri_layout[params.fri_layout.len() - 1] {
-        layer = fri_layer(&layer, &eval_point, eval_domain_size, &eval_x);
+        layer = fri_layer(&layer, &eval_point);
         fri.push(layer.clone());
         eval_point = eval_point.square();
     }
