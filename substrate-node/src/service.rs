@@ -13,7 +13,7 @@ use primitives::{ed25519::Pair, Pair as PairT};
 use std::sync::Arc;
 use substrate_client as client;
 use substrate_executor::native_executor_instance;
-use substrate_runtime::{self, opaque::Block, GenesisConfig, RuntimeApi, block_proof};
+use substrate_runtime::{self, block_proof, opaque::Block, GenesisConfig, RuntimeApi};
 use substrate_service::{
     construct_service_factory, FactoryFullConfiguration, FullBackend, FullClient, FullComponents,
     FullExecutor, LightBackend, LightClient, LightComponents, LightExecutor, TaskExecutor,

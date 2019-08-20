@@ -57,7 +57,6 @@ pub type BlockNumber = u64;
 /// Index of an account's extrinsic in the chain.
 pub type Nonce = u64;
 
-
 pub mod block_proof;
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't
@@ -195,9 +194,7 @@ impl sudo::Trait for Runtime {
     type Proposal = Call;
 }
 
-impl block_proof::Trait for Runtime {
-
-}
+impl block_proof::Trait for Runtime {}
 
 construct_runtime!(
 	pub enum Runtime with Log(InternalLog: DigestItem<Hash, AuthorityId, AuthoritySignature>) where
