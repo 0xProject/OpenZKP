@@ -500,6 +500,23 @@ fn perform_fri_layering(
     proof: &mut ProverChannel,
     params: &ProofParams,
 ) -> (Vec<Vec<FieldElement>>, Vec<Vec<Hash>>) {
+    // let mut fri_trees: Vec<Vec<Hash>> = Vec::with_capacity(params.fri_layout.len());
+    // let mut p = fri_polynomial.clone();
+    //
+    // for (i, &n_reductions) in params.fri_layout.iter().enumerate() {
+    //     let layer = evalute_polynomial_on_domain(&p, params.blowup).to_vec();
+    //     let tree = (2_usize.pow(n_reductions as u32), layer.as_slice()).merkleize();
+    //     proof.write(&tree[1]);
+    //     fri_trees.push(tree);
+    //
+    //     let mut coefficient = proof.get_random();
+    //     for _ in 0..n_reductions {
+    //         p = fri_fold(&p, &coefficient);
+    //         coefficient = coefficient.square();
+    //     }
+    // }
+    // proof.write(p.as_slice());
+
     let mut layer = evalute_polynomial_on_domain(fri_polynomial, params.blowup).to_vec();
     let eval_domain_size = layer.len();
     debug_assert!(eval_domain_size.is_power_of_two());
