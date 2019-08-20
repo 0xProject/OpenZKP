@@ -843,14 +843,8 @@ mod tests {
         let eval_domain_size = trace_len * params.blowup;
         let gen = FieldElement::from(U256::from(3_u64));
 
-        let eval_x = geometric_series(&FieldElement::ONE, &omega, eval_domain_size);
         let eval_offset_x = geometric_series(&gen, &omega, eval_domain_size);
         let trace_x = geometric_series(&FieldElement::ONE, &g, trace_len);
-        // Checks that the geometric series is working
-        assert_eq!(
-            U256::from(eval_x[500].clone()),
-            u256h!("068a24ef8b13c6b23a4fe31235667142494bc0eecbb59ed9866a44ac47fb2f6b")
-        );
 
         // Second check that the trace table function is working.
         let trace = get_trace_table(1024, &private);
