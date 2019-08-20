@@ -212,6 +212,7 @@ mod tests {
     use system::RawOrigin;
     use u256::U256;
 
+    // TODO: What is this for?
     impl_outer_origin! {
         pub enum Origin for Test { }
     }
