@@ -843,9 +843,6 @@ mod tests {
         let eval_domain_size = trace_len * params.blowup;
         let gen = FieldElement::from(U256::from(3_u64));
 
-        let eval_offset_x = geometric_series(&gen, &omega, eval_domain_size);
-        let trace_x = geometric_series(&FieldElement::ONE, &g, trace_len);
-
         // Second check that the trace table function is working.
         let trace = get_trace_table(1024, &private);
         assert_eq!(trace[(1000, 0)], public.value);
@@ -854,13 +851,14 @@ mod tests {
         let TP0 = TPn[0].clone();
         let TP1 = TPn[1].clone();
         // Checks that the trace table polynomial interpolation is working
-        assert_eq!(TP0.evaluate(&trace_x[1000]), trace[(1000, 0)]);
+        assert_eq!(TP0.evaluate(&g.pow(1000)), trace[(1000, 0)]);
 
         let LDEn = calculate_low_degree_extensions(&TPn, params.blowup);
 
         // Checks that the low degree extension calculation is working
         let i = 13644usize;
         let reverse_i = i.bit_reverse_at(eval_domain_size);
+        let eval_offset_x = geometric_series(&gen, &omega, eval_domain_size);
         assert_eq!(TP0.evaluate(&eval_offset_x[reverse_i]), LDEn[0][i]);
         assert_eq!(TP1.evaluate(&eval_offset_x[reverse_i]), LDEn[1][i]);
 
