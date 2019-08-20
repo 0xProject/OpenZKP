@@ -38,6 +38,7 @@ impl DensePolynomial {
         result
     }
 
+    // Returns a polynomial such that f.shift(s)(x) = f(s * y).
     pub fn shift(&self, factor: &FieldElement) -> Self {
         let mut shifted_coefficients = self.0.clone();
         let mut power = FieldElement::ONE;
@@ -474,6 +475,15 @@ mod tests {
         x: FieldElement,
     ) -> bool {
         &c * a.evaluate(&x) == (&c * &a).evaluate(&x)
+    }
+
+    #[quickcheck]
+    fn shift_evaluation_equivalence(
+        a: DensePolynomial,
+        s: FieldElement,
+        x: FieldElement,
+    ) -> bool {
+        a.shift(&s).evaluate(&x) == a.evaluate(&(s * x))
     }
 
     #[quickcheck]
