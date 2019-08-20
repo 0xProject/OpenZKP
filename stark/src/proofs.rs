@@ -322,6 +322,7 @@ pub fn calculate_low_degree_extensions(
     low_degree_extensions
 }
 
+// TODO: shift polynomial by FieldElement::GENERATOR outside of this function.
 fn evalute_polynomial_on_domain(
     constraint_polynomial: &DensePolynomial,
     blowup: usize,
@@ -329,8 +330,7 @@ fn evalute_polynomial_on_domain(
     let extended_domain_length = constraint_polynomial.len() * blowup;
     let extended_domain_generator = FieldElement::root(extended_domain_length)
         .expect("No generator for extended_domain_length.");
-    // hahaha fix this!
-    let shift_factor = FieldElement::GENERATOR; // oh jesus.... move this higher up, so that it's clear what's going on.
+    let shift_factor = FieldElement::GENERATOR;
 
     let mut result: MmapVec<FieldElement> = MmapVec::with_capacity(extended_domain_length);
     for index in 0..blowup {
@@ -465,14 +465,11 @@ fn fri_fold(p: &DensePolynomial, c: &FieldElement) -> DensePolynomial {
     let coefficients: Vec<FieldElement> = shifted
         .coefficients()
         .chunks_exact(2)
-        .map(|pair: &[FieldElement]| {
-            (FieldElement::ONE + FieldElement::ONE) * (&pair[0] + c * &pair[1])
-        })
+        .map(|pair: &[FieldElement]| (&pair[0] + c * &pair[1]).double())
         .collect();
     DensePolynomial::new(&coefficients).shift(&FieldElement::GENERATOR.inv().unwrap())
 }
 
-#[allow(warnings)]
 fn perform_fri_layering(
     fri_polynomial: &DensePolynomial,
     proof: &mut ProverChannel,
@@ -481,10 +478,10 @@ fn perform_fri_layering(
     let mut fri_trees: Vec<Vec<Hash>> = Vec::with_capacity(params.fri_layout.len());
     let mut fri_layers: Vec<Vec<FieldElement>> = Vec::with_capacity(params.fri_layout.len());
 
+    // TODO: fold fri_polynomial without cloning it first.
     let mut p = fri_polynomial.clone();
-    for (i, &n_reductions) in params.fri_layout.iter().enumerate() {
+    for &n_reductions in params.fri_layout.iter() {
         let layer = evalute_polynomial_on_domain(&p, params.blowup).to_vec();
-
         let tree = (2_usize.pow(n_reductions as u32), layer.as_slice()).merkleize();
         proof.write(&tree[1]);
         fri_trees.push(tree);
