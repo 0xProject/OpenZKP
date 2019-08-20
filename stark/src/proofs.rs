@@ -462,13 +462,18 @@ fn calculate_fri_polynomial(
 }
 
 fn fri_fold(p: &DensePolynomial, c: &FieldElement) -> DensePolynomial {
+    // TODO: don't shift and unshift in this function.
     let shifted = p.shift(&FieldElement::GENERATOR);
     let coefficients: Vec<FieldElement> = shifted
         .coefficients()
         .chunks_exact(2)
         .map(|pair: &[FieldElement]| (&pair[0] + c * &pair[1]).double())
         .collect();
-    DensePolynomial::new(&coefficients).shift(&FieldElement::GENERATOR.inv().unwrap())
+    DensePolynomial::new(&coefficients).shift(
+        &FieldElement::GENERATOR
+            .inv()
+            .expect("Generator cannot be zero."),
+    )
 }
 
 fn perform_fri_layering(
