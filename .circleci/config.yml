@@ -117,12 +117,13 @@ jobs:
             # we enable all features (which makes sense from a test coverage perspective).
             cargo bench --features bench --bench benchmark --all --exclude primefield-benchmarks --all-features --no-run
       - run:
-          name: Build wasm substrate runtime
+          name: Build wasm substrate runtime (disabled)
           command: |
-            cd substrate-runtime-wasm
-            cargo +$NIGHTLY build --release
-            cp target/wasm32-unknown-unknown/release/runtime.wasm ./
-            wasm-gc $i.wasm $i.compact.wasm
+            # TODO: Fix this step
+            # pushd substrate-runtime-wasm
+            # cargo +$NIGHTLY build --release
+            # cp target/wasm32-unknown-unknown/release/runtime.wasm ./
+            # wasm-gc $i.wasm $i.compact.wasm
       - run:
           name: Lint with rustformat nightly
           command: cargo +$NIGHTLY fmt $PROJECTS -- --check
