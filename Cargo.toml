@@ -4,12 +4,12 @@ members = [
     "primefield/benchmarks",
     "ecc",
     "starkdex",
-    "wasm",
     "stark",
     "macros_decl",
     "macros_impl",
     "macros_lib",
     "substrate-node",
+    "substrate-runtime",
 ]
 
 # Don't forget to run `cargo clean` to force a rebuild of all dependencies!

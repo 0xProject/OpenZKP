@@ -3,6 +3,7 @@
 
 #![warn(unused_extern_crates)]
 
+use crate::assets::RUNTIME_WASM;
 use basic_authorship::ProposerFactory;
 use consensus::{import_queue, start_aura, AuraImportQueue, NothingExtra, SlotDuration};
 use inherents::InherentDataProviders;
@@ -23,9 +24,9 @@ pub use substrate_executor::NativeExecutor;
 // Our native executor instance.
 native_executor_instance!(
 	pub Executor,
-	substrate_node_runtime::api::dispatch,
-	substrate_node_runtime::native_version,
-	include_bytes!("../runtime/wasm/target/wasm32-unknown-unknown/release/substrate_node_runtime_wasm.compact.wasm")
+	substrate_runtime::api::dispatch,
+	substrate_runtime::native_version,
+	RUNTIME_WASM
 );
 
 #[derive(Default)]
