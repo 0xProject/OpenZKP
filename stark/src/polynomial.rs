@@ -6,6 +6,7 @@ use std::{
     collections::BTreeMap,
     ops::{Add, AddAssign, DivAssign, Mul, MulAssign, Sub, SubAssign},
     prelude::v1::*,
+    vec,
 };
 use u256::{commutative_binop, noncommutative_binop};
 

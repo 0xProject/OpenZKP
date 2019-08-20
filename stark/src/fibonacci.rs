@@ -35,6 +35,16 @@ impl From<PublicInput> for Vec<u8> {
     }
 }
 
+impl From<&[u8]> for PublicInput {
+    fn from(public_input: &[u8]) -> PublicInput {
+        let index = u64::from_be_bytes((&public_input[0..8]).try_into().unwrap()) as usize;
+        let value = FieldElement::from_montgomery(U256::from_bytes_be(
+            (&public_input[8..40]).try_into().unwrap(),
+        ));
+        PublicInput { index, value }
+    }
+}
+
 impl Replayable<PublicInput> for VerifierChannel {
     fn replay(&mut self) -> PublicInput {
         // Need to make a temporary copy here to satisfy the borrow checker.

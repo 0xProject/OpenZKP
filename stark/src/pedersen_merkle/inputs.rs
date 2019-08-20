@@ -1,6 +1,6 @@
 use crate::channel::{ProverChannel, Writable};
 use primefield::FieldElement;
-use std::prelude::v1::*;
+use std::{prelude::v1::*, vec};
 
 pub struct PublicInput {
     pub path_length: usize,
