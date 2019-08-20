@@ -3,7 +3,6 @@ name = "u256"
 version = "0.1.0"
 authors = ["Remco Bloemen <remco@0x.org>"]
 edition = "2018"
-autobenches = false
 
 [dependencies]
 itertools = { version = "0.8.0", default_features = false }
@@ -12,9 +11,9 @@ hex = { version = "", optional = true }
 quickcheck = { version = "0.8", optional = true }
 macros-decl = { path = "../macros_decl", default_features = false }
 
-# Criterion is really a dev-dependency, but it's important that it's optional,
-# or it will enable the `std` flag on various dependencies. Cargo does not allow
-# dev-dependencies to be optional.
+# HACK: Criterion is really a dev-dependency, but it's important that it's
+# optional, or it will enable the `std` flag on various dependencies. Cargo
+# does not allow dev-dependencies to be optional.
 criterion = { version = "0.2.0", optional = true }
 
 [target.'cfg(not(feature="std"))'.dependencies]
@@ -22,10 +21,11 @@ no-std-compat = { version = "0.1.0", features = [ "alloc" ] }
 
 [dev-dependencies]
 quickcheck_macros = "0.8"
-quickcheck = "0.8"
 
 [features]
 default = ["std"] # Default to using the std
+bench = ["criterion"]
+test = ["quickcheck"]
 std = [
     "no-std-compat/std",
     "itertools/use_std",
@@ -33,7 +33,6 @@ std = [
     "macros-decl/std",
     "hex"
 ]
-bench = ["criterion"]
 
 [[bench]]
 name = "benchmark"
