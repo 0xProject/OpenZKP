@@ -63,6 +63,7 @@ jobs:
       - SCCACHE_CACHE_SIZE: 1G
       - NIGHTLY: nightly-2019-08-15
       - PROJECTS: -p u256 -p primefield -p ecc -p starkdex -p stark -p macros-decl -p macros-impl -p macros-lib
+      - NO_STD_PROJECTS: -p macros-decl -p u256
     steps:
       - checkout
       - restore-toolchain-cache
@@ -92,13 +93,8 @@ jobs:
           # See: https://forge.rust-lang.org/platform-support.html
           # We only build libraries and binaries, as we are not interested in
           # the tests/benchmarks/examples working in no_std
-          name: Check all targets on a platform that has no std
-          command: cargo check $PROJECTS --lib --bins  --no-default-features --target=thumbv7m-none-eabi
-      - run:
-          # We only build libraries and binaries, as we are not interested in
-          # the tests/benchmarks/examples working in no_std
-          name: Build all targets on stable (no std)
-          command: cargo build $PROJECTS --lib --bins  --no-default-features
+          name: Check no_std targets on a platform that has no std
+          command: cargo check $NO_STD_PROJECTS --lib --bins --no-default-features --target=thumbv7m-none-eabi
       - run:
           name: Build all targets on stable in release mode
           command: cargo build --release $PROJECTS --all-targets
