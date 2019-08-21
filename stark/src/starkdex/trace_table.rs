@@ -14,8 +14,8 @@ fn get_trace_table() -> TraceTable {
 }
 
 struct SigConfig {
-    pub alpha: FieldElement,
-    pub beta: FieldElement,
+    pub alpha:       FieldElement,
+    pub beta:        FieldElement,
     pub shift_point: Point,
 }
 
@@ -33,24 +33,31 @@ fn test_trace_table() {
         let sig_verify__exponentiate_key__bit = FieldElement::ONE;
         let sig_verify__exponentiate_generator__bit = FieldElement::ONE;
         let hash_pool__hash__ec_subset_sum__bit = FieldElement::ONE;
-        let hash_pool__hash__ec_subset_sum__bit_neg = FieldElement::ONE - &hash_pool__hash__ec_subset_sum__bit;
+        let hash_pool__hash__ec_subset_sum__bit_neg =
+            FieldElement::ONE - &hash_pool__hash__ec_subset_sum__bit;
         let state_transition__merkle_update__side_bit_extraction__bit_1 = FieldElement::ONE;
         let state_transition__merkle_update__side_bit_extraction__bit_0 = FieldElement::ZERO; // I think this is the negation of the above?
         let state_transition__merkle_update__prev_authentication__leaf_0 = FieldElement::ONE;
         let state_transition__merkle_update__prev_authentication__sibling_0 = FieldElement::ZERO;
-        let state_transition__merkle_update__prev_authentication__hashes__ec_subset_sum__bit = FieldElement::ZERO;
-        let state_transition__merkle_update__prev_authentication__hashes__ec_subset_sum__bit_neg = FieldElement::ONE - &state_transition__merkle_update__prev_authentication__hashes__ec_subset_sum__bit;
-        let state_transition__merkle_update__new_authentication__hashes__ec_subset_sum__bit = FieldElement::ONE;
-        let state_transition__merkle_update__new_authentication__hashes__ec_subset_sum__bit_neg = FieldElement::ONE - &state_transition__merkle_update__new_authentication__hashes__ec_subset_sum__bit;
+        let state_transition__merkle_update__prev_authentication__hashes__ec_subset_sum__bit =
+            FieldElement::ZERO;
+        let state_transition__merkle_update__prev_authentication__hashes__ec_subset_sum__bit_neg =
+            FieldElement::ONE
+                - &state_transition__merkle_update__prev_authentication__hashes__ec_subset_sum__bit;
+        let state_transition__merkle_update__new_authentication__hashes__ec_subset_sum__bit =
+            FieldElement::ONE;
+        let state_transition__merkle_update__new_authentication__hashes__ec_subset_sum__bit_neg =
+            FieldElement::ONE
+                - &state_transition__merkle_update__new_authentication__hashes__ec_subset_sum__bit;
         let state_transition__merkle_update__new_authentication__sibling_0 = FieldElement::ZERO;
         let initial_root = FieldElement::ONE;
         let sig_config = SigConfig {
-            alpha: FieldElement::ONE,
-            beta: FieldElement::ONE,
-            shift_point: Point{
+            alpha:       FieldElement::ONE,
+            beta:        FieldElement::ONE,
+            shift_point: Point {
                 x: FieldElement::ONE,
                 y: FieldElement::ONE,
-            }
+            },
         };
         let shift_point = Point {
             x: FieldElement::ONE,
@@ -82,8 +89,10 @@ fn test_trace_table() {
         let trace_length = 0;
         let path_length = 256;
 
-        let sig_verify__exponentiate_key__bit_neg = FieldElement::ONE - &sig_verify__exponentiate_key__bit;
-        let sig_verify__exponentiate_generator__bit_neg = FieldElement::ONE - & sig_verify__exponentiate_generator__bit;
+        let sig_verify__exponentiate_key__bit_neg =
+            FieldElement::ONE - &sig_verify__exponentiate_key__bit;
+        let sig_verify__exponentiate_generator__bit_neg =
+            FieldElement::ONE - &sig_verify__exponentiate_generator__bit;
 
         let merkle_hash_points__x = FieldElement::ONE;
         let merkle_hash_points__y = FieldElement::ONE;
