@@ -124,7 +124,6 @@ jobs:
             # cargo +$NIGHTLY build --release
             # cp target/wasm32-unknown-unknown/release/runtime.wasm ./
             # wasm-gc $i.wasm $i.compact.wasm
-      - save-sccache-cache
       - run:
           name: Lint with rustformat nightly
           command: cargo +$NIGHTLY fmt --all -- --check
@@ -149,6 +148,7 @@ jobs:
             # we enable all features (which makes sense from a test coverage perspective).
             # TODO: We don't need an optimized build here, re-using debug build would be ok.
             cargo bench --bench benchmark $PACKAGES --all-features -- --test
+      - save-sccache-cache
 
 workflows:
   version: 2
