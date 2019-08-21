@@ -130,7 +130,7 @@ jobs:
           # TODO: Also cover substrate projects
       - run:
           name: Lint with clippy
-          command: cargo clippy $PROJECTS --all-targets
+          command: cargo clippy $PROJECTS --all-targets --all-features
           # TODO: Also cover substrate projects
       - run:
           name: Test debug build
