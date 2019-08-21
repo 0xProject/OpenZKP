@@ -125,7 +125,7 @@ jobs:
             # wasm-gc $i.wasm $i.compact.wasm
       - run:
           name: Lint with rustformat nightly
-          command: cargo +$NIGHTLY fmt $PACKAGES -- --check
+          command: cargo +$NIGHTLY fmt --all -- --check
           # TODO: Run over wasm targets (which are not part of the workspace)
       - run:
           name: Lint with clippy
@@ -146,7 +146,7 @@ jobs:
             # HACK: We can not specify --features=bench in a workspace environment, instead
             # we enable all features (which makes sense from a test coverage perspective).
             # TODO: We don't need an optimized build here, re-using debug build would be ok.
-            cargo bench --bench benchmark --all --exclude primefield-benchmarks --all-features -- --test
+            cargo bench --bench benchmark $PACKAGES --all-features -- --test
       - save-sccache-cache
       - save-toolchain-cache
 
