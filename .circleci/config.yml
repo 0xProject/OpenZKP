@@ -84,7 +84,7 @@ jobs:
           no_output_timeout: 1800s
       - run:
           name: Build all targets on stable
-          command: cargo build $PROJECTS --all-targets
+          command: cargo build $PROJECTS --all-targets --all-features
       - run:
           # HACK: We try to build for Cortex-M3, not because we want to create
           # IoT devices, but because there is no `std` available for this target.
@@ -105,10 +105,10 @@ jobs:
             done
       - run:
           name: Build all targets on stable in release mode
-          command: cargo build --release $PROJECTS --all-targets
+          command: cargo build --release $PROJECTS --all-targets --all-features
       - run:
           name: Build all targets on nightly
-          command: cargo +$NIGHTLY build $PROJECTS --all-targets
+          command: cargo +$NIGHTLY build $PROJECTS --all-targets --all-features
       - run:
           name: Build benchmarks
           # Exclude benchmarks that compare against external crates (pulls in a lot of deps)
