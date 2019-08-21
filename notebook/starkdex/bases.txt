@@ -1,4 +1,4 @@
- hash_pool__hash__ec_subset_sum__bit * (hash_pool__hash__ec_subset_sum__bit - 1)
+ hash_pool__hash__ec_subset_sum__bit * (hash_pool__hash__ec_subset_sum__bit - FieldElement::ONE)
  trace_table[(8,i + 3)]
  trace_table[(8,i + 3)]
  hash_pool__hash__ec_subset_sum__bit * (trace_table[(8,i + 2)] - hash_pool_points__y) - trace_table[(8,i + 1)] * (trace_table[(8,i + 0)] - hash_pool_points__x)
@@ -13,7 +13,7 @@
  trace_table[(8,i + 2044)] - trace_table[(8,i + 2051)]
  state_transition__merkle_update__side_bit_extraction__bit_0 * state_transition__merkle_update__side_bit_extraction__bit_0 - state_transition__merkle_update__side_bit_extraction__bit_0
  trace_table[(6,i + 255)]
- state_transition__merkle_update__prev_authentication__hashes__ec_subset_sum__bit * (state_transition__merkle_update__prev_authentication__hashes__ec_subset_sum__bit - 1)
+ state_transition__merkle_update__prev_authentication__hashes__ec_subset_sum__bit * (state_transition__merkle_update__prev_authentication__hashes__ec_subset_sum__bit - FieldElement::ONE)
  trace_table[(3,i + 0)]
  trace_table[(3,i + 0)]
  state_transition__merkle_update__prev_authentication__hashes__ec_subset_sum__bit * (trace_table[(1,i + 0)] - merkle_hash_points__y) - trace_table[(2,i + 0)] * (trace_table[(0,i + 0)] - merkle_hash_points__x)
@@ -25,9 +25,9 @@
  trace_table[(1,i + 256)] - trace_table[(1,i + 255)]
  trace_table[(0,i + 0)] - shift_point.x
  trace_table[(1,i + 0)] - shift_point.y
- (1 - state_transition__merkle_update__side_bit_extraction__bit_1) * (trace_table[(0,i + 511)] - trace_table[(3,i + 512)])
+ (FieldElement::ONE - state_transition__merkle_update__side_bit_extraction__bit_1) * (trace_table[(0,i + 511)] - trace_table[(3,i + 512)])
  state_transition__merkle_update__side_bit_extraction__bit_1 * (trace_table[(0,i + 511)] - trace_table[(3,i + 768)])
- state_transition__merkle_update__new_authentication__hashes__ec_subset_sum__bit * (state_transition__merkle_update__new_authentication__hashes__ec_subset_sum__bit - 1)
+ state_transition__merkle_update__new_authentication__hashes__ec_subset_sum__bit * (state_transition__merkle_update__new_authentication__hashes__ec_subset_sum__bit - FieldElement::ONE)
  trace_table[(7,i + 0)]
  trace_table[(7,i + 0)]
  state_transition__merkle_update__new_authentication__hashes__ec_subset_sum__bit * (trace_table[(5,i + 0)] - merkle_hash_points__y) - trace_table[(6,i + 0)] * (trace_table[(4,i + 0)] - merkle_hash_points__x)
@@ -39,7 +39,7 @@
  trace_table[(5,i + 256)] - trace_table[(5,i + 255)]
  trace_table[(4,i + 0)] - shift_point.x
  trace_table[(5,i + 0)] - shift_point.y
- (1 - state_transition__merkle_update__side_bit_extraction__bit_1) * (trace_table[(4,i + 511)] - trace_table[(7,i + 512)])
+ (FieldElement::ONE - state_transition__merkle_update__side_bit_extraction__bit_1) * (trace_table[(4,i + 511)] - trace_table[(7,i + 512)])
  state_transition__merkle_update__side_bit_extraction__bit_1 * (trace_table[(4,i + 511)] - trace_table[(7,i + 768)])
  state_transition__merkle_update__prev_authentication__sibling_0 - state_transition__merkle_update__new_authentication__sibling_0
  state_transition__merkle_update__prev_authentication__leaf_0 - trace_table[(8,i + 4092)]
@@ -59,22 +59,22 @@
  sig_verify__doubling_key__x_squared + sig_verify__doubling_key__x_squared + sig_verify__doubling_key__x_squared + sig_config.alpha - (trace_table[(9,i + 32)] + trace_table[(9,i + 32)]) * trace_table[(9,i + 16)]
  trace_table[(9,i + 16)] * trace_table[(9,i + 16)] - (trace_table[(9,i + 0)] + trace_table[(9,i + 0)] + trace_table[(9,i + 64)])
  trace_table[(9,i + 32)] + trace_table[(9,i + 96)] - trace_table[(9,i + 16)] * (trace_table[(9,i + 0)] - trace_table[(9,i + 64)])
- sig_verify__exponentiate_generator__bit * (sig_verify__exponentiate_generator__bit - 1)
+ sig_verify__exponentiate_generator__bit * (sig_verify__exponentiate_generator__bit - FieldElement::ONE)
  trace_table[(9,i + 20)]
  trace_table[(9,i + 20)]
  sig_verify__exponentiate_generator__bit * (trace_table[(9,i + 36)] - ecdsa_points__y) - trace_table[(9,i + 100)] * (trace_table[(9,i + 68)] - ecdsa_points__x)
  trace_table[(9,i + 100)] * trace_table[(9,i + 100)] - sig_verify__exponentiate_generator__bit * (trace_table[(9,i + 68)] + ecdsa_points__x + trace_table[(9,i + 196)])
  sig_verify__exponentiate_generator__bit * (trace_table[(9,i + 36)] + trace_table[(9,i + 164)]) - trace_table[(9,i + 100)] * (trace_table[(9,i + 68)] - trace_table[(9,i + 196)])
- trace_table[(9,i + 84)] * (trace_table[(9,i + 68)] - ecdsa_points__x) - 1
+ trace_table[(9,i + 84)] * (trace_table[(9,i + 68)] - ecdsa_points__x) - FieldElement::ONE
  sig_verify__exponentiate_generator__bit_neg * (trace_table[(9,i + 196)] - trace_table[(9,i + 68)])
  sig_verify__exponentiate_generator__bit_neg * (trace_table[(9,i + 164)] - trace_table[(9,i + 36)])
- sig_verify__exponentiate_key__bit * (sig_verify__exponentiate_key__bit - 1)
+ sig_verify__exponentiate_key__bit * (sig_verify__exponentiate_key__bit - FieldElement::ONE)
  trace_table[(9,i + 24)]
  trace_table[(9,i + 24)]
  sig_verify__exponentiate_key__bit * (trace_table[(9,i + 8)] - trace_table[(9,i + 32)]) - trace_table[(9,i + 40)] * (trace_table[(9,i + 48)] - trace_table[(9,i + 0)])
  trace_table[(9,i + 40)] * trace_table[(9,i + 40)] - sig_verify__exponentiate_key__bit * (trace_table[(9,i + 48)] + trace_table[(9,i + 0)] + trace_table[(9,i + 112)])
  sig_verify__exponentiate_key__bit * (trace_table[(9,i + 8)] + trace_table[(9,i + 72)]) - trace_table[(9,i + 40)] * (trace_table[(9,i + 48)] - trace_table[(9,i + 112)])
- trace_table[(9,i + 56)] * (trace_table[(9,i + 48)] - trace_table[(9,i + 0)]) - 1
+ trace_table[(9,i + 56)] * (trace_table[(9,i + 48)] - trace_table[(9,i + 0)]) - FieldElement::ONE
  sig_verify__exponentiate_key__bit_neg * (trace_table[(9,i + 112)] - trace_table[(9,i + 48)])
  sig_verify__exponentiate_key__bit_neg * (trace_table[(9,i + 72)] - trace_table[(9,i + 8)])
  trace_table[(9,i + 68)] - sig_config.shift_point.x
@@ -84,12 +84,12 @@
  trace_table[(9,i + 32676)] - trace_table[(9,i + 16328)] - trace_table[(9,i + 32724)] * (trace_table[(9,i + 32708)] - trace_table[(9,i + 16368)])
  trace_table[(9,i + 32724)] * trace_table[(9,i + 32724)] - (trace_table[(9,i + 32708)] + trace_table[(9,i + 16368)] + trace_table[(9,i + 16384)])
  trace_table[(9,i + 32676)] + trace_table[(9,i + 16416)] - trace_table[(9,i + 32724)] * (trace_table[(9,i + 32708)] - trace_table[(9,i + 16384)])
- trace_table[(9,i + 32740)] * (trace_table[(9,i + 32708)] - trace_table[(9,i + 16368)]) - 1
+ trace_table[(9,i + 32740)] * (trace_table[(9,i + 32708)] - trace_table[(9,i + 16368)]) - FieldElement::ONE
  trace_table[(9,i + 32712)] + sig_config.shift_point.y - trace_table[(8,i + 3069)] * (trace_table[(9,i + 32752)] - sig_config.shift_point.x)
  trace_table[(8,i + 3069)] * trace_table[(8,i + 3069)] - (trace_table[(9,i + 32752)] + sig_config.shift_point.x + trace_table[(9,i + 24)])
- trace_table[(8,i + 19453)] * (trace_table[(9,i + 32752)] - sig_config.shift_point.x) - 1
- trace_table[(9,i + 20)] * trace_table[(8,i + 11261)] - 1
- trace_table[(9,i + 24)] * trace_table[(9,i + 16336)] - 1
+ trace_table[(8,i + 19453)] * (trace_table[(9,i + 32752)] - sig_config.shift_point.x) - FieldElement::ONE
+ trace_table[(9,i + 20)] * trace_table[(8,i + 11261)] - FieldElement::ONE
+ trace_table[(9,i + 24)] * trace_table[(9,i + 16336)] - FieldElement::ONE
  trace_table[(8,i + 27645)] - trace_table[(9,i + 0)] * trace_table[(9,i + 0)]
  trace_table[(9,i + 32)] * trace_table[(9,i + 32)] - (trace_table[(9,i + 0)] * trace_table[(8,i + 27645)] + sig_config.alpha * trace_table[(9,i + 0)] + sig_config.beta)
  is_settlement * (trace_table[(8,i + 7171)] - (((trace_table[(6,i + 255)] * vault_shift + trace_table[(6,i + 49407)]) * amount_shift + trace_table[(9,i + 4)]) * amount_shift + trace_table[(9,i + 32772)]) * trade_shift)
@@ -106,14 +106,14 @@
  is_settlement * (trace_table[(8,i + 4099)] - trace_table[(9,i + 32744)])
  is_settlement * (trace_table[(9,i + 32768)] - trace_table[(9,i + 49144)])
  is_settlement * (trace_table[(8,i + 5123)] - trace_table[(9,i + 49128)])
- trace_table[(8,i + 1021)] * (1 - trace_table[(8,i + 1021)])
+ trace_table[(8,i + 1021)] * (FieldElement::ONE - trace_table[(8,i + 1021)])
  trace_table[(8,i + 1021)] * trace_table[(8,i + 3075)]
  trace_table[(8,i + 1021)] * trace_table[(8,i + 5117)]
- trace_table[(8,i + 3075)] * trace_table[(8,i + 5117)] - (1 - trace_table[(8,i + 1021)])
- (1 - trace_table[(8,i + 1021)]) * trace_table[(9,i + 16376)] - trace_table[(8,i + 3)]
- (1 - trace_table[(8,i + 1021)]) * trace_table[(9,i + 16360)] - trace_table[(8,i + 1027)]
- (1 - trace_table[(8,i + 9213)]) * trace_table[(9,i + 16376)] - trace_table[(8,i + 8195)]
- (1 - trace_table[(8,i + 9213)]) * trace_table[(9,i + 16360)] - trace_table[(8,i + 9219)]
+ trace_table[(8,i + 3075)] * trace_table[(8,i + 5117)] - (FieldElement::ONE - trace_table[(8,i + 1021)])
+ (FieldElement::ONE - trace_table[(8,i + 1021)]) * trace_table[(9,i + 16376)] - trace_table[(8,i + 3)]
+ (FieldElement::ONE - trace_table[(8,i + 1021)]) * trace_table[(9,i + 16360)] - trace_table[(8,i + 1027)]
+ (FieldElement::ONE - trace_table[(8,i + 9213)]) * trace_table[(9,i + 16376)] - trace_table[(8,i + 8195)]
+ (FieldElement::ONE - trace_table[(8,i + 9213)]) * trace_table[(9,i + 16360)] - trace_table[(8,i + 9219)]
  column0_row_expr0 - initial_root
  column4_row_expr1 - final_root
  column4_row_expr0 - column0_row_expr2
