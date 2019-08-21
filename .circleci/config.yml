@@ -86,6 +86,19 @@ jobs:
           name: Build all targets on stable
           command: cargo build $PROJECTS --all-targets --all-features
       - run:
+          name: Build all targets on stable in release mode
+          command: cargo build --release $PROJECTS --all-targets --all-features
+      - run:
+          name: Build all targets on nightly
+          command: cargo +$NIGHTLY build $PROJECTS --all-targets --all-features
+      - run:
+          name: Build benchmarks
+          # Exclude benchmarks that compare against external crates (pulls in a lot of deps)
+          command: |
+            # HACK: We can not specify --features=bench in a workspace environment, instead
+            # we enable all features (which makes sense from a test coverage perspective).
+            cargo bench --features bench --bench benchmark --all --exclude primefield-benchmarks --all-features --no-run
+      - run:
           # HACK: We try to build for Cortex-M3, not because we want to create
           # IoT devices, but because there is no `std` available for this target.
           # This forces the build to fail if an accidental dependency on `std`
@@ -103,19 +116,6 @@ jobs:
               cargo +$NIGHTLY check --lib --bins --no-default-features --target=thumbv7m-none-eabi
               popd
             done
-      - run:
-          name: Build all targets on stable in release mode
-          command: cargo build --release $PROJECTS --all-targets --all-features
-      - run:
-          name: Build all targets on nightly
-          command: cargo +$NIGHTLY build $PROJECTS --all-targets --all-features
-      - run:
-          name: Build benchmarks
-          # Exclude benchmarks that compare against external crates (pulls in a lot of deps)
-          command: |
-            # HACK: We can not specify --features=bench in a workspace environment, instead
-            # we enable all features (which makes sense from a test coverage perspective).
-            cargo bench --features bench --bench benchmark --all --exclude primefield-benchmarks --all-features --no-run
       - run:
           name: Build wasm substrate runtime (disabled)
           command: |
