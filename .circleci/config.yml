@@ -64,7 +64,7 @@ jobs:
       - NIGHTLY: nightly-2019-08-15
         # Exclude benchmarks that compare against external crates (pulls in a lot of deps)
         # Exclude substrate-node (also pulls in a lot of deps, and currently fails)
-      - PACKAGES: --all --exclude primefield-benchmarks --exclude substrate-node
+      - PACKAGES: --all --exclude substrate-node
       - NO_STD_PACKAGES: macros_decl u256 primefield ecc
     steps:
       - checkout
