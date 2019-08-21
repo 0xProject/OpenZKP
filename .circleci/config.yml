@@ -86,11 +86,9 @@ jobs:
           name: Build all targets on stable
           command: cargo build --all --all-targets --all-features
       - run:
-          name: Build all targets on stable in release mode
-          command: cargo build --all --all-targets --all-features --release
-      - run:
+          # NOTE: The nightly build target is here for rustfmt-nightly
           name: Build all targets on nightly
-          command: cargo +$NIGHTLY build -all --all-targets --all-features
+          command: cargo +$NIGHTLY build --all --all-targets --all-features
       - run:
           name: Build benchmarks
           # Exclude benchmarks that compare against external crates (pulls in a lot of deps)
@@ -106,7 +104,7 @@ jobs:
           # See: https://forge.rust-lang.org/platform-support.html
           # We only build libraries and binaries, as we are not interested in
           # the tests/benchmarks/examples working in no_std
-          name: Check no std packages on a platform that has no std
+          name: Check no std packages on nightly on a platform that has no std
           command: |
             # HACK: We use a for loop here because cargo across multiple
             # PACKAGES does not respect feature flags. This also helps
@@ -126,18 +124,15 @@ jobs:
             # wasm-gc $i.wasm $i.compact.wasm
       - run:
           name: Lint with rustformat nightly
-          command: cargo +$NIGHTLY fmt $PACKAGES -- --check
-          # TODO: Also cover substrate PACKAGES
+          command: cargo +$NIGHTLY fmt --all -- --check
+          # TODO: Run over wasm targets (which are not part of the workspace)
       - run:
           name: Lint with clippy
           command: cargo clippy --all --all-targets --all-features
-          # TODO: Also cover substrate PACKAGES
+          # TODO: Run over wasm targets (which are not part of the workspace)
       - run:
           name: Test debug build
           command: cargo test --features test --all -- --nocapture
-      - run:
-          name: Test release build
-          command: cargo test --features test --all --release -- --nocapture
       - run:
           name: Test benchmarks
           command: |
@@ -149,6 +144,7 @@ jobs:
             # unification. 
             # HACK: We can not specify --features=bench in a workspace environment, instead
             # we enable all features (which makes sense from a test coverage perspective).
+            # TODO: We don't need an optimized build here, re-using debug build would be ok.
             cargo bench --bench benchmark --all --exclude primefield-benchmarks --all-features -- --test
       - save-sccache-cache
       - save-toolchain-cache
