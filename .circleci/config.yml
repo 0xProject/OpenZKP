@@ -84,13 +84,13 @@ jobs:
           no_output_timeout: 1800s
       - run:
           name: Build all targets on stable
-          command: cargo build $PACKAGES --all-targets --all-features
+          command: cargo build --all --all-targets --all-features
       - run:
           name: Build all targets on stable in release mode
-          command: cargo build --release $PACKAGES --all-targets --all-features
+          command: cargo build --all --all-targets --all-features --release
       - run:
           name: Build all targets on nightly
-          command: cargo +$NIGHTLY build $PACKAGES --all-targets --all-features
+          command: cargo +$NIGHTLY build -all --all-targets --all-features
       - run:
           name: Build benchmarks
           # Exclude benchmarks that compare against external crates (pulls in a lot of deps)
@@ -130,14 +130,14 @@ jobs:
           # TODO: Also cover substrate PACKAGES
       - run:
           name: Lint with clippy
-          command: cargo clippy $PACKAGES --all-targets --all-features
+          command: cargo clippy --all --all-targets --all-features
           # TODO: Also cover substrate PACKAGES
       - run:
           name: Test debug build
-          command: cargo test --features test $PACKAGES -- --nocapture
+          command: cargo test --features test --all -- --nocapture
       - run:
           name: Test release build
-          command: cargo test --features test --release $PACKAGES -- --nocapture
+          command: cargo test --features test --all --release -- --nocapture
       - run:
           name: Test benchmarks
           command: |
