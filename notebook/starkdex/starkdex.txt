@@ -1,0 +1,66 @@
+modification_boundary_key: is_modification * (column9_row16376 * boundary_base - boundary_key).
+  numerator: 1
+  denominator: point^(trace_length / 65536) - 1
+modification_boundary_token: is_modification * (column9_row16360 * boundary_base - boundary_token).
+  numerator: 1
+  denominator: point^(trace_length / 65536) - 1
+modification_boundary_amount0: is_modification * (column8_row3075 * boundary_base - boundary_amount0).
+  numerator: 1
+  denominator: point^(trace_length / 65536) - 1
+modification_boundary_amount1: is_modification * (column8_row11267 * boundary_base - boundary_amount1).
+  numerator: 1
+  denominator: point^(trace_length / 65536) - 1
+modification_boundary_vault_id: is_modification * (column6_row255 * boundary_base - boundary_vault_id).
+  numerator: 1
+  denominator: point^(trace_length / 65536) - 1
+amounts_range_check/bit: amounts_range_check__bit_0 * amounts_range_check__bit_0 - amounts_range_check__bit_0.
+  numerator: point^(trace_length / 8192) - trace_generator^(63 * trace_length / 64)
+  denominator: point^(trace_length / 128) - 1
+amounts_range_check/zero: column9_row4.
+  numerator: 1
+  denominator: point^(trace_length / 8192) - trace_generator^(63 * trace_length / 64)
+total_token_a_not_changed: is_settlement * (column8_row3075 - column8_row11267 - (column8_row27651 - column8_row19459)).
+  numerator: 1
+  denominator: point^(trace_length / 65536) - 1
+total_token_b_not_changed: is_settlement * (column8_row35843 - column8_row44035 - (column8_row60419 - column8_row52227)).
+  numerator: 1
+  denominator: point^(trace_length / 65536) - 1
+diff_a_range_check_input: (column9_row4 - (column8_row3075 - column8_row11267)) * is_settlement.
+  numerator: 1
+  denominator: point^(trace_length / 65536) - 1
+diff_b_range_check_input: (column9_row32772 - (column8_row35843 - column8_row44035)) * is_settlement.
+  numerator: 1
+  denominator: point^(trace_length / 65536) - 1
+amounts_range_check_inputs: column9_row8196 - column8_row11267.
+  numerator: 1
+  denominator: point^(trace_length / 16384) - 1
+maker_sig_input_packed: is_settlement * (column8_row7171 - (((column6_row255 * vault_shift + column6_row49407) * amount_shift + column9_row4) * amount_shift + column9_row32772) * trade_shift).
+  numerator: 1
+  denominator: point^(trace_length / 65536) - 1
+taker_sig_input_maker_hash: is_settlement * (column8_row36867 - column8_row8188).
+  numerator: 1
+  denominator: point^(trace_length / 65536) - 1
+taker_sig_input_vault_a: is_settlement * (column8_row37891 - column6_row16639).
+  numerator: 1
+  denominator: point^(trace_length / 65536) - 1
+taker_sig_input_vault_b: is_settlement * (column8_row39939 - column6_row33023).
+  numerator: 1
+  denominator: point^(trace_length / 65536) - 1
+copy_signature_input_maker: is_settlement * (column8_row8188 - column9_row20).
+  numerator: 1
+  denominator: point^(trace_length / 65536) - 1
+copy_signature_input_taker: is_settlement * (column8_row40956 - column9_row32788).
+  numerator: 1
+  denominator: point^(trace_length / 65536) - 1
+initial_root: column0_row_expr0 - initial_root.
+  numerator: 1
+  denominator: point - 1
+final_root: column4_row_expr1 - final_root.
+  numerator: 1
+  denominator: point - trace_generator^(65536 * (trace_length / 65536 - 1))
+copy_merkle_roots: column4_row_expr0 - column0_row_expr2.
+  numerator: point - trace_generator^(65536 * (trace_length / 65536 - 1) + 49152)
+  denominator: point^(trace_length / 16384) - 1
+copy_merkle_roots_modification: is_modification * (column4_row_expr0 - column4_row_expr1).
+  numerator: 1
+  denominator: point^(trace_length / 65536) - 1

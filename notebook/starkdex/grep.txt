@@ -1,0 +1,1 @@
+grep '// Denominator: \|// Numerator: \|Constraint expression for' /Users/mason/Desktop/evm-verifier/solidity/contracts/dex/DexConstraintPoly.sol > ~/Desktop/starkdex.txt

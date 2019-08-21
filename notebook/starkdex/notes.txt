@@ -1,0 +1,56 @@
+column0: ecc_point x (this is used at the slope value.)
+column1: ecc_point y
+column2: ecc_point slope
+column3: pedersen sum? pretty sure this is true.
+
+column 4: this is another ecc_point x / hash value.
+column 5: ecc_point y
+column6: sometimes this is a slope, othertimes it is being used a marker for something else?
+column7: accumulator for above.
+
+column8:
+column9: this is being used for everything else.....
+
+Masons-MacBook-Pro:starkdex mason$ git grep denominator | sort | uniq | wc
+      30     250    2301
+Masons-MacBook-Pro:starkdex mason$ git grep numerator | sort | uniq | wc
+      15     133    1236
+
+
+numerator: (point^(trace_length / 16384) - trace_generator^(31 * trace_length / 32)) * (point^(trace_length / 16384) - trace_generator^(15 * trace_length / 16))
+numerator: 1
+numerator: point - trace_generator^(65536 * (trace_length / 65536 - 1) + 49152)
+numerator: point^(trace_length / 1024) - trace_generator^(255 * trace_length / 256)
+numerator: point^(trace_length / 16384) - trace_generator^(255 * trace_length / 256)
+numerator: point^(trace_length / 16384) - trace_generator^(31 * trace_length / 32)
+numerator: point^(trace_length / 2048) - trace_generator^(trace_length / 2)
+numerator: point^(trace_length / 256) - trace_generator^(255 * trace_length / 256)
+numerator: point^(trace_length / 32768) - trace_generator^(255 * trace_length / 256)
+numerator: point^(trace_length / 512) - trace_generator^(trace_length / 2)
+numerator: point^(trace_length / 8192) - trace_generator^(63 * trace_length / 64)
+
+denominator: point - 1
+denominator: point - trace_generator^(65536 * (trace_length / 65536 - 1))
+denominator: point^(trace_length / 1024) - 1
+denominator: point^(trace_length / 1024) - trace_generator^(251 * trace_length / 256)
+denominator: point^(trace_length / 1024) - trace_generator^(255 * trace_length / 256)
+denominator: point^(trace_length / 128) - 1
+denominator: point^(trace_length / 16384) - 1
+denominator: point^(trace_length / 16384) - trace_generator^(251 * trace_length / 256)
+denominator: point^(trace_length / 16384) - trace_generator^(255 * trace_length / 256)
+denominator: point^(trace_length / 16384) - trace_generator^(path_length * trace_length / 32)
+denominator: point^(trace_length / 2048) - 1
+denominator: point^(trace_length / 256) - 1
+denominator: point^(trace_length / 256) - trace_generator^(251 * trace_length / 256)
+denominator: point^(trace_length / 256) - trace_generator^(255 * trace_length / 256)
+denominator: point^(trace_length / 32768) - 1
+denominator: point^(trace_length / 32768) - trace_generator^(251 * trace_length / 256)
+denominator: point^(trace_length / 32768) - trace_generator^(255 * trace_length / 256)
+denominator: point^(trace_length / 4) - 1
+denominator: point^(trace_length / 4096) - 1
+denominator: point^(trace_length / 512) - 1
+denominator: point^(trace_length / 64) - 1
+denominator: point^(trace_length / 65536) - 1
+denominator: point^(trace_length / 8192) - 1
+denominator: point^(trace_length / 8192) - trace_generator^(63 * trace_length / 64)
+denominator: point^trace_length - 1

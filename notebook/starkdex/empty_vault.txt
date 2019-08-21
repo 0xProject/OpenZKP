@@ -1,0 +1,50 @@
+handle_empty_vault/consistency_key_change0: is_settlement * (column9_row0 - column9_row16376).
+  numerator: 1
+  denominator: point^(trace_length / 65536) - 1
+handle_empty_vault/consistency_token_change0: is_settlement * (column8_row4099 - column9_row16360).
+  numerator: 1
+  denominator: point^(trace_length / 65536) - 1
+handle_empty_vault/consistency_key_change3: is_settlement * (column9_row0 - column9_row65528).
+  numerator: 1
+  denominator: point^(trace_length / 65536) - 1
+handle_empty_vault/consistency_token_change3: is_settlement * (column8_row5123 - column9_row65512).
+  numerator: 1
+  denominator: point^(trace_length / 65536) - 1
+handle_empty_vault/consistency_key_change1: is_settlement * (column9_row32768 - column9_row32760).
+  numerator: 1
+  denominator: point^(trace_length / 65536) - 1
+handle_empty_vault/consistency_token_change1: is_settlement * (column8_row4099 - column9_row32744).
+  numerator: 1
+  denominator: point^(trace_length / 65536) - 1
+handle_empty_vault/consistency_key_change2: is_settlement * (column9_row32768 - column9_row49144).
+  numerator: 1
+  denominator: point^(trace_length / 65536) - 1
+handle_empty_vault/consistency_token_change2: is_settlement * (column8_row5123 - column9_row49128).
+  numerator: 1
+  denominator: point^(trace_length / 65536) - 1
+
+handle_empty_vault/vault_empty/empty_vault_booleanity: column8_row1021 * (1 - column8_row1021).
+  numerator: 1
+  denominator: point^(trace_length / 8192) - 1
+handle_empty_vault/vault_empty/amount_zero_when_empty: column8_row1021 * column8_row3075.
+  numerator: 1
+  denominator: point^(trace_length / 8192) - 1
+handle_empty_vault/vault_empty/amount_inv_zero_when_empty: column8_row1021 * column8_row5117.
+  numerator: 1
+  denominator: point^(trace_length / 8192) - 1
+handle_empty_vault/vault_empty/empty_when_amount_zero: column8_row3075 * column8_row5117 - (1 - column8_row1021).
+  numerator: 1
+  denominator: point^(trace_length / 8192) - 1
+
+handle_empty_vault/consistency_key_stage0: (1 - column8_row1021) * column9_row16376 - column8_row3.
+  numerator: 1
+  denominator: point^(trace_length / 16384) - 1
+handle_empty_vault/consistency_token_stage0: (1 - column8_row1021) * column9_row16360 - column8_row1027.
+  numerator: 1
+  denominator: point^(trace_length / 16384) - 1
+handle_empty_vault/consistency_key_stage1: (1 - column8_row9213) * column9_row16376 - column8_row8195.
+  numerator: 1
+  denominator: point^(trace_length / 16384) - 1
+handle_empty_vault/consistency_token_stage1: (1 - column8_row9213) * column9_row16360 - column8_row9219.
+  numerator: 1
+  denominator: point^(trace_length / 16384) - 1

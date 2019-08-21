@@ -1,0 +1,39 @@
+hash_pool/hash/ec_subset_sum/booleanity_test: hash_pool__hash__ec_subset_sum__bit * (hash_pool__hash__ec_subset_sum__bit - 1).
+  numerator: point^(trace_length / 1024) - trace_generator^(255 * trace_length / 256)
+  denominator: point^(trace_length / 4) - 1
+hash_pool/hash/ec_subset_sum/bit_extraction_end: column8_row3.
+  numerator: 1
+  denominator: point^(trace_length / 1024) - trace_generator^(251 * trace_length / 256)
+hash_pool/hash/ec_subset_sum/zeros_tail: column8_row3.
+  numerator: 1
+  denominator: point^(trace_length / 1024) - trace_generator^(255 * trace_length / 256)
+hash_pool/hash/ec_subset_sum/add_points/slope: hash_pool__hash__ec_subset_sum__bit * (column8_row2 - hash_pool_points__y) - column8_row1 * (column8_row0 - hash_pool_points__x).
+  numerator: point^(trace_length / 1024) - trace_generator^(255 * trace_length / 256)
+  denominator: point^(trace_length / 4) - 1
+hash_pool/hash/ec_subset_sum/add_points/x: column8_row1 * column8_row1 - hash_pool__hash__ec_subset_sum__bit * (column8_row0 + hash_pool_points__x + column8_row4).
+  numerator: point^(trace_length / 1024) - trace_generator^(255 * trace_length / 256)
+  denominator: point^(trace_length / 4) - 1
+hash_pool/hash/ec_subset_sum/add_points/y: hash_pool__hash__ec_subset_sum__bit * (column8_row2 + column8_row6) - column8_row1 * (column8_row0 - column8_row4).
+  numerator: point^(trace_length / 1024) - trace_generator^(255 * trace_length / 256)
+  denominator: point^(trace_length / 4) - 1
+hash_pool/hash/ec_subset_sum/copy_point/x: hash_pool__hash__ec_subset_sum__bit_neg * (column8_row4 - column8_row0).
+  numerator: point^(trace_length / 1024) - trace_generator^(255 * trace_length / 256)
+  denominator: point^(trace_length / 4) - 1
+hash_pool/hash/ec_subset_sum/copy_point/y: hash_pool__hash__ec_subset_sum__bit_neg * (column8_row6 - column8_row2).
+  numerator: point^(trace_length / 1024) - trace_generator^(255 * trace_length / 256)
+  denominator: point^(trace_length / 4) - 1
+hash_pool/hash/copy_point/x: column8_row1024 - column8_row1020.
+  numerator: point^(trace_length / 2048) - trace_generator^(trace_length / 2)
+  denominator: point^(trace_length / 1024) - 1
+hash_pool/hash/copy_point/y: column8_row1026 - column8_row1022.
+  numerator: point^(trace_length / 2048) - trace_generator^(trace_length / 2)
+  denominator: point^(trace_length / 1024) - 1
+hash_pool/hash/init/x: column8_row0 - shift_point.x.
+  numerator: 1
+  denominator: point^(trace_length / 2048) - 1
+hash_pool/hash/init/y: column8_row2 - shift_point.y.
+  numerator: 1
+  denominator: point^(trace_length / 2048) - 1
+hash_pool/output_to_input: column8_row2044 - column8_row2051.
+  numerator: 1
+  denominator: point^(trace_length / 4096) - 1

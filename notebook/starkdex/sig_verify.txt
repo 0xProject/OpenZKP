@@ -1,0 +1,108 @@
+sig_verify/doubling_key/slope: sig_verify__doubling_key__x_squared + sig_verify__doubling_key__x_squared + sig_verify__doubling_key__x_squared + sig_config.alpha - (column9_row32 + column9_row32) * column9_row16.
+  numerator: point^(trace_length / 16384) - trace_generator^(255 * trace_length / 256)
+  denominator: point^(trace_length / 64) - 1
+sig_verify/doubling_key/x: column9_row16 * column9_row16 - (column9_row0 + column9_row0 + column9_row64).
+  numerator: point^(trace_length / 16384) - trace_generator^(255 * trace_length / 256)
+  denominator: point^(trace_length / 64) - 1
+sig_verify/doubling_key/y: column9_row32 + column9_row96 - column9_row16 * (column9_row0 - column9_row64).
+  numerator: point^(trace_length / 16384) - trace_generator^(255 * trace_length / 256)
+  denominator: point^(trace_length / 64) - 1
+sig_verify/exponentiate_generator/booleanity_test: sig_verify__exponentiate_generator__bit * (sig_verify__exponentiate_generator__bit - 1).
+  numerator: point^(trace_length / 32768) - trace_generator^(255 * trace_length / 256)
+  denominator: point^(trace_length / 128) - 1
+sig_verify/exponentiate_generator/bit_extraction_end: column9_row20.
+  numerator: 1
+  denominator: point^(trace_length / 32768) - trace_generator^(251 * trace_length / 256)
+sig_verify/exponentiate_generator/zeros_tail: column9_row20.
+  numerator: 1
+  denominator: point^(trace_length / 32768) - trace_generator^(255 * trace_length / 256)
+sig_verify/exponentiate_generator/add_points/slope: sig_verify__exponentiate_generator__bit * (column9_row36 - ecdsa_points__y) - column9_row100 * (column9_row68 - ecdsa_points__x).
+  numerator: point^(trace_length / 32768) - trace_generator^(255 * trace_length / 256)
+  denominator: point^(trace_length / 128) - 1
+sig_verify/exponentiate_generator/add_points/x: column9_row100 * column9_row100 - sig_verify__exponentiate_generator__bit * (column9_row68 + ecdsa_points__x + column9_row196).
+  numerator: point^(trace_length / 32768) - trace_generator^(255 * trace_length / 256)
+  denominator: point^(trace_length / 128) - 1
+sig_verify/exponentiate_generator/add_points/y: sig_verify__exponentiate_generator__bit * (column9_row36 + column9_row164) - column9_row100 * (column9_row68 - column9_row196).
+  numerator: point^(trace_length / 32768) - trace_generator^(255 * trace_length / 256)
+  denominator: point^(trace_length / 128) - 1
+sig_verify/exponentiate_generator/add_points/x_diff_inv: column9_row84 * (column9_row68 - ecdsa_points__x) - 1.
+  numerator: point^(trace_length / 32768) - trace_generator^(255 * trace_length / 256)
+  denominator: point^(trace_length / 128) - 1
+sig_verify/exponentiate_generator/copy_point/x: sig_verify__exponentiate_generator__bit_neg * (column9_row196 - column9_row68).
+  numerator: point^(trace_length / 32768) - trace_generator^(255 * trace_length / 256)
+  denominator: point^(trace_length / 128) - 1
+sig_verify/exponentiate_generator/copy_point/y: sig_verify__exponentiate_generator__bit_neg * (column9_row164 - column9_row36).
+  numerator: point^(trace_length / 32768) - trace_generator^(255 * trace_length / 256)
+  denominator: point^(trace_length / 128) - 1
+sig_verify/exponentiate_key/booleanity_test: sig_verify__exponentiate_key__bit * (sig_verify__exponentiate_key__bit - 1).
+  numerator: point^(trace_length / 16384) - trace_generator^(255 * trace_length / 256)
+  denominator: point^(trace_length / 64) - 1
+sig_verify/exponentiate_key/bit_extraction_end: column9_row24.
+  numerator: 1
+  denominator: point^(trace_length / 16384) - trace_generator^(251 * trace_length / 256)
+sig_verify/exponentiate_key/zeros_tail: column9_row24.
+  numerator: 1
+  denominator: point^(trace_length / 16384) - trace_generator^(255 * trace_length / 256)
+sig_verify/exponentiate_key/add_points/slope: sig_verify__exponentiate_key__bit * (column9_row8 - column9_row32) - column9_row40 * (column9_row48 - column9_row0).
+  numerator: point^(trace_length / 16384) - trace_generator^(255 * trace_length / 256)
+  denominator: point^(trace_length / 64) - 1
+sig_verify/exponentiate_key/add_points/x: column9_row40 * column9_row40 - sig_verify__exponentiate_key__bit * (column9_row48 + column9_row0 + column9_row112).
+  numerator: point^(trace_length / 16384) - trace_generator^(255 * trace_length / 256)
+  denominator: point^(trace_length / 64) - 1
+sig_verify/exponentiate_key/add_points/y: sig_verify__exponentiate_key__bit * (column9_row8 + column9_row72) - column9_row40 * (column9_row48 - column9_row112).
+  numerator: point^(trace_length / 16384) - trace_generator^(255 * trace_length / 256)
+  denominator: point^(trace_length / 64) - 1
+sig_verify/exponentiate_key/add_points/x_diff_inv: column9_row56 * (column9_row48 - column9_row0) - 1.
+  numerator: point^(trace_length / 16384) - trace_generator^(255 * trace_length / 256)
+  denominator: point^(trace_length / 64) - 1
+sig_verify/exponentiate_key/copy_point/x: sig_verify__exponentiate_key__bit_neg * (column9_row112 - column9_row48).
+  numerator: point^(trace_length / 16384) - trace_generator^(255 * trace_length / 256)
+  denominator: point^(trace_length / 64) - 1
+sig_verify/exponentiate_key/copy_point/y: sig_verify__exponentiate_key__bit_neg * (column9_row72 - column9_row8).
+  numerator: point^(trace_length / 16384) - trace_generator^(255 * trace_length / 256)
+  denominator: point^(trace_length / 64) - 1
+sig_verify/init_gen/x: column9_row68 - sig_config.shift_point.x.
+  numerator: 1
+  denominator: point^(trace_length / 32768) - 1
+sig_verify/init_gen/y: column9_row36 + sig_config.shift_point.y.
+  numerator: 1
+  denominator: point^(trace_length / 32768) - 1
+sig_verify/init_key/x: column9_row48 - sig_config.shift_point.x.
+  numerator: 1
+  denominator: point^(trace_length / 16384) - 1
+sig_verify/init_key/y: column9_row8 - sig_config.shift_point.y.
+  numerator: 1
+  denominator: point^(trace_length / 16384) - 1
+sig_verify/add_results/slope: column9_row32676 - column9_row16328 - column9_row32724 * (column9_row32708 - column9_row16368).
+  numerator: 1
+  denominator: point^(trace_length / 32768) - 1
+sig_verify/add_results/x: column9_row32724 * column9_row32724 - (column9_row32708 + column9_row16368 + column9_row16384).
+  numerator: 1
+  denominator: point^(trace_length / 32768) - 1
+sig_verify/add_results/y: column9_row32676 + column9_row16416 - column9_row32724 * (column9_row32708 - column9_row16384).
+  numerator: 1
+  denominator: point^(trace_length / 32768) - 1
+sig_verify/add_results/x_diff_inv: column9_row32740 * (column9_row32708 - column9_row16368) - 1.
+  numerator: 1
+  denominator: point^(trace_length / 32768) - 1
+sig_verify/extract_r/slope: column9_row32712 + sig_config.shift_point.y - column8_row3069 * (column9_row32752 - sig_config.shift_point.x).
+  numerator: 1
+  denominator: point^(trace_length / 32768) - 1
+sig_verify/extract_r/x: column8_row3069 * column8_row3069 - (column9_row32752 + sig_config.shift_point.x + column9_row24).
+  numerator: 1
+  denominator: point^(trace_length / 32768) - 1
+sig_verify/extract_r/x_diff_inv: column8_row19453 * (column9_row32752 - sig_config.shift_point.x) - 1.
+  numerator: 1
+  denominator: point^(trace_length / 32768) - 1
+sig_verify/z_nonzero: column9_row20 * column8_row11261 - 1.
+  numerator: 1
+  denominator: point^(trace_length / 32768) - 1
+sig_verify/r_and_w_nonzero: column9_row24 * column9_row16336 - 1.
+  numerator: 1
+  denominator: point^(trace_length / 16384) - 1
+sig_verify/q_on_curve/x_squared: column8_row27645 - column9_row0 * column9_row0.
+  numerator: 1
+  denominator: point^(trace_length / 32768) - 1
+sig_verify/q_on_curve/on_curve: column9_row32 * column9_row32 - (column9_row0 * column8_row27645 + sig_config.alpha * column9_row0 + sig_config.beta).
+  numerator: 1
+  denominator: point^(trace_length / 32768) - 1
