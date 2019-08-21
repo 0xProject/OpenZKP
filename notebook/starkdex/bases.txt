@@ -1,119 +1,119 @@
  hash_pool__hash__ec_subset_sum__bit * (hash_pool__hash__ec_subset_sum__bit - 1)
- column8_row3
- column8_row3
- hash_pool__hash__ec_subset_sum__bit * (column8_row2 - hash_pool_points__y) - column8_row1 * (column8_row0 - hash_pool_points__x)
- column8_row1 * column8_row1 - hash_pool__hash__ec_subset_sum__bit * (column8_row0 + hash_pool_points__x + column8_row4)
- hash_pool__hash__ec_subset_sum__bit * (column8_row2 + column8_row6) - column8_row1 * (column8_row0 - column8_row4)
- hash_pool__hash__ec_subset_sum__bit_neg * (column8_row4 - column8_row0)
- hash_pool__hash__ec_subset_sum__bit_neg * (column8_row6 - column8_row2)
- column8_row1024 - column8_row1020
- column8_row1026 - column8_row1022
- column8_row0 - shift_point.x
- column8_row2 - shift_point.y
- column8_row2044 - column8_row2051
+ trace_table[(8,i + 3)]
+ trace_table[(8,i + 3)]
+ hash_pool__hash__ec_subset_sum__bit * (trace_table[(8,i + 2)] - hash_pool_points__y) - trace_table[(8,i + 1)] * (trace_table[(8,i + 0)] - hash_pool_points__x)
+ trace_table[(8,i + 1)] * trace_table[(8,i + 1)] - hash_pool__hash__ec_subset_sum__bit * (trace_table[(8,i + 0)] + hash_pool_points__x + trace_table[(8,i + 4)])
+ hash_pool__hash__ec_subset_sum__bit * (trace_table[(8,i + 2)] + trace_table[(8,i + 6)]) - trace_table[(8,i + 1)] * (trace_table[(8,i + 0)] - trace_table[(8,i + 4)])
+ hash_pool__hash__ec_subset_sum__bit_neg * (trace_table[(8,i + 4)] - trace_table[(8,i + 0)])
+ hash_pool__hash__ec_subset_sum__bit_neg * (trace_table[(8,i + 6)] - trace_table[(8,i + 2)])
+ trace_table[(8,i + 1024)] - trace_table[(8,i + 1020)]
+ trace_table[(8,i + 1026)] - trace_table[(8,i + 1022)]
+ trace_table[(8,i + 0)] - shift_point.x
+ trace_table[(8,i + 2)] - shift_point.y
+ trace_table[(8,i + 2044)] - trace_table[(8,i + 2051)]
  state_transition__merkle_update__side_bit_extraction__bit_0 * state_transition__merkle_update__side_bit_extraction__bit_0 - state_transition__merkle_update__side_bit_extraction__bit_0
- column6_row255
+ trace_table[(6,i + 255)]
  state_transition__merkle_update__prev_authentication__hashes__ec_subset_sum__bit * (state_transition__merkle_update__prev_authentication__hashes__ec_subset_sum__bit - 1)
- column3_row0
- column3_row0
- state_transition__merkle_update__prev_authentication__hashes__ec_subset_sum__bit * (column1_row0 - merkle_hash_points__y) - column2_row0 * (column0_row0 - merkle_hash_points__x)
- column2_row0 * column2_row0 - state_transition__merkle_update__prev_authentication__hashes__ec_subset_sum__bit * (column0_row0 + merkle_hash_points__x + column0_row1)
- state_transition__merkle_update__prev_authentication__hashes__ec_subset_sum__bit * (column1_row0 + column1_row1) - column2_row0 * (column0_row0 - column0_row1)
- state_transition__merkle_update__prev_authentication__hashes__ec_subset_sum__bit_neg * (column0_row1 - column0_row0)
- state_transition__merkle_update__prev_authentication__hashes__ec_subset_sum__bit_neg * (column1_row1 - column1_row0)
- column0_row256 - column0_row255
- column1_row256 - column1_row255
- column0_row0 - shift_point.x
- column1_row0 - shift_point.y
- (1 - state_transition__merkle_update__side_bit_extraction__bit_1) * (column0_row511 - column3_row512)
- state_transition__merkle_update__side_bit_extraction__bit_1 * (column0_row511 - column3_row768)
+ trace_table[(3,i + 0)]
+ trace_table[(3,i + 0)]
+ state_transition__merkle_update__prev_authentication__hashes__ec_subset_sum__bit * (trace_table[(1,i + 0)] - merkle_hash_points__y) - trace_table[(2,i + 0)] * (trace_table[(0,i + 0)] - merkle_hash_points__x)
+ trace_table[(2,i + 0)] * trace_table[(2,i + 0)] - state_transition__merkle_update__prev_authentication__hashes__ec_subset_sum__bit * (trace_table[(0,i + 0)] + merkle_hash_points__x + trace_table[(0,i + 1)])
+ state_transition__merkle_update__prev_authentication__hashes__ec_subset_sum__bit * (trace_table[(1,i + 0)] + trace_table[(1,i + 1)]) - trace_table[(2,i + 0)] * (trace_table[(0,i + 0)] - trace_table[(0,i + 1)])
+ state_transition__merkle_update__prev_authentication__hashes__ec_subset_sum__bit_neg * (trace_table[(0,i + 1)] - trace_table[(0,i + 0)])
+ state_transition__merkle_update__prev_authentication__hashes__ec_subset_sum__bit_neg * (trace_table[(1,i + 1)] - trace_table[(1,i + 0)])
+ trace_table[(0,i + 256)] - trace_table[(0,i + 255)]
+ trace_table[(1,i + 256)] - trace_table[(1,i + 255)]
+ trace_table[(0,i + 0)] - shift_point.x
+ trace_table[(1,i + 0)] - shift_point.y
+ (1 - state_transition__merkle_update__side_bit_extraction__bit_1) * (trace_table[(0,i + 511)] - trace_table[(3,i + 512)])
+ state_transition__merkle_update__side_bit_extraction__bit_1 * (trace_table[(0,i + 511)] - trace_table[(3,i + 768)])
  state_transition__merkle_update__new_authentication__hashes__ec_subset_sum__bit * (state_transition__merkle_update__new_authentication__hashes__ec_subset_sum__bit - 1)
- column7_row0
- column7_row0
- state_transition__merkle_update__new_authentication__hashes__ec_subset_sum__bit * (column5_row0 - merkle_hash_points__y) - column6_row0 * (column4_row0 - merkle_hash_points__x)
- column6_row0 * column6_row0 - state_transition__merkle_update__new_authentication__hashes__ec_subset_sum__bit * (column4_row0 + merkle_hash_points__x + column4_row1)
- state_transition__merkle_update__new_authentication__hashes__ec_subset_sum__bit * (column5_row0 + column5_row1) - column6_row0 * (column4_row0 - column4_row1)
- state_transition__merkle_update__new_authentication__hashes__ec_subset_sum__bit_neg * (column4_row1 - column4_row0)
- state_transition__merkle_update__new_authentication__hashes__ec_subset_sum__bit_neg * (column5_row1 - column5_row0)
- column4_row256 - column4_row255
- column5_row256 - column5_row255
- column4_row0 - shift_point.x
- column5_row0 - shift_point.y
- (1 - state_transition__merkle_update__side_bit_extraction__bit_1) * (column4_row511 - column7_row512)
- state_transition__merkle_update__side_bit_extraction__bit_1 * (column4_row511 - column7_row768)
+ trace_table[(7,i + 0)]
+ trace_table[(7,i + 0)]
+ state_transition__merkle_update__new_authentication__hashes__ec_subset_sum__bit * (trace_table[(5,i + 0)] - merkle_hash_points__y) - trace_table[(6,i + 0)] * (trace_table[(4,i + 0)] - merkle_hash_points__x)
+ trace_table[(6,i + 0)] * trace_table[(6,i + 0)] - state_transition__merkle_update__new_authentication__hashes__ec_subset_sum__bit * (trace_table[(4,i + 0)] + merkle_hash_points__x + trace_table[(4,i + 1)])
+ state_transition__merkle_update__new_authentication__hashes__ec_subset_sum__bit * (trace_table[(5,i + 0)] + trace_table[(5,i + 1)]) - trace_table[(6,i + 0)] * (trace_table[(4,i + 0)] - trace_table[(4,i + 1)])
+ state_transition__merkle_update__new_authentication__hashes__ec_subset_sum__bit_neg * (trace_table[(4,i + 1)] - trace_table[(4,i + 0)])
+ state_transition__merkle_update__new_authentication__hashes__ec_subset_sum__bit_neg * (trace_table[(5,i + 1)] - trace_table[(5,i + 0)])
+ trace_table[(4,i + 256)] - trace_table[(4,i + 255)]
+ trace_table[(5,i + 256)] - trace_table[(5,i + 255)]
+ trace_table[(4,i + 0)] - shift_point.x
+ trace_table[(5,i + 0)] - shift_point.y
+ (1 - state_transition__merkle_update__side_bit_extraction__bit_1) * (trace_table[(4,i + 511)] - trace_table[(7,i + 512)])
+ state_transition__merkle_update__side_bit_extraction__bit_1 * (trace_table[(4,i + 511)] - trace_table[(7,i + 768)])
  state_transition__merkle_update__prev_authentication__sibling_0 - state_transition__merkle_update__new_authentication__sibling_0
- state_transition__merkle_update__prev_authentication__leaf_0 - column8_row4092
- state_transition__merkle_update__new_authentication__leaf_0 - column8_row12284
- is_modification * (column9_row16376 * boundary_base - boundary_key)
- is_modification * (column9_row16360 * boundary_base - boundary_token)
- is_modification * (column8_row3075 * boundary_base - boundary_amount0)
- is_modification * (column8_row11267 * boundary_base - boundary_amount1)
- is_modification * (column6_row255 * boundary_base - boundary_vault_id)
+ state_transition__merkle_update__prev_authentication__leaf_0 - trace_table[(8,i + 4092)]
+ state_transition__merkle_update__new_authentication__leaf_0 - trace_table[(8,i + 12284)]
+ is_modification * (trace_table[(9,i + 16376)] * boundary_base - boundary_key)
+ is_modification * (trace_table[(9,i + 16360)] * boundary_base - boundary_token)
+ is_modification * (trace_table[(8,i + 3075)] * boundary_base - boundary_amount0)
+ is_modification * (trace_table[(8,i + 11267)] * boundary_base - boundary_amount1)
+ is_modification * (trace_table[(6,i + 255)] * boundary_base - boundary_vault_id)
  amounts_range_check__bit_0 * amounts_range_check__bit_0 - amounts_range_check__bit_0
- column9_row4
- is_settlement * (column8_row3075 - column8_row11267 - (column8_row27651 - column8_row19459))
- is_settlement * (column8_row35843 - column8_row44035 - (column8_row60419 - column8_row52227))
- (column9_row4 - (column8_row3075 - column8_row11267)) * is_settlement
- (column9_row32772 - (column8_row35843 - column8_row44035)) * is_settlement
- column9_row8196 - column8_row11267
- sig_verify__doubling_key__x_squared + sig_verify__doubling_key__x_squared + sig_verify__doubling_key__x_squared + sig_config.alpha - (column9_row32 + column9_row32) * column9_row16
- column9_row16 * column9_row16 - (column9_row0 + column9_row0 + column9_row64)
- column9_row32 + column9_row96 - column9_row16 * (column9_row0 - column9_row64)
+ trace_table[(9,i + 4)]
+ is_settlement * (trace_table[(8,i + 3075)] - trace_table[(8,i + 11267)] - (trace_table[(8,i + 27651)] - trace_table[(8,i + 19459)]))
+ is_settlement * (trace_table[(8,i + 35843)] - trace_table[(8,i + 44035)] - (trace_table[(8,i + 60419)] - trace_table[(8,i + 52227)]))
+ (trace_table[(9,i + 4)] - (trace_table[(8,i + 3075)] - trace_table[(8,i + 11267)])) * is_settlement
+ (trace_table[(9,i + 32772)] - (trace_table[(8,i + 35843)] - trace_table[(8,i + 44035)])) * is_settlement
+ trace_table[(9,i + 8196)] - trace_table[(8,i + 11267)]
+ sig_verify__doubling_key__x_squared + sig_verify__doubling_key__x_squared + sig_verify__doubling_key__x_squared + sig_config.alpha - (trace_table[(9,i + 32)] + trace_table[(9,i + 32)]) * trace_table[(9,i + 16)]
+ trace_table[(9,i + 16)] * trace_table[(9,i + 16)] - (trace_table[(9,i + 0)] + trace_table[(9,i + 0)] + trace_table[(9,i + 64)])
+ trace_table[(9,i + 32)] + trace_table[(9,i + 96)] - trace_table[(9,i + 16)] * (trace_table[(9,i + 0)] - trace_table[(9,i + 64)])
  sig_verify__exponentiate_generator__bit * (sig_verify__exponentiate_generator__bit - 1)
- column9_row20
- column9_row20
- sig_verify__exponentiate_generator__bit * (column9_row36 - ecdsa_points__y) - column9_row100 * (column9_row68 - ecdsa_points__x)
- column9_row100 * column9_row100 - sig_verify__exponentiate_generator__bit * (column9_row68 + ecdsa_points__x + column9_row196)
- sig_verify__exponentiate_generator__bit * (column9_row36 + column9_row164) - column9_row100 * (column9_row68 - column9_row196)
- column9_row84 * (column9_row68 - ecdsa_points__x) - 1
- sig_verify__exponentiate_generator__bit_neg * (column9_row196 - column9_row68)
- sig_verify__exponentiate_generator__bit_neg * (column9_row164 - column9_row36)
+ trace_table[(9,i + 20)]
+ trace_table[(9,i + 20)]
+ sig_verify__exponentiate_generator__bit * (trace_table[(9,i + 36)] - ecdsa_points__y) - trace_table[(9,i + 100)] * (trace_table[(9,i + 68)] - ecdsa_points__x)
+ trace_table[(9,i + 100)] * trace_table[(9,i + 100)] - sig_verify__exponentiate_generator__bit * (trace_table[(9,i + 68)] + ecdsa_points__x + trace_table[(9,i + 196)])
+ sig_verify__exponentiate_generator__bit * (trace_table[(9,i + 36)] + trace_table[(9,i + 164)]) - trace_table[(9,i + 100)] * (trace_table[(9,i + 68)] - trace_table[(9,i + 196)])
+ trace_table[(9,i + 84)] * (trace_table[(9,i + 68)] - ecdsa_points__x) - 1
+ sig_verify__exponentiate_generator__bit_neg * (trace_table[(9,i + 196)] - trace_table[(9,i + 68)])
+ sig_verify__exponentiate_generator__bit_neg * (trace_table[(9,i + 164)] - trace_table[(9,i + 36)])
  sig_verify__exponentiate_key__bit * (sig_verify__exponentiate_key__bit - 1)
- column9_row24
- column9_row24
- sig_verify__exponentiate_key__bit * (column9_row8 - column9_row32) - column9_row40 * (column9_row48 - column9_row0)
- column9_row40 * column9_row40 - sig_verify__exponentiate_key__bit * (column9_row48 + column9_row0 + column9_row112)
- sig_verify__exponentiate_key__bit * (column9_row8 + column9_row72) - column9_row40 * (column9_row48 - column9_row112)
- column9_row56 * (column9_row48 - column9_row0) - 1
- sig_verify__exponentiate_key__bit_neg * (column9_row112 - column9_row48)
- sig_verify__exponentiate_key__bit_neg * (column9_row72 - column9_row8)
- column9_row68 - sig_config.shift_point.x
- column9_row36 + sig_config.shift_point.y
- column9_row48 - sig_config.shift_point.x
- column9_row8 - sig_config.shift_point.y
- column9_row32676 - column9_row16328 - column9_row32724 * (column9_row32708 - column9_row16368)
- column9_row32724 * column9_row32724 - (column9_row32708 + column9_row16368 + column9_row16384)
- column9_row32676 + column9_row16416 - column9_row32724 * (column9_row32708 - column9_row16384)
- column9_row32740 * (column9_row32708 - column9_row16368) - 1
- column9_row32712 + sig_config.shift_point.y - column8_row3069 * (column9_row32752 - sig_config.shift_point.x)
- column8_row3069 * column8_row3069 - (column9_row32752 + sig_config.shift_point.x + column9_row24)
- column8_row19453 * (column9_row32752 - sig_config.shift_point.x) - 1
- column9_row20 * column8_row11261 - 1
- column9_row24 * column9_row16336 - 1
- column8_row27645 - column9_row0 * column9_row0
- column9_row32 * column9_row32 - (column9_row0 * column8_row27645 + sig_config.alpha * column9_row0 + sig_config.beta)
- is_settlement * (column8_row7171 - (((column6_row255 * vault_shift + column6_row49407) * amount_shift + column9_row4) * amount_shift + column9_row32772) * trade_shift)
- is_settlement * (column8_row36867 - column8_row8188)
- is_settlement * (column8_row37891 - column6_row16639)
- is_settlement * (column8_row39939 - column6_row33023)
- is_settlement * (column8_row8188 - column9_row20)
- is_settlement * (column8_row40956 - column9_row32788)
- is_settlement * (column9_row0 - column9_row16376)
- is_settlement * (column8_row4099 - column9_row16360)
- is_settlement * (column9_row0 - column9_row65528)
- is_settlement * (column8_row5123 - column9_row65512)
- is_settlement * (column9_row32768 - column9_row32760)
- is_settlement * (column8_row4099 - column9_row32744)
- is_settlement * (column9_row32768 - column9_row49144)
- is_settlement * (column8_row5123 - column9_row49128)
- column8_row1021 * (1 - column8_row1021)
- column8_row1021 * column8_row3075
- column8_row1021 * column8_row5117
- column8_row3075 * column8_row5117 - (1 - column8_row1021)
- (1 - column8_row1021) * column9_row16376 - column8_row3
- (1 - column8_row1021) * column9_row16360 - column8_row1027
- (1 - column8_row9213) * column9_row16376 - column8_row8195
- (1 - column8_row9213) * column9_row16360 - column8_row9219
+ trace_table[(9,i + 24)]
+ trace_table[(9,i + 24)]
+ sig_verify__exponentiate_key__bit * (trace_table[(9,i + 8)] - trace_table[(9,i + 32)]) - trace_table[(9,i + 40)] * (trace_table[(9,i + 48)] - trace_table[(9,i + 0)])
+ trace_table[(9,i + 40)] * trace_table[(9,i + 40)] - sig_verify__exponentiate_key__bit * (trace_table[(9,i + 48)] + trace_table[(9,i + 0)] + trace_table[(9,i + 112)])
+ sig_verify__exponentiate_key__bit * (trace_table[(9,i + 8)] + trace_table[(9,i + 72)]) - trace_table[(9,i + 40)] * (trace_table[(9,i + 48)] - trace_table[(9,i + 112)])
+ trace_table[(9,i + 56)] * (trace_table[(9,i + 48)] - trace_table[(9,i + 0)]) - 1
+ sig_verify__exponentiate_key__bit_neg * (trace_table[(9,i + 112)] - trace_table[(9,i + 48)])
+ sig_verify__exponentiate_key__bit_neg * (trace_table[(9,i + 72)] - trace_table[(9,i + 8)])
+ trace_table[(9,i + 68)] - sig_config.shift_point.x
+ trace_table[(9,i + 36)] + sig_config.shift_point.y
+ trace_table[(9,i + 48)] - sig_config.shift_point.x
+ trace_table[(9,i + 8)] - sig_config.shift_point.y
+ trace_table[(9,i + 32676)] - trace_table[(9,i + 16328)] - trace_table[(9,i + 32724)] * (trace_table[(9,i + 32708)] - trace_table[(9,i + 16368)])
+ trace_table[(9,i + 32724)] * trace_table[(9,i + 32724)] - (trace_table[(9,i + 32708)] + trace_table[(9,i + 16368)] + trace_table[(9,i + 16384)])
+ trace_table[(9,i + 32676)] + trace_table[(9,i + 16416)] - trace_table[(9,i + 32724)] * (trace_table[(9,i + 32708)] - trace_table[(9,i + 16384)])
+ trace_table[(9,i + 32740)] * (trace_table[(9,i + 32708)] - trace_table[(9,i + 16368)]) - 1
+ trace_table[(9,i + 32712)] + sig_config.shift_point.y - trace_table[(8,i + 3069)] * (trace_table[(9,i + 32752)] - sig_config.shift_point.x)
+ trace_table[(8,i + 3069)] * trace_table[(8,i + 3069)] - (trace_table[(9,i + 32752)] + sig_config.shift_point.x + trace_table[(9,i + 24)])
+ trace_table[(8,i + 19453)] * (trace_table[(9,i + 32752)] - sig_config.shift_point.x) - 1
+ trace_table[(9,i + 20)] * trace_table[(8,i + 11261)] - 1
+ trace_table[(9,i + 24)] * trace_table[(9,i + 16336)] - 1
+ trace_table[(8,i + 27645)] - trace_table[(9,i + 0)] * trace_table[(9,i + 0)]
+ trace_table[(9,i + 32)] * trace_table[(9,i + 32)] - (trace_table[(9,i + 0)] * trace_table[(8,i + 27645)] + sig_config.alpha * trace_table[(9,i + 0)] + sig_config.beta)
+ is_settlement * (trace_table[(8,i + 7171)] - (((trace_table[(6,i + 255)] * vault_shift + trace_table[(6,i + 49407)]) * amount_shift + trace_table[(9,i + 4)]) * amount_shift + trace_table[(9,i + 32772)]) * trade_shift)
+ is_settlement * (trace_table[(8,i + 36867)] - trace_table[(8,i + 8188)])
+ is_settlement * (trace_table[(8,i + 37891)] - trace_table[(6,i + 16639)])
+ is_settlement * (trace_table[(8,i + 39939)] - trace_table[(6,i + 33023)])
+ is_settlement * (trace_table[(8,i + 8188)] - trace_table[(9,i + 20)])
+ is_settlement * (trace_table[(8,i + 40956)] - trace_table[(9,i + 32788)])
+ is_settlement * (trace_table[(9,i + 0)] - trace_table[(9,i + 16376)])
+ is_settlement * (trace_table[(8,i + 4099)] - trace_table[(9,i + 16360)])
+ is_settlement * (trace_table[(9,i + 0)] - trace_table[(9,i + 65528)])
+ is_settlement * (trace_table[(8,i + 5123)] - trace_table[(9,i + 65512)])
+ is_settlement * (trace_table[(9,i + 32768)] - trace_table[(9,i + 32760)])
+ is_settlement * (trace_table[(8,i + 4099)] - trace_table[(9,i + 32744)])
+ is_settlement * (trace_table[(9,i + 32768)] - trace_table[(9,i + 49144)])
+ is_settlement * (trace_table[(8,i + 5123)] - trace_table[(9,i + 49128)])
+ trace_table[(8,i + 1021)] * (1 - trace_table[(8,i + 1021)])
+ trace_table[(8,i + 1021)] * trace_table[(8,i + 3075)]
+ trace_table[(8,i + 1021)] * trace_table[(8,i + 5117)]
+ trace_table[(8,i + 3075)] * trace_table[(8,i + 5117)] - (1 - trace_table[(8,i + 1021)])
+ (1 - trace_table[(8,i + 1021)]) * trace_table[(9,i + 16376)] - trace_table[(8,i + 3)]
+ (1 - trace_table[(8,i + 1021)]) * trace_table[(9,i + 16360)] - trace_table[(8,i + 1027)]
+ (1 - trace_table[(8,i + 9213)]) * trace_table[(9,i + 16376)] - trace_table[(8,i + 8195)]
+ (1 - trace_table[(8,i + 9213)]) * trace_table[(9,i + 16360)] - trace_table[(8,i + 9219)]
  column0_row_expr0 - initial_root
  column4_row_expr1 - final_root
  column4_row_expr0 - column0_row_expr2
