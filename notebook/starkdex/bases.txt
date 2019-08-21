@@ -1,0 +1,120 @@
+ hash_pool__hash__ec_subset_sum__bit * (hash_pool__hash__ec_subset_sum__bit - 1)
+ column8_row3
+ column8_row3
+ hash_pool__hash__ec_subset_sum__bit * (column8_row2 - hash_pool_points__y) - column8_row1 * (column8_row0 - hash_pool_points__x)
+ column8_row1 * column8_row1 - hash_pool__hash__ec_subset_sum__bit * (column8_row0 + hash_pool_points__x + column8_row4)
+ hash_pool__hash__ec_subset_sum__bit * (column8_row2 + column8_row6) - column8_row1 * (column8_row0 - column8_row4)
+ hash_pool__hash__ec_subset_sum__bit_neg * (column8_row4 - column8_row0)
+ hash_pool__hash__ec_subset_sum__bit_neg * (column8_row6 - column8_row2)
+ column8_row1024 - column8_row1020
+ column8_row1026 - column8_row1022
+ column8_row0 - shift_point.x
+ column8_row2 - shift_point.y
+ column8_row2044 - column8_row2051
+ state_transition__merkle_update__side_bit_extraction__bit_0 * state_transition__merkle_update__side_bit_extraction__bit_0 - state_transition__merkle_update__side_bit_extraction__bit_0
+ column6_row255
+ state_transition__merkle_update__prev_authentication__hashes__ec_subset_sum__bit * (state_transition__merkle_update__prev_authentication__hashes__ec_subset_sum__bit - 1)
+ column3_row0
+ column3_row0
+ state_transition__merkle_update__prev_authentication__hashes__ec_subset_sum__bit * (column1_row0 - merkle_hash_points__y) - column2_row0 * (column0_row0 - merkle_hash_points__x)
+ column2_row0 * column2_row0 - state_transition__merkle_update__prev_authentication__hashes__ec_subset_sum__bit * (column0_row0 + merkle_hash_points__x + column0_row1)
+ state_transition__merkle_update__prev_authentication__hashes__ec_subset_sum__bit * (column1_row0 + column1_row1) - column2_row0 * (column0_row0 - column0_row1)
+ state_transition__merkle_update__prev_authentication__hashes__ec_subset_sum__bit_neg * (column0_row1 - column0_row0)
+ state_transition__merkle_update__prev_authentication__hashes__ec_subset_sum__bit_neg * (column1_row1 - column1_row0)
+ column0_row256 - column0_row255
+ column1_row256 - column1_row255
+ column0_row0 - shift_point.x
+ column1_row0 - shift_point.y
+ (1 - state_transition__merkle_update__side_bit_extraction__bit_1) * (column0_row511 - column3_row512)
+ state_transition__merkle_update__side_bit_extraction__bit_1 * (column0_row511 - column3_row768)
+ state_transition__merkle_update__new_authentication__hashes__ec_subset_sum__bit * (state_transition__merkle_update__new_authentication__hashes__ec_subset_sum__bit - 1)
+ column7_row0
+ column7_row0
+ state_transition__merkle_update__new_authentication__hashes__ec_subset_sum__bit * (column5_row0 - merkle_hash_points__y) - column6_row0 * (column4_row0 - merkle_hash_points__x)
+ column6_row0 * column6_row0 - state_transition__merkle_update__new_authentication__hashes__ec_subset_sum__bit * (column4_row0 + merkle_hash_points__x + column4_row1)
+ state_transition__merkle_update__new_authentication__hashes__ec_subset_sum__bit * (column5_row0 + column5_row1) - column6_row0 * (column4_row0 - column4_row1)
+ state_transition__merkle_update__new_authentication__hashes__ec_subset_sum__bit_neg * (column4_row1 - column4_row0)
+ state_transition__merkle_update__new_authentication__hashes__ec_subset_sum__bit_neg * (column5_row1 - column5_row0)
+ column4_row256 - column4_row255
+ column5_row256 - column5_row255
+ column4_row0 - shift_point.x
+ column5_row0 - shift_point.y
+ (1 - state_transition__merkle_update__side_bit_extraction__bit_1) * (column4_row511 - column7_row512)
+ state_transition__merkle_update__side_bit_extraction__bit_1 * (column4_row511 - column7_row768)
+ state_transition__merkle_update__prev_authentication__sibling_0 - state_transition__merkle_update__new_authentication__sibling_0
+ state_transition__merkle_update__prev_authentication__leaf_0 - column8_row4092
+ state_transition__merkle_update__new_authentication__leaf_0 - column8_row12284
+ is_modification * (column9_row16376 * boundary_base - boundary_key)
+ is_modification * (column9_row16360 * boundary_base - boundary_token)
+ is_modification * (column8_row3075 * boundary_base - boundary_amount0)
+ is_modification * (column8_row11267 * boundary_base - boundary_amount1)
+ is_modification * (column6_row255 * boundary_base - boundary_vault_id)
+ amounts_range_check__bit_0 * amounts_range_check__bit_0 - amounts_range_check__bit_0
+ column9_row4
+ is_settlement * (column8_row3075 - column8_row11267 - (column8_row27651 - column8_row19459))
+ is_settlement * (column8_row35843 - column8_row44035 - (column8_row60419 - column8_row52227))
+ (column9_row4 - (column8_row3075 - column8_row11267)) * is_settlement
+ (column9_row32772 - (column8_row35843 - column8_row44035)) * is_settlement
+ column9_row8196 - column8_row11267
+ sig_verify__doubling_key__x_squared + sig_verify__doubling_key__x_squared + sig_verify__doubling_key__x_squared + sig_config.alpha - (column9_row32 + column9_row32) * column9_row16
+ column9_row16 * column9_row16 - (column9_row0 + column9_row0 + column9_row64)
+ column9_row32 + column9_row96 - column9_row16 * (column9_row0 - column9_row64)
+ sig_verify__exponentiate_generator__bit * (sig_verify__exponentiate_generator__bit - 1)
+ column9_row20
+ column9_row20
+ sig_verify__exponentiate_generator__bit * (column9_row36 - ecdsa_points__y) - column9_row100 * (column9_row68 - ecdsa_points__x)
+ column9_row100 * column9_row100 - sig_verify__exponentiate_generator__bit * (column9_row68 + ecdsa_points__x + column9_row196)
+ sig_verify__exponentiate_generator__bit * (column9_row36 + column9_row164) - column9_row100 * (column9_row68 - column9_row196)
+ column9_row84 * (column9_row68 - ecdsa_points__x) - 1
+ sig_verify__exponentiate_generator__bit_neg * (column9_row196 - column9_row68)
+ sig_verify__exponentiate_generator__bit_neg * (column9_row164 - column9_row36)
+ sig_verify__exponentiate_key__bit * (sig_verify__exponentiate_key__bit - 1)
+ column9_row24
+ column9_row24
+ sig_verify__exponentiate_key__bit * (column9_row8 - column9_row32) - column9_row40 * (column9_row48 - column9_row0)
+ column9_row40 * column9_row40 - sig_verify__exponentiate_key__bit * (column9_row48 + column9_row0 + column9_row112)
+ sig_verify__exponentiate_key__bit * (column9_row8 + column9_row72) - column9_row40 * (column9_row48 - column9_row112)
+ column9_row56 * (column9_row48 - column9_row0) - 1
+ sig_verify__exponentiate_key__bit_neg * (column9_row112 - column9_row48)
+ sig_verify__exponentiate_key__bit_neg * (column9_row72 - column9_row8)
+ column9_row68 - sig_config.shift_point.x
+ column9_row36 + sig_config.shift_point.y
+ column9_row48 - sig_config.shift_point.x
+ column9_row8 - sig_config.shift_point.y
+ column9_row32676 - column9_row16328 - column9_row32724 * (column9_row32708 - column9_row16368)
+ column9_row32724 * column9_row32724 - (column9_row32708 + column9_row16368 + column9_row16384)
+ column9_row32676 + column9_row16416 - column9_row32724 * (column9_row32708 - column9_row16384)
+ column9_row32740 * (column9_row32708 - column9_row16368) - 1
+ column9_row32712 + sig_config.shift_point.y - column8_row3069 * (column9_row32752 - sig_config.shift_point.x)
+ column8_row3069 * column8_row3069 - (column9_row32752 + sig_config.shift_point.x + column9_row24)
+ column8_row19453 * (column9_row32752 - sig_config.shift_point.x) - 1
+ column9_row20 * column8_row11261 - 1
+ column9_row24 * column9_row16336 - 1
+ column8_row27645 - column9_row0 * column9_row0
+ column9_row32 * column9_row32 - (column9_row0 * column8_row27645 + sig_config.alpha * column9_row0 + sig_config.beta)
+ is_settlement * (column8_row7171 - (((column6_row255 * vault_shift + column6_row49407) * amount_shift + column9_row4) * amount_shift + column9_row32772) * trade_shift)
+ is_settlement * (column8_row36867 - column8_row8188)
+ is_settlement * (column8_row37891 - column6_row16639)
+ is_settlement * (column8_row39939 - column6_row33023)
+ is_settlement * (column8_row8188 - column9_row20)
+ is_settlement * (column8_row40956 - column9_row32788)
+ is_settlement * (column9_row0 - column9_row16376)
+ is_settlement * (column8_row4099 - column9_row16360)
+ is_settlement * (column9_row0 - column9_row65528)
+ is_settlement * (column8_row5123 - column9_row65512)
+ is_settlement * (column9_row32768 - column9_row32760)
+ is_settlement * (column8_row4099 - column9_row32744)
+ is_settlement * (column9_row32768 - column9_row49144)
+ is_settlement * (column8_row5123 - column9_row49128)
+ column8_row1021 * (1 - column8_row1021)
+ column8_row1021 * column8_row3075
+ column8_row1021 * column8_row5117
+ column8_row3075 * column8_row5117 - (1 - column8_row1021)
+ (1 - column8_row1021) * column9_row16376 - column8_row3
+ (1 - column8_row1021) * column9_row16360 - column8_row1027
+ (1 - column8_row9213) * column9_row16376 - column8_row8195
+ (1 - column8_row9213) * column9_row16360 - column8_row9219
+ column0_row_expr0 - initial_root
+ column4_row_expr1 - final_root
+ column4_row_expr0 - column0_row_expr2
+ is_modification * (column4_row_expr0 - column4_row_expr1)
