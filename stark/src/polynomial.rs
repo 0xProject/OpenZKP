@@ -39,18 +39,23 @@ impl DensePolynomial {
         result
     }
 
+    // Returns a polynomial such that f.shift(s)(x) = f(s * y).
+    pub fn shift(&self, factor: &FieldElement) -> Self {
+        let mut shifted_coefficients = self.0.clone();
+        let mut power = FieldElement::ONE;
+        for coefficient in shifted_coefficients.iter_mut() {
+            *coefficient *= &power;
+            power *= factor;
+        }
+        Self(shifted_coefficients)
+    }
+
     pub fn next(&self) -> Self {
         // TODO: implement this without assuming that the polynomial has length equal to
         // the trace length.
         let trace_generator =
             FieldElement::root(self.len()).expect("DensePolynomial length doesn't have generator.");
-        let mut shifted_coefficients = self.0.clone();
-        let mut power = FieldElement::ONE;
-        for coefficient in shifted_coefficients.iter_mut() {
-            *coefficient *= &power;
-            power *= &trace_generator;
-        }
-        Self(shifted_coefficients)
+        self.shift(&trace_generator)
     }
 
     // Removes trailing zeros or appends them so that the length is minimal and a
@@ -471,6 +476,11 @@ mod tests {
         x: FieldElement,
     ) -> bool {
         &c * a.evaluate(&x) == (&c * &a).evaluate(&x)
+    }
+
+    #[quickcheck]
+    fn shift_evaluation_equivalence(a: DensePolynomial, s: FieldElement, x: FieldElement) -> bool {
+        a.shift(&s).evaluate(&x) == a.evaluate(&(s * x))
     }
 
     #[quickcheck]
