@@ -62,8 +62,8 @@ jobs:
       - RUSTC_WRAPPER: sccache
       - SCCACHE_CACHE_SIZE: 1G
       - NIGHTLY: nightly-2019-08-15
-      - PROJECTS: -p u256 -p primefield -p ecc -p starkdex -p stark -p macros-decl -p macros-impl -p macros-lib
-      - NO_STD_PROJECTS: macros_decl u256 primefield ecc
+      - PACKAGES: -p u256 -p primefield -p ecc -p starkdex -p stark -p macros-decl -p macros-impl -p macros-lib
+      - NO_STD_PACKAGES: macros_decl u256 primefield ecc
     steps:
       - checkout
       - restore-toolchain-cache
@@ -84,13 +84,13 @@ jobs:
           no_output_timeout: 1800s
       - run:
           name: Build all targets on stable
-          command: cargo build $PROJECTS --all-targets --all-features
+          command: cargo build $PACKAGES --all-targets --all-features
       - run:
           name: Build all targets on stable in release mode
-          command: cargo build --release $PROJECTS --all-targets --all-features
+          command: cargo build --release $PACKAGES --all-targets --all-features
       - run:
           name: Build all targets on nightly
-          command: cargo +$NIGHTLY build $PROJECTS --all-targets --all-features
+          command: cargo +$NIGHTLY build $PACKAGES --all-targets --all-features
       - run:
           name: Build benchmarks
           # Exclude benchmarks that compare against external crates (pulls in a lot of deps)
@@ -106,12 +106,12 @@ jobs:
           # See: https://forge.rust-lang.org/platform-support.html
           # We only build libraries and binaries, as we are not interested in
           # the tests/benchmarks/examples working in no_std
-          name: Check no_std targets on a platform that has no std
+          name: Check no std packages on a platform that has no std
           command: |
             # HACK: We use a for loop here because cargo across multiple
-            # projects does not respect feature flags. This also helps
+            # PACKAGES does not respect feature flags. This also helps
             # identifying the failing project.
-            for i in $NO_STD_PROJECTS; do
+            for i in $NO_STD_PACKAGES; do
               pushd $i
               cargo +$NIGHTLY check --lib --bins --no-default-features --target=thumbv7m-none-eabi
               popd
@@ -126,18 +126,18 @@ jobs:
             # wasm-gc $i.wasm $i.compact.wasm
       - run:
           name: Lint with rustformat nightly
-          command: cargo +$NIGHTLY fmt $PROJECTS -- --check
-          # TODO: Also cover substrate projects
+          command: cargo +$NIGHTLY fmt $PACKAGES -- --check
+          # TODO: Also cover substrate PACKAGES
       - run:
           name: Lint with clippy
-          command: cargo clippy $PROJECTS --all-targets --all-features
-          # TODO: Also cover substrate projects
+          command: cargo clippy $PACKAGES --all-targets --all-features
+          # TODO: Also cover substrate PACKAGES
       - run:
           name: Test debug build
-          command: cargo test --features test $PROJECTS -- --nocapture
+          command: cargo test --features test $PACKAGES -- --nocapture
       - run:
           name: Test release build
-          command: cargo test --features test --release $PROJECTS -- --nocapture
+          command: cargo test --features test --release $PACKAGES -- --nocapture
       - run:
           name: Test benchmarks
           command: |
