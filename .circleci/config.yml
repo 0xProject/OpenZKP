@@ -84,6 +84,7 @@ jobs:
             rustup --version
             wasm-gc --help > /dev/null # Run it to make sure it's executable
           no_output_timeout: 1800s
+      - save-toolchain-cache
       - run:
           name: Build all targets on stable
           command: cargo build $PACKAGES --all-targets --all-features
@@ -123,6 +124,7 @@ jobs:
             # cargo +$NIGHTLY build --release
             # cp target/wasm32-unknown-unknown/release/runtime.wasm ./
             # wasm-gc $i.wasm $i.compact.wasm
+      - save-sccache-cache
       - run:
           name: Lint with rustformat nightly
           command: cargo +$NIGHTLY fmt --all -- --check
@@ -147,8 +149,6 @@ jobs:
             # we enable all features (which makes sense from a test coverage perspective).
             # TODO: We don't need an optimized build here, re-using debug build would be ok.
             cargo bench --bench benchmark $PACKAGES --all-features -- --test
-      - save-sccache-cache
-      - save-toolchain-cache
 
 workflows:
   version: 2
