@@ -60,7 +60,7 @@ jobs:
       - RUST_BACKTRACE: 1
       - RUSTFLAGS: -Dwarnings
       - RUSTC_WRAPPER: sccache
-      - SCCACHE_CACHE_SIZE: 2G
+      - SCCACHE_CACHE_SIZE: 1G
       - NIGHTLY: nightly-2019-08-15
         # Exclude benchmarks that compare against external crates (pulls in a lot of deps)
         # Exclude substrate-node (also pulls in a lot of deps, and currently fails)
