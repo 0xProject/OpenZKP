@@ -1,25 +1,19 @@
 import json
 
 with open("denominators.json") as f:
-    denominators = json.load(f)
+    denominator_mapping = json.load(f)
 
 with open("numerators.json") as f:
-    numerators = json.load(f)
-    #
-    # if re.match(r'', line):
-    #     print line
-    #
-    # first, second = line.split("-", 1)
-    # try:
-    #     base, power = first.split("^", 1)
-    # except ValueError:
-    #     base = first
-    #     power = "(trace_length / trace_length)"
-    #
-    # numerator, denominator = power.split("/", 1)
-    # denominator = denominator[:-1]
-    #
-    # print line[:-1],
-    # print '->'
-    # print '\t%s * i %% trace_length == 0 ' % (denominator)
-    # print first, second
+    numerator_mapping = json.load(f)
+
+with open("everything.txt") as f:
+    lines = f.readlines()
+
+numerators = [numerator_mapping[line[11:-1]] for line in lines[1::3]]
+denominators = [denominator_mapping[line[13:-1]] for line in lines[2::3]]
+
+with open("bases.txt") as f:
+    bases = [line[:-1] for line in f.readlines()]
+
+for base, numerator, denominator in zip(bases, numerators, denominators):
+    print "if (%s) && !(%s) {assert_eq!(%s, FieldElement::ZERO);}" % (denominator, numerator, base)
