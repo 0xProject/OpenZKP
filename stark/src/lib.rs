@@ -12,6 +12,7 @@ mod merkle;
 mod pedersen_merkle;
 mod polynomial;
 mod proofs;
+mod starkdex;
 mod trace_table;
 mod utils;
 mod verifier;
