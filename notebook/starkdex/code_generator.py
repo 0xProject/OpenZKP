@@ -1,15 +1,7 @@
-import re
+import json
 
-with open("denominators.txt") as f:
-    lines = f.readlines()
-
-for line in lines:
-    assert re.match(r'^.*\-.*$', line), line
-    if re.match(r'point\^\(trace_length / [0-9]+\)', line):
-        if re.match(r'trace_generator^(251 * trace_length / 256)', line):
-    else:
-        continue
-        print 'special line:', line
+with open("denominators.json") as f:
+    denominators = json.load(f)
     #
     # if re.match(r'', line):
     #     print line
