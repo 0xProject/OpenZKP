@@ -133,7 +133,7 @@ jobs:
           # TODO: Run over wasm targets (which are not part of the workspace)
       - run:
           name: Test debug build
-          command: cargo test --features test --all -- --nocapture
+          command: cargo test $PACKAGES --all-features -- --nocapture
       - run:
           name: Test benchmarks
           command: |
