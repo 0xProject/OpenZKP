@@ -76,7 +76,7 @@ decl_module! {
             },
         );
 
-        let digest = actual.coin.digest.clone();
+        let digest = actual.coin.digest;
 
         if check_proof(
             actual,
