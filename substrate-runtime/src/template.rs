@@ -1,6 +1,7 @@
 use macros_decl::u256h;
 use primefield::FieldElement;
 use rstd::prelude::*;
+use parity_codec::{Decode, Encode};
 use stark::{
     check_proof,
     fibonacci::{get_fibonacci_constraints, get_trace_table, PrivateInput, PublicInput},
@@ -8,18 +9,23 @@ use stark::{
 };
 #[allow(unused_imports)] // TODO - Remove when used
 use starkdex::wrappers::*;
-
-/// A runtime module template with necessary imports
-
-/// Feel free to remove or edit this file as needed.
-/// If you change the name of this file, make sure to update its references in
-/// runtime/src/lib.rs If you remove this file, you can remove those references
-
-/// For more guidance on Substrate modules, see the example module
-/// https://github.com/paritytech/substrate/blob/master/srml/example/src/lib.rs
-use support::{decl_event, decl_module, decl_storage, dispatch::Result, StorageValue};
+use support::{ensure, decl_event, decl_module, decl_storage, dispatch::Result, StorageValue, StorageMap};
 use system::ensure_signed;
 use u256::U256;
+
+#[derive(PartialEq, Encode, Default, Clone, Decode)]
+#[cfg_attr(feature = "std", derive(Debug))]
+pub struct PublicKey {
+    x: [u8; 32],
+    y: [u8; 32],
+}
+
+#[derive(PartialEq, Encode, Default, Clone, Decode)]
+#[cfg_attr(feature = "std", derive(Debug))]
+pub struct Signature {
+    r: [u8; 32], 
+    s: [u8; 32],
+}
 
 /// The module's configuration trait.
 pub trait Trait: system::Trait {
@@ -32,10 +38,9 @@ pub trait Trait: system::Trait {
 // This module's storage items.
 decl_storage! {
     trait Store for Module<T: Trait> as TemplateModule {
-        // Just a dummy storage item.
-        // Here we are declaring a StorageValue, `Something` as a Option<u32>
-        // `get(something)` is the default getter which returns either the stored `u32` or `None` if nothing stored
-        Something get(something): Option<[u8; 32]>;
+        PublicKeys : map T::AccountId => PublicKey;
+        Nonces : map PublicKey => u32;
+        Asset1 : map PublicKey => u32;
     }
 }
 
@@ -46,61 +51,45 @@ decl_module! {
         // this is needed only if you are using events in your module
         fn deposit_event<T>() = default;
 
-        // Just a dummy entry point.
-        // function that can be called by the external world as an extrinsics call
-        // takes a parameter of the type `AccountId`, stores it and emits an event
-        pub fn do_something(origin, at: usize) -> Result {
-            // TODO: You only need this if you want to check it was signed.
-            let who = ensure_signed(origin)?;
+        pub fn send_tokens(origin, amount: u32, to: PublicKey, sig: Signature) -> Result {
+            let sender = ensure_signed(origin)?;
 
-            let private = PrivateInput {
-            secret: FieldElement::from(u256h!(
-                "00000000000000000000000000000000000000000000000f00dbabe0cafebabe"
-            )),
-        };
-        let tt = get_trace_table(1024, &private);
-        let public = PublicInput {
-            index: at,
-            value: tt[(at, 0)].clone(),
-        };
-        let actual = stark_proof(
-            &get_trace_table(1024, &private),
-            &get_fibonacci_constraints(&public),
-            &public,
-            &ProofParams {
-                blowup:                   16,
-                pow_bits:                 12,
-                queries:                  20,
-                fri_layout:               vec![3, 2],
-                constraints_degree_bound: 1,
-            },
-        );
+            ensure!(<PublicKeys<T>>::exists(sender.clone()), "Sender not registered");
+            ensure!(<Nonces<T>>::exists(to.clone()), "To address not registered");
 
-        let digest = actual.coin.digest.clone();
+            let stark_sender = <PublicKeys<T>>::get(sender);
+            let nonce = <Nonces<T>>::get(stark_sender.clone());
+            let balance = <Asset1<T>>::get(stark_sender.clone());
+            ensure!(balance > amount, "You don't have enough token");
+            
+            // TODO - Hashes over generic slices or better packing.
+            let hash_to = hash(&to.x, &to.y);
+            let hash_amount = hash(&hash_to, &U256::from(amount).to_bytes_be());
+            let hash_nonce = hash(&hash_amount,  &U256::from(nonce).to_bytes_be());
 
-        if check_proof(
-            actual,
-            &get_fibonacci_constraints(&public),
-            &public,
-            &ProofParams {
-                blowup:                   16,
-                pow_bits:                 12,
-                queries:                  20,
-                fri_layout:               vec![3, 2],
-                constraints_degree_bound: 1,
-            },
-            2,
-            1024
-        ) {
-            // TODO: Code to execute when something calls this.
-            // For example: the following line stores the passed in u32 in the storage
+            ensure!(verify(&hash_nonce, (&stark_sender.x, &stark_sender.y), (&sig.r, &sig.s)), "Invalid Signature");
 
-            <Something<T>>::put(digest);
+            let their_balance = <Asset1<T>>::get(to.clone());
 
-            // here we are raising the Something event
-            Self::deposit_event(RawEvent::SomethingStored(at, who));
+             <Asset1<T>>::insert(stark_sender.clone(), balance - amount);
+             <Asset1<T>>::insert(to.clone(), their_balance + amount);
+             <Nonces<T>>::insert(stark_sender.clone(), nonce+1);
+             Ok(())
         }
-        Ok(())
+
+        pub fn register(origin, who: PublicKey, sig: Signature) -> Result 
+        {
+            let sender = ensure_signed(origin)?;
+            let data : Vec<u8> = sender.clone().encode();
+            let mut sized = [0_u8; 32];
+            sized.copy_from_slice(data.as_slice());
+
+            ensure!(verify(&sized, (&who.x, &who.y), (&sig.r, &sig.s)), "Invalid Signature");
+
+            <Asset1<T>>::insert(who.clone(), 0);
+            <Nonces<T>>::insert(who.clone(), 0);
+            <PublicKeys<T>>::insert(sender, who);
+            Ok(())
         }
     }
 }
