@@ -2,6 +2,9 @@ import json
 
 with open("denominators.json") as f:
     denominators = json.load(f)
+
+with open("numerators.json") as f:
+    numerators = json.load(f)
     #
     # if re.match(r'', line):
     #     print line
