@@ -12,6 +12,7 @@ pub fn fft(a: &[FieldElement]) -> Vec<FieldElement> {
 }
 
 // TODO: Create a dedicated type for bit reversed vectors
+#[cfg(feature = "prover")]
 pub fn fft_cofactor_bit_reversed(a: &[FieldElement], cofactor: &FieldElement) -> Vec<FieldElement> {
     let mut result = a.to_vec();
     let mut c = FieldElement::ONE;

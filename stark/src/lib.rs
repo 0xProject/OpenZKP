@@ -3,18 +3,18 @@
 #![deny(warnings)]
 #![cfg_attr(not(feature = "std"), no_std)]
 mod channel;
-pub mod fibonacci;
+mod constraint;
+mod fft;
+mod geometric_series;
 mod hash;
 mod hashable;
 mod masked_keccak;
-mod pedersen_merkle;
+mod merkle;
 mod polynomial;
+mod proof_params;
 mod utils;
 mod verifier;
 
-pub use merkle::verify;
-pub use proofs::{stark_proof, ProofParams};
-pub use trace_table::TraceTable;
 pub use verifier::check_proof;
 
 // In no std mode, substitute no_std_compat
@@ -34,20 +34,28 @@ mod mmap_vec {
 // Prover functionality is only available if the feature is set. Currently
 // requires std.
 // TODO: Make it work without std.
-macro_rules! only_prover {
-    ($items:item) => {};
-}
 
 // Optional prover functionality. Note that prover requires std.
-only_prover! {
-    mod fft;
-    mod merkle;
-    mod proofs;
-    mod trace_table;
-    mod polynomial;
-}
+#[cfg(feature = "prover")]
+pub mod fibonacci;
+#[cfg(feature = "prover")]
+mod pedersen_merkle;
+#[cfg(feature = "prover")]
+mod proofs;
+#[cfg(feature = "prover")]
+mod trace_table;
+
+// Exports for prover
+#[cfg(feature = "prover")]
+pub use merkle::verify;
+#[cfg(feature = "prover")]
+pub use proofs::{stark_proof, ProofParams};
+#[cfg(feature = "prover")]
+pub use trace_table::TraceTable;
 
 // Exports for benchmarking
 // TODO: Avoid publicly exposing.
+#[cfg(feature = "prover")]
 pub use fft::fft_cofactor_bit_reversed;
+#[cfg(feature = "prover")]
 pub use merkle::make_tree;
