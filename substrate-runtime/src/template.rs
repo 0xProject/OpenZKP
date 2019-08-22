@@ -12,6 +12,7 @@ use starkdex::wrappers::*;
 use support::{ensure, decl_event, decl_module, decl_storage, dispatch::Result, StorageValue, StorageMap};
 use system::ensure_signed;
 use u256::U256;
+use runtime_io::{with_storage, StorageOverlay, ChildrenStorageOverlay};
 
 #[derive(PartialEq, Encode, Default, Clone, Decode)]
 #[cfg_attr(feature = "std", derive(Debug))]
@@ -25,6 +26,34 @@ pub struct PublicKey {
 pub struct Signature {
     r: [u8; 32], 
     s: [u8; 32],
+}
+
+impl From<PublicKey> for ([u8; 32], [u8; 32]) {
+    fn from(key: PublicKey) -> ([u8; 32], [u8; 32]) {
+        (key.x.clone(), key.y.clone())
+    }
+}
+
+impl From<([u8; 32], [u8; 32])> for PublicKey {
+    fn from(key: ([u8; 32], [u8; 32])) -> PublicKey {
+        PublicKey{
+            x: key.0.clone(), 
+            y: key.1.clone()}
+    }
+}
+
+impl From<Signature> for ([u8; 32], [u8; 32]) {
+    fn from(key: Signature) -> ([u8; 32], [u8; 32]) {
+        (key.r.clone(), key.s.clone())
+    }
+}
+
+impl From<([u8; 32], [u8; 32])> for Signature {
+    fn from(key: ([u8; 32], [u8; 32])) -> Signature {
+        Signature{
+            r: key.0.clone(), 
+            s: key.1.clone()}
+    }
 }
 
 /// The module's configuration trait.
@@ -41,6 +70,19 @@ decl_storage! {
         PublicKeys : map T::AccountId => PublicKey;
         Nonces : map PublicKey => u32;
         Asset1 : map PublicKey => u32;
+    }
+
+    // Used for testing
+    add_extra_genesis {
+        config(owners): Vec<(T::AccountId, PublicKey, u32, u32)>;
+
+        build(|storage: &mut StorageOverlay, _: &mut ChildrenStorageOverlay, config: &GenesisConfig<T>| {
+            with_storage(storage, || {
+                for (ref acct, ref key, nonce, balance) in &config.owners {
+                    let _ = <Module<T>>::balance_set_up(acct.clone(), key.clone(), *nonce, *balance);
+                }
+            });
+        });
     }
 }
 
@@ -63,11 +105,9 @@ decl_module! {
             ensure!(balance > amount, "You don't have enough token");
             
             // TODO - Hashes over generic slices or better packing.
-            let hash_to = hash(&to.x, &to.y);
-            let hash_amount = hash(&hash_to, &U256::from(amount).to_bytes_be());
-            let hash_nonce = hash(&hash_amount,  &U256::from(nonce).to_bytes_be());
+            let hash = hash(&U256::from(((nonce as u64) << 32)+ amount as u64).to_bytes_be(), &to.x.clone());
 
-            ensure!(verify(&hash_nonce, (&stark_sender.x, &stark_sender.y), (&sig.r, &sig.s)), "Invalid Signature");
+            ensure!(verify(&hash, (&sig.r, &sig.s), (&stark_sender.x, &stark_sender.y)), "Invalid Signature");
 
             let their_balance = <Asset1<T>>::get(to.clone());
 
@@ -80,17 +120,32 @@ decl_module! {
         pub fn register(origin, who: PublicKey, sig: Signature) -> Result 
         {
             let sender = ensure_signed(origin)?;
-            let data : Vec<u8> = sender.clone().encode();
+            let mut data : Vec<u8> = sender.clone().encode();
+            // TODO - We could hash the id here instead of padding, should we?
+            for _ in 0..(32-data.len()) {
+                data.push(0_u8);
+            }
             let mut sized = [0_u8; 32];
             sized.copy_from_slice(data.as_slice());
+            let field_version = FieldElement::from(U256::from_bytes_be(&sized));
 
-            ensure!(verify(&sized, (&who.x, &who.y), (&sig.r, &sig.s)), "Invalid Signature");
+            ensure!(verify(&field_version.as_montgomery().to_bytes_be(), (&sig.r, &sig.s), (&who.x, &who.y)), "Invalid Signature");
 
             <Asset1<T>>::insert(who.clone(), 0);
             <Nonces<T>>::insert(who.clone(), 0);
             <PublicKeys<T>>::insert(sender, who);
             Ok(())
         }
+    }
+}
+
+impl<T: Trait> Module<T> {
+    // Note this function is only used for testing and should never be made pub
+    fn balance_set_up(substrate_who: T::AccountId, who: PublicKey, balance: u32, nonce: u32) -> Result {
+        <Asset1<T>>::insert(who.clone(), balance);
+        <Nonces<T>>::insert(who.clone(), nonce);
+        <PublicKeys<T>>::insert(substrate_who, who);
+        Ok(())
     }
 }
 
@@ -121,15 +176,15 @@ mod tests {
     use support::{assert_ok, impl_outer_origin};
 
     impl_outer_origin! {
-        pub enum Origin for Test {}
+        pub enum Origin for TemplateTest {}
     }
 
     // For testing the module, we construct most of a mock runtime. This means
     // first constructing a configuration type (`Test`) which `impl`s each of the
     // configuration traits of modules we want to use.
     #[derive(Clone, Eq, PartialEq)]
-    pub struct Test;
-    impl system::Trait for Test {
+    pub struct TemplateTest;
+    impl system::Trait for TemplateTest {
         type AccountId = u64;
         type BlockNumber = u64;
         type Digest = Digest;
@@ -142,29 +197,85 @@ mod tests {
         type Lookup = IdentityLookup<Self::AccountId>;
         type Origin = Origin;
     }
-    impl Trait for Test {
+    impl super::Trait for TemplateTest {
         type Event = ();
     }
-    type TemplateModule = Module<Test>;
+    type TemplateModule = super::Module<TemplateTest>;
 
     // This function basically just builds a genesis storage key/value store
     // according to our desired mockup.
     fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
-        system::GenesisConfig::<Test>::default()
-            .build_storage()
-            .unwrap()
-            .0
-            .into()
+        let paul_private =
+            u256h!("02c1e9550e66958296d11b60f8e8e7a7ad990d07fa65d5f7652c4a6c87d4e3cc");
+        let remco_private =
+            u256h!("04c1e9550e66958296d11b60f8e8e7a7ad990d07fa65d5f7652c4a6c87d4e3cc");
+        let paul_public = public_key(&paul_private.to_bytes_be()).into();
+        let remco_public = public_key(&remco_private.to_bytes_be()).into();
+
+        let mut t = system::GenesisConfig::<TemplateTest>::default().build_storage().unwrap().0;
+        t.extend(GenesisConfig::<TemplateTest> {
+
+            // Your genesis kitties 
+            owners: vec![   (0, paul_public, 500, 50), (1, remco_public, 50, 0)], 
+
+        }.build_storage().unwrap().0);
+        t.into()
     }
 
     #[test]
-    fn it_works_for_default_value() {
+    fn allows_registration() {
+        let mut data : Vec<u8> = 111.encode(); // Note - In the substrate test environment account ids are u64 instead of public keys
+        for _ in 0..(32-data.len()) {
+            data.push(0_u8);
+        }
+        let mut sized = [0_u8; 32];
+        sized.copy_from_slice(data.as_slice());
+        let field_version = FieldElement::from(U256::from_bytes_be(&sized));
+
+        let private_key =
+            u256h!("03c1e9550e66958296d11b60f8e8e7a7ad990d07fa65d5f7652c4a6c87d4e3cc");
+        
+        let sig = sign(&field_version.as_montgomery().to_bytes_be(), &private_key.to_bytes_be()).into();
+        let public = public_key(&private_key.to_bytes_be()).into();
         with_externalities(&mut new_test_ext(), || {
-            // Just a dummy test for the dummy funtion `do_something`
-            // calling the `do_something` function with a value 42
-            assert_ok!(TemplateModule::do_something(Origin::signed(1), 42));
-            // asserting that the stored value is equal to what we stored
-            // assert_eq!(TemplateModule::something(), Some(42));
+            assert_ok!(TemplateModule::register(Origin::signed(111), public, sig));
+        });
+    }
+
+    #[test]
+    fn blocks_bad_registration() {
+        let mut data : Vec<u8> = 111.encode(); // Note - In the substrate test environment account ids are u64 instead of public keys
+        for _ in 0..(32-data.len()) {
+            data.push(0_u8);
+        }
+        let mut sized = [0_u8; 32];
+        sized.copy_from_slice(data.as_slice());
+        let field_version = FieldElement::from(U256::from_bytes_be(&sized));
+        let wrong_version = field_version + FieldElement::ONE;
+
+        let private_key =
+            u256h!("03c1e9550e66958296d11b60f8e8e7a7ad990d07fa65d5f7652c4a6c87d4e3cc");
+        
+        let sig = sign(&wrong_version.as_montgomery().to_bytes_be(), &private_key.to_bytes_be()).into();
+        let public = public_key(&private_key.to_bytes_be()).into();
+        with_externalities(&mut new_test_ext(), || {
+            assert_eq!(TemplateModule::register(Origin::signed(111), public, sig), Err("Invalid Signature"));
+        });
+    }
+
+    #[test]
+    fn allows_owner_to_move() {
+        let paul_private =
+            u256h!("02c1e9550e66958296d11b60f8e8e7a7ad990d07fa65d5f7652c4a6c87d4e3cc");
+        let remco_private =
+            u256h!("04c1e9550e66958296d11b60f8e8e7a7ad990d07fa65d5f7652c4a6c87d4e3cc");
+        let paul_public : PublicKey = public_key(&paul_private.to_bytes_be()).into();
+        let remco_public : PublicKey = public_key(&remco_private.to_bytes_be()).into();
+
+        let hash = hash(&U256::from(((50_u64) << 32) + 40).to_bytes_be(), &remco_public.x.clone());
+        let sig = sign(&hash, &paul_private.to_bytes_be()).into();
+        with_externalities(&mut new_test_ext(), || {
+            assert_ok!(TemplateModule::send_tokens(Origin::signed(0), 40, remco_public, sig));
         });
     }
 }
