@@ -3,16 +3,12 @@
 #![deny(warnings)]
 #![cfg_attr(not(feature = "std"), no_std)]
 mod channel;
-mod fft;
 pub mod fibonacci;
 mod hash;
 mod hashable;
 mod masked_keccak;
-mod merkle;
 mod pedersen_merkle;
 mod polynomial;
-mod proofs;
-mod trace_table;
 mod utils;
 mod verifier;
 
@@ -33,6 +29,22 @@ mod mmap_vec;
 #[cfg(not(feature = "mmap"))]
 mod mmap_vec {
     pub use std::vec::Vec as MmapVec;
+}
+
+// Prover functionality is only available if the feature is set. Currently
+// requires std.
+// TODO: Make it work without std.
+macro_rules! only_prover {
+    ($items:item) => {};
+}
+
+// Optional prover functionality. Note that prover requires std.
+only_prover! {
+    mod fft;
+    mod merkle;
+    mod proofs;
+    mod trace_table;
+    mod polynomial;
 }
 
 // Exports for benchmarking

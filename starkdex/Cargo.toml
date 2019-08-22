@@ -40,4 +40,3 @@ test = [
     "ecc/test",
 ]
 bench = ["criterion"]
-unsafe_ecdsa = []
