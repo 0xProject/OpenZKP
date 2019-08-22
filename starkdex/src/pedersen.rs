@@ -16,17 +16,21 @@ pub const SHIFT_POINT: Affine = Affine::Point {
     )),
 };
 
+pub const N_ELEMENTS: usize = 2;
 pub const N_ELEMENT_BITS: usize = 252;
 
 pub fn hash(elements: &[U256]) -> U256 {
+    assert!(elements.len() <= N_ELEMENTS);
     hash_impl(elements, 2)
 }
 
 pub fn old_hash(elements: &[U256]) -> U256 {
+    assert!(elements.len() <= N_ELEMENTS);
     hash_impl(elements, 1)
 }
 
 fn hash_impl(elements: &[U256], offset: usize) -> U256 {
+    assert!(offset + elements.len() * N_ELEMENT_BITS <= PEDERSEN_POINTS.len());
     let mut result = Jacobian::from(SHIFT_POINT);
     for (i, element) in elements.iter().enumerate() {
         assert!(element.bits() <= N_ELEMENT_BITS);
@@ -48,6 +52,12 @@ fn hash_impl(elements: &[U256], offset: usize) -> U256 {
 #[rustfmt::skip]
 mod tests {
     use super::*;
+
+    #[test]
+    fn hash_enough_points() {
+        const MAX_OFFSET: usize = 2;
+        assert!(PEDERSEN_POINTS.len() >= MAX_OFFSET + N_ELEMENTS * N_ELEMENT_BITS);
+    }
 
     #[test]
     fn test_hash_0_0() {
