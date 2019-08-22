@@ -2,9 +2,10 @@ use crate::{
     channel::{ProverChannel, RandomGenerator, Writable},
     constraint::Constraint,
     fft::{bit_reversal_permute, fft_cofactor_bit_reversed, ifft},
+    geometric_series::geometric_series,
     hash::Hash,
     hashable::Hashable,
-    merkle::{self, make_tree},
+    merkle::{self, make_tree, Groupable, Merkleizable},
     mmap_vec::MmapVec,
     polynomial::{DensePolynomial, SparsePolynomial},
     proof_params::ProofParams,
@@ -15,7 +16,6 @@ use itertools::{izip, Itertools};
 use primefield::FieldElement;
 use rayon::prelude::*;
 use std::{
-    cmp::max,
     marker::{Send, Sync},
     prelude::v1::*,
     vec,

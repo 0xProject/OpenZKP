@@ -15,6 +15,7 @@ mod proof_params;
 mod utils;
 mod verifier;
 
+pub use proof_params::ProofParams;
 pub use verifier::check_proof;
 
 // In no std mode, substitute no_std_compat
@@ -49,13 +50,12 @@ mod trace_table;
 #[cfg(feature = "prover")]
 pub use merkle::verify;
 #[cfg(feature = "prover")]
-pub use proofs::{stark_proof, ProofParams};
+pub use proofs::stark_proof;
 #[cfg(feature = "prover")]
 pub use trace_table::TraceTable;
 
 // Exports for benchmarking
 // TODO: Avoid publicly exposing.
-#[cfg(feature = "prover")]
 pub use fft::fft_cofactor_bit_reversed;
 #[cfg(feature = "prover")]
 pub use merkle::make_tree;

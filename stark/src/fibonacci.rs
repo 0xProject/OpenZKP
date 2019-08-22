@@ -1,4 +1,4 @@
-use crate::{channel::*, polynomial::SparsePolynomial, proofs::Constraint, TraceTable};
+use crate::{channel::*, constraint::Constraint, polynomial::SparsePolynomial, TraceTable};
 use primefield::FieldElement;
 use std::{convert::TryInto, prelude::v1::*, vec};
 use u256::U256;
