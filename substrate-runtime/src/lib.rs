@@ -198,7 +198,7 @@ impl sudo::Trait for Runtime {
 impl block_proof::Trait for Runtime {}
 
 impl template::Trait for Runtime {
-	type Event = Event;
+    type Event = Event;
 }
 
 construct_runtime!(

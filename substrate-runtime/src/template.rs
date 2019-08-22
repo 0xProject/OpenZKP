@@ -1,7 +1,8 @@
 use macros_decl::u256h;
+use parity_codec::{Decode, Encode};
 use primefield::FieldElement;
 use rstd::prelude::*;
-use parity_codec::{Decode, Encode};
+use runtime_io::{with_storage, ChildrenStorageOverlay, StorageOverlay};
 use stark::{
     check_proof,
     fibonacci::{get_fibonacci_constraints, get_trace_table, PrivateInput, PublicInput},
@@ -9,10 +10,11 @@ use stark::{
 };
 #[allow(unused_imports)] // TODO - Remove when used
 use starkdex::wrappers::*;
-use support::{ensure, decl_event, decl_module, decl_storage, dispatch::Result, StorageValue, StorageMap};
+use support::{
+    decl_event, decl_module, decl_storage, dispatch::Result, ensure, StorageMap, StorageValue,
+};
 use system::ensure_signed;
 use u256::U256;
-use runtime_io::{with_storage, StorageOverlay, ChildrenStorageOverlay};
 
 #[derive(PartialEq, Encode, Default, Clone, Decode)]
 #[cfg_attr(feature = "std", derive(Debug))]
@@ -24,7 +26,7 @@ pub struct PublicKey {
 #[derive(PartialEq, Encode, Default, Clone, Decode)]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct Signature {
-    r: [u8; 32], 
+    r: [u8; 32],
     s: [u8; 32],
 }
 
@@ -36,9 +38,10 @@ impl From<PublicKey> for ([u8; 32], [u8; 32]) {
 
 impl From<([u8; 32], [u8; 32])> for PublicKey {
     fn from(key: ([u8; 32], [u8; 32])) -> PublicKey {
-        PublicKey{
-            x: key.0.clone(), 
-            y: key.1.clone()}
+        PublicKey {
+            x: key.0.clone(),
+            y: key.1.clone(),
+        }
     }
 }
 
@@ -50,9 +53,10 @@ impl From<Signature> for ([u8; 32], [u8; 32]) {
 
 impl From<([u8; 32], [u8; 32])> for Signature {
     fn from(key: ([u8; 32], [u8; 32])) -> Signature {
-        Signature{
-            r: key.0.clone(), 
-            s: key.1.clone()}
+        Signature {
+            r: key.0.clone(),
+            s: key.1.clone(),
+        }
     }
 }
 
@@ -69,7 +73,7 @@ decl_storage! {
     trait Store for Module<T: Trait> as TemplateModule {
         PublicKeys : map T::AccountId => PublicKey;
         Nonces : map PublicKey => u32;
-        Asset1 : map PublicKey => u32;
+        Asset1 get(balance): map PublicKey => u32;
     }
 
     // Used for testing
@@ -103,7 +107,7 @@ decl_module! {
             let nonce = <Nonces<T>>::get(stark_sender.clone());
             let balance = <Asset1<T>>::get(stark_sender.clone());
             ensure!(balance > amount, "You don't have enough token");
-            
+
             // TODO - Hashes over generic slices or better packing.
             let hash = hash(&U256::from(((nonce as u64) << 32)+ amount as u64).to_bytes_be(), &to.x.clone());
 
@@ -117,7 +121,7 @@ decl_module! {
              Ok(())
         }
 
-        pub fn register(origin, who: PublicKey, sig: Signature) -> Result 
+        pub fn register(origin, who: PublicKey, sig: Signature) -> Result
         {
             let sender = ensure_signed(origin)?;
             let mut data : Vec<u8> = sender.clone().encode();
@@ -141,7 +145,12 @@ decl_module! {
 
 impl<T: Trait> Module<T> {
     // Note this function is only used for testing and should never be made pub
-    fn balance_set_up(substrate_who: T::AccountId, who: PublicKey, balance: u32, nonce: u32) -> Result {
+    fn balance_set_up(
+        substrate_who: T::AccountId,
+        who: PublicKey,
+        balance: u32,
+        nonce: u32,
+    ) -> Result {
         <Asset1<T>>::insert(who.clone(), balance);
         <Nonces<T>>::insert(who.clone(), nonce);
         <PublicKeys<T>>::insert(substrate_who, who);
@@ -212,20 +221,27 @@ mod tests {
         let paul_public = public_key(&paul_private.to_bytes_be()).into();
         let remco_public = public_key(&remco_private.to_bytes_be()).into();
 
-        let mut t = system::GenesisConfig::<TemplateTest>::default().build_storage().unwrap().0;
-        t.extend(GenesisConfig::<TemplateTest> {
-
-            // Your genesis kitties 
-            owners: vec![   (0, paul_public, 500, 50), (1, remco_public, 50, 0)], 
-
-        }.build_storage().unwrap().0);
+        let mut t = system::GenesisConfig::<TemplateTest>::default()
+            .build_storage()
+            .unwrap()
+            .0;
+        t.extend(
+            GenesisConfig::<TemplateTest> {
+                // Your genesis kitties
+                owners: vec![(0, paul_public, 500, 50), (1, remco_public, 50, 0)],
+            }
+            .build_storage()
+            .unwrap()
+            .0,
+        );
         t.into()
     }
 
     #[test]
     fn allows_registration() {
-        let mut data : Vec<u8> = 111.encode(); // Note - In the substrate test environment account ids are u64 instead of public keys
-        for _ in 0..(32-data.len()) {
+        let mut data: Vec<u8> = 111.encode(); // Note - In the substrate test environment account ids are u64 instead of
+                                              // public keys
+        for _ in 0..(32 - data.len()) {
             data.push(0_u8);
         }
         let mut sized = [0_u8; 32];
@@ -234,8 +250,12 @@ mod tests {
 
         let private_key =
             u256h!("03c1e9550e66958296d11b60f8e8e7a7ad990d07fa65d5f7652c4a6c87d4e3cc");
-        
-        let sig = sign(&field_version.as_montgomery().to_bytes_be(), &private_key.to_bytes_be()).into();
+
+        let sig = sign(
+            &field_version.as_montgomery().to_bytes_be(),
+            &private_key.to_bytes_be(),
+        )
+        .into();
         let public = public_key(&private_key.to_bytes_be()).into();
         with_externalities(&mut new_test_ext(), || {
             assert_ok!(TemplateModule::register(Origin::signed(111), public, sig));
@@ -244,8 +264,9 @@ mod tests {
 
     #[test]
     fn blocks_bad_registration() {
-        let mut data : Vec<u8> = 111.encode(); // Note - In the substrate test environment account ids are u64 instead of public keys
-        for _ in 0..(32-data.len()) {
+        let mut data: Vec<u8> = 111.encode(); // Note - In the substrate test environment account ids are u64 instead of
+                                              // public keys
+        for _ in 0..(32 - data.len()) {
             data.push(0_u8);
         }
         let mut sized = [0_u8; 32];
@@ -255,11 +276,18 @@ mod tests {
 
         let private_key =
             u256h!("03c1e9550e66958296d11b60f8e8e7a7ad990d07fa65d5f7652c4a6c87d4e3cc");
-        
-        let sig = sign(&wrong_version.as_montgomery().to_bytes_be(), &private_key.to_bytes_be()).into();
+
+        let sig = sign(
+            &wrong_version.as_montgomery().to_bytes_be(),
+            &private_key.to_bytes_be(),
+        )
+        .into();
         let public = public_key(&private_key.to_bytes_be()).into();
         with_externalities(&mut new_test_ext(), || {
-            assert_eq!(TemplateModule::register(Origin::signed(111), public, sig), Err("Invalid Signature"));
+            assert_eq!(
+                TemplateModule::register(Origin::signed(111), public, sig),
+                Err("Invalid Signature")
+            );
         });
     }
 
@@ -269,13 +297,23 @@ mod tests {
             u256h!("02c1e9550e66958296d11b60f8e8e7a7ad990d07fa65d5f7652c4a6c87d4e3cc");
         let remco_private =
             u256h!("04c1e9550e66958296d11b60f8e8e7a7ad990d07fa65d5f7652c4a6c87d4e3cc");
-        let paul_public : PublicKey = public_key(&paul_private.to_bytes_be()).into();
-        let remco_public : PublicKey = public_key(&remco_private.to_bytes_be()).into();
+        let paul_public: PublicKey = public_key(&paul_private.to_bytes_be()).into();
+        let remco_public: PublicKey = public_key(&remco_private.to_bytes_be()).into();
 
-        let hash = hash(&U256::from(((50_u64) << 32) + 40).to_bytes_be(), &remco_public.x.clone());
+        let hash = hash(
+            &U256::from(((50_u64) << 32) + 40).to_bytes_be(),
+            &remco_public.x.clone(),
+        );
         let sig = sign(&hash, &paul_private.to_bytes_be()).into();
         with_externalities(&mut new_test_ext(), || {
-            assert_ok!(TemplateModule::send_tokens(Origin::signed(0), 40, remco_public, sig));
+            assert_ok!(TemplateModule::send_tokens(
+                Origin::signed(0),
+                40,
+                remco_public.clone(),
+                sig
+            ));
+            assert_eq!(TemplateModule::balance(remco_public), 90);
+            assert_eq!(TemplateModule::balance(paul_public), 460);
         });
     }
 }
