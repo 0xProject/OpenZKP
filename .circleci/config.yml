@@ -64,7 +64,8 @@ jobs:
       - NIGHTLY: nightly-2019-08-15
         # Exclude substrate-node (also pulls in a lot of deps, and currently fails)
       - PACKAGES: --all --exclude substrate-node
-      - NO_STD_PACKAGES: macros_decl u256 primefield ecc starkdex stark substrate-runtime
+        # TODO: Add substrate-runtime to no-std once the hex-litteral issue is resolved.
+      - NO_STD_PACKAGES: macros_decl u256 primefield ecc starkdex stark
     steps:
       - checkout
       - restore-toolchain-cache
