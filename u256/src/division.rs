@@ -159,6 +159,19 @@ mod tests {
         assert_eq!(q, u64::MAX);
     }
 
+    #[test]
+    fn test_divrem_4by3() {
+        let mut numerator = [40, 31, 79, 84, 0];
+        let mut divisor = [53, 12, 12];
+        let expected_quotient = [u64::MAX, 6];
+        let expected_remainder = [93, 0xfffffffffffffeb8, 6];
+        divrem_nbym(&mut numerator, &mut divisor);
+        let remainder = &numerator[0..3];
+        let quotient = &numerator[3..5];
+        assert_eq!(remainder, expected_remainder);
+        assert_eq!(quotient, expected_quotient);
+    }
+
     #[allow(clippy::unreadable_literal)]
     #[test]
     fn test_divrem_8by4() {
