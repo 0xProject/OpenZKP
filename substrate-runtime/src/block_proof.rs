@@ -182,9 +182,9 @@ impl<T: Trait> ProvideInherent for Module<T> {
         ) {
             Ok(())
         } else {
-            return Err(InherentError::InvalidProof(
+            Err(InherentError::InvalidProof(
                 "Posted proof doesn't pass verification".into(),
-            ));
+            ))
         }
     }
 }
