@@ -1,3 +1,4 @@
+use crate::wrappers::*;
 use macros_decl::u256h;
 use parity_codec::{Decode, Encode};
 use primefield::FieldElement;
@@ -8,57 +9,11 @@ use stark::{
     fibonacci::{get_fibonacci_constraints, get_trace_table, PrivateInput, PublicInput},
     stark_proof, ProofParams,
 };
-#[allow(unused_imports)] // TODO - Remove when used
-use starkdex::wrappers::*;
 use support::{
     decl_event, decl_module, decl_storage, dispatch::Result, ensure, StorageMap, StorageValue,
 };
-use system::ensure_signed;
+use system::{ensure_root, ensure_signed};
 use u256::U256;
-
-#[derive(PartialEq, Encode, Default, Clone, Decode)]
-#[cfg_attr(feature = "std", derive(Debug))]
-pub struct PublicKey {
-    x: [u8; 32],
-    y: [u8; 32],
-}
-
-#[derive(PartialEq, Encode, Default, Clone, Decode)]
-#[cfg_attr(feature = "std", derive(Debug))]
-pub struct Signature {
-    r: [u8; 32],
-    s: [u8; 32],
-}
-
-impl From<PublicKey> for ([u8; 32], [u8; 32]) {
-    fn from(key: PublicKey) -> ([u8; 32], [u8; 32]) {
-        (key.x.clone(), key.y.clone())
-    }
-}
-
-impl From<([u8; 32], [u8; 32])> for PublicKey {
-    fn from(key: ([u8; 32], [u8; 32])) -> PublicKey {
-        PublicKey {
-            x: key.0.clone(),
-            y: key.1.clone(),
-        }
-    }
-}
-
-impl From<Signature> for ([u8; 32], [u8; 32]) {
-    fn from(key: Signature) -> ([u8; 32], [u8; 32]) {
-        (key.r.clone(), key.s.clone())
-    }
-}
-
-impl From<([u8; 32], [u8; 32])> for Signature {
-    fn from(key: ([u8; 32], [u8; 32])) -> Signature {
-        Signature {
-            r: key.0.clone(),
-            s: key.1.clone(),
-        }
-    }
-}
 
 /// The module's configuration trait.
 pub trait Trait: system::Trait {
@@ -70,10 +25,14 @@ pub trait Trait: system::Trait {
 
 // This module's storage items.
 decl_storage! {
-    trait Store for Module<T: Trait> as TemplateModule {
-        PublicKeys : map T::AccountId => PublicKey;
-        Nonces : map PublicKey => u32;
-        Asset1 get(balance): map PublicKey => u32;
+    trait Store for Module<T: Trait> as Exchange {
+        pub PublicKeys : map T::AccountId => PublicKey;
+        pub Nonces : map PublicKey => u32;
+        pub Asset1 get(balance): map PublicKey => u32;
+        pub Vaults get(get_vault): map u32 => Vault;
+        pub ExecutedIds get(is_executed): map u32 => bool;
+        AvailableID: u32 = 0;
+
     }
 
     // Used for testing
@@ -97,6 +56,7 @@ decl_module! {
         // this is needed only if you are using events in your module
         fn deposit_event<T>() = default;
 
+        // This is an example of our sig verification but will be eventually removed
         pub fn send_tokens(origin, amount: u32, to: PublicKey, sig: Signature) -> Result {
             let sender = ensure_signed(origin)?;
 
@@ -108,10 +68,9 @@ decl_module! {
             let balance = <Asset1<T>>::get(stark_sender.clone());
             ensure!(balance > amount, "You don't have enough token");
 
-            // TODO - Hashes over generic slices or better packing.
-            let hash = hash(&U256::from(((nonce as u64) << 32)+ amount as u64).to_bytes_be(), &to.x.clone());
+            let hash = hash(U256::from(((nonce as u64) << 32)+ amount as u64).to_bytes_be(), to.x.clone());
 
-            ensure!(verify(&hash, (&sig.r, &sig.s), (&stark_sender.x, &stark_sender.y)), "Invalid Signature");
+            ensure!(verify(hash, sig, stark_sender.clone()), "Invalid Signature");
 
             let their_balance = <Asset1<T>>::get(to.clone());
 
@@ -133,11 +92,94 @@ decl_module! {
             sized.copy_from_slice(data.as_slice());
             let field_version = FieldElement::from(U256::from_bytes_be(&sized));
 
-            ensure!(verify(&field_version.as_montgomery().to_bytes_be(), (&sig.r, &sig.s), (&who.x, &who.y)), "Invalid Signature");
+            ensure!(verify(field_version.as_montgomery().to_bytes_be(), sig, who.clone()), "Invalid Signature");
 
             <Asset1<T>>::insert(who.clone(), 0);
             <Nonces<T>>::insert(who.clone(), 0);
             <PublicKeys<T>>::insert(sender, who);
+            Ok(())
+        }
+
+        // TODO - This eventually should recycle emptied vault IDs as is suggested by the starkware setup
+        pub fn setup_vault(origin, token_id: [u8; 32]) -> Result {
+            let sender = ensure_signed(origin)?;
+            ensure!(<PublicKeys<T>>::exists(sender.clone()), "Sender not registered");
+            let stark_sender = <PublicKeys<T>>::get(sender);
+
+            let next = <AvailableID<T>>::take();
+            <Vaults<T>>::insert(next, Vault{
+                owner: stark_sender,
+                token_id: token_id,
+                balance: 0,
+            });
+            <AvailableID<T>>::put(next+1);
+            Ok(())
+        }
+
+        // An authorized deposit creation function through which a super user can make deposits.
+        // TODO - We don't want this long term, we want some type of test which shows that the deposited info is on ethereum.
+        // TODO - When adding block proofs we can require this shows up in the deposit proof.
+        pub fn deposit_authorized(origin, vault_id: u32, amount: u64) -> Result {
+            ensure_root(origin)?;
+            ensure!(<Vaults<T>>::exists(vault_id), "User should register first");
+            let mut data = <Vaults<T>>::get(vault_id);
+            data.balance += amount;
+            Ok(())
+        }
+
+        // TODO - Edge case grief-ing where you can just pick another trade id and someone else's order won't go through, really should be hashes.
+        pub fn execute_order(origin, order: TakerMessage, sig: Signature) -> Result {
+            let sender = ensure_signed(origin)?;
+            ensure!(<PublicKeys<T>>::exists(sender.clone()), "Sender not registered");
+            let stark_sender = <PublicKeys<T>>::get(sender);
+
+            // Checks that this hasn't been executed
+            ensure!(!<ExecutedIds<T>>::exists(order.maker_message.trade_id));
+
+            ensure!(<Vaults<T>>::exists(order.vault_a), "Missing taker vault a");
+            ensure!(<Vaults<T>>::exists(order.vault_b), "Missing taker vault b");
+            ensure!(<Vaults<T>>::exists(order.maker_message.vault_a), "Missing maker vault a");
+            ensure!(<Vaults<T>>::exists(order.maker_message.vault_b), "Missing maker vault b");
+
+            let mut taker_vault_a = <Vaults<T>>::get(order.vault_a);
+            let mut taker_vault_b = <Vaults<T>>::get(order.vault_b);
+            ensure!(taker_vault_a.owner == taker_vault_b.owner, "Mismatch in taker vault owners");
+
+            let mut maker_vault_a = <Vaults<T>>::get(order.maker_message.vault_a);
+            let mut maker_vault_b = <Vaults<T>>::get(order.maker_message.vault_b);
+            // Check the vaults are owned by the same key
+            ensure!(maker_vault_a.owner == maker_vault_b.owner, "Mismatch in maker vault owners");
+            // Check that the vault asset types are what is indicated
+            ensure!(order.maker_message.token_a == maker_vault_a.token_id, "Token in maker order vault_a doesn't match vault token type");
+            ensure!(order.maker_message.token_b == maker_vault_b.token_id, "Token in maker order vault_a doesn't match vault token type");
+
+            // Checks that the a vaults and be vaults have the same asset types across maker and taker.
+            ensure!(maker_vault_a.token_id == taker_vault_a.token_id, "Mismatched token types");
+            ensure!(maker_vault_b.token_id == taker_vault_a.token_id, "Mismatched token types");
+
+            // Checks that we can transfer amount_a of tokens from maker and amount_b of tokens from taker
+            ensure!(order.maker_message.amount_a <= maker_vault_a.balance, "Not enough funds in maker's source vault");
+            ensure!(order.maker_message.amount_b <= taker_vault_b.balance, "Not enough funds in taker's source vault");
+
+            // Verifies the starkdex signature
+            ensure!(maker_verify(order.maker_message.clone(), order.maker_message.sig.clone(), maker_vault_a.owner.clone()), "Maker message improperly signed");
+            ensure!(taker_verify(order.clone(), sig, stark_sender), "Taker message improperly signed");
+
+            // Moves amount_a from maker's vault_a to takers vault_a
+            taker_vault_a.balance += order.maker_message.amount_a;
+            maker_vault_a.balance -= order.maker_message.amount_a;
+            ensure!(taker_vault_a.balance >= order.maker_message.amount_a, "Failed the overflow check");
+            // Moves amount_b to maker's vault_b from taker's vault_b
+            taker_vault_b.balance -= order.maker_message.amount_b;
+            maker_vault_b.balance += order.maker_message.amount_b;
+            ensure!(maker_vault_b.balance >= order.maker_message.amount_b, "Failed the overflow check");
+
+            // Actually updates our mapping
+            <Vaults<T>>::insert(order.vault_a, taker_vault_a);
+            <Vaults<T>>::insert(order.vault_b, taker_vault_b);
+            <Vaults<T>>::insert(order.maker_message.vault_a, maker_vault_a);
+            <Vaults<T>>::insert(order.maker_message.vault_b, maker_vault_b);
+            <ExecutedIds<T>>::insert(order.maker_message.trade_id, true);
             Ok(())
         }
     }
@@ -185,15 +227,15 @@ mod tests {
     use support::{assert_ok, impl_outer_origin};
 
     impl_outer_origin! {
-        pub enum Origin for TemplateTest {}
+        pub enum Origin for ExchangeTest {}
     }
 
     // For testing the module, we construct most of a mock runtime. This means
     // first constructing a configuration type (`Test`) which `impl`s each of the
     // configuration traits of modules we want to use.
     #[derive(Clone, Eq, PartialEq)]
-    pub struct TemplateTest;
-    impl system::Trait for TemplateTest {
+    pub struct ExchangeTest;
+    impl system::Trait for ExchangeTest {
         type AccountId = u64;
         type BlockNumber = u64;
         type Digest = Digest;
@@ -206,10 +248,10 @@ mod tests {
         type Lookup = IdentityLookup<Self::AccountId>;
         type Origin = Origin;
     }
-    impl super::Trait for TemplateTest {
+    impl super::Trait for ExchangeTest {
         type Event = ();
     }
-    type TemplateModule = super::Module<TemplateTest>;
+    type Exchange = super::Module<ExchangeTest>;
 
     // This function basically just builds a genesis storage key/value store
     // according to our desired mockup.
@@ -221,12 +263,12 @@ mod tests {
         let paul_public = public_key(&paul_private.to_bytes_be()).into();
         let remco_public = public_key(&remco_private.to_bytes_be()).into();
 
-        let mut t = system::GenesisConfig::<TemplateTest>::default()
+        let mut t = system::GenesisConfig::<ExchangeTest>::default()
             .build_storage()
             .unwrap()
             .0;
         t.extend(
-            GenesisConfig::<TemplateTest> {
+            GenesisConfig::<ExchangeTest> {
                 // Your genesis kitties
                 owners: vec![(0, paul_public, 500, 50), (1, remco_public, 50, 0)],
             }
@@ -258,7 +300,7 @@ mod tests {
         .into();
         let public = public_key(&private_key.to_bytes_be()).into();
         with_externalities(&mut new_test_ext(), || {
-            assert_ok!(TemplateModule::register(Origin::signed(111), public, sig));
+            assert_ok!(Exchange::register(Origin::signed(111), public, sig));
         });
     }
 
@@ -285,7 +327,7 @@ mod tests {
         let public = public_key(&private_key.to_bytes_be()).into();
         with_externalities(&mut new_test_ext(), || {
             assert_eq!(
-                TemplateModule::register(Origin::signed(111), public, sig),
+                Exchange::register(Origin::signed(111), public, sig),
                 Err("Invalid Signature")
             );
         });
@@ -306,14 +348,14 @@ mod tests {
         );
         let sig = sign(&hash, &paul_private.to_bytes_be()).into();
         with_externalities(&mut new_test_ext(), || {
-            assert_ok!(TemplateModule::send_tokens(
+            assert_ok!(Exchange::send_tokens(
                 Origin::signed(0),
                 40,
                 remco_public.clone(),
                 sig
             ));
-            assert_eq!(TemplateModule::balance(remco_public), 90);
-            assert_eq!(TemplateModule::balance(paul_public), 460);
+            assert_eq!(Exchange::balance(remco_public), 90);
+            assert_eq!(Exchange::balance(paul_public), 460);
         });
     }
 }
