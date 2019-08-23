@@ -25,7 +25,7 @@ impl Writable<&PublicInput> for ProverChannel {
 }
 
 #[cfg(test)]
-use macros_decl::{field_element};
+use macros_decl::field_element;
 #[cfg(test)]
 use u256::U256;
 
@@ -60,7 +60,7 @@ mod tests {
         channel::{ProverChannel, RandomGenerator, Writable},
         hash::Hash,
     };
-    use macros_decl::{hex};
+    use macros_decl::hex;
     use u256::U256;
 
     #[test]

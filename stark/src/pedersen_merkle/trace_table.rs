@@ -125,9 +125,7 @@ fn get_coordinates(p: &Affine) -> (&FieldElement, &FieldElement) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::pedersen_merkle::inputs::{
-        SHORT_PUBLIC_INPUT, short_private_input,
-    };
+    use crate::pedersen_merkle::inputs::{short_private_input, SHORT_PUBLIC_INPUT};
 
     #[test]
     fn short_inputs_consistent() {
