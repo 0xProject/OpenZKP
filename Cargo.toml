@@ -15,5 +15,4 @@ members = [
 [profile.release]
 opt-level = 3
 lto = true
-debug = true # Debug symbols are required for profiling. Remove for production!
 panic = 'unwind'
