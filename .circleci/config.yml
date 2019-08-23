@@ -116,13 +116,12 @@ jobs:
               popd
             done
       - run:
-          name: Build wasm substrate runtime (disabled)
+          name: Build wasm substrate runtime
           command: |
-            # TODO: Fix this step
-            # pushd substrate-runtime-wasm
-            # cargo +$NIGHTLY build --release
-            # cp target/wasm32-unknown-unknown/release/runtime.wasm ./
-            # wasm-gc $i.wasm $i.compact.wasm
+            pushd substrate-runtime-wasm
+            cargo +$NIGHTLY build --release
+            cp target/wasm32-unknown-unknown/release/substrate_node_runtime_wasm.wasm ./runtime.wasm
+            wasm-gc runtime.wasm
       # We save the sccache here because everything has been build, from here on
       # it is only testing that will not add to the cache (including clippy).
       # Saving cache early allows it to be re-used even when the tests fail.
@@ -151,6 +150,9 @@ jobs:
             # we enable all features (which makes sense from a test coverage perspective).
             # TODO: We don't need an optimized build here, re-using debug build would be ok.
             cargo bench --bench benchmark $PACKAGES --all-features -- --test
+      - store_artifacts:
+          path: substrate-runtime-wasm/runtime.wasm
+          destination: runtime.wasm
 
 workflows:
   version: 2
