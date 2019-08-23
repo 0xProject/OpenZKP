@@ -79,10 +79,12 @@ jobs:
             rustup component add rustfmt --toolchain $NIGHTLY
             rustup component add clippy
             cargo install --git https://github.com/alexcrichton/wasm-gc || echo Already installed
+            cargo install twiggy || echo Already installed
             rustc --version
             cargo --version
             rustup --version
             wasm-gc --help > /dev/null # Run it to make sure it's executable
+            twiggy --version
           no_output_timeout: 1800s
       - save-toolchain-cache
       - run:
@@ -123,6 +125,7 @@ jobs:
             cargo +$NIGHTLY build --release
             cp target/wasm32-unknown-unknown/release/substrate_node_runtime_wasm.wasm ./runtime.wasm
             wasm-gc runtime.wasm
+            twiggy top -n 50 runtime.wasm
       - run:
           name: Build node executable
           command: |
