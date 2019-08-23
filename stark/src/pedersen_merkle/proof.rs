@@ -9,7 +9,8 @@ mod tests {
             },
             trace_table::get_trace_table,
         },
-        proofs::{stark_proof, ProofParams},
+        proof_params::ProofParams,
+        proofs::stark_proof,
     };
     use macros_decl::hex;
 

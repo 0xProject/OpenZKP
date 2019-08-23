@@ -1,1 +1,1 @@
-pub const RUNTIME_WASM: &'static [u8] = include_bytes!("../assets/runtime.wasm");
+pub const RUNTIME_WASM: &[u8] = include_bytes!("../assets/runtime.wasm");

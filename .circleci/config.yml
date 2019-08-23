@@ -64,7 +64,8 @@ jobs:
       - NIGHTLY: nightly-2019-08-15
         # Exclude substrate-node (also pulls in a lot of deps, and currently fails)
       - PACKAGES: --all --exclude substrate-node
-      - NO_STD_PACKAGES: macros_decl u256 primefield ecc
+        # TODO: Add substrate-runtime to no-std once the hex-literal issue is resolved.
+      - NO_STD_PACKAGES: macros_decl u256 primefield ecc starkdex stark
     steps:
       - checkout
       - restore-toolchain-cache
@@ -78,10 +79,13 @@ jobs:
             rustup component add rustfmt --toolchain $NIGHTLY
             rustup component add clippy
             cargo install --git https://github.com/alexcrichton/wasm-gc || echo Already installed
+            cargo install twiggy || echo Already installed
+            sudo apt-get install clang # For the rocksdb dependency of substrate-node
             rustc --version
             cargo --version
             rustup --version
             wasm-gc --help > /dev/null # Run it to make sure it's executable
+            twiggy --version
           no_output_timeout: 1800s
       - save-toolchain-cache
       - run:
@@ -116,13 +120,23 @@ jobs:
               popd
             done
       - run:
-          name: Build wasm substrate runtime (disabled)
+          name: Build wasm substrate runtime
           command: |
-            # TODO: Fix this step
-            # pushd substrate-runtime-wasm
-            # cargo +$NIGHTLY build --release
-            # cp target/wasm32-unknown-unknown/release/runtime.wasm ./
-            # wasm-gc $i.wasm $i.compact.wasm
+            pushd substrate-runtime-wasm
+            cargo +$NIGHTLY build --release
+            cp target/wasm32-unknown-unknown/release/substrate_node_runtime_wasm.wasm ./runtime.wasm
+            wasm-gc runtime.wasm
+            # OPT: Run wasm-opt -O3 runtime.wasm -o runtime.wasm
+            twiggy top -n 50 runtime.wasm
+      - run:
+          name: Build node executable (disabled)
+          command: |
+            #pushd substrate-node
+            #cp ../substrate-runtime-wasm/runtime.wasm ./assets/runtime.wasm
+            # TODO: This builds rocksdb as a dependency in c++, this is not
+            # currently covered by sccache, but could be.
+            # TODO: This build times out on CI.
+            # cargo build --release
       # We save the sccache here because everything has been build, from here on
       # it is only testing that will not add to the cache (including clippy).
       # Saving cache early allows it to be re-used even when the tests fail.
@@ -151,6 +165,12 @@ jobs:
             # we enable all features (which makes sense from a test coverage perspective).
             # TODO: We don't need an optimized build here, re-using debug build would be ok.
             cargo bench --bench benchmark $PACKAGES --all-features -- --test
+      - store_artifacts:
+          path: substrate-runtime-wasm/runtime.wasm
+          destination: runtime.wasm
+      #- store_artifacts:
+      #    path: target/release/substrate-node
+      #    destination: node-{{ arch }}
 
 workflows:
   version: 2

@@ -1,10 +1,10 @@
-use macros_decl::u256h;
+use macros_decl::field_element;
 use primefield::FieldElement;
 use rstd::prelude::*;
 use stark::{
     check_proof,
     fibonacci::{get_fibonacci_constraints, get_trace_table, PrivateInput, PublicInput},
-    stark_proof, ProofParams,
+    ProofParams,
 };
 #[allow(unused_imports)] // TODO - Remove when used
 use starkdex::wrappers::*;
@@ -53,54 +53,36 @@ decl_module! {
             // TODO: You only need this if you want to check it was signed.
             let who = ensure_signed(origin)?;
 
-            let private = PrivateInput {
-            secret: FieldElement::from(u256h!(
-                "00000000000000000000000000000000000000000000000f00dbabe0cafebabe"
-            )),
-        };
-        let tt = get_trace_table(1024, &private);
-        let public = PublicInput {
-            index: at,
-            value: tt[(at, 0)].clone(),
-        };
-        let actual = stark_proof(
-            &get_trace_table(1024, &private),
-            &get_fibonacci_constraints(&public),
-            &public,
-            &ProofParams {
-                blowup:                   16,
-                pow_bits:                 12,
-                queries:                  20,
-                fri_layout:               vec![3, 2],
-                constraints_degree_bound: 1,
-            },
-        );
+            let public = PublicInput {
+                index: 1000,
+                value: field_element!("00000000000000000000000000000000000000000000000f00dbabe0cafebabe"),
+            };
 
-        let digest = actual.coin.digest;
+            let proof = b"";
 
-        if check_proof(
-            actual,
-            &get_fibonacci_constraints(&public),
-            &public,
-            &ProofParams {
-                blowup:                   16,
-                pow_bits:                 12,
-                queries:                  20,
-                fri_layout:               vec![3, 2],
-                constraints_degree_bound: 1,
-            },
-            2,
-            1024
-        ) {
-            // TODO: Code to execute when something calls this.
-            // For example: the following line stores the passed in u32 in the storage
+            if check_proof(
+                proof,
+                &get_fibonacci_constraints(&public),
+                &public,
+                &ProofParams {
+                    blowup:                   16,
+                    pow_bits:                 12,
+                    queries:                  20,
+                    fri_layout:               vec![3, 2],
+                    constraints_degree_bound: 1,
+                },
+                2,
+                1024
+            ) {
+                // TODO: Code to execute when something calls this.
+                // For example: the following line stores the passed in u32 in the storage
 
-            <Something<T>>::put(digest);
+                <Something<T>>::put(digest);
 
-            // here we are raising the Something event
-            Self::deposit_event(RawEvent::SomethingStored(at, who));
-        }
-        Ok(())
+                // here we are raising the Something event
+                Self::deposit_event(RawEvent::SomethingStored(at, who));
+            }
+            Ok(())
         }
     }
 }

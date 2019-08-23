@@ -1,4 +1,5 @@
 use crate::{
+    constraint::Constraint,
     pedersen_merkle::{
         inputs::PublicInput,
         periodic_columns::{
@@ -6,7 +7,6 @@ use crate::{
         },
     },
     polynomial::{DensePolynomial, SparsePolynomial},
-    proofs::Constraint,
 };
 use ecc::Affine;
 use primefield::FieldElement;

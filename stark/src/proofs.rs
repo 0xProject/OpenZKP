@@ -1,11 +1,13 @@
 use crate::{
     channel::{ProverChannel, RandomGenerator, Writable},
+    constraint::Constraint,
     fft::{fft_cofactor_bit_reversed, ifft},
     hash::Hash,
     hashable::Hashable,
-    merkle::{self, make_tree},
+    merkle::{self, make_tree, Groupable, Merkleizable},
     mmap_vec::MmapVec,
     polynomial::{DensePolynomial, SparsePolynomial},
+    proof_params::ProofParams,
     utils::Reversible,
     TraceTable,
 };
@@ -13,82 +15,11 @@ use itertools::{izip, Itertools};
 use primefield::FieldElement;
 use rayon::prelude::*;
 use std::{
-    cmp::max,
     marker::{Send, Sync},
     prelude::v1::*,
     vec,
 };
 use u256::U256;
-
-// This trait is for objects where the object is grouped into hashable sets
-// based on index before getting made into a merkle tree, with domain size
-// being the max index [ie the one which if you iterate up to it splits the
-// whole range]
-pub trait Groupable<LeafType: Hashable> {
-    fn get_leaf_hash(&self, index: usize) -> Hash {
-        self.get_leaf(index).hash()
-    }
-    fn get_leaf(&self, index: usize) -> LeafType;
-    fn domain_size(&self) -> usize;
-}
-
-// This trait is applied to give groupable objects a merkle tree based on their
-// groupings
-pub trait Merkleizable<NodeHash: Hashable> {
-    fn merkleize(self) -> Vec<Hash>;
-}
-
-/// Parameters for Stark proof generation
-///
-/// Contains various tuning parameters that determine how proofs are computed.
-/// These can trade off between security, prover time, verifier time and
-/// proof size.
-///
-/// **Note**: This does not including the constraint system or anything
-/// about the claim to be proven.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct ProofParams {
-    /// The blowup factor
-    ///
-    /// The size of the low-degree-extension domain compared to the trace
-    /// domain. Should be a power of two. Recommended values are 16, 32 or 64.
-    pub blowup: usize,
-
-    /// Proof of work difficulty
-    ///
-    /// The difficulty of the proof of work step in number of leading zero bits
-    /// required.
-    pub pow_bits: u8,
-
-    /// Number of queries made to the oracles
-    pub queries: usize,
-
-    /// Number of FRI reductions between steps
-    ///
-    /// After the initial LDE polynomial is committed, several rounds of FRI
-    /// degree reduction are done. Entries in the vector specify how many
-    /// reductions are done between commitments.
-    ///
-    /// After `fri_layout.sum()` reductions are done, the remaining polynomial
-    /// is written explicitly in coefficient form.
-    pub fri_layout: Vec<usize>,
-
-    /// The highest degree of any constraint polynomial.
-    ///
-    /// The polynomial constraints are not directly commited too on the trace
-    /// domain, instead they are calculated via "Deep fri" which samples and
-    /// commits too information outside of the domain.
-    ///
-    /// This information on constraint degree allows the out of domain sampling
-    /// to provide the right number points.
-    pub constraints_degree_bound: usize,
-}
-
-pub struct Constraint {
-    pub base:        Box<dyn Fn(&[DensePolynomial]) -> DensePolynomial>,
-    pub denominator: SparsePolynomial,
-    pub numerator:   SparsePolynomial,
-}
 
 // This groupable impl allows the fri tree layers to get grouped and use the
 // same merkleize system
@@ -274,25 +205,6 @@ fn get_indices(num: usize, bits: u32, proof: &mut ProverChannel) -> Vec<usize> {
     query_indices.truncate(num);
     (&mut query_indices).sort_unstable();
     query_indices
-}
-
-// TODO: move to utils.
-pub fn geometric_series(base: &FieldElement, step: &FieldElement, len: usize) -> Vec<FieldElement> {
-    const PARALLELIZATION: usize = 16_usize;
-    // OPT - Set based on the cores available and how well the work is spread
-    let step_len = max(1, len / PARALLELIZATION);
-    let mut range = vec![FieldElement::ZERO; len];
-    range
-        .par_chunks_mut(step_len)
-        .enumerate()
-        .for_each(|(i, slice)| {
-            let mut hold = base * step.pow(i * step_len);
-            for element in slice.iter_mut() {
-                *element = hold.clone();
-                hold *= step;
-            }
-        });
-    range
 }
 
 pub fn interpolate_trace_table(table: &TraceTable) -> Vec<DensePolynomial> {
@@ -567,6 +479,7 @@ mod tests {
     use super::*;
     use crate::{
         fibonacci::{get_fibonacci_constraints, get_trace_table, PrivateInput, PublicInput},
+        geometric_series::geometric_series,
         verifier::check_proof,
     };
     use macros_decl::{field_element, hex, u256h};
@@ -672,7 +585,7 @@ mod tests {
         );
 
         assert!(check_proof(
-            actual,
+            actual.proof.as_slice(),
             &get_fibonacci_constraints(&public),
             &public,
             &ProofParams {
@@ -711,7 +624,7 @@ mod tests {
         });
 
         assert!(check_proof(
-            actual,
+            actual.proof.as_slice(),
             &constraints,
             &public,
             &ProofParams {
@@ -724,23 +637,6 @@ mod tests {
             2,
             4096
         ));
-    }
-
-    #[test]
-    fn geometric_series_test() {
-        let base = FieldElement::from(u256h!(
-            "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
-        ));
-        let step = FieldElement::from(u256h!(
-            "00000000000000000000000000000000000000000000000f00dbabe0cafebabe"
-        ));
-
-        let domain = geometric_series(&base, &step, 32);
-        let mut hold = base.clone();
-        for item in domain {
-            assert_eq!(item, hold);
-            hold *= &step;
-        }
     }
 
     // TODO: What are we actually testing here? Should we add these as debug_assert
