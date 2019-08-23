@@ -80,6 +80,7 @@ jobs:
             rustup component add clippy
             cargo install --git https://github.com/alexcrichton/wasm-gc || echo Already installed
             cargo install twiggy || echo Already installed
+            sudo apt-get install clang # For the rocksdb dependency of substrate-node
             rustc --version
             cargo --version
             rustup --version
@@ -125,6 +126,7 @@ jobs:
             cargo +$NIGHTLY build --release
             cp target/wasm32-unknown-unknown/release/substrate_node_runtime_wasm.wasm ./runtime.wasm
             wasm-gc runtime.wasm
+            # OPT: Run wasm-opt -O3 runtime.wasm -o runtime.wasm
             twiggy top -n 50 runtime.wasm
       - run:
           name: Build node executable
