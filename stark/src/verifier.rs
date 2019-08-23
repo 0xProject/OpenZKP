@@ -332,7 +332,7 @@ fn out_of_domain_element(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fibonacci::*;
+    use crate::{fibonacci::*, proofs::stark_proof};
     use macros_decl::u256h;
 
     #[test]
