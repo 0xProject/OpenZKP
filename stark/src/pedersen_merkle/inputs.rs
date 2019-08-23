@@ -66,7 +66,7 @@ mod tests {
         // first constraint coefficient) matches the the one in
         // pedersen_merkle_proof_annotations.txt.
         let mut proof = ProverChannel::new();
-        proof.write(&STARKWARE_PUBLIC_INPUT);
+        proof.write(&SHORT_PUBLIC_INPUT);
 
         // This is /pedersen merkle/STARK/Original/Commit on Trace
         proof.write(&Hash::new(hex!(
