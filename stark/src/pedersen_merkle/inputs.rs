@@ -25,6 +25,11 @@ impl Writable<&PublicInput> for ProverChannel {
 }
 
 #[cfg(test)]
+use macros_decl::{field_element};
+#[cfg(test)]
+use u256::U256;
+
+#[cfg(test)]
 pub const SHORT_PUBLIC_INPUT: PublicInput = PublicInput {
     path_length: 4,
     leaf:        field_element!("00"),
@@ -55,8 +60,7 @@ mod tests {
         channel::{ProverChannel, RandomGenerator, Writable},
         hash::Hash,
     };
-    use macros_decl::{field_element, hex};
-    use primefield::FieldElement;
+    use macros_decl::{hex};
     use u256::U256;
 
     #[test]
@@ -75,7 +79,7 @@ mod tests {
 
         let first_random: FieldElement = proof.get_random();
         let first_constraint_coefficient =
-            field_element!("0636ad17759a0cc671e906ef94553c10f7a2c012d7a2aa599875506f874c136a");
+            field_element!("0458928c6aa01a8aa95f4ece0cd405277e9966231ee2defa4d817eeb8391cb36");
         assert_eq!(first_random, first_constraint_coefficient);
     }
 }
