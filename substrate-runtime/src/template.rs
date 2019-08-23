@@ -4,7 +4,7 @@ use rstd::prelude::*;
 use stark::{
     check_proof,
     fibonacci::{get_fibonacci_constraints, get_trace_table, PrivateInput, PublicInput},
-    stark_proof, ProofParams,
+    ProofParams,
 };
 #[allow(unused_imports)] // TODO - Remove when used
 use starkdex::wrappers::*;

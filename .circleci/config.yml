@@ -64,7 +64,7 @@ jobs:
       - NIGHTLY: nightly-2019-08-15
         # Exclude substrate-node (also pulls in a lot of deps, and currently fails)
       - PACKAGES: --all --exclude substrate-node
-      - NO_STD_PACKAGES: macros_decl u256 primefield ecc starkdex stark
+      - NO_STD_PACKAGES: macros_decl u256 primefield ecc starkdex stark substrate-runtime
     steps:
       - checkout
       - restore-toolchain-cache
