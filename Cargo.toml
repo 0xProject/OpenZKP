@@ -16,3 +16,8 @@ members = [
 opt-level = 3
 lto = true
 panic = 'unwind'
+
+# HACK: Patch replace substrate's dependency on hex-literal with a local clone
+# that sets #[no_std].
+[replace]
+"hex-literal:0.1.4" = { path = "./hex-literal" }
