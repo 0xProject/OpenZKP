@@ -1,6 +1,5 @@
 use crate::fft::{fft, ifft};
 use primefield::FieldElement;
-use rayon::prelude::*;
 use std::{
     cmp::max,
     collections::BTreeMap,
@@ -10,10 +9,12 @@ use std::{
 };
 use u256::{commutative_binop, noncommutative_binop};
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(PartialEq, Clone)]
+#[cfg_attr(feature = "std", derive(Debug))]
 pub struct DensePolynomial(Vec<FieldElement>);
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(PartialEq, Clone)]
+#[cfg_attr(feature = "std", derive(Debug))]
 pub struct SparsePolynomial(BTreeMap<usize, FieldElement>);
 
 impl DensePolynomial {
@@ -77,10 +78,7 @@ impl DensePolynomial {
         let mut result = self.0.clone();
         result.extend_from_slice(&vec![FieldElement::ZERO; self.len()]);
         result = fft(&result);
-        result
-            .par_iter_mut()
-            .map(|x| *x = x.square())
-            .collect::<Vec<_>>();
+        result.iter_mut().for_each(|x| *x = x.square());
         result = ifft(&result);
         Self(result)
     }
@@ -91,10 +89,9 @@ impl DensePolynomial {
 impl AddAssign<&DensePolynomial> for DensePolynomial {
     fn add_assign(&mut self, other: &DensePolynomial) {
         self.0
-            .par_iter_mut()
+            .iter_mut()
             .zip(&other.0)
-            .map(|(c_1, c_2)| *c_1 += c_2)
-            .collect::<Vec<_>>();
+            .for_each(|(c_1, c_2)| *c_1 += c_2);
         if self.len() < other.len() {
             self.0.extend_from_slice(&other.0[self.len()..]);
         }
@@ -105,17 +102,15 @@ impl AddAssign<&DensePolynomial> for DensePolynomial {
 impl SubAssign<&Self> for DensePolynomial {
     fn sub_assign(&mut self, other: &Self) {
         self.0
-            .par_iter_mut()
+            .iter_mut()
             .zip(&other.0)
-            .map(|(c_1, c_2)| *c_1 -= c_2)
-            .collect::<Vec<_>>();
+            .for_each(|(c_1, c_2)| *c_1 -= c_2);
         if self.len() < other.len() {
             let original_length = self.len();
             self.0.extend_from_slice(&other.0[self.len()..]);
             self.0[original_length..]
-                .par_iter_mut()
-                .map(|c| c.neg_assign())
-                .collect::<Vec<_>>();
+                .iter_mut()
+                .for_each(|c| c.neg_assign());
         }
         self.canonicalize();
     }
@@ -135,10 +130,9 @@ impl MulAssign<&Self> for DensePolynomial {
             .extend_from_slice(&vec![FieldElement::ZERO; result_length - other.len()]);
 
         self.0
-            .par_iter_mut()
+            .iter_mut()
             .zip(&fft(&other_coefficients))
-            .map(|(x, y)| *x *= y)
-            .collect::<Vec<_>>();
+            .for_each(|(x, y)| *x *= y);
         self.0 = ifft(&self.0);
         self.canonicalize();
     }
@@ -152,22 +146,13 @@ impl Mul<&DensePolynomial> for &FieldElement {
     type Output = DensePolynomial;
 
     fn mul(self, other: &DensePolynomial) -> DensePolynomial {
-        let mut coefficients: Vec<FieldElement> = Vec::with_capacity(other.len());
-        other
-            .0
-            .par_iter()
-            .map(|x| x * self)
-            .collect_into_vec(&mut coefficients);
-        DensePolynomial(coefficients)
+        DensePolynomial(other.0.iter().map(|x| x * self).collect())
     }
 }
 
 impl MulAssign<&FieldElement> for DensePolynomial {
     fn mul_assign(&mut self, other: &FieldElement) {
-        self.0
-            .par_iter_mut()
-            .map(|x| *x *= other)
-            .collect::<Vec<_>>();
+        self.0.iter_mut().for_each(|x| *x *= other);
     }
 }
 

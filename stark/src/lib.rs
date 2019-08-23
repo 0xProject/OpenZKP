@@ -20,7 +20,7 @@ pub use verifier::check_proof;
 
 // In no std mode, substitute no_std_compat
 #[cfg(not(feature = "std"))]
-#[macro_use]
+#[cfg_attr(feature = "std", macro_use)]
 extern crate no_std_compat as std;
 
 // Conditionally include MmapVec. If the feature is disabled substitute Vec

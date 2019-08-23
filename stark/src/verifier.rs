@@ -10,7 +10,7 @@ use crate::{
 };
 use itertools::*;
 use primefield::FieldElement;
-use std::{collections::HashMap, convert::TryInto, prelude::v1::*};
+use std::{collections::BTreeMap, convert::TryInto, prelude::v1::*};
 use u256::U256;
 
 pub fn check_proof<Public>(
@@ -137,7 +137,7 @@ where
         .collect();
 
     // Folded fri values from the previous layer
-    let mut fri_folds: HashMap<usize, FieldElement> = HashMap::new();
+    let mut fri_folds: BTreeMap<usize, FieldElement> = BTreeMap::new();
 
     let mut previous_indices = queries.to_vec().clone();
     let mut step = 1;
@@ -178,7 +178,7 @@ where
             fri_layer_values.push((*i, coset));
         }
         // Fold and record foldings
-        let mut layer_folds = HashMap::new();
+        let mut layer_folds = BTreeMap::new();
         for (i, coset) in fri_layer_values.iter() {
             layer_folds.insert(
                 *i,

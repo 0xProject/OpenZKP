@@ -1,11 +1,10 @@
 use crate::{hash::Hash, hashable::Hashable, masked_keccak::MaskedKeccak};
+use std::prelude::v1::*;
 
 #[cfg(feature = "prover")]
 use rayon::prelude::*;
 #[cfg(feature = "prover")]
 use std::marker::Sync;
-#[cfg(feature = "prover")]
-use std::{prelude::v1::*, vec};
 
 // This trait is for objects where the object is grouped into hashable sets
 // based on index before getting made into a merkle tree, with domain size
