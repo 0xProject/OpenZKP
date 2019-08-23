@@ -1,7 +1,6 @@
 [workspace]
 members = [
     "primefield",
-    "primefield/benchmarks",
     "ecc",
     "starkdex",
     "stark",
