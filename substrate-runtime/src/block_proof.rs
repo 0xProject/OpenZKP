@@ -98,8 +98,7 @@ decl_module! {
             no_macro_vec.push(2);
 
             assert!(check_proof(
-                // TODO - From slice for prover channel/make verifier take Vec<u8>
-                recorded.proof.clone().into(),
+                recorded.proof.as_slice(),
                 &get_fibonacci_constraints(&public),
                 &public,
                 // TODO - These params should be stored or provided instead of hardcoded
@@ -168,7 +167,7 @@ impl<T: Trait> ProvideInherent for Module<T> {
         no_macro_vec.push(2);
 
         if check_proof(
-            t.proof.into(),
+            t.proof.as_slice(),
             &get_fibonacci_constraints(&public),
             &public,
             &ProofParams {

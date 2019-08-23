@@ -14,7 +14,7 @@ use std::{collections::BTreeMap, convert::TryInto, prelude::v1::*};
 use u256::U256;
 
 pub fn check_proof<Public>(
-    proposed_proof: ProverChannel,
+    proposed_proof: &[u8],
     constraints: &[Constraint],
     public: &Public,
     params: &ProofParams,
@@ -30,7 +30,7 @@ where
 
     let eval_x = geometric_series(&FieldElement::ONE, &omega, eval_domain_size);
 
-    let mut channel = VerifierChannel::new(proposed_proof.proof.clone());
+    let mut channel = VerifierChannel::new(proposed_proof.to_vec());
     let bytes: Vec<u8> = public.clone().into();
     channel.initialize(&bytes);
 

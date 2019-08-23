@@ -1,16 +1,19 @@
-use crate::{channel::*, constraint::Constraint, polynomial::SparsePolynomial, TraceTable};
+use crate::{channel::*, constraint::Constraint, polynomial::SparsePolynomial};
 use primefield::FieldElement;
-use std::{convert::TryInto, prelude::v1::*, vec};
+use std::{convert::TryInto, prelude::v1::*};
 use u256::U256;
 
-#[allow(dead_code)] // TODO
-#[derive(Debug, PartialEq, Clone)]
+#[cfg(feature = "prover")]
+use crate::TraceTable;
+
+#[derive(PartialEq, Clone)]
+#[cfg_attr(feature = "std", derive(Debug))]
 pub struct PublicInput {
     pub index: usize,
     pub value: FieldElement,
 }
 
-#[derive(Debug)]
+#[cfg_attr(feature = "std", derive(Debug))]
 pub struct PrivateInput {
     pub secret: FieldElement,
 }
@@ -62,6 +65,7 @@ impl Replayable<PublicInput> for VerifierChannel {
     }
 }
 
+#[cfg(feature = "prover")]
 pub fn get_trace_table(length: usize, private: &PrivateInput) -> TraceTable {
     // Compute trace table
     let mut trace = TraceTable::new(length, 2);

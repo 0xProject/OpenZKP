@@ -5,6 +5,7 @@
 mod channel;
 mod constraint;
 mod fft;
+pub mod fibonacci;
 mod geometric_series;
 mod hash;
 mod hashable;
@@ -15,6 +16,7 @@ mod proof_params;
 mod utils;
 mod verifier;
 
+pub use channel::{ProverChannel, VerifierChannel};
 pub use proof_params::ProofParams;
 pub use verifier::check_proof;
 
@@ -37,8 +39,6 @@ mod mmap_vec {
 // TODO: Make it work without std.
 
 // Optional prover functionality. Note that prover requires std.
-#[cfg(feature = "prover")]
-pub mod fibonacci;
 #[cfg(feature = "prover")]
 mod pedersen_merkle;
 #[cfg(feature = "prover")]
