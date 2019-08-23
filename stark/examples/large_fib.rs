@@ -45,7 +45,7 @@ fn main() {
     println!("The proof length is {}", potential_proof.proof.len());
 
     let verified = check_proof(
-        potential_proof,
+        potential_proof.proof.as_slice(),
         &constraints,
         &public,
         &ProofParams {

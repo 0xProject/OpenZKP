@@ -5,6 +5,9 @@ use std::prelude::v1::*;
 use tiny_keccak::Keccak;
 use u256::U256;
 
+#[cfg(feature = "std")]
+use rayon::prelude::*;
+
 pub trait RandomGenerator<T> {
     fn get_random(&mut self) -> T;
 }

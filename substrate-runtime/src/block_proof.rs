@@ -203,11 +203,10 @@ mod tests {
         BuildStorage,
     };
     use stark::{
-        check_proof,
         fibonacci::{get_fibonacci_constraints, get_trace_table, PrivateInput, PublicInput},
         stark_proof, ProofParams,
     };
-    use support::{assert_ok, impl_outer_origin};
+    use support::impl_outer_origin;
     use system::RawOrigin;
     use u256::U256;
 

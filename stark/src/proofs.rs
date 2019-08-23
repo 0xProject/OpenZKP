@@ -1,8 +1,7 @@
 use crate::{
     channel::{ProverChannel, RandomGenerator, Writable},
     constraint::Constraint,
-    fft::{bit_reversal_permute, fft_cofactor_bit_reversed, ifft},
-    geometric_series::geometric_series,
+    fft::{fft_cofactor_bit_reversed, ifft},
     hash::Hash,
     hashable::Hashable,
     merkle::{self, make_tree, Groupable, Merkleizable},
@@ -480,6 +479,7 @@ mod tests {
     use super::*;
     use crate::{
         fibonacci::{get_fibonacci_constraints, get_trace_table, PrivateInput, PublicInput},
+        geometric_series::geometric_series,
         verifier::check_proof,
     };
     use macros_decl::{field_element, hex, u256h};
@@ -585,7 +585,7 @@ mod tests {
         );
 
         assert!(check_proof(
-            actual,
+            actual.proof.as_slice(),
             &get_fibonacci_constraints(&public),
             &public,
             &ProofParams {
@@ -624,7 +624,7 @@ mod tests {
         });
 
         assert!(check_proof(
-            actual,
+            actual.proof.as_slice(),
             &constraints,
             &public,
             &ProofParams {
@@ -637,23 +637,6 @@ mod tests {
             2,
             4096
         ));
-    }
-
-    #[test]
-    fn geometric_series_test() {
-        let base = FieldElement::from(u256h!(
-            "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
-        ));
-        let step = FieldElement::from(u256h!(
-            "00000000000000000000000000000000000000000000000f00dbabe0cafebabe"
-        ));
-
-        let domain = geometric_series(&base, &step, 32);
-        let mut hold = base.clone();
-        for item in domain {
-            assert_eq!(item, hold);
-            hold *= &step;
-        }
     }
 
     // TODO: What are we actually testing here? Should we add these as debug_assert

@@ -363,7 +363,7 @@ mod tests {
         );
 
         assert!(check_proof(
-            actual,
+            actual.proof.as_slice(),
             &constraints,
             &public,
             &ProofParams {

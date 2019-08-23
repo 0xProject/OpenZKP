@@ -169,7 +169,7 @@ fn proof_check(crit: &mut Criterion) {
     crit.bench_function("Checking a fib proof of len 1024", move |bench| {
         bench.iter(|| {
             black_box(check_proof(
-                proof.clone(),
+                proof.proof.as_slice(),
                 &get_fibonacci_constraints(&public),
                 &public,
                 &ProofParams {
