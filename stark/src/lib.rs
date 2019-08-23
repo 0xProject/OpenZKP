@@ -40,7 +40,7 @@ mod mmap_vec {
 
 // Optional prover functionality. Note that prover requires std.
 #[cfg(feature = "prover")]
-mod pedersen_merkle;
+pub mod pedersen_merkle;
 #[cfg(feature = "prover")]
 mod proofs;
 #[cfg(feature = "prover")]
