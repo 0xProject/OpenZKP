@@ -56,20 +56,20 @@ pub fn div_3by2(n: &[u64; 3], d: &[u64; 2]) -> u64 {
         // TODO: Proof
         0xffffffffffffffffu64
     } else {
-    // Compute quotient and remainder
-    let (mut q, mut r) = divrem_2by1(n[1], n[2], d[1]);
+        // Compute quotient and remainder
+        let (mut q, mut r) = divrem_2by1(n[1], n[2], d[1]);
 
-    if mul_2(q, d[0]) > val_2(n[0], r) {
-        q -= 1;
-        r = r.wrapping_add(d[1]);
-        let overflow = r < d[1];
-        if !overflow && mul_2(q, d[0]) > val_2(n[0], r) {
+        if mul_2(q, d[0]) > val_2(n[0], r) {
             q -= 1;
-            // UNUSED: r += d[1];
+            r = r.wrapping_add(d[1]);
+            let overflow = r < d[1];
+            if !overflow && mul_2(q, d[0]) > val_2(n[0], r) {
+                q -= 1;
+                // UNUSED: r += d[1];
+            }
         }
+        q
     }
-    q
-}
 }
 
 // Turns numerator into remainder, returns quotient.
@@ -131,7 +131,8 @@ pub fn divrem_nbym(numerator: &mut [u64], divisor: &mut [u64]) {
                 carry = b;
             }
             // This should alwayst be zero, so we don't compute:
-            // numerator[j + n] = numerator[j + n].wrapping_add(carry);
+            // IGNORED: numerator[j + n] = numerator[j + n].wrapping_add(carry);
+            // debug_assert_eq!(numerator[j + n], 0);
             qhat -= 1;
         }
 
@@ -159,6 +160,14 @@ mod tests {
     use quickcheck_macros::quickcheck;
 
     const HALF: u64 = 1u64 << 63;
+
+    #[test]
+    fn div_3by2_issue() {
+        let n = [0, 0, 0x8000000000000000];
+        let d = [1, 0x8000000000000000];
+        let q = div_3by2(&n, &d);
+        assert_eq!(q, 0xffffffffffffffff);
+    }
 
     #[test]
     fn div_3by2_max() {
@@ -235,8 +244,10 @@ mod tests {
 
     #[quickcheck]
     fn div_3by2_correct(q: u64, d0: u64, d1: u64) -> bool {
+        // TODO: Add remainder
         let d1 = d1 | (1 << 63);
         let n = U256::from_limbs(d0, d1, 0, 0) * &U256::from(q);
+        debug_assert!(n.c3 == 0);
         let qhat = div_3by2(&[n.c0, n.c1, n.c2], &[d0, d1]);
         qhat == q
     }
