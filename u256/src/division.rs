@@ -18,12 +18,15 @@ const fn mul_2(a: u64, b: u64) -> u128 {
 // TODO: If divq is not supported, use a fast software implementation:
 // See https://gmplib.org/~tege/division-paper.pdf
 #[inline(always)]
-const fn divrem_2by1(lo: u64, hi: u64, d: u64) -> (u64, u64) {
-    // TODO: debug_assert!(d > 0);
+fn divrem_2by1(lo: u64, hi: u64, d: u64) -> (u64, u64) {
+    debug_assert!(d > 0);
+    debug_assert!(hi < d);
     let d = d as u128;
     let n = val_2(lo, hi);
     let q = n / d;
     let r = n % d;
+    debug_assert!(r < d);
+    debug_assert!(mul_2(q as u64, d as u64) + val_2(r as u64, 0) == val_2(lo, hi));
     (q as u64, r as u64)
 }
 
@@ -47,7 +50,7 @@ pub fn div_3by2(n: &[u64; 3], d: &[u64; 2]) -> u64 {
     debug_assert!(d[1] >> 63 == 1);
 
     // The quotient needs to fit u64. For this we need <n2 n1> < <d1 d0>
-    debug_assert!(n[2] < d[1] || (n[2] == d[1] && n[1] < d[0]));
+    debug_assert!(val_2(n[1], n[2]) < val_2(d[0], d[1]));
 
     // Compute quotient and remainder
     // TODO: Use GMP's reciprocal computation.
