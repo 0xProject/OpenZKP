@@ -52,8 +52,11 @@ pub fn div_3by2(n: &[u64; 3], d: &[u64; 2]) -> u64 {
     // The quotient needs to fit u64. For this we need <n2 n1> < <d1 d0>
     debug_assert!(val_2(n[1], n[2]) < val_2(d[0], d[1]));
 
+    if n[2] == d[1] {
+        // TODO: Proof
+        0xffffffffffffffffu64
+    } else {
     // Compute quotient and remainder
-    // TODO: Use GMP's reciprocal computation.
     let (mut q, mut r) = divrem_2by1(n[1], n[2], d[1]);
 
     if mul_2(q, d[0]) > val_2(n[0], r) {
@@ -66,6 +69,7 @@ pub fn div_3by2(n: &[u64; 3], d: &[u64; 2]) -> u64 {
         }
     }
     q
+}
 }
 
 // Turns numerator into remainder, returns quotient.
