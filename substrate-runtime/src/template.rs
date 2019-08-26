@@ -1,8 +1,8 @@
 use parity_codec::{Decode, Encode};
 use primefield::FieldElement;
 use rstd::prelude::*;
+#[cfg(feature = "std")]
 use runtime_io::{with_storage, ChildrenStorageOverlay, StorageOverlay};
-#[allow(unused_imports)] // TODO - Remove when used
 use starkdex::wrappers::*;
 use support::{
     decl_event, decl_module, decl_storage, dispatch::Result, ensure, StorageMap,
