@@ -1,4 +1,3 @@
-use macros_decl::u256h;
 use parity_codec::{Decode, Encode};
 use primefield::FieldElement;
 use rstd::prelude::*;
@@ -6,7 +5,7 @@ use runtime_io::{with_storage, ChildrenStorageOverlay, StorageOverlay};
 #[allow(unused_imports)] // TODO - Remove when used
 use starkdex::wrappers::*;
 use support::{
-    decl_event, decl_module, decl_storage, dispatch::Result, ensure, StorageMap, StorageValue,
+    decl_event, decl_module, decl_storage, dispatch::Result, ensure, StorageMap,
 };
 use system::ensure_signed;
 use u256::U256;
@@ -177,12 +176,8 @@ mod tests {
         traits::{BlakeTwo256, IdentityLookup},
         BuildStorage,
     };
-    use stark::{
-        check_proof,
-        fibonacci::{get_fibonacci_constraints, get_trace_table, PrivateInput, PublicInput},
-        ProofParams,
-    };
     use support::{assert_ok, impl_outer_origin};
+    use macros_decl::u256h;
 
     impl_outer_origin! {
         pub enum Origin for TemplateTest {}
