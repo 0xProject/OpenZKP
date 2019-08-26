@@ -1,6 +1,33 @@
-// TODO: #![deny(missing_docs)]
 #![warn(clippy::all)]
 #![cfg_attr(not(feature = "std"), no_std)]
+#![warn(
+    absolute_paths_not_starting_with_crate,
+    anonymous_parameters,
+    // box_pointers,
+    deprecated_in_future,
+    elided_lifetimes_in_paths,
+    explicit_outlives_requirements,
+    keyword_idents,
+    macro_use_extern_crate,
+    // missing_copy_implementations,
+    missing_doc_code_examples,
+    private_doc_tests,
+    single_use_lifetimes,
+    trivial_casts,
+    trivial_numeric_casts,
+    unsafe_code,
+    unstable_features,
+    unused_extern_crates,
+    unused_import_braces,
+    unused_labels,
+    unused_lifetimes,
+    unused_qualifications,
+    unused_results,
+    variant_size_differences
+)]
+// TODO: #![cfg_attr(feature = "std", missing_debug_implementations)]
+// TODO: #![warn(unreachable_pub)]
+// TODO: #![warn(missing_docs)]
 mod channel;
 mod constraint;
 mod fft;
