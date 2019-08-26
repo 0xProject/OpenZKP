@@ -139,6 +139,7 @@ decl_module! {
 
 impl<T: Trait> Module<T> {
     // Note this function is only used for testing and should never be made pub
+    #[cfg(feature = "std")]
     fn balance_set_up(
         substrate_who: T::AccountId,
         who: PublicKey,
