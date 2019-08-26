@@ -1,6 +1,5 @@
 // TODO: #![deny(missing_docs)]
 #![warn(clippy::all)]
-#![deny(warnings)]
 #![cfg_attr(not(feature = "std"), no_std)]
 mod curve;
 mod jacobian;

@@ -1,5 +1,4 @@
 #![warn(clippy::all)]
-#![deny(warnings)]
 use macros_decl::u256h;
 use primefield::FieldElement;
 use stark::{

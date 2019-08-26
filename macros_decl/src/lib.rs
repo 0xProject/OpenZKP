@@ -1,5 +1,4 @@
 #![warn(clippy::all)]
-#![deny(warnings)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use proc_macro_hack::proc_macro_hack;

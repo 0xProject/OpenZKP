@@ -1,5 +1,4 @@
 #![warn(clippy::all)]
-#![deny(warnings)]
 mod utils;
 
 use cfg_if::cfg_if;
