@@ -167,23 +167,20 @@ pub fn decommitment_size(indices: &[usize], data_size: usize) -> usize {
     let mut peekable_indicies = indices.iter().peekable();
     let mut excluded_pair = false;
     for &index in indices.iter() {
-        peekable_indicies.next();
+        // TODO: Use return value.
+        let _ = peekable_indicies.next();
         known[num_leaves + index % num_leaves] = true;
 
         if index % 2 == 0 {
             known[num_leaves + 1 + index % num_leaves] = true;
-            let prophet = peekable_indicies.peek();
-            match prophet {
-                Some(x) => {
-                    if **x != index + 1 {
-                        total += 1;
-                    } else {
-                        excluded_pair = true;
-                    }
-                }
-                None => {
+            if let Some(x) = peekable_indicies.peek() {
+                if **x != index + 1 {
                     total += 1;
+                } else {
+                    excluded_pair = true;
                 }
+            } else {
+                total += 1;
             }
         } else if !excluded_pair {
             known[num_leaves - 1 + index % num_leaves] = true;

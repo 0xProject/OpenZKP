@@ -245,7 +245,7 @@ impl DivAssign<SparsePolynomial> for DensePolynomial {
                 assert!(self.0[i].is_zero());
             }
         }
-        self.0.drain(0..denominator_degree);
+        let _ = self.0.drain(0..denominator_degree);
         self.canonicalize();
     }
 }

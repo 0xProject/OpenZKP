@@ -180,7 +180,7 @@ where
         // Fold and record foldings
         let mut layer_folds = BTreeMap::new();
         for (i, coset) in fri_layer_values.iter() {
-            layer_folds.insert(
+            let _old_value = layer_folds.insert(
                 *i,
                 fri_fold(
                     coset.as_slice(),

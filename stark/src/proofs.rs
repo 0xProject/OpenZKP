@@ -78,6 +78,8 @@ where
     }
 }
 
+// TODO: Look into lifetime annotations here. For now ignore the hint.
+#[allow(single_use_lifetimes)]
 pub fn stark_proof<Public>(
     trace: &TraceTable,
     constraints: &[Constraint],
@@ -86,7 +88,7 @@ pub fn stark_proof<Public>(
 ) -> ProverChannel
 where
     for<'a> ProverChannel: Writable<&'a Public>,
-    for<'a> ProverChannel: Writable<&'a Hash>,
+    for<'b> ProverChannel: Writable<&'b Hash>,
 {
     // Initialize a proof channel with the public input.
     let mut proof = ProverChannel::new();
