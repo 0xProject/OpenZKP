@@ -45,7 +45,7 @@ pub fn divrem_nby1(numerator: &mut [u64], divisor: u64) -> u64 {
 //  q = |  --------  |
 //      |_    d1 d0 _|
 #[inline(always)]
-pub fn div_3by2(n: &[u64; 3], d: &[u64; 2]) -> u64 {
+fn div_3by2(n: &[u64; 3], d: &[u64; 2]) -> u64 {
     // The highest bit of d needs to be set
     debug_assert!(d[1] >> 63 == 1);
 
@@ -53,7 +53,9 @@ pub fn div_3by2(n: &[u64; 3], d: &[u64; 2]) -> u64 {
     debug_assert!(val_2(n[1], n[2]) < val_2(d[0], d[1]));
 
     if n[2] == d[1] {
-        // TODO: Proof
+        // We compute [n2 n1 n0] / [n2 d0] with n1 < d0.
+        //
+        // TODO: Proof.
         0xffffffffffffffffu64
     } else {
         // Compute quotient and remainder
@@ -84,6 +86,8 @@ pub fn divrem_nbym(numerator: &mut [u64], divisor: &mut [u64]) {
     debug_assert!(numerator.len() > divisor.len());
     debug_assert!(*divisor.last().unwrap() > 0);
     debug_assert!(*numerator.last().unwrap() == 0);
+    // OPT: Once const generics are in, unroll for lengths.
+    // OPT: We can use macro generated specializations till then.
     let n = divisor.len();
     let m = numerator.len() - n - 1;
 
