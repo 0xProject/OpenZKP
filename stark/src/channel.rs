@@ -25,18 +25,21 @@ pub trait Replayable<T> {
 }
 
 #[derive(PartialEq, Eq, Clone, Default)]
+#[cfg_attr(feature = "std", derive(Debug))]
 pub struct PublicCoin {
     pub digest: [u8; 32],
     counter:    u64,
 }
 
 #[derive(PartialEq, Eq, Clone, Default)]
+#[cfg_attr(feature = "std", derive(Debug))]
 pub struct ProverChannel {
     pub coin:  PublicCoin,
     pub proof: Vec<u8>,
 }
 
 #[derive(PartialEq, Eq, Clone, Default)]
+#[cfg_attr(feature = "std", derive(Debug))]
 pub struct VerifierChannel {
     pub coin:    PublicCoin,
     pub proof:   Vec<u8>,
