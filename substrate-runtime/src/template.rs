@@ -4,9 +4,7 @@ use rstd::prelude::*;
 #[cfg(feature = "std")]
 use runtime_io::{with_storage, ChildrenStorageOverlay, StorageOverlay};
 use starkdex::wrappers::*;
-use support::{
-    decl_event, decl_module, decl_storage, dispatch::Result, ensure, StorageMap,
-};
+use support::{decl_event, decl_module, decl_storage, dispatch::Result, ensure, StorageMap};
 use system::ensure_signed;
 use u256::U256;
 
@@ -170,6 +168,7 @@ decl_event!(
 mod tests {
     use super::*;
 
+    use macros_decl::u256h;
     use primitives::{Blake2Hasher, H256};
     use runtime_io::with_externalities;
     use runtime_primitives::{
@@ -178,7 +177,6 @@ mod tests {
         BuildStorage,
     };
     use support::{assert_ok, impl_outer_origin};
-    use macros_decl::u256h;
 
     impl_outer_origin! {
         pub enum Origin for TemplateTest {}
