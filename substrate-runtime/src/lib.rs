@@ -2,6 +2,9 @@
 //! ready for Wasm.
 
 #![cfg_attr(not(feature = "std"), no_std)]
+// False positive: linter warns that the feature is stable and does not need
+// a flag. But we do want to feature-flag it here.
+#![allow(stable_features)] // TODO: Make it apply only to the following line
 #![cfg_attr(not(feature = "std"), feature(alloc))]
 // `construct_runtime!` does a lot of recursion and requires us to increase the limit to 256.
 #![recursion_limit = "256"]

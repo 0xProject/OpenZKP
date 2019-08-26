@@ -1,10 +1,12 @@
 use crate::hash::Hash;
 use macros_decl::{hex, u256h};
 use primefield::FieldElement;
-use rayon::prelude::*;
 use std::prelude::v1::*;
 use tiny_keccak::Keccak;
 use u256::U256;
+
+#[cfg(feature = "std")]
+use rayon::prelude::*;
 
 pub trait RandomGenerator<T> {
     fn get_random(&mut self) -> T;
@@ -65,6 +67,7 @@ impl PublicCoin {
     }
 
     // TODO - Make tests compatible with the proof of work values from this function
+    #[cfg(feature = "std")]
     pub fn pow_find_nonce_threaded(&self, pow_bits: u8) -> u64 {
         let seed = self.pow_seed(pow_bits);
         // NOTE: Rayon does not support open ended ranges, so we need to use a closed
@@ -132,6 +135,7 @@ impl ProverChannel {
         self.coin.pow_find_nonce(pow_bits)
     }
 
+    #[cfg(feature = "std")]
     pub fn pow_find_nonce_threaded(&self, pow_bits: u8) -> u64 {
         self.coin.pow_find_nonce_threaded(pow_bits)
     }
@@ -158,6 +162,7 @@ impl VerifierChannel {
         self.coin.pow_find_nonce(pow_bits)
     }
 
+    #[cfg(feature = "std")]
     pub fn pow_find_nonce_threaded(&self, pow_bits: u8) -> u64 {
         self.coin.pow_find_nonce_threaded(pow_bits)
     }
