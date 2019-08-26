@@ -3,11 +3,6 @@ use parity_codec::{Decode, Encode};
 use primefield::FieldElement;
 use rstd::prelude::*;
 use runtime_io::{with_storage, ChildrenStorageOverlay, StorageOverlay};
-use stark::{
-    check_proof,
-    fibonacci::{get_fibonacci_constraints, get_trace_table, PrivateInput, PublicInput},
-    ProofParams,
-};
 #[allow(unused_imports)] // TODO - Remove when used
 use starkdex::wrappers::*;
 use support::{
@@ -181,6 +176,11 @@ mod tests {
         testing::{Digest, DigestItem, Header},
         traits::{BlakeTwo256, IdentityLookup},
         BuildStorage,
+    };
+    use stark::{
+        check_proof,
+        fibonacci::{get_fibonacci_constraints, get_trace_table, PrivateInput, PublicInput},
+        ProofParams,
     };
     use support::{assert_ok, impl_outer_origin};
 
