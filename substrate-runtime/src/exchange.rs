@@ -4,6 +4,7 @@ use parity_codec::{Decode, Encode};
 use primefield::FieldElement;
 use rstd::prelude::*;
 use runtime_io::{with_storage, ChildrenStorageOverlay, StorageOverlay};
+use runtime_primitives::traits::{BlakeTwo256, Hash};
 use stark::{
     check_proof,
     fibonacci::{get_fibonacci_constraints, get_trace_table, PrivateInput, PublicInput},
@@ -84,13 +85,8 @@ decl_module! {
         {
             let sender = ensure_signed(origin)?;
             let mut data : Vec<u8> = sender.clone().encode();
-            // TODO - We could hash the id here instead of padding, should we?
-            for _ in 0..(32-data.len()) {
-                data.push(0_u8);
-            }
-            let mut sized = [0_u8; 32];
-            sized.copy_from_slice(data.as_slice());
-            let field_version = FieldElement::from(U256::from_bytes_be(&sized));
+            let hash : [u8; 32] = BlakeTwo256::hash_of(&data).into();
+            let field_version = FieldElement::from(U256::from_bytes_be(&hash));
 
             ensure!(verify(field_version.as_montgomery().to_bytes_be(), sig, who.clone()), "Invalid Signature");
 
@@ -134,7 +130,7 @@ decl_module! {
             let stark_sender = <PublicKeys<T>>::get(sender);
 
             // Checks that this hasn't been executed
-            ensure!(!<ExecutedIds<T>>::exists(order.maker_message.trade_id));
+            ensure!(!<ExecutedIds<T>>::exists(order.maker_message.trade_id), "Trade has already been executed");
 
             ensure!(<Vaults<T>>::exists(order.vault_a), "Missing taker vault a");
             ensure!(<Vaults<T>>::exists(order.vault_b), "Missing taker vault b");
@@ -225,6 +221,7 @@ mod tests {
         BuildStorage,
     };
     use support::{assert_ok, impl_outer_origin};
+    use starkdex::wrappers::{public_key, sign};
 
     impl_outer_origin! {
         pub enum Origin for ExchangeTest {}
@@ -281,14 +278,10 @@ mod tests {
 
     #[test]
     fn allows_registration() {
-        let mut data: Vec<u8> = 111.encode(); // Note - In the substrate test environment account ids are u64 instead of
+        let mut data: Vec<u8> = (10_u64).encode(); // Note - In the substrate test environment account ids are u64 instead of
                                               // public keys
-        for _ in 0..(32 - data.len()) {
-            data.push(0_u8);
-        }
-        let mut sized = [0_u8; 32];
-        sized.copy_from_slice(data.as_slice());
-        let field_version = FieldElement::from(U256::from_bytes_be(&sized));
+        let hashed : [u8; 32] = BlakeTwo256::hash_of(&data).into();
+        let field_version = FieldElement::from(U256::from_bytes_be(&hashed));
 
         let private_key =
             u256h!("03c1e9550e66958296d11b60f8e8e7a7ad990d07fa65d5f7652c4a6c87d4e3cc");
@@ -300,7 +293,7 @@ mod tests {
         .into();
         let public = public_key(&private_key.to_bytes_be()).into();
         with_externalities(&mut new_test_ext(), || {
-            assert_ok!(Exchange::register(Origin::signed(111), public, sig));
+            assert_ok!(Exchange::register(Origin::signed(10), public, sig));
         });
     }
 
@@ -342,9 +335,9 @@ mod tests {
         let paul_public: PublicKey = public_key(&paul_private.to_bytes_be()).into();
         let remco_public: PublicKey = public_key(&remco_private.to_bytes_be()).into();
 
-        let hash = hash(
-            &U256::from(((50_u64) << 32) + 40).to_bytes_be(),
-            &remco_public.x.clone(),
+        let hash = crate::wrappers::hash(
+            U256::from(((50_u64) << 32) + 40).to_bytes_be(),
+            remco_public.x.clone(),
         );
         let sig = sign(&hash, &paul_private.to_bytes_be()).into();
         with_externalities(&mut new_test_ext(), || {
