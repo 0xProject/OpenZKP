@@ -24,30 +24,30 @@ pub struct Signature {
 
 impl From<PublicKey> for ([u8; 32], [u8; 32]) {
     fn from(key: PublicKey) -> ([u8; 32], [u8; 32]) {
-        (key.x.clone(), key.y.clone())
+        (key.x, key.y)
     }
 }
 
 impl From<([u8; 32], [u8; 32])> for PublicKey {
     fn from(key: ([u8; 32], [u8; 32])) -> PublicKey {
         PublicKey {
-            x: key.0.clone(),
-            y: key.1.clone(),
+            x: key.0,
+            y: key.1,
         }
     }
 }
 
 impl From<Signature> for ([u8; 32], [u8; 32]) {
     fn from(key: Signature) -> ([u8; 32], [u8; 32]) {
-        (key.r.clone(), key.s.clone())
+        (key.r, key.s)
     }
 }
 
 impl From<([u8; 32], [u8; 32])> for Signature {
     fn from(key: ([u8; 32], [u8; 32])) -> Signature {
         Signature {
-            r: key.0.clone(),
-            s: key.1.clone(),
+            r: key.0,
+            s: key.1,
         }
     }
 }
@@ -101,7 +101,7 @@ decl_module! {
             ensure!(balance > amount, "You don't have enough token");
 
             // TODO - Hashes over generic slices or better packing.
-            let hash = hash(&U256::from(((nonce as u64) << 32)+ amount as u64).to_bytes_be(), &to.x.clone());
+            let hash = hash(&U256::from((u64::from(nonce) << 32)+ u64::from(amount)).to_bytes_be(), &to.x);
 
             ensure!(verify(&hash, (&sig.r, &sig.s), (&stark_sender.x, &stark_sender.y)), "Invalid Signature");
 
@@ -296,7 +296,7 @@ mod tests {
 
         let hash = hash(
             &U256::from(((50_u64) << 32) + 40).to_bytes_be(),
-            &remco_public.x.clone(),
+            &remco_public.x,
         );
         let sig = sign(&hash, &paul_private.to_bytes_be()).into();
         with_externalities(&mut new_test_ext(), || {
