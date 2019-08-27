@@ -1,8 +1,12 @@
+// Substrate macros use `Default::default()`. To allow this we need to
+// allow the lint on the whole file scope.
+#![allow(clippy::default_trait_access)]
+
 #[cfg(feature = "std")]
 use inherents::ProvideInherentData;
 use inherents::{InherentData, InherentIdentifier, IsFatalError, ProvideInherent, RuntimeString};
 use parity_codec::{Decode, Encode};
-use rstd::{prelude::*, result};
+use rstd::{prelude::*, result::Result};
 use support::{decl_module, decl_storage, StorageValue};
 use system::ensure_inherent;
 
@@ -34,10 +38,7 @@ pub enum InherentError {
 
 impl IsFatalError for InherentError {
     fn is_fatal_error(&self) -> bool {
-        match self {
-            InherentError::InvalidProof(_) => true,
-            InherentError::Other(_) => true,
-        }
+        true
     }
 }
 
@@ -46,7 +47,7 @@ impl InherentError {
     #[cfg(feature = "std")]
     pub fn try_from(id: InherentIdentifier, data: &[u8]) -> Option<Self> {
         if id == INHERENT_IDENTIFIER {
-            <InherentError as parity_codec::Decode>::decode(&mut &data[..])
+            <Self as parity_codec::Decode>::decode(&mut &data[..])
         } else {
             None
         }
@@ -147,7 +148,7 @@ impl<T: Trait> ProvideInherent for Module<T> {
         Some(Call::set(data))
     }
 
-    fn check_inherent(call: &Self::Call, data: &InherentData) -> result::Result<(), Self::Error> {
+    fn check_inherent(call: &Self::Call, data: &InherentData) -> Result<(), Self::Error> {
         let t: RecordedProof = match call {
             Call::set(ref t) => t.clone(),
             _ => return Err(InherentError::Other("Call Failure".into())),
