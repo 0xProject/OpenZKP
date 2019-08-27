@@ -37,6 +37,8 @@
 #![cfg_attr(feature = "std", warn(
     // TODO: missing_debug_implementations,
 ))]
+// TODO: We do a lot of casting all over the place, mostly to/from usize.
+#![allow(clippy::cast_possible_truncation)]
 
 mod channel;
 mod constraint;

@@ -21,6 +21,8 @@ impl Reversible for u64 {
     }
 }
 
+// False positive, const can not use Self
+#[allow(clippy::use_self)]
 impl Reversible for usize {
     fn bit_reverse(mut self) -> Self {
         const BITS: usize = 64;

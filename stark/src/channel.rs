@@ -66,6 +66,8 @@ impl PublicCoin {
     pub fn pow_find_nonce(&self, pow_bits: u8) -> u64 {
         let seed = self.pow_seed(pow_bits);
 
+        // We assume a nonce exists and will be found in reasonable time.
+        #[allow(clippy::maybe_infinite_iter)]
         (0_u64..)
             .find(|&nonce| Self::pow_verify_with_seed(nonce, pow_bits, &seed))
             .expect("No valid nonce found")
@@ -273,7 +275,7 @@ impl Writable<&[FieldElement]> for ProverChannel {
     fn write(&mut self, data: &[FieldElement]) {
         let mut container = Vec::with_capacity(32 * data.len());
         for element in data {
-            for byte in element.as_montgomery().to_bytes_be().iter() {
+            for byte in &element.as_montgomery().to_bytes_be() {
                 container.push(byte.clone());
             }
         }

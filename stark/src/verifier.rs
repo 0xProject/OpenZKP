@@ -145,7 +145,7 @@ where
         let mut fri_layer_values = Vec::new();
 
         fri_indices.dedup();
-        for i in fri_indices.iter() {
+        for i in &fri_indices {
             let mut coset: Vec<FieldElement> = Vec::new();
             for j in 0..2_usize.pow(params.fri_layout[k] as u32) {
                 let n = i * 2_usize.pow(params.fri_layout[k] as u32) + j;
@@ -223,7 +223,7 @@ where
     // Checks that the calculated fri folded queries are the points interpolated by
     // the decommited polynomial.
     let interp_root = FieldElement::root(len).unwrap();
-    for key in previous_indices.iter() {
+    for key in &previous_indices {
         let calculated = fri_folds[key].clone();
         let x_pow = interp_root.pow(key.bit_reverse_at(len));
         let committed = DensePolynomial::new(&last_layer_coefficient).evaluate(&x_pow);

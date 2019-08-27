@@ -31,7 +31,7 @@ impl Writable<&PublicInput> for ProverChannel {
 }
 
 impl From<PublicInput> for Vec<u8> {
-    fn from(public_input: PublicInput) -> Vec<u8> {
+    fn from(public_input: PublicInput) -> Self {
         let mut bytes = [public_input.index.to_be_bytes()].concat();
         bytes.extend_from_slice(&public_input.value.as_montgomery().to_bytes_be());
         bytes

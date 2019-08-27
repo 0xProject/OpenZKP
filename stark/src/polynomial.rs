@@ -318,6 +318,8 @@ impl Arbitrary for SparsePolynomial {
     }
 }
 
+// Qiuckcheck needs pass by value
+#[allow(clippy::needless_pass_by_value)]
 #[cfg(test)]
 mod tests {
     use super::*;
