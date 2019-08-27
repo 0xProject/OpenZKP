@@ -48,14 +48,23 @@ fn div_3by2(n: &[u64; 3], d: &[u64; 2]) -> u64 {
     // The highest bit of d needs to be set
     debug_assert!(d[1] >> 63 == 1);
 
-    // The quotient needs to fit u64. For this we need <n2 n1> < <d1 d0>
+    // The quotient needs to fit u64. For this we need [n2 n1] < [d1 d0]
     debug_assert!(val_2(n[1], n[2]) < val_2(d[0], d[1]));
 
     if n[2] == d[1] {
-        // We compute [n2 n1 n0] / [n2 d0] with n1 < d0.
-        //
-        // TODO: Proof.
-        0xffffffffffffffffu64
+        // From [n2 n1] < [d1 d0] and n2 = d1 it follows that n[1] < d[0].
+        debug_assert!(n[1] < d[0]);
+        // We start by subtracting 2^64 times the divisor, resulting in a
+        // negative remainder. Depending on the result, we need to add back
+        // in one or two times the divisor to make the remainder positive.
+        // (It can not be more since the divisor is > 2^127 and the negated
+        // remainder is < 2^128.)
+        let neg_remainder = val_2(0, d[0]) - val_2(n[0], n[1]);
+        if neg_remainder > val_2(d[0], d[1]) {
+            0xffff_ffff_ffff_fffe_u64
+        } else {
+            0xffff_ffff_ffff_ffff_u64
+        }
     } else {
         // Compute quotient and remainder
         let (mut q, mut r) = divrem_2by1(n[1], n[2], d[1]);
@@ -163,13 +172,12 @@ mod tests {
     use quickcheck_macros::quickcheck;
 
     const HALF: u64 = 1_u64 << 63;
+    const FULL: u64 = u64::max_value();
 
     #[test]
-    fn div_3by2_issue() {
-        let n = [0, 0, 0x8000000000000000];
-        let d = [1, 0x8000000000000000];
-        let q = div_3by2(&n, &d);
-        assert_eq!(q, 0xffffffffffffffff);
+    fn div_3by2_tests() {
+        assert_eq!(div_3by2(&[FULL, FULL - 1, HALF], &[FULL, HALF]), FULL);
+        assert_eq!(div_3by2(&[0, 0, HALF], &[FULL, HALF]), FULL - 1);
     }
 
     #[test]
