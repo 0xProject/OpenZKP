@@ -168,7 +168,7 @@ where
     // Decommit the trace table values.
     decommit_with_queries_and_proof(
         query_indices.as_slice(),
-        trace_lde.as_slice(),
+        &trace_lde.as_slice(),
         tree.as_slice(),
         &mut proof,
     );
@@ -176,7 +176,7 @@ where
     // Decommit the constraint values
     decommit_with_queries_and_proof(
         query_indices.as_slice(),
-        constraint_lde.as_slice(),
+        &constraint_lde.as_slice(),
         c_tree.as_slice(),
         &mut proof,
     );
@@ -184,7 +184,7 @@ where
     // Decommit the FRI layer values
     decommit_fri_layers_and_trees(
         fri_layers.as_slice(),
-        fri_trees.as_slice(),
+        &fri_trees.as_slice(),
         query_indices.as_slice(),
         &params,
         &mut proof,
@@ -198,7 +198,7 @@ fn get_indices(num: usize, bits: u32, proof: &mut ProverChannel) -> Vec<usize> {
     let mut query_indices = Vec::with_capacity(num + 3);
     while query_indices.len() < num {
         let val: U256 = proof.get_random();
-        let mask = 2usize.pow(bits) - 1;
+        let mask = 2_usize.pow(bits) - 1;
         query_indices.push((val.clone() >> (0x100 - 0x040)).as_usize() & mask);
         query_indices.push((val.clone() >> (0x100 - 0x080)).as_usize() & mask);
         query_indices.push((val.clone() >> (0x100 - 0x0C0)).as_usize() & mask);
@@ -322,7 +322,7 @@ fn get_out_of_domain_information(
             .push(constraint_polynomial.evaluate(&oods_point.pow(constraint_polynomials.len())));
     }
 
-    for v in oods_values.iter() {
+    for v in &oods_values {
         proof.write(v);
     }
 
@@ -400,8 +400,10 @@ fn perform_fri_layering(
 
     // TODO: fold fri_polynomial without cloning it first.
     let mut p = fri_polynomial.clone();
-    for &n_reductions in params.fri_layout.iter() {
+    for &n_reductions in &params.fri_layout {
         let layer = evalute_polynomial_on_domain(&p, params.blowup).to_vec();
+        // FRI layout values are small.
+        #[allow(clippy::cast_possible_truncation)]
         let tree = (2_usize.pow(n_reductions as u32), layer.as_slice()).merkleize();
         proof.write(&tree[1]);
         fri_trees.push(tree);
@@ -419,22 +421,22 @@ fn perform_fri_layering(
 
 fn decommit_with_queries_and_proof<R: Hashable, T: Groupable<R>>(
     queries: &[usize],
-    source: T,
+    source: &T,
     tree: &[Hash],
     proof: &mut ProverChannel,
 ) where
     ProverChannel: Writable<R>,
 {
     for &index in queries.iter() {
-        proof.write((&source).get_leaf(index));
+        proof.write(source.get_leaf(index));
     }
-    decommit_proof(merkle::proof(tree, queries, source), proof);
+    decommit_proof(&merkle::proof(tree, queries, source), proof);
 }
 
 // Note - This function exists because rust gets confused by the intersection of
 // the write types and the others.
-fn decommit_proof(decommitment: Vec<Hash>, proof: &mut ProverChannel) {
-    for x in decommitment.iter() {
+fn decommit_proof(decommitment: &[Hash], proof: &mut ProverChannel) {
+    for x in decommitment {
         proof.write(x);
     }
 }
@@ -449,6 +451,8 @@ fn decommit_fri_layers_and_trees(
     let mut previous_indices: Vec<usize> = query_indices.to_vec();
 
     for (layer, tree, n_reductions) in izip!(fri_layers, fri_trees, &params.fri_layout) {
+        // FRI layout usizes are small.
+        #[allow(clippy::cast_possible_truncation)]
         let fri_const = 2_usize.pow(*n_reductions as u32);
 
         let new_indices: Vec<usize> = previous_indices
@@ -457,7 +461,7 @@ fn decommit_fri_layers_and_trees(
             .dedup()
             .collect();
 
-        for i in new_indices.iter() {
+        for i in &new_indices {
             for j in 0..fri_const {
                 let n = i * fri_const + j;
                 match previous_indices.binary_search(&n) {
@@ -466,9 +470,9 @@ fn decommit_fri_layers_and_trees(
                 };
             }
         }
-        let decommitment = merkle::proof(tree, &new_indices, (fri_const, layer.as_slice()));
+        let decommitment = merkle::proof(tree, &new_indices, &(fri_const, layer.as_slice()));
 
-        for proof_element in decommitment.iter() {
+        for proof_element in &decommitment {
             proof.write(proof_element);
         }
 
@@ -692,7 +696,7 @@ mod tests {
         let LDEn = calculate_low_degree_extensions(&TPn, params.blowup);
 
         // Checks that the low degree extension calculation is working
-        let i = 13644usize;
+        let i = 13644_usize;
         let reverse_i = i.bit_reverse_at(eval_domain_size);
         let eval_offset_x = geometric_series(&gen, &omega, eval_domain_size);
         assert_eq!(TPn[0].evaluate(&eval_offset_x[reverse_i]), LDEn[0][i]);
@@ -824,7 +828,7 @@ mod tests {
 
         decommit_with_queries_and_proof(
             query_indices.as_slice(),
-            LDEn.as_slice(),
+            &LDEn.as_slice(),
             tree.as_slice(),
             &mut proof,
         );
@@ -836,7 +840,7 @@ mod tests {
 
         decommit_with_queries_and_proof(
             query_indices.as_slice(),
-            CC.as_slice(),
+            &CC.as_slice(),
             c_tree.as_slice(),
             &mut proof,
         );

@@ -1,3 +1,5 @@
+// TODO: Naming?
+#![allow(clippy::module_name_repetitions)]
 use crate::hash::Hash;
 use macros_decl::{hex, u256h};
 use primefield::FieldElement;
@@ -65,7 +67,7 @@ impl PublicCoin {
         let seed = self.pow_seed(pow_bits);
 
         (0_u64..)
-            .find(|&nonce| PublicCoin::pow_verify_with_seed(nonce, pow_bits, &seed))
+            .find(|&nonce| Self::pow_verify_with_seed(nonce, pow_bits, &seed))
             .expect("No valid nonce found")
     }
 
@@ -77,7 +79,7 @@ impl PublicCoin {
         // one.
         (0..u64::max_value())
             .into_par_iter()
-            .find_any(|&nonce| PublicCoin::pow_verify_with_seed(nonce, pow_bits, &seed))
+            .find_any(|&nonce| Self::pow_verify_with_seed(nonce, pow_bits, &seed))
             .expect("No valid nonce found")
     }
 
@@ -93,7 +95,7 @@ impl PublicCoin {
 
     pub fn pow_verify(&self, nonce: u64, pow_bits: u8) -> bool {
         let seed = self.pow_seed(pow_bits);
-        PublicCoin::pow_verify_with_seed(nonce, pow_bits, &seed)
+        Self::pow_verify_with_seed(nonce, pow_bits, &seed)
     }
 
     fn pow_verify_with_seed(nonce: u64, pow_bits: u8, seed: &[u8; 32]) -> bool {
@@ -110,8 +112,8 @@ impl PublicCoin {
 }
 
 impl From<Vec<u8>> for ProverChannel {
-    fn from(proof_data: Vec<u8>) -> ProverChannel {
-        ProverChannel {
+    fn from(proof_data: Vec<u8>) -> Self {
+        Self {
             coin:  PublicCoin::new(),
             proof: proof_data,
         }

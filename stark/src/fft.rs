@@ -1,3 +1,5 @@
+// We want these functions to be called `fft`
+#![allow(clippy::module_name_repetitions)]
 use crate::utils::Reversible;
 use primefield::FieldElement;
 use std::prelude::v1::*;
