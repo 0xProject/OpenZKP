@@ -72,8 +72,8 @@ pub fn batch_convert(jacobians: &[Jacobian], affines: &mut [Affine]) {
 //      need any allocations?
 pub fn non_adjacent_form(mut scalar: U256, window: usize) -> [i16; 257] {
     let mask = (1_u64 << window) - 1;
-    let half = 1i16 << (window - 1);
-    let mut snaf = [0i16; 257];
+    let half = 1_i16 << (window - 1);
+    let mut snaf = [0_i16; 257];
     let mut i: usize = 0;
     loop {
         // Shift to next set bit (and hence make k odd)
@@ -87,12 +87,14 @@ pub fn non_adjacent_form(mut scalar: U256, window: usize) -> [i16; 257] {
         }
 
         // Extract window and shift W buts
+        // The mask prevents truncations
+        #[allow(clippy::cast_possible_truncation)]
         let mut n: i16 = (scalar.c0 & mask) as i16;
         scalar >>= window;
 
         // Make negative if n > 2^(w-1)
         if n >= half {
-            n -= 1i16 << window;
+            n -= 1_i16 << window;
             scalar += U256::ONE;
         }
 
@@ -105,110 +107,127 @@ pub fn non_adjacent_form(mut scalar: U256, window: usize) -> [i16; 257] {
 
 // Multiply Affine point using Jacobian accumulator
 // See https://doc-internal.dalek.rs/curve25519_dalek/traits/trait.VartimeMultiscalarMul.html
+// Signs are explicitly handled
+#[allow(clippy::cast_sign_loss)]
 pub fn mul(p: &Affine, scalar: &U256) -> Jacobian {
     // Precomputed odd multiples
-    let mut naf: [Jacobian; 8] = Default::default();
-    window_table(p, &mut naf);
+    let mut naf_table: [Jacobian; 8] = Default::default();
+    window_table(p, &mut naf_table);
 
     // Get SNAF
-    let snaf = non_adjacent_form(scalar.clone(), 5);
+    let snaf_expansion = non_adjacent_form(scalar.clone(), 5);
 
     // Algorithm 3.36 of Guide to Elliptic Curve Cryptography
     let mut r = Jacobian::ZERO;
-    for i in (0..snaf.len()).rev() {
+    for i in (0..snaf_expansion.len()).rev() {
         // OPT: Avoid doubling zeros
-        // OPT: Use A + A -> J formular for first
+        // OPT: Use A + A -> J formula for first
         r.double_assign();
-        if snaf[i] > 0 {
-            r += &naf[(snaf[i] >> 1) as usize];
-        } else if snaf[i] < 0 {
-            r -= &naf[(-snaf[i] >> 1) as usize];
+        if snaf_expansion[i] > 0 {
+            r += &naf_table[(snaf_expansion[i] >> 1) as usize];
+        } else if snaf_expansion[i] < 0 {
+            r -= &naf_table[(-snaf_expansion[i] >> 1) as usize];
         }
     }
     r
 }
 
-pub fn double_mul(pa: &Affine, sa: U256, pb: &Affine, sb: U256) -> Jacobian {
+// Signs are explicitly handled
+#[allow(clippy::cast_sign_loss)]
+pub fn double_mul(point_a: &Affine, scalar_a: U256, point_b: &Affine, scalar_b: U256) -> Jacobian {
     // Precomputed odd multiples
-    let mut nafa: [Jacobian; 8] = Default::default();
-    let mut nafb: [Jacobian; 8] = Default::default();
-    window_table(pa, &mut nafa);
-    window_table(pb, &mut nafb);
+    let mut naf_table_a: [Jacobian; 8] = Default::default();
+    let mut naf_table_b: [Jacobian; 8] = Default::default();
+    window_table(point_a, &mut naf_table_a);
+    window_table(point_b, &mut naf_table_b);
 
     // Get SNAF
-    let snafa = non_adjacent_form(sa, 5);
-    let snafb = non_adjacent_form(sb, 5);
+    let snaf_expansion_a = non_adjacent_form(scalar_a, 5);
+    let snaf_expansion_b = non_adjacent_form(scalar_b, 5);
 
     // Algorithm 3.36 of Guide to Elliptic Curve Cryptography
     let mut r = Jacobian::ZERO;
-    for i in (0..snafa.len()).rev() {
+    debug_assert_eq!(snaf_expansion_a.len(), snaf_expansion_b.len());
+    for i in (0..snaf_expansion_a.len()).rev() {
         // OPT: Avoid doubling zeros
         // OPT: Use A + A -> J formular for first
         r.double_assign();
-        if snafa[i] > 0 {
-            r += &nafa[(snafa[i] >> 1) as usize];
-        } else if snafa[i] < 0 {
-            r -= &nafa[(-snafa[i] >> 1) as usize];
+        if snaf_expansion_a[i] > 0 {
+            r += &naf_table_a[(snaf_expansion_a[i] >> 1) as usize];
+        } else if snaf_expansion_b[i] < 0 {
+            r -= &naf_table_a[(-snaf_expansion_a[i] >> 1) as usize];
         }
-        if snafb[i] > 0 {
-            r += &nafb[(snafb[i] >> 1) as usize];
-        } else if snafb[i] < 0 {
-            r -= &nafb[(-snafb[i] >> 1) as usize];
+        if snaf_expansion_b[i] > 0 {
+            r += &naf_table_b[(snaf_expansion_b[i] >> 1) as usize];
+        } else if snaf_expansion_b[i] < 0 {
+            r -= &naf_table_b[(-snaf_expansion_b[i] >> 1) as usize];
         }
     }
     r
 }
 
-pub fn base_mul(naf: &[Affine], s: U256) -> Jacobian {
+// Signs are explicitly handled
+#[allow(clippy::cast_sign_loss)]
+pub fn base_mul(naf_table: &[Affine], s: U256) -> Jacobian {
     // Get SNAF
-    let snaf = non_adjacent_form(s, 7);
+    let snaf_expansion = non_adjacent_form(s, 7);
 
     // Algorithm 3.36 of Guide to Elliptic Curve Cryptography
     let mut r = Jacobian::ZERO;
-    for i in (0..snaf.len()).rev() {
+    for i in (0..snaf_expansion.len()).rev() {
         // OPT: Avoid doubling zeros
         // OPT: Use A + A -> J formular for first
         r.double_assign();
-        if snaf[i] > 0 {
-            r += &naf[(snaf[i] >> 1) as usize];
-        } else if snaf[i] < 0 {
-            r -= &naf[(-snaf[i] >> 1) as usize];
+        if snaf_expansion[i] > 0 {
+            r += &naf_table[(snaf_expansion[i] >> 1) as usize];
+        } else if snaf_expansion[i] < 0 {
+            r -= &naf_table[(-snaf_expansion[i] >> 1) as usize];
         }
     }
     r
 }
 
-pub fn double_base_mul(nafa: &[Affine], sa: U256, pb: &Affine, sb: U256) -> Jacobian {
+// Signs are explicitly handled
+#[allow(clippy::cast_sign_loss)]
+// Rebind naf_table after affine batch conversion
+#[allow(clippy::shadow_unrelated)]
+pub fn double_base_mul(
+    naf_table_a: &[Affine],
+    scalar_a: U256,
+    point_b: &Affine,
+    scalar_b: U256,
+) -> Jacobian {
     // Precomputed odd multiples
-    let mut nafb: [Jacobian; 8] = Default::default();
-    window_table(pb, &mut nafb);
+    let mut naf_table_b: [Jacobian; 8] = Default::default();
+    window_table(point_b, &mut naf_table_b);
 
     // Batch convert to affine
     // OPT: Right now this doesn't hurt or improve performance. It should be
     // better with more points.
-    let mut naf: [Affine; 8] = Default::default();
-    batch_convert(&nafb, &mut naf);
-    let nafb = naf;
+    let mut temp: [Affine; 8] = Default::default();
+    batch_convert(&naf_table_b, &mut temp);
+    let naf_table_b = temp;
 
     // Get SNAF
-    let snafa = non_adjacent_form(sa, 7);
-    let snafb = non_adjacent_form(sb, 5);
+    let snaf_expansion_a = non_adjacent_form(scalar_a, 7);
+    let snaf_expansion_b = non_adjacent_form(scalar_b, 5);
 
     // Algorithm 3.36 of Guide to Elliptic Curve Cryptography
     let mut r = Jacobian::ZERO;
-    for i in (0..snafa.len()).rev() {
+    debug_assert_eq!(snaf_expansion_a.len(), snaf_expansion_b.len());
+    for i in (0..snaf_expansion_a.len()).rev() {
         // OPT: Avoid doubling zeros
-        // OPT: Use A + A -> J formular for first
+        // OPT: Use A + A -> J formula for first
         r.double_assign();
-        if snafa[i] > 0 {
-            r += &nafa[(snafa[i] >> 1) as usize];
-        } else if snafa[i] < 0 {
-            r -= &nafa[(-snafa[i] >> 1) as usize];
+        if snaf_expansion_a[i] > 0 {
+            r += &naf_table_a[(snaf_expansion_a[i] >> 1) as usize];
+        } else if snaf_expansion_a[i] < 0 {
+            r -= &naf_table_a[(-snaf_expansion_a[i] >> 1) as usize];
         }
-        if snafb[i] > 0 {
-            r += &nafb[(snafb[i] >> 1) as usize];
-        } else if snafb[i] < 0 {
-            r -= &nafb[(-snafb[i] >> 1) as usize];
+        if snaf_expansion_b[i] > 0 {
+            r += &naf_table_b[(snaf_expansion_b[i] >> 1) as usize];
+        } else if snaf_expansion_b[i] < 0 {
+            r -= &naf_table_b[(-snaf_expansion_b[i] >> 1) as usize];
         }
     }
     r
