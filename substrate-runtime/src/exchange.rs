@@ -1,8 +1,9 @@
-// Substrate needs a large enum but we can't put this directly on it's declaration inside the substrate macro
+// Substrate needs a large enum but we can't put this directly on it's
+// declaration inside the substrate macro
 #![allow(clippy::large_enum_variant)]
 
 use crate::wrappers::*;
-use parity_codec::{Encode};
+use parity_codec::Encode;
 use primefield::FieldElement;
 use rstd::prelude::*;
 use runtime_io::{with_storage, ChildrenStorageOverlay, StorageOverlay};
@@ -47,7 +48,6 @@ decl_storage! {
     }
 }
 
- #[allow(clippy::large_enum_variant)]
 decl_module! {
     /// The module declaration.
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
@@ -211,6 +211,7 @@ decl_event!(
 mod tests {
     use super::*;
 
+    use macros_decl::u256h;
     use primitives::{Blake2Hasher, H256};
     use runtime_io::with_externalities;
     use runtime_primitives::{
@@ -218,9 +219,8 @@ mod tests {
         traits::{BlakeTwo256, IdentityLookup},
         BuildStorage,
     };
-    use support::{assert_ok, impl_outer_origin};
     use starkdex::wrappers::{public_key, sign};
-    use macros_decl::u256h;
+    use support::{assert_ok, impl_outer_origin};
 
     impl_outer_origin! {
         pub enum Origin for ExchangeTest {}
@@ -278,8 +278,8 @@ mod tests {
     #[test]
     fn allows_registration() {
         let data: Vec<u8> = (10_u64).encode(); // Note - In the substrate test environment account ids are u64 instead of
-                                              // public keys
-        let hashed : [u8; 32] = BlakeTwo256::hash_of(&data).into();
+                                               // public keys
+        let hashed: [u8; 32] = BlakeTwo256::hash_of(&data).into();
         let field_version = FieldElement::from(U256::from_bytes_be(&hashed));
 
         let private_key =

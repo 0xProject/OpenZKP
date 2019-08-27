@@ -1,4 +1,5 @@
-// TODO - This code will be be reworked to incorporate it into a chain which doesn't lock blocks to proofs.
+// TODO - This code will be be reworked to incorporate it into a chain which
+// doesn't lock blocks to proofs.
 #[cfg(feature = "std")]
 use inherents::ProvideInherentData;
 use inherents::{InherentData, InherentIdentifier, IsFatalError, ProvideInherent, RuntimeString};

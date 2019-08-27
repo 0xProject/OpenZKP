@@ -52,10 +52,7 @@ impl From<PublicKey> for ([u8; 32], [u8; 32]) {
 
 impl From<([u8; 32], [u8; 32])> for PublicKey {
     fn from(key: ([u8; 32], [u8; 32])) -> PublicKey {
-        PublicKey {
-            x: key.0,
-            y: key.1,
-        }
+        PublicKey { x: key.0, y: key.1 }
     }
 }
 
@@ -67,10 +64,7 @@ impl From<Signature> for ([u8; 32], [u8; 32]) {
 
 impl From<([u8; 32], [u8; 32])> for Signature {
     fn from(key: ([u8; 32], [u8; 32])) -> Signature {
-        Signature {
-            r: key.0,
-            s: key.1,
-        }
+        Signature { r: key.0, s: key.1 }
     }
 }
 
