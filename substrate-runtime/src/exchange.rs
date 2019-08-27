@@ -6,6 +6,7 @@ use crate::wrappers::*;
 use parity_codec::Encode;
 use primefield::FieldElement;
 use rstd::prelude::*;
+#[cfg(feature = "std")]
 use runtime_io::{with_storage, ChildrenStorageOverlay, StorageOverlay};
 use runtime_primitives::traits::{BlakeTwo256, Hash};
 use support::{
