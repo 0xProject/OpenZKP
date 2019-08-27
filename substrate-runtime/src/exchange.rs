@@ -70,7 +70,7 @@ decl_module! {
 
             let hash = hash(U256::from((u64::from(nonce) << 32)+ u64::from(amount)).to_bytes_be(), to.x);
 
-            ensure!(verify(hash, sig, stark_sender.clone()), "Invalid Signature");
+            ensure!(verify(hash, &sig, &stark_sender), "Invalid Signature");
 
             let their_balance = <Asset1<T>>::get(to.clone());
 
@@ -87,7 +87,7 @@ decl_module! {
             let hash : [u8; 32] = BlakeTwo256::hash_of(&data).into();
             let field_version = FieldElement::from(U256::from_bytes_be(&hash));
 
-            ensure!(verify(field_version.as_montgomery().to_bytes_be(), sig, who.clone()), "Invalid Signature");
+            ensure!(verify(field_version.as_montgomery().to_bytes_be(), &sig, &who), "Invalid Signature");
 
             <Asset1<T>>::insert(who.clone(), 0);
             <Nonces<T>>::insert(who.clone(), 0);
@@ -157,8 +157,8 @@ decl_module! {
             ensure!(order.maker_message.amount_b <= taker_vault_b.balance, "Not enough funds in taker's source vault");
 
             // Verifies the starkdex signature
-            ensure!(maker_verify(order.maker_message.clone(), order.maker_message.sig.clone(), maker_vault_a.owner.clone()), "Maker message improperly signed");
-            ensure!(taker_verify(order.clone(), sig, stark_sender), "Taker message improperly signed");
+            ensure!(maker_verify(order.maker_message.clone(), &order.maker_message.sig, &maker_vault_a.owner), "Maker message improperly signed");
+            ensure!(taker_verify(order.clone(), &sig, &stark_sender), "Taker message improperly signed");
 
             // Moves amount_a from maker's vault_a to takers vault_a
             taker_vault_a.balance += order.maker_message.amount_a;
@@ -246,10 +246,10 @@ mod tests {
         type Lookup = IdentityLookup<Self::AccountId>;
         type Origin = Origin;
     }
-    impl super::Trait for ExchangeTest {
+    impl Trait for ExchangeTest {
         type Event = ();
     }
-    type Exchange = super::Module<ExchangeTest>;
+    type Exchange = Module<ExchangeTest>;
 
     // This function basically just builds a genesis storage key/value store
     // according to our desired mockup.
@@ -336,7 +336,7 @@ mod tests {
         let paul_public: PublicKey = public_key(&paul_private.to_bytes_be()).into();
         let remco_public: PublicKey = public_key(&remco_private.to_bytes_be()).into();
 
-        let hash = crate::wrappers::hash(
+        let hash = hash(
             U256::from(((50_u64) << 32) + 40).to_bytes_be(),
             remco_public.x,
         );

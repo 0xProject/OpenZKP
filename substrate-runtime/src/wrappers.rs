@@ -51,8 +51,8 @@ impl From<PublicKey> for ([u8; 32], [u8; 32]) {
 }
 
 impl From<([u8; 32], [u8; 32])> for PublicKey {
-    fn from(key: ([u8; 32], [u8; 32])) -> PublicKey {
-        PublicKey { x: key.0, y: key.1 }
+    fn from(key: ([u8; 32], [u8; 32])) -> Self {
+        Self { x: key.0, y: key.1 }
     }
 }
 
@@ -63,14 +63,14 @@ impl From<Signature> for ([u8; 32], [u8; 32]) {
 }
 
 impl From<([u8; 32], [u8; 32])> for Signature {
-    fn from(key: ([u8; 32], [u8; 32])) -> Signature {
-        Signature { r: key.0, s: key.1 }
+    fn from(key: ([u8; 32], [u8; 32])) -> Self {
+        Self { r: key.0, s: key.1 }
     }
 }
 
 impl From<MakerMessage> for starkdex::wrappers::MakerMessage {
-    fn from(message: MakerMessage) -> starkdex::wrappers::MakerMessage {
-        starkdex::wrappers::MakerMessage {
+    fn from(message: MakerMessage) -> Self {
+        Self {
             vault_a:  message.vault_a,
             vault_b:  message.vault_b,
             amount_a: message.amount_a,
@@ -82,7 +82,7 @@ impl From<MakerMessage> for starkdex::wrappers::MakerMessage {
     }
 }
 
-pub fn taker_verify(taker_message: TakerMessage, sig: Signature, public: PublicKey) -> bool {
+pub fn taker_verify(taker_message: TakerMessage, sig: &Signature, public: &PublicKey) -> bool {
     starkdex::wrappers::taker_verify(
         &taker_message.maker_message.into(),
         taker_message.vault_a,
@@ -92,11 +92,11 @@ pub fn taker_verify(taker_message: TakerMessage, sig: Signature, public: PublicK
     )
 }
 
-pub fn verify(hash: [u8; 32], sig: Signature, public: PublicKey) -> bool {
+pub fn verify(hash: [u8; 32], sig: &Signature, public: &PublicKey) -> bool {
     starkdex::wrappers::verify(&hash, (&sig.r, &sig.s), (&public.x, &public.y))
 }
 
-pub fn maker_verify(message: MakerMessage, sig: Signature, public: PublicKey) -> bool {
+pub fn maker_verify(message: MakerMessage, sig: &Signature, public: &PublicKey) -> bool {
     starkdex::wrappers::maker_verify(&message.into(), (&sig.r, &sig.s), (&public.x, &public.y))
 }
 

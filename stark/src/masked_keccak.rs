@@ -7,7 +7,7 @@ impl MaskedKeccak {
     const MASK_LENGTH: usize = 20;
 
     pub fn new() -> Self {
-        MaskedKeccak(Keccak::new_keccak256())
+        Self(Keccak::new_keccak256())
     }
 
     pub fn update(&mut self, input: &[u8]) {

@@ -18,7 +18,7 @@ fn is_quadratic_residue(a: &FieldElement) -> bool {
 // These two constants are chosen so that 1 + SIGNIFICAND << BINARY_EXPONENT ==
 // MODULUS.
 const BINARY_EXPONENT: usize = 3 * 4 * 16;
-const SIGNIFICAND: U256 = U256::from_limbs(0x0800_0000_0000_0011u64, 0, 0, 0);
+const SIGNIFICAND: U256 = U256::from_limbs(0x0800_0000_0000_0011_u64, 0, 0, 0);
 // The starting value of c in the Tonelli Shanks algorithm. We are using 3, a
 // generator, as the quadratic nonresidue the algorithm requires.
 const INITIAL_C: FieldElement = FieldElement::from_montgomery(u256h!(
@@ -30,7 +30,7 @@ fn tonelli_shanks(a: &FieldElement) -> FieldElement {
     // This algorithm is still correct when the following assertion fails. However,
     // more efficient algorithms exist when MODULUS % 4 == 1 or MODULUS % 8 == 5
     // (3.36 and 3.37 in HAC).
-    debug_assert!(&FieldElement::MODULUS & 7u64 == 1);
+    debug_assert!(&FieldElement::MODULUS & 7_u64 == 1);
 
     if a.is_zero() {
         return FieldElement::ZERO;
@@ -53,6 +53,8 @@ fn tonelli_shanks(a: &FieldElement) -> FieldElement {
     root
 }
 
+// Quickcheck needs pass by value
+#[allow(clippy::needless_pass_by_value)]
 #[cfg(test)]
 mod tests {
     use super::*;

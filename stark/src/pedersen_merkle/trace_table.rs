@@ -8,11 +8,13 @@ use starkdex::{PEDERSEN_POINTS, SHIFT_POINT};
 use std::prelude::v1::*;
 use u256::U256;
 
+// TODO: Naming
+#[allow(clippy::module_name_repetitions)]
 pub fn get_trace_table(public_input: &PublicInput, private_input: &PrivateInput) -> TraceTable {
     let num_columns = 8;
     let mut trace = TraceTable::new(public_input.path_length * 256, num_columns);
 
-    let mut row: Row = Default::default();
+    let mut row: Row = Row::default();
     row.right.point = Affine::Point {
         x: public_input.leaf.clone(),
         y: FieldElement::ZERO,
@@ -23,10 +25,10 @@ pub fn get_trace_table(public_input: &PublicInput, private_input: &PrivateInput)
             if bit_index % 256 == 0 {
                 let other_hash = U256::from(&private_input.path[path_index]);
                 let (x, _) = get_coordinates(&row.right.point);
-                if !private_input.directions[path_index] {
-                    row = initialize_hash(U256::from(x), other_hash);
-                } else {
+                if private_input.directions[path_index] {
                     row = initialize_hash(other_hash, U256::from(x));
+                } else {
+                    row = initialize_hash(U256::from(x), other_hash);
                 }
             } else {
                 row = hash_next_bit(&row, bit_index);
@@ -50,7 +52,7 @@ pub fn get_trace_table(public_input: &PublicInput, private_input: &PrivateInput)
 }
 
 fn initialize_hash(left_source: U256, right_source: U256) -> Row {
-    let mut row: Row = Default::default();
+    let mut row: Row = Row::default();
     row.left.source = left_source;
     row.right.source = right_source;
     row.right.point = SHIFT_POINT;
@@ -62,11 +64,11 @@ fn hash_next_bit(row: &Row, bit_index: usize) -> Row {
         left:  Subrow {
             source: row.left.source.clone() >> 1,
             point: row.right.point.clone(),
-            ..Default::default()
+            ..Subrow::default()
         },
         right: Subrow {
             source: row.right.source.clone() >> 1,
-            ..Default::default()
+            ..Subrow::default()
         },
     };
     if row.left.source.bit(0) {
@@ -98,7 +100,7 @@ struct Subrow {
 
 impl Default for Subrow {
     fn default() -> Self {
-        Subrow {
+        Self {
             source: U256::ZERO,
             slope:  FieldElement::ZERO,
             point:  Affine::Point {

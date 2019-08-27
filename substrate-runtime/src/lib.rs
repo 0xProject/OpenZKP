@@ -2,14 +2,53 @@
 //! ready for Wasm.
 
 #![cfg_attr(not(feature = "std"), no_std)]
-// False positive: linter warns that the feature is stable and does not need
-// a flag. But we do want to feature-flag it here.
-#![allow(stable_features)] // TODO: Make it apply only to the following line
-#![cfg_attr(not(feature = "std"), feature(alloc))]
+// HACK: This sequence needs to be repeated in each project.
+//       See https://github.com/rust-lang/cargo/issues/5034
+// For clippy lints see: https://rust-lang.github.io/rust-clippy/master
+// For rustc lints see: https://doc.rust-lang.org/rustc/lints/index.html
+#![warn(
+    // Enable sets of warnings
+    clippy::all,
+    clippy::pedantic,
+    // TODO: clippy::cargo,
+    rust_2018_idioms,
+    future_incompatible,
+    unused,
+
+    // Additional unused warnings (not included in `unused`)
+    unused_lifetimes,
+    unused_qualifications,
+    unused_results,
+
+    // Additional misc. warnings
+    anonymous_parameters,
+    deprecated_in_future,
+    elided_lifetimes_in_paths,
+    explicit_outlives_requirements,
+    keyword_idents,
+    macro_use_extern_crate,
+    // TODO: missing_docs,
+    missing_doc_code_examples,
+    private_doc_tests,
+    single_use_lifetimes,
+    trivial_casts,
+    trivial_numeric_casts,
+    // TODO: unreachable_pub,
+    unsafe_code,
+    variant_size_differences
+)]
+#![cfg_attr(feature = "std", warn(
+    // TODO: missing_debug_implementations,
+))]
 // `construct_runtime!` does a lot of recursion and requires us to increase the limit to 256.
 #![recursion_limit = "256"]
+// Substrate macros use `Default::default()`. To allow this we need to
+// allow the lint on the whole file scope.
+// TODO: Move offending code to it's own module
+#![allow(clippy::default_trait_access)]
 // Substrate needs a large enum but we can't put this directly on its declaration inside the
 // substrate macro
+// TODO: Move offending code to it's own module
 #![allow(clippy::large_enum_variant)]
 
 use client::{
@@ -81,7 +120,7 @@ pub mod opaque {
     pub struct UncheckedExtrinsic(#[cfg_attr(feature = "std", serde(with = "bytes"))] pub Vec<u8>);
     #[cfg(feature = "std")]
     impl std::fmt::Debug for UncheckedExtrinsic {
-        fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
+        fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             write!(fmt, "{}", primitives::hexdisplay::HexDisplay::from(&self.0))
         }
     }
@@ -120,7 +159,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 pub fn native_version() -> NativeVersion {
     NativeVersion {
         runtime_version: VERSION,
-        can_author_with: Default::default(),
+        can_author_with: std::collections::HashSet::<u32>::default(),
     }
 }
 
@@ -234,7 +273,7 @@ type Address = <Indices as StaticLookup>::Source;
 pub type Header = generic::Header<BlockNumber, BlakeTwo256, Log>;
 /// Block type as expected by this runtime.
 pub type Block = generic::Block<Header, UncheckedExtrinsic>;
-/// BlockId type as expected by this runtime.
+/// `BlockId` type as expected by this runtime.
 pub type BlockId = generic::BlockId<Block>;
 /// Unchecked extrinsic type as expected by this runtime.
 pub type UncheckedExtrinsic =
@@ -266,7 +305,7 @@ impl_runtime_apis! {
 
     impl runtime_api::Metadata<Block> for Runtime {
         fn metadata() -> OpaqueMetadata {
-            Runtime::metadata().into()
+            Self::metadata().into()
         }
     }
 

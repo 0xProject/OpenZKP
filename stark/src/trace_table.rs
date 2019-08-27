@@ -13,12 +13,12 @@ pub struct TraceTable {
 
 impl TraceTable {
     /// Constructs a zero-initialized trace table of the given size.
-    pub fn new(trace_length: usize, num_columns: usize) -> TraceTable {
+    pub fn new(trace_length: usize, num_columns: usize) -> Self {
         let mut values: MmapVec<FieldElement> = MmapVec::with_capacity(trace_length * num_columns);
         for _ in 0..(trace_length * num_columns) {
             values.push(FieldElement::ZERO);
         }
-        TraceTable {
+        Self {
             trace_length,
             num_columns,
             values,

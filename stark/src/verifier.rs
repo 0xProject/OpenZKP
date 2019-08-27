@@ -87,7 +87,6 @@ where
     assert_eq!(recorded_work, proof_of_work);
 
     // Gets queries from channel
-    let eval_domain_size = trace_len * params.blowup;
     let queries = get_indices(
         params.queries,
         eval_domain_size.trailing_zeros(),
@@ -105,10 +104,10 @@ where
         .collect();
     let lde_decommitment = Replayable::<Hash>::replay_many(&mut channel, merkle_proof_length);
     if !verify(
-        low_degree_extension_root,
+        &low_degree_extension_root,
         eval_domain_size.trailing_zeros(),
         led_values.as_mut_slice(),
-        lde_decommitment,
+        &lde_decommitment,
     ) {
         return false;
     }
@@ -122,10 +121,10 @@ where
         Replayable::<Hash>::replay_many(&mut channel, merkle_proof_length);
 
     if !verify(
-        constraint_evaluated_root,
+        &constraint_evaluated_root,
         eval_domain_size.trailing_zeros(),
         constraint_values.as_mut_slice(),
-        constraint_decommitment,
+        &constraint_decommitment,
     ) {
         return false;
     }
@@ -146,41 +145,36 @@ where
         let mut fri_layer_values = Vec::new();
 
         fri_indices.dedup();
-        for i in fri_indices.iter() {
+        for i in &fri_indices {
             let mut coset: Vec<FieldElement> = Vec::new();
             for j in 0..2_usize.pow(params.fri_layout[k] as u32) {
                 let n = i * 2_usize.pow(params.fri_layout[k] as u32) + j;
-
-                let has_index = previous_indices.binary_search(&n);
-                match has_index {
-                    Ok(z) => {
-                        if k > 0 {
-                            coset.push(fri_folds.get(&n).unwrap().clone());
-                        } else {
-                            let z_reverse = queries[z].bit_reverse_at(eval_domain_size);
-                            coset.push(out_of_domain_element(
-                                led_values[z].1.as_slice(),
-                                &constraint_values[z].1,
-                                &eval_x[z_reverse],
-                                &oods_point,
-                                oods_values.as_slice(),
-                                oods_coefficients.as_slice(),
-                                eval_domain_size,
-                                params.blowup,
-                            ));
-                        }
+                if let Ok(z) = previous_indices.binary_search(&n) {
+                    if k > 0 {
+                        coset.push(fri_folds.get(&n).unwrap().clone());
+                    } else {
+                        let z_reverse = queries[z].bit_reverse_at(eval_domain_size);
+                        coset.push(out_of_domain_element(
+                            led_values[z].1.as_slice(),
+                            &constraint_values[z].1,
+                            &eval_x[z_reverse],
+                            &oods_point,
+                            oods_values.as_slice(),
+                            oods_coefficients.as_slice(),
+                            eval_domain_size,
+                            params.blowup,
+                        ));
                     }
-                    Err(_) => {
-                        coset.push(Replayable::<FieldElement>::replay(&mut channel));
-                    }
+                } else {
+                    coset.push(Replayable::<FieldElement>::replay(&mut channel));
                 }
             }
             fri_layer_values.push((*i, coset));
         }
         // Fold and record foldings
         let mut layer_folds = BTreeMap::new();
-        for (i, coset) in fri_layer_values.iter() {
-            layer_folds.insert(
+        for (i, coset) in &fri_layer_values {
+            let _old_value = layer_folds.insert(
                 *i,
                 fri_fold(
                     coset.as_slice(),
@@ -206,10 +200,10 @@ where
         len /= 2_usize.pow(params.fri_layout[k] as u32);
 
         if !verify(
-            fri_roots[k].clone(),
+            &fri_roots[k].clone(),
             len.trailing_zeros(),
             fri_layer_values.as_mut_slice(),
-            decommitment,
+            &decommitment,
         ) {
             return false;
         }
@@ -229,7 +223,7 @@ where
     // Checks that the calculated fri folded queries are the points interpolated by
     // the decommited polynomial.
     let interp_root = FieldElement::root(len).unwrap();
-    for key in previous_indices.iter() {
+    for key in &previous_indices {
         let calculated = fri_folds[key].clone();
         let x_pow = interp_root.pow(key.bit_reverse_at(len));
         let committed = DensePolynomial::new(&last_layer_coefficient).evaluate(&x_pow);

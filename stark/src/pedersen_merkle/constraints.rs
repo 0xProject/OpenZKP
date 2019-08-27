@@ -14,7 +14,18 @@ use starkdex::SHIFT_POINT;
 use std::{prelude::v1::*, vec};
 use u256::U256;
 
+// TODO: Naming
+#[allow(clippy::module_name_repetitions)]
 pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constraint> {
+    fn get_left_bit(trace_polynomials: &[DensePolynomial]) -> DensePolynomial {
+        &trace_polynomials[0]
+            - &FieldElement::from(U256::from(2_u64)) * &trace_polynomials[0].next()
+    }
+    fn get_right_bit(trace_polynomials: &[DensePolynomial]) -> DensePolynomial {
+        &trace_polynomials[4]
+            - &FieldElement::from(U256::from(2_u64)) * &trace_polynomials[4].next()
+    }
+
     let path_length = public_input.path_length;
     let trace_length = path_length * 256;
     let root = public_input.root.clone();
@@ -49,13 +60,6 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constr
     let q_x_right_1 = SparsePolynomial::periodic(&RIGHT_X_COEFFICIENTS, path_length);
     let q_x_right_2 = SparsePolynomial::periodic(&RIGHT_X_COEFFICIENTS, path_length);
     let q_y_right = SparsePolynomial::periodic(&RIGHT_Y_COEFFICIENTS, path_length);
-
-    fn get_left_bit(trace_polynomials: &[DensePolynomial]) -> DensePolynomial {
-        &trace_polynomials[0] - &FieldElement::from(U256::from(2u64)) * &trace_polynomials[0].next()
-    }
-    fn get_right_bit(trace_polynomials: &[DensePolynomial]) -> DensePolynomial {
-        &trace_polynomials[4] - &FieldElement::from(U256::from(2u64)) * &trace_polynomials[4].next()
-    }
 
     vec![
         Constraint {

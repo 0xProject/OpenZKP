@@ -32,7 +32,9 @@ std = [
     'stark/std',
     'starkdex/std',
 ]
-test = ['stark/prover']
+test = [
+    'stark/prover',
+]
 
 [dependencies]
 macros-decl = { path = "../macros_decl", default-features = false }

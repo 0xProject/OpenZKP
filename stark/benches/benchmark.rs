@@ -1,5 +1,4 @@
 #![warn(clippy::all)]
-#![deny(warnings)]
 use criterion::{
     black_box, criterion_group, criterion_main, AxisScale, Bencher, Criterion,
     ParameterizedBenchmark, PlotConfiguration, Throughput,
