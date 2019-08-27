@@ -99,8 +99,7 @@ decl_module! {
             no_macro_vec.push(2);
 
             assert!(check_proof(
-                // TODO - From slice for prover channel/make verifier take Vec<u8>
-                recorded.proof.clone().into(),
+                recorded.proof.as_slice(),
                 &get_fibonacci_constraints(&public),
                 &public,
                 // TODO - These params should be stored or provided instead of hardcoded
@@ -146,7 +145,7 @@ impl<T: Trait> ProvideInherent for Module<T> {
 
     fn create_inherent(data: &InherentData) -> Option<Self::Call> {
         let data = extract_inherent_data(data).expect("Error in extracting inherent data.");
-        Some(Call::set(data.into()))
+        Some(Call::set(data))
     }
 
     fn check_inherent(call: &Self::Call, data: &InherentData) -> result::Result<(), Self::Error> {
@@ -169,7 +168,7 @@ impl<T: Trait> ProvideInherent for Module<T> {
         no_macro_vec.push(2);
 
         if check_proof(
-            t.proof.into(),
+            t.proof.as_slice(),
             &get_fibonacci_constraints(&public),
             &public,
             &ProofParams {
@@ -184,9 +183,9 @@ impl<T: Trait> ProvideInherent for Module<T> {
         ) {
             Ok(())
         } else {
-            return Err(InherentError::InvalidProof(
+            Err(InherentError::InvalidProof(
                 "Posted proof doesn't pass verification".into(),
-            ));
+            ))
         }
     }
 }
@@ -205,11 +204,10 @@ mod tests {
         BuildStorage,
     };
     use stark::{
-        check_proof,
         fibonacci::{get_fibonacci_constraints, get_trace_table, PrivateInput, PublicInput},
         stark_proof, ProofParams,
     };
-    use support::{assert_ok, impl_outer_origin};
+    use support::impl_outer_origin;
     use system::RawOrigin;
     use u256::U256;
 

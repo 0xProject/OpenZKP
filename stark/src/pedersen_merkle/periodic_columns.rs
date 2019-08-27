@@ -1038,7 +1038,7 @@ pub const RIGHT_Y_COEFFICIENTS: [FieldElement; 256] = [
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{polynomial::DensePolynomial, proofs::geometric_series};
+    use crate::{geometric_series::geometric_series, polynomial::DensePolynomial};
     use ecc::Affine;
     use starkdex::PEDERSEN_POINTS;
 

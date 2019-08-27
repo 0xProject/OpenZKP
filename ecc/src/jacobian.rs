@@ -8,7 +8,8 @@ use u256::{commutative_binop, noncommutative_binop, U256};
 
 // See http://www.hyperelliptic.org/EFD/g1p/auto-shortw-jacobian.html
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
+#[cfg_attr(feature = "std", derive(Debug))]
 pub struct Jacobian {
     pub x: FieldElement,
     pub y: FieldElement,

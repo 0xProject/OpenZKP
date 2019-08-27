@@ -1,6 +1,28 @@
-use crate::{hash::Hash, hashable::Hashable, masked_keccak::MaskedKeccak, proofs::*};
+use crate::{hash::Hash, hashable::Hashable, masked_keccak::MaskedKeccak};
+use std::prelude::v1::*;
+
+#[cfg(feature = "prover")]
 use rayon::prelude::*;
-use std::{marker::Sync, prelude::v1::*, vec};
+#[cfg(feature = "prover")]
+use std::marker::Sync;
+
+// This trait is for objects where the object is grouped into hashable sets
+// based on index before getting made into a merkle tree, with domain size
+// being the max index [ie the one which if you iterate up to it splits the
+// whole range]
+pub trait Groupable<LeafType: Hashable> {
+    fn get_leaf_hash(&self, index: usize) -> Hash {
+        self.get_leaf(index).hash()
+    }
+    fn get_leaf(&self, index: usize) -> LeafType;
+    fn domain_size(&self) -> usize;
+}
+
+// This trait is applied to give groupable objects a merkle tree based on their
+// groupings
+pub trait Merkleizable<NodeHash: Hashable> {
+    fn merkleize(self) -> Vec<Hash>;
+}
 
 struct MerkleNode<'a>(&'a Hash, &'a Hash);
 
@@ -13,6 +35,7 @@ impl Hashable for MerkleNode<'_> {
     }
 }
 
+#[cfg(feature = "prover")]
 pub fn make_tree_direct<T: Hashable>(leaves: &[T]) -> Vec<Hash> {
     let n = leaves.len();
     let depth = n.trailing_zeros(); // Log_2 of n
@@ -29,6 +52,7 @@ pub fn make_tree_direct<T: Hashable>(leaves: &[T]) -> Vec<Hash> {
     tree
 }
 
+#[cfg(feature = "prover")]
 pub fn make_tree<T: Hashable + Sync>(leaves: &[T]) -> Vec<Hash> {
     if leaves.len() < 256 {
         make_tree_direct(leaves)
@@ -37,6 +61,7 @@ pub fn make_tree<T: Hashable + Sync>(leaves: &[T]) -> Vec<Hash> {
     }
 }
 
+#[cfg(feature = "prover")]
 pub fn make_tree_threaded<T: Hashable + Sync>(leaves: &[T]) -> Vec<Hash> {
     let n = leaves.len();
     debug_assert!(n.is_power_of_two());
@@ -67,6 +92,7 @@ pub fn make_tree_threaded<T: Hashable + Sync>(leaves: &[T]) -> Vec<Hash> {
 }
 
 // Note - Make sure to remove duplicated indexes from the input values.
+#[cfg(feature = "prover")]
 pub fn proof<R: Hashable, T: Groupable<R>>(
     tree: &[Hash],
     indices: &[usize],

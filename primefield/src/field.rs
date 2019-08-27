@@ -1,12 +1,13 @@
 use crate::{montgomery::*, square_root::square_root};
 use macros_decl::u256h;
 use std::{
-    fmt,
     ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign},
     prelude::v1::*,
 };
 use u256::{commutative_binop, noncommutative_binop, U256};
 // TODO: Implement Serde
+#[cfg(feature = "std")]
+use std::fmt;
 
 #[derive(PartialEq, Eq, Clone)]
 pub struct FieldElement(U256);
@@ -35,6 +36,7 @@ impl FieldElement {
         FieldElement(n)
     }
 
+    #[cfg(feature = "std")]
     pub fn from_hex_str(s: &str) -> Self {
         FieldElement::from(U256::from_hex_str(s))
     }
@@ -140,6 +142,7 @@ fn cumulative_product(elements: &[FieldElement]) -> Vec<FieldElement> {
         .collect()
 }
 
+#[cfg(feature = "std")]
 impl fmt::Debug for FieldElement {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let n = U256::from(self);

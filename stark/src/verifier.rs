@@ -1,11 +1,20 @@
-use crate::{channel::*, hash::*, merkle::*, polynomial::DensePolynomial, proofs::*, utils::*};
-use itertools::Itertools;
+use crate::{
+    channel::*,
+    constraint::Constraint,
+    geometric_series::geometric_series,
+    hash::*,
+    merkle::{decommitment_size, verify},
+    polynomial::DensePolynomial,
+    proof_params::ProofParams,
+    utils::*,
+};
+use itertools::*;
 use primefield::FieldElement;
-use std::{collections::HashMap, convert::TryInto, prelude::v1::*};
+use std::{collections::BTreeMap, convert::TryInto, prelude::v1::*};
 use u256::U256;
 
 pub fn check_proof<Public>(
-    proposed_proof: ProverChannel,
+    proposed_proof: &[u8],
     constraints: &[Constraint],
     public: &Public,
     params: &ProofParams,
@@ -21,7 +30,7 @@ where
 
     let eval_x = geometric_series(&FieldElement::ONE, &omega, eval_domain_size);
 
-    let mut channel = VerifierChannel::new(proposed_proof.proof.clone());
+    let mut channel = VerifierChannel::new(proposed_proof.to_vec());
     let bytes: Vec<u8> = public.clone().into();
     channel.initialize(&bytes);
 
@@ -128,7 +137,7 @@ where
         .collect();
 
     // Folded fri values from the previous layer
-    let mut fri_folds: HashMap<usize, FieldElement> = HashMap::new();
+    let mut fri_folds: BTreeMap<usize, FieldElement> = BTreeMap::new();
 
     let mut previous_indices = queries.to_vec().clone();
     let mut step = 1;
@@ -169,7 +178,7 @@ where
             fri_layer_values.push((*i, coset));
         }
         // Fold and record foldings
-        let mut layer_folds = HashMap::new();
+        let mut layer_folds = BTreeMap::new();
         for (i, coset) in fri_layer_values.iter() {
             layer_folds.insert(
                 *i,
@@ -323,7 +332,7 @@ fn out_of_domain_element(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fibonacci::*;
+    use crate::{fibonacci::*, proofs::stark_proof};
     use macros_decl::u256h;
 
     #[test]
@@ -354,7 +363,7 @@ mod tests {
         );
 
         assert!(check_proof(
-            actual,
+            actual.proof.as_slice(),
             &constraints,
             &public,
             &ProofParams {
