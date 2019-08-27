@@ -1,3 +1,5 @@
+// We want these functions to be called `fft`
+#![allow(clippy::module_name_repetitions)]
 use crate::utils::Reversible;
 use primefield::FieldElement;
 use std::prelude::v1::*;
@@ -6,7 +8,7 @@ use u256::U256;
 pub fn fft(a: &[FieldElement]) -> Vec<FieldElement> {
     let mut result = a.to_vec();
     let root = FieldElement::root(result.len()).expect("No root of unity for input length");
-    bit_reversal_fft(result.as_mut_slice(), root);
+    bit_reversal_fft(result.as_mut_slice(), &root);
     bit_reversal_permute(result.as_mut_slice());
     result
 }
@@ -15,13 +17,13 @@ pub fn fft(a: &[FieldElement]) -> Vec<FieldElement> {
 pub fn fft_cofactor_bit_reversed(a: &[FieldElement], cofactor: &FieldElement) -> Vec<FieldElement> {
     let mut result = a.to_vec();
     let mut c = FieldElement::ONE;
-    for element in result.iter_mut() {
+    for element in &mut result {
         *element *= &c;
         c *= cofactor;
     }
 
     let root = FieldElement::root(result.len()).expect("No root of unity for input length");
-    bit_reversal_fft(result.as_mut_slice(), root);
+    bit_reversal_fft(result.as_mut_slice(), &root);
     result
 }
 
@@ -33,23 +35,23 @@ pub fn ifft(a: &[FieldElement]) -> Vec<FieldElement> {
         .expect("No root of unity for input length")
         .inv()
         .expect("No inverse for FieldElement::ZERO");
-    bit_reversal_fft(result.as_mut_slice(), inverse_root);
+    bit_reversal_fft(result.as_mut_slice(), &inverse_root);
     bit_reversal_permute(result.as_mut_slice());
     let inverse_length = FieldElement::from(n_elements)
         .inv()
         .expect("No inverse length for empty list");
-    for e in result.iter_mut() {
+    for e in &mut result {
         *e *= &inverse_length;
     }
     result
 }
 
-fn bit_reversal_fft(coefficients: &mut [FieldElement], root: FieldElement) {
+fn bit_reversal_fft(coefficients: &mut [FieldElement], root: &FieldElement) {
     let n_elements = coefficients.len();
     debug_assert!(n_elements.is_power_of_two());
     debug_assert!(root.pow(n_elements).is_one());
     for layer in 0..n_elements.trailing_zeros() {
-        let n_blocks = 1 << layer;
+        let n_blocks = 1_usize << layer;
         let mut twiddle_factor = FieldElement::ONE;
         // OPT: In place combined update like gcd::mat_mul.
         let block_size = n_elements >> (layer + 1);
@@ -87,7 +89,7 @@ pub fn bit_reversal_permute<T>(v: &mut [T]) {
 
 fn reverse(x: u64, bits: u32) -> u64 {
     debug_assert!(bits <= 64);
-    debug_assert!(bits == 64 || x < (1u64 << bits));
+    debug_assert!(bits == 64 || x < (1_u64 << bits));
     if bits == 0 {
         0
     } else {
@@ -95,6 +97,8 @@ fn reverse(x: u64, bits: u32) -> u64 {
     }
 }
 
+// Quickcheck needs pass by value
+#[allow(clippy::needless_pass_by_value)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -124,7 +128,7 @@ mod tests {
             FieldElement::from_hex_str("3123423"),
             FieldElement::from_hex_str("9986432"),
         ];
-        let expected: Vec<FieldElement> = (0..4u64)
+        let expected: Vec<FieldElement> = (0..4_u64)
             .map(|i| DensePolynomial::new(&v).evaluate(&FieldElement::root(4).unwrap().pow(i)))
             .collect();
 
@@ -144,7 +148,7 @@ mod tests {
             FieldElement::from_hex_str("99864321"),
         ];
         let eighth_root_of_unity = FieldElement::root(8).unwrap();
-        let expected: Vec<FieldElement> = (0..8u64)
+        let expected: Vec<FieldElement> = (0..8_u64)
             .map(|i| DensePolynomial::new(&v).evaluate(&eighth_root_of_unity.pow(i)))
             .collect();
 

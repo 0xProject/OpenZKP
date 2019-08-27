@@ -11,7 +11,7 @@ use substrate_service;
 // const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 
 /// Specialized `ChainSpec`. This is a specialization of the general Substrate
-/// ChainSpec type.
+/// `ChainSpec` type.
 pub type ChainSpec = substrate_service::ChainSpec<GenesisConfig>;
 
 /// The chain specification option. This is expected to come in from the CLI and
@@ -47,8 +47,8 @@ impl Alternative {
                     "dev",
                     || {
                         testnet_genesis(
-                            vec![authority_key("Alice")],
-                            vec![account_key("Alice")],
+                            &[authority_key("Alice")],
+                            &[account_key("Alice")],
                             account_key("Alice"),
                         )
                     },
@@ -65,8 +65,8 @@ impl Alternative {
                     "local_testnet",
                     || {
                         testnet_genesis(
-                            vec![authority_key("Alice"), authority_key("Bob")],
-                            vec![
+                            &[authority_key("Alice"), authority_key("Bob")],
+                            &[
                                 account_key("Alice"),
                                 account_key("Bob"),
                                 account_key("Charlie"),
@@ -97,21 +97,21 @@ impl Alternative {
 }
 
 fn testnet_genesis(
-    initial_authorities: Vec<AuthorityId>,
-    endowed_accounts: Vec<AccountId>,
+    initial_authorities: &[AuthorityId],
+    endowed_accounts: &[AccountId],
     root_key: AccountId,
 ) -> GenesisConfig {
     GenesisConfig {
         consensus: Some(ConsensusConfig {
             code:        RUNTIME_WASM.to_vec(),
-            authorities: initial_authorities.clone(),
+            authorities: initial_authorities.to_owned(),
         }),
         system:    None,
         timestamp: Some(TimestampConfig {
             minimum_period: 5, // 10 second block time.
         }),
         indices:   Some(IndicesConfig {
-            ids: endowed_accounts.clone(),
+            ids: endowed_accounts.to_owned(),
         }),
         balances:  Some(BalancesConfig {
             transaction_base_fee: 1,

@@ -1,3 +1,5 @@
+// This module abstracts low-level `unsafe` behaviour
+#![allow(unsafe_code)]
 use memmap::{MmapMut, MmapOptions};
 use std::{
     marker::PhantomData,
@@ -16,7 +18,7 @@ pub struct MmapVec<T: Clone> {
 }
 
 impl<T: Clone> MmapVec<T> {
-    pub fn with_capacity(capacity: usize) -> MmapVec<T> {
+    pub fn with_capacity(capacity: usize) -> Self {
         debug_assert!(capacity > 0);
         // From https://docs.rs/tempfile/3.1.0/tempfile/: tempfile() relies on
         // the OS to remove the temporary file once the last handle is closed.
@@ -28,7 +30,7 @@ impl<T: Clone> MmapVec<T> {
         let mmap = unsafe { MmapOptions::new().len(size).map_mut(&file) }
             .expect("cannot access memory mapped file");
 
-        MmapVec {
+        Self {
             mmap,
             length: 0,
             capacity,
@@ -129,7 +131,7 @@ mod tests {
             *x += FieldElement::from(U256::from(i));
         }
 
-        for i in 0..10u64 {
+        for i in 0..10_u64 {
             assert_eq!(m[i as usize], FieldElement::from(U256::from(i + 1)))
         }
     }
@@ -151,7 +153,7 @@ mod tests {
     #[should_panic]
     fn test_cannot_extend_beyond_capacity() {
         let mut m: MmapVec<u64> = MmapVec::with_capacity(1);
-        let v = vec![10u64; 2];
+        let v = vec![10_u64; 2];
         m.extend(v.as_slice());
     }
 }

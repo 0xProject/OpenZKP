@@ -1,9 +1,14 @@
+// Names `from` and `to` are not very meaningful on their own
+#![allow(clippy::module_name_repetitions)]
 use crate::field::FieldElement;
 use macros_decl::u256h;
 use u256::{
     utils::{adc, mac, sbb},
     U256,
 };
+
+// TODO: Maybe move this file to U256?
+// TODO: Make these `const fn` once https://github.com/rust-lang/rust/issues/49146 lands.
 
 // M64 = -MODULUS^(-1) mod 2^64
 pub const M64: u64 = 0xffff_ffff_ffff_ffff; // = -1
@@ -13,6 +18,8 @@ pub const R1: U256 = u256h!("07fffffffffffdf0fffffffffffffffffffffffffffffffffff
 pub const R2: U256 = u256h!("07ffd4ab5e008810ffffffffff6f800000000001330ffffffffffd737e000401");
 pub const R3: U256 = u256h!("038e5f79873c0a6df47d84f8363000187545706677ffcc06cc7177d1406df18e");
 
+// We rebind variables for readability
+#[allow(clippy::shadow_unrelated)]
 pub const fn to_montgomery_const(x: &U256) -> U256 {
     let k = x.c0.wrapping_mul(R2.c0).wrapping_mul(M64);
     let (a0, carry) = mac(0, x.c0, R2.c0, 0);
@@ -20,7 +27,7 @@ pub const fn to_montgomery_const(x: &U256) -> U256 {
     let (a2, carry) = mac(0, x.c0, R2.c2, carry);
     let (a3, carry) = mac(0, x.c0, R2.c3, carry);
     let a4 = carry;
-    let (_a, carry) = mac(a0, k, FieldElement::MODULUS.c0, 0);
+    let (_, carry) = mac(a0, k, FieldElement::MODULUS.c0, 0);
     let (a0, carry) = mac(a1, k, FieldElement::MODULUS.c1, carry);
     let (a1, carry) = mac(a2, k, FieldElement::MODULUS.c2, carry);
     let (a2, carry) = mac(a3, k, FieldElement::MODULUS.c3, carry);
@@ -31,7 +38,7 @@ pub const fn to_montgomery_const(x: &U256) -> U256 {
     let (a2, carry) = mac(a2, x.c1, R2.c2, carry);
     let (a3, carry) = mac(a3, x.c1, R2.c3, carry);
     let a4 = carry;
-    let (_a, carry) = mac(a0, k, FieldElement::MODULUS.c0, 0);
+    let (_, carry) = mac(a0, k, FieldElement::MODULUS.c0, 0);
     let (a0, carry) = mac(a1, k, FieldElement::MODULUS.c1, carry);
     let (a1, carry) = mac(a2, k, FieldElement::MODULUS.c2, carry);
     let (a2, carry) = mac(a3, k, FieldElement::MODULUS.c3, carry);
@@ -42,7 +49,7 @@ pub const fn to_montgomery_const(x: &U256) -> U256 {
     let (a2, carry) = mac(a2, x.c2, R2.c2, carry);
     let (a3, carry) = mac(a3, x.c2, R2.c3, carry);
     let a4 = carry;
-    let (_a, carry) = mac(a0, k, FieldElement::MODULUS.c0, 0);
+    let (_, carry) = mac(a0, k, FieldElement::MODULUS.c0, 0);
     let (a0, carry) = mac(a1, k, FieldElement::MODULUS.c1, carry);
     let (a1, carry) = mac(a2, k, FieldElement::MODULUS.c2, carry);
     let (a2, carry) = mac(a3, k, FieldElement::MODULUS.c3, carry);
@@ -53,7 +60,7 @@ pub const fn to_montgomery_const(x: &U256) -> U256 {
     let (a2, carry) = mac(a2, x.c3, R2.c2, carry);
     let (a3, carry) = mac(a3, x.c3, R2.c3, carry);
     let a4 = carry;
-    let (_a, carry) = mac(a0, k, FieldElement::MODULUS.c0, 0);
+    let (_, carry) = mac(a0, k, FieldElement::MODULUS.c0, 0);
     let (a0, carry) = mac(a1, k, FieldElement::MODULUS.c1, carry);
     let (a1, carry) = mac(a2, k, FieldElement::MODULUS.c2, carry);
     let (a2, carry) = mac(a3, k, FieldElement::MODULUS.c3, carry);
@@ -72,13 +79,13 @@ pub const fn to_montgomery_const(x: &U256) -> U256 {
     let (a0, carry) = adc(a0, borrow * FieldElement::MODULUS.c0, 0);
     let (a1, carry) = adc(a1, borrow * FieldElement::MODULUS.c1, carry);
     let (a2, carry) = adc(a2, borrow * FieldElement::MODULUS.c2, carry);
-    let (a3, _carry) = adc(a3, borrow * FieldElement::MODULUS.c3, carry);
+    let (a3, _) = adc(a3, borrow * FieldElement::MODULUS.c3, carry);
     // Return the now reduced result
     U256::from_limbs(a0, a1, a2, a3)
 }
 
-// TODO: Make const fn
-#[inline(always)]
+// We rebind variables for readability
+#[allow(clippy::shadow_unrelated)]
 pub fn redc(lo: &U256, hi: &U256) -> U256 {
     // Algorithm 14.32 from Handbook of Applied Cryptography.
     // TODO: Optimize for the specific values of M64 and MODULUS.
@@ -105,7 +112,7 @@ pub fn redc(lo: &U256, hi: &U256) -> U256 {
     let (a4, carry) = mac(a4, ui, FieldElement::MODULUS.c1, carry);
     let (a5, carry) = mac(a5, ui, FieldElement::MODULUS.c2, carry);
     let (a6, carry) = mac(a6, ui, FieldElement::MODULUS.c3, carry);
-    let (a7, _carry) = adc(hi.c3, carry2, carry);
+    let (a7, _) = adc(hi.c3, carry2, carry);
 
     // Final reduction
     let mut r = U256::from_limbs(a4, a5, a6, a7);
@@ -115,8 +122,8 @@ pub fn redc(lo: &U256, hi: &U256) -> U256 {
     r
 }
 
-// TODO: Make `const fn` once https://github.com/rust-lang/rust/issues/49146 lands.
-#[inline(always)]
+// We rebind variables for readability
+#[allow(clippy::shadow_unrelated)]
 pub fn mul_redc(x: &U256, y: &U256) -> U256 {
     // TODO: This might not be faster than:
     // let (lo, hi) = x.mul_full(y);
@@ -174,7 +181,6 @@ pub fn mul_redc(x: &U256, y: &U256) -> U256 {
     r
 }
 
-#[inline(always)]
 pub fn sqr_redc(a: &U256) -> U256 {
     let (lo, hi) = a.sqr_full();
     redc(&lo, &hi)

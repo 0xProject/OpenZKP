@@ -1,3 +1,5 @@
+// TODO: Naming?
+#![allow(clippy::module_name_repetitions)]
 use crate::fft::{fft, ifft};
 use primefield::FieldElement;
 use std::{
@@ -43,7 +45,7 @@ impl DensePolynomial {
     pub fn shift(&self, factor: &FieldElement) -> Self {
         let mut shifted_coefficients = self.0.clone();
         let mut power = FieldElement::ONE;
-        for coefficient in shifted_coefficients.iter_mut() {
+        for coefficient in &mut shifted_coefficients {
             *coefficient *= &power;
             power *= factor;
         }
@@ -73,7 +75,7 @@ impl DensePolynomial {
         &self.0
     }
 
-    pub fn square(&self) -> DensePolynomial {
+    pub fn square(&self) -> Self {
         let mut result = self.0.clone();
         result.extend_from_slice(&vec![FieldElement::ZERO; self.len()]);
         result = fft(&result);
@@ -86,7 +88,7 @@ impl DensePolynomial {
 // OPT: Write an Add<DensePolynomial> uses the fact that it's faster to add
 // shorter DensePolynomial's to longer ones, rather than vice versa.
 impl AddAssign<&DensePolynomial> for DensePolynomial {
-    fn add_assign(&mut self, other: &DensePolynomial) {
+    fn add_assign(&mut self, other: &Self) {
         self.0
             .iter_mut()
             .zip(&other.0)
@@ -109,7 +111,7 @@ impl SubAssign<&Self> for DensePolynomial {
             self.0.extend_from_slice(&other.0[self.len()..]);
             self.0[original_length..]
                 .iter_mut()
-                .for_each(|c| c.neg_assign());
+                .for_each(FieldElement::neg_assign);
         }
         self.canonicalize();
     }
@@ -192,7 +194,7 @@ impl SparsePolynomial {
 
     pub fn evaluate(&self, x: &FieldElement) -> FieldElement {
         let mut result = FieldElement::ZERO;
-        for (degree, coefficient) in self.0.iter() {
+        for (degree, coefficient) in &self.0 {
             result += coefficient * x.pow(*degree);
         }
         result
@@ -211,7 +213,7 @@ impl SparsePolynomial {
 impl MulAssign<SparsePolynomial> for DensePolynomial {
     fn mul_assign(&mut self, other: SparsePolynomial) {
         let mut result = vec![FieldElement::ZERO; self.len() + other.degree()];
-        for (degree, other_coefficient) in other.0.iter() {
+        for (degree, other_coefficient) in &other.0 {
             for (i, self_coefficient) in self.0.iter().enumerate() {
                 result[i + degree] += self_coefficient * other_coefficient
             }
@@ -237,7 +239,7 @@ impl DivAssign<SparsePolynomial> for DensePolynomial {
         for i in (0..self.len()).rev() {
             if i >= denominator_degree {
                 let quotient_coefficient = &self.0[i] * &inverse_leading_coefficient;
-                for (degree, coefficient) in denominator.0.iter() {
+                for (degree, coefficient) in &denominator.0 {
                     self.0[i - denominator_degree + degree] -= &quotient_coefficient * coefficient;
                 }
                 self.0[i] = quotient_coefficient;
@@ -245,7 +247,7 @@ impl DivAssign<SparsePolynomial> for DensePolynomial {
                 assert!(self.0[i].is_zero());
             }
         }
-        self.0.drain(0..denominator_degree);
+        let _ = self.0.drain(0..denominator_degree);
         self.canonicalize();
     }
 }
@@ -255,7 +257,7 @@ impl Add<SparsePolynomial> for &DensePolynomial {
 
     fn add(self, other: SparsePolynomial) -> DensePolynomial {
         let mut sum = self.0.clone();
-        for (degree, coefficient) in other.0.iter() {
+        for (degree, coefficient) in &other.0 {
             sum[*degree] += coefficient;
         }
         DensePolynomial(sum)
@@ -267,7 +269,7 @@ impl Sub<SparsePolynomial> for &DensePolynomial {
 
     fn sub(self, other: SparsePolynomial) -> DensePolynomial {
         let mut difference = self.0.clone();
-        for (degree, coefficient) in other.0.iter() {
+        for (degree, coefficient) in &other.0 {
             difference[*degree] -= coefficient;
         }
         DensePolynomial(difference)
@@ -304,18 +306,20 @@ impl Arbitrary for SparsePolynomial {
         let mut map = BTreeMap::new();
         for (coefficient, degree) in coefficients_and_degrees {
             if coefficient.is_zero() {
-                map.insert(degree, FieldElement::ONE);
+                let _ = map.insert(degree, FieldElement::ONE);
             } else {
-                map.insert(degree, coefficient);
+                let _ = map.insert(degree, coefficient);
             }
         }
         if map.is_empty() {
-            map.insert(0, FieldElement::ONE);
+            let _ = map.insert(0, FieldElement::ONE);
         }
         Self(map)
     }
 }
 
+// Qiuckcheck needs pass by value
+#[allow(clippy::needless_pass_by_value)]
 #[cfg(test)]
 mod tests {
     use super::*;

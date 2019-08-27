@@ -14,7 +14,18 @@ use starkdex::SHIFT_POINT;
 use std::{prelude::v1::*, vec};
 use u256::U256;
 
+// TODO: Naming
+#[allow(clippy::module_name_repetitions)]
 pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constraint> {
+    fn get_left_bit(trace_polynomials: &[DensePolynomial]) -> DensePolynomial {
+        &trace_polynomials[0]
+            - &FieldElement::from(U256::from(2_u64)) * &trace_polynomials[0].next()
+    }
+    fn get_right_bit(trace_polynomials: &[DensePolynomial]) -> DensePolynomial {
+        &trace_polynomials[4]
+            - &FieldElement::from(U256::from(2_u64)) * &trace_polynomials[4].next()
+    }
+
     let path_length = public_input.path_length;
     let trace_length = path_length * 256;
     let root = public_input.root.clone();
@@ -49,13 +60,6 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constr
     let q_x_right_1 = SparsePolynomial::periodic(&RIGHT_X_COEFFICIENTS, path_length);
     let q_x_right_2 = SparsePolynomial::periodic(&RIGHT_X_COEFFICIENTS, path_length);
     let q_y_right = SparsePolynomial::periodic(&RIGHT_Y_COEFFICIENTS, path_length);
-
-    fn get_left_bit(trace_polynomials: &[DensePolynomial]) -> DensePolynomial {
-        &trace_polynomials[0] - &FieldElement::from(U256::from(2u64)) * &trace_polynomials[0].next()
-    }
-    fn get_right_bit(trace_polynomials: &[DensePolynomial]) -> DensePolynomial {
-        &trace_polynomials[4] - &FieldElement::from(U256::from(2u64)) * &trace_polynomials[4].next()
-    }
 
     vec![
         Constraint {
@@ -256,4 +260,53 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constr
             denominator: hash_end_rows.clone(),
         },
     ]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{
+        pedersen_merkle::{
+            inputs::{short_private_input, SHORT_PUBLIC_INPUT},
+            trace_table::get_trace_table,
+        },
+        proof_params::ProofParams,
+        proofs::stark_proof,
+    };
+
+    #[test]
+    fn short_pedersen_merkle() {
+        let public_input = SHORT_PUBLIC_INPUT;
+        let private_input = short_private_input();
+        let trace_table = get_trace_table(&public_input, &private_input);
+
+        let constraints = &get_pedersen_merkle_constraints(&public_input);
+
+        let proof = stark_proof(&trace_table, &constraints, &public_input, &ProofParams {
+            blowup:                   16,
+            pow_bits:                 0,
+            queries:                  13,
+            fri_layout:               vec![3, 2],
+            constraints_degree_bound: 2,
+        });
+
+        assert_eq!(
+            hex::encode(proof.proof[0..32].to_vec()),
+            "e2c4e35c37e33aa3b439592f2f3c5c82f464f026000000000000000000000000"
+        );
+        assert_eq!(
+            hex::encode(proof.proof[32..64].to_vec()),
+            "c5df989253ac4c3eff4fdb4130f832db1d2a9826000000000000000000000000"
+        );
+
+        // FRI commitments
+        assert_eq!(
+            hex::encode(proof.proof[640..672].to_vec()),
+            "744f04f8bcd9c5aafb8907586428fbe9dd81b976000000000000000000000000"
+        );
+        assert_eq!(
+            hex::encode(proof.proof[672..704].to_vec()),
+            "ce329839a5eccb8009ffebf029312989e68f1cde000000000000000000000000"
+        );
+    }
 }

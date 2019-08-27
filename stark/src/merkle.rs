@@ -96,7 +96,7 @@ pub fn make_tree_threaded<T: Hashable + Sync>(leaves: &[T]) -> Vec<Hash> {
 pub fn proof<R: Hashable, T: Groupable<R>>(
     tree: &[Hash],
     indices: &[usize],
-    source: T,
+    source: &T,
 ) -> Vec<Hash> {
     debug_assert!(tree.len().is_power_of_two());
     let depth = tree.len().trailing_zeros();
@@ -108,30 +108,26 @@ pub fn proof<R: Hashable, T: Groupable<R>>(
     let mut peekable_indicies = indices.iter().peekable();
     let mut excluded_pair = false;
     for &index in indices.iter() {
-        peekable_indicies.next();
+        let _ = peekable_indicies.next();
         known[num_leaves + index % num_leaves] = true;
 
         if index % 2 == 0 {
             known[num_leaves + 1 + index % num_leaves] = true;
-            let prophet = peekable_indicies.peek();
-            match prophet {
-                Some(x) => {
-                    if **x != index + 1 {
-                        decommitment.push(source.get_leaf_hash(index + 1));
-                    } else {
-                        excluded_pair = true;
-                    }
-                }
-                None => {
+            if let Some(x) = peekable_indicies.peek() {
+                if **x == index + 1 {
+                    excluded_pair = true;
+                } else {
                     decommitment.push(source.get_leaf_hash(index + 1));
                 }
+            } else {
+                decommitment.push(source.get_leaf_hash(index + 1));
             }
-        } else if !excluded_pair {
-            known[num_leaves - 1 + index % num_leaves] = true;
-            decommitment.push(source.get_leaf_hash(index - 1));
-        } else {
+        } else if excluded_pair {
             known[num_leaves - 1 + index % num_leaves] = true;
             excluded_pair = false;
+        } else {
+            known[num_leaves - 1 + index % num_leaves] = true;
+            decommitment.push(source.get_leaf_hash(index - 1));
         }
     }
 
@@ -167,30 +163,27 @@ pub fn decommitment_size(indices: &[usize], data_size: usize) -> usize {
     let mut peekable_indicies = indices.iter().peekable();
     let mut excluded_pair = false;
     for &index in indices.iter() {
-        peekable_indicies.next();
+        // TODO: Use return value.
+        let _ = peekable_indicies.next();
         known[num_leaves + index % num_leaves] = true;
 
         if index % 2 == 0 {
             known[num_leaves + 1 + index % num_leaves] = true;
-            let prophet = peekable_indicies.peek();
-            match prophet {
-                Some(x) => {
-                    if **x != index + 1 {
-                        total += 1;
-                    } else {
-                        excluded_pair = true;
-                    }
-                }
-                None => {
+            if let Some(x) = peekable_indicies.peek() {
+                if **x == index + 1 {
+                    excluded_pair = true;
+                } else {
                     total += 1;
                 }
+            } else {
+                total += 1;
             }
-        } else if !excluded_pair {
-            known[num_leaves - 1 + index % num_leaves] = true;
-            total += 1;
-        } else {
+        } else if excluded_pair {
             known[num_leaves - 1 + index % num_leaves] = true;
             excluded_pair = false;
+        } else {
+            known[num_leaves - 1 + index % num_leaves] = true;
+            total += 1;
         }
     }
 
@@ -217,10 +210,10 @@ pub fn decommitment_size(indices: &[usize], data_size: usize) -> usize {
 }
 
 pub fn verify<T: Hashable>(
-    root: Hash,
+    root: &Hash,
     depth: u32,
     values: &mut [(usize, T)],
-    decommitment: Vec<Hash>,
+    decommitment: &[Hash],
 ) -> bool {
     let mut queue = Vec::with_capacity(values.len());
     let mut previous_index = 0;
@@ -240,7 +233,7 @@ pub fn verify<T: Hashable>(
     loop {
         if queue.len() == 1 && queue[0].0 == 1 {
             debug_assert_eq!(decommitment.len(), consumed);
-            return queue[0].1 == root;
+            return queue[0].1 == *root;
         }
 
         let mut new_queue = Vec::new();
@@ -336,22 +329,22 @@ mod tests {
         ];
 
         let indices = vec![1, 11, 14];
-        let decommitment = proof(tree.as_slice(), &indices, leaves.as_slice());
+        let decommitment = proof(tree.as_slice(), &indices, &leaves.as_slice());
         let non_root = Hash::new(hex!(
             "ed112f44bc944f33e2567f86eea202350913b11c000000000000000000000000"
         ));
 
         assert!(verify(
-            tree[1].clone(),
+            &tree[1],
             depth,
             values.as_mut_slice(),
-            decommitment.clone()
+            &decommitment
         ));
         assert!(!verify(
-            non_root,
+            &non_root,
             depth,
             values.as_mut_slice(),
-            decommitment
+            &decommitment
         ));
     }
 }

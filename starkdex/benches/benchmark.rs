@@ -1,5 +1,4 @@
 #![warn(clippy::all)]
-#![deny(warnings)]
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use macros_decl::u256h;
 use starkdex::hash;

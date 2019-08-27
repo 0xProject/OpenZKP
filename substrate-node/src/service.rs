@@ -1,4 +1,4 @@
-//! Service and ServiceFactory implementation. Specialized wrapper over
+//! `Service` and `ServiceFactory` implementation. Specialized wrapper over
 //! Substrate service.
 
 #![warn(unused_extern_crates)]
