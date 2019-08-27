@@ -6,7 +6,7 @@
     // Enable sets of warnings
     clippy::all,
     clippy::pedantic,
-    clippy::cargo,
+    // TODO: clippy::cargo,
     rust_2018_idioms,
     future_incompatible,
     unused,
@@ -39,11 +39,6 @@
 
 extern crate proc_macro;
 use proc_macro_hack::proc_macro_hack;
-
-#[proc_macro_hack]
-pub fn linter_rules(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    macros_lib::linter_rules(input.into()).into()
-}
 
 #[proc_macro_hack]
 pub fn hex(input: proc_macro::TokenStream) -> proc_macro::TokenStream {

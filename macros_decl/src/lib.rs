@@ -7,7 +7,7 @@
     // Enable sets of warnings
     clippy::all,
     clippy::pedantic,
-    clippy::cargo,
+    // TODO: clippy::cargo,
     rust_2018_idioms,
     future_incompatible,
     unused,
@@ -39,9 +39,6 @@
 ))]
 
 use proc_macro_hack::proc_macro_hack;
-
-#[proc_macro_hack]
-pub use macros_impl::linter_rules;
 
 /// Hex literal.
 ///
