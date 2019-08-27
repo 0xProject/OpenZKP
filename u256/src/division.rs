@@ -1,12 +1,10 @@
 use crate::utils::{adc, msb};
 use core::u64;
 
-#[inline(always)]
 const fn val_2(lo: u64, hi: u64) -> u128 {
     ((hi as u128) << 64) | (lo as u128)
 }
 
-#[inline(always)]
 const fn mul_2(a: u64, b: u64) -> u128 {
     (a as u128) * (b as u128)
 }
@@ -14,16 +12,20 @@ const fn mul_2(a: u64, b: u64) -> u128 {
 /// Compute <hi, lo> / d, returning the quotient and the remainder.
 // TODO: Make sure it uses divq on x86_64.
 // See http://lists.llvm.org/pipermail/llvm-dev/2017-October/118323.html
-// (Note that we require d < hi for this)
+// (Note that we require d > hi for this)
 // TODO: If divq is not supported, use a fast software implementation:
 // See https://gmplib.org/~tege/division-paper.pdf
-#[inline(always)]
-const fn divrem_2by1(lo: u64, hi: u64, d: u64) -> (u64, u64) {
-    // TODO: debug_assert!(d > 0);
-    let d = d as u128;
+fn divrem_2by1(lo: u64, hi: u64, d: u64) -> (u64, u64) {
+    debug_assert!(d > 0);
+    debug_assert!(d > hi);
+    let d = u128::from(d);
     let n = val_2(lo, hi);
     let q = n / d;
     let r = n % d;
+    debug_assert!(q < val_2(0, 1));
+    debug_assert!(r < d);
+    // There should not be any truncaction.
+    #[allow(clippy::cast_possible_truncation)]
     (q as u64, r as u64)
 }
 
@@ -41,7 +43,6 @@ pub fn divrem_nby1(numerator: &mut [u64], divisor: u64) -> u64 {
 //      |  n2 n1 n0  |
 //  q = |  --------  |
 //      |_    d1 d0 _|
-#[inline(always)]
 pub fn div_3by2(n: &[u64; 3], d: &[u64; 2]) -> u64 {
     // The highest bit of d needs to be set
     debug_assert!(d[1] >> 63 == 1);

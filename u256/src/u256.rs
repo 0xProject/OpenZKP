@@ -5,7 +5,6 @@ use crate::{
     noncommutative_binop,
     utils::{adc, div_2_1, mac, sbb},
 };
-use macros_decl::u256h;
 use std::{
     cmp::Ordering,
     num::Wrapping,
@@ -33,22 +32,6 @@ impl From<core::num::ParseIntError> for ParseError {
     }
 }
 
-// We can't use `u64::from` here because it is not a const fn.
-// You'd want to use this with `#[allow(clippy::cast_lossless)]` to
-// surpress a clippy false positive (u8 -> u64 is always safe).
-macro_rules! u64_from_bytes_be {
-    ($arr:ident, $offset:expr) => {
-        ($arr[$offset + 0] as u64) << 56
-            | ($arr[$offset + 1] as u64) << 48
-            | ($arr[$offset + 2] as u64) << 40
-            | ($arr[$offset + 3] as u64) << 32
-            | ($arr[$offset + 4] as u64) << 24
-            | ($arr[$offset + 5] as u64) << 16
-            | ($arr[$offset + 6] as u64) << 8
-            | ($arr[$offset + 7] as u64)
-    };
-}
-
 #[derive(PartialEq, Eq, Clone, Default)]
 pub struct U256 {
     pub c0: u64,
@@ -58,34 +41,33 @@ pub struct U256 {
 }
 
 impl U256 {
-    pub const MAX: U256 = U256::from_limbs(
+    pub const MAX: Self = Self::from_limbs(
         u64::max_value(),
         u64::max_value(),
         u64::max_value(),
         u64::max_value(),
     );
-    pub const ONE: U256 = U256::from_limbs(1, 0, 0, 0);
-    pub const ZERO: U256 = U256::from_limbs(0, 0, 0, 0);
+    pub const ONE: Self = Self::from_limbs(1, 0, 0, 0);
+    pub const ZERO: Self = Self::from_limbs(0, 0, 0, 0);
 
-    #[inline(always)]
     pub const fn from_limbs(c0: u64, c1: u64, c2: u64, c3: u64) -> Self {
         Self { c0, c1, c2, c3 }
     }
 
-    #[inline(always)]
-    #[allow(clippy::cast_lossless)]
-    pub const fn from_bytes_be(n: &[u8; 32]) -> Self {
-        U256::from_limbs(
-            u64_from_bytes_be!(n, 24),
-            u64_from_bytes_be!(n, 16),
-            u64_from_bytes_be!(n, 8),
-            u64_from_bytes_be!(n, 0),
+    pub fn from_bytes_be(n: &[u8; 32]) -> Self {
+        Self::from_limbs(
+            u64::from_be_bytes([n[24], n[25], n[26], n[27], n[28], n[29], n[30], n[31]]),
+            u64::from_be_bytes([n[16], n[17], n[18], n[19], n[20], n[21], n[22], n[23]]),
+            u64::from_be_bytes([n[8], n[9], n[10], n[11], n[12], n[13], n[14], n[15]]),
+            u64::from_be_bytes([n[0], n[1], n[2], n[3], n[4], n[5], n[6], n[7]]),
         )
     }
 
     pub fn to_bytes_be(&self) -> [u8; 32] {
         let mut r = [0; 32];
         let mut n = self.clone();
+        // We want truncation here
+        #[allow(clippy::cast_possible_truncation)]
         for i in (0..32).rev() {
             r[i] = n.c0 as u8;
             n >>= 8;
@@ -93,40 +75,33 @@ impl U256 {
         r
     }
 
-    // TODO: Remove
-    #[inline(always)]
-    #[allow(clippy::cast_lossless)]
-    pub const fn from_slice(limbs: &[u32; 8]) -> Self {
-        Self::from_limbs(
-            ((limbs[1] as u64) << 32) | (limbs[0] as u64),
-            ((limbs[3] as u64) << 32) | (limbs[2] as u64),
-            ((limbs[5] as u64) << 32) | (limbs[4] as u64),
-            ((limbs[7] as u64) << 32) | (limbs[6] as u64),
-        )
-    }
-
-    #[inline(always)]
     pub fn is_zero(&self) -> bool {
-        *self == U256::ZERO
+        *self == Self::ZERO
     }
 
-    pub fn from_decimal_str(s: &str) -> Result<U256, ParseError> {
+    // Can not use Self inside the macro
+    #[allow(clippy::use_self)]
+    pub fn from_decimal_str(s: &str) -> Result<Self, ParseError> {
         // ceil(2^256 / 10)
-        const MAX10: U256 =
-            u256h!("199999999999999999999999999999999999999999999999999999999999999a");
+        let max10: Self = Self::from_limbs(
+            0x9999_9999_9999_999a_u64,
+            0x9999_9999_9999_9999_u64,
+            0x9999_9999_9999_9999_u64,
+            0x1999_9999_9999_9999_u64,
+        );
         if s.is_empty() {
             return Err(ParseError::Empty);
         }
         // TODO: Support other radices
         // TODO: Implement as trait
         // OPT: Convert 19 digits at a time using u64.
-        let mut result = U256::ZERO;
+        let mut result = Self::ZERO;
         for (i, _c) in s.chars().enumerate() {
-            if result > MAX10 {
+            if result > max10 {
                 return Err(ParseError::Overflow);
             }
-            result *= U256::from(10_u64);
-            let digit = U256::from(u64::from_str_radix(&s[i..=i], 10)?);
+            result *= Self::from(10_u64);
+            let digit = Self::from(u64::from_str_radix(&s[i..=i], 10)?);
             if &result + &digit < result {
                 return Err(ParseError::Overflow);
             }
@@ -136,16 +111,16 @@ impl U256 {
     }
 
     pub fn to_decimal_str(&self) -> String {
-        if *self == U256::ZERO {
+        if *self == Self::ZERO {
             return "0".to_string();
         }
         let mut result = String::new();
         let mut copy = self.clone();
-        while copy > U256::ZERO {
+        while copy > Self::ZERO {
             // OPT: Convert 19 digits at a time using u64.
-            let digit = (&copy % U256::from(10_u64)).c0;
+            let digit = (&copy % Self::from(10_u64)).c0;
             result.push_str(&digit.to_string());
-            copy /= U256::from(10_u64);
+            copy /= Self::from(10_u64);
         }
         // Reverse digits
         // Note: Chars are safe here instead of graphemes, because all graphemes
@@ -154,35 +129,30 @@ impl U256 {
     }
 
     #[cfg(feature = "std")]
-    pub fn from_hex_str(s: &str) -> U256 {
+    pub fn from_hex_str(s: &str) -> Self {
         let byte_string = format!("{:0>64}", s.trim_start_matches("0x"));
         let bytes = hex::decode(byte_string).unwrap();
         let mut array = [0_u8; 32];
         array.copy_from_slice(&bytes[..32]);
-        U256::from_bytes_be(&array)
+        Self::from_bytes_be(&array)
     }
 
-    #[inline(always)]
     pub const fn is_even(&self) -> bool {
         self.c0 & 1 == 0
     }
 
-    #[inline(always)]
     pub const fn is_odd(&self) -> bool {
         self.c0 & 1 == 1
     }
 
-    #[inline(always)]
     pub fn bits(&self) -> usize {
         256 - self.leading_zeros()
     }
 
-    #[inline(always)]
     pub fn msb(&self) -> usize {
         255 - self.leading_zeros()
     }
 
-    #[inline(always)]
     pub fn bit(&self, i: usize) -> bool {
         if i < 64 {
             self.c0 >> i & 1 == 1
@@ -197,7 +167,6 @@ impl U256 {
         }
     }
 
-    #[inline(always)]
     pub fn leading_zeros(&self) -> usize {
         if self.c3 > 0 {
             self.c3.leading_zeros() as usize
@@ -212,7 +181,6 @@ impl U256 {
         }
     }
 
-    #[inline(always)]
     pub fn trailing_zeros(&self) -> usize {
         if self.c0 > 0 {
             self.c0.trailing_zeros() as usize
@@ -227,8 +195,9 @@ impl U256 {
         }
     }
 
-    #[inline(always)]
-    pub const fn mul_full(&self, rhs: &U256) -> (U256, U256) {
+    // We shadow carry for readability
+    #[allow(clippy::shadow_unrelated)]
+    pub const fn mul_full(&self, rhs: &Self) -> (Self, Self) {
         let (r0, carry) = mac(0, self.c0, rhs.c0, 0);
         let (r1, carry) = mac(0, self.c0, rhs.c1, carry);
         let (r2, carry) = mac(0, self.c0, rhs.c2, carry);
@@ -246,13 +215,14 @@ impl U256 {
         let (r5, carry) = mac(r5, self.c3, rhs.c2, carry);
         let (r6, r7) = mac(r6, self.c3, rhs.c3, carry);
         (
-            U256::from_limbs(r0, r1, r2, r3),
-            U256::from_limbs(r4, r5, r6, r7),
+            Self::from_limbs(r0, r1, r2, r3),
+            Self::from_limbs(r4, r5, r6, r7),
         )
     }
 
-    #[inline(always)]
-    pub const fn sqr_full(&self) -> (U256, U256) {
+    // We shadow carry for readability
+    #[allow(clippy::shadow_unrelated)]
+    pub const fn sqr_full(&self) -> (Self, Self) {
         let (r1, carry) = mac(0, self.c0, self.c1, 0);
         let (r2, carry) = mac(0, self.c0, self.c2, carry);
         let (r3, r4) = mac(0, self.c0, self.c3, carry);
@@ -275,14 +245,14 @@ impl U256 {
         let (r6, carry) = mac(r6, self.c3, self.c3, carry);
         let (r7, _) = adc(r7, 0, carry);
         (
-            U256::from_limbs(r0, r1, r2, r3),
-            U256::from_limbs(r4, r5, r6, r7),
+            Self::from_limbs(r0, r1, r2, r3),
+            Self::from_limbs(r4, r5, r6, r7),
         )
     }
 
     // Short division
     // TODO: Can be computed in-place
-    pub fn divrem_u64(&self, rhs: u64) -> Option<(U256, u64)> {
+    pub fn divrem_u64(&self, rhs: u64) -> Option<(Self, u64)> {
         if rhs == 0 {
             None
         } else {
@@ -292,66 +262,66 @@ impl U256 {
             let (q2, r) = div_2_1(self.c2, r, rhs);
             let (q1, r) = div_2_1(self.c1, r, rhs);
             let (q0, r) = div_2_1(self.c0, r, rhs);
-            Some((U256::from_limbs(q0, q1, q2, q3), r))
+            Some((Self::from_limbs(q0, q1, q2, q3), r))
         }
     }
 
     // Long division
-    pub fn divrem(&self, rhs: &U256) -> Option<(U256, U256)> {
+    pub fn divrem(&self, rhs: &Self) -> Option<(Self, Self)> {
         let mut numerator = [self.c0, self.c1, self.c2, self.c3, 0];
         if rhs.c3 > 0 {
             divrem_nbym(&mut numerator, &mut [rhs.c0, rhs.c1, rhs.c2, rhs.c3]);
             Some((
-                U256::from_limbs(numerator[4], 0, 0, 0),
-                U256::from_limbs(numerator[0], numerator[1], numerator[2], numerator[3]),
+                Self::from_limbs(numerator[4], 0, 0, 0),
+                Self::from_limbs(numerator[0], numerator[1], numerator[2], numerator[3]),
             ))
         } else if rhs.c2 > 0 {
             divrem_nbym(&mut numerator, &mut [rhs.c0, rhs.c1, rhs.c2]);
             Some((
-                U256::from_limbs(numerator[3], numerator[4], 0, 0),
-                U256::from_limbs(numerator[0], numerator[1], numerator[2], 0),
+                Self::from_limbs(numerator[3], numerator[4], 0, 0),
+                Self::from_limbs(numerator[0], numerator[1], numerator[2], 0),
             ))
         } else if rhs.c1 > 0 {
             divrem_nbym(&mut numerator, &mut [rhs.c0, rhs.c1]);
             Some((
-                U256::from_limbs(numerator[2], numerator[3], numerator[4], 0),
-                U256::from_limbs(numerator[0], numerator[1], 0, 0),
+                Self::from_limbs(numerator[2], numerator[3], numerator[4], 0),
+                Self::from_limbs(numerator[0], numerator[1], 0, 0),
             ))
         } else if rhs.c0 > 0 {
             let remainder = divrem_nby1(&mut numerator, rhs.c0);
             Some((
-                U256::from_limbs(numerator[0], numerator[1], numerator[2], numerator[3]),
-                U256::from_limbs(remainder, 0, 0, 0),
+                Self::from_limbs(numerator[0], numerator[1], numerator[2], numerator[3]),
+                Self::from_limbs(remainder, 0, 0, 0),
             ))
         } else {
             None
         }
     }
 
-    pub fn mulmod(&self, rhs: &U256, modulus: &U256) -> U256 {
+    pub fn mulmod(&self, rhs: &Self, modulus: &Self) -> Self {
         let (lo, hi) = self.mul_full(rhs);
         let mut numerator = [lo.c0, lo.c1, lo.c2, lo.c3, hi.c0, hi.c1, hi.c2, hi.c3, 0];
         if modulus.c3 > 0 {
             divrem_nbym(&mut numerator, &mut [
                 modulus.c0, modulus.c1, modulus.c2, modulus.c3,
             ]);
-            U256::from_limbs(numerator[0], numerator[1], numerator[2], numerator[3])
+            Self::from_limbs(numerator[0], numerator[1], numerator[2], numerator[3])
         } else if modulus.c2 > 0 {
             divrem_nbym(&mut numerator, &mut [modulus.c0, modulus.c1, modulus.c2]);
-            U256::from_limbs(numerator[0], numerator[1], numerator[2], 0)
+            Self::from_limbs(numerator[0], numerator[1], numerator[2], 0)
         } else if modulus.c1 > 0 {
             divrem_nbym(&mut numerator, &mut [modulus.c0, modulus.c1]);
-            U256::from_limbs(numerator[0], numerator[1], 0, 0)
+            Self::from_limbs(numerator[0], numerator[1], 0, 0)
         } else if modulus.c0 > 0 {
             let remainder = divrem_nby1(&mut numerator, modulus.c0);
-            U256::from_limbs(remainder, 0, 0, 0)
+            Self::from_limbs(remainder, 0, 0, 0)
         } else {
             panic!(); // TODO: return Option<>
         }
     }
 
     // Computes the inverse modulo 2^256
-    pub fn invmod256(&self) -> Option<U256> {
+    pub fn invmod256(&self) -> Option<Self> {
         if self.is_even() {
             None
         } else {
@@ -367,22 +337,22 @@ impl U256 {
             r *= Wrapping(2) - c * r; // mod 2^64
             let mut r = Wrapping(u128::from(r.0));
             r *= Wrapping(2) - Wrapping(self.as_u128()) * r; // mod 2^128
-            let mut r = U256::from(r.0);
-            r *= &(U256::from(2_u64) - &(r.clone() * self)); // mod 2^256
+            let mut r = Self::from(r.0);
+            r *= &(Self::from(2_u64) - &(r.clone() * self)); // mod 2^256
             Some(r)
         }
     }
 
     // Computes the inverse modulo a given modulus
-    pub fn invmod(&self, modulus: &U256) -> Option<U256> {
+    pub fn invmod(&self, modulus: &Self) -> Option<Self> {
         inv_mod(modulus, self)
     }
 
-    pub fn pow(&self, exponent: u64) -> Option<U256> {
+    pub fn pow(&self, exponent: u64) -> Option<Self> {
         if self.is_zero() && (exponent == 0) {
             None
         } else {
-            let mut result = U256::ONE;
+            let mut result = Self::ONE;
             let mut remaining_exponent = exponent;
             let mut square = self.clone();
             while remaining_exponent > 0 {
@@ -403,7 +373,7 @@ macro_rules! impl_from_uint {
         impl From<$type> for U256 {
             // $type could be u64, which triggers the lint.
             #[allow(trivial_numeric_casts)]
-            fn from(n: $type) -> U256 {
+            fn from(n: $type) -> Self {
                 Self::from_limbs(n as u64, 0, 0, 0)
             }
         }
@@ -417,7 +387,9 @@ impl_from_uint!(u64);
 impl_from_uint!(usize);
 
 impl From<u128> for U256 {
-    fn from(n: u128) -> U256 {
+    fn from(n: u128) -> Self {
+        // We want truncation here
+        #[allow(clippy::cast_possible_truncation)]
         Self::from_limbs(n as u64, (n >> 64) as u64, 0, 0)
     }
 }
@@ -425,7 +397,11 @@ impl From<u128> for U256 {
 macro_rules! impl_from_int {
     ($t:ty) => {
         impl From<$t> for U256 {
-            fn from(n: $t) -> U256 {
+            // We want twos-complement casting
+            #[allow(clippy::cast_sign_loss)]
+            // We want truncation here
+            #[allow(clippy::cast_possible_truncation)]
+            fn from(n: $t) -> Self {
                 if n >= 0 {
                     Self::from_limbs(n as u64, 0, 0, 0)
                 } else {
@@ -448,7 +424,11 @@ impl_from_int!(i64);
 impl_from_int!(isize);
 
 impl From<i128> for U256 {
-    fn from(n: i128) -> U256 {
+    // We want twos-complement casting
+    #[allow(clippy::cast_sign_loss)]
+    // We want truncation here
+    #[allow(clippy::cast_possible_truncation)]
+    fn from(n: i128) -> Self {
         if n >= 0 {
             Self::from_limbs(n as u64, (n >> 64) as u64, 0, 0)
         } else {
@@ -522,13 +502,13 @@ impl fmt::Debug for U256 {
 }
 
 impl PartialOrd for U256 {
-    fn partial_cmp(&self, other: &U256) -> Option<Ordering> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
 impl Ord for U256 {
-    fn cmp(&self, other: &U256) -> Ordering {
+    fn cmp(&self, other: &Self) -> Ordering {
         let t = self.c3.cmp(&other.c3);
         if t != Ordering::Equal {
             return t;
@@ -555,7 +535,7 @@ impl BitAnd<u64> for &U256 {
 }
 
 impl BitAndAssign<&U256> for U256 {
-    fn bitand_assign(&mut self, rhs: &U256) {
+    fn bitand_assign(&mut self, rhs: &Self) {
         self.c0 &= rhs.c0;
         self.c1 &= rhs.c1;
         self.c2 &= rhs.c2;
@@ -698,27 +678,27 @@ impl Shr<usize> for U256 {
 
 impl AddAssign<&U256> for U256 {
     fn add_assign(&mut self, rhs: &Self) {
-        let (t, carry) = adc(self.c0, rhs.c0, 0);
-        self.c0 = t;
-        let (t, carry) = adc(self.c1, rhs.c1, carry);
-        self.c1 = t;
-        let (t, carry) = adc(self.c2, rhs.c2, carry);
-        self.c2 = t;
-        let (t, _) = adc(self.c3, rhs.c3, carry);
-        self.c3 = t;
+        let (c0, carry) = adc(self.c0, rhs.c0, 0);
+        let (c1, carry) = adc(self.c1, rhs.c1, carry);
+        let (c2, carry) = adc(self.c2, rhs.c2, carry);
+        let (c3, _) = adc(self.c3, rhs.c3, carry);
+        self.c0 = c0;
+        self.c1 = c1;
+        self.c2 = c2;
+        self.c3 = c3;
     }
 }
 
 impl SubAssign<&U256> for U256 {
     fn sub_assign(&mut self, rhs: &Self) {
-        let (t, borrow) = sbb(self.c0, rhs.c0, 0);
-        self.c0 = t;
-        let (t, borrow) = sbb(self.c1, rhs.c1, borrow);
-        self.c1 = t;
-        let (t, borrow) = sbb(self.c2, rhs.c2, borrow);
-        self.c2 = t;
-        let (t, _) = sbb(self.c3, rhs.c3, borrow);
-        self.c3 = t;
+        let (c0, borrow) = sbb(self.c0, rhs.c0, 0);
+        let (c1, borrow) = sbb(self.c1, rhs.c1, borrow);
+        let (c2, borrow) = sbb(self.c2, rhs.c2, borrow);
+        let (c3, _) = sbb(self.c3, rhs.c3, borrow);
+        self.c0 = c0;
+        self.c1 = c1;
+        self.c2 = c2;
+        self.c3 = c3;
     }
 }
 
@@ -888,6 +868,7 @@ impl Arbitrary for U256 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use macros_decl::u256h;
     use quickcheck_macros::quickcheck;
 
     #[allow(dead_code)]

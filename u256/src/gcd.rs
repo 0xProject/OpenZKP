@@ -15,7 +15,7 @@ use crunchy::unroll;
 struct Matrix(u64, u64, u64, u64, bool);
 
 impl Matrix {
-    const IDENTITY: Matrix = Matrix(1, 0, 0, 1, true);
+    const IDENTITY: Self = Self(1, 0, 0, 1, true);
 }
 
 /// Computes a double linear combination efficiently in place.
@@ -28,6 +28,8 @@ impl Matrix {
 /// ```
 // We want to keep spaces to align arguments
 #[rustfmt::skip]
+// We shadow variables for readability.
+#[allow(clippy::shadow_unrelated)]
 fn mat_mul(a: &mut U256, b: &mut U256, (q00, q01, q10, q11): (u64, u64, u64, u64)) {
     use crate::utils::{mac, msb};
     let (ai, ac) = mac( 0, q00, a.c0, 0);
@@ -125,6 +127,8 @@ fn lehmer_unroll(a2: u64, a3: &mut u64, k2: u64, k3: &mut u64) {
 ///
 /// This is essentialy Euclids extended GCD algorithm for 64 bits.
 // OPT: Would this be faster using extended binary gcd?
+// We shadow q for readability.
+#[allow(clippy::shadow_unrelated)]
 fn lehmer_small(mut r0: u64, mut r1: u64) -> Matrix {
     debug_assert!(r0 >= r1);
     if r1 == 0_u64 {
@@ -161,6 +165,8 @@ fn lehmer_small(mut r0: u64, mut r1: u64) -> Matrix {
 /// See also `mpn_hgcd2` in GMP, but ours handles the double precision bit
 /// separately in `lehmer_double`.
 /// <https://gmplib.org/repo/gmp-6.1/file/tip/mpn/generic/hgcd2.c#l226>
+// We shadow q for readability.
+#[allow(clippy::shadow_unrelated)]
 fn lehmer_loop(a0: u64, mut a1: u64) -> Matrix {
     const LIMIT: u64 = 1_u64 << 32;
     debug_assert!(a0 >= 1_u64 << 63);
@@ -283,6 +289,8 @@ fn lehmer_loop(a0: u64, mut a1: u64) -> Matrix {
 /// out of these solutions.
 // OPT: We can update r0 and r1 in place. This won't remove the partially
 // redundant call to lehmer_update, but it reduces memory usage.
+// We shadow s for readability.
+#[allow(clippy::shadow_unrelated)]
 fn lehmer_double(mut r0: U256, mut r1: U256) -> Matrix {
     debug_assert!(r0 >= r1);
     if r0.bits() < 64 {
@@ -514,6 +522,8 @@ mod tests {
     }
 
     #[quickcheck]
+    // We shadow t for readability.
+    #[allow(clippy::shadow_unrelated)]
     fn test_lehmer_loop_match_gcd(mut a: u64, mut b: u64) -> bool {
         const LIMIT: u64 = 1_u64 << 32;
 
