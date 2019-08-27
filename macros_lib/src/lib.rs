@@ -6,7 +6,7 @@
     // Enable sets of warnings
     clippy::all,
     clippy::pedantic,
-    clippy::cargo,
+    // TODO: clippy::cargo,
     rust_2018_idioms,
     future_incompatible,
     unused,
@@ -82,7 +82,7 @@ fn bytes_to_limbs(bytes: &[u8]) -> syn::Result<[u64; 4]> {
             "expected up to 32 bytes",
         ));
     }
-    let mut result = [0u64; 4];
+    let mut result = [0_u64; 4];
     let mut iter = bytes.iter().rev();
     for i in 0..4 {
         for j in 0..8 {
@@ -100,6 +100,8 @@ fn bytes_to_limbs(bytes: &[u8]) -> syn::Result<[u64; 4]> {
 // TODO: Drop this in favour of a `const fn` call.
 // These constants are copied, but we don't have u256h! to format them here.
 #[allow(clippy::unreadable_literal)]
+// Variables are relabeled in ways that confuse clippy.
+#[allow(clippy::shadow_unrelated)]
 fn montgomery_convert(x: (u64, u64, u64, u64)) -> (u64, u64, u64, u64) {
     const M64: u64 = 0xffff_ffff_ffff_ffff;
     const M: (u64, u64, u64, u64) = (1, 0, 0, 576460752303423505);
@@ -114,6 +116,8 @@ fn montgomery_convert(x: (u64, u64, u64, u64)) -> (u64, u64, u64, u64) {
     #[allow(clippy::cast_lossless)]
     pub fn mac(a: u64, b: u64, c: u64, carry: u64) -> (u64, u64) {
         let ret = (a as u128) + ((b as u128) * (c as u128)) + (carry as u128);
+        // We want truncation here
+        #[allow(clippy::cast_possible_truncation)]
         (ret as u64, (ret >> 64) as u64)
     }
 
@@ -166,13 +170,15 @@ fn montgomery_convert(x: (u64, u64, u64, u64)) -> (u64, u64, u64, u64) {
     if (a3, a2, a1, a0) >= (M.3, M.2, M.1, M.0) {
         pub const fn sbb(a: u64, b: u64, borrow: u64) -> (u64, u64) {
             let ret = (a as u128).wrapping_sub((b as u128) + ((borrow >> 63) as u128));
+            // We want truncation here
+            #[allow(clippy::cast_possible_truncation)]
             (ret as u64, (ret >> 64) as u64)
         }
 
         let (a0, borrow) = sbb(a0, M.0, 0);
         let (a1, borrow) = sbb(a1, M.1, borrow);
         let (a2, borrow) = sbb(a2, M.2, borrow);
-        let (a3, _borrow) = sbb(a3, M.3, borrow);
+        let (a3, _) = sbb(a3, M.3, borrow);
         (a0, a1, a2, a3)
     } else {
         (a0, a1, a2, a3)
@@ -224,16 +230,6 @@ pub fn field_element(input: TokenStream) -> TokenStream {
     .unwrap_or_else(|err: syn::Error| err.to_compile_error())
 }
 
-pub fn linter_rules(input: TokenStream) -> TokenStream {
-    (|| {
-        let _input: Expr = syn::parse2(input)?;
-        Ok(quote! {
-            #![deny(missing_debug_implementations)]
-        })
-    })()
-    .unwrap_or_else(|err: syn::Error| err.to_compile_error())
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
@@ -241,12 +237,7 @@ mod test {
     // directly. Instead we go roundabout and compare their `.to_string()`.
 
     #[test]
-    pub fn test_linter_rules() {
-        println!("{:?}", linter_rules(quote! {}).to_string());
-    }
-
-    #[test]
-    pub fn test_hex() {
+    pub fn hex_positive() {
         assert_eq!(hex(quote! {""}).to_string(), quote! {*b""}.to_string());
         assert_eq!(hex(quote! {"00"}).to_string(), quote! {*b"\0"}.to_string());
         assert_eq!(
@@ -264,7 +255,7 @@ mod test {
     }
 
     #[test]
-    pub fn test_hex_negative() {
+    pub fn hex_negative() {
         assert_eq!(
             hex(quote! {0x00000234320323247423897429387489237498273498237498237489237492384723984783928}).to_string(),
             quote! {compile_error ! { "Expected hexadecimal string" }}.to_string());
@@ -289,7 +280,7 @@ mod test {
     }
 
     #[test]
-    pub fn test_u256h() {
+    pub fn u256h_positive() {
         assert_eq!(
             u256h(quote! {""}).to_string(),
             quote! {U256::from_limbs(0u64, 0u64, 0u64, 0u64)}.to_string()
@@ -302,7 +293,7 @@ mod test {
     }
 
     #[test]
-    pub fn test_field_element() {
+    pub fn field_element_positive() {
         assert_eq!(
             field_element(quote! {""}).to_string(),
             quote! {FieldElement::from_montgomery(
