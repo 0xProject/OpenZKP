@@ -6,7 +6,7 @@
     // Enable sets of warnings
     clippy::all,
     clippy::pedantic,
-    clippy::cargo,
+    // TODO: clippy::cargo,
     rust_2018_idioms,
     future_incompatible,
     unused,
@@ -55,7 +55,7 @@ fn run() -> cli::error::Result<()> {
         support_url:     "support.anonymous.an",
     };
 
-    cli::run(::std::env::args(), cli::Exit, version)
+    cli::run(::std::env::args(), cli::Exit, &version)
 }
 
 error_chain::quick_main!(run);
