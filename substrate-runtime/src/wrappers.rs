@@ -1,6 +1,5 @@
 use parity_codec::{Decode, Encode};
-use starkdex::wrappers::*;
-use u256::U256;
+use starkdex;
 
 #[derive(PartialEq, Encode, Default, Clone, Decode)]
 #[cfg_attr(feature = "std", derive(Debug))]
@@ -47,30 +46,30 @@ pub struct Vault {
 
 impl From<PublicKey> for ([u8; 32], [u8; 32]) {
     fn from(key: PublicKey) -> ([u8; 32], [u8; 32]) {
-        (key.x.clone(), key.y.clone())
+        (key.x, key.y)
     }
 }
 
 impl From<([u8; 32], [u8; 32])> for PublicKey {
     fn from(key: ([u8; 32], [u8; 32])) -> PublicKey {
         PublicKey {
-            x: key.0.clone(),
-            y: key.1.clone(),
+            x: key.0,
+            y: key.1,
         }
     }
 }
 
 impl From<Signature> for ([u8; 32], [u8; 32]) {
     fn from(key: Signature) -> ([u8; 32], [u8; 32]) {
-        (key.r.clone(), key.s.clone())
+        (key.r, key.s)
     }
 }
 
 impl From<([u8; 32], [u8; 32])> for Signature {
     fn from(key: ([u8; 32], [u8; 32])) -> Signature {
         Signature {
-            r: key.0.clone(),
-            s: key.1.clone(),
+            r: key.0,
+            s: key.1,
         }
     }
 }
@@ -82,8 +81,8 @@ impl From<MakerMessage> for starkdex::wrappers::MakerMessage {
             vault_b:  message.vault_b,
             amount_a: message.amount_a,
             amount_b: message.amount_b,
-            token_a:  message.token_a.clone(),
-            token_b:  message.token_b.clone(),
+            token_a:  message.token_a,
+            token_b:  message.token_b,
             trade_id: message.trade_id,
         }
     }
@@ -111,10 +110,12 @@ pub fn hash(in_a: [u8; 32], in_b: [u8; 32]) -> [u8; 32] {
     starkdex::wrappers::hash(&in_a, &in_b)
 }
 
+#[allow(dead_code)]
 pub fn maker_hash(message: &MakerMessage) -> [u8; 32] {
     starkdex::wrappers::maker_hash(&message.clone().into())
 }
 
+#[allow(dead_code)]
 pub fn taker_hash(message: &TakerMessage) -> [u8; 32] {
     starkdex::wrappers::taker_hash(
         &maker_hash(&message.maker_message),

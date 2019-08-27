@@ -1,15 +1,12 @@
+// Substrate needs a large enum but we can't put this directly on it's declaration inside the substrate macro
+#![allow(clippy::large_enum_variant)]
+
 use crate::wrappers::*;
-use macros_decl::u256h;
-use parity_codec::{Decode, Encode};
+use parity_codec::{Encode};
 use primefield::FieldElement;
 use rstd::prelude::*;
 use runtime_io::{with_storage, ChildrenStorageOverlay, StorageOverlay};
 use runtime_primitives::traits::{BlakeTwo256, Hash};
-use stark::{
-    check_proof,
-    fibonacci::{get_fibonacci_constraints, get_trace_table, PrivateInput, PublicInput},
-    stark_proof, ProofParams,
-};
 use support::{
     decl_event, decl_module, decl_storage, dispatch::Result, ensure, StorageMap, StorageValue,
 };
@@ -50,6 +47,7 @@ decl_storage! {
     }
 }
 
+ #[allow(clippy::large_enum_variant)]
 decl_module! {
     /// The module declaration.
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
@@ -69,7 +67,7 @@ decl_module! {
             let balance = <Asset1<T>>::get(stark_sender.clone());
             ensure!(balance > amount, "You don't have enough token");
 
-            let hash = hash(U256::from(((nonce as u64) << 32)+ amount as u64).to_bytes_be(), to.x.clone());
+            let hash = hash(U256::from((u64::from(nonce) << 32)+ u64::from(amount)).to_bytes_be(), to.x);
 
             ensure!(verify(hash, sig, stark_sender.clone()), "Invalid Signature");
 
@@ -84,7 +82,7 @@ decl_module! {
         pub fn register(origin, who: PublicKey, sig: Signature) -> Result
         {
             let sender = ensure_signed(origin)?;
-            let mut data : Vec<u8> = sender.clone().encode();
+            let data : Vec<u8> = sender.clone().encode();
             let hash : [u8; 32] = BlakeTwo256::hash_of(&data).into();
             let field_version = FieldElement::from(U256::from_bytes_be(&hash));
 
@@ -222,6 +220,7 @@ mod tests {
     };
     use support::{assert_ok, impl_outer_origin};
     use starkdex::wrappers::{public_key, sign};
+    use macros_decl::u256h;
 
     impl_outer_origin! {
         pub enum Origin for ExchangeTest {}
@@ -278,7 +277,7 @@ mod tests {
 
     #[test]
     fn allows_registration() {
-        let mut data: Vec<u8> = (10_u64).encode(); // Note - In the substrate test environment account ids are u64 instead of
+        let data: Vec<u8> = (10_u64).encode(); // Note - In the substrate test environment account ids are u64 instead of
                                               // public keys
         let hashed : [u8; 32] = BlakeTwo256::hash_of(&data).into();
         let field_version = FieldElement::from(U256::from_bytes_be(&hashed));
@@ -337,7 +336,7 @@ mod tests {
 
         let hash = crate::wrappers::hash(
             U256::from(((50_u64) << 32) + 40).to_bytes_be(),
-            remco_public.x.clone(),
+            remco_public.x,
         );
         let sig = sign(&hash, &paul_private.to_bytes_be()).into();
         with_externalities(&mut new_test_ext(), || {

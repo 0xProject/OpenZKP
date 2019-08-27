@@ -8,6 +8,8 @@
 #![cfg_attr(not(feature = "std"), feature(alloc))]
 // `construct_runtime!` does a lot of recursion and requires us to increase the limit to 256.
 #![recursion_limit = "256"]
+// Substrate needs a large enum but we can't put this directly on it's declaration inside the substrate macro
+#![allow(clippy::large_enum_variant)]
 
 use client::{
     block_builder::api::{self as block_builder_api, CheckInherentsResult, InherentData},
@@ -220,7 +222,6 @@ construct_runtime!(
 		Sudo: sudo,
         BlockProof: block_proof::{Module, Call, Storage, Inherent},
         Exchange: exchange::{Module, Call, Storage, Event<T>},
-        TemplateModule: template::{Module, Call, Storage, Event<T>},
 	}
 );
 
