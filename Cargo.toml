@@ -1,12 +1,13 @@
 [workspace]
 members = [
+    "macros_lib",
+    "macros_impl",
+    "macros_decl",
+    "u256",
     "primefield",
     "ecc",
     "starkdex",
     "stark",
-    "macros_decl",
-    "macros_impl",
-    "macros_lib",
     "substrate-node",
     "substrate-runtime",
 ]

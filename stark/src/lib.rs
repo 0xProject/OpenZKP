@@ -1,33 +1,43 @@
-#![warn(clippy::all)]
 #![cfg_attr(not(feature = "std"), no_std)]
+// HACK: This sequence needs to be repeated in each project.
+//       See https://github.com/rust-lang/cargo/issues/5034
+// For clippy lints see: https://rust-lang.github.io/rust-clippy/master
+// For rustc lints see: https://doc.rust-lang.org/rustc/lints/index.html
 #![warn(
-    absolute_paths_not_starting_with_crate,
+    // Enable sets of warnings
+    clippy::all,
+    clippy::pedantic,
+    clippy::cargo,
+    rust_2018_idioms,
+    future_incompatible,
+    unused,
+
+    // Additional unused warnings (not included in `unused`)
+    unused_lifetimes,
+    unused_qualifications,
+    unused_results,
+
+    // Additional misc. warnings
     anonymous_parameters,
-    // box_pointers,
     deprecated_in_future,
     elided_lifetimes_in_paths,
     explicit_outlives_requirements,
     keyword_idents,
     macro_use_extern_crate,
-    // missing_copy_implementations,
+    // TODO: missing_docs,
     missing_doc_code_examples,
     private_doc_tests,
     single_use_lifetimes,
     trivial_casts,
     trivial_numeric_casts,
+    // TODO: unreachable_pub,
     unsafe_code,
-    unstable_features,
-    unused_extern_crates,
-    unused_import_braces,
-    unused_labels,
-    unused_lifetimes,
-    unused_qualifications,
-    unused_results,
     variant_size_differences
 )]
-// TODO: #![cfg_attr(feature = "std", missing_debug_implementations)]
-// TODO: #![warn(unreachable_pub)]
-// TODO: #![warn(missing_docs)]
+#![cfg_attr(feature = "std", warn(
+    // TODO: missing_debug_implementations,
+))]
+
 mod channel;
 mod constraint;
 mod fft;
@@ -61,9 +71,8 @@ mod mmap_vec {
 }
 
 // Prover functionality is only available if the feature is set. Currently
-// requires std.
-// TODO: Make it work without std.
-
+// requires std. TODO: Make it work without std.
+//
 // Optional prover functionality. Note that prover requires std.
 #[cfg(feature = "prover")]
 pub mod pedersen_merkle;
