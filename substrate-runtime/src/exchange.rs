@@ -1,4 +1,4 @@
-// Substrate needs a large enum but we can't put this directly on it's
+// Substrate needs a large enum but we can't put this directly on its
 // declaration inside the substrate macro
 #![allow(clippy::large_enum_variant)]
 
