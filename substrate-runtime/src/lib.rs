@@ -40,7 +40,6 @@
 #![cfg_attr(feature = "std", warn(
     // TODO: missing_debug_implementations,
 ))]
-#![cfg_attr(not(feature = "std"), feature(alloc))]
 // `construct_runtime!` does a lot of recursion and requires us to increase the limit to 256.
 #![recursion_limit = "256"]
 // Substrate macros use `Default::default()`. To allow this we need to
