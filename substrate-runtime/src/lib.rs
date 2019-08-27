@@ -47,6 +47,10 @@
 // allow the lint on the whole file scope.
 // TODO: Move offending code to it's own module
 #![allow(clippy::default_trait_access)]
+// Substrate needs a large enum but we can't put this directly on its declaration inside the
+// substrate macro
+// TODO: Move offending code to it's own module
+#![allow(clippy::large_enum_variant)]
 
 use client::{
     block_builder::api::{self as block_builder_api, CheckInherentsResult, InherentData},
@@ -68,6 +72,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "std")]
 use version::NativeVersion;
 use version::RuntimeVersion;
+mod wrappers;
 
 // A few exports that help ease life for downstream crates.
 pub use balances::Call as BalancesCall;
@@ -100,6 +105,7 @@ pub type BlockNumber = u64;
 pub type Nonce = u64;
 
 pub mod block_proof;
+pub mod exchange;
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't
 /// need to know the specifics of the runtime. They can then be made to be
@@ -238,6 +244,10 @@ impl sudo::Trait for Runtime {
 
 impl block_proof::Trait for Runtime {}
 
+impl exchange::Trait for Runtime {
+    type Event = Event;
+}
+
 construct_runtime!(
 	pub enum Runtime with Log(InternalLog: DigestItem<Hash, AuthorityId, AuthoritySignature>) where
 		Block = Block,
@@ -252,6 +262,7 @@ construct_runtime!(
 		Balances: balances,
 		Sudo: sudo,
         BlockProof: block_proof::{Module, Call, Storage, Inherent},
+        Exchange: exchange::{Module, Call, Storage, Event<T>},
 	}
 );
 
