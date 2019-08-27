@@ -64,7 +64,7 @@ impl PublicCoin {
     pub fn pow_find_nonce(&self, pow_bits: u8) -> u64 {
         let seed = self.pow_seed(pow_bits);
 
-        (0u64..)
+        (0_u64..)
             .find(|&nonce| PublicCoin::pow_verify_with_seed(nonce, pow_bits, &seed))
             .expect("No valid nonce found")
     }

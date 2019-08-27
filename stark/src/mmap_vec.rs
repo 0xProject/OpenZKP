@@ -129,7 +129,7 @@ mod tests {
             *x += FieldElement::from(U256::from(i));
         }
 
-        for i in 0..10u64 {
+        for i in 0..10_u64 {
             assert_eq!(m[i as usize], FieldElement::from(U256::from(i + 1)))
         }
     }
@@ -151,7 +151,7 @@ mod tests {
     #[should_panic]
     fn test_cannot_extend_beyond_capacity() {
         let mut m: MmapVec<u64> = MmapVec::with_capacity(1);
-        let v = vec![10u64; 2];
+        let v = vec![10_u64; 2];
         m.extend(v.as_slice());
     }
 }

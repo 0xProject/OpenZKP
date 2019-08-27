@@ -58,7 +58,12 @@ pub struct U256 {
 }
 
 impl U256 {
-    pub const MAX: U256 = U256::from_limbs(u64::MAX, u64::MAX, u64::MAX, u64::MAX);
+    pub const MAX: U256 = U256::from_limbs(
+        u64::max_value(),
+        u64::max_value(),
+        u64::max_value(),
+        u64::max_value(),
+    );
     pub const ONE: U256 = U256::from_limbs(1, 0, 0, 0);
     pub const ZERO: U256 = U256::from_limbs(0, 0, 0, 0);
 
@@ -106,12 +111,12 @@ impl U256 {
     }
 
     pub fn from_decimal_str(s: &str) -> Result<U256, ParseError> {
-        if s.is_empty() {
-            return Err(ParseError::Empty);
-        }
         // ceil(2^256 / 10)
         const MAX10: U256 =
             u256h!("199999999999999999999999999999999999999999999999999999999999999a");
+        if s.is_empty() {
+            return Err(ParseError::Empty);
+        }
         // TODO: Support other radices
         // TODO: Implement as trait
         // OPT: Convert 19 digits at a time using u64.
@@ -120,7 +125,7 @@ impl U256 {
             if result > MAX10 {
                 return Err(ParseError::Overflow);
             }
-            result *= U256::from(10u64);
+            result *= U256::from(10_u64);
             let digit = U256::from(u64::from_str_radix(&s[i..=i], 10)?);
             if &result + &digit < result {
                 return Err(ParseError::Overflow);
@@ -138,9 +143,9 @@ impl U256 {
         let mut copy = self.clone();
         while copy > U256::ZERO {
             // OPT: Convert 19 digits at a time using u64.
-            let digit = (&copy % U256::from(10u64)).c0;
+            let digit = (&copy % U256::from(10_u64)).c0;
             result.push_str(&digit.to_string());
-            copy /= U256::from(10u64);
+            copy /= U256::from(10_u64);
         }
         // Reverse digits
         // Note: Chars are safe here instead of graphemes, because all graphemes
@@ -152,7 +157,7 @@ impl U256 {
     pub fn from_hex_str(s: &str) -> U256 {
         let byte_string = format!("{:0>64}", s.trim_start_matches("0x"));
         let bytes = hex::decode(byte_string).unwrap();
-        let mut array = [0u8; 32];
+        let mut array = [0_u8; 32];
         array.copy_from_slice(&bytes[..32]);
         U256::from_bytes_be(&array)
     }
@@ -268,7 +273,7 @@ impl U256 {
         let (r4, carry) = mac(r4, self.c2, self.c2, carry);
         let (r5, carry) = adc(r5, 0, carry);
         let (r6, carry) = mac(r6, self.c3, self.c3, carry);
-        let (r7, _carry) = adc(r7, 0, carry);
+        let (r7, _) = adc(r7, 0, carry);
         (
             U256::from_limbs(r0, r1, r2, r3),
             U256::from_limbs(r4, r5, r6, r7),
@@ -363,7 +368,7 @@ impl U256 {
             let mut r = Wrapping(u128::from(r.0));
             r *= Wrapping(2) - Wrapping(self.as_u128()) * r; // mod 2^128
             let mut r = U256::from(r.0);
-            r *= &(U256::from(2u64) - &(r.clone() * self)); // mod 2^256
+            r *= &(U256::from(2_u64) - &(r.clone() * self)); // mod 2^256
             Some(r)
         }
     }
@@ -394,9 +399,11 @@ impl U256 {
 }
 
 macro_rules! impl_from_uint {
-    ($t:ty) => {
-        impl From<$t> for U256 {
-            fn from(n: $t) -> U256 {
+    ($type:ty) => {
+        impl From<$type> for U256 {
+            // $type could be u64, which triggers the lint.
+            #[allow(trivial_numeric_casts)]
+            fn from(n: $type) -> U256 {
                 Self::from_limbs(n as u64, 0, 0, 0)
             }
         }
@@ -457,6 +464,8 @@ impl From<i128> for U256 {
 
 macro_rules! as_int {
     ($name:ident, $type:ty) => {
+        // $type could be u64, which triggers the lint.
+        #[allow(trivial_numeric_casts)]
         pub fn $name(&self) -> $type {
             self.c0 as $type
         }
@@ -492,7 +501,7 @@ impl U256 {
 
 #[cfg(feature = "std")]
 impl fmt::Display for U256 {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "{:016x}{:016x}{:016x}{:016x}",
@@ -503,7 +512,7 @@ impl fmt::Display for U256 {
 
 #[cfg(feature = "std")]
 impl fmt::Debug for U256 {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "u256h!(\"{:016x}{:016x}{:016x}{:016x}\")",
@@ -513,14 +522,12 @@ impl fmt::Debug for U256 {
 }
 
 impl PartialOrd for U256 {
-    #[inline(always)]
     fn partial_cmp(&self, other: &U256) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
 impl Ord for U256 {
-    #[inline(always)]
     fn cmp(&self, other: &U256) -> Ordering {
         let t = self.c3.cmp(&other.c3);
         if t != Ordering::Equal {
@@ -542,7 +549,6 @@ impl Ord for U256 {
 impl BitAnd<u64> for &U256 {
     type Output = u64;
 
-    #[inline(always)]
     fn bitand(self, rhs: u64) -> u64 {
         self.c0 & rhs
     }
@@ -558,7 +564,6 @@ impl BitAndAssign<&U256> for U256 {
 }
 
 impl ShlAssign<usize> for U256 {
-    #[inline(always)]
     fn shl_assign(&mut self, rhs: usize) {
         // Note: If RHS is a compile time constant then inlining will allow
         // the branches to be optimized away.
@@ -617,17 +622,15 @@ impl ShlAssign<usize> for U256 {
 }
 
 impl Shl<usize> for U256 {
-    type Output = U256;
+    type Output = Self;
 
-    #[inline(always)]
-    fn shl(mut self, rhs: usize) -> U256 {
+    fn shl(mut self, rhs: usize) -> Self {
         self <<= rhs;
         self
     }
 }
 
 impl ShrAssign<usize> for U256 {
-    #[inline(always)]
     fn shr_assign(&mut self, rhs: usize) {
         // Note: If RHS is a compile time constant then inlining will allow
         // the branches to be optimized away.
@@ -685,72 +688,70 @@ impl ShrAssign<usize> for U256 {
 }
 
 impl Shr<usize> for U256 {
-    type Output = U256;
+    type Output = Self;
 
-    #[inline(always)]
-    fn shr(mut self, rhs: usize) -> U256 {
+    fn shr(mut self, rhs: usize) -> Self {
         self >>= rhs;
         self
     }
 }
 
 impl AddAssign<&U256> for U256 {
-    #[inline(always)]
-    fn add_assign(&mut self, rhs: &U256) {
+    fn add_assign(&mut self, rhs: &Self) {
         let (t, carry) = adc(self.c0, rhs.c0, 0);
         self.c0 = t;
         let (t, carry) = adc(self.c1, rhs.c1, carry);
         self.c1 = t;
         let (t, carry) = adc(self.c2, rhs.c2, carry);
         self.c2 = t;
-        let (t, _carry) = adc(self.c3, rhs.c3, carry);
+        let (t, _) = adc(self.c3, rhs.c3, carry);
         self.c3 = t;
     }
 }
 
 impl SubAssign<&U256> for U256 {
-    #[inline(always)]
-    fn sub_assign(&mut self, rhs: &U256) {
+    fn sub_assign(&mut self, rhs: &Self) {
         let (t, borrow) = sbb(self.c0, rhs.c0, 0);
         self.c0 = t;
         let (t, borrow) = sbb(self.c1, rhs.c1, borrow);
         self.c1 = t;
         let (t, borrow) = sbb(self.c2, rhs.c2, borrow);
         self.c2 = t;
-        let (t, _borrow) = sbb(self.c3, rhs.c3, borrow);
+        let (t, _) = sbb(self.c3, rhs.c3, borrow);
         self.c3 = t;
     }
 }
 
 impl MulAssign<&U256> for U256 {
-    #[inline(always)]
-    fn mul_assign(&mut self, rhs: &U256) {
+    // We shadow carry for readability
+    #[allow(clippy::shadow_unrelated)]
+    fn mul_assign(&mut self, rhs: &Self) {
         let (r0, carry) = mac(0, self.c0, rhs.c0, 0);
         let (r1, carry) = mac(0, self.c0, rhs.c1, carry);
         let (r2, carry) = mac(0, self.c0, rhs.c2, carry);
-        let (r3, _carry) = mac(0, self.c0, rhs.c3, carry);
+        let (r3, _) = mac(0, self.c0, rhs.c3, carry);
         self.c0 = r0;
         let (r1, carry) = mac(r1, self.c1, rhs.c0, 0);
         let (r2, carry) = mac(r2, self.c1, rhs.c1, carry);
-        let (r3, _carry) = mac(r3, self.c1, rhs.c2, carry);
+        let (r3, _) = mac(r3, self.c1, rhs.c2, carry);
         self.c1 = r1;
         let (r2, carry) = mac(r2, self.c2, rhs.c0, 0);
-        let (r3, _carry) = mac(r3, self.c2, rhs.c1, carry);
+        let (r3, _) = mac(r3, self.c2, rhs.c1, carry);
         self.c2 = r2;
-        let (r3, _carry) = mac(r3, self.c3, rhs.c0, 0);
+        let (r3, _) = mac(r3, self.c3, rhs.c0, 0);
         self.c3 = r3;
     }
 }
 
 impl DivAssign<&U256> for U256 {
-    fn div_assign(&mut self, rhs: &U256) {
+    fn div_assign(&mut self, rhs: &Self) {
         let (q, _r) = self.divrem(rhs).unwrap();
         *self = q;
     }
 }
 
 impl RemAssign<&U256> for U256 {
-    fn rem_assign(&mut self, rhs: &U256) {
+    fn rem_assign(&mut self, rhs: &Self) {
         let (_q, r) = self.divrem(rhs).unwrap();
         *self = r;
     }
@@ -764,12 +765,11 @@ noncommutative_binop!(U256, Div, div, DivAssign, div_assign);
 noncommutative_binop!(U256, Rem, rem, RemAssign, rem_assign);
 
 impl MulAssign<u64> for U256 {
-    #[inline(always)]
     fn mul_assign(&mut self, rhs: u64) {
         let (r0, carry) = mac(0, self.c0, rhs, 0);
         let (r1, carry) = mac(0, self.c1, rhs, carry);
         let (r2, carry) = mac(0, self.c2, rhs, carry);
-        let (r3, _carry) = mac(0, self.c3, rhs, carry);
+        let (r3, _) = mac(0, self.c3, rhs, carry);
         self.c0 = r0;
         self.c1 = r1;
         self.c2 = r2;
@@ -778,10 +778,9 @@ impl MulAssign<u64> for U256 {
 }
 
 impl Mul<u64> for U256 {
-    type Output = U256;
+    type Output = Self;
 
-    #[inline(always)]
-    fn mul(mut self, /* mut */ rhs: u64) -> U256 {
+    fn mul(mut self, rhs: u64) -> Self {
         self.mul_assign(rhs);
         self
     }
@@ -790,7 +789,6 @@ impl Mul<u64> for U256 {
 impl Mul<u64> for &U256 {
     type Output = U256;
 
-    #[inline(always)]
     fn mul(self, rhs: u64) -> U256 {
         self.clone().mul(rhs)
     }
@@ -799,7 +797,6 @@ impl Mul<u64> for &U256 {
 impl Mul<U256> for u64 {
     type Output = U256;
 
-    #[inline(always)]
     fn mul(self, rhs: U256) -> U256 {
         rhs.mul(self)
     }
@@ -808,7 +805,6 @@ impl Mul<U256> for u64 {
 impl Mul<&U256> for u64 {
     type Output = U256;
 
-    #[inline(always)]
     fn mul(self, rhs: &U256) -> U256 {
         rhs.mul(self)
     }
@@ -817,17 +813,19 @@ impl Mul<&U256> for u64 {
 impl MulAssign<u128> for U256 {
     // We need `>>` to implement mul
     #[allow(clippy::suspicious_op_assign_impl)]
-    #[inline(always)]
+    // Carry gets re-used for readability
+    #[allow(clippy::shadow_unrelated)]
     fn mul_assign(&mut self, rhs: u128) {
-        let lo = rhs as u64;
-        let hi = (rhs >> 64) as u64;
+        // We want the truncation here
+        #[allow(clippy::cast_possible_truncation)]
+        let (lo, hi) = (rhs as u64, (rhs >> 64) as u64);
         let (r0, carry) = mac(0, self.c0, lo, 0);
         let (r1, carry) = mac(0, self.c1, lo, carry);
         let (r2, carry) = mac(0, self.c2, lo, carry);
-        let (r3, _carry) = mac(0, self.c3, lo, carry);
+        let (r3, _) = mac(0, self.c3, lo, carry);
         let (r1, carry) = mac(r1, self.c0, hi, 0);
         let (r2, carry) = mac(r2, self.c1, hi, carry);
-        let (r3, _carry) = mac(r3, self.c2, hi, carry);
+        let (r3, _) = mac(r3, self.c2, hi, carry);
         self.c0 = r0;
         self.c1 = r1;
         self.c2 = r2;
@@ -836,10 +834,9 @@ impl MulAssign<u128> for U256 {
 }
 
 impl Mul<u128> for U256 {
-    type Output = U256;
+    type Output = Self;
 
-    #[inline(always)]
-    fn mul(mut self, rhs: u128) -> U256 {
+    fn mul(mut self, rhs: u128) -> Self {
         self.mul_assign(rhs);
         self
     }
@@ -848,7 +845,6 @@ impl Mul<u128> for U256 {
 impl Mul<u128> for &U256 {
     type Output = U256;
 
-    #[inline(always)]
     fn mul(self, rhs: u128) -> U256 {
         self.clone().mul(rhs)
     }
@@ -857,7 +853,6 @@ impl Mul<u128> for &U256 {
 impl Mul<U256> for u128 {
     type Output = U256;
 
-    #[inline(always)]
     fn mul(self, rhs: U256) -> U256 {
         rhs.mul(self)
     }
@@ -866,7 +861,6 @@ impl Mul<U256> for u128 {
 impl Mul<&U256> for u128 {
     type Output = U256;
 
-    #[inline(always)]
     fn mul(self, rhs: &U256) -> U256 {
         rhs.mul(self)
     }
@@ -878,7 +872,7 @@ use quickcheck::{Arbitrary, Gen};
 #[cfg(any(test, feature = "quickcheck"))]
 impl Arbitrary for U256 {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
-        U256::from_limbs(
+        Self::from_limbs(
             u64::arbitrary(g),
             u64::arbitrary(g),
             u64::arbitrary(g),
@@ -889,6 +883,8 @@ impl Arbitrary for U256 {
 
 // TODO: Replace literals with u256h!
 #[allow(clippy::unreadable_literal)]
+// Quickcheck requires pass by value
+#[allow(clippy::needless_pass_by_value)]
 #[cfg(test)]
 mod tests {
     use super::*;

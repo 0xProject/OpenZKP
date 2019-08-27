@@ -283,12 +283,12 @@ mod test {
     pub fn u256h_positive() {
         assert_eq!(
             u256h(quote! {""}).to_string(),
-            quote! {U256::from_limbs(0u64, 0u64, 0u64, 0u64)}.to_string()
+            quote! {U256::from_limbs(0_u64, 0_u64, 0_u64, 0_u64)}.to_string()
         );
         assert_eq!(
             u256h(quote! {"0000000000000004000000000000000300000000000000020000000000000001"})
                 .to_string(),
-            quote! {U256::from_limbs(1u64, 2u64, 3u64, 4u64)}.to_string()
+            quote! {U256::from_limbs(1_u64, 2_u64, 3_u64, 4_u64)}.to_string()
         );
     }
 
@@ -297,14 +297,14 @@ mod test {
         assert_eq!(
             field_element(quote! {""}).to_string(),
             quote! {FieldElement::from_montgomery(
-                U256::from_limbs(0u64, 0u64, 0u64, 0u64)
+                U256::from_limbs(0_u64, 0_u64, 0_u64, 0_u64)
             )}
             .to_string()
         );
         assert_eq!(
             field_element(quote! {"01"}).to_string(),
             quote! {FieldElement::from_montgomery(
-                U256::from_limbs(18446744073709551585u64 , 18446744073709551615u64 , 18446744073709551615u64 , 576460752303422960u64)
+                U256::from_limbs(18446744073709551585_u64 , 18446744073709551615_u64 , 18446744073709551615_u64 , 576460752303422960_u64)
             )}
             .to_string()
         );

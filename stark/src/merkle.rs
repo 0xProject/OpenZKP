@@ -108,23 +108,19 @@ pub fn proof<R: Hashable, T: Groupable<R>>(
     let mut peekable_indicies = indices.iter().peekable();
     let mut excluded_pair = false;
     for &index in indices.iter() {
-        peekable_indicies.next();
+        let _ = peekable_indicies.next();
         known[num_leaves + index % num_leaves] = true;
 
         if index % 2 == 0 {
             known[num_leaves + 1 + index % num_leaves] = true;
-            let prophet = peekable_indicies.peek();
-            match prophet {
-                Some(x) => {
-                    if **x != index + 1 {
-                        decommitment.push(source.get_leaf_hash(index + 1));
-                    } else {
-                        excluded_pair = true;
-                    }
-                }
-                None => {
+            if let Some(x) = peekable_indicies.peek() {
+                if **x != index + 1 {
                     decommitment.push(source.get_leaf_hash(index + 1));
+                } else {
+                    excluded_pair = true;
                 }
+            } else {
+                decommitment.push(source.get_leaf_hash(index + 1));
             }
         } else if !excluded_pair {
             known[num_leaves - 1 + index % num_leaves] = true;

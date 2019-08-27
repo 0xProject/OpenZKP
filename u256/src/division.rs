@@ -151,46 +151,46 @@ mod tests {
     use macros_decl::u256h;
     use quickcheck_macros::quickcheck;
 
-    const HALF: u64 = 1u64 << 63;
+    const HALF: u64 = 1_u64 << 63;
 
     #[test]
     fn div_3by2_max() {
-        let q = div_3by2(&[u64::MAX, u64::MAX, HALF - 1], &[0, HALF]);
-        assert_eq!(q, u64::MAX);
+        let q = div_3by2(&[u64::max_value(), u64::max_value(), HALF - 1], &[0, HALF]);
+        assert_eq!(q, u64::max_value());
     }
 
     #[allow(clippy::unreadable_literal)]
     #[test]
     fn test_divrem_8by4() {
         let mut numerator = [
-            0x9c2bcebfa9cca2c6u64,
-            0x274e154bb5e24f7au64,
-            0xe1442d5d3842be2bu64,
-            0xf18f5adfd420853fu64,
-            0x04ed6127eba3b594u64,
-            0xc5c179973cdb1663u64,
-            0x7d7f67780bb268ffu64,
-            0x0000000000000003u64,
-            0x0000000000000000u64,
+            0x9c2bcebfa9cca2c6_u64,
+            0x274e154bb5e24f7a_u64,
+            0xe1442d5d3842be2b_u64,
+            0xf18f5adfd420853f_u64,
+            0x04ed6127eba3b594_u64,
+            0xc5c179973cdb1663_u64,
+            0x7d7f67780bb268ff_u64,
+            0x0000000000000003_u64,
+            0x0000000000000000_u64,
         ];
         let mut divisor = [
-            0x0181880b078ab6a1u64,
-            0x62d67f6b7b0bda6bu64,
-            0x92b1840f9c792dedu64,
-            0x0000000000000019u64,
+            0x0181880b078ab6a1_u64,
+            0x62d67f6b7b0bda6b_u64,
+            0x92b1840f9c792ded_u64,
+            0x0000000000000019_u64,
         ];
         let expected_quotient = [
-            0x9128464e61d6b5b3u64,
-            0xd9eea4fc30c5ac6cu64,
-            0x944a2d832d5a6a08u64,
-            0x22f06722e8d883b1u64,
-            0x0000000000000000u64,
+            0x9128464e61d6b5b3_u64,
+            0xd9eea4fc30c5ac6c_u64,
+            0x944a2d832d5a6a08_u64,
+            0x22f06722e8d883b1_u64,
+            0x0000000000000000_u64,
         ];
         let expected_remainder = [
-            0x1dfa5a7ea5191b33u64,
-            0xb5aeb3f9ad5e294eu64,
-            0xfc710038c13e4eedu64,
-            0x000000000000000bu64,
+            0x1dfa5a7ea5191b33_u64,
+            0xb5aeb3f9ad5e294e_u64,
+            0xfc710038c13e4eed_u64,
+            0x000000000000000b_u64,
         ];
         divrem_nbym(&mut numerator, &mut divisor);
         let remainder = &numerator[0..4];

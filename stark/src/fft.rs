@@ -87,7 +87,7 @@ pub fn bit_reversal_permute<T>(v: &mut [T]) {
 
 fn reverse(x: u64, bits: u32) -> u64 {
     debug_assert!(bits <= 64);
-    debug_assert!(bits == 64 || x < (1u64 << bits));
+    debug_assert!(bits == 64 || x < (1_u64 << bits));
     if bits == 0 {
         0
     } else {
@@ -124,7 +124,7 @@ mod tests {
             FieldElement::from_hex_str("3123423"),
             FieldElement::from_hex_str("9986432"),
         ];
-        let expected: Vec<FieldElement> = (0..4u64)
+        let expected: Vec<FieldElement> = (0..4_u64)
             .map(|i| DensePolynomial::new(&v).evaluate(&FieldElement::root(4).unwrap().pow(i)))
             .collect();
 
@@ -144,7 +144,7 @@ mod tests {
             FieldElement::from_hex_str("99864321"),
         ];
         let eighth_root_of_unity = FieldElement::root(8).unwrap();
-        let expected: Vec<FieldElement> = (0..8u64)
+        let expected: Vec<FieldElement> = (0..8_u64)
             .map(|i| DensePolynomial::new(&v).evaluate(&eighth_root_of_unity.pow(i)))
             .collect();
 

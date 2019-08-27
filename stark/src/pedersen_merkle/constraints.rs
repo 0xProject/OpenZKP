@@ -51,10 +51,12 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constr
     let q_y_right = SparsePolynomial::periodic(&RIGHT_Y_COEFFICIENTS, path_length);
 
     fn get_left_bit(trace_polynomials: &[DensePolynomial]) -> DensePolynomial {
-        &trace_polynomials[0] - &FieldElement::from(U256::from(2u64)) * &trace_polynomials[0].next()
+        &trace_polynomials[0]
+            - &FieldElement::from(U256::from(2_u64)) * &trace_polynomials[0].next()
     }
     fn get_right_bit(trace_polynomials: &[DensePolynomial]) -> DensePolynomial {
-        &trace_polynomials[4] - &FieldElement::from(U256::from(2u64)) * &trace_polynomials[4].next()
+        &trace_polynomials[4]
+            - &FieldElement::from(U256::from(2_u64)) * &trace_polynomials[4].next()
     }
 
     vec![
