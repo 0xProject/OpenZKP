@@ -79,6 +79,7 @@ jobs:
             rustup component add clippy
             cargo install --git https://github.com/alexcrichton/wasm-gc || echo Already installed
             cargo install twiggy || echo Already installed
+            cargo install cargo-tarpaulin  || echo Already installed
             sudo apt-get install clang # For the rocksdb dependency of substrate-node
             rustc --version
             cargo --version
