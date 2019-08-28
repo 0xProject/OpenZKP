@@ -1135,13 +1135,6 @@ mod tests {
         assert_eq!(r, e);
     }
 
-    #[test]
-    fn test_divrem_issue() {
-        let a = u256h!("0000000000000054000000000000004f000000000000001f0000000000000028");
-        let b = u256h!("0000000000000000000000000000000c000000000000000c0000000000000035");
-        assert!(test_divrem(a, b));
-    }
-
     #[quickcheck]
     fn commutative_add(a: U256, b: U256) -> bool {
         let mut l = a.clone();
@@ -1166,17 +1159,12 @@ mod tests {
         }
     }
 
-    // #[quickcheck]
+    #[quickcheck]
     fn test_divrem(a: U256, b: U256) -> bool {
         match a.divrem(&b) {
             None => b == U256::ZERO,
             Some((q, r)) => r < b && q * &b + &r == a,
         }
-    }
-
-    #[test]
-    fn quickchecks() {
-        quickcheck::quickcheck(test_divrem as fn(U256, U256) -> bool);
     }
 
     #[quickcheck]

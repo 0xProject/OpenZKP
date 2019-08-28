@@ -1,5 +1,5 @@
 use crate::utils::{adc, msb};
-use core::u64;
+use core::{convert::TryFrom, u64};
 
 const fn val_2(lo: u64, hi: u64) -> u128 {
     ((hi as u128) << 64) | (lo as u128)
@@ -23,7 +23,11 @@ fn divrem_2by1(lo: u64, hi: u64, d: u64) -> (u64, u64) {
     let q = n / d;
     let r = n % d;
     debug_assert!(q < val_2(0, 1));
-    debug_assert!(mul_2(q as u64, d as u64) + val_2(r as u64, 0) == val_2(lo, hi));
+    debug_assert!(
+        mul_2(u64::try_from(q).unwrap(), u64::try_from(d).unwrap())
+            + val_2(u64::try_from(r).unwrap(), 0)
+            == val_2(lo, hi)
+    );
     debug_assert!(r < d);
     // There should not be any truncation.
     #[allow(clippy::cast_possible_truncation)]
@@ -176,22 +180,17 @@ mod tests {
 
     #[test]
     fn div_3by2_tests() {
+        // Test cases where n[2] == d[1]
         assert_eq!(div_3by2(&[FULL, FULL - 1, HALF], &[FULL, HALF]), FULL);
         assert_eq!(div_3by2(&[0, 0, HALF], &[FULL, HALF]), FULL - 1);
-    }
-
-    #[test]
-    fn div_3by2_max() {
-        let q = div_3by2(&[u64::max_value(), u64::max_value(), HALF - 1], &[0, HALF]);
-        assert_eq!(q, u64::max_value());
     }
 
     #[test]
     fn test_divrem_4by3() {
         let mut numerator = [40, 31, 79, 84, 0];
         let mut divisor = [53, 12, 12];
-        let expected_quotient = [u64::MAX, 6];
-        let expected_remainder = [93, 0xfffffffffffffeb8, 6];
+        let expected_quotient = [u64::max_value(), 6];
+        let expected_remainder = [93, 0xffff_ffff_ffff_feb8, 6];
         divrem_nbym(&mut numerator, &mut divisor);
         let remainder = &numerator[0..3];
         let quotient = &numerator[3..5];
