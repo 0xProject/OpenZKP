@@ -31,8 +31,10 @@ decl_storage! {
         pub Asset1 get(balance): map PublicKey => u32;
         pub Vaults get(get_vault): map u32 => Vault;
         pub ExecutedIds get(is_executed): map u32 => bool;
+        // The available id is the index of the tree which has the most recently freed value
         AvailableID: u32 = 0;
-
+        // Contains a listing of freed ids, and at key 0 a max id released which is known to always be free
+        RecycledID build(|_config: &GenesisConfig<T>| {vec![(0_u32,0_u32)]}): map u32 => u32;
     }
 
     // Used for testing
@@ -95,20 +97,32 @@ decl_module! {
             Ok(())
         }
 
-        // TODO - This eventually should recycle emptied vault IDs as is suggested by the starkware setup
         pub fn setup_vault(origin, token_id: [u8; 32]) -> Result {
             let sender = ensure_signed(origin)?;
             ensure!(<PublicKeys<T>>::exists(sender.clone()), "Sender not registered");
             let stark_sender = <PublicKeys<T>>::get(sender);
 
             let next = <AvailableID<T>>::take();
-            <Vaults<T>>::insert(next, Vault{
-                owner: stark_sender,
-                token_id: token_id,
-                balance: 0,
-            });
-            <AvailableID<T>>::put(next+1);
-            Ok(())
+
+            if next == 0 {
+                let id = <RecycledID<T>>::get(next);
+                <Vaults<T>>::insert(id, Vault{
+                    owner: stark_sender,
+                    token_id: token_id,
+                    balance: 0,
+                });
+                <RecycledID<T>>::insert(0, id+1);
+                Ok(())
+            } else {
+                let id = <RecycledID<T>>::get(next);
+                <Vaults<T>>::insert(id, Vault{
+                    owner: stark_sender,
+                    token_id: token_id,
+                    balance: 0,
+                });
+                <AvailableID<T>>::put(next-1);
+                Ok(())
+            }
         }
 
         // An authorized deposit creation function through which a super user can make deposits.
@@ -169,10 +183,26 @@ decl_module! {
             maker_vault_b.balance += order.maker_message.amount_b;
             ensure!(maker_vault_b.balance >= order.maker_message.amount_b, "Failed the overflow check");
 
-            // Actually updates our mapping
+            // If a vault is empty we delete it, and add it's id to the listing of available ones
+            if maker_vault_a.balance == 0 {
+                <Vaults<T>>::remove(order.maker_message.vault_a);
+                let next = <AvailableID<T>>::take();
+                <RecycledID<T>>::insert(next+1, order.maker_message.vault_a);
+                <AvailableID<T>>::put(next+1);
+            } else {
+                <Vaults<T>>::insert(order.maker_message.vault_a, maker_vault_a);
+            }
+            if taker_vault_b.balance == 0 {
+                <Vaults<T>>::remove(order.vault_b);
+                let next = <AvailableID<T>>::take();
+                <RecycledID<T>>::insert(next+1, order.vault_b);
+                <AvailableID<T>>::put(next+1);
+            } else {
+                <Vaults<T>>::insert(order.vault_b, taker_vault_b);
+            }
+
+            // Updates these knowing that they will not be 0
             <Vaults<T>>::insert(order.vault_a, taker_vault_a);
-            <Vaults<T>>::insert(order.vault_b, taker_vault_b);
-            <Vaults<T>>::insert(order.maker_message.vault_a, maker_vault_a);
             <Vaults<T>>::insert(order.maker_message.vault_b, maker_vault_b);
             <ExecutedIds<T>>::insert(order.maker_message.trade_id, true);
             Ok(())
