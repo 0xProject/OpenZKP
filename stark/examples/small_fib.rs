@@ -1,9 +1,8 @@
 #![warn(clippy::all)]
-#![deny(warnings)]
 use macros_decl::u256h;
 use primefield::FieldElement;
 use stark::{
-    fibonacci::{get_constraint, get_trace_table, PrivateInput, PublicInput},
+    fibonacci::{get_fibonacci_constraints, get_trace_table, PrivateInput, PublicInput},
     stark_proof, ProofParams,
 };
 use std::time::Instant;
@@ -23,7 +22,8 @@ fn main() {
     };
     let trace_table = get_trace_table(1024, &private);
     let start = Instant::now();
-    let potential_proof = stark_proof(&trace_table, &get_constraint(), &public, &ProofParams {
+    let constraints = get_fibonacci_constraints(&public);
+    let potential_proof = stark_proof(&trace_table, &constraints, &public, &ProofParams {
         blowup:                   16,
         pow_bits:                 12,
         queries:                  20,

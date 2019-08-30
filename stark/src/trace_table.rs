@@ -1,6 +1,9 @@
 use crate::mmap_vec::MmapVec;
 use primefield::FieldElement;
-use std::ops::{Index, IndexMut};
+use std::{
+    ops::{Index, IndexMut},
+    prelude::v1::*,
+};
 
 pub struct TraceTable {
     trace_length: usize,
@@ -10,12 +13,12 @@ pub struct TraceTable {
 
 impl TraceTable {
     /// Constructs a zero-initialized trace table of the given size.
-    pub fn new(trace_length: usize, num_columns: usize) -> TraceTable {
+    pub fn new(trace_length: usize, num_columns: usize) -> Self {
         let mut values: MmapVec<FieldElement> = MmapVec::with_capacity(trace_length * num_columns);
         for _ in 0..(trace_length * num_columns) {
             values.push(FieldElement::ZERO);
         }
-        TraceTable {
+        Self {
             trace_length,
             num_columns,
             values,
@@ -31,7 +34,7 @@ impl TraceTable {
     }
 
     pub fn generator(&self) -> FieldElement {
-        FieldElement::root(self.trace_length.into()).expect("No generator for trace table length.")
+        FieldElement::root(self.trace_length).expect("No generator for trace table length.")
     }
 
     pub fn iter_row(&self, i: usize) -> impl Iterator<Item = &FieldElement> {

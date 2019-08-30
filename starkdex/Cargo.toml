@@ -5,17 +5,38 @@ authors = ["Remco Bloemen <remco@0x.org>"]
 edition = "2018"
 
 [dependencies]
-u256 =  { path = "../u256" }
-primefield =  { path = "../primefield" }
-ecc =  { path = "../ecc", features=["unsafe_ecdsa"]  }
-hex = ""
-itertools = "0.8.0"
-crunchy = "0.2.2"
-macros-decl = { path = "../macros_decl" }
+macros-decl = { path = "../macros_decl", default-features = false }
+u256 = { path = "../u256", default-features = false }
+primefield = { path = "../primefield", default-features = false }
+ecc = { path = "../ecc", features = ["unsafe_ecdsa"], default-features = false }
+no-std-compat = { version = "0.1.0", features = [ "alloc" ] }
+quickcheck = { version = "0.8", optional = true}
 
-[dev-dependencies]
-criterion = "0.2.10"
+# HACK: Criterion is really a dev-dependency, but it's important that it's
+# optional, or it will enable the `std` flag on various dependencies. Cargo
+# does not allow dev-dependencies to be optional.
+criterion = { version = "0.2.0", optional = true }
+quickcheck_macros = { version = "0.8", optional = true }
 
 [[bench]]
 name = "benchmark"
 harness = false
+required-features = ["bench"]
+
+[features]
+default = [ "std" ]
+std = [
+    "macros-decl/std",
+    "u256/std",
+    "primefield/std",
+    "ecc/std",
+    "no-std-compat/std",
+]
+test = [
+    "quickcheck",
+    "quickcheck_macros",
+    "u256/test",
+    "primefield/test",
+    "ecc/test",
+]
+bench = ["criterion"]

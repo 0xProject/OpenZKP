@@ -1,10 +1,9 @@
 #![warn(clippy::all)]
-#![deny(warnings)]
 use macros_decl::u256h;
 use primefield::FieldElement;
 use stark::{
     check_proof,
-    fibonacci::{get_constraint, get_trace_table, PrivateInput, PublicInput},
+    fibonacci::{get_fibonacci_constraints, get_trace_table, PrivateInput, PublicInput},
     stark_proof, ProofParams,
 };
 use std::{env, time::Instant};
@@ -31,7 +30,8 @@ fn main() {
     let trace_table = get_trace_table(1_048_576, &private);
     public.value = trace_table[(public.index, 0)].clone();
     let start = Instant::now();
-    let potential_proof = stark_proof(&trace_table, &get_constraint(), &public, &ProofParams {
+    let constraints = get_fibonacci_constraints(&public);
+    let potential_proof = stark_proof(&trace_table, &constraints, &public, &ProofParams {
         blowup:                   16,
         pow_bits:                 12,
         queries:                  20,
@@ -44,8 +44,8 @@ fn main() {
     println!("The proof length is {}", potential_proof.proof.len());
 
     let verified = check_proof(
-        potential_proof,
-        &get_constraint(),
+        potential_proof.proof.as_slice(),
+        &constraints,
         &public,
         &ProofParams {
             blowup:                   16,

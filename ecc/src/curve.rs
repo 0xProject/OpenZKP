@@ -1,25 +1,29 @@
 use crate::BETA;
 use primefield::FieldElement;
-use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
+use std::{
+    ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
+    prelude::v1::*,
+};
 use u256::{commutative_binop, noncommutative_binop, U256};
 
-#[derive(PartialEq, Eq, Clone, Debug)]
+#[derive(PartialEq, Eq, Clone)]
+#[cfg_attr(feature = "std", derive(Debug))]
 pub enum Affine {
     Zero, // Neutral element, point at infinity, additive identity, etc.
     Point { x: FieldElement, y: FieldElement },
 }
 
 impl Affine {
-    pub const ZERO: Affine = Affine::Zero;
+    pub const ZERO: Self = Self::Zero;
 
-    pub fn new(x: FieldElement, y: FieldElement) -> Affine {
-        Affine::Point { x, y }
+    pub fn new(x: FieldElement, y: FieldElement) -> Self {
+        Self::Point { x, y }
     }
 
     pub fn on_curve(&self) -> bool {
         match self {
-            Affine::Zero => true,
-            Affine::Point { x, y } => y * y == x * x * x + x + BETA,
+            Self::Zero => true,
+            Self::Point { x, y } => y * y == x * x * x + x + BETA,
         }
     }
 
@@ -27,17 +31,17 @@ impl Affine {
         *self = self.double();
     }
 
-    pub fn double(&self) -> Affine {
+    pub fn double(&self) -> Self {
         match self {
-            Affine::Zero => Affine::Zero,
-            Affine::Point { x, y } => {
+            Self::Zero => Self::Zero,
+            Self::Point { x, y } => {
                 if *y == FieldElement::ZERO {
-                    Affine::Zero
+                    Self::Zero
                 } else {
                     let m = ((x + x + x) * x + FieldElement::ONE) / (y + y);
                     let nx = &m * &m - x - x;
                     let ny = m * (x - &nx) - y;
-                    Affine::Point { x: nx, y: ny }
+                    Self::Point { x: nx, y: ny }
                 }
             }
         }
@@ -45,15 +49,15 @@ impl Affine {
 
     pub fn neg_assign(&mut self) {
         match self {
-            Affine::Zero => {}
-            Affine::Point { y, .. } => y.neg_assign(),
+            Self::Zero => {}
+            Self::Point { y, .. } => y.neg_assign(),
         }
     }
 }
 
 impl Default for Affine {
     fn default() -> Self {
-        Affine::ZERO
+        Self::ZERO
     }
 }
 
@@ -74,18 +78,18 @@ impl Neg for &Affine {
 }
 
 impl AddAssign<&Affine> for Affine {
-    fn add_assign(&mut self, rhs: &Affine) {
+    fn add_assign(&mut self, rhs: &Self) {
         match self {
-            Affine::Zero => *self = rhs.clone(),
-            Affine::Point { x: ax, y: ay } => {
+            Self::Zero => *self = rhs.clone(),
+            Self::Point { x: ax, y: ay } => {
                 match rhs {
-                    Affine::Zero => {}
-                    Affine::Point { x: bx, y: by } => {
+                    Self::Zero => {}
+                    Self::Point { x: bx, y: by } => {
                         if ax == bx {
                             if ay == by {
                                 self.double_assign()
                             } else {
-                                *self = Affine::Zero
+                                *self = Self::Zero
                             }
                         } else {
                             let m = (&*ay - by) / (&*ax - bx);
@@ -105,7 +109,7 @@ impl AddAssign<&Affine> for Affine {
 macro_rules! curve_operations {
     ($type:ident) => {
         impl SubAssign<&$type> for $type {
-            fn sub_assign(&mut self, rhs: &$type) {
+            fn sub_assign(&mut self, rhs: &Self) {
                 *self += &rhs.neg()
             }
         }
@@ -141,7 +145,7 @@ macro_rules! curve_operations {
         impl Mul<U256> for $type {
             type Output = Self;
 
-            fn mul(self, scalar: U256) -> $type {
+            fn mul(self, scalar: U256) -> Self {
                 &self * &scalar
             }
         }
@@ -149,7 +153,7 @@ macro_rules! curve_operations {
         impl Mul<&U256> for $type {
             type Output = Self;
 
-            fn mul(self, scalar: &U256) -> $type {
+            fn mul(self, scalar: &U256) -> Self {
                 &self * scalar
             }
         }
@@ -190,6 +194,8 @@ impl Arbitrary for Affine {
 
 // TODO: Use u256h literals here.
 #[allow(clippy::unreadable_literal)]
+// Quickcheck needs pass by value
+#[allow(clippy::needless_pass_by_value)]
 #[cfg(test)]
 mod tests {
     use super::*;

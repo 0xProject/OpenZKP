@@ -4,7 +4,7 @@ use crate::{
     GENERATOR, ORDER,
 };
 use lazy_static::*;
-use std::default::Default;
+use std::{default::Default, prelude::v1::*};
 use tiny_keccak::sha3_256;
 use u256::U256;
 
@@ -76,6 +76,8 @@ pub fn verify(msg_hash: &U256, r: &U256, w: &U256, public_key: &Affine) -> bool 
     }
 }
 
+// Quickcheck needs pass by value
+#[allow(clippy::needless_pass_by_value)]
 #[cfg(test)]
 mod tests {
     use super::*;

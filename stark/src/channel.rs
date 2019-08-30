@@ -1,9 +1,14 @@
+// TODO: Naming?
+#![allow(clippy::module_name_repetitions)]
 use crate::hash::Hash;
 use macros_decl::{hex, u256h};
 use primefield::FieldElement;
-use rayon::prelude::*;
+use std::prelude::v1::*;
 use tiny_keccak::Keccak;
 use u256::U256;
+
+#[cfg(feature = "std")]
+use rayon::prelude::*;
 
 pub trait RandomGenerator<T> {
     fn get_random(&mut self) -> T;
@@ -22,18 +27,21 @@ pub trait Replayable<T> {
 }
 
 #[derive(PartialEq, Eq, Clone, Default)]
+#[cfg_attr(feature = "std", derive(Debug))]
 pub struct PublicCoin {
     pub digest: [u8; 32],
     counter:    u64,
 }
 
 #[derive(PartialEq, Eq, Clone, Default)]
+#[cfg_attr(feature = "std", derive(Debug))]
 pub struct ProverChannel {
     pub coin:  PublicCoin,
     pub proof: Vec<u8>,
 }
 
 #[derive(PartialEq, Eq, Clone, Default)]
+#[cfg_attr(feature = "std", derive(Debug))]
 pub struct VerifierChannel {
     pub coin:    PublicCoin,
     pub proof:   Vec<u8>,
@@ -58,19 +66,22 @@ impl PublicCoin {
     pub fn pow_find_nonce(&self, pow_bits: u8) -> u64 {
         let seed = self.pow_seed(pow_bits);
 
-        (0u64..)
-            .find(|&nonce| PublicCoin::pow_verify_with_seed(nonce, pow_bits, &seed))
+        // We assume a nonce exists and will be found in reasonable time.
+        #[allow(clippy::maybe_infinite_iter)]
+        (0_u64..)
+            .find(|&nonce| Self::pow_verify_with_seed(nonce, pow_bits, &seed))
             .expect("No valid nonce found")
     }
 
     // TODO - Make tests compatible with the proof of work values from this function
+    #[cfg(feature = "std")]
     pub fn pow_find_nonce_threaded(&self, pow_bits: u8) -> u64 {
         let seed = self.pow_seed(pow_bits);
         // NOTE: Rayon does not support open ended ranges, so we need to use a closed
         // one.
         (0..u64::max_value())
             .into_par_iter()
-            .find_any(|&nonce| PublicCoin::pow_verify_with_seed(nonce, pow_bits, &seed))
+            .find_any(|&nonce| Self::pow_verify_with_seed(nonce, pow_bits, &seed))
             .expect("No valid nonce found")
     }
 
@@ -86,7 +97,7 @@ impl PublicCoin {
 
     pub fn pow_verify(&self, nonce: u64, pow_bits: u8) -> bool {
         let seed = self.pow_seed(pow_bits);
-        PublicCoin::pow_verify_with_seed(nonce, pow_bits, &seed)
+        Self::pow_verify_with_seed(nonce, pow_bits, &seed)
     }
 
     fn pow_verify_with_seed(nonce: u64, pow_bits: u8, seed: &[u8; 32]) -> bool {
@@ -102,6 +113,15 @@ impl PublicCoin {
     }
 }
 
+impl From<Vec<u8>> for ProverChannel {
+    fn from(proof_data: Vec<u8>) -> Self {
+        Self {
+            coin:  PublicCoin::new(),
+            proof: proof_data,
+        }
+    }
+}
+
 impl ProverChannel {
     pub fn new() -> Self {
         Self {
@@ -112,7 +132,6 @@ impl ProverChannel {
 
     pub fn initialize(&mut self, seed: &[u8]) {
         self.coin.seed(seed);
-        self.proof = Vec::from(seed);
     }
 
     pub fn pow_verify(&self, nonce: u64, pow_bits: u8) -> bool {
@@ -123,6 +142,7 @@ impl ProverChannel {
         self.coin.pow_find_nonce(pow_bits)
     }
 
+    #[cfg(feature = "std")]
     pub fn pow_find_nonce_threaded(&self, pow_bits: u8) -> u64 {
         self.coin.pow_find_nonce_threaded(pow_bits)
     }
@@ -138,9 +158,7 @@ impl VerifierChannel {
     }
 
     pub fn initialize(&mut self, seed: &[u8]) {
-        assert_eq!(*seed, self.proof[..seed.len()]);
         self.coin.seed(seed);
-        self.proof_index = seed.len();
     }
 
     pub fn pow_verify(&self, nonce: u64, pow_bits: u8) -> bool {
@@ -151,6 +169,7 @@ impl VerifierChannel {
         self.coin.pow_find_nonce(pow_bits)
     }
 
+    #[cfg(feature = "std")]
     pub fn pow_find_nonce_threaded(&self, pow_bits: u8) -> u64 {
         self.coin.pow_find_nonce_threaded(pow_bits)
     }
@@ -256,7 +275,7 @@ impl Writable<&[FieldElement]> for ProverChannel {
     fn write(&mut self, data: &[FieldElement]) {
         let mut container = Vec::with_capacity(32 * data.len());
         for element in data {
-            for byte in element.as_montgomery().to_bytes_be().iter() {
+            for byte in &element.as_montgomery().to_bytes_be() {
                 container.push(byte.clone());
             }
         }

@@ -1,11 +1,15 @@
 use crate::{curve::Affine, curve_operations};
 use primefield::FieldElement;
-use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
+use std::{
+    ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
+    prelude::v1::*,
+};
 use u256::{commutative_binop, noncommutative_binop, U256};
 
 // See http://www.hyperelliptic.org/EFD/g1p/auto-shortw-jacobian.html
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
+#[cfg_attr(feature = "std", derive(Debug))]
 pub struct Jacobian {
     pub x: FieldElement,
     pub y: FieldElement,
@@ -13,7 +17,7 @@ pub struct Jacobian {
 }
 
 impl Jacobian {
-    pub const ZERO: Jacobian = Jacobian {
+    pub const ZERO: Self = Self {
         x: FieldElement::ONE,
         y: FieldElement::ONE,
         z: FieldElement::ZERO,
@@ -26,7 +30,7 @@ impl Jacobian {
 
     pub fn double_assign(&mut self) {
         if self.y == FieldElement::ZERO {
-            *self = Jacobian::ZERO;
+            *self = Self::ZERO;
             return;
         }
         // OPT: Special case z == FieldElement::ONE?
@@ -46,15 +50,15 @@ impl Jacobian {
         self.y.neg_assign();
     }
 
-    pub fn double(&self) -> Jacobian {
+    pub fn double(&self) -> Self {
         let mut r = self.clone();
         r.double_assign();
         r
     }
 
     // Multiply Affine point using Jacobian accumulator
-    pub fn mul(p: &Affine, scalar: &U256) -> Jacobian {
-        let mut r = Jacobian::from(p);
+    pub fn mul(p: &Affine, scalar: &U256) -> Self {
+        let mut r = Self::from(p);
         for i in (0..scalar.msb()).rev() {
             r.double_assign();
             if scalar.bit(i) {
@@ -66,7 +70,7 @@ impl Jacobian {
 }
 
 impl PartialEq for Jacobian {
-    fn eq(&self, rhs: &Jacobian) -> bool {
+    fn eq(&self, rhs: &Self) -> bool {
         // TODO: without inverting Z
         Affine::from(self) == Affine::from(rhs)
     }
@@ -74,16 +78,16 @@ impl PartialEq for Jacobian {
 
 impl Default for Jacobian {
     fn default() -> Self {
-        Jacobian::ZERO
+        Self::ZERO
     }
 }
 
 impl From<&Affine> for Jacobian {
-    fn from(other: &Affine) -> Jacobian {
+    fn from(other: &Affine) -> Self {
         match other {
-            Affine::Zero => Jacobian::ZERO,
+            Affine::Zero => Self::ZERO,
             Affine::Point { x, y } => {
-                Jacobian {
+                Self {
                     x: x.clone(),
                     y: y.clone(),
                     z: FieldElement::ONE,
@@ -94,11 +98,11 @@ impl From<&Affine> for Jacobian {
 }
 
 impl From<Affine> for Jacobian {
-    fn from(other: Affine) -> Jacobian {
+    fn from(other: Affine) -> Self {
         match other {
-            Affine::Zero => Jacobian::ZERO,
+            Affine::Zero => Self::ZERO,
             Affine::Point { x, y } => {
-                Jacobian {
+                Self {
                     x,
                     y,
                     z: FieldElement::ONE,
@@ -109,13 +113,13 @@ impl From<Affine> for Jacobian {
 }
 
 impl From<&Jacobian> for Affine {
-    fn from(other: &Jacobian) -> Affine {
+    fn from(other: &Jacobian) -> Self {
         match other.z.inv() {
-            None => Affine::ZERO,
+            None => Self::ZERO,
             Some(zi) => {
                 let zi2 = zi.square();
                 let zi3 = zi * &zi2;
-                Affine::Point {
+                Self::Point {
                     x: &other.x * zi2,
                     y: &other.y * zi3,
                 }
@@ -139,7 +143,7 @@ impl AddAssign<&Jacobian> for Jacobian {
     #[allow(clippy::many_single_char_names)]
     // We need multiplications to implement addition
     #[allow(clippy::suspicious_op_assign_impl)]
-    fn add_assign(&mut self, rhs: &Jacobian) {
+    fn add_assign(&mut self, rhs: &Self) {
         if rhs.z == FieldElement::ZERO {
             return;
         }
@@ -160,7 +164,7 @@ impl AddAssign<&Jacobian> for Jacobian {
             return if s1 == s2 {
                 self.double_assign()
             } else {
-                *self = Jacobian::ZERO
+                *self = Self::ZERO
             };
         }
         let h = u2 - &u1;
@@ -198,7 +202,7 @@ impl AddAssign<&Affine> for Jacobian {
                     return if self.x == s2 {
                         self.double_assign()
                     } else {
-                        *self = Jacobian::ZERO
+                        *self = Self::ZERO
                     };
                 }
                 let h = u2 - &self.x;
@@ -243,7 +247,7 @@ use quickcheck::{Arbitrary, Gen};
 impl Arbitrary for Jacobian {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         // To force Z to be non trivial we add two points.
-        let mut r = Jacobian::from(Affine::arbitrary(g));
+        let mut r = Self::from(Affine::arbitrary(g));
         r += &Affine::arbitrary(g);
         r
     }
@@ -251,6 +255,8 @@ impl Arbitrary for Jacobian {
 
 // TODO: Replace literals with u256h!
 #[allow(clippy::unreadable_literal)]
+// Quickcheck needs pass by value
+#[allow(clippy::needless_pass_by_value)]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -1,40 +1,45 @@
-use crate::{channel::*, hash::*, merkle::*, polynomial::eval_poly, proofs::*, utils::*};
-use itertools::Itertools;
+use crate::{
+    channel::*,
+    constraint::Constraint,
+    geometric_series::geometric_series,
+    hash::*,
+    merkle::{decommitment_size, verify},
+    polynomial::DensePolynomial,
+    proof_params::ProofParams,
+    utils::*,
+};
+use itertools::*;
 use primefield::FieldElement;
-use std::{collections::HashMap, convert::TryInto};
+use std::{collections::BTreeMap, convert::TryInto, prelude::v1::*};
 use u256::U256;
 
 pub fn check_proof<Public>(
-    proposed_proof: ProverChannel,
-    constraints: &Constraint<Public>,
+    proposed_proof: &[u8],
+    constraints: &[Constraint],
     public: &Public,
     params: &ProofParams,
     trace_cols: usize,
     trace_len: usize,
 ) -> bool
 where
-    Public: PartialEq + Clone,
-    VerifierChannel: Replayable<Public>,
-    VerifierChannel: Replayable<Hash>,
+    Public: PartialEq + Clone + Into<Vec<u8>>,
+    VerifierChannel: Replayable<Public> + Replayable<Hash>,
 {
-    let omega = FieldElement::root(U256::from(trace_len * params.blowup)).unwrap();
+    let omega = FieldElement::root(trace_len * params.blowup).unwrap();
     let eval_domain_size = trace_len * params.blowup;
 
     let eval_x = geometric_series(&FieldElement::ONE, &omega, eval_domain_size);
 
-    let mut channel = VerifierChannel::new(proposed_proof.proof.clone());
-    let seen_public: Public = channel.replay();
-    if seen_public != public.clone() {
-        return false;
-    }
-    // TOOD: Initialize verifier channel here.
+    let mut channel = VerifierChannel::new(proposed_proof.to_vec());
+    let bytes: Vec<u8> = public.clone().into();
+    channel.initialize(&bytes);
 
     // Get the low degree root commitment, and constraint root commitment
     // TODO: Make it work as channel.read()
     let low_degree_extension_root = Replayable::<Hash>::replay(&mut channel);
-    let mut constraint_coefficients: Vec<FieldElement> =
-        Vec::with_capacity(constraints.num_constraints);
-    for _i in 0..constraints.num_constraints {
+    let mut constraint_coefficients: Vec<FieldElement> = Vec::with_capacity(2 * constraints.len());
+    for _ in constraints {
+        constraint_coefficients.push(channel.get_random());
         constraint_coefficients.push(channel.get_random());
     }
     let constraint_evaluated_root = Replayable::<Hash>::replay(&mut channel);
@@ -82,7 +87,6 @@ where
     assert_eq!(recorded_work, proof_of_work);
 
     // Gets queries from channel
-    let eval_domain_size = trace_len * params.blowup;
     let queries = get_indices(
         params.queries,
         eval_domain_size.trailing_zeros(),
@@ -100,10 +104,10 @@ where
         .collect();
     let lde_decommitment = Replayable::<Hash>::replay_many(&mut channel, merkle_proof_length);
     if !verify(
-        low_degree_extension_root,
+        &low_degree_extension_root,
         eval_domain_size.trailing_zeros(),
         led_values.as_mut_slice(),
-        lde_decommitment,
+        &lde_decommitment,
     ) {
         return false;
     }
@@ -117,10 +121,10 @@ where
         Replayable::<Hash>::replay_many(&mut channel, merkle_proof_length);
 
     if !verify(
-        constraint_evaluated_root,
+        &constraint_evaluated_root,
         eval_domain_size.trailing_zeros(),
         constraint_values.as_mut_slice(),
-        constraint_decommitment,
+        &constraint_decommitment,
     ) {
         return false;
     }
@@ -132,7 +136,7 @@ where
         .collect();
 
     // Folded fri values from the previous layer
-    let mut fri_folds: HashMap<usize, FieldElement> = HashMap::new();
+    let mut fri_folds: BTreeMap<usize, FieldElement> = BTreeMap::new();
 
     let mut previous_indices = queries.to_vec().clone();
     let mut step = 1;
@@ -141,41 +145,36 @@ where
         let mut fri_layer_values = Vec::new();
 
         fri_indices.dedup();
-        for i in fri_indices.iter() {
+        for i in &fri_indices {
             let mut coset: Vec<FieldElement> = Vec::new();
             for j in 0..2_usize.pow(params.fri_layout[k] as u32) {
                 let n = i * 2_usize.pow(params.fri_layout[k] as u32) + j;
-
-                let has_index = previous_indices.binary_search(&n);
-                match has_index {
-                    Ok(z) => {
-                        if k > 0 {
-                            coset.push(fri_folds.get(&n).unwrap().clone());
-                        } else {
-                            let z_reverse = queries[z].bit_reverse_at(eval_domain_size);
-                            coset.push(out_of_domain_element(
-                                led_values[z].1.as_slice(),
-                                &constraint_values[z].1,
-                                &eval_x[z_reverse],
-                                &oods_point,
-                                oods_values.as_slice(),
-                                oods_coefficients.as_slice(),
-                                eval_domain_size,
-                                params.blowup,
-                            ));
-                        }
+                if let Ok(z) = previous_indices.binary_search(&n) {
+                    if k > 0 {
+                        coset.push(fri_folds.get(&n).unwrap().clone());
+                    } else {
+                        let z_reverse = queries[z].bit_reverse_at(eval_domain_size);
+                        coset.push(out_of_domain_element(
+                            led_values[z].1.as_slice(),
+                            &constraint_values[z].1,
+                            &eval_x[z_reverse],
+                            &oods_point,
+                            oods_values.as_slice(),
+                            oods_coefficients.as_slice(),
+                            eval_domain_size,
+                            params.blowup,
+                        ));
                     }
-                    Err(_) => {
-                        coset.push(Replayable::<FieldElement>::replay(&mut channel));
-                    }
+                } else {
+                    coset.push(Replayable::<FieldElement>::replay(&mut channel));
                 }
             }
             fri_layer_values.push((*i, coset));
         }
         // Fold and record foldings
-        let mut layer_folds = HashMap::new();
-        for (i, coset) in fri_layer_values.iter() {
-            layer_folds.insert(
+        let mut layer_folds = BTreeMap::new();
+        for (i, coset) in &fri_layer_values {
+            let _old_value = layer_folds.insert(
                 *i,
                 fri_fold(
                     coset.as_slice(),
@@ -201,10 +200,10 @@ where
         len /= 2_usize.pow(params.fri_layout[k] as u32);
 
         if !verify(
-            fri_roots[k].clone(),
+            &fri_roots[k].clone(),
             len.trailing_zeros(),
             fri_layer_values.as_mut_slice(),
-            decommitment,
+            &decommitment,
         ) {
             return false;
         }
@@ -223,18 +222,18 @@ where
 
     // Checks that the calculated fri folded queries are the points interpolated by
     // the decommited polynomial.
-    let interp_root = FieldElement::root(len.into()).unwrap();
-    for key in previous_indices.iter() {
+    let interp_root = FieldElement::root(len).unwrap();
+    for key in &previous_indices {
         let calculated = fri_folds[key].clone();
-        let x_pow = interp_root.pow(key.bit_reverse_at(len).into());
-        let committed = eval_poly(x_pow, last_layer_coefficient.as_slice());
+        let x_pow = interp_root.pow(key.bit_reverse_at(len));
+        let committed = DensePolynomial::new(&last_layer_coefficient).evaluate(&x_pow);
 
         if committed != calculated.clone() {
             return false;
         }
     }
 
-    // Checks that the oods point calculation matches the constrain calculation
+    // Checks that the oods point calculation matches the constraint calculation
     // TODO
 
     true
@@ -307,8 +306,8 @@ fn out_of_domain_element(
         .collect();
     let constraint_point = FieldElement::from_montgomery(constraint_point_u.clone());
     let x_transform = x_cord * FieldElement::GENERATOR;
-    let omega = FieldElement::root(U256::from(eval_domain_size)).unwrap();
-    let g = omega.pow(blowup.into());
+    let omega = FieldElement::root(eval_domain_size).unwrap();
+    let g = omega.pow(blowup);
     let mut r = FieldElement::ZERO;
 
     for x in 0..poly_points.len() {
@@ -327,7 +326,7 @@ fn out_of_domain_element(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fibonacci::*;
+    use crate::{fibonacci::*, proofs::stark_proof};
     use macros_decl::u256h;
 
     #[test]
@@ -343,29 +342,30 @@ mod tests {
                 "00000000000000000000000000000000000000000000000000000000cafebabe"
             )),
         };
+        let constraints = &get_fibonacci_constraints(&public);
         let actual = stark_proof(
             &get_trace_table(1024, &private),
-            &get_constraint(),
+            &constraints,
             &public,
             &ProofParams {
                 blowup:                   16,
                 pow_bits:                 12,
                 queries:                  20,
                 fri_layout:               vec![3, 2],
-                constraints_degree_bound: 2,
+                constraints_degree_bound: 1,
             },
         );
 
         assert!(check_proof(
-            actual,
-            &get_constraint(),
+            actual.proof.as_slice(),
+            &constraints,
             &public,
             &ProofParams {
                 blowup:                   16,
                 pow_bits:                 12,
                 queries:                  20,
                 fri_layout:               vec![3, 2],
-                constraints_degree_bound: 2,
+                constraints_degree_bound: 1,
             },
             2,
             1024

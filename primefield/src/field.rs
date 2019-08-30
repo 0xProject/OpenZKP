@@ -1,18 +1,21 @@
 use crate::{montgomery::*, square_root::square_root};
 use macros_decl::u256h;
 use std::{
-    fmt,
     ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign},
+    prelude::v1::*,
 };
 use u256::{commutative_binop, noncommutative_binop, U256};
-
 // TODO: Implement Serde
+#[cfg(feature = "std")]
+use std::fmt;
 
+// TODO: Reconsider type name
+#[allow(clippy::module_name_repetitions)]
 #[derive(PartialEq, Eq, Clone)]
 pub struct FieldElement(U256);
 
 impl FieldElement {
-    pub const GENERATOR: FieldElement = FieldElement::from_montgomery(u256h!(
+    pub const GENERATOR: Self = Self::from_montgomery(u256h!(
         "07fffffffffff9b0ffffffffffffffffffffffffffffffffffffffffffffffa1"
     ));
     /// Prime modulus of the field.
@@ -21,71 +24,66 @@ impl FieldElement {
     pub const MODULUS: U256 =
         u256h!("0800000000000011000000000000000000000000000000000000000000000001");
     // 3, in montgomery form.
-    pub const NEGATIVE_ONE: FieldElement = FieldElement::from_montgomery(u256h!(
+    pub const NEGATIVE_ONE: Self = Self::from_montgomery(u256h!(
         "0000000000000220000000000000000000000000000000000000000000000020"
     ));
-    pub const ONE: FieldElement = FieldElement::from_montgomery(R1);
-    pub const ZERO: FieldElement = FieldElement::from_montgomery(U256::ZERO);
+    pub const ONE: Self = Self::from_montgomery(R1);
+    pub const ZERO: Self = Self::from_montgomery(U256::ZERO);
 
-    pub const fn from_u256_const(n: U256) -> Self {
-        FieldElement(to_montgomery_const(&n))
+    pub const fn from_u256_const(n: &U256) -> Self {
+        Self(to_montgomery_const(n))
     }
 
     pub const fn from_montgomery(n: U256) -> Self {
-        FieldElement(n)
+        Self(n)
     }
 
+    #[cfg(feature = "std")]
     pub fn from_hex_str(s: &str) -> Self {
-        FieldElement::from(U256::from_hex_str(s))
+        Self::from(U256::from_hex_str(s))
     }
 
     pub fn as_montgomery(&self) -> &U256 {
         &self.0
     }
 
-    #[inline(always)]
     pub fn is_zero(&self) -> bool {
         self.0 == U256::ZERO
     }
 
-    #[inline(always)]
     pub fn is_one(&self) -> bool {
         self.0 == R1
     }
 
-    #[inline(always)]
-    pub fn inv(&self) -> Option<FieldElement> {
-        inv_redc(&self.0).map(FieldElement)
+    pub fn inv(&self) -> Option<Self> {
+        inv_redc(&self.0).map(Self)
     }
 
-    #[inline(always)]
-    pub fn double(&self) -> FieldElement {
+    pub fn double(&self) -> Self {
         // TODO: Optimize
         self.clone() + self
     }
 
-    #[inline(always)]
-    pub fn triple(&self) -> FieldElement {
+    pub fn triple(&self) -> Self {
         // TODO: Optimize
         self.clone() + self + self
     }
 
-    #[inline(always)]
-    pub fn square(&self) -> FieldElement {
-        FieldElement::from_montgomery(sqr_redc(&self.0))
+    pub fn square(&self) -> Self {
+        Self::from_montgomery(sqr_redc(&self.0))
     }
 
-    pub fn square_root(&self) -> Option<FieldElement> {
+    pub fn square_root(&self) -> Option<Self> {
         square_root(self)
     }
 
-    #[inline(always)]
     pub fn neg_assign(&mut self) {
         *self = self.neg()
     }
 
-    pub fn pow(&self, exponent: U256) -> FieldElement {
-        let mut result = FieldElement::ONE;
+    pub fn pow<T: Into<U256>>(&self, exponent: T) -> Self {
+        let exponent: U256 = exponent.into();
+        let mut result = Self::ONE;
         let mut square = self.clone();
         let mut remaining_exponent = exponent;
         while !remaining_exponent.is_zero() {
@@ -99,15 +97,16 @@ impl FieldElement {
     }
 
     // OPT: replace this with a constant array of roots of unity.
-    pub fn root(n: U256) -> Option<FieldElement> {
+    pub fn root<T: Into<U256>>(n: T) -> Option<Self> {
+        let n: U256 = n.into();
         if n.is_zero() {
-            return Some(FieldElement::ONE);
+            return Some(Self::ONE);
         }
-        let (q, rem) = (FieldElement::MODULUS - U256::ONE).divrem(&n).unwrap();
+        let (q, rem) = (Self::MODULUS - U256::ONE).divrem(&n).unwrap();
         if rem != U256::ZERO {
             return None;
         }
-        Some(FieldElement::GENERATOR.pow(q))
+        Some(Self::GENERATOR.pow(q))
     }
 }
 
@@ -138,8 +137,9 @@ fn cumulative_product(elements: &[FieldElement]) -> Vec<FieldElement> {
         .collect()
 }
 
+#[cfg(feature = "std")]
 impl fmt::Debug for FieldElement {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let n = U256::from(self);
         write!(
             f,
@@ -173,7 +173,7 @@ macro_rules! impl_from_int {
                 if n >= 0 {
                     U256::from(n).into()
                 } else {
-                    FieldElement::from(U256::from(-n)).neg()
+                    Self::from(U256::from(-n)).neg()
                 }
             }
         }
@@ -237,7 +237,7 @@ impl From<U256> for FieldElement {
 
 impl From<&U256> for FieldElement {
     fn from(n: &U256) -> Self {
-        FieldElement::from_montgomery(to_montgomery(n))
+        Self::from_montgomery(to_montgomery(n))
     }
 }
 
@@ -256,50 +256,44 @@ impl From<&FieldElement> for U256 {
 impl Neg for &FieldElement {
     type Output = FieldElement;
 
-    #[inline(always)]
     fn neg(self) -> Self::Output {
-        FieldElement::from_montgomery(FieldElement::MODULUS - &self.0)
+        FieldElement::ZERO - self
     }
 }
 
 impl AddAssign<&FieldElement> for FieldElement {
-    #[inline(always)]
-    fn add_assign(&mut self, rhs: &FieldElement) {
+    fn add_assign(&mut self, rhs: &Self) {
         self.0 += &rhs.0;
-        if self.0 >= FieldElement::MODULUS {
-            self.0 -= &FieldElement::MODULUS;
+        if self.0 >= Self::MODULUS {
+            self.0 -= &Self::MODULUS;
         }
     }
 }
 
 impl SubAssign<&FieldElement> for FieldElement {
-    #[inline(always)]
-    fn sub_assign(&mut self, rhs: &FieldElement) {
-        if self.0 >= rhs.0 {
-            self.0 -= &rhs.0;
-        } else {
-            self.0 -= &rhs.0;
-            self.0 += &FieldElement::MODULUS;
+    fn sub_assign(&mut self, rhs: &Self) {
+        if self.0 < rhs.0 {
+            self.0 += &Self::MODULUS;
         }
+        self.0 -= &rhs.0;
     }
 }
 
 impl MulAssign<&FieldElement> for FieldElement {
-    #[inline(always)]
-    fn mul_assign(&mut self, rhs: &FieldElement) {
+    fn mul_assign(&mut self, rhs: &Self) {
         self.0 = mul_redc(&self.0, &rhs.0);
     }
 }
 
 impl DivAssign<&FieldElement> for FieldElement {
-    fn div_assign(&mut self, rhs: &FieldElement) {
+    fn div_assign(&mut self, rhs: &Self) {
         *self *= rhs.inv().unwrap();
     }
 }
 
-impl std::iter::Product for FieldElement {
-    fn product<I: Iterator<Item = FieldElement>>(iter: I) -> FieldElement {
-        iter.fold(FieldElement::ONE, Mul::mul)
+impl core::iter::Product for FieldElement {
+    fn product<I: Iterator<Item = FieldElement>>(iter: I) -> Self {
+        iter.fold(Self::ONE, Mul::mul)
     }
 }
 
@@ -317,7 +311,7 @@ use quickcheck::{Arbitrary, Gen};
 impl Arbitrary for FieldElement {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         // TODO: Generate 0, 1, p/2 and -1
-        FieldElement::from_montgomery(U256::arbitrary(g) % FieldElement::MODULUS)
+        Self::from_montgomery(U256::arbitrary(g) % Self::MODULUS)
     }
 }
 
@@ -328,6 +322,8 @@ macro_rules! field_h {
     };
 }
 
+// Quickcheck needs pass by value
+#[allow(clippy::needless_pass_by_value)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -353,6 +349,11 @@ mod tests {
             FieldElement::ONE + FieldElement::NEGATIVE_ONE,
             FieldElement::ZERO
         );
+    }
+
+    #[test]
+    fn minus_zero_equals_zero() {
+        assert_eq!(-&FieldElement::ZERO, FieldElement::ZERO);
     }
 
     #[test]
@@ -407,7 +408,7 @@ mod tests {
 
     #[quickcheck]
     fn test_batch_inv(x: Vec<FieldElement>) -> bool {
-        if x.iter().any(|a| a.is_zero()) {
+        if x.iter().any(FieldElement::is_zero) {
             true
         } else {
             invert_batch(x.as_slice())
@@ -477,22 +478,22 @@ mod tests {
 
     #[quickcheck]
     fn pow_0(a: FieldElement) -> bool {
-        a.pow(0.into()) == FieldElement::ONE
+        a.pow(0) == FieldElement::ONE
     }
 
     #[quickcheck]
     fn pow_1(a: FieldElement) -> bool {
-        a.pow(1.into()) == a
+        a.pow(1) == a
     }
 
     #[quickcheck]
     fn pow_2(a: FieldElement) -> bool {
-        a.pow(2.into()) == a.square()
+        a.pow(2) == a.square()
     }
 
     #[quickcheck]
     fn pow_n(a: FieldElement, n: usize) -> bool {
-        a.pow(n.into()) == repeat_n(a, n).product()
+        a.pow(n) == repeat_n(a, n).product()
     }
 
     #[quickcheck]
@@ -502,7 +503,7 @@ mod tests {
 
     #[test]
     fn zeroth_root_of_unity() {
-        assert_eq!(FieldElement::root(0.into()).unwrap(), FieldElement::ONE);
+        assert_eq!(FieldElement::root(0).unwrap(), FieldElement::ONE);
     }
 
     #[test]
