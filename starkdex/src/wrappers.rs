@@ -7,6 +7,12 @@ fn from_bytes(bytes: &[u8; 32]) -> U256 {
     U256::from_bytes_be(bytes)
 }
 
+fn from_24_bytes(bytes: &[u8; 24]) -> U256 {
+    let mut padded = [0_u8; 32];
+    padded.copy_from_slice(bytes);
+    U256::from_bytes_be(&padded)
+}
+
 fn to_bytes(num: &U256) -> [u8; 32] {
     num.to_bytes_be()
 }
@@ -45,7 +51,7 @@ pub fn verify(
     )
 }
 
-pub type MakerMessage = orders::MakerMessage<[u8; 32]>;
+pub type MakerMessage = orders::MakerMessage<[u8; 24]>;
 
 pub fn maker_hash(message: &MakerMessage) -> [u8; 32] {
     let m = orders::MakerMessage {
@@ -53,8 +59,8 @@ pub fn maker_hash(message: &MakerMessage) -> [u8; 32] {
         vault_b:  message.vault_b,
         amount_a: message.amount_a,
         amount_b: message.amount_b,
-        token_a:  from_bytes(&message.token_a),
-        token_b:  from_bytes(&message.token_b),
+        token_a:  from_24_bytes(&message.token_a),
+        token_b:  from_24_bytes(&message.token_b),
         trade_id: message.trade_id,
     };
     let h = orders::hash_maker(&m);
