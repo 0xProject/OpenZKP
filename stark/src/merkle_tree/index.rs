@@ -4,22 +4,21 @@
 /// and nodes in the tree. Nodes are indexed in breadth-first order, starting
 /// with the root at 0.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct MerkleIndex(usize);
+pub struct Index(usize);
 
-#[allow(dead_code)] // TODO Remove
-impl MerkleIndex {
-    pub fn root() -> MerkleIndex {
-        MerkleIndex(0)
+impl Index {
+    pub fn root() -> Self {
+        Self(0)
     }
 
-    pub fn from_index(index: usize) -> MerkleIndex {
-        MerkleIndex(index)
+    pub fn from_index(index: usize) -> Self {
+        Self(index)
     }
 
-    pub fn from_depth_offset(depth: usize, offset: usize) -> MerkleIndex {
+    pub fn from_depth_offset(depth: usize, offset: usize) -> Self {
         // At level `depth` there are 2^depth nodes at offsets [0..2^depth-1]
         assert!(offset < 1usize << depth);
-        MerkleIndex((1usize << depth) - 1 + offset)
+        Self((1usize << depth) - 1 + offset)
     }
 
     pub fn index(&self) -> usize {
@@ -54,45 +53,45 @@ impl MerkleIndex {
         (self.0 + 2).is_power_of_two()
     }
 
-    pub fn parent(&self) -> Option<MerkleIndex> {
+    pub fn parent(&self) -> Option<Self> {
         if self.is_root() {
             None
         } else {
-            Some(MerkleIndex((self.0 - 1) >> 1))
+            Some(Self((self.0 - 1) >> 1))
         }
     }
 
-    pub fn sibling(&self) -> Option<MerkleIndex> {
+    pub fn sibling(&self) -> Option<Self> {
         if self.is_root() {
             None
         } else if self.is_left() {
-            Some(MerkleIndex(self.0 + 1))
+            Some(Self(self.0 + 1))
         } else {
-            Some(MerkleIndex(self.0 - 1))
+            Some(Self(self.0 - 1))
         }
     }
 
-    pub fn left_neighbor(&self) -> Option<MerkleIndex> {
+    pub fn left_neighbor(&self) -> Option<Self> {
         if self.is_left_most() {
             None
         } else {
-            Some(MerkleIndex(self.0 - 1))
+            Some(Self(self.0 - 1))
         }
     }
 
-    pub fn right_neighbor(&self) -> Option<MerkleIndex> {
+    pub fn right_neighbor(&self) -> Option<Self> {
         if self.is_right_most() {
             None
         } else {
-            Some(MerkleIndex(self.0 + 1))
+            Some(Self(self.0 + 1))
         }
     }
 
-    pub fn left_child(&self) -> MerkleIndex {
-        MerkleIndex(2 * self.0 + 1)
+    pub fn left_child(&self) -> Self {
+        Self(2 * self.0 + 1)
     }
 
-    pub fn right_child(&self) -> MerkleIndex {
-        MerkleIndex(2 * self.0 + 2)
+    pub fn right_child(&self) -> Self {
+        Self(2 * self.0 + 2)
     }
 }
