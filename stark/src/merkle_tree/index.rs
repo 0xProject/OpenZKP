@@ -1,16 +1,17 @@
 /// Index into a balances binary tree
 ///
+/// 
 /// Nodes are indexed [0...n-1], where n = 2^k-1 is the total number of leafs
 /// and nodes in the tree. Nodes are indexed in breadth-first order, starting
 /// with the root at 0.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Index(usize);
 
+// TODO: Shift the internal representation by one.
 impl Index {
-    pub fn root() -> Self {
+    pub const fn root() -> Self {
         Self(0)
     }
-
     pub fn from_index(index: usize) -> Self {
         Self(index)
     }
@@ -93,5 +94,17 @@ impl Index {
 
     pub fn right_child(&self) -> Self {
         Self(2 * self.0 + 2)
+    }
+
+    pub fn ancestor_of(&self, other: Index) -> bool {
+
+    }
+
+    pub fn descents_from(&self, other: ) -> bool {
+
+    }
+
+    pub fn last_common_ancestor(&self, other: Self) -> Self {
+        // TODO
     }
 }
