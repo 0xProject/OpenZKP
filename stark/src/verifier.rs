@@ -12,6 +12,7 @@ use itertools::*;
 use primefield::FieldElement;
 use std::{collections::BTreeMap, convert::TryInto, prelude::v1::*};
 use u256::U256;
+use crate::fft::ifft;
 
 pub fn check_proof<Public>(
     proposed_proof: &[u8],
@@ -234,8 +235,27 @@ where
     }
 
     // Checks that the oods point calculation matches the constraint calculation
-    // TODO
+    let mut trace_polynomials: Vec<DensePolynomial> = vec![];
+    for i in 0..trace_cols {
+        let fake_polynomial = DensePolynomial::new(&ifft(&[oods_values[2 * i].clone(), oods_values[2 * i + 1].clone()]));
+        assert_eq!(fake_polynomial.evaluate(&FieldElement::ONE), oods_values[2 * i]);
+        assert_eq!(fake_polynomial.next().evaluate(&FieldElement::ONE), oods_values[2 * i + 1]);
+        trace_polynomials.push(fake_polynomial);
+    }
 
+    let mut claimed_oods_value = FieldElement::ZERO;
+    for (i, constraint) in constraints.iter().enumerate() {
+        let mut x = (constraint.base)(&trace_polynomials).evaluate(&FieldElement::ONE);
+        x *= constraint.numerator.evaluate(&oods_point);
+        x /= constraint.denominator.evaluate(&oods_point);
+        claimed_oods_value += &constraint_coefficients[2 * i] * &x;
+
+        let adjustment_degree = constraint.denominator.degree() - constraint.numerator.degree();
+        let adjustment = oods_point.pow(adjustment_degree);
+        claimed_oods_value += &constraint_coefficients[2 * i + 1] * adjustment * &x;
+    }
+
+    assert_eq!(claimed_oods_value, oods_values[2 * trace_cols]);
     true
 }
 
