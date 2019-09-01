@@ -1,4 +1,4 @@
-use super::Hashable;
+use super::{Hash, Hashable};
 
 pub trait Merkelizable
 where
@@ -9,6 +9,10 @@ where
     fn len(&self) -> usize;
 
     fn leaf(&self, index: usize) -> &Self::Leaf;
+
+    fn leaf_hash(&self, index: usize) -> Hash {
+        self.leaf(index).hash()
+    }
 }
 
 // TODO ExactSizeIterator + Index<usize>

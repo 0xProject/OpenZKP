@@ -1,5 +1,6 @@
 use super::{Hash, Hashable, Index, Node};
 use itertools::Itertools;
+use std::collections::VecDeque;
 
 #[derive(Clone, Debug)]
 pub struct Proof {
@@ -8,6 +9,13 @@ pub struct Proof {
 }
 
 impl Proof {
+    pub fn from_depth_decommitment(depth: usize, decommitments: &[Hash]) -> Self {
+        Self {
+            depth,
+            decommitments: decommitments.to_vec(),
+        }
+    }
+
     pub fn depth(&self) -> usize {
         self.depth
     }
@@ -38,6 +46,7 @@ impl Proof {
             panic!("Duplicate indices without duplicate leaf hashes");
         }
         nodes.dedup_by_key(|(index, _)| *index);
+        let mut nodes: VecDeque<(Index,Hash)> = nodes.into_iter().collect();
 
         // Create a mutable closure to pop decommitments from the list
         let mut decommitments_iter = self.decommitments.iter();
@@ -48,41 +57,38 @@ impl Proof {
         };
 
         // Reconstruct the root
-        // On each iteration, the indices in the set are strictly decreasing
-        // which means eventually they reduce to the root and we terminate
-        // the loop.
-        'outer: loop {
-            assert!(!nodes.is_empty());
-            // TODO: We can use a single ring buffer instead of vecs
-            let mut next_nodes: Vec<(Index, Hash)> = Vec::new();
-            let mut iter = nodes.iter().peekable();
-            while let Some((index, hash)) = iter.next() {
-                if let Some(parent) = index.parent() {
-                    let node: Node<'_> = if index.is_left() {
-                        match iter.peek() {
-                            // Merge if next is right
-                            Some((next_index, next_hash))
-                                if index.sibling() == Some(*next_index) =>
-                            {
-                                // Skip the next right node
-                                let _ = iter.next();
-                                Node(&hash, &next_hash)
-                            }
-                            // Left node not merged with right
-                            _ => Node(&hash, &pop()),
+        while let Some((current, hash)) = nodes.pop_front() {
+            if let Some(parent) = current.parent() {
+                // Reconstruct the parent node
+                let node = if current.is_left() {
+                    if let Some((next, next_hash)) = nodes.front() {
+                        // TODO: Find a better way to satisfy the borrow checker.
+                        let next_hash = next_hash.clone();
+                        if current.sibling().unwrap() == *next {
+                            // Merge current and next
+                            let _ = nodes.pop_front();
+                            Node(&hash, &next_hash).hash()
+                        } else {
+                            // Left not merged with next
+                            Node(&hash, &pop()).hash()
                         }
                     } else {
-                        // Right node not merged with left
-                        Node(&pop(), &hash)
-                    };
-                    // Queue the new parent node for the next iteration
-                    next_nodes.push((parent, node.hash()))
+                        // Left not merged with next
+                        Node(&hash, &pop()).hash()
+                    }
                 } else {
-                    // Root node has no parent, we are done
-                    break 'outer hash.clone();
-                }
+                    // Right not merged with previous (or we would have skipped)
+                    Node(&pop(), &hash).hash()
+                };
+                // Queue the new parent node for the next iteration
+                nodes.push_back((parent, node))
+            } else {
+                // Root node has no parent, we are done
+                return hash.clone();
             }
-            nodes = next_nodes
         }
+
+        // TODO: Empty indices
+        unreachable!()
     }
 }
