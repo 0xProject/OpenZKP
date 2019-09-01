@@ -1,5 +1,6 @@
 use super::{Hash, Hashable, Index, Merkelizable, Node, Proof};
-use std::ops::Index as IndexOp;
+use itertools::Itertools;
+use std::{collections::VecDeque, ops::Index as IndexOp};
 
 #[derive(Clone, Debug)]
 pub struct Tree<'a, Container: Merkelizable> {
@@ -43,52 +44,58 @@ impl<'a, Container: Merkelizable> Tree<'a, Container> {
         &self[Index::root()]
     }
 
-    pub fn proof(&self, indices: &[usize]) -> Proof {
-        // Allocate space for decommitments
-        let mut decommitments: Vec<Hash> = Vec::new();
-
-        // Convert leaf indices to a sorted list of unique MerkleIndices.
+    // Convert leaf indices to a sorted list of unique MerkleIndices.
+    fn sort_indices(&self, indices: &[usize]) -> Vec<Index> {
         let mut indices: Vec<Index> = indices
             .iter()
             .map(|i| Index::from_depth_offset(self.depth, *i).expect("Index out of range"))
             .collect();
         indices.sort();
         indices.dedup();
+        indices
+    }
 
-        // Iterate over indices
-        while !indices.is_empty() {
-            // TODO: We can use a single ring buffer instead of vecs
-            let mut next_indices: Vec<Index> = Vec::new();
-            let mut iter = indices.iter().peekable();
-            while let Some(i) = iter.next() {
-                // Add parent index to the queue for the next pass
-                if let Some(parent) = i.parent() {
-                    if !parent.is_root() {
-                        next_indices.push(parent);
-                    }
-                }
+    pub fn decommitment_size(&self, indices: &[usize]) -> usize {
+        let indices = self.sort_indices(indices);
 
-                // Check if we merge with the next merkle index.
-                if let Some(j) = iter.peek() {
-                    if i.sibling() == Some(**j) {
-                        // Don't write a decommitment and skip next.
-                        iter.next();
-                        continue;
-                    }
-                }
+        // Start with the full path length for the first index
+        // then add the path length of each next index up to the last common
+        // ancestor with the previous index.
+        self.depth
+            + indices
+                .iter()
+                .tuple_windows()
+                .map(|(&current, &next)| self.depth - current.last_common_ancestor(next).depth())
+                .sum::<usize>()
+    }
 
-                // Add a hash to the decommitment
-                decommitments.push(self[*i].clone());
+    pub fn proof(&self, indices: &[usize]) -> Proof {
+        let mut indices: VecDeque<Index> = self.sort_indices(indices).into_iter().collect();
+        let mut decommitments: Vec<Hash> = Vec::new();
+
+        while let Some(current) = indices.pop_front() {
+            // Add parent index to the queue for the next pass
+            // Root node has no parent and means we are done
+            if let Some(parent) = current.parent() {
+                indices.push_back(parent);
             }
-            indices = next_indices
-        }
 
-        // TODO
-        unimplemented!()
-        // Proof {
-        // depth: self.depth,
-        // decommitments,
-        // }
+            // Check if we merge with the next merkle index.
+            if let Some(&next) = indices.front() {
+                if current.sibling() == Some(next) {
+                    // Don't write a decommitment and skip next.
+                    let _ = indices.pop_front();
+                    continue;
+                }
+            }
+
+            // Add a hash to the decommitment
+            decommitments.push(self[current].clone());
+        }
+        Proof {
+            depth: self.depth,
+            decommitments,
+        }
     }
 }
 
