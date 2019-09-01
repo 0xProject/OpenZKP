@@ -43,22 +43,20 @@
 mod channel;
 mod constraint;
 mod fft;
-// TODO pub mod fibonacci;
+pub mod fibonacci;
 mod geometric_series;
 mod hash;
 mod hashable;
 mod masked_keccak;
-mod merkle_tree;
+mod merkle;
 mod polynomial;
 mod proof_params;
 mod utils;
-// TODO mod verifier;
+mod verifier;
 
 pub use channel::{ProverChannel, VerifierChannel};
 pub use proof_params::ProofParams;
-// TODO pub use verifier::check_proof;
-
-use merkle_tree::Proof as MerkleProof;
+pub use verifier::check_proof;
 
 // In no std mode, substitute no_std_compat
 #[cfg(not(feature = "std"))]
@@ -78,21 +76,23 @@ mod mmap_vec {
 // requires std. TODO: Make it work without std.
 //
 // Optional prover functionality. Note that prover requires std.
-// TODO #[cfg(feature = "prover")]
-// TODO pub mod pedersen_merkle;
-// TODO #[cfg(feature = "prover")]
-// TODO mod proofs;
+#[cfg(feature = "prover")]
+pub mod pedersen_merkle;
+#[cfg(feature = "prover")]
+mod proofs;
 #[cfg(feature = "prover")]
 mod trace_table;
 
 // Exports for prover
 #[cfg(feature = "prover")]
-pub use merkle_tree::Tree as MerkleTree;
-// TODO #[cfg(feature = "prover")]
-// TODO pub use proofs::stark_proof;
+pub use merkle::verify;
+#[cfg(feature = "prover")]
+pub use proofs::stark_proof;
 #[cfg(feature = "prover")]
 pub use trace_table::TraceTable;
 
 // Exports for benchmarking
 // TODO: Avoid publicly exposing.
 pub use fft::fft_cofactor_bit_reversed;
+#[cfg(feature = "prover")]
+pub use merkle::make_tree;

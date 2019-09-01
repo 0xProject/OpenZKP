@@ -4,11 +4,12 @@ use crate::{
     fft::{fft_cofactor_bit_reversed, ifft},
     hash::Hash,
     hashable::Hashable,
+    merkle::{self, make_tree, Groupable, Merkleizable},
     mmap_vec::MmapVec,
     polynomial::{DensePolynomial, SparsePolynomial},
     proof_params::ProofParams,
     utils::Reversible,
-    MerkleTree, TraceTable,
+    TraceTable,
 };
 use itertools::{izip, Itertools};
 use primefield::FieldElement;
@@ -102,8 +103,8 @@ where
 
     // Construct a merkle tree over the LDE trace
     // and write the root to the channel.
-    let tree = MerkleTree::new(trace_lde.as_slice());
-    proof.write(&tree.root());
+    let tree = trace_lde.as_slice().merkleize();
+    proof.write(&tree[1]);
 
     // 2. Constraint commitment
     //
@@ -125,7 +126,7 @@ where
     let constraint_lde = calculate_low_degree_extensions(&constraint_polynomials, params.blowup);
     // Construct a merkle tree over the LDE combined constraints
     // and write the root to the channel.
-    let c_tree = MerkleTree::new(constraint_lde.as_slice());
+    let c_tree = constraint_lde.as_slice().merkleize();
     proof.write(&c_tree[1]);
 
     // 3. Out of domain sampling
@@ -426,25 +427,23 @@ fn decommit_with_queries_and_proof<R: Hashable, T: Groupable<R>>(
 ) where
     ProverChannel: Writable<R>,
 {
-    // TODO
-    // for &index in queries.iter() {
-    // proof.write(source.get_leaf(index));
-    // }
-    // decommit_proof(&merkle::proof(tree, queries, source), proof);
+    for &index in queries.iter() {
+        proof.write(source.get_leaf(index));
+    }
+    decommit_proof(&merkle::proof(tree, queries, source), proof);
 }
 
 // Note - This function exists because rust gets confused by the intersection of
 // the write types and the others.
 fn decommit_proof(decommitment: &[Hash], proof: &mut ProverChannel) {
-    // TODO
-    // for x in decommitment {
-    // proof.write(x);
-    // }
+    for x in decommitment {
+        proof.write(x);
+    }
 }
 
 fn decommit_fri_layers_and_trees(
     fri_layers: &[Vec<FieldElement>],
-    fri_trees: &[MerkleTree],
+    fri_trees: &[Vec<Hash>],
     query_indices: &[usize],
     params: &ProofParams,
     proof: &mut ProverChannel,
@@ -471,9 +470,11 @@ fn decommit_fri_layers_and_trees(
                 };
             }
         }
+        let decommitment = merkle::proof(tree, &new_indices, &(fri_const, layer.as_slice()));
 
-        // Write the merkle proof
-        proof.write(&tree.proof(&new_indices));
+        for proof_element in &decommitment {
+            proof.write(proof_element);
+        }
 
         previous_indices = new_indices;
     }

@@ -1,6 +1,12 @@
 use crate::{
-    channel::*, constraint::Constraint, geometric_series::geometric_series, hash::*,
-    polynomial::DensePolynomial, proof_params::ProofParams, utils::*, MerkleProof,
+    channel::*,
+    constraint::Constraint,
+    geometric_series::geometric_series,
+    hash::*,
+    merkle::{decommitment_size, verify},
+    polynomial::DensePolynomial,
+    proof_params::ProofParams,
+    utils::*,
 };
 use itertools::*;
 use primefield::FieldElement;
