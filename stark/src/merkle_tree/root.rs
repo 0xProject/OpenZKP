@@ -1,5 +1,11 @@
+use super::{Hash, Proof};
+
 #[derive(Clone, Debug)]
-pub struct MerkleRoot {
+pub struct Root {
     depth: usize,
     root:  Hash,
+}
+
+impl Root {
+    pub fn verify(&self, proof: &Proof) -> bool {}
 }

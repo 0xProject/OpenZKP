@@ -1,6 +1,6 @@
 // TODO: Naming?
 #![allow(clippy::module_name_repetitions)]
-use crate::hash::Hash;
+use crate::{hash::Hash, MerkleProof};
 use macros_decl::{hex, u256h};
 use primefield::FieldElement;
 use std::prelude::v1::*;
@@ -303,6 +303,14 @@ impl Writable<Vec<U256>> for ProverChannel {
 impl Writable<U256> for ProverChannel {
     fn write(&mut self, data: U256) {
         self.write(&data.to_bytes_be()[..]);
+    }
+}
+
+impl Writable<&MerkleProof> for ProverChannel {
+    fn write(&mut self, proof: &MerkleProof) {
+        for decommitment in proof.decommitments() {
+            self.write(decommitment)
+        }
     }
 }
 

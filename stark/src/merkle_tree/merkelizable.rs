@@ -10,3 +10,5 @@ where
 
     fn leaf(&self, index: usize) -> &Self::Leaf;
 }
+
+// TODO ExactSizeIterator + Index<usize>
