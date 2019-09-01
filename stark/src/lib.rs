@@ -49,6 +49,7 @@ mod hash;
 mod hashable;
 mod masked_keccak;
 mod merkle;
+mod merkle_tree;
 mod polynomial;
 mod proof_params;
 mod utils;

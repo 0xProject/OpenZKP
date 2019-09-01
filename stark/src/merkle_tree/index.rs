@@ -22,7 +22,9 @@ use std::convert::TryFrom;
 /// and nodes in the tree. Nodes are indexed in breadth-first order, starting
 /// with the root at 0.
 // Internally, the representation is the index number offset by one. This leads
-// to the nice binary representation `1 << depth | offset`.
+// to the nice binary representation `1 << depth | offset`. Equivalently, it is
+// the path to the node, stating with `1` at the root and then `0` for left and
+// `1` for right.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Index(usize);
 
@@ -33,6 +35,15 @@ enum Kind {
 }
 
 impl Index {
+    pub const fn max_depth() -> usize {
+        // Bit counts can always be represented as `usize`.
+        0_usize.count_zeros() as usize - 1
+    }
+
+    pub const fn nodes_at_depth(depth: usize) -> usize {
+        1_usize << depth
+    }
+
     pub const fn root() -> Self {
         Self(1)
     }
@@ -43,7 +54,7 @@ impl Index {
 
     // At level `depth` there are 2^depth nodes at offsets [0..2^depth-1]
     pub fn from_depth_offset(depth: usize, offset: usize) -> Option<Self> {
-        if offset >= (1_usize << depth) {
+        if depth > Self::max_depth() || offset >= (1_usize << depth) {
             None
         } else {
             Some(Self((1_usize << depth) | offset))
@@ -62,7 +73,7 @@ impl Index {
     }
 
     pub fn offset(&self) -> usize {
-        self.0 - (self.0.next_power_of_two())
+        self.0 - (1_usize << self.depth())
     }
 
     pub fn is_root(&self) -> bool {
@@ -70,36 +81,34 @@ impl Index {
     }
 
     pub fn is_left(&self) -> bool {
-        self.0 != 0 && self.0 % 2 == 0
+        self.0 % 2 == 0
     }
 
     pub fn is_right(&self) -> bool {
-        self.0 % 2 == 1
+        self.0 != 1 && self.0 % 2 == 1
     }
 
     pub fn is_left_most(&self) -> bool {
-        (self.0 + 1).is_power_of_two()
+        self.0.is_power_of_two()
     }
 
     pub fn is_right_most(&self) -> bool {
-        (self.0 + 2).is_power_of_two()
+        (self.0 + 1).is_power_of_two()
     }
 
     pub fn parent(&self) -> Option<Self> {
         if self.is_root() {
             None
         } else {
-            Some(Self((self.0 - 1) >> 1))
+            Some(Self(self.0 >> 1))
         }
     }
 
     pub fn sibling(&self) -> Option<Self> {
         if self.is_root() {
             None
-        } else if self.is_left() {
-            Some(Self(self.0 + 1))
         } else {
-            Some(Self(self.0 - 1))
+            Some(Self(self.0 ^ 1))
         }
     }
 
@@ -120,26 +129,22 @@ impl Index {
     }
 
     pub fn left_child(&self) -> Self {
-        Self(2 * self.0 + 1)
+        Self(self.0 << 1)
     }
 
     pub fn right_child(&self) -> Self {
-        Self(2 * self.0 + 2)
-    }
-
-    pub fn ancestor_of(&self, other: Index) -> bool {
-        // TODO
-        unimplemented!()
-    }
-
-    pub fn descents_from(&self, other: Index) -> bool {
-        // TODO
-        unimplemented!()
+        Self((self.0 << 1) | 1)
     }
 
     pub fn last_common_ancestor(&self, other: Self) -> Self {
-        // TODO
-        unimplemented!()
+        // Align their first bits all the way to the left
+        let a = self.0 << self.0.leading_zeros();
+        let b = other.0 << other.0.leading_zeros();
+
+        // Extract the longest common prefix
+        let prefix_length = (a ^ b).leading_zeros();
+        let prefix = a >> (0_usize.count_zeros() - prefix_length);
+        Self(prefix)
     }
 }
 
@@ -160,8 +165,27 @@ mod test {
 
     #[quickcheck]
     pub fn test_depth_offset_roundtrip(depth: usize, offset: usize) -> bool {
-        let offset = offset % (1_usize << depth);
+        let depth = depth % Index::max_depth();
+        let offset = offset % Index::nodes_at_depth(depth);
         let index = Index::from_depth_offset(depth, offset).unwrap();
         index.depth() == depth && index.offset() == offset
+    }
+
+    #[quickcheck]
+    pub fn test_children(parent: Index) -> bool {
+        let left = parent.left_child();
+        let right = parent.right_child();
+        assert!(left.is_left());
+        assert!(right.is_right());
+        assert_eq!(left.depth(), right.depth());
+        assert_eq!(left.depth(), parent.depth() + 1);
+        assert_eq!(left.offset() + 1, right.offset());
+        assert_eq!(left.parent().unwrap(), parent);
+        assert_eq!(right.parent().unwrap(), parent);
+        assert_eq!(left.right_neighbor().unwrap(), right);
+        assert_eq!(right.left_neighbor().unwrap(), left);
+        assert_eq!(left.sibling().unwrap(), right);
+        assert_eq!(right.sibling().unwrap(), left);
+        true
     }
 }
