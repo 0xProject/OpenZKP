@@ -1,37 +1,44 @@
-use super::{Hash, Hashable, Index, Node};
+use super::{Commitment, Hash, Hashable, Index, Node};
 use itertools::Itertools;
 use std::collections::VecDeque;
 
+// Note: we can merge and split proofs. Based on indices we can
+// compute which values are redundant.
 #[derive(Clone, Debug)]
 pub struct Proof {
-    depth:         usize,
-    decommitments: Vec<Hash>,
+    commitment: Commitment,
+    indices:    Vec<usize>,
+    hashes:     Vec<Hash>,
 }
 
 impl Proof {
-    pub fn from_depth_decommitment(depth: usize, decommitments: &[Hash]) -> Self {
+    // TODO: Result<(), Error> instead of panic.
+    pub fn from_hashes(commitment: &Commitment, indices: &[usize], hashes: &[Hash]) -> Self {
+        assert!(indices.iter().all(|&i| i < commitment.num_leaves()));
+        assert!(indices.iter().tuple_windows().all(|(a, b)| a < b));
+        assert_eq!(hashes.len(), commitment.proof_size(indices));
+
+        // TODO: Validate decommitment size.
         Self {
-            depth,
-            decommitments: decommitments.to_vec(),
+            commitment: commitment.clone(),
+            indices:    indices.to_vec(),
+            hashes:     hashes.to_vec(),
         }
     }
 
-    pub fn depth(&self) -> usize {
-        self.depth
+    pub fn hashes(&self) -> &[Hash] {
+        &self.hashes
     }
 
-    pub fn decommitments(&self) -> &[Hash] {
-        &self.decommitments
-    }
-
-    // TODO: Result<Hash, Error> instead of panic.
-    pub fn root<Leaf: Hashable>(&self, leafs: &[(usize, &Leaf)]) -> Hash {
+    // TODO: Result<(), Error> instead of panic.
+    pub fn verify<Leaf: Hashable>(&self, leafs: &[(usize, &Leaf)]) {
         // Construct the leaf nodes
         let mut nodes: Vec<_> = leafs
             .iter()
             .map(|(index, leaf)| {
                 (
-                    Index::from_depth_offset(self.depth, *index).expect("Index out of range."),
+                    Index::from_depth_offset(self.commitment.depth(), *index)
+                        .expect("Index out of range."),
                     leaf.hash(),
                 )
             })
@@ -46,12 +53,12 @@ impl Proof {
             panic!("Duplicate indices without duplicate leaf hashes");
         }
         nodes.dedup_by_key(|(index, _)| *index);
-        let mut nodes: VecDeque<(Index,Hash)> = nodes.into_iter().collect();
+        let mut nodes: VecDeque<(Index, Hash)> = nodes.into_iter().collect();
 
-        // Create a mutable closure to pop decommitments from the list
-        let mut decommitments_iter = self.decommitments.iter();
+        // Create a mutable closure to pop hashes from the list
+        let mut hashes_iter = self.hashes.iter();
         let mut pop = move || {
-            decommitments_iter
+            hashes_iter
                 .next()
                 .expect("Not enough elements in decommitment.")
         };
@@ -65,11 +72,12 @@ impl Proof {
                         // TODO: Find a better way to satisfy the borrow checker.
                         let next_hash = next_hash.clone();
                         if current.sibling().unwrap() == *next {
-                            // Merge current and next
+                            // Merge left with next
                             let _ = nodes.pop_front();
                             Node(&hash, &next_hash).hash()
                         } else {
                             // Left not merged with next
+                            // TODO: Find a way to merge this branch with the next.
                             Node(&hash, &pop()).hash()
                         }
                     } else {
@@ -84,11 +92,10 @@ impl Proof {
                 nodes.push_back((parent, node))
             } else {
                 // Root node has no parent, we are done
-                return hash.clone();
+                if hash != *self.commitment.hash() {
+                    panic!("Root hashes do not match.");
+                }
             }
         }
-
-        // TODO: Empty indices
-        unreachable!()
     }
 }

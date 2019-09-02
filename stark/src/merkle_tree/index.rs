@@ -1,6 +1,6 @@
 use std::convert::TryFrom;
 
-/// Index into a balances binary tree
+/// Index into a balanced binary tree
 ///
 /// The index has two representations, as a (depth, offset) pair and as an
 /// index.

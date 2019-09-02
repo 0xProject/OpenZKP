@@ -1,4 +1,4 @@
-use super::{Hash, Hashable, Index, Merkelizable, Node, Proof};
+use super::{Commitment, Hash, Hashable, Index, Merkelizable, Node, Proof};
 use itertools::Itertools;
 use std::{collections::VecDeque, ops::Index as IndexOp};
 
@@ -6,24 +6,24 @@ use std::{collections::VecDeque, ops::Index as IndexOp};
 // OPT: Allow up to `n` lower layers to be skipped.
 #[derive(Clone, Debug)]
 pub struct Tree<'a, Container: Merkelizable> {
-    depth: usize,
-    nodes: Vec<Hash>,
-    leafs: &'a Container,
+    commitment: Commitment,
+    nodes:      Vec<Hash>,
+    leaves:     &'a Container,
 }
 
 impl<'a, Container: Merkelizable> Tree<'a, Container> {
-    pub fn new(leafs: &'a Container) -> Self {
-        let num_leafs = leafs.len();
-        assert!(num_leafs.is_power_of_two());
-        let depth = num_leafs.trailing_zeros() as usize;
-        let mut nodes = vec![Hash::default(); 2 * num_leafs - 1];
+    pub fn from_leaves(leaves: &'a Container) -> Self {
+        let num_leaves = leaves.len();
+        assert!(num_leaves.is_power_of_two());
+        let depth = num_leaves.trailing_zeros() as usize;
+        let mut nodes = vec![Hash::default(); 2 * num_leaves - 1];
 
         // Hash the tree
-        // TODO: leafs.iter().enumerate()
-        for i in 0..leafs.len() {
+        // TODO: leaves.iter().enumerate()
+        for i in 0..leaves.len() {
             // At `depth` there should always be an `i `th leaf.
             let mut cursor = Index::from_depth_offset(depth, i).unwrap();
-            nodes[cursor.as_index()] = leafs.leaf_hash(i);
+            nodes[cursor.as_index()] = leaves.leaf_hash(i);
             while cursor.is_right() {
                 cursor = cursor.parent().unwrap();
                 nodes[cursor.as_index()] = Node(
@@ -35,48 +35,33 @@ impl<'a, Container: Merkelizable> Tree<'a, Container> {
         }
 
         Tree {
-            depth,
+            commitment: Commitment::from_depth_hash(depth, &nodes[0]),
             nodes,
-            leafs,
+            leaves,
         }
     }
 
-    pub fn root(&self) -> &Hash {
-        &self[Index::root()]
+    pub fn commitment(&self) -> &Commitment {
+        &self.commitment
     }
 
     // Convert leaf indices to a sorted list of unique MerkleIndices.
     fn sort_indices(&self, indices: &[usize]) -> Vec<Index> {
         let mut indices: Vec<Index> = indices
             .iter()
-            .map(|i| Index::from_depth_offset(self.depth, *i).expect("Index out of range"))
+            .map(|i| {
+                Index::from_depth_offset(self.commitment().depth(), *i).expect("Index out of range")
+            })
             .collect();
         indices.sort_unstable();
         indices.dedup();
         indices
     }
 
-    /// The number of hashes in the decommitment for the given set of indices.
-    pub fn decommitment_size(&self, indices: &[usize]) -> usize {
-        let indices = self.sort_indices(indices);
-
-        // Start with the full path length for the first index
-        // then add the path length of each next index up to the last common
-        // ancestor with the previous index.
-        // One is subtracted from each path because we omit the leaf hash.
-        self.depth - 2 // TODO: Explain
-            + indices
-                .iter()
-                .tuple_windows()
-                .map(|(&current, &next)| {
-                    self.depth - current.last_common_ancestor(next).depth() - 1
-                })
-                .sum::<usize>()
-    }
-
-    pub fn proof(&self, indices: &[usize]) -> Proof {
+    pub fn open(&self, indices: &[usize]) -> Proof {
+        let proof_indices = indices;
         let mut indices: VecDeque<Index> = self.sort_indices(indices).into_iter().collect();
-        let mut decommitments: Vec<Hash> = Vec::new();
+        let mut hashes: Vec<Hash> = Vec::new();
 
         while let Some(current) = indices.pop_front() {
             // Root node has no parent and means we are done
@@ -97,10 +82,10 @@ impl<'a, Container: Merkelizable> Tree<'a, Container> {
                 }
 
                 // Add a sibling hash to the decommitment
-                decommitments.push(self[sibling].clone());
+                hashes.push(self[sibling].clone());
             }
         }
-        Proof::from_depth_decommitment(self.depth, &decommitments)
+        Proof::from_hashes(self.commitment(), proof_indices, &hashes)
     }
 }
 
@@ -133,31 +118,28 @@ mod tests {
     #[test]
     fn test_merkle_creation_and_proof() {
         let depth = 6;
-        let leafs: Vec<_> = (0..2_u64.pow(depth))
+        let leaves: Vec<_> = (0..2_u64.pow(depth))
             .map(|i| U256::from((i + 10).pow(3)))
             .collect();
 
         // Build the tree
-        let tree = Tree::new(&leafs);
+        let tree = Tree::from_leaves(&leaves);
+        let root = tree.commitment();
         assert_eq!(
-            tree.root().as_bytes(),
+            root.hash().as_bytes(),
             hex!("fd112f44bc944f33e2567f86eea202350913b11c000000000000000000000000")
         );
 
         // Decommit indices
         let indices = vec![1, 11, 14];
-        let decommitment = tree.proof(&indices);
-        assert_eq!(
-            decommitment.decommitments().len(),
-            tree.decommitment_size(&indices)
-        );
+        let proof = tree.open(&indices);
+        assert_eq!(proof.hashes().len(), root.proof_size(&indices));
 
         // println!("{:?}", tree);
 
         // Verify proof
-        let select_leafs: Vec<_> = indices.iter().map(|&i| (i, &leafs[i])).collect();
-        let root = decommitment.root(select_leafs.as_slice());
-        assert_eq!(*tree.root(), root);
+        let select_leaves: Vec<_> = indices.iter().map(|&i| (i, &leaves[i])).collect();
+        proof.verify(&select_leaves);
 
         // Verify non-proof
         let non_root = Hash::new(hex!(
