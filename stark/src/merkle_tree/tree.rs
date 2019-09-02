@@ -138,24 +138,21 @@ mod tests {
 
         // Verify proof
         let select_leaves: Vec<_> = indices.iter().map(|&i| (i, &leaves[i])).collect();
-        proof.verify(&select_leaves);
+        proof.verify(&select_leaves).unwrap();
 
-        // Verify non-proof
+        // Verify non-root
         let non_root = Hash::new(hex!(
             "ed112f44bc944f33e2567f86eea202350913b11c000000000000000000000000"
         ));
-
-        // assert!(verify(
-        // &tree[1],
-        // depth,
-        // values.as_mut_slice(),
-        // &decommitment
-        // ));
-        // assert!(!verify(
-        // &non_root,
-        // depth,
-        // values.as_mut_slice(),
-        // &decommitment
-        // ));
+        let non_proof = Proof::from_hashes(
+            &Commitment::from_depth_hash(root.depth(), &non_root).unwrap(),
+            &indices,
+            &proof.hashes(),
+        )
+        .unwrap();
+        assert_eq!(
+            non_proof.verify(&select_leaves),
+            Err(Error::RootHashMismatch)
+        );
     }
 }
