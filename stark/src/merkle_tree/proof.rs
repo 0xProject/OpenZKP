@@ -1,4 +1,4 @@
-use super::{Commitment, Hash, Hashable, Index, Node};
+use super::{Commitment, Error, Hash, Hashable, Index, Node, Result};
 use itertools::Itertools;
 use std::collections::VecDeque;
 
@@ -12,26 +12,30 @@ pub struct Proof {
 }
 
 impl Proof {
-    // TODO: Result<(), Error> instead of panic.
-    pub fn from_hashes(commitment: &Commitment, indices: &[usize], hashes: &[Hash]) -> Self {
-        assert!(indices.iter().all(|&i| i < commitment.num_leaves()));
-        assert!(indices.iter().tuple_windows().all(|(a, b)| a < b));
-        assert_eq!(hashes.len(), commitment.proof_size(indices));
-
-        // TODO: Validate decommitment size.
-        Self {
+    pub fn from_hashes(
+        commitment: &Commitment,
+        indices: &[usize],
+        hashes: &[Hash],
+    ) -> Result<Self> {
+        // Validate indices using `sort_indices`
+        let _ = commitment.sort_indices(indices)?;
+        if hashes.len() != commitment.proof_size(indices)? {
+            return Err(Error::NotEnoughHashes);
+        }
+        Ok(Self {
             commitment: commitment.clone(),
             indices:    indices.to_vec(),
             hashes:     hashes.to_vec(),
-        }
+        })
     }
 
     pub fn hashes(&self) -> &[Hash] {
         &self.hashes
     }
 
-    // TODO: Result<(), Error> instead of panic.
-    pub fn verify<Leaf: Hashable>(&self, leafs: &[(usize, &Leaf)]) {
+    pub fn verify<Leaf: Hashable>(&self, leafs: &[(usize, &Leaf)]) -> Result<()> {
+        // TODO: Check if the indices line up.
+
         // Construct the leaf nodes
         let mut nodes: Vec<_> = leafs
             .iter()
@@ -50,18 +54,14 @@ impl Proof {
             .tuple_windows()
             .any(|(a, b)| a.0 == b.0 && a.1 != b.1)
         {
-            panic!("Duplicate indices without duplicate leaf hashes");
+            return Err(Error::DuplicateLeafMismatch);
         }
         nodes.dedup_by_key(|(index, _)| *index);
         let mut nodes: VecDeque<(Index, Hash)> = nodes.into_iter().collect();
 
         // Create a mutable closure to pop hashes from the list
         let mut hashes_iter = self.hashes.iter();
-        let mut pop = move || {
-            hashes_iter
-                .next()
-                .expect("Not enough elements in decommitment.")
-        };
+        let mut pop = move || hashes_iter.next().ok_or(Error::NotEnoughHashes);
 
         // Reconstruct the root
         while let Some((current, hash)) = nodes.pop_front() {
@@ -78,24 +78,25 @@ impl Proof {
                         } else {
                             // Left not merged with next
                             // TODO: Find a way to merge this branch with the next.
-                            Node(&hash, &pop()).hash()
+                            Node(&hash, pop()?).hash()
                         }
                     } else {
                         // Left not merged with next
-                        Node(&hash, &pop()).hash()
+                        Node(&hash, pop()?).hash()
                     }
                 } else {
                     // Right not merged with previous (or we would have skipped)
-                    Node(&pop(), &hash).hash()
+                    Node(pop()?, &hash).hash()
                 };
                 // Queue the new parent node for the next iteration
                 nodes.push_back((parent, node))
             } else {
                 // Root node has no parent, we are done
                 if hash != *self.commitment.hash() {
-                    panic!("Root hashes do not match.");
+                    return Err(Error::RootHashMismatch);
                 }
             }
         }
+        Ok(())
     }
 }

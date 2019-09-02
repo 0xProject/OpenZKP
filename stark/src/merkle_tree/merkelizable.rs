@@ -1,4 +1,4 @@
-use super::{Commitment, Hash, Hashable, Tree};
+use super::{Hash, Hashable};
 
 // TODO: Rename to VectorCommitment
 pub trait Merkelizable
@@ -15,11 +15,7 @@ where
         self.leaf(index).hash()
     }
 
-    // TODO
-    // fn commit(&self) -> (Commitment, Tree<'a, Self>) {
-    //    let tree = Tree::from_leaves(self);
-    //    (tree.commitment(), tree)
-    //}
+    // TODO: Add `commit(&self) -> (Commitment, Tree)`
 }
 
 // TODO ExactSizeIterator + Index<usize>

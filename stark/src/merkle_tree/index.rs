@@ -1,3 +1,4 @@
+use super::{Error, Result};
 use std::convert::TryFrom;
 
 /// Index into a balanced binary tree
@@ -53,11 +54,11 @@ impl Index {
     }
 
     // At level `depth` there are 2^depth nodes at offsets [0..2^depth-1]
-    pub fn from_depth_offset(depth: usize, offset: usize) -> Option<Self> {
+    pub fn from_depth_offset(depth: usize, offset: usize) -> Result<Self> {
         if depth > Self::max_depth() || offset >= (1_usize << depth) {
-            None
+            Err(Error::IndexOutOfRange)
         } else {
-            Some(Self((1_usize << depth) | offset))
+            Ok(Self((1_usize << depth) | offset))
         }
     }
 
