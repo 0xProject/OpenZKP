@@ -121,8 +121,20 @@ mod tests {
 
         // Open indices
         let indices = vec![1, 11, 14];
+        assert_eq!(root.proof_size(&indices).unwrap(), 9);
         let proof = tree.open(&indices).unwrap();
-        assert_eq!(proof.hashes().len(), root.proof_size(&indices).unwrap());
+        #[rustfmt::skip]
+        assert_eq!(proof.hashes(), &[
+            Hash::new(hex!("00000000000000000000000000000000000000000000000000000000000003e8")),
+            Hash::new(hex!("0000000000000000000000000000000000000000000000000000000000001f40")),
+            Hash::new(hex!("0000000000000000000000000000000000000000000000000000000000003d09")),
+            Hash::new(hex!("4ea8b9bafb11dafcfe132a26f8e343eaef0651d9000000000000000000000000")),
+            Hash::new(hex!("023a7ce535cadd222093be053ac26f9b800ee476000000000000000000000000")),
+            Hash::new(hex!("70b0744af2583d10e7e3236c731d37605e196e06000000000000000000000000")),
+            Hash::new(hex!("221aea6e87862ba2d03543d0aa82c6bffee310ae000000000000000000000000")),
+            Hash::new(hex!("68b58e5131703684edb16d41b763017dfaa24a35000000000000000000000000")),
+            Hash::new(hex!("e108b7dc670810e8588c67c2fde7ec4cc00165e8000000000000000000000000")),
+        ]);
 
         // Verify proof
         let select_leaves: Vec<_> = indices.iter().map(|&i| (i, &leaves[i])).collect();
