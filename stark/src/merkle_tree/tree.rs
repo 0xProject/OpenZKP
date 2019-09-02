@@ -90,6 +90,7 @@ impl<Container: Merkelizable> IndexOp<Index> for Tree<'_, Container> {
 mod tests {
     use super::*;
     use macros_decl::hex;
+    use quickcheck_macros::quickcheck;
     use u256::U256;
 
     impl Merkelizable for Vec<U256> {
@@ -105,7 +106,7 @@ mod tests {
     }
 
     #[test]
-    fn test_merkle_creation_and_proof() {
+    fn test_explicit_values() {
         let depth = 6;
         let leaves: Vec<_> = (0..2_u64.pow(depth))
             .map(|i| U256::from((i + 10).pow(3)))
@@ -154,5 +155,30 @@ mod tests {
             non_proof.verify(&select_leaves),
             Err(Error::RootHashMismatch)
         );
+    }
+
+    #[quickcheck]
+    fn test_merkle_tree(depth: usize, indices: Vec<usize>, seed: U256) {
+        // We want tests up to depth 8; adjust the input
+        let depth = depth % 9;
+        let num_leaves = 1_usize << depth;
+        let indices: Vec<_> = indices.iter().map(|&i| i % num_leaves).collect();
+        let leaves: Vec<_> = (0..num_leaves)
+            .map(|i| (&seed + U256::from(i)).pow(3).unwrap())
+            .collect();
+        println!("Depth: {:?}", depth);
+
+        // Build the tree
+        let tree = Tree::from_leaves(&leaves).unwrap();
+        let root = tree.commitment();
+
+        // Open indices
+        let proof = tree.open(&indices);
+        // assert_eq!(root.proof_size(&indices).unwrap(), proof.hashes().len());
+
+        // Verify proof
+        // let select_leaves: Vec<_> = indices.iter().map(|&i| (i,
+        // &leaves[i])).collect(); proof.verify(&select_leaves).
+        // unwrap();
     }
 }
