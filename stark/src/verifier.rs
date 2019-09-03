@@ -235,24 +235,24 @@ where
     }
 
     // Checks that the oods point calculation matches the constraint calculation
-    // TODO use another struct here.
-    let mut fake_polynomials: Vec<DensePolynomial> = vec![];
+    // TODO: don't use DensePolynomial for this.
+    let mut mock_polynomials: Vec<DensePolynomial> = vec![];
     for i in 0..trace_cols {
         let fake_polynomial = DensePolynomial::new(&ifft(&[
             oods_values[2 * i].clone(),
             oods_values[2 * i + 1].clone(),
         ]));
-        fake_polynomials.push(fake_polynomial);
+        mock_polynomials.push(fake_polynomial);
     }
 
     let mut claimed_oods_value = FieldElement::ZERO;
     for (i, constraint) in constraints.iter().enumerate() {
-        let mut x = (constraint.base)(&fake_polynomials).evaluate(&FieldElement::ONE);
+        let mut x = (constraint.base)(&mock_polynomials).evaluate(&FieldElement::ONE);
         x *= constraint.numerator.evaluate(&oods_point);
         x /= constraint.denominator.evaluate(&oods_point);
         claimed_oods_value += &constraint_coefficients[2 * i] * &x;
 
-        // TODO make this work when params.constraints_degree_bound is not 1.
+        // TODO: make this work when params.constraints_degree_bound is not 1.
         let adjustment_degree = constraint.denominator.degree() - constraint.numerator.degree();
         let adjustment = oods_point.pow(adjustment_degree);
         claimed_oods_value += &constraint_coefficients[2 * i + 1] * adjustment * &x;
