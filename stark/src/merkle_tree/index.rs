@@ -32,12 +32,6 @@ use std::fmt;
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Index(usize);
 
-enum Kind {
-    Root,
-    Left,
-    Right,
-}
-
 impl Index {
     pub const fn max_depth() -> usize {
         // Bit counts can always be represented as `usize`.

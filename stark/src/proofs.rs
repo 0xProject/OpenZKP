@@ -5,7 +5,7 @@ use crate::{
     hash::Hash,
     hashable::Hashable,
     masked_keccak::MaskedKeccak,
-    merkle::{self, make_tree, Groupable, Merkleizable},
+    merkle::Groupable,
     merkle_tree::{self, VectorCommitment},
     mmap_vec::MmapVec,
     polynomial::{DensePolynomial, SparsePolynomial},
@@ -13,14 +13,10 @@ use crate::{
     utils::Reversible,
     TraceTable,
 };
-use itertools::{izip, Itertools};
+use itertools::Itertools;
 use primefield::FieldElement;
 use rayon::prelude::*;
-use std::{
-    marker::{Send, Sync},
-    prelude::v1::*,
-    vec,
-};
+use std::{prelude::v1::*, vec};
 use u256::U256;
 
 // This groupable impl allows the fri tree layers to get grouped and use the
@@ -61,22 +57,6 @@ impl Groupable<U256> for &[FieldElement] {
 
     fn domain_size(&self) -> usize {
         self.len()
-    }
-}
-
-impl<NodeHash, LeafType> Merkleizable<NodeHash> for LeafType
-where
-    NodeHash: Hashable + Send + Sync,
-    LeafType: Groupable<NodeHash> + Send + Sync,
-{
-    fn merkleize(self) -> Vec<Hash> {
-        let eval_domain_size = self.domain_size();
-        let mut leaves = Vec::with_capacity(eval_domain_size);
-        (0..eval_domain_size)
-            .into_par_iter()
-            .map(|index| self.get_leaf_hash(index))
-            .collect_into_vec(&mut leaves);
-        make_tree(leaves.as_slice())
     }
 }
 
@@ -258,12 +238,7 @@ where
     proof.write(&c_tree.open(&query_indices).unwrap());
 
     // Decommit the FRI layer values
-    decommit_fri_layers_and_trees(
-        &fri_trees.as_slice(),
-        query_indices.as_slice(),
-        &params,
-        &mut proof,
-    );
+    decommit_fri_layers_and_trees(&fri_trees.as_slice(), query_indices.as_slice(), &mut proof);
 
     // Q.E.D.
     proof
@@ -493,32 +468,9 @@ fn perform_fri_layering(
     fri_trees
 }
 
-fn decommit_with_queries_and_proof<R: Hashable, T: Groupable<R>>(
-    queries: &[usize],
-    source: &T,
-    tree: &[Hash],
-    proof: &mut ProverChannel,
-) where
-    ProverChannel: Writable<R>,
-{
-    for &index in queries.iter() {
-        proof.write(source.get_leaf(index));
-    }
-    decommit_proof(&merkle::proof(tree, queries, source), proof);
-}
-
-// Note - This function exists because rust gets confused by the intersection of
-// the write types and the others.
-fn decommit_proof(decommitment: &[Hash], proof: &mut ProverChannel) {
-    for x in decommitment {
-        proof.write(x);
-    }
-}
-
 fn decommit_fri_layers_and_trees(
     fri_trees: &[FriTree],
     query_indices: &[usize],
-    params: &ProofParams,
     proof: &mut ProverChannel,
 ) {
     let mut previous_indices: Vec<usize> = query_indices.to_vec();
@@ -917,12 +869,7 @@ mod tests {
             "f2d3e6593dc23fa32655040ad5023739e15fff1d645bb809467cfccb676d6343"
         );
 
-        decommit_fri_layers_and_trees(
-            fri_trees.as_slice(),
-            query_indices.as_slice(),
-            &params,
-            &mut proof,
-        );
+        decommit_fri_layers_and_trees(fri_trees.as_slice(), query_indices.as_slice(), &mut proof);
         // Checks that our fri decommitment is successful
         assert_eq!(
             hex::encode(proof.coin.digest),
