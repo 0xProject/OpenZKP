@@ -4,7 +4,9 @@ use crate::{
     fft::{fft_cofactor_bit_reversed, ifft},
     hash::Hash,
     hashable::Hashable,
+    masked_keccak::MaskedKeccak,
     merkle::{self, make_tree, Groupable, Merkleizable},
+    merkle_tree::{self, VectorCommitment},
     mmap_vec::MmapVec,
     polynomial::{DensePolynomial, SparsePolynomial},
     proof_params::ProofParams,
@@ -78,6 +80,38 @@ where
     }
 }
 
+// Merkle trees over trace table LDE
+impl VectorCommitment for Vec<MmapVec<FieldElement>> {
+    // TODO: Copy free implementation. Maybe have index as a leaf type.
+    type Leaf = Vec<U256>;
+
+    fn len(&self) -> usize {
+        self.first().unwrap().len()
+    }
+
+    fn leaf(&self, index: usize) -> Self::Leaf {
+        let mut ret = Vec::with_capacity(self.len());
+        for item in self.iter() {
+            ret.push(item[index].as_montgomery().clone())
+        }
+        ret
+    }
+
+    fn leaf_hash(&self, index: usize) -> Hash {
+        if self.len() == 1 {
+            // For a single element, return its hash.
+            self[0][index].hash()
+        } else {
+            // Concatenate the element hashes and hash the result.
+            let mut hasher = MaskedKeccak::new();
+            for value in self.iter() {
+                hasher.update(value[index].hash().as_bytes());
+            }
+            hasher.hash()
+        }
+    }
+}
+
 // TODO: Look into lifetime annotations here. For now ignore the hint.
 #[allow(single_use_lifetimes)]
 pub fn stark_proof<Public>(
@@ -103,8 +137,10 @@ where
 
     // Construct a merkle tree over the LDE trace
     // and write the root to the channel.
-    let tree = trace_lde.as_slice().merkleize();
-    proof.write(&tree[1]);
+    // let tree = trace_lde.as_slice().merkleize();
+    // proof.write(&tree[1]);
+    let tree = merkle_tree::Tree::from_leaves(&trace_lde).unwrap();
+    proof.write(tree.commitment());
 
     // 2. Constraint commitment
     //
@@ -166,12 +202,10 @@ where
     );
 
     // Decommit the trace table values.
-    decommit_with_queries_and_proof(
-        query_indices.as_slice(),
-        &trace_lde.as_slice(),
-        tree.as_slice(),
-        &mut proof,
-    );
+    for &index in &query_indices {
+        proof.write(trace_lde.leaf(index));
+    }
+    proof.write(&tree.open(&query_indices).unwrap());
 
     // Decommit the constraint values
     decommit_with_queries_and_proof(

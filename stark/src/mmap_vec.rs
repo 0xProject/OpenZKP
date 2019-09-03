@@ -38,6 +38,10 @@ impl<T: Clone> MmapVec<T> {
         }
     }
 
+    pub fn len(&self) -> usize {
+        self.length
+    }
+
     pub fn push(&mut self, next: T) {
         if self.length == self.capacity {
             panic!("MmapVec is at capacity")
