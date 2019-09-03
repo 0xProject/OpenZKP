@@ -1,6 +1,7 @@
 use crate::{
     channel::*,
     constraint::Constraint,
+    fft::ifft,
     geometric_series::geometric_series,
     hash::*,
     merkle::{decommitment_size, verify},
@@ -234,9 +235,30 @@ where
     }
 
     // Checks that the oods point calculation matches the constraint calculation
-    // TODO
+    // TODO: don't use DensePolynomial for this.
+    let mut mock_polynomials: Vec<DensePolynomial> = vec![];
+    for i in 0..trace_cols {
+        let fake_polynomial = DensePolynomial::new(&ifft(&[
+            oods_values[2 * i].clone(),
+            oods_values[2 * i + 1].clone(),
+        ]));
+        mock_polynomials.push(fake_polynomial);
+    }
 
-    true
+    let mut claimed_oods_value = FieldElement::ZERO;
+    for (i, constraint) in constraints.iter().enumerate() {
+        let mut x = (constraint.base)(&mock_polynomials).evaluate(&FieldElement::ONE);
+        x *= constraint.numerator.evaluate(&oods_point);
+        x /= constraint.denominator.evaluate(&oods_point);
+        claimed_oods_value += &constraint_coefficients[2 * i] * &x;
+
+        // TODO: make this work when params.constraints_degree_bound is not 1.
+        let adjustment_degree = constraint.denominator.degree() - constraint.numerator.degree();
+        let adjustment = oods_point.pow(adjustment_degree);
+        claimed_oods_value += &constraint_coefficients[2 * i + 1] * adjustment * &x;
+    }
+
+    claimed_oods_value == oods_values[2 * trace_cols]
 }
 
 fn get_indices(num: usize, bits: u32, proof: &mut VerifierChannel) -> Vec<usize> {
