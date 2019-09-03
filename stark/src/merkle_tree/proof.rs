@@ -18,7 +18,7 @@ impl Proof {
         hashes: &[Hash],
     ) -> Result<Self> {
         // Validate indices using `sort_indices`
-        let indies = commitment.sort_indices(indices)?;
+        let _ = commitment.sort_indices(indices)?;
         if hashes.len() != commitment.proof_size(indices)? {
             return Err(Error::NotEnoughHashes);
         }
@@ -33,7 +33,8 @@ impl Proof {
         &self.hashes
     }
 
-    pub fn verify<Leaf: Hashable>(&self, leafs: &[(usize, &Leaf)]) -> Result<()> {
+    pub fn verify<Leaf: Hashable>(&self, leafs: &[(usize, Leaf)]) -> Result<()> {
+        // TODO: Pass leafs by reference?
         // TODO: Check if the indices line up.
 
         // Construct the leaf nodes

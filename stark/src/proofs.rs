@@ -113,7 +113,7 @@ impl VectorCommitment for Vec<MmapVec<FieldElement>> {
 }
 
 // Merkle tree for FRI layers with coset size
-impl VectorCommitment for (usize, &[FieldElement]) {
+impl VectorCommitment for (usize, Vec<FieldElement>) {
     type Leaf = Vec<U256>;
 
     fn len(&self) -> usize {
@@ -121,24 +121,24 @@ impl VectorCommitment for (usize, &[FieldElement]) {
     }
 
     fn leaf(&self, index: usize) -> Self::Leaf {
-        let (coset_size, layer) = *self;
-        let mut internal_leaf = Vec::with_capacity(coset_size);
-        for j in 0..coset_size {
+        let (coset_size, layer) = self;
+        let mut internal_leaf = Vec::with_capacity(*coset_size);
+        for j in 0..*coset_size {
             internal_leaf.push(layer[(index * coset_size + j)].as_montgomery().clone());
         }
         internal_leaf
     }
 
     fn leaf_hash(&self, index: usize) -> Hash {
-        let (coset_size, layer) = *self;
-        if coset_size == 1 {
+        let (coset_size, layer) = self;
+        if *coset_size == 1 {
             // For a single element, return its hash.
             layer[index].hash()
         } else {
             // Concatenate the element hashes and hash the result.
             let mut hasher = MaskedKeccak::new();
-            for j in 0..coset_size {
-                hasher.update(layer[(index * coset_size + j)].hash().as_bytes());
+            for j in 0..*coset_size {
+                hasher.update(layer[(index * *coset_size + j)].hash().as_bytes());
             }
             hasher.hash()
         }
@@ -172,7 +172,7 @@ where
     // and write the root to the channel.
     // let tree = trace_lde.as_slice().merkleize();
     // proof.write(&tree[1]);
-    let tree = merkle_tree::Tree::from_leaves(&trace_lde).unwrap();
+    let tree = merkle_tree::Tree::from_leaves(trace_lde).unwrap();
     proof.write(tree.commitment());
 
     // 2. Constraint commitment
@@ -195,7 +195,7 @@ where
     let constraint_lde = calculate_low_degree_extensions(&constraint_polynomials, params.blowup);
     // Construct a merkle tree over the LDE combined constraints
     // and write the root to the channel.
-    let c_tree = merkle_tree::Tree::from_leaves(&constraint_lde).unwrap();
+    let c_tree = merkle_tree::Tree::from_leaves(constraint_lde).unwrap();
     proof.write(c_tree.commitment());
 
     // 3. Out of domain sampling
@@ -236,13 +236,13 @@ where
 
     // Decommit the trace table values.
     for &index in &query_indices {
-        proof.write(trace_lde.leaf(index));
+        proof.write(tree.leaf(index));
     }
     proof.write(&tree.open(&query_indices).unwrap());
 
     // Decommit the constraint values
     for &index in &query_indices {
-        proof.write(constraint_lde.leaf(index));
+        proof.write(c_tree.leaf(index));
     }
     proof.write(&c_tree.open(&query_indices).unwrap());
 

@@ -1,17 +1,22 @@
 use super::{Commitment, Error, Hash, Hashable, Index, Node, Proof, Result, VectorCommitment};
 use std::{collections::VecDeque, ops::Index as IndexOp};
 
+/// Merkle tree
+///
+/// The tree will become the owner of the `Container`. This is necessary because
+/// when low layer-omissionn is implemented we need immutable access to the
+/// leaves. If shared ownership is required the `Container` can be an `Rc<_>`.
 // OPT: Do not store leaf hashes but re-create.
 // OPT: Allow up to `n` lower layers to be skipped.
 #[derive(Clone, Debug)]
-pub struct Tree<'a, Container: VectorCommitment> {
+pub struct Tree<Container: VectorCommitment> {
     commitment: Commitment,
     nodes:      Vec<Hash>,
-    leaves:     &'a Container,
+    leaves:     Container,
 }
 
-impl<'a, Container: VectorCommitment> Tree<'a, Container> {
-    pub fn from_leaves(leaves: &'a Container) -> Result<Self> {
+impl<Container: VectorCommitment> Tree<Container> {
+    pub fn from_leaves(leaves: Container) -> Result<Self> {
         let num_leaves = leaves.len();
         if !num_leaves.is_power_of_two() {
             return Err(Error::NumLeavesNotPowerOfTwo);
@@ -46,6 +51,14 @@ impl<'a, Container: VectorCommitment> Tree<'a, Container> {
         &self.commitment
     }
 
+    pub fn leaves(&self) -> &Container {
+        &self.leaves
+    }
+
+    pub fn leaf(&self, index: usize) -> Container::Leaf {
+        self.leaves.leaf(index)
+    }
+
     pub fn open(&self, indices: &[usize]) -> Result<Proof> {
         let indices = self.commitment().sort_indices(indices)?;
         let proof_indices: Vec<usize> = indices.iter().map(Index::offset).collect();
@@ -78,10 +91,10 @@ impl<'a, Container: VectorCommitment> Tree<'a, Container> {
     }
 }
 
-impl<Container: VectorCommitment> IndexOp<Index> for Tree<'_, Container> {
+impl<Container: VectorCommitment> IndexOp<Index> for Tree<Container> {
     type Output = Hash;
 
-    fn index(&self, index: Index) -> &Hash {
+    fn index(&self, index: Index) -> &Self::Output {
         &self.nodes[index.as_index()]
     }
 }
@@ -101,7 +114,7 @@ mod tests {
             .collect();
 
         // Build the tree
-        let tree = Tree::from_leaves(&leaves).unwrap();
+        let tree = Tree::from_leaves(leaves).unwrap();
         let root = tree.commitment();
         assert_eq!(
             root.hash().as_bytes(),
@@ -126,8 +139,8 @@ mod tests {
         ]);
 
         // Verify proof
-        let select_leaves: Vec<_> = indices.iter().map(|&i| (i, &leaves[i])).collect();
-        proof.verify(&select_leaves).unwrap();
+        let select_leaves: Vec<_> = indices.iter().map(|&i| (i, tree.leaf(i))).collect();
+        proof.verify(select_leaves.as_slice()).unwrap();
 
         // Verify non-root
         let non_root = Hash::new(hex!(
@@ -156,7 +169,7 @@ mod tests {
             .collect();
 
         // Build the tree
-        let tree = Tree::from_leaves(&leaves).unwrap();
+        let tree = Tree::from_leaves(leaves).unwrap();
         let root = tree.commitment();
 
         // Open indices
@@ -164,7 +177,7 @@ mod tests {
         assert_eq!(root.proof_size(&indices).unwrap(), proof.hashes().len());
 
         // Verify proof
-        let select_leaves: Vec<_> = indices.iter().map(|&i| (i, &leaves[i])).collect();
+        let select_leaves: Vec<_> = indices.iter().map(|&i| (i, tree.leaf(i))).collect();
         proof.verify(&select_leaves).unwrap();
     }
 }
