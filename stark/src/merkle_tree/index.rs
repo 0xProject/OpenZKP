@@ -9,13 +9,13 @@ use std::fmt;
 /// The index has two representations, as a (depth, offset) pair and as an
 /// index.
 ///
-/// ```
+/// ```ignore
 /// (0, 0)(1, 0)(1, 1)(2, 0)(2, 1)(2, 2)(2, 3)(3, 0)(3, 1)(3, 2)(3, 3)(3, 4)(3, 5)(3, 6)(3, 7)
 /// ```
 ///
 /// The corresponding index numbering is
 ///
-/// ```
+/// ```ignore
 ///                            0
 ///              1                           2
 ///       3             4             5             6

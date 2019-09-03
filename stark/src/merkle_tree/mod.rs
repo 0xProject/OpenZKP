@@ -6,10 +6,10 @@ mod commitment;
 // TODO: Implement sparse Merkle trees.
 // TODO: Generalize over hash implementations.
 mod index;
-mod merkelizable;
 mod node;
 mod proof;
 mod result;
+mod vector_commitment;
 
 #[cfg(feature = "prover")]
 mod tree;
@@ -17,10 +17,10 @@ mod tree;
 use crate::{hash::Hash, hashable::Hashable};
 
 pub use commitment::Commitment;
-pub use merkelizable::Merkelizable;
 pub use proof::Proof;
 pub use result::{Error, Result};
 pub use tree::Tree;
+pub use vector_commitment::VectorCommitment;
 
 use index::Index;
 use node::Node;

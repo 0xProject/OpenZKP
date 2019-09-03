@@ -1,16 +1,16 @@
-use super::{Commitment, Error, Hash, Hashable, Index, Merkelizable, Node, Proof, Result};
+use super::{Commitment, Error, Hash, Hashable, Index, Node, Proof, Result, VectorCommitment};
 use std::{collections::VecDeque, ops::Index as IndexOp};
 
 // OPT: Do not store leaf hashes but re-create.
 // OPT: Allow up to `n` lower layers to be skipped.
 #[derive(Clone, Debug)]
-pub struct Tree<'a, Container: Merkelizable> {
+pub struct Tree<'a, Container: VectorCommitment> {
     commitment: Commitment,
     nodes:      Vec<Hash>,
     leaves:     &'a Container,
 }
 
-impl<'a, Container: Merkelizable> Tree<'a, Container> {
+impl<'a, Container: VectorCommitment> Tree<'a, Container> {
     pub fn from_leaves(leaves: &'a Container) -> Result<Self> {
         let num_leaves = leaves.len();
         if !num_leaves.is_power_of_two() {
@@ -78,7 +78,7 @@ impl<'a, Container: Merkelizable> Tree<'a, Container> {
     }
 }
 
-impl<Container: Merkelizable> IndexOp<Index> for Tree<'_, Container> {
+impl<Container: VectorCommitment> IndexOp<Index> for Tree<'_, Container> {
     type Output = Hash;
 
     fn index(&self, index: Index) -> &Hash {
@@ -92,18 +92,6 @@ mod tests {
     use macros_decl::hex;
     use quickcheck_macros::quickcheck;
     use u256::U256;
-
-    impl Merkelizable for Vec<U256> {
-        type Leaf = U256;
-
-        fn len(&self) -> usize {
-            self.len()
-        }
-
-        fn leaf(&self, index: usize) -> &U256 {
-            &self[index]
-        }
-    }
 
     #[test]
     fn test_explicit_values() {
