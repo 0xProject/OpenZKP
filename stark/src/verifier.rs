@@ -69,7 +69,7 @@ where
         .unwrap(),
     );
     // Get fri roots and eval points from the channel random
-    let mut halvings = params.fri_layout[0];
+    let mut depth_reduction = params.fri_layout[0];
     for &x in params.fri_layout.iter().skip(1) {
         // TODO: When is x equal to zero?
         let eval_point = if x == 0 {
@@ -78,10 +78,10 @@ where
             channel.get_random()
         };
         eval_points.push(eval_point);
-        halvings += x;
+        depth_reduction += x;
         fri_commitments.push(
             Commitment::from_depth_hash(
-                depth - halvings,
+                depth - depth_reduction,
                 &Replayable::<Hash>::replay(&mut channel),
             )
             .unwrap(),

@@ -32,7 +32,7 @@ impl<Leaf: Hashable + Clone> VectorCommitment for Vec<Leaf> {
     type Leaf = Leaf;
 
     fn len(&self) -> usize {
-        Vec::<Leaf>::len(self)
+        Self::len(self)
     }
 
     fn leaf(&self, index: usize) -> Self::Leaf {
@@ -49,7 +49,7 @@ impl<Leaf: Hashable + Clone> VectorCommitment for MmapVec<Leaf> {
     type Leaf = Leaf;
 
     fn len(&self) -> usize {
-        MmapVec::<Leaf>::len(self)
+        Self::len(self)
     }
 
     fn leaf(&self, index: usize) -> Self::Leaf {

@@ -18,7 +18,9 @@ use rayon::prelude::*;
 use std::{prelude::v1::*, vec};
 use u256::U256;
 
-// Merkle trees over trace table LDE and constraint LDE
+/// Merkle trees over trace table LDE and constraint LDE
+// Clippy false positive
+#[allow(clippy::use_self)]
 impl VectorCommitment for Vec<MmapVec<FieldElement>> {
     // TODO: Copy free implementation. Maybe have index as a leaf type.
     type Leaf = Vec<U256>;

@@ -59,42 +59,42 @@ impl Index {
         }
     }
 
-    pub fn as_index(&self) -> usize {
+    pub fn as_index(self) -> usize {
         self.0 - 1
     }
 
-    pub fn depth(&self) -> usize {
+    pub fn depth(self) -> usize {
         let next_layer = (self.0 + 1).next_power_of_two();
         // Usize should always be able to hold it's number of bits
         let next_depth = usize::try_from(next_layer.trailing_zeros()).unwrap();
         next_depth - 1
     }
 
-    pub fn offset(&self) -> usize {
+    pub fn offset(self) -> usize {
         self.0 - (1_usize << self.depth())
     }
 
-    pub fn is_root(&self) -> bool {
+    pub fn is_root(self) -> bool {
         self.0 == 1
     }
 
-    pub fn is_left(&self) -> bool {
+    pub fn is_left(self) -> bool {
         self.0 % 2 == 0
     }
 
-    pub fn is_right(&self) -> bool {
+    pub fn is_right(self) -> bool {
         self.0 != 1 && self.0 % 2 == 1
     }
 
-    pub fn is_left_most(&self) -> bool {
+    pub fn is_left_most(self) -> bool {
         self.0.is_power_of_two()
     }
 
-    pub fn is_right_most(&self) -> bool {
+    pub fn is_right_most(self) -> bool {
         (self.0 + 1).is_power_of_two()
     }
 
-    pub fn parent(&self) -> Option<Self> {
+    pub fn parent(self) -> Option<Self> {
         if self.is_root() {
             None
         } else {
@@ -102,7 +102,7 @@ impl Index {
         }
     }
 
-    pub fn sibling(&self) -> Option<Self> {
+    pub fn sibling(self) -> Option<Self> {
         if self.is_root() {
             None
         } else {
@@ -110,7 +110,7 @@ impl Index {
         }
     }
 
-    pub fn left_neighbor(&self) -> Option<Self> {
+    pub fn left_neighbor(self) -> Option<Self> {
         if self.is_left_most() {
             None
         } else {
@@ -118,7 +118,7 @@ impl Index {
         }
     }
 
-    pub fn right_neighbor(&self) -> Option<Self> {
+    pub fn right_neighbor(self) -> Option<Self> {
         if self.is_right_most() {
             None
         } else {
@@ -126,15 +126,15 @@ impl Index {
         }
     }
 
-    pub fn left_child(&self) -> Self {
+    pub fn left_child(self) -> Self {
         Self(self.0 << 1)
     }
 
-    pub fn right_child(&self) -> Self {
+    pub fn right_child(self) -> Self {
         Self((self.0 << 1) | 1)
     }
 
-    pub fn last_common_ancestor(&self, other: Self) -> Self {
+    pub fn last_common_ancestor(self, other: Self) -> Self {
         // Align their first bits all the way to the left
         let a = self.0 << self.0.leading_zeros();
         let b = other.0 << other.0.leading_zeros();

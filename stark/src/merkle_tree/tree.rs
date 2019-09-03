@@ -42,7 +42,7 @@ impl<Container: VectorCommitment> Tree<Container> {
             }
         }
 
-        Ok(Tree {
+        Ok(Self {
             commitment: Commitment::from_depth_hash(depth, &nodes[0])?,
             nodes,
             leaves,
@@ -63,7 +63,7 @@ impl<Container: VectorCommitment> Tree<Container> {
 
     pub fn open(&self, indices: &[usize]) -> Result<Proof> {
         let indices = self.commitment().sort_indices(indices)?;
-        let proof_indices: Vec<usize> = indices.iter().map(Index::offset).collect();
+        let proof_indices: Vec<usize> = indices.iter().map(|i| i.offset()).collect();
         let mut indices: VecDeque<Index> = indices.into_iter().collect();
         let mut hashes: Vec<Hash> = Vec::new();
 
@@ -101,6 +101,8 @@ impl<Container: VectorCommitment> IndexOp<Index> for Tree<Container> {
     }
 }
 
+// Quickcheck requires pass by value
+#[allow(clippy::needless_pass_by_value)]
 #[cfg(test)]
 mod tests {
     use super::*;
