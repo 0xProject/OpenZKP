@@ -18,7 +18,7 @@ impl Proof {
         hashes: &[Hash],
     ) -> Result<Self> {
         // Validate indices using `sort_indices`
-        let _ = commitment.sort_indices(indices)?;
+        let indies = commitment.sort_indices(indices)?;
         if hashes.len() != commitment.proof_size(indices)? {
             return Err(Error::NotEnoughHashes);
         }
@@ -41,6 +41,7 @@ impl Proof {
             .iter()
             .map(|(index, leaf)| {
                 (
+                    // TODO: Error
                     Index::from_depth_offset(self.commitment.depth(), *index)
                         .expect("Index out of range."),
                     leaf.hash(),

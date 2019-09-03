@@ -1,6 +1,9 @@
 use super::{Error, Result};
 use std::convert::TryFrom;
 
+#[cfg(feature = "std")]
+use std::fmt;
+
 /// Index into a balanced binary tree
 ///
 /// The index has two representations, as a (depth, offset) pair and as an
@@ -26,7 +29,7 @@ use std::convert::TryFrom;
 // to the nice binary representation `1 << depth | offset`. Equivalently, it is
 // the path to the node, stating with `1` at the root and then `0` for left and
 // `1` for right.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Index(usize);
 
 enum Kind {
@@ -146,6 +149,13 @@ impl Index {
         let prefix_length = (a ^ b).leading_zeros();
         let prefix = a >> (0_usize.count_zeros() - prefix_length);
         Self(prefix)
+    }
+}
+
+#[cfg(feature = "std")]
+impl fmt::Debug for Index {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Index({:}, {:})", self.depth(), self.offset())
     }
 }
 

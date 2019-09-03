@@ -166,19 +166,17 @@ mod tests {
         let leaves: Vec<_> = (0..num_leaves)
             .map(|i| (&seed + U256::from(i)).pow(3).unwrap())
             .collect();
-        println!("Depth: {:?}", depth);
 
         // Build the tree
         let tree = Tree::from_leaves(&leaves).unwrap();
         let root = tree.commitment();
 
         // Open indices
-        let proof = tree.open(&indices);
-        // assert_eq!(root.proof_size(&indices).unwrap(), proof.hashes().len());
+        let proof = tree.open(&indices).unwrap();
+        assert_eq!(root.proof_size(&indices).unwrap(), proof.hashes().len());
 
         // Verify proof
-        // let select_leaves: Vec<_> = indices.iter().map(|&i| (i,
-        // &leaves[i])).collect(); proof.verify(&select_leaves).
-        // unwrap();
+        let select_leaves: Vec<_> = indices.iter().map(|&i| (i, &leaves[i])).collect();
+        proof.verify(&select_leaves).unwrap();
     }
 }

@@ -50,14 +50,11 @@ impl Commitment {
         // Start with the full path length for the first index
         // then add the path length of each next index up to the last common
         // ancestor with the previous index.
-        // One is subtracted from each path because we omit the leaf hash.
-        Ok(self.depth - 2 // TODO: Explain
-            + indices
-                .iter()
-                .tuple_windows()
-                .map(|(&current, &next)| {
-                    self.depth - current.last_common_ancestor(next).depth() - 1
-                })
-                .sum::<usize>())
+        let mut size = self.depth() * indices.len();
+        for (&current, &next) in indices.iter().tuple_windows() {
+            let ancestor = current.last_common_ancestor(next);
+            size -= ancestor.depth() + 2;
+        }
+        Ok(size)
     }
 }
