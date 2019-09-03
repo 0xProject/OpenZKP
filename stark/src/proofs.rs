@@ -779,11 +779,11 @@ mod tests {
             u256h!("03dbc6c47df0606997c2cefb20c4277caf2b76bca1d31c13432f71cdd93b3718")
         );
 
-        let tree = LDEn.merkleize();
+        let tree = merkle_tree::Tree::from_leaves(LDEn).unwrap();
         // Checks that the merklelizable implementation is working [implicit check of
         // most previous steps]
         assert_eq!(
-            tree[1].as_bytes(),
+            tree.commitment().hash().as_bytes(),
             hex!("018dc61f748b1a6c440827876f30f63cb6c4c188000000000000000000000000")
         );
 
@@ -797,7 +797,7 @@ mod tests {
             proof.coin.digest,
             hex!("c891a11ddbc6c425fad523a7a4aeafa505d7aa1638cfffbd5b747100bc69e367")
         );
-        proof.write(&tree[1]);
+        proof.write(tree.commitment());
         // Checks that the channel allows writing of [u8; 32] properly
         assert_eq!(
             proof.coin.digest,
@@ -825,14 +825,14 @@ mod tests {
             field_element!("05b841208b357e29ac1fe7a654efebe1ae152104571e695f311a353d4d5cabfb")
         );
 
-        let c_tree = CC.as_slice().merkleize();
+        let c_tree = merkle_tree::Tree::from_leaves(CC).unwrap();
         // Checks both that the merkle tree is working for this groupable type and that
         // the constraints are properly calculated on the domain
         assert_eq!(
-            hex::encode(c_tree[1].as_bytes()),
+            hex::encode(c_tree.commitment().hash().as_bytes()),
             "e276ce1357d4030a4c84cdfdb4dd77845d3f80e9000000000000000000000000"
         );
-        proof.write(&c_tree[1]);
+        proof.write(c_tree.commitment());
 
         let (oods_point, oods_coefficients) =
             get_out_of_domain_information(&mut proof, &TPn, &constraint_polynomials);
@@ -893,24 +893,24 @@ mod tests {
         // Checks that the get query_indices is working
         assert_eq!(query_indices[19], 16377);
 
-        decommit_with_queries_and_proof(
-            query_indices.as_slice(),
-            &LDEn.as_slice(),
-            tree.as_slice(),
-            &mut proof,
-        );
+        // Decommit trace table
+        for &index in &query_indices {
+            proof.write(tree.leaf(index))
+        }
+        proof.write(&tree.open(&query_indices).unwrap());
+
         // Checks that our first decommitment is successful
         assert_eq!(
             hex::encode(proof.coin.digest),
             "c0bf8d8ba4d15bd0e73892e3d6e90bd4f477f9135a7be39ba7e9471e6ac68a44"
         );
 
-        decommit_with_queries_and_proof(
-            query_indices.as_slice(),
-            &CC.as_slice(),
-            c_tree.as_slice(),
-            &mut proof,
-        );
+        // Decommit constraints poly
+        for &index in &query_indices {
+            proof.write(c_tree.leaf(index))
+        }
+        proof.write(&c_tree.open(&query_indices).unwrap());
+
         // Checks that our second decommitment is successful
         assert_eq!(
             hex::encode(proof.coin.digest),
