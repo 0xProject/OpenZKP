@@ -146,9 +146,10 @@ pub fn divrem_nbym(numerator: &mut [u64], divisor: &mut [u64]) {
                 numerator[j + i] = a;
                 carry = b;
             }
-            // This should alwayst be zero, so we don't compute:
-            // IGNORED: numerator[j + n] = numerator[j + n].wrapping_add(carry);
-            // debug_assert_eq!(numerator[j + n], 0);
+            // We would do
+            // numerator[j + n] = numerator[j + n].wrapping_add(carry);
+            // but this is always zero
+            debug_assert_eq!(numerator[j + n].wrapping_add(carry), 0);
             qhat -= 1;
         }
 
@@ -159,7 +160,7 @@ pub fn divrem_nbym(numerator: &mut [u64], divisor: &mut [u64]) {
     // D8. Unnormalize.
     if shift > 0 {
         // Make sure to only normalize the remainder part, the quotient
-        // is alreadt normalized.
+        // is already normalized.
         for i in 0..(n - 1) {
             numerator[i] >>= shift;
             numerator[i] |= numerator[i + 1] << (64 - shift);

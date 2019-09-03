@@ -508,6 +508,7 @@ mod tests {
 
     #[test]
     fn test_issue() {
+        // This triggers div_3by2 to go into an edge case division.
         let a = u256h!("0000000000000054000000000000004f000000000000001f0000000000000028");
         let b = u256h!("0000000000000054000000000000005b000000000000002b000000000000005d");
         let _ = gcd(a, b);
