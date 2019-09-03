@@ -26,6 +26,8 @@ impl<Container: VectorCommitment> Tree<Container> {
 
         // Hash the tree
         // TODO: leaves.iter().enumerate()
+        // OPT: Parallel implementation.
+        // OPT: Layer at a time has better cache locality.
         for i in 0..leaves.len() {
             // At `depth` there should always be an `i `th leaf.
             let mut cursor = Index::from_depth_offset(depth, i).unwrap();
