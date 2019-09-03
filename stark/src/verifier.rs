@@ -60,25 +60,38 @@ where
         oods_coefficients.push(channel.get_random());
     }
 
-    let mut fri_roots: Vec<Hash> = Vec::with_capacity(params.fri_layout.len() + 1);
+    let mut fri_commitments: Vec<Commitment> = Vec::with_capacity(params.fri_layout.len() + 1);
     let mut eval_points: Vec<FieldElement> = Vec::with_capacity(params.fri_layout.len() + 1);
     // Get first fri root:
-    fri_roots.push(Replayable::<Hash>::replay(&mut channel));
+    fri_commitments.push(
+        Commitment::from_depth_hash(
+            depth - params.fri_layout[0],
+            &Replayable::<Hash>::replay(&mut channel),
+        )
+        .unwrap(),
+    );
     // Get fri roots and eval points from the channel random
-    let mut halvings = 0;
-    for &x in params.fri_layout.iter().dropping_back(1) {
+    let mut halvings = params.fri_layout[0];
+    for &x in params.fri_layout.iter().skip(1) {
+        // TODO: When is x equal to zero?
         let eval_point = if x == 0 {
             FieldElement::ONE
         } else {
             channel.get_random()
         };
         eval_points.push(eval_point);
-        fri_roots.push(Replayable::<Hash>::replay(&mut channel));
         halvings += x;
+        fri_commitments.push(
+            Commitment::from_depth_hash(
+                depth - halvings,
+                &Replayable::<Hash>::replay(&mut channel),
+            )
+            .unwrap(),
+        );
     }
     // Gets the last layer and the polynomial coefficients
     eval_points.push(channel.get_random());
-    halvings += params.fri_layout[params.fri_layout.len() - 1];
+    let halvings: usize = params.fri_layout.iter().sum();
     let last_layer_degree_bound = trace_len / (2_usize.pow(halvings as u32));
     let last_layer_coefficient: Vec<FieldElement> =
         Replayable::<FieldElement>::replay_many(&mut channel, last_layer_degree_bound);
@@ -141,7 +154,7 @@ where
     let mut previous_indices = queries.to_vec().clone();
     let mut step = 1;
     let mut len = eval_domain_size;
-    for (k, _) in fri_roots.iter().enumerate() {
+    for (k, commitment) in fri_commitments.iter().enumerate() {
         let mut fri_layer_values = Vec::new();
 
         fri_indices.dedup();
@@ -187,11 +200,9 @@ where
             );
         }
 
-        let merkle_proof_length = decommitment_size(
-            fri_indices.as_slice(),
-            len / 2_usize.pow(params.fri_layout[k] as u32),
-        );
-        let decommitment = Replayable::<Hash>::replay_many(&mut channel, merkle_proof_length);
+        let merkle_proof_length = commitment.proof_size(&fri_indices).unwrap();
+        let merkle_hashes = Replayable::<Hash>::replay_many(&mut channel, merkle_proof_length);
+        let merkle_proof = Proof::from_hashes(commitment, &fri_indices, &merkle_hashes).unwrap();
         fri_folds = layer_folds;
 
         for _ in 0..params.fri_layout[k] {
@@ -199,12 +210,8 @@ where
         }
         len /= 2_usize.pow(params.fri_layout[k] as u32);
 
-        if !verify(
-            &fri_roots[k].clone(),
-            len.trailing_zeros(),
-            fri_layer_values.as_mut_slice(),
-            &decommitment,
-        ) {
+        merkle_proof.verify(&fri_layer_values).unwrap();
+        if merkle_proof.verify(&fri_layer_values).is_err() {
             return false;
         }
 
