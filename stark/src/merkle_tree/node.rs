@@ -1,7 +1,8 @@
 use super::{Hash, Hashable};
 use crate::masked_keccak::MaskedKeccak;
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
+#[cfg_attr(feature = "std", derive(Debug))]
 pub struct Node<'a>(pub &'a Hash, pub &'a Hash);
 
 impl Hashable for Node<'_> {

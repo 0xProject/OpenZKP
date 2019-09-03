@@ -1,4 +1,7 @@
 use super::{Hash, Hashable};
+use std::prelude::v1::*;
+
+#[cfg(feature = "std")]
 use crate::mmap_vec::MmapVec;
 
 // TODO: Rename to VectorCommitment
@@ -9,6 +12,10 @@ where
     type Leaf;
 
     fn len(&self) -> usize;
+
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
 
     fn leaf(&self, index: usize) -> Self::Leaf;
 
@@ -37,6 +44,7 @@ impl<Leaf: Hashable + Clone> VectorCommitment for Vec<Leaf> {
     }
 }
 
+#[cfg(feature = "std")]
 impl<Leaf: Hashable + Clone> VectorCommitment for MmapVec<Leaf> {
     type Leaf = Leaf;
 

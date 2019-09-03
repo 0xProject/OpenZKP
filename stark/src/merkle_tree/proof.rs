@@ -1,10 +1,11 @@
 use super::{Commitment, Error, Hash, Hashable, Index, Node, Result};
 use itertools::Itertools;
-use std::collections::VecDeque;
+use std::{collections::VecDeque, prelude::v1::*};
 
 // Note: we can merge and split proofs. Based on indices we can
 // compute which values are redundant.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
+#[cfg_attr(feature = "std", derive(Debug))]
 pub struct Proof {
     commitment: Commitment,
     indices:    Vec<usize>,

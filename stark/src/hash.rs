@@ -1,4 +1,6 @@
+#[cfg(feature = "std")]
 use hex;
+#[cfg(feature = "std")]
 use std::fmt;
 
 #[derive(Clone, Default, PartialEq, Eq)]
@@ -14,6 +16,7 @@ impl Hash {
     }
 }
 
+#[cfg(feature = "std")]
 impl fmt::Debug for Hash {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Hash(0x{:})", hex::encode(self.0))

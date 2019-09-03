@@ -1,7 +1,9 @@
 use super::{Error, Hash, Index, Result};
 use itertools::Itertools;
+use std::prelude::v1::*;
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
+#[cfg_attr(feature = "std", derive(Debug))]
 pub struct Commitment {
     depth: usize,
     hash:  Hash,

@@ -19,8 +19,10 @@ use crate::{hash::Hash, hashable::Hashable};
 pub use commitment::Commitment;
 pub use proof::Proof;
 pub use result::{Error, Result};
-pub use tree::Tree;
 pub use vector_commitment::VectorCommitment;
+
+#[cfg(feature = "prover")]
+pub use tree::Tree;
 
 use index::Index;
 use node::Node;
