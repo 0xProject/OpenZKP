@@ -270,18 +270,21 @@ impl U256 {
     pub fn divrem(&self, rhs: &Self) -> Option<(Self, Self)> {
         let mut numerator = [self.c0, self.c1, self.c2, self.c3, 0];
         if rhs.c3 > 0 {
+            // divrem_nby4
             divrem_nbym(&mut numerator, &mut [rhs.c0, rhs.c1, rhs.c2, rhs.c3]);
             Some((
                 Self::from_limbs(numerator[4], 0, 0, 0),
                 Self::from_limbs(numerator[0], numerator[1], numerator[2], numerator[3]),
             ))
         } else if rhs.c2 > 0 {
+            // divrem_nby3
             divrem_nbym(&mut numerator, &mut [rhs.c0, rhs.c1, rhs.c2]);
             Some((
                 Self::from_limbs(numerator[3], numerator[4], 0, 0),
                 Self::from_limbs(numerator[0], numerator[1], numerator[2], 0),
             ))
         } else if rhs.c1 > 0 {
+            // divrem_nby2
             divrem_nbym(&mut numerator, &mut [rhs.c0, rhs.c1]);
             Some((
                 Self::from_limbs(numerator[2], numerator[3], numerator[4], 0),

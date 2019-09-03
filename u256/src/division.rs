@@ -1,5 +1,5 @@
 use crate::utils::{adc, msb};
-use core::u64;
+use core::{convert::TryFrom, u64};
 
 const fn val_2(lo: u64, hi: u64) -> u128 {
     ((hi as u128) << 64) | (lo as u128)
@@ -23,8 +23,13 @@ fn divrem_2by1(lo: u64, hi: u64, d: u64) -> (u64, u64) {
     let q = n / d;
     let r = n % d;
     debug_assert!(q < val_2(0, 1));
+    debug_assert!(
+        mul_2(u64::try_from(q).unwrap(), u64::try_from(d).unwrap())
+            + val_2(u64::try_from(r).unwrap(), 0)
+            == val_2(lo, hi)
+    );
     debug_assert!(r < d);
-    // There should not be any truncaction.
+    // There should not be any truncation.
     #[allow(clippy::cast_possible_truncation)]
     (q as u64, r as u64)
 }
@@ -43,27 +48,42 @@ pub fn divrem_nby1(numerator: &mut [u64], divisor: u64) -> u64 {
 //      |  n2 n1 n0  |
 //  q = |  --------  |
 //      |_    d1 d0 _|
-pub fn div_3by2(n: &[u64; 3], d: &[u64; 2]) -> u64 {
+fn div_3by2(n: &[u64; 3], d: &[u64; 2]) -> u64 {
     // The highest bit of d needs to be set
     debug_assert!(d[1] >> 63 == 1);
 
-    // The quotient needs to fit u64. For this we need <n2 n1> < <d1 d0>
-    debug_assert!(n[2] < d[1] || (n[2] == d[1] && n[1] < d[0]));
+    // The quotient needs to fit u64. For this we need [n2 n1] < [d1 d0]
+    debug_assert!(val_2(n[1], n[2]) < val_2(d[0], d[1]));
 
-    // Compute quotient and remainder
-    // TODO: Use GMP's reciprocal computation.
-    let (mut q, mut r) = divrem_2by1(n[1], n[2], d[1]);
-
-    if mul_2(q, d[0]) > val_2(n[0], r) {
-        q -= 1;
-        r = r.wrapping_add(d[1]);
-        let overflow = r < d[1];
-        if !overflow && mul_2(q, d[0]) > val_2(n[0], r) {
-            q -= 1;
-            // UNUSED: r += d[1];
+    if n[2] == d[1] {
+        // From [n2 n1] < [d1 d0] and n2 = d1 it follows that n[1] < d[0].
+        debug_assert!(n[1] < d[0]);
+        // We start by subtracting 2^64 times the divisor, resulting in a
+        // negative remainder. Depending on the result, we need to add back
+        // in one or two times the divisor to make the remainder positive.
+        // (It can not be more since the divisor is > 2^127 and the negated
+        // remainder is < 2^128.)
+        let neg_remainder = val_2(0, d[0]) - val_2(n[0], n[1]);
+        if neg_remainder > val_2(d[0], d[1]) {
+            0xffff_ffff_ffff_fffe_u64
+        } else {
+            0xffff_ffff_ffff_ffff_u64
         }
+    } else {
+        // Compute quotient and remainder
+        let (mut q, mut r) = divrem_2by1(n[1], n[2], d[1]);
+
+        if mul_2(q, d[0]) > val_2(n[0], r) {
+            q -= 1;
+            r = r.wrapping_add(d[1]);
+            let overflow = r < d[1];
+            if !overflow && mul_2(q, d[0]) > val_2(n[0], r) {
+                q -= 1;
+                // UNUSED: r += d[1];
+            }
+        }
+        q
     }
-    q
 }
 
 // Turns numerator into remainder, returns quotient.
@@ -78,6 +98,8 @@ pub fn divrem_nbym(numerator: &mut [u64], divisor: &mut [u64]) {
     debug_assert!(numerator.len() > divisor.len());
     debug_assert!(*divisor.last().unwrap() > 0);
     debug_assert!(*numerator.last().unwrap() == 0);
+    // OPT: Once const generics are in, unroll for lengths.
+    // OPT: We can use macro generated specializations till then.
     let n = divisor.len();
     let m = numerator.len() - n - 1;
 
@@ -124,8 +146,10 @@ pub fn divrem_nbym(numerator: &mut [u64], divisor: &mut [u64]) {
                 numerator[j + i] = a;
                 carry = b;
             }
-            // This should alwayst be zero, so we don't compute:
+            // We would do
             // numerator[j + n] = numerator[j + n].wrapping_add(carry);
+            // but this is always zero
+            debug_assert_eq!(numerator[j + n].wrapping_add(carry), 0);
             qhat -= 1;
         }
 
@@ -136,7 +160,7 @@ pub fn divrem_nbym(numerator: &mut [u64], divisor: &mut [u64]) {
     // D8. Unnormalize.
     if shift > 0 {
         // Make sure to only normalize the remainder part, the quotient
-        // is alreadt normalized.
+        // is already normalized.
         for i in 0..(n - 1) {
             numerator[i] >>= shift;
             numerator[i] |= numerator[i + 1] << (64 - shift);
@@ -153,11 +177,26 @@ mod tests {
     use quickcheck_macros::quickcheck;
 
     const HALF: u64 = 1_u64 << 63;
+    const FULL: u64 = u64::max_value();
 
     #[test]
-    fn div_3by2_max() {
-        let q = div_3by2(&[u64::max_value(), u64::max_value(), HALF - 1], &[0, HALF]);
-        assert_eq!(q, u64::max_value());
+    fn div_3by2_tests() {
+        // Test cases where n[2] == d[1]
+        assert_eq!(div_3by2(&[FULL, FULL - 1, HALF], &[FULL, HALF]), FULL);
+        assert_eq!(div_3by2(&[0, 0, HALF], &[FULL, HALF]), FULL - 1);
+    }
+
+    #[test]
+    fn test_divrem_4by3() {
+        let mut numerator = [40, 31, 79, 84, 0];
+        let mut divisor = [53, 12, 12];
+        let expected_quotient = [u64::max_value(), 6];
+        let expected_remainder = [93, 0xffff_ffff_ffff_feb8, 6];
+        divrem_nbym(&mut numerator, &mut divisor);
+        let remainder = &numerator[0..3];
+        let quotient = &numerator[3..5];
+        assert_eq!(remainder, expected_remainder);
+        assert_eq!(quotient, expected_quotient);
     }
 
     #[allow(clippy::unreadable_literal)]
@@ -216,8 +255,10 @@ mod tests {
 
     #[quickcheck]
     fn div_3by2_correct(q: u64, d0: u64, d1: u64) -> bool {
+        // TODO: Add remainder
         let d1 = d1 | (1 << 63);
         let n = U256::from_limbs(d0, d1, 0, 0) * &U256::from(q);
+        debug_assert!(n.c3 == 0);
         let qhat = div_3by2(&[n.c0, n.c1, n.c2], &[d0, d1]);
         qhat == q
     }
