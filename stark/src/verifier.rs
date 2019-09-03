@@ -3,13 +3,11 @@ use crate::{
     constraint::Constraint,
     geometric_series::geometric_series,
     hash::*,
-    merkle::{decommitment_size, verify},
     merkle_tree::{Commitment, Proof},
     polynomial::DensePolynomial,
     proof_params::ProofParams,
     utils::*,
 };
-use itertools::*;
 use primefield::FieldElement;
 use std::{collections::BTreeMap, convert::TryInto, prelude::v1::*};
 use u256::U256;
@@ -112,7 +110,7 @@ where
     );
 
     // Get values and check decommitment of low degree extension
-    let mut led_values: Vec<(usize, Vec<U256>)> = queries
+    let led_values: Vec<(usize, Vec<U256>)> = queries
         .iter()
         .map(|&index| {
             let held = Replayable::<U256>::replay_many(&mut channel, trace_cols);
@@ -128,7 +126,7 @@ where
     }
 
     // Gets the values and checks the constraint decommitment
-    let mut constraint_values: Vec<(usize, U256)> = queries
+    let constraint_values: Vec<(usize, U256)> = queries
         .iter()
         .map({ |&index| (index, Replayable::<U256>::replay(&mut channel)) })
         .collect();
