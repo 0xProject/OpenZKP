@@ -48,7 +48,6 @@ mod geometric_series;
 mod hash;
 mod hashable;
 mod masked_keccak;
-mod merkle;
 mod merkle_tree;
 mod polynomial;
 mod proof_params;
@@ -86,8 +85,6 @@ mod trace_table;
 
 // Exports for prover
 #[cfg(feature = "prover")]
-pub use merkle::verify;
-#[cfg(feature = "prover")]
 pub use proofs::stark_proof;
 #[cfg(feature = "prover")]
 pub use trace_table::TraceTable;
@@ -95,5 +92,3 @@ pub use trace_table::TraceTable;
 // Exports for benchmarking
 // TODO: Avoid publicly exposing.
 pub use fft::fft_cofactor_bit_reversed;
-#[cfg(feature = "prover")]
-pub use merkle::make_tree;
