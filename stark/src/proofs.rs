@@ -80,7 +80,7 @@ where
     }
 }
 
-// Merkle trees over trace table LDE
+// Merkle trees over trace table LDE and constraint LDE
 impl VectorCommitment for Vec<MmapVec<FieldElement>> {
     // TODO: Copy free implementation. Maybe have index as a leaf type.
     type Leaf = Vec<U256>;
@@ -106,6 +106,39 @@ impl VectorCommitment for Vec<MmapVec<FieldElement>> {
             let mut hasher = MaskedKeccak::new();
             for value in self.iter() {
                 hasher.update(value[index].hash().as_bytes());
+            }
+            hasher.hash()
+        }
+    }
+}
+
+// Merkle tree for FRI layers with coset size
+impl VectorCommitment for (usize, &[FieldElement]) {
+    type Leaf = Vec<U256>;
+
+    fn len(&self) -> usize {
+        self.1.len() / self.0
+    }
+
+    fn leaf(&self, index: usize) -> Self::Leaf {
+        let (coset_size, layer) = *self;
+        let mut internal_leaf = Vec::with_capacity(coset_size);
+        for j in 0..coset_size {
+            internal_leaf.push(layer[(index * coset_size + j)].as_montgomery().clone());
+        }
+        internal_leaf
+    }
+
+    fn leaf_hash(&self, index: usize) -> Hash {
+        let (coset_size, layer) = *self;
+        if coset_size == 1 {
+            // For a single element, return its hash.
+            layer[index].hash()
+        } else {
+            // Concatenate the element hashes and hash the result.
+            let mut hasher = MaskedKeccak::new();
+            for j in 0..coset_size {
+                hasher.update(layer[(index * coset_size + j)].hash().as_bytes());
             }
             hasher.hash()
         }
