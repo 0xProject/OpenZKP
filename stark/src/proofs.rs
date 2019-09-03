@@ -162,8 +162,8 @@ where
     let constraint_lde = calculate_low_degree_extensions(&constraint_polynomials, params.blowup);
     // Construct a merkle tree over the LDE combined constraints
     // and write the root to the channel.
-    let c_tree = constraint_lde.as_slice().merkleize();
-    proof.write(&c_tree[1]);
+    let c_tree = merkle_tree::Tree::from_leaves(&constraint_lde).unwrap();
+    proof.write(c_tree.commitment());
 
     // 3. Out of domain sampling
     //
@@ -208,12 +208,10 @@ where
     proof.write(&tree.open(&query_indices).unwrap());
 
     // Decommit the constraint values
-    decommit_with_queries_and_proof(
-        query_indices.as_slice(),
-        &constraint_lde.as_slice(),
-        c_tree.as_slice(),
-        &mut proof,
-    );
+    for &index in &query_indices {
+        proof.write(constraint_lde.leaf(index));
+    }
+    proof.write(&c_tree.open(&query_indices).unwrap());
 
     // Decommit the FRI layer values
     decommit_fri_layers_and_trees(
