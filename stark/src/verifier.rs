@@ -4,6 +4,7 @@ use crate::{
     geometric_series::geometric_series,
     hash::*,
     merkle::{decommitment_size, verify},
+    merkle_tree::{Commitment, Proof},
     polynomial::DensePolynomial,
     proof_params::ProofParams,
     utils::*,
@@ -36,13 +37,17 @@ where
 
     // Get the low degree root commitment, and constraint root commitment
     // TODO: Make it work as channel.read()
+    let depth = eval_domain_size.trailing_zeros() as usize;
     let low_degree_extension_root = Replayable::<Hash>::replay(&mut channel);
+    let lde_commitment = Commitment::from_depth_hash(depth, &low_degree_extension_root).unwrap();
     let mut constraint_coefficients: Vec<FieldElement> = Vec::with_capacity(2 * constraints.len());
     for _ in constraints {
         constraint_coefficients.push(channel.get_random());
         constraint_coefficients.push(channel.get_random());
     }
     let constraint_evaluated_root = Replayable::<Hash>::replay(&mut channel);
+    let constraint_commitment =
+        Commitment::from_depth_hash(depth, &constraint_evaluated_root).unwrap();
 
     // Get the oods information from the proof and random
     let oods_point: FieldElement = channel.get_random();
@@ -92,7 +97,6 @@ where
         eval_domain_size.trailing_zeros(),
         &mut channel,
     );
-    let merkle_proof_length = decommitment_size(queries.as_slice(), eval_domain_size);
 
     // Get values and check decommitment of low degree extension
     let mut led_values: Vec<(usize, Vec<U256>)> = queries
@@ -102,13 +106,11 @@ where
             (index, held)
         })
         .collect();
-    let lde_decommitment = Replayable::<Hash>::replay_many(&mut channel, merkle_proof_length);
-    if !verify(
-        &low_degree_extension_root,
-        eval_domain_size.trailing_zeros(),
-        led_values.as_mut_slice(),
-        &lde_decommitment,
-    ) {
+    let lde_proof_length = lde_commitment.proof_size(&queries).unwrap();
+    let lde_hashes = Replayable::<Hash>::replay_many(&mut channel, lde_proof_length);
+    let lde_proof = Proof::from_hashes(&lde_commitment, &queries, &lde_hashes).unwrap();
+    if lde_proof.verify(&led_values).is_err() {
+        // TODO: Return Error
         return false;
     }
 
@@ -117,15 +119,13 @@ where
         .iter()
         .map({ |&index| (index, Replayable::<U256>::replay(&mut channel)) })
         .collect();
-    let constraint_decommitment: Vec<Hash> =
-        Replayable::<Hash>::replay_many(&mut channel, merkle_proof_length);
-
-    if !verify(
-        &constraint_evaluated_root,
-        eval_domain_size.trailing_zeros(),
-        constraint_values.as_mut_slice(),
-        &constraint_decommitment,
-    ) {
+    let constraint_proof_length = constraint_commitment.proof_size(&queries).unwrap();
+    let constraint_hashes: Vec<Hash> =
+        Replayable::<Hash>::replay_many(&mut channel, constraint_proof_length);
+    let constraint_proof =
+        Proof::from_hashes(&constraint_commitment, &queries, &constraint_hashes).unwrap();
+    if constraint_proof.verify(&constraint_values).is_err() {
+        // TODO: Return Error
         return false;
     }
 
