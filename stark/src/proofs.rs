@@ -5,7 +5,6 @@ use crate::{
     hash::Hash,
     hashable::Hashable,
     masked_keccak::MaskedKeccak,
-    merkle::Groupable,
     merkle_tree::{self, VectorCommitment},
     mmap_vec::MmapVec,
     polynomial::{DensePolynomial, SparsePolynomial},
@@ -18,47 +17,6 @@ use primefield::FieldElement;
 use rayon::prelude::*;
 use std::{prelude::v1::*, vec};
 use u256::U256;
-
-// This groupable impl allows the fri tree layers to get grouped and use the
-// same merkleize system
-impl Groupable<Vec<U256>> for (usize, &[FieldElement]) {
-    fn get_leaf(&self, index: usize) -> Vec<U256> {
-        let (coset_size, layer) = *self;
-        let mut internal_leaf = Vec::with_capacity(coset_size);
-        for j in 0..coset_size {
-            internal_leaf.push(layer[(index * coset_size + j)].as_montgomery().clone());
-        }
-        internal_leaf
-    }
-
-    fn domain_size(&self) -> usize {
-        self.1.len() / self.0
-    }
-}
-
-impl Groupable<Vec<U256>> for &[MmapVec<FieldElement>] {
-    fn get_leaf(&self, index: usize) -> Vec<U256> {
-        let mut ret = Vec::with_capacity(self.len());
-        for item in self.iter() {
-            ret.push(item[index].as_montgomery().clone())
-        }
-        ret
-    }
-
-    fn domain_size(&self) -> usize {
-        self[0].len()
-    }
-}
-
-impl Groupable<U256> for &[FieldElement] {
-    fn get_leaf(&self, index: usize) -> U256 {
-        self[index].as_montgomery().clone()
-    }
-
-    fn domain_size(&self) -> usize {
-        self.len()
-    }
-}
 
 // Merkle trees over trace table LDE and constraint LDE
 impl VectorCommitment for Vec<MmapVec<FieldElement>> {
@@ -723,11 +681,11 @@ mod tests {
 
         // Checks that the groupable trait is properly grouping for &[Vec<FieldElement>]
         assert_eq!(
-            (LDEn.as_slice().get_leaf(3243))[0].clone(),
+            (LDEn.leaf(3243))[0].clone(),
             u256h!("01ddd9e389a326817ad1d2a5311e1bc2cf7fa734ebdc2961085b5acfa87a58ff")
         );
         assert_eq!(
-            (LDEn.as_slice().get_leaf(3243))[1].clone(),
+            (LDEn.leaf(3243))[1].clone(),
             u256h!("03dbc6c47df0606997c2cefb20c4277caf2b76bca1d31c13432f71cdd93b3718")
         );
 
