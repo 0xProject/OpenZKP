@@ -8,6 +8,7 @@ use crate::{
     merkle_tree::{self, VectorCommitment},
     mmap_vec::MmapVec,
     polynomial::{DensePolynomial, SparsePolynomial},
+    proof_of_work,
     proof_params::ProofParams,
     utils::Reversible,
     TraceTable,
@@ -168,9 +169,11 @@ where
     let fri_trees = perform_fri_layering(&oods_polynomial, &mut proof, &params);
 
     // 5. Proof of work
-    let proof_of_work = proof.pow_find_nonce(params.pow_bits);
-    debug_assert!(&proof.pow_verify(proof_of_work, params.pow_bits));
-    proof.write(proof_of_work);
+    let pow_seed: proof_of_work::ChallengeSeed = proof.get_random();
+    let pow_challenge = pow_seed.with_difficulty(params.pow_bits);
+    let pow_response = pow_challenge.solve();
+    debug_assert!(pow_challenge.verify(pow_response));
+    proof.write(pow_response);
 
     // 6. Query decommitments
     //
@@ -789,11 +792,14 @@ mod tests {
             "3c6cecef72873e7d73933e73279d36ca77c5a0c7497311eba735722549238334"
         );
 
-        let proof_of_work = proof.pow_find_nonce(params.pow_bits);
+        let pow_seed: proof_of_work::ChallengeSeed = proof.get_random();
+        let pow_challenge = pow_seed.with_difficulty(params.pow_bits);
+        let pow_response = pow_challenge.solve();
+        debug_assert!(pow_challenge.verify(pow_response));
         // Checks that the pow function is working [may also fail if the previous steps
         // have perturbed the channel's random]
-        assert_eq!(proof_of_work, 281);
-        proof.write(proof_of_work);
+        assert_eq!(pow_response.nonce(), 281);
+        proof.write(pow_response);
 
         let query_indices = get_indices(
             params.queries,

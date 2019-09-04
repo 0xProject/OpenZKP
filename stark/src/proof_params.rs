@@ -20,7 +20,7 @@ pub struct ProofParams {
     ///
     /// The difficulty of the proof of work step in number of leading zero bits
     /// required.
-    pub pow_bits: u8,
+    pub pow_bits: usize,
 
     /// Number of queries made to the oracles
     pub queries: usize,
