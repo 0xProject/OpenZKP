@@ -135,7 +135,11 @@ pub fn divrem_nbym(numerator: &mut [u64], divisor: &mut [u64]) {
             borrow = b;
         }
         let negative = numerator[j + n] < borrow;
-        // IGNORED: numerator[j + n] = numerator[j + n].wrapping_sub(borrow);
+        // In release mode we don't bother computing numerator[j + n] because
+        // it should always come out zero.
+        if cfg!(debug_assertions) {
+            numerator[j + n] = numerator[j + n].wrapping_sub(borrow);
+        }
 
         // D5. Test remainder for negative result.
         if negative {
@@ -146,14 +150,14 @@ pub fn divrem_nbym(numerator: &mut [u64], divisor: &mut [u64]) {
                 numerator[j + i] = a;
                 carry = b;
             }
-            // We would do
-            // numerator[j + n] = numerator[j + n].wrapping_add(carry);
-            // but this is always zero
-            debug_assert_eq!(numerator[j + n].wrapping_add(carry), 0);
+            if cfg!(debug_assertions) {
+                numerator[j + n] = numerator[j + n].wrapping_add(carry);
+            }
             qhat -= 1;
         }
+        debug_assert_eq!(numerator[j + n], 0);
 
-        // Store remainder in the now vacant bits of numerator
+        // Store remainder in the now zero bits of numerator
         numerator[j + n] = qhat;
     }
 
