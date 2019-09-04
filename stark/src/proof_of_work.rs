@@ -95,20 +95,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_seed_from_channel() {
-        use crate::channel::*;
-        let mut rand_source = ProverChannel::new();
-        rand_source.initialize(hex!("0123456789abcded").to_vec().as_slice());
-
-        let mut ver_rand_source = VerifierChannel::new(rand_source.proof.clone());
-        ver_rand_source.initialize(&hex!("0123456789abcded"));
-
-        let seed: ChallengeSeed = rand_source.get_random();
-        let ver_seed: ChallengeSeed = rand_source.get_random();
-        assert_eq!(seed, ver_seed);
-    }
-
-    #[test]
     fn threaded_proof_of_work_test() {
         let challenge = ChallengeSeed::from_bytes(hex!(
             "0123456789abcded0123456789abcded0123456789abcded0123456789abcded"

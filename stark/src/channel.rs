@@ -107,7 +107,8 @@ impl VerifierChannel {
 
 impl RandomGenerator<proof_of_work::ChallengeSeed> for PublicCoin {
     fn get_random(&mut self) -> proof_of_work::ChallengeSeed {
-        // The POW seed is exceptional in that it does not push counter forward.
+        self.counter += 1;
+        // FIX: Use get_random::<[u8;32]>();
         proof_of_work::ChallengeSeed::from_bytes(self.digest)
     }
 }
@@ -190,6 +191,7 @@ impl Writable<&[u8]> for PublicCoin {
         keccak.update(&self.digest);
         keccak.update(data);
         keccak.finalize(&mut result);
+        // FIX: Hash counter into digest.
         self.digest = result;
         self.counter = 0;
     }
@@ -436,5 +438,17 @@ mod tests {
         let bit_int_vec_test: Vec<U256> = verifier.replay_many(2);
         assert_eq!(bit_int_vec_test, written_big_int_vec);
         assert_eq!(verifier.coin.digest, source.coin.digest);
+    }
+
+    #[test]
+    fn test_challenge_seed_from_channel() {
+        use crate::channel::*;
+        let mut rand_source = ProverChannel::new();
+        rand_source.initialize(&hex!("0123456789abcded"));
+        // Verify that reading challenges does not depend on public coin counter.
+        // FIX: Make it depend on public coin counter.
+        let seed1: proof_of_work::ChallengeSeed = rand_source.get_random();
+        let seed2: proof_of_work::ChallengeSeed = rand_source.get_random();
+        assert_eq!(seed1, seed2);
     }
 }
