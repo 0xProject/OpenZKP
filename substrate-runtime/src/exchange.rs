@@ -3,6 +3,7 @@
 #![allow(clippy::large_enum_variant)]
 
 use crate::wrappers::*;
+use macros_decl::hex;
 use parity_codec::Encode;
 use primefield::FieldElement;
 use rstd::prelude::*;
@@ -97,7 +98,7 @@ decl_module! {
             Ok(())
         }
 
-        pub fn setup_vault(origin, token_id: [u8; 32]) -> Result {
+        pub fn setup_vault(origin, token_id: [u8; 24]) -> Result {
             let sender = ensure_signed(origin)?;
             ensure!(<PublicKeys<T>>::exists(sender.clone()), "Sender not registered");
             let stark_sender = <PublicKeys<T>>::get(sender);
@@ -207,8 +208,31 @@ decl_module! {
             <ExecutedIds<T>>::insert(order.maker_message.trade_id, true);
             Ok(())
         }
+
+        pub fn withdraw(origin, vault_id: u32, amount: u64, sig: Signature) -> Result {
+            let sender = ensure_signed(origin)?;
+            ensure!(<PublicKeys<T>>::exists(sender.clone()), "Sender not registered");
+            let stark_sender = <PublicKeys<T>>::get(sender);
+
+            let mut sender_vault = <Vaults<T>>::get(vault_id);
+            ensure!(sender_vault.owner == stark_sender, "Sender doesn't own the vault");
+            ensure!(sender_vault.balance > amount, "Trying to withdraw too much");
+
+            let nonce = <Nonces<T>>::get(stark_sender.clone());
+            let hash = hash(((U256::from(u64::from(nonce)) << 64) + U256::from(amount)).to_bytes_be(), sender_vault.clone().vault_hash());
+            ensure!(verify(hash, &sig, &stark_sender), "Invalid Signature");
+
+            sender_vault.balance -= amount;
+            <Nonces<T>>::insert(stark_sender, nonce+1);
+            <Vaults<T>>::insert(vault_id, sender_vault);
+            Ok(())
+        }
     }
 }
+
+// Hash of the zero vault ie hash(0, 0)
+pub const ZERO_VAULT: [u8; 32] =
+    hex!("049ee3eba8c1600700ee1b87eb599f16716b0b1022947733551fde4050ca6804");
 
 impl<T: Trait> Module<T> {
     // Note this function is only used for testing and should never be made pub
@@ -223,6 +247,53 @@ impl<T: Trait> Module<T> {
         <Nonces<T>>::insert(who.clone(), nonce);
         <PublicKeys<T>>::insert(substrate_who, who);
         Ok(())
+    }
+
+    fn empty_root(depth: u32) -> [u8; 32] {
+        // 4
+        let mut level = ZERO_VAULT;
+        for _ in 0..depth {
+            level = hash(level, level);
+        }
+        level
+    }
+
+    pub fn hash_balance_tree() -> [u8; 32] {
+        let max_vault = <RecycledID<T>>::get(0);
+        let power_of_two = max_vault.next_power_of_two();
+
+        // Note since we are hashing the bottom row we are going to
+        // TODO - Bad complexity around transitions from power domains of two
+        let mut layer: Vec<[u8; 32]> = (0..power_of_two)
+            .map(|x| {
+                if x > max_vault {
+                    ZERO_VAULT
+                } else {
+                    <Vaults<T>>::get(x).vault_hash()
+                }
+            })
+            .collect();
+
+        let depth = 32 - power_of_two.leading_zeros();
+        for _ in 0..depth {
+            layer = layer
+                .chunks(2)
+                .map(|chunk| hash(chunk[0], chunk[1]))
+                .collect();
+        }
+        debug_assert_eq!(layer.len(), 1);
+        let mut value_subtree = layer[0];
+        let mut other_half = Self::empty_root(depth);
+
+        if depth < 31 {
+            // Our tree is only hashed up to depth 31
+            for _ in 0..(31 - depth) {
+                value_subtree = hash(value_subtree, other_half);
+                other_half = hash(other_half, other_half);
+            }
+        }
+
+        value_subtree
     }
 }
 

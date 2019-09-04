@@ -22,8 +22,8 @@ pub struct MakerMessage {
     pub vault_b:  u32,
     pub amount_a: u64,
     pub amount_b: u64,
-    pub token_a:  [u8; 32],
-    pub token_b:  [u8; 32],
+    pub token_a:  [u8; 24],
+    pub token_b:  [u8; 24],
     pub trade_id: u32,
     pub sig:      Signature,
 }
@@ -40,8 +40,19 @@ pub struct TakerMessage {
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct Vault {
     pub owner:    PublicKey,
-    pub token_id: [u8; 32],
+    pub token_id: [u8; 24],
     pub balance:  u64,
+}
+
+impl Vault {
+    pub fn vault_hash(self) -> [u8; 32] {
+        let mut vec_holder = self.token_id.to_vec();
+        vec_holder.extend_from_slice(&self.balance.to_be_bytes());
+        let mut packed_array = [0_u8; 32];
+        packed_array.copy_from_slice(vec_holder.as_slice());
+
+        hash(self.owner.x, packed_array)
+    }
 }
 
 impl From<PublicKey> for ([u8; 32], [u8; 32]) {
