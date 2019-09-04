@@ -35,9 +35,9 @@ where
 
     // Get the low degree root commitment, and constraint root commitment
     // TODO: Make it work as channel.read()
-    let depth = eval_domain_size.trailing_zeros() as usize;
     let low_degree_extension_root = Replayable::<Hash>::replay(&mut channel);
-    let lde_commitment = Commitment::from_depth_hash(depth, &low_degree_extension_root).unwrap();
+    let lde_commitment =
+        Commitment::from_size_hash(eval_domain_size, &low_degree_extension_root).unwrap();
     let mut constraint_coefficients: Vec<FieldElement> = Vec::with_capacity(2 * constraints.len());
     for _ in constraints {
         constraint_coefficients.push(channel.get_random());
@@ -45,7 +45,7 @@ where
     }
     let constraint_evaluated_root = Replayable::<Hash>::replay(&mut channel);
     let constraint_commitment =
-        Commitment::from_depth_hash(depth, &constraint_evaluated_root).unwrap();
+        Commitment::from_size_hash(eval_domain_size, &constraint_evaluated_root).unwrap();
 
     // Get the oods information from the proof and random
     let oods_point: FieldElement = channel.get_random();
@@ -60,17 +60,14 @@ where
 
     let mut fri_commitments: Vec<Commitment> = Vec::with_capacity(params.fri_layout.len() + 1);
     let mut eval_points: Vec<FieldElement> = Vec::with_capacity(params.fri_layout.len() + 1);
+    let mut fri_size = eval_domain_size >> params.fri_layout[0];
     // Get first fri root:
     fri_commitments.push(
-        Commitment::from_depth_hash(
-            depth - params.fri_layout[0],
-            &Replayable::<Hash>::replay(&mut channel),
-        )
-        .unwrap(),
+        Commitment::from_size_hash(fri_size, &Replayable::<Hash>::replay(&mut channel)).unwrap(),
     );
     // Get fri roots and eval points from the channel random
-    let mut depth_reduction = params.fri_layout[0];
     for &x in params.fri_layout.iter().skip(1) {
+        fri_size >>= x;
         // TODO: When is x equal to zero?
         let eval_point = if x == 0 {
             FieldElement::ONE
@@ -78,21 +75,15 @@ where
             channel.get_random()
         };
         eval_points.push(eval_point);
-        depth_reduction += x;
         fri_commitments.push(
-            Commitment::from_depth_hash(
-                depth - depth_reduction,
-                &Replayable::<Hash>::replay(&mut channel),
-            )
-            .unwrap(),
+            Commitment::from_size_hash(fri_size, &Replayable::<Hash>::replay(&mut channel))
+                .unwrap(),
         );
     }
     // Gets the last layer and the polynomial coefficients
     eval_points.push(channel.get_random());
-    let halvings: usize = params.fri_layout.iter().sum();
-    let last_layer_degree_bound = trace_len / (2_usize.pow(halvings as u32));
     let last_layer_coefficient: Vec<FieldElement> =
-        Replayable::<FieldElement>::replay_many(&mut channel, last_layer_degree_bound);
+        Replayable::<FieldElement>::replay_many(&mut channel, fri_size / params.blowup);
 
     // Gets the proof of work from the proof, without moving the random forward.
     let proof_of_work = u64::from_be_bytes(channel.read_without_replay(8).try_into().unwrap());

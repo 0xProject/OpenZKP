@@ -1,33 +1,29 @@
 use super::{Error, Hash, Index, Result};
+use crate::require;
 use itertools::Itertools;
 use std::prelude::v1::*;
 
 #[derive(Clone)]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct Commitment {
-    depth: usize,
-    hash:  Hash,
+    size: usize,
+    hash: Hash,
 }
 
 impl Commitment {
-    pub fn from_depth_hash(depth: usize, hash: &Hash) -> Result<Self> {
-        if depth >= (0_usize.count_zeros() as usize) {
-            // The number of leaves needs to fit `usize`
-            Err(Error::DepthOutOfRange)
-        } else {
-            Ok(Self {
-                depth,
-                hash: hash.clone(),
-            })
-        }
+    pub fn from_size_hash(size: usize, hash: &Hash) -> Result<Self> {
+        require!(
+            size == 0 || size.is_power_of_two(),
+            Error::NumLeavesNotPowerOfTwo
+        );
+        Ok(Self {
+            size,
+            hash: hash.clone(),
+        })
     }
 
-    pub fn depth(&self) -> usize {
-        self.depth
-    }
-
-    pub fn num_leaves(&self) -> usize {
-        1_usize << self.depth
+    pub fn size(&self) -> usize {
+        self.size
     }
 
     pub fn hash(&self) -> &Hash {
@@ -38,7 +34,7 @@ impl Commitment {
     pub fn sort_indices(&self, indices: &[usize]) -> Result<Vec<Index>> {
         let mut indices = indices
             .iter()
-            .map(|&i| Index::from_depth_offset(self.depth, i))
+            .map(|&i| Index::from_size_offset(self.size, i))
             .collect::<Result<Vec<_>>>()?;
         indices.sort_unstable();
         indices.dedup();
@@ -52,7 +48,8 @@ impl Commitment {
         // Start with the full path length for the first index
         // then add the path length of each next index up to the last common
         // ancestor with the previous index.
-        let mut size = self.depth() * indices.len();
+        let depth = self.size.trailing_zeros() as usize;
+        let mut size = depth * indices.len();
         for (&current, &next) in indices.iter().tuple_windows() {
             let ancestor = current.last_common_ancestor(next);
             size -= ancestor.depth() + 2;

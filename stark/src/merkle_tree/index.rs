@@ -1,4 +1,5 @@
 use super::{Error, Result};
+use crate::require;
 use std::convert::TryFrom;
 
 #[cfg(feature = "std")]
@@ -33,9 +34,9 @@ use std::fmt;
 pub struct Index(usize);
 
 impl Index {
-    pub const fn max_depth() -> usize {
+    pub const fn max_size() -> usize {
         // Bit counts can always be represented as `usize`.
-        0_usize.count_zeros() as usize - 1
+        1_usize << (0_usize.count_zeros() as usize - 1)
     }
 
     pub const fn nodes_at_depth(depth: usize) -> usize {
@@ -51,12 +52,11 @@ impl Index {
     }
 
     // At level `depth` there are 2^depth nodes at offsets [0..2^depth-1]
-    pub fn from_depth_offset(depth: usize, offset: usize) -> Result<Self> {
-        if depth > Self::max_depth() || offset >= (1_usize << depth) {
-            Err(Error::IndexOutOfRange)
-        } else {
-            Ok(Self((1_usize << depth) | offset))
-        }
+    pub fn from_size_offset(size: usize, offset: usize) -> Result<Self> {
+        require!(size.is_power_of_two(), Error::NumLeavesNotPowerOfTwo);
+        require!(size <= Self::max_size(), Error::TreeToLarge);
+        require!(offset < size, Error::IndexOutOfRange);
+        Ok(Self(size | offset))
     }
 
     pub fn as_index(self) -> usize {
@@ -170,9 +170,9 @@ mod test {
 
     #[quickcheck]
     pub fn test_depth_offset_roundtrip(depth: usize, offset: usize) -> bool {
-        let depth = depth % Index::max_depth();
+        let depth = depth % (Index::max_size().trailing_zeros() as usize);
         let offset = offset % Index::nodes_at_depth(depth);
-        let index = Index::from_depth_offset(depth, offset).unwrap();
+        let index = Index::from_size_offset(1_usize << depth, offset).unwrap();
         index.depth() == depth && index.offset() == offset
     }
 

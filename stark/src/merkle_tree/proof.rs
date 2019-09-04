@@ -1,4 +1,5 @@
 use super::{Commitment, Error, Hash, Hashable, Index, Node, Result};
+use crate::require;
 use itertools::Itertools;
 use std::{collections::VecDeque, prelude::v1::*};
 
@@ -20,9 +21,10 @@ impl Proof {
     ) -> Result<Self> {
         // Validate indices using `sort_indices`
         let _ = commitment.sort_indices(indices)?;
-        if hashes.len() != commitment.proof_size(indices)? {
-            return Err(Error::NotEnoughHashes);
-        }
+        require!(
+            hashes.len() == commitment.proof_size(indices)?,
+            Error::NotEnoughHashes
+        );
         Ok(Self {
             commitment: commitment.clone(),
             indices:    indices.to_vec(),
@@ -39,26 +41,22 @@ impl Proof {
         // TODO: Check if the indices line up.
 
         // Construct the leaf nodes
-        let mut nodes: Vec<_> = leafs
+        let mut nodes = leafs
             .iter()
             .map(|(index, leaf)| {
-                (
-                    // TODO: Error
-                    Index::from_depth_offset(self.commitment.depth(), *index)
-                        .expect("Index out of range."),
-                    leaf.hash(),
-                )
+                (Index::from_size_offset(self.commitment.size(), *index)
+                    .map(|index| (index, leaf.hash())))
             })
-            .collect();
+            .collect::<Result<Vec<_>>>()?;
         nodes.sort_unstable_by_key(|(index, _)| *index);
         // OPT: `tuple_windows` copies the hashes
-        if nodes
-            .iter()
-            .tuple_windows()
-            .any(|(a, b)| a.0 == b.0 && a.1 != b.1)
-        {
-            return Err(Error::DuplicateLeafMismatch);
-        }
+        require!(
+            nodes
+                .iter()
+                .tuple_windows()
+                .all(|(a, b)| a.0 != b.0 || a.1 == b.1),
+            Error::DuplicateLeafMismatch
+        );
         nodes.dedup_by_key(|(index, _)| *index);
         let mut nodes: VecDeque<(Index, Hash)> = nodes.into_iter().collect();
 
@@ -95,9 +93,7 @@ impl Proof {
                 nodes.push_back((parent, node))
             } else {
                 // Root node has no parent, we are done
-                if hash != *self.commitment.hash() {
-                    return Err(Error::RootHashMismatch);
-                }
+                require!(hash == *self.commitment.hash(), Error::RootHashMismatch);
             }
         }
         Ok(())

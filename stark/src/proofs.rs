@@ -26,7 +26,7 @@ impl VectorCommitment for Vec<MmapVec<FieldElement>> {
     type Leaf = Vec<U256>;
 
     fn len(&self) -> usize {
-        self.first().unwrap().len()
+        self.first().map_or(0, MmapVec::len)
     }
 
     fn leaf(&self, index: usize) -> Self::Leaf {

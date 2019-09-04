@@ -4,7 +4,6 @@ use std::prelude::v1::*;
 #[cfg(feature = "std")]
 use crate::mmap_vec::MmapVec;
 
-// TODO: Rename to VectorCommitment
 pub trait VectorCommitment
 where
     Self::Leaf: Hashable,

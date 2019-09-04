@@ -1,4 +1,5 @@
 use super::{Commitment, Error, Hash, Hashable, Index, Node, Proof, Result, VectorCommitment};
+use crate::require;
 use std::{collections::VecDeque, ops::Index as IndexOp};
 
 /// Merkle tree
@@ -8,6 +9,7 @@ use std::{collections::VecDeque, ops::Index as IndexOp};
 /// leaves. If shared ownership is required the `Container` can be an `Rc<_>`.
 // OPT: Do not store leaf hashes but re-create.
 // OPT: Allow up to `n` lower layers to be skipped.
+// TODO: Make hash depend on type.
 #[derive(Clone, Debug)]
 pub struct Tree<Container: VectorCommitment> {
     commitment: Commitment,
@@ -17,20 +19,28 @@ pub struct Tree<Container: VectorCommitment> {
 
 impl<Container: VectorCommitment> Tree<Container> {
     pub fn from_leaves(leaves: Container) -> Result<Self> {
-        let num_leaves = leaves.len();
-        if !num_leaves.is_power_of_two() {
-            return Err(Error::NumLeavesNotPowerOfTwo);
+        let size = leaves.len();
+        if size == 0 {
+            return Ok(Self {
+                // TODO: Ideally give the empty tree a unique flag value.
+                // Size zero commitment always exists
+                commitment: Commitment::from_size_hash(size, &Hash::default()).unwrap(),
+                nodes: vec![],
+                leaves,
+            });
         }
-        let depth = num_leaves.trailing_zeros() as usize;
-        let mut nodes = vec![Hash::default(); 2 * num_leaves - 1];
+        // TODO: Support non power of two sizes
+        require!(size.is_power_of_two(), Error::NumLeavesNotPowerOfTwo);
+        require!(size <= Index::max_size(), Error::TreeToLarge);
+        let mut nodes = vec![Hash::default(); 2 * size - 1];
 
         // Hash the tree
         // TODO: leaves.iter().enumerate()
         // OPT: Parallel implementation.
         // OPT: Layer at a time has better cache locality.
-        for i in 0..leaves.len() {
-            // At `depth` there should always be an `i `th leaf.
-            let mut cursor = Index::from_depth_offset(depth, i).unwrap();
+        for i in 0..size {
+            // `i` should always be less than `size`.
+            let mut cursor = Index::from_size_offset(size, i).unwrap();
             nodes[cursor.as_index()] = leaves.leaf_hash(i);
             while cursor.is_right() {
                 cursor = cursor.parent().unwrap();
@@ -43,7 +53,7 @@ impl<Container: VectorCommitment> Tree<Container> {
         }
 
         Ok(Self {
-            commitment: Commitment::from_depth_hash(depth, &nodes[0])?,
+            commitment: Commitment::from_size_hash(size, &nodes[0])?,
             nodes,
             leaves,
         })
@@ -151,7 +161,7 @@ mod tests {
             "ed112f44bc944f33e2567f86eea202350913b11c000000000000000000000000"
         ));
         let non_proof = Proof::from_hashes(
-            &Commitment::from_depth_hash(root.depth(), &non_root).unwrap(),
+            &Commitment::from_size_hash(root.size(), &non_root).unwrap(),
             &indices,
             &proof.hashes(),
         )
@@ -160,6 +170,23 @@ mod tests {
             non_proof.verify(&select_leaves),
             Err(Error::RootHashMismatch)
         );
+    }
+
+    #[test]
+    fn test_empty_tree() {
+        let indices: Vec<usize> = vec![];
+        let leaves: Vec<U256> = vec![];
+
+        let tree = Tree::from_leaves(leaves).unwrap();
+        let root = tree.commitment();
+
+        // Open indices
+        let proof = tree.open(&indices).unwrap();
+        assert_eq!(root.proof_size(&indices).unwrap(), proof.hashes().len());
+
+        // Verify proof
+        let select_leaves: Vec<(usize, U256)> = vec![];
+        proof.verify(&select_leaves).unwrap();
     }
 
     #[quickcheck]
