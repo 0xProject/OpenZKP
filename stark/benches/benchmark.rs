@@ -10,7 +10,7 @@ use rayon::ThreadPoolBuilder;
 use stark::{
     check_proof, fft_cofactor_bit_reversed,
     fibonacci::{get_fibonacci_constraints, get_trace_table, PrivateInput, PublicInput},
-    make_tree, stark_proof, ProofParams,
+    merkle_tree, stark_proof, ProofParams,
 };
 use std::{convert::TryInto, marker::Send};
 use u256::U256;
@@ -65,7 +65,7 @@ where
 fn merkle_tree_size(crit: &mut Criterion) {
     log_size_bench(crit, "Merkle tree size", &SIZES, move |bench, size| {
         let leaves: Vec<_> = (0..size).map(U256::from).collect();
-        bench.iter(|| black_box(make_tree(black_box(&leaves))))
+        bench.iter(|| black_box(merkle_tree::Tree::from_leaves(black_box(leaves.clone()))))
     });
 }
 
@@ -73,7 +73,7 @@ fn merkle_tree_threads(crit: &mut Criterion) {
     let size: usize = *SIZES.last().unwrap();
     log_thread_bench(crit, "Merkle tree threads", size, move |bench| {
         let leaves: Vec<_> = (0..size).map(U256::from).collect();
-        bench.iter(|| black_box(make_tree(black_box(&leaves))))
+        bench.iter(|| black_box(merkle_tree::Tree::from_leaves(black_box(leaves.clone()))))
     });
 }
 
