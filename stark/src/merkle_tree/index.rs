@@ -177,7 +177,7 @@ mod test {
     }
 
     #[quickcheck]
-    pub fn test_children(parent: Index) -> bool {
+    pub fn test_children(parent: Index) {
         let left = parent.left_child();
         let right = parent.right_child();
         assert!(left.is_left());
@@ -191,6 +191,5 @@ mod test {
         assert_eq!(right.left_neighbor().unwrap(), left);
         assert_eq!(left.sibling().unwrap(), right);
         assert_eq!(right.sibling().unwrap(), left);
-        true
     }
 }

@@ -101,7 +101,7 @@ where
     );
 
     // Get values and check decommitment of low degree extension
-    let led_values: Vec<(usize, Vec<U256>)> = queries
+    let lde_values: Vec<(usize, Vec<U256>)> = queries
         .iter()
         .map(|&index| {
             let held = Replayable::<U256>::replay_many(&mut channel, trace_cols);
@@ -111,7 +111,7 @@ where
     let lde_proof_length = lde_commitment.proof_size(&queries).unwrap();
     let lde_hashes = Replayable::<Hash>::replay_many(&mut channel, lde_proof_length);
     let lde_proof = Proof::from_hashes(&lde_commitment, &queries, &lde_hashes).unwrap();
-    if lde_proof.verify(&led_values).is_err() {
+    if lde_proof.verify(&lde_values).is_err() {
         // TODO: Return Error
         return false;
     }
@@ -157,7 +157,7 @@ where
                     } else {
                         let z_reverse = queries[z].bit_reverse_at(eval_domain_size);
                         coset.push(out_of_domain_element(
-                            led_values[z].1.as_slice(),
+                            lde_values[z].1.as_slice(),
                             &constraint_values[z].1,
                             &eval_x[z_reverse],
                             &oods_point,

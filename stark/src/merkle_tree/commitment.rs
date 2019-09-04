@@ -30,7 +30,8 @@ impl Commitment {
         &self.hash
     }
 
-    /// Convert leaf indices to a sorted list of unique `Index`s.
+    /// Convert leaf indices to a sorted list of unique `Index`s and validates
+    /// their range.
     pub fn sort_indices(&self, indices: &[usize]) -> Result<Vec<Index>> {
         let mut indices = indices
             .iter()

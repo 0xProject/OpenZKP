@@ -121,8 +121,6 @@ where
 
     // Construct a merkle tree over the LDE trace
     // and write the root to the channel.
-    // let tree = trace_lde.as_slice().merkleize();
-    // proof.write(&tree[1]);
     let tree = merkle_tree::Tree::from_leaves(trace_lde).unwrap();
     proof.write(tree.commitment());
 
@@ -198,7 +196,7 @@ where
     proof.write(&c_tree.open(&query_indices).unwrap());
 
     // Decommit the FRI layer values
-    decommit_fri_layers_and_trees(&fri_trees.as_slice(), query_indices.as_slice(), &mut proof);
+    decommit_fri_layers_and_trees(fri_trees.as_slice(), query_indices.as_slice(), &mut proof);
 
     // Q.E.D.
     proof
