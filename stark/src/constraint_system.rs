@@ -1,6 +1,10 @@
-use crate::{Constraints, TraceTable};
+use crate::{Constraints, ProverChannel, TraceTable};
 
-pub trait ConstraintSystem {
+pub trait ConstraintSystem
+where
+    ProverChannel: Writable<&Public>,
+    VerifierChannel: Replayable<Public>,
+{
     type Public;
     type Private;
 
