@@ -1,3 +1,12 @@
+#[macro_export]
+macro_rules! require {
+    ($condition:expr, $err:expr) => {
+        if !$condition {
+            return Err($err);
+        }
+    };
+}
+
 pub trait Reversible {
     fn bit_reverse(self) -> Self;
     fn bit_reverse_at(self, len: usize) -> Self;
