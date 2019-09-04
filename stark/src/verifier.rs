@@ -4,12 +4,11 @@ use crate::{
     fft::ifft,
     geometric_series::geometric_series,
     hash::*,
-    merkle::{decommitment_size, verify},
+    merkle_tree::{Commitment, Proof},
     polynomial::DensePolynomial,
     proof_params::ProofParams,
     utils::*,
 };
-use itertools::*;
 use primefield::FieldElement;
 use std::{collections::BTreeMap, convert::TryInto, prelude::v1::*};
 use u256::U256;
@@ -38,12 +37,16 @@ where
     // Get the low degree root commitment, and constraint root commitment
     // TODO: Make it work as channel.read()
     let low_degree_extension_root = Replayable::<Hash>::replay(&mut channel);
+    let lde_commitment =
+        Commitment::from_size_hash(eval_domain_size, &low_degree_extension_root).unwrap();
     let mut constraint_coefficients: Vec<FieldElement> = Vec::with_capacity(2 * constraints.len());
     for _ in constraints {
         constraint_coefficients.push(channel.get_random());
         constraint_coefficients.push(channel.get_random());
     }
     let constraint_evaluated_root = Replayable::<Hash>::replay(&mut channel);
+    let constraint_commitment =
+        Commitment::from_size_hash(eval_domain_size, &constraint_evaluated_root).unwrap();
 
     // Get the oods information from the proof and random
     let oods_point: FieldElement = channel.get_random();
@@ -56,28 +59,32 @@ where
         oods_coefficients.push(channel.get_random());
     }
 
-    let mut fri_roots: Vec<Hash> = Vec::with_capacity(params.fri_layout.len() + 1);
+    let mut fri_commitments: Vec<Commitment> = Vec::with_capacity(params.fri_layout.len() + 1);
     let mut eval_points: Vec<FieldElement> = Vec::with_capacity(params.fri_layout.len() + 1);
+    let mut fri_size = eval_domain_size >> params.fri_layout[0];
     // Get first fri root:
-    fri_roots.push(Replayable::<Hash>::replay(&mut channel));
+    fri_commitments.push(
+        Commitment::from_size_hash(fri_size, &Replayable::<Hash>::replay(&mut channel)).unwrap(),
+    );
     // Get fri roots and eval points from the channel random
-    let mut halvings = 0;
-    for &x in params.fri_layout.iter().dropping_back(1) {
+    for &x in params.fri_layout.iter().skip(1) {
+        fri_size >>= x;
+        // TODO: When is x equal to zero?
         let eval_point = if x == 0 {
             FieldElement::ONE
         } else {
             channel.get_random()
         };
         eval_points.push(eval_point);
-        fri_roots.push(Replayable::<Hash>::replay(&mut channel));
-        halvings += x;
+        fri_commitments.push(
+            Commitment::from_size_hash(fri_size, &Replayable::<Hash>::replay(&mut channel))
+                .unwrap(),
+        );
     }
     // Gets the last layer and the polynomial coefficients
     eval_points.push(channel.get_random());
-    halvings += params.fri_layout[params.fri_layout.len() - 1];
-    let last_layer_degree_bound = trace_len / (2_usize.pow(halvings as u32));
     let last_layer_coefficient: Vec<FieldElement> =
-        Replayable::<FieldElement>::replay_many(&mut channel, last_layer_degree_bound);
+        Replayable::<FieldElement>::replay_many(&mut channel, fri_size / params.blowup);
 
     // Gets the proof of work from the proof, without moving the random forward.
     let proof_of_work = u64::from_be_bytes(channel.read_without_replay(8).try_into().unwrap());
@@ -93,40 +100,35 @@ where
         eval_domain_size.trailing_zeros(),
         &mut channel,
     );
-    let merkle_proof_length = decommitment_size(queries.as_slice(), eval_domain_size);
 
     // Get values and check decommitment of low degree extension
-    let mut led_values: Vec<(usize, Vec<U256>)> = queries
+    let lde_values: Vec<(usize, Vec<U256>)> = queries
         .iter()
         .map(|&index| {
             let held = Replayable::<U256>::replay_many(&mut channel, trace_cols);
             (index, held)
         })
         .collect();
-    let lde_decommitment = Replayable::<Hash>::replay_many(&mut channel, merkle_proof_length);
-    if !verify(
-        &low_degree_extension_root,
-        eval_domain_size.trailing_zeros(),
-        led_values.as_mut_slice(),
-        &lde_decommitment,
-    ) {
+    let lde_proof_length = lde_commitment.proof_size(&queries).unwrap();
+    let lde_hashes = Replayable::<Hash>::replay_many(&mut channel, lde_proof_length);
+    let lde_proof = Proof::from_hashes(&lde_commitment, &queries, &lde_hashes).unwrap();
+    if lde_proof.verify(&lde_values).is_err() {
+        // TODO: Return Error
         return false;
     }
 
     // Gets the values and checks the constraint decommitment
-    let mut constraint_values: Vec<(usize, U256)> = queries
+    let constraint_values: Vec<(usize, U256)> = queries
         .iter()
         .map({ |&index| (index, Replayable::<U256>::replay(&mut channel)) })
         .collect();
-    let constraint_decommitment: Vec<Hash> =
-        Replayable::<Hash>::replay_many(&mut channel, merkle_proof_length);
-
-    if !verify(
-        &constraint_evaluated_root,
-        eval_domain_size.trailing_zeros(),
-        constraint_values.as_mut_slice(),
-        &constraint_decommitment,
-    ) {
+    let constraint_proof_length = constraint_commitment.proof_size(&queries).unwrap();
+    let constraint_hashes: Vec<Hash> =
+        Replayable::<Hash>::replay_many(&mut channel, constraint_proof_length);
+    let constraint_proof =
+        Proof::from_hashes(&constraint_commitment, &queries, &constraint_hashes).unwrap();
+    if constraint_proof.verify(&constraint_values).is_err() {
+        // TODO: Return Error
         return false;
     }
 
@@ -142,7 +144,7 @@ where
     let mut previous_indices = queries.to_vec().clone();
     let mut step = 1;
     let mut len = eval_domain_size;
-    for (k, _) in fri_roots.iter().enumerate() {
+    for (k, commitment) in fri_commitments.iter().enumerate() {
         let mut fri_layer_values = Vec::new();
 
         fri_indices.dedup();
@@ -156,7 +158,7 @@ where
                     } else {
                         let z_reverse = queries[z].bit_reverse_at(eval_domain_size);
                         coset.push(out_of_domain_element(
-                            led_values[z].1.as_slice(),
+                            lde_values[z].1.as_slice(),
                             &constraint_values[z].1,
                             &eval_x[z_reverse],
                             &oods_point,
@@ -188,11 +190,9 @@ where
             );
         }
 
-        let merkle_proof_length = decommitment_size(
-            fri_indices.as_slice(),
-            len / 2_usize.pow(params.fri_layout[k] as u32),
-        );
-        let decommitment = Replayable::<Hash>::replay_many(&mut channel, merkle_proof_length);
+        let merkle_proof_length = commitment.proof_size(&fri_indices).unwrap();
+        let merkle_hashes = Replayable::<Hash>::replay_many(&mut channel, merkle_proof_length);
+        let merkle_proof = Proof::from_hashes(commitment, &fri_indices, &merkle_hashes).unwrap();
         fri_folds = layer_folds;
 
         for _ in 0..params.fri_layout[k] {
@@ -200,12 +200,8 @@ where
         }
         len /= 2_usize.pow(params.fri_layout[k] as u32);
 
-        if !verify(
-            &fri_roots[k].clone(),
-            len.trailing_zeros(),
-            fri_layer_values.as_mut_slice(),
-            &decommitment,
-        ) {
+        merkle_proof.verify(&fri_layer_values).unwrap();
+        if merkle_proof.verify(&fri_layer_values).is_err() {
             return false;
         }
 

@@ -31,7 +31,13 @@ impl Hashable for FieldElement {
     }
 }
 
-impl<T: Hashable> Hashable for [T] {
+impl<T: Hashable> Hashable for &T {
+    fn hash(&self) -> Hash {
+        (*self).hash()
+    }
+}
+
+impl<T: Hashable> Hashable for &[T] {
     fn hash(&self) -> Hash {
         if self.len() == 1 {
             // For a single element, return its hash.
@@ -39,7 +45,7 @@ impl<T: Hashable> Hashable for [T] {
         } else {
             // Concatenate the element hashes and hash the result.
             let mut hasher = MaskedKeccak::new();
-            for value in self {
+            for value in self.iter() {
                 hasher.update(value.hash().as_bytes());
             }
             hasher.hash()

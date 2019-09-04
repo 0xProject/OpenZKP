@@ -4,42 +4,32 @@ use crate::{
     fft::{fft_cofactor_bit_reversed, ifft},
     hash::Hash,
     hashable::Hashable,
-    merkle::{self, make_tree, Groupable, Merkleizable},
+    masked_keccak::MaskedKeccak,
+    merkle_tree::{self, VectorCommitment},
     mmap_vec::MmapVec,
     polynomial::{DensePolynomial, SparsePolynomial},
     proof_params::ProofParams,
     utils::Reversible,
     TraceTable,
 };
-use itertools::{izip, Itertools};
+use itertools::Itertools;
 use primefield::FieldElement;
 use rayon::prelude::*;
-use std::{
-    marker::{Send, Sync},
-    prelude::v1::*,
-    vec,
-};
+use std::{prelude::v1::*, vec};
 use u256::U256;
 
-// This groupable impl allows the fri tree layers to get grouped and use the
-// same merkleize system
-impl Groupable<Vec<U256>> for (usize, &[FieldElement]) {
-    fn get_leaf(&self, index: usize) -> Vec<U256> {
-        let (coset_size, layer) = *self;
-        let mut internal_leaf = Vec::with_capacity(coset_size);
-        for j in 0..coset_size {
-            internal_leaf.push(layer[(index * coset_size + j)].as_montgomery().clone());
-        }
-        internal_leaf
+/// Merkle trees over trace table LDE and constraint LDE
+// Clippy false positive
+#[allow(clippy::use_self)]
+impl VectorCommitment for Vec<MmapVec<FieldElement>> {
+    // TODO: Copy free implementation. Maybe have index as a leaf type.
+    type Leaf = Vec<U256>;
+
+    fn len(&self) -> usize {
+        self.first().map_or(0, MmapVec::len)
     }
 
-    fn domain_size(&self) -> usize {
-        self.1.len() / self.0
-    }
-}
-
-impl Groupable<Vec<U256>> for &[MmapVec<FieldElement>] {
-    fn get_leaf(&self, index: usize) -> Vec<U256> {
+    fn leaf(&self, index: usize) -> Self::Leaf {
         let mut ret = Vec::with_capacity(self.len());
         for item in self.iter() {
             ret.push(item[index].as_montgomery().clone())
@@ -47,34 +37,62 @@ impl Groupable<Vec<U256>> for &[MmapVec<FieldElement>] {
         ret
     }
 
-    fn domain_size(&self) -> usize {
-        self[0].len()
+    fn leaf_hash(&self, index: usize) -> Hash {
+        if self.len() == 1 {
+            // For a single element, return its hash.
+            self[0][index].hash()
+        } else {
+            // Concatenate the element hashes and hash the result.
+            let mut hasher = MaskedKeccak::new();
+            for value in self.iter() {
+                hasher.update(value[index].hash().as_bytes());
+            }
+            hasher.hash()
+        }
     }
 }
 
-impl Groupable<U256> for &[FieldElement] {
-    fn get_leaf(&self, index: usize) -> U256 {
-        self[index].as_montgomery().clone()
-    }
-
-    fn domain_size(&self) -> usize {
-        self.len()
-    }
+#[derive(Clone, Debug)]
+struct FriLeaves {
+    coset_size: usize,
+    layer:      Vec<FieldElement>,
 }
 
-impl<NodeHash, LeafType> Merkleizable<NodeHash> for LeafType
-where
-    NodeHash: Hashable + Send + Sync,
-    LeafType: Groupable<NodeHash> + Send + Sync,
-{
-    fn merkleize(self) -> Vec<Hash> {
-        let eval_domain_size = self.domain_size();
-        let mut leaves = Vec::with_capacity(eval_domain_size);
-        (0..eval_domain_size)
-            .into_par_iter()
-            .map(|index| self.get_leaf_hash(index))
-            .collect_into_vec(&mut leaves);
-        make_tree(leaves.as_slice())
+type FriTree = merkle_tree::Tree<FriLeaves>;
+
+// Merkle tree for FRI layers with coset size
+impl VectorCommitment for FriLeaves {
+    type Leaf = Vec<U256>;
+
+    fn len(&self) -> usize {
+        debug_assert_eq!(self.layer.len() % self.coset_size, 0);
+        self.layer.len() / self.coset_size
+    }
+
+    fn leaf(&self, index: usize) -> Self::Leaf {
+        let mut internal_leaf = Vec::with_capacity(self.coset_size);
+        for j in 0..self.coset_size {
+            internal_leaf.push(
+                self.layer[(index * self.coset_size + j)]
+                    .as_montgomery()
+                    .clone(),
+            );
+        }
+        internal_leaf
+    }
+
+    fn leaf_hash(&self, index: usize) -> Hash {
+        if self.coset_size == 1 {
+            // For a single element, return its hash.
+            self.layer[index].hash()
+        } else {
+            // Concatenate the element hashes and hash the result.
+            let mut hasher = MaskedKeccak::new();
+            for j in 0..self.coset_size {
+                hasher.update(self.layer[(index * self.coset_size + j)].hash().as_bytes());
+            }
+            hasher.hash()
+        }
     }
 }
 
@@ -103,8 +121,8 @@ where
 
     // Construct a merkle tree over the LDE trace
     // and write the root to the channel.
-    let tree = trace_lde.as_slice().merkleize();
-    proof.write(&tree[1]);
+    let tree = merkle_tree::Tree::from_leaves(trace_lde).unwrap();
+    proof.write(tree.commitment());
 
     // 2. Constraint commitment
     //
@@ -126,8 +144,8 @@ where
     let constraint_lde = calculate_low_degree_extensions(&constraint_polynomials, params.blowup);
     // Construct a merkle tree over the LDE combined constraints
     // and write the root to the channel.
-    let c_tree = constraint_lde.as_slice().merkleize();
-    proof.write(&c_tree[1]);
+    let c_tree = merkle_tree::Tree::from_leaves(constraint_lde).unwrap();
+    proof.write(c_tree.commitment());
 
     // 3. Out of domain sampling
     //
@@ -146,8 +164,8 @@ where
         &oods_coefficients,
     );
 
-    // 4. FRI layers
-    let (fri_layers, fri_trees) = perform_fri_layering(&oods_polynomial, &mut proof, &params);
+    // 4. FRI layers with trees
+    let fri_trees = perform_fri_layering(&oods_polynomial, &mut proof, &params);
 
     // 5. Proof of work
     let proof_of_work = proof.pow_find_nonce(params.pow_bits);
@@ -166,29 +184,19 @@ where
     );
 
     // Decommit the trace table values.
-    decommit_with_queries_and_proof(
-        query_indices.as_slice(),
-        &trace_lde.as_slice(),
-        tree.as_slice(),
-        &mut proof,
-    );
+    for &index in &query_indices {
+        proof.write(tree.leaf(index));
+    }
+    proof.write(&tree.open(&query_indices).unwrap());
 
     // Decommit the constraint values
-    decommit_with_queries_and_proof(
-        query_indices.as_slice(),
-        &constraint_lde.as_slice(),
-        c_tree.as_slice(),
-        &mut proof,
-    );
+    for &index in &query_indices {
+        proof.write(c_tree.leaf(index));
+    }
+    proof.write(&c_tree.open(&query_indices).unwrap());
 
     // Decommit the FRI layer values
-    decommit_fri_layers_and_trees(
-        fri_layers.as_slice(),
-        &fri_trees.as_slice(),
-        query_indices.as_slice(),
-        &params,
-        &mut proof,
-    );
+    decommit_fri_layers_and_trees(fri_trees.as_slice(), query_indices.as_slice(), &mut proof);
 
     // Q.E.D.
     proof
@@ -394,9 +402,8 @@ fn perform_fri_layering(
     fri_polynomial: &DensePolynomial,
     proof: &mut ProverChannel,
     params: &ProofParams,
-) -> (Vec<Vec<FieldElement>>, Vec<Vec<Hash>>) {
-    let mut fri_trees: Vec<Vec<Hash>> = Vec::with_capacity(params.fri_layout.len());
-    let mut fri_layers: Vec<Vec<FieldElement>> = Vec::with_capacity(params.fri_layout.len());
+) -> Vec<FriTree> {
+    let mut fri_trees: Vec<FriTree> = Vec::with_capacity(params.fri_layout.len());
 
     // TODO: fold fri_polynomial without cloning it first.
     let mut p = fri_polynomial.clone();
@@ -404,10 +411,10 @@ fn perform_fri_layering(
         let layer = evalute_polynomial_on_domain(&p, params.blowup).to_vec();
         // FRI layout values are small.
         #[allow(clippy::cast_possible_truncation)]
-        let tree = (2_usize.pow(n_reductions as u32), layer.as_slice()).merkleize();
-        proof.write(&tree[1]);
+        let coset_size = 2_usize.pow(n_reductions as u32);
+        let tree = FriTree::from_leaves(FriLeaves { coset_size, layer }).unwrap();
+        proof.write(tree.commitment());
         fri_trees.push(tree);
-        fri_layers.push(layer);
 
         let mut coefficient = proof.get_random();
         for _ in 0..n_reductions {
@@ -416,66 +423,36 @@ fn perform_fri_layering(
         }
     }
     proof.write(p.shift(&FieldElement::GENERATOR).coefficients());
-    (fri_layers, fri_trees)
-}
-
-fn decommit_with_queries_and_proof<R: Hashable, T: Groupable<R>>(
-    queries: &[usize],
-    source: &T,
-    tree: &[Hash],
-    proof: &mut ProverChannel,
-) where
-    ProverChannel: Writable<R>,
-{
-    for &index in queries.iter() {
-        proof.write(source.get_leaf(index));
-    }
-    decommit_proof(&merkle::proof(tree, queries, source), proof);
-}
-
-// Note - This function exists because rust gets confused by the intersection of
-// the write types and the others.
-fn decommit_proof(decommitment: &[Hash], proof: &mut ProverChannel) {
-    for x in decommitment {
-        proof.write(x);
-    }
+    fri_trees
 }
 
 fn decommit_fri_layers_and_trees(
-    fri_layers: &[Vec<FieldElement>],
-    fri_trees: &[Vec<Hash>],
+    fri_trees: &[FriTree],
     query_indices: &[usize],
-    params: &ProofParams,
     proof: &mut ProverChannel,
 ) {
     let mut previous_indices: Vec<usize> = query_indices.to_vec();
 
-    for (layer, tree, n_reductions) in izip!(fri_layers, fri_trees, &params.fri_layout) {
-        // FRI layout usizes are small.
-        #[allow(clippy::cast_possible_truncation)]
-        let fri_const = 2_usize.pow(*n_reductions as u32);
+    for tree in fri_trees {
+        let coset_size = tree.leaves().coset_size;
 
         let new_indices: Vec<usize> = previous_indices
             .iter()
-            .map(|x| x / fri_const)
+            .map(|x| x / coset_size)
             .dedup()
             .collect();
 
         for i in &new_indices {
-            for j in 0..fri_const {
-                let n = i * fri_const + j;
+            // TODO: Write entire tree.leaf(i)
+            for j in 0..coset_size {
+                let n = i * coset_size + j;
                 match previous_indices.binary_search(&n) {
                     Ok(_) => (),
-                    _ => proof.write(&layer[n]),
+                    _ => proof.write(&tree.leaves().layer[n]),
                 };
             }
         }
-        let decommitment = merkle::proof(tree, &new_indices, &(fri_const, layer.as_slice()));
-
-        for proof_element in &decommitment {
-            proof.write(proof_element);
-        }
-
+        proof.write(&tree.open(&new_indices).unwrap());
         previous_indices = new_indices;
     }
 }
@@ -704,19 +681,19 @@ mod tests {
 
         // Checks that the groupable trait is properly grouping for &[Vec<FieldElement>]
         assert_eq!(
-            (LDEn.as_slice().get_leaf(3243))[0].clone(),
+            (LDEn.leaf(3243))[0].clone(),
             u256h!("01ddd9e389a326817ad1d2a5311e1bc2cf7fa734ebdc2961085b5acfa87a58ff")
         );
         assert_eq!(
-            (LDEn.as_slice().get_leaf(3243))[1].clone(),
+            (LDEn.leaf(3243))[1].clone(),
             u256h!("03dbc6c47df0606997c2cefb20c4277caf2b76bca1d31c13432f71cdd93b3718")
         );
 
-        let tree = LDEn.merkleize();
+        let tree = merkle_tree::Tree::from_leaves(LDEn).unwrap();
         // Checks that the merklelizable implementation is working [implicit check of
         // most previous steps]
         assert_eq!(
-            tree[1].as_bytes(),
+            tree.commitment().hash().as_bytes(),
             hex!("018dc61f748b1a6c440827876f30f63cb6c4c188000000000000000000000000")
         );
 
@@ -730,7 +707,7 @@ mod tests {
             proof.coin.digest,
             hex!("c891a11ddbc6c425fad523a7a4aeafa505d7aa1638cfffbd5b747100bc69e367")
         );
-        proof.write(&tree[1]);
+        proof.write(tree.commitment());
         // Checks that the channel allows writing of [u8; 32] properly
         assert_eq!(
             proof.coin.digest,
@@ -758,14 +735,14 @@ mod tests {
             field_element!("05b841208b357e29ac1fe7a654efebe1ae152104571e695f311a353d4d5cabfb")
         );
 
-        let c_tree = CC.as_slice().merkleize();
+        let c_tree = merkle_tree::Tree::from_leaves(CC).unwrap();
         // Checks both that the merkle tree is working for this groupable type and that
         // the constraints are properly calculated on the domain
         assert_eq!(
-            hex::encode(c_tree[1].as_bytes()),
+            hex::encode(c_tree.commitment().hash().as_bytes()),
             "e276ce1357d4030a4c84cdfdb4dd77845d3f80e9000000000000000000000000"
         );
-        proof.write(&c_tree[1]);
+        proof.write(c_tree.commitment());
 
         let (oods_point, oods_coefficients) =
             get_out_of_domain_information(&mut proof, &TPn, &constraint_polynomials);
@@ -794,16 +771,16 @@ mod tests {
             field_element!("03c6b730c58b55f44bbf3cb7ea82b2e6a0a8b23558e908b5466dfe42e821ee96")
         );
 
-        let (fri_layers, fri_trees) = perform_fri_layering(&CO, &mut proof, &params);
+        let fri_trees = perform_fri_layering(&CO, &mut proof, &params);
 
         // Checks that the first fri merkle tree root is right
         assert_eq!(
-            hex::encode(fri_trees[0][1].as_bytes()),
+            hex::encode(fri_trees[0].commitment().hash().as_bytes()),
             "620a934880b6c7d893acf17a21cc9c10058a7add000000000000000000000000"
         );
         // Checks that the second fri merkle tree root is right
         assert_eq!(
-            hex::encode(fri_trees[1][1].as_bytes()),
+            hex::encode(fri_trees[1].commitment().hash().as_bytes()),
             "effd58adf9f2dac6bfd338772d0d7750c0c6f8b2000000000000000000000000"
         );
         // Checks that the fri layering function decommited the right values.
@@ -826,37 +803,31 @@ mod tests {
         // Checks that the get query_indices is working
         assert_eq!(query_indices[19], 16377);
 
-        decommit_with_queries_and_proof(
-            query_indices.as_slice(),
-            &LDEn.as_slice(),
-            tree.as_slice(),
-            &mut proof,
-        );
+        // Decommit trace table
+        for &index in &query_indices {
+            proof.write(tree.leaf(index))
+        }
+        proof.write(&tree.open(&query_indices).unwrap());
+
         // Checks that our first decommitment is successful
         assert_eq!(
             hex::encode(proof.coin.digest),
             "c0bf8d8ba4d15bd0e73892e3d6e90bd4f477f9135a7be39ba7e9471e6ac68a44"
         );
 
-        decommit_with_queries_and_proof(
-            query_indices.as_slice(),
-            &CC.as_slice(),
-            c_tree.as_slice(),
-            &mut proof,
-        );
+        // Decommit constraints poly
+        for &index in &query_indices {
+            proof.write(c_tree.leaf(index))
+        }
+        proof.write(&c_tree.open(&query_indices).unwrap());
+
         // Checks that our second decommitment is successful
         assert_eq!(
             hex::encode(proof.coin.digest),
             "f2d3e6593dc23fa32655040ad5023739e15fff1d645bb809467cfccb676d6343"
         );
 
-        decommit_fri_layers_and_trees(
-            fri_layers.as_slice(),
-            fri_trees.as_slice(),
-            query_indices.as_slice(),
-            &params,
-            &mut proof,
-        );
+        decommit_fri_layers_and_trees(fri_trees.as_slice(), query_indices.as_slice(), &mut proof);
         // Checks that our fri decommitment is successful
         assert_eq!(
             hex::encode(proof.coin.digest),
