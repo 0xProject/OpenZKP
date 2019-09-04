@@ -1,14 +1,11 @@
 // TODO: Naming?
 #![allow(clippy::module_name_repetitions)]
 use crate::{hash::Hash, merkle_tree, proof_of_work};
-use macros_decl::{hex, u256h};
+use macros_decl::u256h;
 use primefield::FieldElement;
-use std::{convert::TryFrom, prelude::v1::*};
+use std::prelude::v1::*;
 use tiny_keccak::Keccak;
 use u256::U256;
-
-#[cfg(feature = "std")]
-use rayon::prelude::*;
 
 pub trait RandomGenerator<T> {
     fn get_random(&mut self) -> T;
@@ -111,7 +108,7 @@ impl VerifierChannel {
 impl RandomGenerator<proof_of_work::ChallengeSeed> for PublicCoin {
     fn get_random(&mut self) -> proof_of_work::ChallengeSeed {
         // The POW seed is exceptional in that it does not push counter forward.
-        proof_of_work::ChallengeSeed::from_bytes(self.digest.clone())
+        proof_of_work::ChallengeSeed::from_bytes(self.digest)
     }
 }
 
@@ -315,7 +312,7 @@ impl Replayable<FieldElement> for VerifierChannel {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use macros_decl::u256h;
+    use macros_decl::{hex, u256h};
 
     // Note - This test depends on the specific ordering of the subtests because of
     // the nature of the channel

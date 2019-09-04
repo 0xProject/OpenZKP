@@ -11,7 +11,7 @@ use crate::{
     utils::*,
 };
 use primefield::FieldElement;
-use std::{collections::BTreeMap, convert::TryInto, prelude::v1::*};
+use std::{collections::BTreeMap, prelude::v1::*};
 use u256::U256;
 
 pub fn check_proof<Public>(

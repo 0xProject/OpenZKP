@@ -67,6 +67,8 @@ impl Challenge {
 
     // TODO: Make tests compatible with the proof of work values from this function
     #[cfg(feature = "std")]
+    // TODO: Use threaded solver
+    #[allow(dead_code)]
     pub fn solve_threaded(&self) -> Response {
         // NOTE: Rayon does not support open ended ranges, so we need to use a closed
         // one.
@@ -83,7 +85,7 @@ impl Response {
         Self { nonce }
     }
 
-    pub fn nonce(&self) -> u64 {
+    pub fn nonce(self) -> u64 {
         self.nonce
     }
 }
