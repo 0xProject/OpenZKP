@@ -1,28 +1,27 @@
 #![warn(clippy::all)]
-#![deny(warnings)]
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use ecc::{mul, Affine, Jacobian};
-use hex_literal::*;
+use macros_decl::u256h;
 use primefield::FieldElement;
-use u256::{u256h, U256};
+use u256::U256;
 
 #[cfg(feature = "unsafe_ecdsa")]
 use ecc::{private_to_public, sign, verify};
 
 fn curve_add(crit: &mut Criterion) {
     let a = Affine::Point {
-        x: FieldElement(u256h!(
+        x: FieldElement::from_montgomery(u256h!(
             "04f50f81bf91b7ada9de33eeec4ae787bc39f520fbb5c8fa4620fecfca4d7cf5"
         )),
-        y: FieldElement(u256h!(
+        y: FieldElement::from_montgomery(u256h!(
             "0176a4c00d1ce6b642176e460624b1699da148593f701cac4df2280c2edb163f"
         )),
     };
     let b = Affine::Point {
-        x: FieldElement(u256h!(
+        x: FieldElement::from_montgomery(u256h!(
             "03722d346a64345ec69b4a36c97247fa924bedfbd371d5bdedeb7db3fcf32a78"
         )),
-        y: FieldElement(u256h!(
+        y: FieldElement::from_montgomery(u256h!(
             "07444fb1e7e4751935707758c5b9bb6bc270056bc12a00d1f5b82ba217a20876"
         )),
     };
@@ -35,10 +34,10 @@ fn curve_add(crit: &mut Criterion) {
 
 fn curve_dbl(crit: &mut Criterion) {
     let a = Affine::Point {
-        x: FieldElement(u256h!(
+        x: FieldElement::from_montgomery(u256h!(
             "04f50f81bf91b7ada9de33eeec4ae787bc39f520fbb5c8fa4620fecfca4d7cf5"
         )),
-        y: FieldElement(u256h!(
+        y: FieldElement::from_montgomery(u256h!(
             "0176a4c00d1ce6b642176e460624b1699da148593f701cac4df2280c2edb163f"
         )),
     };
@@ -51,10 +50,10 @@ fn curve_dbl(crit: &mut Criterion) {
 
 fn curve_mul(crit: &mut Criterion) {
     let a = Affine::Point {
-        x: FieldElement(u256h!(
+        x: FieldElement::from_montgomery(u256h!(
             "04f50f81bf91b7ada9de33eeec4ae787bc39f520fbb5c8fa4620fecfca4d7cf5"
         )),
-        y: FieldElement(u256h!(
+        y: FieldElement::from_montgomery(u256h!(
             "0176a4c00d1ce6b642176e460624b1699da148593f701cac4df2280c2edb163f"
         )),
     };
@@ -68,10 +67,10 @@ fn curve_mul(crit: &mut Criterion) {
 
 fn jacobian_to_affine(crit: &mut Criterion) {
     let a = Jacobian::from(Affine::Point {
-        x: FieldElement(u256h!(
+        x: FieldElement::from_montgomery(u256h!(
             "04f50f81bf91b7ada9de33eeec4ae787bc39f520fbb5c8fa4620fecfca4d7cf5"
         )),
-        y: FieldElement(u256h!(
+        y: FieldElement::from_montgomery(u256h!(
             "0176a4c00d1ce6b642176e460624b1699da148593f701cac4df2280c2edb163f"
         )),
     });
@@ -84,18 +83,18 @@ fn jacobian_to_affine(crit: &mut Criterion) {
 
 fn jacobian_add(crit: &mut Criterion) {
     let a = Jacobian::from(Affine::Point {
-        x: FieldElement(u256h!(
+        x: FieldElement::from_montgomery(u256h!(
             "04f50f81bf91b7ada9de33eeec4ae787bc39f520fbb5c8fa4620fecfca4d7cf5"
         )),
-        y: FieldElement(u256h!(
+        y: FieldElement::from_montgomery(u256h!(
             "0176a4c00d1ce6b642176e460624b1699da148593f701cac4df2280c2edb163f"
         )),
     });
     let b = Jacobian::from(Affine::Point {
-        x: FieldElement(u256h!(
+        x: FieldElement::from_montgomery(u256h!(
             "03722d346a64345ec69b4a36c97247fa924bedfbd371d5bdedeb7db3fcf32a78"
         )),
-        y: FieldElement(u256h!(
+        y: FieldElement::from_montgomery(u256h!(
             "07444fb1e7e4751935707758c5b9bb6bc270056bc12a00d1f5b82ba217a20876"
         )),
     });
@@ -108,18 +107,18 @@ fn jacobian_add(crit: &mut Criterion) {
 
 fn jacobian_add_affine(crit: &mut Criterion) {
     let a = Jacobian::from(Affine::Point {
-        x: FieldElement(u256h!(
+        x: FieldElement::from_montgomery(u256h!(
             "04f50f81bf91b7ada9de33eeec4ae787bc39f520fbb5c8fa4620fecfca4d7cf5"
         )),
-        y: FieldElement(u256h!(
+        y: FieldElement::from_montgomery(u256h!(
             "0176a4c00d1ce6b642176e460624b1699da148593f701cac4df2280c2edb163f"
         )),
     });
     let b = Affine::Point {
-        x: FieldElement(u256h!(
+        x: FieldElement::from_montgomery(u256h!(
             "03722d346a64345ec69b4a36c97247fa924bedfbd371d5bdedeb7db3fcf32a78"
         )),
-        y: FieldElement(u256h!(
+        y: FieldElement::from_montgomery(u256h!(
             "07444fb1e7e4751935707758c5b9bb6bc270056bc12a00d1f5b82ba217a20876"
         )),
     };
@@ -132,10 +131,10 @@ fn jacobian_add_affine(crit: &mut Criterion) {
 
 fn jacobian_dbl(crit: &mut Criterion) {
     let a = Jacobian::from(Affine::Point {
-        x: FieldElement(u256h!(
+        x: FieldElement::from_montgomery(u256h!(
             "04f50f81bf91b7ada9de33eeec4ae787bc39f520fbb5c8fa4620fecfca4d7cf5"
         )),
-        y: FieldElement(u256h!(
+        y: FieldElement::from_montgomery(u256h!(
             "0176a4c00d1ce6b642176e460624b1699da148593f701cac4df2280c2edb163f"
         )),
     });
@@ -148,10 +147,10 @@ fn jacobian_dbl(crit: &mut Criterion) {
 
 fn jacobian_mul(crit: &mut Criterion) {
     let a = Jacobian::from(Affine::Point {
-        x: FieldElement(u256h!(
+        x: FieldElement::from_montgomery(u256h!(
             "04f50f81bf91b7ada9de33eeec4ae787bc39f520fbb5c8fa4620fecfca4d7cf5"
         )),
-        y: FieldElement(u256h!(
+        y: FieldElement::from_montgomery(u256h!(
             "0176a4c00d1ce6b642176e460624b1699da148593f701cac4df2280c2edb163f"
         )),
     });
@@ -165,10 +164,10 @@ fn jacobian_mul(crit: &mut Criterion) {
 
 fn jacobian_mul_affine(crit: &mut Criterion) {
     let a = Affine::Point {
-        x: FieldElement(u256h!(
+        x: FieldElement::from_montgomery(u256h!(
             "04f50f81bf91b7ada9de33eeec4ae787bc39f520fbb5c8fa4620fecfca4d7cf5"
         )),
-        y: FieldElement(u256h!(
+        y: FieldElement::from_montgomery(u256h!(
             "0176a4c00d1ce6b642176e460624b1699da148593f701cac4df2280c2edb163f"
         )),
     };
@@ -182,10 +181,10 @@ fn jacobian_mul_affine(crit: &mut Criterion) {
 
 fn wnaf_mul_affine(crit: &mut Criterion) {
     let a = Affine::Point {
-        x: FieldElement(u256h!(
+        x: FieldElement::from_montgomery(u256h!(
             "04f50f81bf91b7ada9de33eeec4ae787bc39f520fbb5c8fa4620fecfca4d7cf5"
         )),
-        y: FieldElement(u256h!(
+        y: FieldElement::from_montgomery(u256h!(
             "0176a4c00d1ce6b642176e460624b1699da148593f701cac4df2280c2edb163f"
         )),
     };

@@ -1,4 +1,5 @@
 [alias]
-tr = "test --release"
-bt = "build --tests"
-bs = "build --tests --features strict"
+t = "test --all-features"
+tr = "test --release --all-features"
+bt = "build --all-features --all-targets"
+lint = "clippy --all-features --all-targets -- -D warnings"

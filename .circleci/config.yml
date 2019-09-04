@@ -1,59 +1,176 @@
-version: 2
+version: 2.1
+
+commands:
+  restore-toolchain-cache:
+    steps:
+      - run:
+          name: Allow CirceCI to write toolchain (workaround)
+          command: |
+            sudo mkdir -p /usr/local/{cargo,rustup}
+            sudo chown -R circleci /usr/local/{cargo,rustup}
+      - restore_cache:
+          name: Restore toolchain cache
+          keys: 
+            - toolchain-v2-{{ arch }}-{{ .Environment.CIRCLE_JOB }}
+            - toolchain-v2-{{ arch }}
+  save-toolchain-cache:
+    steps:
+      - run:
+          name: Generate toolchain cache key
+          command: sha256sum /usr/local/rustup/toolchains/*/bin/* /usr/local/cargo/bin/* > TOOLCHAIN_CACHE_KEY
+      - save_cache:
+          name: Save toolchain cache
+          key: toolchain-v2-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ checksum "TOOLCHAIN_CACHE_KEY" }}
+          paths:
+            - /usr/local/cargo
+            - /usr/local/rustup
+  setup-sccache:
+    steps:
+      - restore_cache:
+          name: Restore sccache cache
+          keys: 
+            - sccache-cache-v1-{{ arch }}-{{ .Environment.CIRCLE_JOB }}
+            - sccache-cache-v1-{{ arch }}
+      - run:
+          name: Setup sccache
+          command: |
+            RUSTC_WRAPPER="" cargo install sccache --no-default-features || echo Already installed
+            sccache --version
+  save-sccache-cache:
+    steps:
+      - run:
+          name: Show sccache statistics
+          command: |
+            sccache --show-stats
+      - save_cache:
+          name: Save sccache cache
+          # We use {{ epoch }} to always upload a fresh cache:
+          # Of course, restore_cache will not find this exact key,
+          # but it will fall back to the closest key (aka the most recent).
+          # See https://discuss.circleci.com/t/add-mechanism-to-update-existing-cache-key/9014/13
+          key: sccache-cache-v1-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ epoch }}
+          paths:
+            - "~/.cache/sccache"
+
 jobs:
   build:
     docker:
       - image: circleci/rust:latest
+    environment:
+      - RUST_BACKTRACE: 1
+      - RUSTFLAGS: -Dwarnings
+      - RUSTC_WRAPPER: sccache
+      - SCCACHE_CACHE_SIZE: 1G
+      - NIGHTLY: nightly-2019-08-15
+        # Exclude substrate-node (also pulls in a lot of deps, and currently fails)
+      - PACKAGES: --all --exclude substrate-node
+      - NO_STD_PACKAGES: macros_decl u256 primefield ecc starkdex stark substrate-runtime
     steps:
       - checkout
-      - restore_cache:
-          key: project-cache
+      - restore-toolchain-cache
+      - setup-sccache
       - run:
-          name: Version information
+          name: Setup toolchain
           command: |
+            rustup toolchain install $NIGHTLY
+            rustup target add wasm32-unknown-unknown --toolchain $NIGHTLY
+            rustup target add thumbv7m-none-eabi --toolchain $NIGHTLY
+            rustup component add rustfmt --toolchain $NIGHTLY
+            rustup component add clippy
+            cargo install --git https://github.com/alexcrichton/wasm-gc || echo Already installed
+            cargo install twiggy || echo Already installed
+            sudo apt-get install clang # For the rocksdb dependency of substrate-node
             rustc --version
             cargo --version
             rustup --version
-      - run:
-          name: Setup build environment
-          command: |
-            sudo apt-get update
-            sudo apt-get install jq
-            rustup component add rustfmt clippy
-            rustup toolchain install nightly-2019-07-31
-            rustup component add rustfmt --toolchain nightly-2019-07-31
+            wasm-gc --help > /dev/null # Run it to make sure it's executable
+            twiggy --version
           no_output_timeout: 1800s
+      - save-toolchain-cache
       - run:
-          name: Clean build
+          name: Build all targets on stable
+          command: cargo build $PACKAGES --all-targets --all-features
+      - run:
+          # NOTE: The nightly build target is here for rustfmt-nightly
+          name: Build all targets on nightly
+          command: cargo +$NIGHTLY build $PACKAGES --all-targets --all-features
+      - run:
+          name: Build benchmarks
           command: |
-            # Clean workspace projects  but not dependencies.
-            WORKSPACE=$(cargo metadata --format-version 1 | jq --raw-output '.workspace_members[] | match("^(\\w.+)\\ \\d";"g") | .captures[0].string')
-            echo "Workspace projects: " $WORKSPACE
-            for MEMBER in $WORKSPACE; do cargo clean -p $MEMBER; done
+            # HACK: We can not specify --features=bench in a workspace environment, instead
+            # we enable all features (which makes sense from a test coverage perspective).
+            cargo bench --features bench --bench benchmark $PACKAGES --all-features --no-run
       - run:
-          name: Linting
+          # HACK: We try to build for Cortex-M3, not because we want to create
+          # IoT devices, but because there is no `std` available for this target.
+          # This forces the build to fail if an accidental dependency on `std`
+          # exists. Wasm has a working std, so is not a suitable target here.
+          # See: https://forge.rust-lang.org/platform-support.html
+          # We only build libraries and binaries, as we are not interested in
+          # the tests/benchmarks/examples working in no_std
+          name: Check no std packages on nightly on a platform that has no std
           command: |
-            RUSTFLAGS="-Dwarnings" cargo +nightly-2019-07-31 fmt --all -- --check
-            RUSTFLAGS="-Dwarnings" cargo clippy --all --all-targets
+            # HACK: We use a for loop here because cargo across multiple
+            # PACKAGES does not respect feature flags. This also helps
+            # identifying the failing project.
+            for i in $NO_STD_PACKAGES; do
+              pushd $i
+              cargo +$NIGHTLY check --lib --bins --no-default-features --target=thumbv7m-none-eabi
+              popd
+            done
       - run:
-          name: Build all targets
-          command: RUST_BACKTRACE=1 RUSTFLAGS="-Dwarnings" cargo build --all --all-targets
-      - run:
-          name: Test in debug and release mode
+          name: Build wasm substrate runtime
           command: |
-            RUST_BACKTRACE=1 cargo test --all -- --nocapture
-            RUST_BACKTRACE=1 cargo test --release -- --nocapture
+            pushd substrate-runtime-wasm
+            cargo +$NIGHTLY build --release
+            cp target/wasm32-unknown-unknown/release/substrate_node_runtime_wasm.wasm ./runtime.wasm
+            wasm-gc runtime.wasm
+            # OPT: Run wasm-opt -O3 runtime.wasm -o runtime.wasm
+            twiggy top -n 50 runtime.wasm
       - run:
-          name: Run benchmarks as tests
+          name: Build node executable (disabled)
+          command: |
+            #pushd substrate-node
+            #cp ../substrate-runtime-wasm/runtime.wasm ./assets/runtime.wasm
+            # TODO: This builds rocksdb as a dependency in c++, this is not
+            # currently covered by sccache, but could be.
+            # TODO: This build times out on CI.
+            # cargo build --release
+      # We save the sccache here because everything has been build, from here on
+      # it is only testing that will not add to the cache (including clippy).
+      # Saving cache early allows it to be re-used even when the tests fail.
+      - save-sccache-cache
+      - run:
+          name: Lint with rustformat nightly
+          command: cargo +$NIGHTLY fmt --all -- --check
+          # TODO: Run over wasm targets (which are not part of the workspace)
+      - run:
+          name: Lint with clippy
+          command: cargo clippy $PACKAGES --all-targets --all-features
+          # TODO: Run over wasm targets (which are not part of the workspace)
+      - run:
+          name: Test debug build
+          command: cargo test $PACKAGES --all-features -- --nocapture
+      - run:
+          name: Test benchmarks
           command: |
             # Actually running the benchmarks on CI is too noisy. The results
             # would be meaningless. Instead we just run it to make sure they work.
-            RUST_BACKTRACE=1 cargo bench --bench benchmark -- --test
-      # TODO: Coverage
-      - save_cache:
-          key: project-cache
-          paths:
-            - "~/.cargo"
-            - "./target"
+            # Exclude benchmarks that compare against external crates (pulls in a lot of deps)
+            # HACK: We add 'bench' as a feature so dev-dependencies can be included as optional
+            # regular dependencies behind a feature flag. This solves problems with feature
+            # unification. 
+            # HACK: We can not specify --features=bench in a workspace environment, instead
+            # we enable all features (which makes sense from a test coverage perspective).
+            # TODO: We don't need an optimized build here, re-using debug build would be ok.
+            cargo bench --bench benchmark $PACKAGES --all-features -- --test
+      - store_artifacts:
+          path: substrate-runtime-wasm/runtime.wasm
+          destination: runtime.wasm
+      #- store_artifacts:
+      #    path: target/release/substrate-node
+      #    destination: node-{{ arch }}
+
 workflows:
   version: 2
   build:

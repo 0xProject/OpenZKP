@@ -1,0 +1,4 @@
+[build]
+target = "wasm32-unknown-unknown"
+incremental = false
+rustflags = "-C link-arg=--export-table"

@@ -1,8 +1,11 @@
-use hex_literal::*;
+// TODO: Naming?
+#![allow(clippy::module_name_repetitions)]
+use crate::{hash::Hash, merkle_tree, proof_of_work};
+use macros_decl::u256h;
 use primefield::FieldElement;
-use rayon::prelude::*;
+use std::prelude::v1::*;
 use tiny_keccak::Keccak;
-use u256::{u256h, U256};
+use u256::U256;
 
 pub trait RandomGenerator<T> {
     fn get_random(&mut self) -> T;
@@ -21,18 +24,21 @@ pub trait Replayable<T> {
 }
 
 #[derive(PartialEq, Eq, Clone, Default)]
+#[cfg_attr(feature = "std", derive(Debug))]
 pub struct PublicCoin {
     pub digest: [u8; 32],
     counter:    u64,
 }
 
 #[derive(PartialEq, Eq, Clone, Default)]
+#[cfg_attr(feature = "std", derive(Debug))]
 pub struct ProverChannel {
     pub coin:  PublicCoin,
     pub proof: Vec<u8>,
 }
 
 #[derive(PartialEq, Eq, Clone, Default)]
+#[cfg_attr(feature = "std", derive(Debug))]
 pub struct VerifierChannel {
     pub coin:    PublicCoin,
     pub proof:   Vec<u8>,
@@ -40,105 +46,89 @@ pub struct VerifierChannel {
 }
 
 impl PublicCoin {
-    pub fn new(seed: &[u8]) -> Self {
-        let mut digest: [u8; 32] = [0; 32];
+    pub fn new() -> Self {
+        Self {
+            digest:  [0; 32],
+            counter: 0,
+        }
+    }
+
+    pub fn seed(&mut self, seed: &[u8]) {
         let mut keccak = Keccak::new_keccak256();
         keccak.update(seed);
-        keccak.finalize(&mut digest);
-        Self { digest, counter: 0 }
+        keccak.finalize(&mut self.digest);
+        self.counter = 0;
     }
+}
 
-    pub fn pow_find_nonce(&self, pow_bits: u8) -> u64 {
-        let seed = self.pow_seed(pow_bits);
-
-        (0u64..)
-            .find(|&nonce| PublicCoin::pow_verify_with_seed(nonce, pow_bits, &seed))
-            .expect("No valid nonce found")
-    }
-
-    // TODO - Make tests compatible with the proof of work values from this function
-    pub fn pow_find_nonce_threaded(&self, pow_bits: u8) -> u64 {
-        let seed = self.pow_seed(pow_bits);
-        // NOTE: Rayon does not support open ended ranges, so we need to use a closed
-        // one.
-        (0..u64::max_value())
-            .into_par_iter()
-            .find_any(|&nonce| PublicCoin::pow_verify_with_seed(nonce, pow_bits, &seed))
-            .expect("No valid nonce found")
-    }
-
-    pub fn pow_seed(&self, pow_bits: u8) -> [u8; 32] {
-        let mut seed = [0_u8; 32];
-        let mut keccak = Keccak::new_keccak256();
-        keccak.update(&hex!("0123456789abcded"));
-        keccak.update(&self.digest);
-        keccak.update(&[pow_bits]);
-        keccak.finalize(&mut seed);
-        seed
-    }
-
-    pub fn pow_verify(&self, nonce: u64, pow_bits: u8) -> bool {
-        let seed = self.pow_seed(pow_bits);
-        PublicCoin::pow_verify_with_seed(nonce, pow_bits, &seed)
-    }
-
-    fn pow_verify_with_seed(nonce: u64, pow_bits: u8, seed: &[u8; 32]) -> bool {
-        // OPT: Inline Keccak256 and work directly on buffer using 'keccakf'
-        let mut keccak = Keccak::new_keccak256();
-        let mut digest = [0_u8; 32];
-        keccak.update(seed);
-        keccak.update(&(nonce.to_be_bytes()));
-        keccak.finalize(&mut digest);
-        // OPT: Check performance impact of conversion
-        let work = U256::from_bytes_be(&digest).leading_zeros();
-        work >= pow_bits as usize
+impl From<Vec<u8>> for ProverChannel {
+    fn from(proof_data: Vec<u8>) -> Self {
+        Self {
+            coin:  PublicCoin::new(),
+            proof: proof_data,
+        }
     }
 }
 
 impl ProverChannel {
-    pub fn new(seed: &[u8]) -> Self {
+    pub fn new() -> Self {
         Self {
-            coin:  PublicCoin::new(seed),
-            proof: seed.to_vec(),
+            coin:  PublicCoin::new(),
+            proof: Vec::new(),
         }
     }
 
-    pub fn pow_verify(&self, nonce: u64, pow_bits: u8) -> bool {
-        self.coin.pow_verify(nonce, pow_bits)
-    }
-
-    pub fn pow_find_nonce(&self, pow_bits: u8) -> u64 {
-        self.coin.pow_find_nonce(pow_bits)
-    }
-
-    pub fn pow_find_nonce_threaded(&self, pow_bits: u8) -> u64 {
-        self.coin.pow_find_nonce_threaded(pow_bits)
+    pub fn initialize(&mut self, seed: &[u8]) {
+        self.coin.seed(seed);
     }
 }
 
-// TODO - Remove this dead code allowance when the actual verifier uses the
-// verifier channel
-#[allow(dead_code)]
 impl VerifierChannel {
-    pub fn new(seed: &[u8], proof: Vec<u8>) -> Self {
-        assert_eq!(seed, &proof[..seed.len()]);
+    pub fn new(proof: Vec<u8>) -> Self {
         Self {
-            coin: PublicCoin::new(seed),
+            coin: PublicCoin::new(),
             proof,
-            proof_index: seed.len(),
+            proof_index: 0,
         }
     }
 
-    pub fn pow_verify(&self, nonce: u64, pow_bits: u8) -> bool {
-        self.coin.pow_verify(nonce, pow_bits)
+    pub fn initialize(&mut self, seed: &[u8]) {
+        self.coin.seed(seed);
     }
 
-    pub fn pow_find_nonce(&self, pow_bits: u8) -> u64 {
-        self.coin.pow_find_nonce(pow_bits)
+    pub fn read_without_replay(&self, length: usize) -> &[u8] {
+        &self.proof[self.proof_index..(self.proof_index + length)]
     }
 
-    pub fn pow_find_nonce_threaded(&self, pow_bits: u8) -> u64 {
-        self.coin.pow_find_nonce_threaded(pow_bits)
+    pub fn at_end(self) -> bool {
+        self.proof_index == self.proof.len()
+    }
+}
+
+impl RandomGenerator<proof_of_work::ChallengeSeed> for PublicCoin {
+    fn get_random(&mut self) -> proof_of_work::ChallengeSeed {
+        self.counter += 1;
+        // FIX: Use get_random::<[u8;32]>();
+        proof_of_work::ChallengeSeed::from_bytes(self.digest)
+    }
+}
+
+impl Writable<proof_of_work::Response> for ProverChannel {
+    fn write(&mut self, data: proof_of_work::Response) {
+        self.write(&data.nonce().to_be_bytes()[..]);
+    }
+}
+
+impl Replayable<proof_of_work::Response> for VerifierChannel {
+    fn replay(&mut self) -> proof_of_work::Response {
+        let mut holder = [0_u8; 8];
+        let from = self.proof_index;
+        let to = from + 8;
+        self.proof_index = to;
+        holder.copy_from_slice(&self.proof[from..to]);
+        self.coin.write(&holder[..]);
+        let nonce = u64::from_be_bytes(holder);
+        proof_of_work::Response::from_nonce(nonce)
     }
 }
 
@@ -151,7 +141,7 @@ impl RandomGenerator<FieldElement> for PublicCoin {
             let seed = number & MASK;
             if seed < FieldElement::MODULUS {
                 // TODO: Avoid accessing FieldElement members directly
-                break FieldElement(seed);
+                break FieldElement::from_montgomery(seed);
             }
         }
     }
@@ -201,6 +191,7 @@ impl Writable<&[u8]> for PublicCoin {
         keccak.update(&self.digest);
         keccak.update(data);
         keccak.finalize(&mut result);
+        // FIX: Hash counter into digest.
         self.digest = result;
         self.counter = 0;
     }
@@ -217,16 +208,23 @@ impl Writable<&[u8]> for ProverChannel {
     }
 }
 
-// TODO - Make into a hash type label
-impl Writable<&[u8; 32]> for ProverChannel {
-    fn write(&mut self, data: &[u8; 32]) {
-        self.write(&data[..]);
+impl Writable<&Hash> for ProverChannel {
+    fn write(&mut self, data: &Hash) {
+        self.write(data.as_bytes());
     }
 }
 
-impl Writable<u64> for ProverChannel {
-    fn write(&mut self, data: u64) {
-        self.write(&data.to_be_bytes()[..]);
+impl Writable<&merkle_tree::Commitment> for ProverChannel {
+    fn write(&mut self, data: &merkle_tree::Commitment) {
+        self.write(data.hash())
+    }
+}
+
+impl Writable<&merkle_tree::Proof> for ProverChannel {
+    fn write(&mut self, data: &merkle_tree::Proof) {
+        for hash in data.hashes() {
+            self.write(hash)
+        }
     }
 }
 
@@ -235,7 +233,7 @@ impl Writable<&[FieldElement]> for ProverChannel {
     fn write(&mut self, data: &[FieldElement]) {
         let mut container = Vec::with_capacity(32 * data.len());
         for element in data {
-            for byte in U256::to_bytes_be(&element.0).iter() {
+            for byte in &element.as_montgomery().to_bytes_be() {
                 container.push(byte.clone());
             }
         }
@@ -246,7 +244,7 @@ impl Writable<&[FieldElement]> for ProverChannel {
 impl Writable<&FieldElement> for ProverChannel {
     fn write(&mut self, data: &FieldElement) {
         // TODO: Avoid accessing FieldElement members directly
-        self.write(&data.0.to_bytes_be()[..]);
+        self.write(&data.as_montgomery().to_bytes_be()[..]);
     }
 }
 
@@ -263,6 +261,13 @@ impl Writable<Vec<U256>> for ProverChannel {
 impl Writable<U256> for ProverChannel {
     fn write(&mut self, data: U256) {
         self.write(&data.to_bytes_be()[..]);
+    }
+}
+
+impl Replayable<Hash> for VerifierChannel {
+    fn replay(&mut self) -> Hash {
+        let hash: [u8; 32] = self.replay();
+        Hash::new(hash)
     }
 }
 
@@ -287,7 +292,7 @@ impl Replayable<U256> for VerifierChannel {
 
 impl Replayable<FieldElement> for VerifierChannel {
     fn replay(&mut self) -> FieldElement {
-        FieldElement(Replayable::replay(self))
+        FieldElement::from_montgomery(Replayable::replay(self))
     }
 
     fn replay_many(&mut self, len: usize) -> Vec<FieldElement> {
@@ -299,64 +304,24 @@ impl Replayable<FieldElement> for VerifierChannel {
             let to = from + 32;
             self.proof_index = to;
             holder.copy_from_slice(&self.proof[from..to]);
-            ret.push(FieldElement(U256::from_bytes_be(&holder)));
+            ret.push(FieldElement::from_montgomery(U256::from_bytes_be(&holder)));
         }
         self.coin.write(&self.proof[start_index..self.proof_index]);
         ret
     }
 }
 
-impl Replayable<u64> for VerifierChannel {
-    fn replay(&mut self) -> u64 {
-        let mut holder = [0_u8; 8];
-        let from = self.proof_index;
-        let to = from + 8;
-        self.proof_index = to;
-        // OPT: Use arrayref crate or similar to avoid copy
-        holder.copy_from_slice(&self.proof[from..to]);
-        self.coin.write(&holder[..]);
-        u64::from_be_bytes(holder)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use u256::u256h;
-
-    #[test]
-    fn proof_of_work_test() {
-        let rand_source = ProverChannel::new(hex!("0123456789abcded").to_vec().as_slice());
-        let ver_rand_source =
-            VerifierChannel::new(&hex!("0123456789abcded")[..], rand_source.proof.clone());
-        let work = rand_source.pow_find_nonce(12);
-        let ver_work = ver_rand_source.pow_find_nonce(12);
-        assert_eq!(ver_work, work);
-        assert!(&rand_source.pow_verify(work, 12));
-    }
-
-    #[test]
-    fn threaded_proof_of_work_test() {
-        let rand_source = ProverChannel::new(hex!("0123456789abcded").to_vec().as_slice());
-        let work = rand_source.pow_find_nonce_threaded(12);
-        assert!(&rand_source.pow_verify(work, 12));
-    }
-
-    #[test]
-    fn ver_threaded_proof_of_work_test() {
-        let rand_source = VerifierChannel::new(
-            &hex!("0123456789abcded")[..],
-            hex!("0123456789abcded").to_vec(),
-        );
-        let work = rand_source.pow_find_nonce_threaded(12);
-        assert!(&rand_source.pow_verify(work, 12));
-    }
+    use macros_decl::{hex, u256h};
 
     // Note - This test depends on the specific ordering of the subtests because of
     // the nature of the channel
     #[test]
     fn test_channel_get_random() {
-        let mut source = ProverChannel::new(hex!("0123456789abcded").to_vec().as_slice());
+        let mut source = ProverChannel::new();
+        source.initialize(hex!("0123456789abcded").to_vec().as_slice());
         let rand_bytes: [u8; 32] = source.get_random();
         assert_eq!(
             rand_bytes,
@@ -370,7 +335,7 @@ mod tests {
         let rand_element: FieldElement = source.get_random();
         assert_eq!(
             rand_element,
-            FieldElement(u256h!(
+            FieldElement::from_montgomery(u256h!(
                 "0389a47fe0e1e5f9c05d8dcb27b069b67b1c7ec61a5c0a3f54d81aea83d2c8f0"
             ))
         );
@@ -380,19 +345,20 @@ mod tests {
     // the nature of the channel
     #[test]
     fn test_channel_write() {
-        let mut source = ProverChannel::new(hex!("0123456789abcded").to_vec().as_slice());
+        let mut source = ProverChannel::new();
+        source.initialize(&hex!("0123456789abcded"));
         let rand_bytes: [u8; 32] = source.get_random();
-        source.write(&rand_bytes);
+        source.write(&rand_bytes[..]);
         assert_eq!(
             source.coin.digest,
             hex!("3174a00d031bc8deff799e24a78ee347b303295a6cb61986a49873d9b6f13a0d")
         );
-        source.write(11_028_357_238_u64);
+        source.write(proof_of_work::Response::from_nonce(11_028_357_238_u64));
         assert_eq!(
             source.coin.digest,
             hex!("21571e2a323daa1e6f2adda87ce912608e1325492d868e8fe41626633d6acb93")
         );
-        source.write(&FieldElement(u256h!(
+        source.write(&FieldElement::from_montgomery(u256h!(
             "0389a47fe0e1e5f9c05d8dcb27b069b67b1c7ec61a5c0a3f54d81aea83d2c8f0"
         )));
         assert_eq!(
@@ -401,10 +367,10 @@ mod tests {
         );
         source.write(
             vec![
-                FieldElement(u256h!(
+                FieldElement::from_montgomery(u256h!(
                     "0389a47fe0e1e5f9c05d8dcb27b069b67b1c7ec61a5c0a3f54d81aea83d2c8f0"
                 )),
-                FieldElement(u256h!(
+                FieldElement::from_montgomery(u256h!(
                     "129ab47fe0e1a5f9c05d8dcb27b069b67b1c7ec61a5c0a3f54d81aea83d2c8f0"
                 )),
             ]
@@ -418,19 +384,20 @@ mod tests {
 
     #[test]
     fn verifier_channel_test() {
-        let mut source = ProverChannel::new(hex!("0123456789abcded").to_vec().as_slice());
+        let mut source = ProverChannel::new();
+        source.initialize(&hex!("0123456789abcded"));
         let rand_bytes: [u8; 32] = source.get_random();
-        source.write(&rand_bytes);
-        source.write(11_028_357_238_u64);
-        let written_field_element = FieldElement(u256h!(
+        source.write(&rand_bytes[..]);
+        source.write(proof_of_work::Response::from_nonce(11_028_357_238_u64));
+        let written_field_element = FieldElement::from_montgomery(u256h!(
             "0389a47fe0e1e5f9c05d8dcb27b069b67b1c7ec61a5c0a3f54d81aea83d2c8f0"
         ));
         source.write(&written_field_element);
         let written_field_element_vec = vec![
-            FieldElement(u256h!(
+            FieldElement::from_montgomery(u256h!(
                 "0389a47fe0e1e5f9c05d8dcb27b069b67b1c7ec61a5c0a3f54d81aea83d2c8f0"
             )),
-            FieldElement(u256h!(
+            FieldElement::from_montgomery(u256h!(
                 "129ab47fe0e1a5f9c05d8dcb27b069b67b1c7ec61a5c0a3f54d81aea83d2c8f0"
             )),
         ];
@@ -442,16 +409,16 @@ mod tests {
         ];
         source.write(written_big_int_vec.clone());
 
-        let mut verifier =
-            VerifierChannel::new(&hex!("0123456789abcded")[..], source.proof.clone());
+        let mut verifier = VerifierChannel::new(source.proof.clone());
+        verifier.initialize(&hex!("0123456789abcded"));
         let bytes_test: [u8; 32] = verifier.replay();
         assert_eq!(bytes_test, rand_bytes);
         assert_eq!(
             verifier.coin.digest,
             hex!("3174a00d031bc8deff799e24a78ee347b303295a6cb61986a49873d9b6f13a0d")
         );
-        let integer_test: u64 = verifier.replay();
-        assert_eq!(integer_test, 11_028_357_238_u64);
+        let pow_response_test: proof_of_work::Response = verifier.replay();
+        assert_eq!(pow_response_test.nonce(), 11_028_357_238_u64);
         assert_eq!(
             verifier.coin.digest,
             hex!("21571e2a323daa1e6f2adda87ce912608e1325492d868e8fe41626633d6acb93")
@@ -471,5 +438,17 @@ mod tests {
         let bit_int_vec_test: Vec<U256> = verifier.replay_many(2);
         assert_eq!(bit_int_vec_test, written_big_int_vec);
         assert_eq!(verifier.coin.digest, source.coin.digest);
+    }
+
+    #[test]
+    fn test_challenge_seed_from_channel() {
+        use crate::channel::*;
+        let mut rand_source = ProverChannel::new();
+        rand_source.initialize(&hex!("0123456789abcded"));
+        // Verify that reading challenges does not depend on public coin counter.
+        // FIX: Make it depend on public coin counter.
+        let seed1: proof_of_work::ChallengeSeed = rand_source.get_random();
+        let seed2: proof_of_work::ChallengeSeed = rand_source.get_random();
+        assert_eq!(seed1, seed2);
     }
 }

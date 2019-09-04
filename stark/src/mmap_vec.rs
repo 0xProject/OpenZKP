@@ -1,13 +1,15 @@
+// This module abstracts low-level `unsafe` behaviour
+#![allow(unsafe_code)]
 use memmap::{MmapMut, MmapOptions};
 use std::{
     marker::PhantomData,
     mem::size_of,
     ops::{Deref, DerefMut},
+    prelude::v1::*,
     slice,
 };
 use tempfile::tempfile;
 
-#[allow(dead_code)]
 pub struct MmapVec<T: Clone> {
     mmap:     MmapMut,
     length:   usize,
@@ -15,9 +17,8 @@ pub struct MmapVec<T: Clone> {
     _t:       PhantomData<T>,
 }
 
-#[allow(dead_code)]
 impl<T: Clone> MmapVec<T> {
-    pub fn with_capacity(capacity: usize) -> MmapVec<T> {
+    pub fn with_capacity(capacity: usize) -> Self {
         debug_assert!(capacity > 0);
         // From https://docs.rs/tempfile/3.1.0/tempfile/: tempfile() relies on
         // the OS to remove the temporary file once the last handle is closed.
@@ -29,12 +30,16 @@ impl<T: Clone> MmapVec<T> {
         let mmap = unsafe { MmapOptions::new().len(size).map_mut(&file) }
             .expect("cannot access memory mapped file");
 
-        MmapVec {
+        Self {
             mmap,
             length: 0,
             capacity,
             _t: PhantomData,
         }
+    }
+
+    pub fn len(&self) -> usize {
+        self.length
     }
 
     pub fn push(&mut self, next: T) {
@@ -46,16 +51,6 @@ impl<T: Clone> MmapVec<T> {
         self[end] = next;
     }
 
-    pub fn extend(&mut self, other: &[T]) {
-        let old_length = self.length;
-        let new_length = old_length + other.len();
-        if new_length > self.capacity {
-            panic!("MmapVec cannot be extended beyond capacity")
-        }
-        self.length = new_length;
-        self[old_length..new_length].clone_from_slice(other);
-    }
-
     #[inline]
     pub fn as_slice(&self) -> &[T] {
         self
@@ -64,6 +59,25 @@ impl<T: Clone> MmapVec<T> {
     #[inline]
     pub fn as_mut_slice(&mut self) -> &mut [T] {
         self
+    }
+}
+
+impl<T: Clone> Extend<T> for MmapVec<T> {
+    fn extend<I: IntoIterator<Item = T>>(&mut self, iter: I) {
+        // The function signature is for compatibility with Vec::extend.
+        // OPT: Specialize for SliceIterator
+        for i in iter {
+            self.push(i)
+        }
+    }
+}
+
+impl<'a, T: 'a + Clone> Extend<&'a T> for MmapVec<T> {
+    fn extend<I: IntoIterator<Item = &'a T>>(&mut self, iter: I) {
+        // The function signature is for compatibility with Vec::extend.
+        for i in iter {
+            self.push(i.clone())
+        }
     }
 }
 
@@ -121,7 +135,7 @@ mod tests {
             *x += FieldElement::from(U256::from(i));
         }
 
-        for i in 0..10u64 {
+        for i in 0..10_u64 {
             assert_eq!(m[i as usize], FieldElement::from(U256::from(i + 1)))
         }
     }
@@ -143,7 +157,7 @@ mod tests {
     #[should_panic]
     fn test_cannot_extend_beyond_capacity() {
         let mut m: MmapVec<u64> = MmapVec::with_capacity(1);
-        let v = vec![10u64; 2];
+        let v = vec![10_u64; 2];
         m.extend(v.as_slice());
     }
 }

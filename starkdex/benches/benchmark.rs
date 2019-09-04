@@ -1,9 +1,8 @@
 #![warn(clippy::all)]
-#![deny(warnings)]
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use hex_literal::*;
+use macros_decl::u256h;
 use starkdex::hash;
-use u256::{u256h, U256};
+use u256::U256;
 
 fn pedersen_hash(crit: &mut Criterion) {
     let elements = [

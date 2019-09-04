@@ -1,6 +1,9 @@
 use crate::mmap_vec::MmapVec;
 use primefield::FieldElement;
-use std::ops::{Index, IndexMut};
+use std::{
+    ops::{Index, IndexMut},
+    prelude::v1::*,
+};
 
 pub struct TraceTable {
     trace_length: usize,
@@ -10,12 +13,12 @@ pub struct TraceTable {
 
 impl TraceTable {
     /// Constructs a zero-initialized trace table of the given size.
-    pub fn new(trace_length: usize, num_columns: usize) -> TraceTable {
+    pub fn new(trace_length: usize, num_columns: usize) -> Self {
         let mut values: MmapVec<FieldElement> = MmapVec::with_capacity(trace_length * num_columns);
-        for _i in 0..(trace_length * num_columns) {
+        for _ in 0..(trace_length * num_columns) {
             values.push(FieldElement::ZERO);
         }
-        TraceTable {
+        Self {
             trace_length,
             num_columns,
             values,
@@ -30,16 +33,28 @@ impl TraceTable {
         self.num_columns
     }
 
-    #[allow(dead_code)] // TODO
     pub fn generator(&self) -> FieldElement {
-        FieldElement::root(self.trace_length.into()).expect("No generator for trace table length.")
+        FieldElement::root(self.trace_length).expect("No generator for trace table length.")
+    }
+
+    pub fn iter_row(&self, i: usize) -> impl Iterator<Item = &FieldElement> {
+        // Delegate to Index<usize> which returns a row slice.
+        self[i].iter()
+    }
+
+    pub fn iter_column(&self, j: usize) -> impl Iterator<Item = &FieldElement> {
+        self.values[j..].iter().step_by(self.num_columns)
     }
 
     /// Extract the j-th column as a vector
-    // OPT: Instead of using this function, work with strides.
-    pub fn column(&self, j: usize) -> MmapVec<FieldElement> {
+    ///
+    /// It allocates a potentially large new vector. Where possible, use
+    /// the index accessors or the column iterator instead. It is unfortunately
+    /// not possible to get a slice of a column (since the representation is
+    /// row first.)
+    pub fn column_to_mmapvec(&self, j: usize) -> MmapVec<FieldElement> {
         let mut result: MmapVec<FieldElement> = MmapVec::with_capacity(self.trace_length);
-        for v in self.values.iter().skip(j).step_by(self.num_columns) {
+        for v in self.iter_column(j) {
             result.push(v.clone());
         }
         result

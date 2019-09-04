@@ -1,11 +1,15 @@
 use crate::{curve::Affine, curve_operations};
 use primefield::FieldElement;
-use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
+use std::{
+    ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
+    prelude::v1::*,
+};
 use u256::{commutative_binop, noncommutative_binop, U256};
 
 // See http://www.hyperelliptic.org/EFD/g1p/auto-shortw-jacobian.html
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
+#[cfg_attr(feature = "std", derive(Debug))]
 pub struct Jacobian {
     pub x: FieldElement,
     pub y: FieldElement,
@@ -13,7 +17,7 @@ pub struct Jacobian {
 }
 
 impl Jacobian {
-    pub const ZERO: Jacobian = Jacobian {
+    pub const ZERO: Self = Self {
         x: FieldElement::ONE,
         y: FieldElement::ONE,
         z: FieldElement::ZERO,
@@ -26,7 +30,7 @@ impl Jacobian {
 
     pub fn double_assign(&mut self) {
         if self.y == FieldElement::ZERO {
-            *self = Jacobian::ZERO;
+            *self = Self::ZERO;
             return;
         }
         // OPT: Special case z == FieldElement::ONE?
@@ -46,15 +50,15 @@ impl Jacobian {
         self.y.neg_assign();
     }
 
-    pub fn double(&self) -> Jacobian {
+    pub fn double(&self) -> Self {
         let mut r = self.clone();
         r.double_assign();
         r
     }
 
     // Multiply Affine point using Jacobian accumulator
-    pub fn mul(p: &Affine, scalar: &U256) -> Jacobian {
-        let mut r = Jacobian::from(p);
+    pub fn mul(p: &Affine, scalar: &U256) -> Self {
+        let mut r = Self::from(p);
         for i in (0..scalar.msb()).rev() {
             r.double_assign();
             if scalar.bit(i) {
@@ -66,7 +70,7 @@ impl Jacobian {
 }
 
 impl PartialEq for Jacobian {
-    fn eq(&self, rhs: &Jacobian) -> bool {
+    fn eq(&self, rhs: &Self) -> bool {
         // TODO: without inverting Z
         Affine::from(self) == Affine::from(rhs)
     }
@@ -74,16 +78,16 @@ impl PartialEq for Jacobian {
 
 impl Default for Jacobian {
     fn default() -> Self {
-        Jacobian::ZERO
+        Self::ZERO
     }
 }
 
 impl From<&Affine> for Jacobian {
-    fn from(other: &Affine) -> Jacobian {
+    fn from(other: &Affine) -> Self {
         match other {
-            Affine::Zero => Jacobian::ZERO,
+            Affine::Zero => Self::ZERO,
             Affine::Point { x, y } => {
-                Jacobian {
+                Self {
                     x: x.clone(),
                     y: y.clone(),
                     z: FieldElement::ONE,
@@ -94,11 +98,11 @@ impl From<&Affine> for Jacobian {
 }
 
 impl From<Affine> for Jacobian {
-    fn from(other: Affine) -> Jacobian {
+    fn from(other: Affine) -> Self {
         match other {
-            Affine::Zero => Jacobian::ZERO,
+            Affine::Zero => Self::ZERO,
             Affine::Point { x, y } => {
-                Jacobian {
+                Self {
                     x,
                     y,
                     z: FieldElement::ONE,
@@ -109,13 +113,13 @@ impl From<Affine> for Jacobian {
 }
 
 impl From<&Jacobian> for Affine {
-    fn from(other: &Jacobian) -> Affine {
+    fn from(other: &Jacobian) -> Self {
         match other.z.inv() {
-            None => Affine::ZERO,
+            None => Self::ZERO,
             Some(zi) => {
                 let zi2 = zi.square();
                 let zi3 = zi * &zi2;
-                Affine::Point {
+                Self::Point {
                     x: &other.x * zi2,
                     y: &other.y * zi3,
                 }
@@ -139,7 +143,7 @@ impl AddAssign<&Jacobian> for Jacobian {
     #[allow(clippy::many_single_char_names)]
     // We need multiplications to implement addition
     #[allow(clippy::suspicious_op_assign_impl)]
-    fn add_assign(&mut self, rhs: &Jacobian) {
+    fn add_assign(&mut self, rhs: &Self) {
         if rhs.z == FieldElement::ZERO {
             return;
         }
@@ -160,7 +164,7 @@ impl AddAssign<&Jacobian> for Jacobian {
             return if s1 == s2 {
                 self.double_assign()
             } else {
-                *self = Jacobian::ZERO
+                *self = Self::ZERO
             };
         }
         let h = u2 - &u1;
@@ -198,7 +202,7 @@ impl AddAssign<&Affine> for Jacobian {
                     return if self.x == s2 {
                         self.double_assign()
                     } else {
-                        *self = Jacobian::ZERO
+                        *self = Self::ZERO
                     };
                 }
                 let h = u2 - &self.x;
@@ -243,7 +247,7 @@ use quickcheck::{Arbitrary, Gen};
 impl Arbitrary for Jacobian {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         // To force Z to be non trivial we add two points.
-        let mut r = Jacobian::from(Affine::arbitrary(g));
+        let mut r = Self::from(Affine::arbitrary(g));
         r += &Affine::arbitrary(g);
         r
     }
@@ -251,124 +255,85 @@ impl Arbitrary for Jacobian {
 
 // TODO: Replace literals with u256h!
 #[allow(clippy::unreadable_literal)]
+// Quickcheck needs pass by value
+#[allow(clippy::needless_pass_by_value)]
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::ORDER;
-    use hex_literal::*;
+    use macros_decl::u256h;
     use quickcheck_macros::quickcheck;
-    use u256::u256h;
 
     #[test]
     fn test_add() {
-        let a = Jacobian::from(Affine::Point {
-            x: FieldElement::new(&[
-                0xca9b3b7a, 0xadf5b0d8, 0x4728f1b4, 0x7a5cbd79, 0x316a86d0, 0xb9aaaf56, 0x557c9ca9,
-                0x0259dee2,
-            ]),
-            y: FieldElement::new(&[
-                0x68173fdd, 0x25daa0d2, 0xcd94b717, 0x4f84a316, 0xd637a579, 0x236d898d, 0x787b7c9e,
-                0x011cf020,
-            ]),
-        });
-        let b = Jacobian::from(Affine::Point {
-            x: FieldElement::new(&[
-                0x55893510, 0x5985d659, 0xc0cda9ae, 0xfb1db2ec, 0xc78fe4ec, 0xe60f0d63, 0xfb0e0cf5,
-                0x0449895d,
-            ]),
-            y: FieldElement::new(&[
-                0x1b78e1cc, 0x86e1e27b, 0x80a13dd1, 0x157492ef, 0x8191f8ae, 0x7fb47371, 0x8d4ef0e6,
-                0x07cfb4b0,
-            ]),
-        });
-        let c = Jacobian::from(Affine::Point {
-            x: FieldElement::new(&[
-                0xcaaa938d, 0x1e36e642, 0x875a7e8a, 0xb1ccde68, 0x1e961e1a, 0xbbb669e2, 0xd487aea7,
-                0x07ec1cca,
-            ]),
-            y: FieldElement::new(&[
-                0x1879893b, 0x953ad520, 0x89ca316f, 0x999e7f28, 0x1a29f3b5, 0xb48241d7, 0x7d682604,
-                0x05e52087,
-            ]),
-        });
+        let a = Jacobian::from(Affine::new(
+            FieldElement::from(u256h!(
+                "01ef15c18599971b7beced415a40f0c7deacfd9b0d1819e03d723d8bc943cfca"
+            )),
+            FieldElement::from(u256h!(
+                "005668060aa49730b7be4801df46ec62de53ecd11abe43a32873000c36e8dc1f"
+            )),
+        ));
+        let b = Jacobian::from(Affine::new(
+            FieldElement::from(u256h!(
+                "00f24921907180cd42c9d2d4f9490a7bc19ac987242e80ac09a8ac2bcf0445de"
+            )),
+            FieldElement::from(u256h!(
+                "018a7a2ab4e795405f924de277b0e723d90eac55f2a470d8532113d735bdedd4"
+            )),
+        ));
+        let c = Jacobian::from(Affine::new(
+            FieldElement::from(u256h!(
+                "0457342950d2475d9e83a4de8beb3c0850181342ea04690d804b37aa907b735f"
+            )),
+            FieldElement::from(u256h!(
+                "00011bd6102b929632ce605b5ae1c9c6c1b8cba2f83aa0c5a6d1247318871137"
+            )),
+        ));
         assert_eq!(a + b, c);
     }
 
     #[test]
     fn test_double() {
-        let a = Jacobian::from(Affine::Point {
-            x: FieldElement::new(&[
-                0xa19caf1f, 0x9764694b, 0xd49d26e1, 0xc2d21cea, 0x9d37cc5b, 0xce13e7e3, 0x787be6e0,
-                0x00ea1dff,
-            ]),
-            y: FieldElement::new(&[
-                0xce7296f0, 0xd1f6f7df, 0xc9c5b41c, 0x6b889413, 0xc9449f06, 0xf44da1a6, 0x302e9f91,
-                0x011b6c17,
-            ]),
-        });
-        let b = Jacobian::from(Affine::Point {
-            x: FieldElement::new(&[
-                0x1f01ad3f, 0x6fe79335, 0x2cdfe101, 0x032a86e6, 0x1481bc24, 0x8fccd336, 0xf387342d,
-                0x017056be,
-            ]),
-            y: FieldElement::new(&[
-                0x6342205c, 0x06a09929, 0x1924cee3, 0x38e46f15, 0xe0393658, 0xcc1b8a43, 0x0743351a,
-                0x062673bb,
-            ]),
-        });
+        let a = Jacobian::from(Affine::new(
+            FieldElement::from(u256h!(
+                "01ef15c18599971b7beced415a40f0c7deacfd9b0d1819e03d723d8bc943cfca"
+            )),
+            FieldElement::from(u256h!(
+                "005668060aa49730b7be4801df46ec62de53ecd11abe43a32873000c36e8dc1f"
+            )),
+        ));
+        let b = Jacobian::from(Affine::new(
+            FieldElement::from(u256h!(
+                "0759ca09377679ecd535a81e83039658bf40959283187c654c5416f439403cf5"
+            )),
+            FieldElement::from(u256h!(
+                "06f524a3400e7708d5c01a28598ad272e7455aa88778b19f93b562d7a9646c41"
+            )),
+        ));
         assert_eq!(a.double(), b);
     }
 
     #[test]
     fn test_mul() {
-        let a = Jacobian::from(Affine::Point {
-            x: FieldElement::new(&[
-                0x5bf31eb0, 0xfe50a889, 0x2d1a8a21, 0x3242e28e, 0x0d13fe66, 0xcf63e064, 0x9426e2c3,
-                0x0040ffd5,
-            ]),
-            y: FieldElement::new(&[
-                0xe29859d2, 0xd21b931a, 0xea34d27d, 0x296f19b9, 0x6487ae5b, 0x524260f9, 0x069092ca,
-                0x060c2257,
-            ]),
-        });
-        let b = U256::from_slice(&[
-            0x711a14cf, 0xebe54f04, 0x4729d630, 0xd14a329a, 0xf5480b47, 0x35fdc862, 0xde09131d,
-            0x029f7a37,
-        ]);
-        let c = Jacobian::from(Affine::Point {
-            x: FieldElement::new(&[
-                0x143de731, 0x4c657d7e, 0x44b99cbf, 0x49dfc2e5, 0x40ea4226, 0xaf6c4895, 0x9a141832,
-                0x04851acc,
-            ]),
-            y: FieldElement::new(&[
-                0x138592fd, 0x1377613f, 0xd53c61dd, 0xaa8b32c1, 0xd5bf18bc, 0x3b22a665, 0xf54ed6ae,
-                0x07f4bb53,
-            ]),
-        });
-        assert_eq!(a * b, c);
-    }
-
-    #[test]
-    fn test_mul_2() {
-        let p = Jacobian::from(Affine::Point {
-            x: FieldElement::from(u256h!(
+        let a = Jacobian::from(Affine::new(
+            FieldElement::from(u256h!(
                 "01ef15c18599971b7beced415a40f0c7deacfd9b0d1819e03d723d8bc943cfca"
             )),
-            y: FieldElement::from(u256h!(
+            FieldElement::from(u256h!(
                 "005668060aa49730b7be4801df46ec62de53ecd11abe43a32873000c36e8dc1f"
             )),
-        });
-        let c = u256h!("07374b7d69dc9825fc758b28913c8d2a27be5e7c32412f612b20c9c97afbe4dd");
-        let expected = Jacobian::from(Affine::Point {
-            x: FieldElement::from(u256h!(
+        ));
+        let b = u256h!("07374b7d69dc9825fc758b28913c8d2a27be5e7c32412f612b20c9c97afbe4dd");
+        let c = Jacobian::from(Affine::new(
+            FieldElement::from(u256h!(
                 "00f24921907180cd42c9d2d4f9490a7bc19ac987242e80ac09a8ac2bcf0445de"
             )),
-            y: FieldElement::from(u256h!(
+            FieldElement::from(u256h!(
                 "018a7a2ab4e795405f924de277b0e723d90eac55f2a470d8532113d735bdedd4"
             )),
-        });
-        let result = p.clone() * c;
-        assert_eq!(result, expected);
+        ));
+        assert_eq!(a * b, c);
     }
 
     #[allow(clippy::eq_op)]
