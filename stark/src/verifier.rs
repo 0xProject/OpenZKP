@@ -6,11 +6,12 @@ use crate::{
     hash::*,
     merkle_tree::{Commitment, Proof},
     polynomial::DensePolynomial,
+    proof_of_work,
     proof_params::ProofParams,
     utils::*,
 };
 use primefield::FieldElement;
-use std::{collections::BTreeMap, convert::TryInto, prelude::v1::*};
+use std::{collections::BTreeMap, prelude::v1::*};
 use u256::U256;
 
 pub fn check_proof<Public>(
@@ -86,13 +87,13 @@ where
     let last_layer_coefficient: Vec<FieldElement> =
         Replayable::<FieldElement>::replay_many(&mut channel, fri_size / params.blowup);
 
-    // Gets the proof of work from the proof, without moving the random forward.
-    let proof_of_work = u64::from_be_bytes(channel.read_without_replay(8).try_into().unwrap());
-    if !channel.pow_verify(proof_of_work, params.pow_bits) {
+    // Gets the proof of work from the proof.
+    let pow_seed: proof_of_work::ChallengeSeed = channel.get_random();
+    let pow_challenge = pow_seed.with_difficulty(params.pow_bits);
+    let pow_response = Replayable::<proof_of_work::Response>::replay(&mut channel);
+    if !pow_challenge.verify(pow_response) {
         return false;
     }
-    let recorded_work = Replayable::<u64>::replay(&mut channel);
-    assert_eq!(recorded_work, proof_of_work);
 
     // Gets queries from channel
     let queries = get_indices(
