@@ -2,7 +2,7 @@
 // declaration inside the substrate macro
 #![allow(clippy::large_enum_variant)]
 
-use crate::wrappers::*;
+use crate::{finality, wrappers::*};
 use macros_decl::hex;
 use parity_codec::Encode;
 use primefield::FieldElement;
@@ -10,19 +10,12 @@ use rstd::prelude::*;
 #[cfg(feature = "std")]
 use runtime_io::{with_storage, ChildrenStorageOverlay, StorageOverlay};
 use runtime_primitives::traits::{BlakeTwo256, Hash};
-use support::{
-    decl_event, decl_module, decl_storage, dispatch::Result, ensure, StorageMap, StorageValue,
-};
+use support::{decl_module, decl_storage, dispatch::Result, ensure, StorageMap, StorageValue};
 use system::{ensure_root, ensure_signed};
 use u256::U256;
 
 /// The module's configuration trait.
-pub trait Trait: system::Trait {
-    // TODO: Add other types and constants required configure this module.
-
-    /// The overarching event type.
-    type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
-}
+pub trait Trait: finality::Trait {}
 
 // This module's storage items.
 decl_storage! {
@@ -55,10 +48,6 @@ decl_storage! {
 decl_module! {
     /// The module declaration.
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
-        // Initializing events
-        // this is needed only if you are using events in your module
-        fn deposit_event<T>() = default;
-
         // This is an example of our sig verification but will be eventually removed
         pub fn send_tokens(origin, amount: u32, to: PublicKey, sig: Signature) -> Result {
             let sender = ensure_signed(origin)?;
@@ -227,6 +216,11 @@ decl_module! {
             <Vaults<T>>::insert(vault_id, sender_vault);
             Ok(())
         }
+
+        fn on_finalize() {
+            let vaults_hash = Self::hash_balance_tree();
+            <finality::Module<T>>::add_hash(vaults_hash);
+        }
     }
 }
 
@@ -250,7 +244,6 @@ impl<T: Trait> Module<T> {
     }
 
     fn empty_root(depth: u32) -> [u8; 32] {
-        // 4
         let mut level = ZERO_VAULT;
         for _ in 0..depth {
             level = hash(level, level);
@@ -297,18 +290,6 @@ impl<T: Trait> Module<T> {
     }
 }
 
-decl_event!(
-    pub enum Event<T>
-    where
-        AccountId = <T as system::Trait>::AccountId,
-    {
-        // Just a dummy event.
-        // Event `Something` is declared with a parameter of the type `u32` and `AccountId`
-        // To emit this event, we call the deposit funtion, from our runtime funtions
-        SomethingStored(usize, AccountId),
-    }
-);
-
 /// tests for this module
 #[cfg(test)]
 mod tests {
@@ -347,9 +328,10 @@ mod tests {
         type Lookup = IdentityLookup<Self::AccountId>;
         type Origin = Origin;
     }
-    impl Trait for ExchangeTest {
+    impl finality::Trait for ExchangeTest {
         type Event = ();
     }
+    impl Trait for ExchangeTest {}
     type Exchange = Module<ExchangeTest>;
 
     // This function basically just builds a genesis storage key/value store
