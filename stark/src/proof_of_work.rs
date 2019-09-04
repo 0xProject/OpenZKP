@@ -6,18 +6,18 @@ use u256::U256;
 #[cfg(feature = "std")]
 use rayon::prelude::*;
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct ChallengeSeed([u8; 32]);
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct Challenge {
     seed:       [u8; 32],
     difficulty: usize,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct Response {
     nonce: u64,
@@ -91,35 +91,40 @@ impl Response {
 }
 
 #[cfg(test)]
-#[cfg(all(unix, windows))]
 mod tests {
     use super::*;
 
     #[test]
-    fn proof_of_work_test() {
+    fn test_seed_from_channel() {
+        use crate::channel::*;
         let mut rand_source = ProverChannel::new();
         rand_source.initialize(hex!("0123456789abcded").to_vec().as_slice());
+
         let mut ver_rand_source = VerifierChannel::new(rand_source.proof.clone());
         ver_rand_source.initialize(&hex!("0123456789abcded"));
-        let work = rand_source.pow_find_nonce(12);
-        let ver_work = ver_rand_source.pow_find_nonce(12);
-        assert_eq!(ver_work, work);
-        assert!(&rand_source.pow_verify(work, 12));
+
+        let seed: ChallengeSeed = rand_source.get_random();
+        let ver_seed: ChallengeSeed = rand_source.get_random();
+        assert_eq!(seed, ver_seed);
     }
 
     #[test]
     fn threaded_proof_of_work_test() {
-        let mut rand_source = ProverChannel::new();
-        rand_source.initialize(&hex!("0123456789abcded"));
-        let work = rand_source.pow_find_nonce_threaded(12);
-        assert!(&rand_source.pow_verify(work, 12));
+        let challenge = ChallengeSeed::from_bytes(hex!(
+            "0123456789abcded0123456789abcded0123456789abcded0123456789abcded"
+        ))
+        .with_difficulty(8);
+        let response = challenge.solve();
+        assert!(challenge.verify(response));
     }
 
     #[test]
     fn ver_threaded_proof_of_work_test() {
-        let mut rand_source = VerifierChannel::new(hex!("0123456789abcded").to_vec());
-        rand_source.initialize(&hex!("0123456789abcded"));
-        let work = rand_source.pow_find_nonce_threaded(12);
-        assert!(&rand_source.pow_verify(work, 12));
+        let challenge = ChallengeSeed::from_bytes(hex!(
+            "0123456789abcded0123456789abcded0123456789abcded0123456789abcded"
+        ))
+        .with_difficulty(8);
+        let response = challenge.solve_threaded();
+        assert!(challenge.verify(response));
     }
 }
