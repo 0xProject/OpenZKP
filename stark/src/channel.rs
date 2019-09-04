@@ -215,12 +215,6 @@ impl Writable<&Hash> for ProverChannel {
     }
 }
 
-impl Writable<u64> for ProverChannel {
-    fn write(&mut self, data: u64) {
-        self.write(&data.to_be_bytes()[..]);
-    }
-}
-
 impl Writable<&merkle_tree::Commitment> for ProverChannel {
     fn write(&mut self, data: &merkle_tree::Commitment) {
         self.write(data.hash())
@@ -318,19 +312,6 @@ impl Replayable<FieldElement> for VerifierChannel {
     }
 }
 
-impl Replayable<u64> for VerifierChannel {
-    fn replay(&mut self) -> u64 {
-        let mut holder = [0_u8; 8];
-        let from = self.proof_index;
-        let to = from + 8;
-        self.proof_index = to;
-        // OPT: Use arrayref crate or similar to avoid copy
-        holder.copy_from_slice(&self.proof[from..to]);
-        self.coin.write(&holder[..]);
-        u64::from_be_bytes(holder)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -373,7 +354,7 @@ mod tests {
             source.coin.digest,
             hex!("3174a00d031bc8deff799e24a78ee347b303295a6cb61986a49873d9b6f13a0d")
         );
-        source.write(11_028_357_238_u64);
+        source.write(proof_of_work::Response::from_nonce(11_028_357_238_u64));
         assert_eq!(
             source.coin.digest,
             hex!("21571e2a323daa1e6f2adda87ce912608e1325492d868e8fe41626633d6acb93")
@@ -408,7 +389,7 @@ mod tests {
         source.initialize(&hex!("0123456789abcded"));
         let rand_bytes: [u8; 32] = source.get_random();
         source.write(&rand_bytes[..]);
-        source.write(11_028_357_238_u64);
+        source.write(proof_of_work::Response::from_nonce(11_028_357_238_u64));
         let written_field_element = FieldElement::from_montgomery(u256h!(
             "0389a47fe0e1e5f9c05d8dcb27b069b67b1c7ec61a5c0a3f54d81aea83d2c8f0"
         ));
@@ -437,8 +418,8 @@ mod tests {
             verifier.coin.digest,
             hex!("3174a00d031bc8deff799e24a78ee347b303295a6cb61986a49873d9b6f13a0d")
         );
-        let integer_test: u64 = verifier.replay();
-        assert_eq!(integer_test, 11_028_357_238_u64);
+        let pow_response_test: proof_of_work::Response = verifier.replay();
+        assert_eq!(pow_response_test.nonce(), 11_028_357_238_u64);
         assert_eq!(
             verifier.coin.digest,
             hex!("21571e2a323daa1e6f2adda87ce912608e1325492d868e8fe41626633d6acb93")
