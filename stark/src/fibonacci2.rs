@@ -23,20 +23,20 @@ impl ConstraintSystem for Fibonacci {
         assert!(index < Self::TRACE_LENGTH);
 
         // Constraint repetitions
+        // TODO: Move these helper functions to ConstraintSystem.
         let g = Constant(Self::generator());
-        let first_row = RationalExpression::from(1) / (X - 1.into());
-        let target_row = RationalExpression::from(1) / (X - g.pow(index));
-        let every_row = (X - g.pow(Self::TRACE_LENGTH)) / (X.pow(Self::TRACE_LENGTH) - 1.into());
+        let on_row = |index| RationalExpression::from(1) / (X - g.pow(index));
+        let every_row = || (X - g.pow(Self::TRACE_LENGTH)) / (X.pow(Self::TRACE_LENGTH) - 1.into());
 
         // The system
         Constraints {
             trace_length: Self::TRACE_LENGTH,
             num_columns:  Self::NUM_COLUMNS,
             constraints:  vec![
-                (Trace(0, 0) - 1.into()) * first_row,
-                (Trace(1, 0) - value.into()) * target_row,
-                (Trace(0, 1) - Trace(1, 0)) * every_row.clone(),
-                (Trace(1, 1) - Trace(0, 0) - Trace(1, 0)) * every_row,
+                (Trace(0, 0) - 1.into()) * on_row(0),
+                (Trace(1, 0) - value.into()) * on_row(index),
+                (Trace(0, 1) - Trace(1, 0)) * every_row(),
+                (Trace(1, 1) - Trace(0, 0) - Trace(1, 0)) * every_row(),
             ],
         }
     }

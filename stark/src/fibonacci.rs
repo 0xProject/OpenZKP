@@ -11,7 +11,7 @@ use crate::TraceTable;
 pub struct PublicInput {
     pub index: usize,
     pub value: FieldElement,
-};
+}
 
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct PrivateInput {
