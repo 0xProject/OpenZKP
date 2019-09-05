@@ -1,14 +1,14 @@
 use parity_codec::{Decode, Encode};
 use starkdex;
 
-#[derive(PartialEq, Encode, Default, Clone, Decode)]
+#[derive(PartialEq, Encode, Default, Clone, Decode, Eq)]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct PublicKey {
     pub x: [u8; 32],
     pub y: [u8; 32],
 }
 
-#[derive(PartialEq, Encode, Default, Clone, Decode)]
+#[derive(PartialEq, Encode, Default, Clone, Decode, Eq)]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct Signature {
     pub r: [u8; 32],

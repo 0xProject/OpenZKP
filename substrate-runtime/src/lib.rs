@@ -105,6 +105,7 @@ pub type Nonce = u64;
 
 pub mod block_proof;
 pub mod exchange;
+pub mod finality;
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't
 /// need to know the specifics of the runtime. They can then be made to be
@@ -243,7 +244,9 @@ impl sudo::Trait for Runtime {
 
 impl block_proof::Trait for Runtime {}
 
-impl exchange::Trait for Runtime {
+impl exchange::Trait for Runtime {}
+
+impl finality::Trait for Runtime {
     type Event = Event;
 }
 
@@ -261,7 +264,8 @@ construct_runtime!(
 		Balances: balances,
 		Sudo: sudo,
         BlockProof: block_proof::{Module, Call, Storage, Inherent},
-        Exchange: exchange::{Module, Call, Storage, Event<T>},
+        Exchange: exchange::{Module, Call, Storage},
+        FinalityProof: finality::{Module, Call, Storage, Event},
 	}
 );
 
