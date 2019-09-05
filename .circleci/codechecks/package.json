@@ -1,0 +1,10 @@
+{
+  "name": "codechecks",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "devDependencies": {
+    "@codechecks/build-size-watcher": "^0.1.0",
+    "@codechecks/client": "^0.1.8"
+  }
+}

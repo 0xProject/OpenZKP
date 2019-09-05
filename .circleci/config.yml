@@ -167,6 +167,12 @@ jobs:
       - store_artifacts:
           path: substrate-runtime-wasm/runtime.wasm
           destination: runtime.wasm
+      - run:
+          name: Codechecks
+          command: |
+            pushd .circleci/codechecks
+            yarn i
+            npx codechecks
       #- store_artifacts:
       #    path: target/release/substrate-node
       #    destination: node-{{ arch }}
