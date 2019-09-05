@@ -6,5 +6,8 @@
   "devDependencies": {
     "@codechecks/build-size-watcher": "^0.1.0",
     "@codechecks/client": "^0.1.8"
+  },
+  "dependencies": {
+    "codechecks-git-no-uncommitted": "^0.0.1"
   }
 }

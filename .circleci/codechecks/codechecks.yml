@@ -5,3 +5,4 @@ checks:
       gzip: false
       files:
         - path: "../../../../../tmp/workspace/runtime.wasm"
+  - name: codechecks-git-no-uncommitted

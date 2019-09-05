@@ -174,6 +174,11 @@ cli-table@^0.3.1:
   dependencies:
     colors "1.0.3"
 
+codechecks-git-no-uncommitted@^0.0.1:
+  version "0.0.1"
+  resolved "https://registry.yarnpkg.com/codechecks-git-no-uncommitted/-/codechecks-git-no-uncommitted-0.0.1.tgz#68a810ff6d7e322c21d085131062c573939e160b"
+  integrity sha512-bZlxREEAVEZ/aOtBFO8gip/MRvcr/jEZu5654f1wcPoXCwbzaXqpH57+mfFtxEPnLmhXwGjcEqDBTbhwMU3nXg==
+
 color-convert@^1.9.0:
   version "1.9.3"
   resolved "https://registry.yarnpkg.com/color-convert/-/color-convert-1.9.3.tgz#bb71850690e1f136567de629d2d5471deda4c1e8"
