@@ -24,7 +24,31 @@ commands:
           paths:
             - /usr/local/cargo
             - /usr/local/rustup
-  setup-sccache:
+  setup-toolchain:
+    steps:
+      - restore-toolchain-cache
+      - run:
+          name: Setup toolchain
+          command: |
+            # TODO: Create a custom docker image
+            rustup toolchain install $NIGHTLY
+            rustup target add wasm32-unknown-unknown --toolchain $NIGHTLY
+            rustup target add thumbv7m-none-eabi --toolchain $NIGHTLY
+            rustup component add rustfmt --toolchain $NIGHTLY
+            rustup component add clippy
+            cargo install --git https://github.com/alexcrichton/wasm-gc || echo Already installed
+            cargo install twiggy || echo Already installed
+            cargo install sccache --no-default-features || echo Already installed
+            sudo apt-get install clang # For the rocksdb dependency of substrate-node
+            sccache --version
+            rustc --version
+            cargo --version
+            rustup --version
+            wasm-gc --help > /dev/null # Run it to make sure it's executable
+            twiggy --version
+          no_output_timeout: 1800s
+      - save-toolchain-cache
+  enable-sccache:
     steps:
       - restore_cache:
           name: Restore sccache cache
@@ -32,10 +56,10 @@ commands:
             - sccache-cache-v1-{{ arch }}-{{ .Environment.CIRCLE_JOB }}
             - sccache-cache-v1-{{ arch }}
       - run:
-          name: Setup sccache
+          name: Enable sccache
           command: |
-            RUSTC_WRAPPER="" cargo install sccache --no-default-features || echo Already installed
-            sccache --version
+            echo 'export RUSTC_WRAPPER=sccache' >> $BASH_ENV
+            source $BASH_ENV
   save-sccache-cache:
     steps:
       - run:
@@ -71,35 +95,15 @@ jobs:
     environment:
       - RUST_BACKTRACE: 1
       - RUSTFLAGS: -Dwarnings
-      - RUSTC_WRAPPER: sccache
       - SCCACHE_CACHE_SIZE: 1G
       - NIGHTLY: nightly-2019-08-15
         # Exclude substrate-node (also pulls in a lot of deps, and currently fails)
       - PACKAGES: --all --exclude substrate-node
       - NO_STD_PACKAGES: macros_decl u256 primefield ecc starkdex stark substrate-runtime
     steps:
-      - checkout
-      - restore-toolchain-cache
+      - setup-toolchain
       - setup-sccache
-      - run:
-          name: Setup toolchain
-          command: |
-            # TODO: Create a custom docker image
-            rustup toolchain install $NIGHTLY
-            rustup target add wasm32-unknown-unknown --toolchain $NIGHTLY
-            rustup target add thumbv7m-none-eabi --toolchain $NIGHTLY
-            rustup component add rustfmt --toolchain $NIGHTLY
-            rustup component add clippy
-            cargo install --git https://github.com/alexcrichton/wasm-gc || echo Already installed
-            cargo install twiggy || echo Already installed
-            sudo apt-get install clang # For the rocksdb dependency of substrate-node
-            rustc --version
-            cargo --version
-            rustup --version
-            wasm-gc --help > /dev/null # Run it to make sure it's executable
-            twiggy --version
-          no_output_timeout: 1800s
-      - save-toolchain-cache
+      - checkout
       # - run:
       #     name: Build all targets on stable
       #     command: cargo build $PACKAGES --all-targets --all-features
