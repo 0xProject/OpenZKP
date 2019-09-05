@@ -123,6 +123,7 @@ jobs:
           name: Build all targets on stable
           command: cargo build $PACKAGES --all-targets --all-features
       - save-sccache-cache
+      - save-target-to-workspace
   build-nightly:
     executor: docker-rust
     steps:
@@ -134,7 +135,7 @@ jobs:
           name: Build all targets on nightly
           command: cargo +$NIGHTLY build $PACKAGES --all-targets --all-features
       - save-sccache-cache
-      - save-target
+      - save-target-to-workspace
   build-benchmarks:
     executor: docker-rust
     steps:
@@ -148,6 +149,7 @@ jobs:
             # we enable all features (which makes sense from a test coverage perspective).
             cargo bench --features bench --bench benchmark $PACKAGES --all-features --no-run
       - save-sccache-cache
+      - save-target-to-workspace
   build-no-std:
     executor: docker-rust
     steps:
@@ -253,6 +255,6 @@ workflows:
       - build-no-std
       - build-wasm
       - build-node
-      - rustformat-nightly
+      - rustformat-nightly:
           requires:
             - build-nightly
