@@ -40,6 +40,7 @@ decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
         fn deposit_event() = default;
 
+        // TODO - Want this to take a url pull or a ipfs hash to reduce node size
         pub fn prove_chain(origin, recorded: RecordedProof, start_index: u32, end_index: u32) -> Result {
             let _ = ensure_signed(origin)?; //TODO - Do we need this? Do we want to lock to validators or add a cost?
 
