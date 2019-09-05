@@ -176,7 +176,7 @@ jobs:
       #    destination: node-{{ arch }}
   codechecks:
     docker:
-      - image: circleci/node:latests
+      - image: circleci/node:latest
     steps:
       - checkout
       # - restore_cache:
