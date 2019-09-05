@@ -87,37 +87,37 @@ jobs:
             twiggy --version
           no_output_timeout: 1800s
       - save-toolchain-cache
-      - run:
-          name: Build all targets on stable
-          command: cargo build $PACKAGES --all-targets --all-features
-      - run:
-          # NOTE: The nightly build target is here for rustfmt-nightly
-          name: Build all targets on nightly
-          command: cargo +$NIGHTLY build $PACKAGES --all-targets --all-features
-      - run:
-          name: Build benchmarks
-          command: |
-            # HACK: We can not specify --features=bench in a workspace environment, instead
-            # we enable all features (which makes sense from a test coverage perspective).
-            cargo bench --features bench --bench benchmark $PACKAGES --all-features --no-run
-      - run:
-          # HACK: We try to build for Cortex-M3, not because we want to create
-          # IoT devices, but because there is no `std` available for this target.
-          # This forces the build to fail if an accidental dependency on `std`
-          # exists. Wasm has a working std, so is not a suitable target here.
-          # See: https://forge.rust-lang.org/platform-support.html
-          # We only build libraries and binaries, as we are not interested in
-          # the tests/benchmarks/examples working in no_std
-          name: Check no std packages on nightly on a platform that has no std
-          command: |
-            # HACK: We use a for loop here because cargo across multiple
-            # PACKAGES does not respect feature flags. This also helps
-            # identifying the failing project.
-            for i in $NO_STD_PACKAGES; do
-              pushd $i
-              cargo +$NIGHTLY check --lib --bins --no-default-features --target=thumbv7m-none-eabi
-              popd
-            done
+      # - run:
+      #     name: Build all targets on stable
+      #     command: cargo build $PACKAGES --all-targets --all-features
+      # - run:
+      #     # NOTE: The nightly build target is here for rustfmt-nightly
+      #     name: Build all targets on nightly
+      #     command: cargo +$NIGHTLY build $PACKAGES --all-targets --all-features
+      # - run:
+      #     name: Build benchmarks
+      #     command: |
+      #       # HACK: We can not specify --features=bench in a workspace environment, instead
+      #       # we enable all features (which makes sense from a test coverage perspective).
+      #       cargo bench --features bench --bench benchmark $PACKAGES --all-features --no-run
+      # - run:
+      #     # HACK: We try to build for Cortex-M3, not because we want to create
+      #     # IoT devices, but because there is no `std` available for this target.
+      #     # This forces the build to fail if an accidental dependency on `std`
+      #     # exists. Wasm has a working std, so is not a suitable target here.
+      #     # See: https://forge.rust-lang.org/platform-support.html
+      #     # We only build libraries and binaries, as we are not interested in
+      #     # the tests/benchmarks/examples working in no_std
+      #     name: Check no std packages on nightly on a platform that has no std
+      #     command: |
+      #       # HACK: We use a for loop here because cargo across multiple
+      #       # PACKAGES does not respect feature flags. This also helps
+      #       # identifying the failing project.
+      #       for i in $NO_STD_PACKAGES; do
+      #         pushd $i
+      #         cargo +$NIGHTLY check --lib --bins --no-default-features --target=thumbv7m-none-eabi
+      #         popd
+      #       done
       - run:
           name: Build wasm substrate runtime
           command: |
@@ -127,43 +127,43 @@ jobs:
             wasm-gc runtime.wasm
             # OPT: Run wasm-opt -O3 runtime.wasm -o runtime.wasm
             twiggy top -n 50 runtime.wasm
-      - run:
-          name: Build node executable (disabled)
-          command: |
-            #pushd substrate-node
-            #cp ../substrate-runtime-wasm/runtime.wasm ./assets/runtime.wasm
-            # TODO: This builds rocksdb as a dependency in c++, this is not
-            # currently covered by sccache, but could be.
-            # TODO: This build times out on CI.
-            # cargo build --release
+      # - run:
+      #     name: Build node executable (disabled)
+      #     command: |
+      #       #pushd substrate-node
+      #       #cp ../substrate-runtime-wasm/runtime.wasm ./assets/runtime.wasm
+      #       # TODO: This builds rocksdb as a dependency in c++, this is not
+      #       # currently covered by sccache, but could be.
+      #       # TODO: This build times out on CI.
+      #       # cargo build --release
       # We save the sccache here because everything has been build, from here on
       # it is only testing that will not add to the cache (including clippy).
       # Saving cache early allows it to be re-used even when the tests fail.
       - save-sccache-cache
-      - run:
-          name: Lint with rustformat nightly
-          command: cargo +$NIGHTLY fmt --all -- --check
-          # TODO: Run over wasm targets (which are not part of the workspace)
-      - run:
-          name: Lint with clippy
-          command: cargo clippy $PACKAGES --all-targets --all-features
-          # TODO: Run over wasm targets (which are not part of the workspace)
-      - run:
-          name: Test debug build
-          command: cargo test $PACKAGES --all-features -- --nocapture
-      - run:
-          name: Test benchmarks
-          command: |
-            # Actually running the benchmarks on CI is too noisy. The results
-            # would be meaningless. Instead we just run it to make sure they work.
-            # Exclude benchmarks that compare against external crates (pulls in a lot of deps)
-            # HACK: We add 'bench' as a feature so dev-dependencies can be included as optional
-            # regular dependencies behind a feature flag. This solves problems with feature
-            # unification. 
-            # HACK: We can not specify --features=bench in a workspace environment, instead
-            # we enable all features (which makes sense from a test coverage perspective).
-            # TODO: We don't need an optimized build here, re-using debug build would be ok.
-            cargo bench --bench benchmark $PACKAGES --all-features -- --test
+      # - run:
+      #     name: Lint with rustformat nightly
+      #     command: cargo +$NIGHTLY fmt --all -- --check
+      #     # TODO: Run over wasm targets (which are not part of the workspace)
+      # - run:
+      #     name: Lint with clippy
+      #     command: cargo clippy $PACKAGES --all-targets --all-features
+      #     # TODO: Run over wasm targets (which are not part of the workspace)
+      # - run:
+      #     name: Test debug build
+      #     command: cargo test $PACKAGES --all-features -- --nocapture
+      # - run:
+      #     name: Test benchmarks
+      #     command: |
+      #       # Actually running the benchmarks on CI is too noisy. The results
+      #       # would be meaningless. Instead we just run it to make sure they work.
+      #       # Exclude benchmarks that compare against external crates (pulls in a lot of deps)
+      #       # HACK: We add 'bench' as a feature so dev-dependencies can be included as optional
+      #       # regular dependencies behind a feature flag. This solves problems with feature
+      #       # unification. 
+      #       # HACK: We can not specify --features=bench in a workspace environment, instead
+      #       # we enable all features (which makes sense from a test coverage perspective).
+      #       # TODO: We don't need an optimized build here, re-using debug build would be ok.
+      #       cargo bench --bench benchmark $PACKAGES --all-features -- --test
       - store_artifacts:
           path: substrate-runtime-wasm/runtime.wasm
           destination: runtime.wasm
