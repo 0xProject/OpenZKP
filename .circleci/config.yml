@@ -17,10 +17,10 @@ commands:
     steps:
       - run:
           name: Generate toolchain cache key
-          command: sha256sum /usr/local/rustup/toolchains/*/bin/* /usr/local/cargo/bin/* > TOOLCHAIN_CACHE_KEY
+          command: sha256sum /usr/local/rustup/toolchains/*/bin/* /usr/local/cargo/bin/* > /tmp/TOOLCHAIN_CACHE_KEY
       - save_cache:
           name: Save toolchain cache
-          key: toolchain-v2-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ checksum "TOOLCHAIN_CACHE_KEY" }}
+          key: toolchain-v2-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ checksum "/tmp/TOOLCHAIN_CACHE_KEY" }}
           paths:
             - /usr/local/cargo
             - /usr/local/rustup
