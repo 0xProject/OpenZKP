@@ -4,4 +4,4 @@ checks:
       name: runtime.wasm
       gzip: false
       files:
-        - path: "../../substrate-runtime-wasm/runtime.wasm"
+        - path: "/tmp/workspace/runtime.wasm"

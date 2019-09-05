@@ -167,18 +167,39 @@ jobs:
       - store_artifacts:
           path: substrate-runtime-wasm/runtime.wasm
           destination: runtime.wasm
-      - run:
-          name: Codechecks
-          command: |
-            pushd .circleci/codechecks
-            yarn i
-            npx codechecks
+      - persist_to_workspace:
+          root: ./substrate-runtime-wasm
+          paths:
+            - runtime.wasm
       #- store_artifacts:
       #    path: target/release/substrate-node
       #    destination: node-{{ arch }}
+  codechecks:
+    docker:
+      - image: circleci/node:latests
+    steps:
+      - checkout
+      # - restore_cache:
+      #       keys:
+      #       - v3-dependencies-{{ checksum "package.json" }}
+      - run:
+          name: Build Codechecks
+          command: |
+              pushd .circleci/codechecks
+              yarn i
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Run Codechecks
+          command: |
+              pushd .circleci/codechecks
+              npx codechecks
 
 workflows:
   version: 2
   build:
     jobs:
       - build
+      - codechecks:
+          requires:
+            - build
