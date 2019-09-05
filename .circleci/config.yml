@@ -182,13 +182,13 @@ jobs:
       # - restore_cache:
       #       keys:
       #       - v3-dependencies-{{ checksum "package.json" }}
+      - attach_workspace:
+          at: /tmp/workspace
       - run:
           name: Build Codechecks
           command: |
               pushd .circleci/codechecks
-              yarn i
-      - attach_workspace:
-          at: /tmp/workspace
+              yarn
       - run:
           name: Run Codechecks
           command: |
