@@ -51,11 +51,23 @@ commands:
           key: sccache-cache-v1-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ epoch }}
           paths:
             - "~/.cache/sccache"
+  codechecks:
+    steps:
+      - run:
+          name: Build Codechecks
+          command: |
+              pushd .circleci/codechecks
+              yarn
+      - run:
+          name: Run Codechecks
+          command: |
+              pushd .circleci/codechecks
+              npx codechecks
 
 jobs:
   build:
     docker:
-      - image: circleci/rust:latest
+      - image: circleci/rust:1.37.0-node
     environment:
       - RUST_BACKTRACE: 1
       - RUSTFLAGS: -Dwarnings
@@ -72,6 +84,7 @@ jobs:
       - run:
           name: Setup toolchain
           command: |
+            # TODO: Create a custom docker image
             rustup toolchain install $NIGHTLY
             rustup target add wasm32-unknown-unknown --toolchain $NIGHTLY
             rustup target add thumbv7m-none-eabi --toolchain $NIGHTLY
@@ -174,32 +187,10 @@ jobs:
       #- store_artifacts:
       #    path: target/release/substrate-node
       #    destination: node-{{ arch }}
-  codechecks:
-    docker:
-      - image: circleci/node:latest
-    steps:
-      - checkout
-      # - restore_cache:
-      #       keys:
-      #       - v3-dependencies-{{ checksum "package.json" }}
-      - attach_workspace:
-          at: /tmp/workspace
-      - run:
-          name: Build Codechecks
-          command: |
-              pushd .circleci/codechecks
-              yarn
-      - run:
-          name: Run Codechecks
-          command: |
-              pushd .circleci/codechecks
-              npx codechecks
+      - codechecks
 
 workflows:
   version: 2
   build:
     jobs:
       - build
-      - codechecks:
-          requires:
-            - build
