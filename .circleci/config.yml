@@ -254,6 +254,5 @@ workflows:
       - build-wasm
       - build-node
       - rustformat-nightly
-        requires:
-          - build-nightly
-
+          requires:
+            - build-nightly
