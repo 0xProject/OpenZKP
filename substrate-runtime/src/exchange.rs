@@ -242,7 +242,7 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
-    fn empty_root(depth: u32) -> [u8; 32] {
+    fn empty_level(depth: u32) -> [u8; 32] {
         let mut level = EMPTY_VAULT_HASH;
         for _ in 0..depth {
             level = hash(level, level);
@@ -275,7 +275,7 @@ impl<T: Trait> Module<T> {
         }
         debug_assert_eq!(layer.len(), 1);
         let mut value_subtree = layer[0];
-        let mut other_half = Self::empty_root(depth);
+        let mut other_half = Self::empty_level(depth);
 
         if depth < 31 {
             // Our tree is only hashed up to depth 31
