@@ -72,8 +72,7 @@ decl_module! {
              Ok(())
         }
 
-        pub fn register(origin, who: PublicKey, sig: Signature) -> Result
-        {
+        pub fn register(origin, who: PublicKey, sig: Signature) -> Result {
             let sender = ensure_signed(origin)?;
             let data : Vec<u8> = sender.clone().encode();
             let hash : [u8; 32] = BlakeTwo256::hash_of(&data).into();
