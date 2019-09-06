@@ -35,9 +35,8 @@ RUN true \
  # For coverage reports
  && apt-get install lcov \
  # Build project
- && cargo build --all --all-targets --all-features \
- # Build project
  && cd /root/project \
+ && cargo build --all --all-targets --all-features \
  && cargo build --release --all --all-targets --all-features \
  # Download codechecks deps
  && cd /root/project/.circleci/codechecks \
