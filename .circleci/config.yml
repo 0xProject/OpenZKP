@@ -73,6 +73,10 @@ commands:
     steps:
       - attach_workspace:
           at: .
+      - run:
+          # Make sure target is newer than source
+          name: Touch target files
+          command: time find target -exec touch {} \;
 
 jobs:
   build-docker:
@@ -176,6 +180,10 @@ jobs:
           command: |
             pushd substrate-runtime-wasm
             twiggy top -n 50 runtime.wasm
+      - persist_to_workspace:
+          root: substrate-runtime-wasm
+          paths:
+            - runtime.wasm
       - store_artifacts:
           path: substrate-runtime-wasm/runtime.wasm
           destination: runtime.wasm
@@ -185,6 +193,8 @@ jobs:
     steps:
       - enable-sccache
       - checkout
+      - attach_workspace:
+          at: ./substrate-node/assets
       - run:
           name: Build node executable (disabled)
           command: |
@@ -195,9 +205,6 @@ jobs:
             # TODO: This build times out on CI.
             # cargo build --release
       - save-sccache-cache
-      #- store_artifacts:
-      #    path: target/release/substrate-node
-      #    destination: node-{{ arch }}
       - codechecks
   rustformat-nightly:
     executor: docker-rust
