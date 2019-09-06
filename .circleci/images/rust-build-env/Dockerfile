@@ -1,7 +1,8 @@
 FROM circleci/rust:1.37-node
 
-# Install clippy
+# Install clippy and sccache
 RUN rustup component add clippy
+RUN cargo install sccache --no-default-features
 
 # Install Nightly with rustfmt, wasm and Cortex-M3 support
 ENV NIGHTLY="nightly-2019-08-15"
