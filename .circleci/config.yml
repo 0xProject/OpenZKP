@@ -235,6 +235,8 @@ workflows:
               only:
                 - master
     jobs:
+      # Rebuild docker build environment to get up-to-date dependencies
+      # and build cache.
       - rebuild-docker
   commit:
     jobs:
