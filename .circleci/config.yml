@@ -3,7 +3,7 @@ version: 2.1
 executors:
   docker-builder:
     docker:
-      - image: circleci/buildpack-deps:stretch
+      - image: docker:stable-git
     environment:
       # Necessary for `docker manifest` subcommand
       DOCKER_CLI_EXPERIMENTAL: enabled
