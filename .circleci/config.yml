@@ -81,7 +81,7 @@ jobs:
       - setup_remote_docker
       - run:
           name: Build Docker image
-          command: docker build -t $IMAGE_NAME .circleci/images/rust-build-env
+          command: docker build -t $IMAGE .circleci/images/rust-build-env
   publish-docker:
     executor: docker-builder
     steps:
@@ -90,7 +90,7 @@ jobs:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
-            docker push $IMAGE_NAME:latest
+            docker push $IMAGE
   build-stable:
     executor: docker-rust
     steps:
