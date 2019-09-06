@@ -94,7 +94,6 @@ jobs:
   build-stable:
     executor: docker-rust
     steps:
-      - setup-toolchain
       - enable-sccache
       - checkout
       - run:
@@ -106,7 +105,6 @@ jobs:
   build-nightly:
     executor: docker-rust
     steps:
-      - setup-toolchain
       - enable-sccache
       - checkout
       - run:
@@ -119,7 +117,6 @@ jobs:
   build-benchmarks:
     executor: docker-rust
     steps:
-      - setup-toolchain
       - enable-sccache
       - checkout
       - run:
@@ -134,7 +131,6 @@ jobs:
   build-no-std:
     executor: docker-rust
     steps:
-      - setup-toolchain
       - enable-sccache
       - checkout
       - run:
@@ -160,7 +156,6 @@ jobs:
   build-wasm-runtime:
     executor: docker-rust
     steps:
-      - setup-toolchain
       - enable-sccache
       - checkout
       - run:
@@ -169,6 +164,7 @@ jobs:
             pushd substrate-runtime-wasm
             cargo +$NIGHTLY build --release
             cp target/wasm32-unknown-unknown/release/substrate_node_runtime_wasm.wasm ./runtime.wasm
+      - save-sccache-cache
       - run:
           name: Optimize for size
           command: |
@@ -182,7 +178,6 @@ jobs:
           command: |
             pushd substrate-runtime-wasm
             twiggy top -n 50 runtime.wasm
-      - save-sccache-cache
       - store_artifacts:
           path: substrate-runtime-wasm/runtime.wasm
           destination: runtime.wasm
@@ -190,7 +185,6 @@ jobs:
   build-node:
     executor: docker-rust
     steps:
-      - setup-toolchain
       - enable-sccache
       - checkout
       - run:
@@ -202,6 +196,7 @@ jobs:
             # currently covered by sccache, but could be.
             # TODO: This build times out on CI.
             # cargo build --release
+      - save-sccache-cache
       #- store_artifacts:
       #    path: target/release/substrate-node
       #    destination: node-{{ arch }}
@@ -209,8 +204,6 @@ jobs:
   rustformat-nightly:
     executor: docker-rust
     steps:
-      - setup-toolchain
-      - enable-sccache
       - checkout
       - restore-target-from-workspace
       - run:
@@ -221,8 +214,6 @@ jobs:
   clippy:
     executor: docker-rust
     steps:
-      - setup-toolchain
-      - enable-sccache
       - checkout
       - restore-target-from-workspace
       - run:
@@ -233,8 +224,6 @@ jobs:
   tests:
     executor: docker-rust
     steps:
-      - setup-toolchain
-      - enable-sccache
       - checkout
       - restore-target-from-workspace
       - run:
@@ -244,8 +233,6 @@ jobs:
   test-benchmarks:
     executor: docker-rust
     steps:
-      - setup-toolchain
-      - enable-sccache
       - checkout
       - restore-target-from-workspace
       - run:
