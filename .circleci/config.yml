@@ -116,13 +116,6 @@ jobs:
     executor: docker-rust
     steps:
       - checkout
-      - enable-sccache
-      - run:
-          # NOTE: The nightly build target is here for rustfmt-nightly
-          # TODO: Do we need the build just to lint?
-          name: Build all targets on nightly
-          command: cargo +$NIGHTLY build $PACKAGES --all-targets --all-features
-      - save-sccache-cache
       - run:
           name: Lint with rustformat nightly
           command: cargo +$NIGHTLY fmt --all -- --check
