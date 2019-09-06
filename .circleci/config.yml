@@ -13,7 +13,6 @@ executors:
       - PACKAGES: --all --exclude substrate-node
       - NO_STD_PACKAGES: macros_decl u256 primefield ecc starkdex stark substrate-runtime
 
-
 commands:
   restore-toolchain-cache:
     steps:
