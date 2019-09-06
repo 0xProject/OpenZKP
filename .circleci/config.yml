@@ -76,7 +76,7 @@ jobs:
               docker build -t $IMAGE .circleci/images/rust-build-env;
               docker push $IMAGE
             )
-  build-debug:
+  tests:
     executor: docker-rust
     steps:
       - checkout
@@ -89,7 +89,7 @@ jobs:
           name: Test debug build
           command: cargo test $PACKAGES --all-features -- --nocapture
       - codechecks
-  build-release:
+  benchmarks:
     executor: docker-rust
     steps:
       - checkout
@@ -112,7 +112,7 @@ jobs:
             # TODO: We don't need an optimized build here, re-using debug build would be ok.
             cargo bench --bench benchmark $PACKAGES --all-features -- --test
       - codechecks
-  build-nightly:
+  rustformat:
     executor: docker-rust
     steps:
       - checkout
@@ -131,8 +131,8 @@ jobs:
   build-no-std:
     executor: docker-rust
     steps:
-      - enable-sccache
       - checkout
+      - enable-sccache
       - run:
           # HACK: We try to build for Cortex-M3, not because we want to create
           # IoT devices, but because there is no `std` available for this target.
@@ -156,8 +156,8 @@ jobs:
   build-wasm-runtime:
     executor: docker-rust
     steps:
-      - enable-sccache
       - checkout
+      - enable-sccache
       - run:
           name: Build wasm substrate runtime
           command: |
@@ -189,10 +189,10 @@ jobs:
   build-node:
     executor: docker-rust
     steps:
-      - enable-sccache
       - checkout
       - attach_workspace:
           at: ./substrate-node/assets
+      - enable-sccache
       - run:
           name: Build node executable (disabled)
           command: |
@@ -223,13 +223,13 @@ workflows:
   build:
     jobs:
       - build-docker
-      - build-debug:
+      - tests:
           requires:
             - build-docker
-      - build-release:
+      - benchmarks:
           requires:
             - build-docker
-      - build-nightly:
+      - rustformat:
           requires:
             - build-docker
       - build-no-std:
