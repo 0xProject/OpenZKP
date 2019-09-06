@@ -1,6 +1,10 @@
 version: 2.1
 # Validate using `circleci config validate`
 
+# TODO: Build with profile guided optimization. Use benchmarks and select
+#  example projects as guides. This is probably only worthwhile on `master`.
+#  See https://doc.rust-lang.org/rustc/profile-guided-optimization.html
+
 executors:
   docker-builder:
     docker:

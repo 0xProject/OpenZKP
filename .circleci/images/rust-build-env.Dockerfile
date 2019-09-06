@@ -5,6 +5,7 @@
 # See also the Rust playground Dockerfile: 
 # https://github.com/integer32llc/rust-playground/blob/master/compiler/base/Dockerfile
 FROM circleci/rust:1-node
+USER root
 
 # The latest nightly
 # TODO: Update manually. 
@@ -22,17 +23,21 @@ RUN true \
  && rustup target add wasm32-unknown-unknown --toolchain $NIGHTLY \
  && rustup target add thumbv7m-none-eabi --toolchain $NIGHTLY \
  && rustup component add rustfmt --toolchain $NIGHTLY \
- # Install some tools
+ # Install tools
  && rustup component add clippy \
  && cargo install sccache --no-default-features \
  && cargo install --git https://github.com/alexcrichton/wasm-gc \
  && cargo install twiggy \
  && cargo install cargo-cache \
+ && cargo install grcov \
  # For the rocksdb dependency of substrate-node
- && sudo apt-get install clang \
+ && apt-get install clang \
+ # For coverage reports
+ && apt-get install lcov \
  # Build project
- cd /root/project \
  && cargo build --all --all-targets --all-features \
+ # Build project
+ && cd /root/project \
  && cargo build --release --all --all-targets --all-features \
  # Download codechecks deps
  && cd /root/project/.circleci/codechecks \
