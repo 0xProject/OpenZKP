@@ -145,12 +145,15 @@ pub(crate) fn divrem_nbym(numerator: &mut [u64], divisor: &mut [u64]) {
                 carry = b;
             }
             qhat -= 1;
+            // The updated value of numerator[j + n] would be 0. But since we're going to
+            // overwrite it below, we only check that the result would be 0.
             debug_assert_eq!(numerator[j + n].wrapping_sub(borrow).wrapping_add(carry), 0);
         } else {
+            // This the would be the updated value when the remainder is non-negative.
             debug_assert_eq!(numerator[j + n].wrapping_sub(borrow), 0);
         }
 
-        // Store remainder in the now zero bits of numerator
+        // Store remainder in the unused bits of numerator
         numerator[j + n] = qhat;
     }
 
