@@ -82,8 +82,8 @@ jobs:
       - checkout
       - enable-sccache
       - run:
-          name: Build all targets in debug mode
-          command: cargo build $PACKAGES --all-targets --all-features
+          name: Build tests in debug mode
+          command: cargo build $PACKAGES --tests --all-features
       - save-sccache-cache
       - run:
           name: Test debug build
@@ -119,6 +119,7 @@ jobs:
       - enable-sccache
       - run:
           # NOTE: The nightly build target is here for rustfmt-nightly
+          # TODO: Do we need the build just to lint?
           name: Build all targets on nightly
           command: cargo +$NIGHTLY build $PACKAGES --all-targets --all-features
       - save-sccache-cache
