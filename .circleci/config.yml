@@ -1,66 +1,24 @@
 version: 2.1
 
 executors:
+  docker-builder:
+    docker:
+      - image: circleci/buildpack-deps:stretch
+    environment:
+      # Note: increment on changes do Dockerfile both here and in `docker-rust` below
+      IMAGE: 0xchain/rust-build-env:v1
   docker-rust:
     docker:
-      - image: circleci/rust:1.37.0-node
+      - image: 0xchain/rust-build-env:v1
     environment:
-      - RUST_BACKTRACE: 1
-      - RUSTFLAGS: -Dwarnings
-      - SCCACHE_CACHE_SIZE: 1G
-      - NIGHTLY: nightly-2019-08-15
-        # Exclude substrate-node (also pulls in a lot of deps, and currently fails)
-      - PACKAGES: --all --exclude substrate-node
-      - NO_STD_PACKAGES: macros_decl u256 primefield ecc starkdex stark substrate-runtime
+      RUST_BACKTRACE: "1"
+      RUSTFLAGS: -Dwarnings
+      SCCACHE_CACHE_SIZE: 1G
+      # Exclude substrate-node (also pulls in a lot of deps, and currently fails)
+      PACKAGES: --all --exclude substrate-node
+      NO_STD_PACKAGES: macros_decl u256 primefield ecc starkdex stark substrate-runtime
 
 commands:
-  restore-toolchain-cache:
-    steps:
-      - run:
-          name: Allow CirceCI to write toolchain (workaround)
-          command: |
-            sudo mkdir -p /usr/local/{cargo,rustup}
-            sudo chown -R circleci /usr/local/{cargo,rustup}
-      - restore_cache:
-          name: Restore toolchain cache
-          keys: 
-            - toolchain-v2-{{ arch }}-{{ .Environment.CIRCLE_JOB }}
-            - toolchain-v2-{{ arch }}
-  save-toolchain-cache:
-    steps:
-      - run:
-          name: Generate toolchain cache key
-          command: sha256sum /usr/local/rustup/toolchains/*/bin/* /usr/local/cargo/bin/* > /tmp/TOOLCHAIN_CACHE_KEY
-      - save_cache:
-          name: Save toolchain cache
-          key: toolchain-v2-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ checksum "/tmp/TOOLCHAIN_CACHE_KEY" }}
-          paths:
-            - /usr/local/cargo
-            - /usr/local/rustup
-  setup-toolchain:
-    steps:
-      - restore-toolchain-cache
-      - run:
-          name: Setup toolchain
-          command: |
-            # TODO: Create a custom docker image
-            rustup toolchain install $NIGHTLY
-            rustup target add wasm32-unknown-unknown --toolchain $NIGHTLY
-            rustup target add thumbv7m-none-eabi --toolchain $NIGHTLY
-            rustup component add rustfmt --toolchain $NIGHTLY
-            rustup component add clippy
-            cargo install --git https://github.com/alexcrichton/wasm-gc || echo Already installed
-            cargo install twiggy || echo Already installed
-            cargo install sccache --no-default-features || echo Already installed
-            sudo apt-get install clang # For the rocksdb dependency of substrate-node
-            sccache --version
-            rustc --version
-            cargo --version
-            rustup --version
-            wasm-gc --help > /dev/null # Run it to make sure it's executable
-            twiggy --version
-          no_output_timeout: 1800s
-      - save-toolchain-cache
   enable-sccache:
     steps:
       - restore_cache:
@@ -116,6 +74,23 @@ commands:
           at: .
 
 jobs:
+  build-docker:
+    executor: docker-builder
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build Docker image
+          command: docker build -t $IMAGE_NAME .circleci/images/rust-build-env
+  publish-docker:
+    executor: docker-builder
+    steps:
+      - setup_remote_docker
+      - run:
+          name: Publish Docker Image to Docker Hub
+          command: |
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            docker push $IMAGE_NAME:latest
   build-stable:
     executor: docker-rust
     steps:
@@ -292,23 +267,40 @@ workflows:
   version: 2
   build:
     jobs:
-      - build-stable
-      - build-nightly
-      - build-no-std
-      - build-wasm-runtime
+      - build-docker
+      - publish-docker:
+          requires:
+            - build-docker
+      - build-stable:
+          requires:
+            - publish-docker
+      - build-nightly:
+          requires:
+            - publish-docker
+      - build-no-std:
+          requires:
+            - publish-docker
+      - build-wasm-runtime:
+          requires:
+            - publish-docker
       - build-node:
           requires:
+            - publish-docker
             - build-wasm-runtime
       - rustformat-nightly:
           requires:
+            - publish-docker
             - build-nightly
       - clippy:
           requires:
+            - publish-docker
             - build-stable
       - tests:
           requires:
+            - publish-docker
             - build-stable
       - test-benchmarks:
           requires:
+            - publish-docker
             - build-stable
 
