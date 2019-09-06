@@ -79,13 +79,13 @@ jobs:
               docker build -t $IMAGE .circleci/images/rust-build-env;
               docker push $IMAGE
             )
-  build-stable:
+  build-debug:
     executor: docker-rust
     steps:
       - enable-sccache
       - checkout
       - run:
-          name: Build all targets on stable
+          name: Build all targets in debug mode
           command: cargo build $PACKAGES --all-targets --all-features
       - save-sccache-cache
       - run:
@@ -95,6 +95,29 @@ jobs:
       - run:
           name: Test debug build
           command: cargo test $PACKAGES --all-features -- --nocapture
+      - run:
+          name: Test benchmarks
+          command: |
+            # Actually running the benchmarks on CI is too noisy. The results
+            # would be meaningless. Instead we just run it to make sure they work.
+            # Exclude benchmarks that compare against external crates (pulls in a lot of deps)
+            # HACK: We add 'bench' as a feature so dev-dependencies can be included as optional
+            # regular dependencies behind a feature flag. This solves problems with feature
+            # unification. 
+            # HACK: We can not specify --features=bench in a workspace environment, instead
+            # we enable all features (which makes sense from a test coverage perspective).
+            # TODO: We don't need an optimized build here, re-using debug build would be ok.
+            cargo bench --bench benchmark $PACKAGES --all-features -- --test
+      - codechecks
+  build-release:
+    executor: docker-rust
+    steps:
+      - enable-sccache
+      - checkout
+      - run:
+          name: Build benchmarks in release mode on stable
+          command: cargo build --release --bench benchmark $PACKAGES --all-features
+      - save-sccache-cache
       - run:
           name: Test benchmarks
           command: |
@@ -220,7 +243,10 @@ workflows:
   build:
     jobs:
       - build-docker
-      - build-stable:
+      - build-debug:
+          requires:
+            - build-docker
+      - build-release:
           requires:
             - build-docker
       - build-nightly:
