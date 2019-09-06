@@ -1,4 +1,5 @@
 version: 2.1
+# Validate using `circleci config validate`
 
 executors:
   docker-builder:
@@ -50,14 +51,10 @@ commands:
   codechecks:
     steps:
       - run:
-          name: Build Codechecks
-          command: |
-              pushd .circleci/codechecks
-              yarn
-      - run:
           name: Run Codechecks
           command: |
               pushd .circleci/codechecks
+              yarn
               if [ -f $CIRCLE_JOB.yml ]; then
                 npx codechecks all-jobs.yml $CIRCLE_JOB.yml
               else
@@ -82,16 +79,12 @@ jobs:
   build-debug:
     executor: docker-rust
     steps:
-      - enable-sccache
       - checkout
+      - enable-sccache
       - run:
           name: Build all targets in debug mode
           command: cargo build $PACKAGES --all-targets --all-features
       - save-sccache-cache
-      - run:
-          name: Lint with clippy
-          command: cargo clippy $PACKAGES --all-targets --all-features
-          # TODO: Run over wasm targets (which are not part of the workspace)
       - run:
           name: Test debug build
           command: cargo test $PACKAGES --all-features -- --nocapture
@@ -112,8 +105,8 @@ jobs:
   build-release:
     executor: docker-rust
     steps:
-      - enable-sccache
       - checkout
+      - enable-sccache
       - run:
           name: Build benchmarks in release mode on stable
           command: cargo build --release --bench benchmark $PACKAGES --all-features
@@ -135,8 +128,8 @@ jobs:
   build-nightly:
     executor: docker-rust
     steps:
-      - enable-sccache
       - checkout
+      - enable-sccache
       - run:
           # NOTE: The nightly build target is here for rustfmt-nightly
           name: Build all targets on nightly
@@ -146,20 +139,6 @@ jobs:
           name: Lint with rustformat nightly
           command: cargo +$NIGHTLY fmt --all -- --check
           # TODO: Run over wasm targets (which are not part of the workspace)
-      - codechecks
-  build-benchmarks:
-    executor: docker-rust
-    steps:
-      - enable-sccache
-      - checkout
-      - run:
-          name: Build benchmarks
-          command: |
-            # HACK: We can not specify --features=bench in a workspace environment, instead
-            # we enable all features (which makes sense from a test coverage perspective).
-            cargo bench --features bench --bench benchmark $PACKAGES --all-features --no-run
-      - save-sccache-cache
-      - save-target-to-workspace
       - codechecks
   build-no-std:
     executor: docker-rust
@@ -237,6 +216,19 @@ jobs:
             # cargo build --release
       - save-sccache-cache
       - codechecks
+  clippy:
+    executor: docker-rust
+    steps:
+      - checkout
+      - enable-sccache
+      - run:
+          name: Lint with clippy
+          command: |
+            cargo clippy $PACKAGES --all-targets --all-features
+            # TODO: Run over wasm targets (which are not part of the workspace)
+            # TODO: Clippy different feature sets (std, test, bench, ...)
+      - save-sccache-cache
+      - codechecks
 
 workflows:
   version: 2
@@ -262,4 +254,7 @@ workflows:
           requires:
             - build-docker
             - build-wasm-runtime
+      - clippy:
+          requires:
+            - build-docker
 
