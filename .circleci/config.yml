@@ -6,10 +6,10 @@ executors:
       - image: circleci/buildpack-deps:stretch
     environment:
       # Note: increment on changes do Dockerfile both here and in `docker-rust` below
-      IMAGE: 0xchain/rust-build-env:v1
+      IMAGE: 0xchain/rust-build-env:1
   docker-rust:
     docker:
-      - image: 0xchain/rust-build-env:v1
+      - image: 0xchain/rust-build-env:1
     environment:
       RUST_BACKTRACE: "1"
       RUSTFLAGS: -Dwarnings
@@ -78,18 +78,18 @@ jobs:
     executor: docker-builder
     steps:
       - checkout
-      - setup_remote_docker
+      - setup_remote_docker:
+          docker_layer_caching: true
       - run:
-          name: Build Docker image
+          name: Build docker image
           command: docker build -t $IMAGE .circleci/images/rust-build-env
-  publish-docker:
-    executor: docker-builder
-    steps:
-      - setup_remote_docker
       - run:
-          name: Publish Docker Image to Docker Hub
+          name: Login to docker
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+      - run:
+          name: Publish docker image to docker hub
+          command: |
             docker push $IMAGE
   build-stable:
     executor: docker-rust
@@ -255,39 +255,36 @@ workflows:
   build:
     jobs:
       - build-docker
-      - publish-docker:
-          requires:
-            - build-docker
       - build-stable:
           requires:
-            - publish-docker
+            - build-docker
       - build-nightly:
           requires:
-            - publish-docker
+            - build-docker
       - build-no-std:
           requires:
-            - publish-docker
+            - build-docker
       - build-wasm-runtime:
           requires:
-            - publish-docker
+            - build-docker
       - build-node:
           requires:
-            - publish-docker
+            - build-docker
             - build-wasm-runtime
       - rustformat-nightly:
           requires:
-            - publish-docker
+            - build-docker
             - build-nightly
       - clippy:
           requires:
-            - publish-docker
+            - build-docker
             - build-stable
       - tests:
           requires:
-            - publish-docker
+            - build-docker
             - build-stable
       - test-benchmarks:
           requires:
-            - publish-docker
+            - build-docker
             - build-stable
 
