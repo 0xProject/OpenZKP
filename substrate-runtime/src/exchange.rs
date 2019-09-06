@@ -203,6 +203,7 @@ pub const EMPTY_VAULT_HASH: [u8; 32] =
     hex!("049ee3eba8c1600700ee1b87eb599f16716b0b1022947733551fde4050ca6804");
 
 impl<T: Trait> Module<T> {
+    #[cfg(feature = "std")]
     fn vault_set_up(substrate_who: T::AccountId, which: u32, nonce: u32, vault: Vault) -> Result {
         let max_id = <RecycledID<T>>::get(0);
         <RecycledID<T>>::insert(0, max_id + 1);
