@@ -100,8 +100,9 @@ commands:
           name: Run Codechecks
           command: |
               pushd .circleci/codechecks
-              if [ -f {{ .Environment.CIRCLE_JOB }}.yml ]; then
-                npx codechecks all-jobs.yml {{ .Environment.CIRCLE_JOB }}.yml
+              echo $CIRCLE_JOB.yml
+              if [ -f $CIRCLE_JOB.yml ]; then
+                npx codechecks all-jobs.yml $CIRCLE_JOB.yml
               else
                 npx codechecks all-jobs.yml
               fi
