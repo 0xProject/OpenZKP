@@ -92,17 +92,32 @@ jobs:
               docker push $IMAGE
             )
   tests:
+    # See https://github.com/mozilla/grcov#grcov-with-travis
+    # Requires nightly because of: https://github.com/rust-lang/rust/issues/42524
     executor: docker-rust
+    environment:
+      RUSTFLAGS: -Dwarnings -Zprofile -Zno-landing-pads -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off
+      GRCOVFLAGS: -s . --llvm --branch --ignore-not-existing --ignore-dir "/*"
     steps:
       - checkout
       - enable-sccache
       - run:
-          name: Build tests in debug mode
-          command: cargo build $PACKAGES --tests --all-features
+          name: Build tests with coverage
+          command: cargo +$NIGHTLY build $PACKAGES --tests --all-features
       - save-sccache-cache
       - run:
-          name: Test debug build
-          command: cargo test $PACKAGES --all-features -- --nocapture
+          name: Run tests
+          command: cargo +$NIGHTLY test $PACKAGES --all-features -- --nocapture
+      - run:
+          name: Combine coverage
+          command: |
+            zip -0 target/ccov.zip `find . \( -name "*.gc*" \) -print`
+            grcov target/ccov.zip $GRCOVFLAGS -t lcov -o target/lcov.info
+            grcov target/ccov.zip $GRCOVFLAGS -t coveralls+ --service-name circleci --service-number $CIRCLE_WORKFLOW_JOB_ID --token $COVERALLS_SECRET -o target/coveralls.json
+            curl -S -X POST -F "json_file=@target/coverals.json" "https://coveralls.io/api/v1/jobs"
+      - store_artifacts:
+          path: target/lcov.info
+          destination: lcov.info
       - codechecks
   benchmarks:
     executor: docker-rust
