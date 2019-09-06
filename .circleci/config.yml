@@ -8,11 +8,11 @@ executors:
     environment:
       # Necessary for `docker manifest` subcommand
       DOCKER_CLI_EXPERIMENTAL: enabled
-      # Note: increment on changes do Dockerfile both here and in `docker-rust` below
-      IMAGE: 0xchain/rust-build-env:2
+      # Bump the tag version whenever changes are made.
+      IMAGE: &build_image "0xchain/rust-build-env:2"
   docker-rust:
     docker:
-      - image: 0xchain/rust-build-env:2
+      - image: *build_image
     environment:
       RUST_BACKTRACE: "1"
       RUSTFLAGS: -Dwarnings
