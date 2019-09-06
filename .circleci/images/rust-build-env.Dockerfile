@@ -10,29 +10,32 @@ FROM circleci/rust:1-node
 # TODO: Update manually. 
 ENV NIGHTLY="nightly-2019-08-15"
 
-# Install clippy and sccache
-RUN rustup component add clippy \
- && cargo install sccache --no-default-features \
+# Compile project to load up global cargo caches.
+# We also leave the `.git` and `target` folder around as this
+# will speedup CI builds. The `checkout` routine will make sure
+# we have a fresh source checkout in CI.
+COPY --chown=circleci:circleci . /root/project
+
+RUN true \
  # Install Nightly with rustfmt, wasm and Cortex-M3 support
  && rustup toolchain install $NIGHTLY \
  && rustup target add wasm32-unknown-unknown --toolchain $NIGHTLY \
  && rustup target add thumbv7m-none-eabi --toolchain $NIGHTLY \
  && rustup component add rustfmt --toolchain $NIGHTLY \
  # Install some tools
+ && rustup component add clippy \
+ && cargo install sccache --no-default-features \
  && cargo install --git https://github.com/alexcrichton/wasm-gc \
  && cargo install twiggy \
  && cargo install cargo-cache \
  # For the rocksdb dependency of substrate-node
- && sudo apt-get install clang
-
-# Compile project to load up global cargo caches.
-# We also leave the `.git` and `target` folder around as this
-# will speedup CI builds. The `checkout` routine will make sure
-# we have a fresh source checkout in CI.
-COPY --chown=circleci:circleci . /root/project
-RUN cd /root/project \
+ && sudo apt-get install clang \
+ # Build project
+ cd /root/project \
  && cargo build --all --all-targets --all-features \
  && cargo build --release --all --all-targets --all-features \
- && cargo cache --autoclean-expensive \
- && cd .circleci/codechecks \
- && yarn
+ # Download codechecks deps
+ && cd /root/project/.circleci/codechecks \
+ && yarn \
+ # Compress cargo caches
+ && cargo cache --autoclean-expensive
