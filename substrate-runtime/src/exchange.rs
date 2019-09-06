@@ -199,7 +199,7 @@ decl_module! {
 }
 
 // Hash of the zero vault ie hash(0, 0)
-pub const ZERO_VAULT: [u8; 32] =
+pub const EMPTY_VAULT_HASH: [u8; 32] =
     hex!("049ee3eba8c1600700ee1b87eb599f16716b0b1022947733551fde4050ca6804");
 
 impl<T: Trait> Module<T> {
@@ -212,8 +212,8 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
-    fn empty_root(depth: u32) -> [u8; 32] {
-        let mut level = ZERO_VAULT;
+    fn empty_level(depth: u32) -> [u8; 32] {
+        let mut level = EMPTY_VAULT_HASH;
         for _ in 0..depth {
             level = hash(level, level);
         }
@@ -229,7 +229,7 @@ impl<T: Trait> Module<T> {
         let mut layer: Vec<[u8; 32]> = (0..power_of_two)
             .map(|x| {
                 if x > max_vault {
-                    ZERO_VAULT
+                    EMPTY_VAULT_HASH
                 } else {
                     <Vaults<T>>::get(x).vault_hash()
                 }
@@ -245,7 +245,7 @@ impl<T: Trait> Module<T> {
         }
         debug_assert_eq!(layer.len(), 1);
         let mut value_subtree = layer[0];
-        let mut other_half = Self::empty_root(depth);
+        let mut other_half = Self::empty_level(depth);
 
         if depth < 31 {
             // Our tree is only hashed up to depth 31
