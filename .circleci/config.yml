@@ -99,7 +99,6 @@ commands:
           name: Run Codechecks
           command: |
               pushd .circleci/codechecks
-              echo $CIRCLE_JOB.yml
               if [ -f $CIRCLE_JOB.yml ]; then
                 npx codechecks all-jobs.yml $CIRCLE_JOB.yml
               else
@@ -195,8 +194,18 @@ jobs:
             pushd substrate-runtime-wasm
             cargo +$NIGHTLY build --release
             cp target/wasm32-unknown-unknown/release/substrate_node_runtime_wasm.wasm ./runtime.wasm
+      - run:
+          name: Optimize for size
+          command: |
+            pushd substrate-runtime-wasm
+            ls -l runtime.wasm
             wasm-gc runtime.wasm
             # OPT: Run wasm-opt -O3 runtime.wasm -o runtime.wasm
+            ls -l runtime.wasm
+      - run:
+          name: List top 50 space consumers
+          command: |
+            pushd substrate-runtime-wasm
             twiggy top -n 50 runtime.wasm
       - save-sccache-cache
       - store_artifacts:
