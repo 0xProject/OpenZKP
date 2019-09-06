@@ -6,6 +6,7 @@ version: 2.1
 #  See https://doc.rust-lang.org/rustc/profile-guided-optimization.html
 
 executors:
+  # TODO: Add a container with fixed versions for reproducible builds from master.
   docker-builder:
     docker:
       - image: docker:stable-git
@@ -94,20 +95,23 @@ jobs:
   tests:
     # See https://github.com/mozilla/grcov#grcov-with-travis
     # Requires nightly because of: https://github.com/rust-lang/rust/issues/42524
+    # Requires non-incremental build.
     executor: docker-rust
     environment:
-      RUSTFLAGS: -Dwarnings -Zprofile -Zno-landing-pads -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off
       GRCOVFLAGS: -s . --llvm --branch --ignore-not-existing --ignore-dir "/*"
     steps:
       - checkout
       - enable-sccache
       - run:
           name: Build tests with coverage
-          command: cargo +$NIGHTLY build $PACKAGES --tests --all-features
+          command: |
+            # Build with coverage settings from Dockerfile
+            CARGO_INCREMENTAL=0 RUSTFLAGS="$COVFLAGS" cargo +$NIGHTLY build $PACKAGES --tests --all-features
       - save-sccache-cache
       - run:
           name: Run tests
-          command: cargo +$NIGHTLY test $PACKAGES --all-features -- --nocapture
+          command: |
+            CARGO_INCREMENTAL=0 RUSTFLAGS="$COVFLAGS" cargo +$NIGHTLY test $PACKAGES --all-features -- --nocapture
       - run:
           name: Combine coverage
           command: |

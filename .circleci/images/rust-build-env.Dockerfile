@@ -5,11 +5,19 @@
 # See also the Rust playground Dockerfile: 
 # https://github.com/integer32llc/rust-playground/blob/master/compiler/base/Dockerfile
 FROM circleci/rust:1-node
+
+# TODO: Make it work with non-priviliged `circleci` user
 USER root
 
 # The latest nightly
 # TODO: Update manually. 
 ENV NIGHTLY="nightly-2019-08-15"
+
+# Flags used to build coverage. To benefit from precompiling, we need to use
+# identical flags in CI, which is why they are exported in an ENV.
+# See https://users.rust-lang.org/t/howto-generating-a-branch-coverage-report/8524
+# NOTE: We could add `-Coverflow-checks=off` but we want overflow checks in unit tests.
+ENV COVFLAGS="-Dwarnings -Zprofile -Zno-landing-pads -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Copt-level=1"
 
 # Compile project to load up global cargo caches.
 # We also leave the `.git` and `target` folder around as this
@@ -34,12 +42,12 @@ RUN true \
  && apt-get install clang \
  # For coverage reports
  && apt-get install lcov \
- # Build project
- && cd /root/project \
- && cargo build --all --all-targets --all-features \
- && cargo build --release --all --all-targets --all-features \
  # Download codechecks deps
  && cd /root/project/.circleci/codechecks \
  && yarn \
+ # Prebuild in debug+coverage and release mode
+ && cd /root/project \
+ && CARGO_INCREMENTAL=0 RUSTFLAGS="$COVFLAGS" cargo +$NIGHTLY build --all --all-targets --all-features \
+ && RUSTFLAGS="-Dwarnings" cargo build --release --all --all-targets --all-features \
  # Compress cargo caches
  && cargo cache --autoclean-expensive
