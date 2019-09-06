@@ -5,6 +5,8 @@ executors:
     docker:
       - image: circleci/buildpack-deps:stretch
     environment:
+      # Necessary for `docker manifest` subcommand
+      DOCKER_CLI_EXPERIMENTAL: enabled
       # Note: increment on changes do Dockerfile both here and in `docker-rust` below
       IMAGE: 0xchain/rust-build-env:1
   docker-rust:
@@ -81,16 +83,13 @@ jobs:
       - setup_remote_docker:
           docker_layer_caching: true
       - run:
-          name: Build docker image
-          command: docker build -t $IMAGE .circleci/images/rust-build-env
-      - run:
-          name: Login to docker
+          name: Build and publish docker image if not exist
           command: |
-            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
-      - run:
-          name: Publish docker image to docker hub
-          command: |
-            docker push $IMAGE
+            docker manifest inspect $IMAGE || (
+              echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin;
+              docker build -t $IMAGE .circleci/images/rust-build-env;
+              docker push $IMAGE
+            )
   build-stable:
     executor: docker-rust
     steps:
