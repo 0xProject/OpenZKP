@@ -124,6 +124,7 @@ jobs:
           command: cargo build $PACKAGES --all-targets --all-features
       - save-sccache-cache
       - save-target-to-workspace
+      - codechecks
   build-nightly:
     executor: docker-rust
     steps:
@@ -136,6 +137,7 @@ jobs:
           command: cargo +$NIGHTLY build $PACKAGES --all-targets --all-features
       - save-sccache-cache
       - save-target-to-workspace
+      - codechecks
   build-benchmarks:
     executor: docker-rust
     steps:
@@ -150,6 +152,7 @@ jobs:
             cargo bench --features bench --bench benchmark $PACKAGES --all-features --no-run
       - save-sccache-cache
       - save-target-to-workspace
+      - codechecks
   build-no-std:
     executor: docker-rust
     steps:
@@ -175,7 +178,8 @@ jobs:
               popd
             done
       - save-sccache-cache
-  build-wasm:
+      - codechecks
+  build-wasm-runtime:
     executor: docker-rust
     steps:
       - setup-toolchain
@@ -210,6 +214,10 @@ jobs:
             # currently covered by sccache, but could be.
             # TODO: This build times out on CI.
             # cargo build --release
+      #- store_artifacts:
+      #    path: target/release/substrate-node
+      #    destination: node-{{ arch }}
+      - codechecks
   rustformat-nightly:
     executor: docker-rust
     steps:
@@ -221,29 +229,50 @@ jobs:
           name: Lint with rustformat nightly
           command: cargo +$NIGHTLY fmt --all -- --check
           # TODO: Run over wasm targets (which are not part of the workspace)
-      # - run:
-      #     name: Lint with clippy
-      #     command: cargo clippy $PACKAGES --all-targets --all-features
-      #     # TODO: Run over wasm targets (which are not part of the workspace)
-      # - run:
-      #     name: Test debug build
-      #     command: cargo test $PACKAGES --all-features -- --nocapture
-      # - run:
-      #     name: Test benchmarks
-      #     command: |
-      #       # Actually running the benchmarks on CI is too noisy. The results
-      #       # would be meaningless. Instead we just run it to make sure they work.
-      #       # Exclude benchmarks that compare against external crates (pulls in a lot of deps)
-      #       # HACK: We add 'bench' as a feature so dev-dependencies can be included as optional
-      #       # regular dependencies behind a feature flag. This solves problems with feature
-      #       # unification. 
-      #       # HACK: We can not specify --features=bench in a workspace environment, instead
-      #       # we enable all features (which makes sense from a test coverage perspective).
-      #       # TODO: We don't need an optimized build here, re-using debug build would be ok.
-      #       cargo bench --bench benchmark $PACKAGES --all-features -- --test
-      #- store_artifacts:
-      #    path: target/release/substrate-node
-      #    destination: node-{{ arch }}
+      - codechecks
+  clippy:
+    executor: docker-rust
+    steps:
+      - setup-toolchain
+      - enable-sccache
+      - checkout
+      - restore-target-from-workspace
+      - run:
+          name: Lint with clippy
+          command: cargo clippy $PACKAGES --all-targets --all-features
+          # TODO: Run over wasm targets (which are not part of the workspace)
+      - codechecks
+  tests:
+    executor: docker-rust
+    steps:
+      - setup-toolchain
+      - enable-sccache
+      - checkout
+      - restore-target-from-workspace
+      - run:
+          name: Test debug build
+          command: cargo test $PACKAGES --all-features -- --nocapture
+      - codechecks
+  test-benchmarks:
+    executor: docker-rust
+    steps:
+      - setup-toolchain
+      - enable-sccache
+      - checkout
+      - restore-target-from-workspace
+      - run:
+          name: Test benchmarks
+          command: |
+            # Actually running the benchmarks on CI is too noisy. The results
+            # would be meaningless. Instead we just run it to make sure they work.
+            # Exclude benchmarks that compare against external crates (pulls in a lot of deps)
+            # HACK: We add 'bench' as a feature so dev-dependencies can be included as optional
+            # regular dependencies behind a feature flag. This solves problems with feature
+            # unification. 
+            # HACK: We can not specify --features=bench in a workspace environment, instead
+            # we enable all features (which makes sense from a test coverage perspective).
+            # TODO: We don't need an optimized build here, re-using debug build would be ok.
+            cargo bench --bench benchmark $PACKAGES --all-features -- --test
       - codechecks
 
 workflows:
@@ -253,8 +282,20 @@ workflows:
       - build-stable
       - build-nightly
       - build-no-std
-      - build-wasm
-      - build-node
+      - build-wasm-runtime
+      - build-node:
+          requires:
+            - build-wasm-runtime
       - rustformat-nightly:
           requires:
             - build-nightly
+      - clippy:
+          requires:
+            - build-stable
+      - tests:
+          requires:
+            - build-stable
+      - test-benchmarks:
+          requires:
+            - build-stable
+
