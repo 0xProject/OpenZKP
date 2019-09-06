@@ -8,10 +8,10 @@ executors:
       # Necessary for `docker manifest` subcommand
       DOCKER_CLI_EXPERIMENTAL: enabled
       # Note: increment on changes do Dockerfile both here and in `docker-rust` below
-      IMAGE: 0xchain/rust-build-env:1
+      IMAGE: 0xchain/rust-build-env:2
   docker-rust:
     docker:
-      - image: 0xchain/rust-build-env:1
+      - image: 0xchain/rust-build-env:2
     environment:
       RUST_BACKTRACE: "1"
       RUSTFLAGS: -Dwarnings
