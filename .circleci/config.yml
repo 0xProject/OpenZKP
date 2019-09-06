@@ -100,7 +100,11 @@ commands:
           name: Run Codechecks
           command: |
               pushd .circleci/codechecks
-              npx codechecks
+              if [ -f {{ .Environment.CIRCLE_JOB }}.yml ]; then
+                npx codechecks all-jobs.yml {{ .Environment.CIRCLE_JOB }}.yml
+              else
+                npx codechecks all-jobs.yml
+              fi
   save-target-to-workspace:
     steps:
       - persist_to_workspace:

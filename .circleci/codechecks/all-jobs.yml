@@ -1,0 +1,2 @@
+checks:
+  - name: codechecks-git-no-uncommitted
