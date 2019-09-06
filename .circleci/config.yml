@@ -54,7 +54,6 @@ commands:
           name: Run Codechecks
           command: |
               pushd .circleci/codechecks
-              yarn
               if [ -f $CIRCLE_JOB.yml ]; then
                 npx codechecks all-jobs.yml $CIRCLE_JOB.yml
               else

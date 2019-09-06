@@ -33,4 +33,6 @@ COPY --chown=circleci:circleci . /root/project
 RUN cd /root/project \
  && cargo build --all --all-targets --all-features \
  && cargo build --release --all --all-targets --all-features \
- && cargo cache --autoclean-expensive
+ && cargo cache --autoclean-expensive \
+ && cd .circleci/codechecks \
+ && yarn
