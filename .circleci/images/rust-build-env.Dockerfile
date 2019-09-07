@@ -13,18 +13,6 @@ USER root
 # TODO: Update manually. 
 ENV NIGHTLY="nightly-2019-08-15"
 
-# Flags used to build coverage. To benefit from precompiling, we need to use
-# identical flags in CI, which is why they are exported in an ENV.
-# See https://users.rust-lang.org/t/howto-generating-a-branch-coverage-report/8524
-# NOTE: We could add `-Coverflow-checks=off` but we want overflow checks in unit tests.
-ENV COVFLAGS="-Dwarnings -Zprofile -Zno-landing-pads -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Copt-level=1"
-
-# Compile project to load up global cargo caches.
-# We also leave the `.git` and `target` folder around as this
-# will speedup CI builds. The `checkout` routine will make sure
-# we have a fresh source checkout in CI.
-COPY --chown=circleci:circleci . /root/project
-
 RUN true \
  # Install Nightly with rustfmt, wasm and Cortex-M3 support
  && rustup toolchain install $NIGHTLY \
@@ -42,6 +30,22 @@ RUN true \
  && apt-get install clang \
  # For coverage reports
  && apt-get install lcov \
+ # Compress cargo caches
+ && cargo cache --autoclean-expensive
+
+# Flags used to build coverage. To benefit from precompiling, we need to use
+# identical flags in CI, which is why they are exported in an ENV.
+# See https://users.rust-lang.org/t/howto-generating-a-branch-coverage-report/8524
+# NOTE: We could add `-Coverflow-checks=off` but we want overflow checks in unit tests.
+ENV COVFLAGS="-Dwarnings -Zprofile -Zno-landing-pads -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Copt-level=1"
+
+# Compile project to load up global cargo caches.
+# We also leave the `.git` and `target` folder around as this
+# will speedup CI builds. The `checkout` routine will make sure
+# we have a fresh source checkout in CI.
+COPY --chown=circleci:circleci . /root/project
+
+RUN true \
  # Download codechecks deps
  && cd /root/project/.circleci/codechecks \
  && yarn \
