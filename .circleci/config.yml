@@ -5,6 +5,20 @@ version: 2.1
 #  example projects as guides. This is probably only worthwhile on `master`.
 #  See https://doc.rust-lang.org/rustc/profile-guided-optimization.html
 
+# TODO: Generate rustdoc and host somewhere
+
+# TODO: Push relevant packages to crates.io
+
+# TODO: Report documentation coverage.
+# TODO: Codecheck on documentation coverage changes.
+
+# TODO: Run benchmarks on reliable machine.
+# TODO: Codecheck on benchmark changes.
+
+# TODO: Submit all codecheck from `master` stats to Metabase.
+
+# TODO: Sync `TODO` and other comments.
+
 executors:
   # TODO: Add a container with fixed versions for reproducible builds from master.
   docker-builder:
@@ -68,6 +82,8 @@ commands:
 jobs:
   rebuild-docker:
     executor: docker-builder
+    # We need more resources to build the image
+    resource_class: large
     steps:
       - checkout
       - setup_remote_docker:
@@ -80,6 +96,8 @@ jobs:
             docker push $IMAGE
   build-docker:
     executor: docker-builder
+    # We need more resources to build the image
+    resource_class: large
     steps:
       - checkout
       - setup_remote_docker:
