@@ -83,7 +83,7 @@ jobs:
   rebuild-docker:
     executor: docker-builder
     # We need more resources to build the image
-    resource_class: large
+    resource_class: xlarge
     steps:
       - checkout
       - setup_remote_docker:
@@ -97,7 +97,7 @@ jobs:
   build-docker:
     executor: docker-builder
     # We need more resources to build the image
-    resource_class: large
+    resource_class: xlarge
     steps:
       - checkout
       - setup_remote_docker:
