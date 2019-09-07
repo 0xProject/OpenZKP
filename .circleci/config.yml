@@ -91,8 +91,8 @@ jobs:
       - run:
           name: Build and publish docker image
           command: |
-            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin;
-            docker build -t $IMAGE . -f .circleci/images/rust-build-env.Dockerfile;
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            docker build -t $IMAGE . -f .circleci/images/rust-build-env.Dockerfile
             docker push $IMAGE
   build-docker:
     executor: docker-builder
@@ -102,17 +102,17 @@ jobs:
       - run:
           name: Stop if image exits
           command: |
-            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
             docker manifest inspect $IMAGE && (
               # See https://support.circleci.com/hc/en-us/articles/360015562253-Conditionally-end-a-running-job-gracefully
               circleci-agent step halt
-            )
+            ) || true
       - setup_remote_docker:
           docker_layer_caching: true
       - checkout
       - run:
           name: Build and publish docker image if not exist
           command: |
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
             docker build -t $IMAGE . -f .circleci/images/rust-build-env.Dockerfile;
             docker push $IMAGE
   tests:
