@@ -41,10 +41,10 @@ executors:
       NO_STD_PACKAGES: macros_decl u256 primefield ecc starkdex stark substrate-runtime
 
 commands:
-  stop-if-image-exits:
+  stop-if-image-exists:
     steps:
       - run:
-          name: Stop if image exits
+          name: Stop if image exists
           command: |
             docker manifest inspect $IMAGE && (
               # See https://support.circleci.com/hc/en-us/articles/360015562253-Conditionally-end-a-running-job-gracefully
@@ -63,7 +63,7 @@ commands:
       - restore_cache:
           name: Restore sccache cache
           keys:
-            - sccache-cache-v3-{{ arch }}-{{ .Environment.CIRCLE_JOB }}
+            - sccache-cache-v4-{{ arch }}-{{ .Environment.CIRCLE_JOB }}
       - run:
           name: Enable sccache
           command: |
@@ -81,7 +81,7 @@ commands:
           # Of course, restore_cache will not find this exact key,
           # but it will fall back to the closest key (aka the most recent).
           # See https://discuss.circleci.com/t/add-mechanism-to-update-existing-cache-key/9014/13
-          key: sccache-cache-v3-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ epoch }}
+          key: sccache-cache-v4-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ epoch }}
           paths:
             - "~/.cache/sccache"
   codechecks:
@@ -111,7 +111,7 @@ jobs:
     # We need more resources to build the image
     resource_class: xlarge
     steps:
-      - stop-if-image-exits
+      - stop-if-image-exists
       - setup_remote_docker:
           docker_layer_caching: true
       - checkout
