@@ -40,14 +40,14 @@ ENV COVFLAGS="-Dwarnings -Zprofile -Zno-landing-pads -Ccodegen-units=1 -Cinline-
 # We also leave the `.git` and `target` folder around as this
 # will speedup CI builds. The `checkout` routine will make sure
 # we have a fresh source checkout in CI.
-COPY --chown=circleci:circleci . /root/project
+COPY --chown=circleci:circleci . /home/circleci
 
 RUN true \
  # Download codechecks deps
- && cd /root/project/.circleci/codechecks \
+ && cd /home/circleci/project/.circleci/codechecks \
  && yarn \
  # Fetch project dependencies
- && cd /root/project \
+ && cd /home/circleci/project \
  && cargo fetch \
  # Compress cargo caches
  && cargo cache --autoclean-expensive
