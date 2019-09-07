@@ -27,3 +27,7 @@ wasm-pack.log
 
 # Ignore the substrate ui for now
 substrate-ui
+
+# Codechecks is written in javascript
+node_modules
+yarn-error.log

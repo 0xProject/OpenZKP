@@ -1,41 +1,74 @@
 version: 2.1
+# Validate using `circleci config validate`
+
+# TODO: Build with profile guided optimization. Use benchmarks and select
+#  example projects as guides. This is probably only worthwhile on `master`.
+#  See https://doc.rust-lang.org/rustc/profile-guided-optimization.html
+
+# TODO: Generate rustdoc and host somewhere
+
+# TODO: Push relevant packages to crates.io
+
+# TODO: Report documentation coverage.
+# TODO: Codecheck on documentation coverage changes.
+
+# TODO: Run benchmarks on reliable machine.
+# TODO: Codecheck on benchmark changes.
+
+# TODO: Submit all codecheck from `master` stats to Metabase.
+
+# TODO: Sync `TODO` and other comments.
+
+executors:
+  # TODO: Add a container with fixed versions for reproducible builds from master.
+  docker-builder:
+    docker:
+      - image: docker:stable-git
+    environment:
+      # Necessary for `docker manifest` subcommand
+      DOCKER_CLI_EXPERIMENTAL: enabled
+      # Bump the tag version whenever changes are made.
+      IMAGE: &build_image "0xchain/rust-build-env:4"
+  docker-rust:
+    docker:
+      - image: *build_image
+    environment:
+      RUST_BACKTRACE: "1"
+      RUSTFLAGS: -Dwarnings
+      SCCACHE_CACHE_SIZE: 1G
+      # Exclude substrate-node (also pulls in a lot of deps, and currently fails)
+      PACKAGES: --all --exclude substrate-node
+      NO_STD_PACKAGES: macros_decl u256 primefield ecc starkdex stark substrate-runtime
 
 commands:
-  restore-toolchain-cache:
+  stop-if-image-exists:
     steps:
       - run:
-          name: Allow CirceCI to write toolchain (workaround)
+          name: Stop if image exists
           command: |
-            sudo mkdir -p /usr/local/{cargo,rustup}
-            sudo chown -R circleci /usr/local/{cargo,rustup}
-      - restore_cache:
-          name: Restore toolchain cache
-          keys: 
-            - toolchain-v2-{{ arch }}-{{ .Environment.CIRCLE_JOB }}
-            - toolchain-v2-{{ arch }}
-  save-toolchain-cache:
+            docker manifest inspect $IMAGE && (
+              # See https://support.circleci.com/hc/en-us/articles/360015562253-Conditionally-end-a-running-job-gracefully
+              circleci-agent step halt
+            ) || true
+  publish-image:
     steps:
       - run:
-          name: Generate toolchain cache key
-          command: sha256sum /usr/local/rustup/toolchains/*/bin/* /usr/local/cargo/bin/* > TOOLCHAIN_CACHE_KEY
-      - save_cache:
-          name: Save toolchain cache
-          key: toolchain-v2-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ checksum "TOOLCHAIN_CACHE_KEY" }}
-          paths:
-            - /usr/local/cargo
-            - /usr/local/rustup
-  setup-sccache:
+          name: Build and publish docker image
+          command: |
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            docker build -t $IMAGE . -f .circleci/images/rust-build-env.Dockerfile
+            docker push $IMAGE
+  enable-sccache:
     steps:
       - restore_cache:
           name: Restore sccache cache
-          keys: 
-            - sccache-cache-v1-{{ arch }}-{{ .Environment.CIRCLE_JOB }}
-            - sccache-cache-v1-{{ arch }}
+          keys:
+            - sccache-cache-v4-{{ arch }}-{{ .Environment.CIRCLE_JOB }}
       - run:
-          name: Setup sccache
+          name: Enable sccache
           command: |
-            RUSTC_WRAPPER="" cargo install sccache --no-default-features || echo Already installed
-            sccache --version
+            echo 'export RUSTC_WRAPPER=sccache' >> $BASH_ENV
+            source $BASH_ENV
   save-sccache-cache:
     steps:
       - run:
@@ -48,58 +81,110 @@ commands:
           # Of course, restore_cache will not find this exact key,
           # but it will fall back to the closest key (aka the most recent).
           # See https://discuss.circleci.com/t/add-mechanism-to-update-existing-cache-key/9014/13
-          key: sccache-cache-v1-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ epoch }}
+          key: sccache-cache-v4-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ epoch }}
           paths:
             - "~/.cache/sccache"
+  codechecks:
+    steps:
+      - run:
+          name: Run Codechecks
+          command: |
+              pushd .circleci/codechecks
+              if [ -f $CIRCLE_JOB.yml ]; then
+                npx codechecks all-jobs.yml $CIRCLE_JOB.yml
+              else
+                npx codechecks all-jobs.yml
+              fi
 
 jobs:
-  build:
-    docker:
-      - image: circleci/rust:latest
-    environment:
-      - RUST_BACKTRACE: 1
-      - RUSTFLAGS: -Dwarnings
-      - RUSTC_WRAPPER: sccache
-      - SCCACHE_CACHE_SIZE: 1G
-      - NIGHTLY: nightly-2019-08-15
-        # Exclude substrate-node (also pulls in a lot of deps, and currently fails)
-      - PACKAGES: --all --exclude substrate-node
-      - NO_STD_PACKAGES: macros_decl u256 primefield ecc starkdex stark substrate-runtime
+  rebuild-docker:
+    executor: docker-builder
+    # We need more resources to build the image
+    resource_class: xlarge
     steps:
       - checkout
-      - restore-toolchain-cache
-      - setup-sccache
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - publish-image
+  build-docker:
+    executor: docker-builder
+    # We need more resources to build the image
+    resource_class: xlarge
+    steps:
+      - stop-if-image-exists
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - checkout
+      - publish-image
+  tests:
+    # See https://github.com/mozilla/grcov#grcov-with-travis
+    # Requires nightly because of: https://github.com/rust-lang/rust/issues/42524
+    # Requires non-incremental build.
+    executor: docker-rust
+    environment:
+      GRCOVFLAGS: -s . --llvm --branch --ignore-not-existing --ignore-dir "/*"
+    steps:
+      - checkout
+      - enable-sccache
       - run:
-          name: Setup toolchain
+          name: Build tests with coverage
           command: |
-            rustup toolchain install $NIGHTLY
-            rustup target add wasm32-unknown-unknown --toolchain $NIGHTLY
-            rustup target add thumbv7m-none-eabi --toolchain $NIGHTLY
-            rustup component add rustfmt --toolchain $NIGHTLY
-            rustup component add clippy
-            cargo install --git https://github.com/alexcrichton/wasm-gc || echo Already installed
-            cargo install twiggy || echo Already installed
-            sudo apt-get install clang # For the rocksdb dependency of substrate-node
-            rustc --version
-            cargo --version
-            rustup --version
-            wasm-gc --help > /dev/null # Run it to make sure it's executable
-            twiggy --version
-          no_output_timeout: 1800s
-      - save-toolchain-cache
+            # Build with coverage settings from Dockerfile
+            CARGO_INCREMENTAL=0 RUSTFLAGS="$COVFLAGS" cargo +$NIGHTLY build $PACKAGES --tests --all-features
+      - save-sccache-cache
       - run:
-          name: Build all targets on stable
-          command: cargo build $PACKAGES --all-targets --all-features
-      - run:
-          # NOTE: The nightly build target is here for rustfmt-nightly
-          name: Build all targets on nightly
-          command: cargo +$NIGHTLY build $PACKAGES --all-targets --all-features
-      - run:
-          name: Build benchmarks
+          name: Run tests
           command: |
+            CARGO_INCREMENTAL=0 RUSTFLAGS="$COVFLAGS" cargo +$NIGHTLY test $PACKAGES --all-features -- --nocapture
+      - run:
+          name: Combine coverage
+          command: |
+            zip -0 target/ccov.zip `find . \( -name "*.gc*" \) -print`
+            grcov target/ccov.zip $GRCOVFLAGS -t lcov -o target/lcov.info
+            grcov target/ccov.zip $GRCOVFLAGS -t coveralls+ --commit-sha $CIRCLE_SHA1 --service-name circleci --service-number $CIRCLE_BUILD_NUM --token $COVERALLS_SECRET -o target/coveralls.json
+            cat target/coveralls.json | jq .git.branch=\"$CIRCLE_BRANCH\" > target/coveralls.fix.json
+            curl -S -X POST -F "json_file=@target/coveralls.fix.json" "https://coveralls.io/api/v1/jobs"
+      - store_artifacts:
+          path: target/lcov.info
+          destination: lcov.info
+      - codechecks
+  benchmarks:
+    executor: docker-rust
+    steps:
+      - checkout
+      - enable-sccache
+      - run:
+          name: Build benchmarks in release mode on stable
+          command: cargo build --release --bench benchmark $PACKAGES --all-features
+      - save-sccache-cache
+      - run:
+          name: Test benchmarks
+          command: |
+            # Actually running the benchmarks on CI is too noisy. The results
+            # would be meaningless. Instead we just run it to make sure they work.
+            # Exclude benchmarks that compare against external crates (pulls in a lot of deps)
+            # HACK: We add 'bench' as a feature so dev-dependencies can be included as optional
+            # regular dependencies behind a feature flag. This solves problems with feature
+            # unification. 
             # HACK: We can not specify --features=bench in a workspace environment, instead
             # we enable all features (which makes sense from a test coverage perspective).
-            cargo bench --features bench --bench benchmark $PACKAGES --all-features --no-run
+            # TODO: We don't need an optimized build here, re-using debug build would be ok.
+            cargo bench --bench benchmark $PACKAGES --all-features -- --test
+      - codechecks
+  rustformat:
+    executor: docker-rust
+    steps:
+      - checkout
+      - run:
+          name: Lint with rustformat nightly
+          command: cargo +$NIGHTLY fmt --all -- --check
+          # TODO: Run over wasm targets (which are not part of the workspace)
+      - codechecks
+  build-no-std:
+    executor: docker-rust
+    steps:
+      - checkout
+      - enable-sccache
       - run:
           # HACK: We try to build for Cortex-M3, not because we want to create
           # IoT devices, but because there is no `std` available for this target.
@@ -118,15 +203,48 @@ jobs:
               cargo +$NIGHTLY check --lib --bins --no-default-features --target=thumbv7m-none-eabi
               popd
             done
+      - save-sccache-cache
+      - codechecks
+  build-wasm-runtime:
+    executor: docker-rust
+    steps:
+      - checkout
+      - enable-sccache
       - run:
           name: Build wasm substrate runtime
           command: |
             pushd substrate-runtime-wasm
             cargo +$NIGHTLY build --release
             cp target/wasm32-unknown-unknown/release/substrate_node_runtime_wasm.wasm ./runtime.wasm
+      - save-sccache-cache
+      - run:
+          name: Optimize for size
+          command: |
+            pushd substrate-runtime-wasm
+            ls -l runtime.wasm
             wasm-gc runtime.wasm
             # OPT: Run wasm-opt -O3 runtime.wasm -o runtime.wasm
+            ls -l runtime.wasm
+      - run:
+          name: List top 50 space consumers
+          command: |
+            pushd substrate-runtime-wasm
             twiggy top -n 50 runtime.wasm
+      - persist_to_workspace:
+          root: substrate-runtime-wasm
+          paths:
+            - runtime.wasm
+      - store_artifacts:
+          path: substrate-runtime-wasm/runtime.wasm
+          destination: runtime.wasm
+      - codechecks
+  build-node:
+    executor: docker-rust
+    steps:
+      - checkout
+      - attach_workspace:
+          at: ./substrate-node/assets
+      - enable-sccache
       - run:
           name: Build node executable (disabled)
           command: |
@@ -136,43 +254,60 @@ jobs:
             # currently covered by sccache, but could be.
             # TODO: This build times out on CI.
             # cargo build --release
-      # We save the sccache here because everything has been build, from here on
-      # it is only testing that will not add to the cache (including clippy).
-      # Saving cache early allows it to be re-used even when the tests fail.
       - save-sccache-cache
-      - run:
-          name: Lint with rustformat nightly
-          command: cargo +$NIGHTLY fmt --all -- --check
-          # TODO: Run over wasm targets (which are not part of the workspace)
+      - codechecks
+  clippy:
+    executor: docker-rust
+    steps:
+      - checkout
+      - enable-sccache
       - run:
           name: Lint with clippy
-          command: cargo clippy $PACKAGES --all-targets --all-features
-          # TODO: Run over wasm targets (which are not part of the workspace)
-      - run:
-          name: Test debug build
-          command: cargo test $PACKAGES --all-features -- --nocapture
-      - run:
-          name: Test benchmarks
           command: |
-            # Actually running the benchmarks on CI is too noisy. The results
-            # would be meaningless. Instead we just run it to make sure they work.
-            # Exclude benchmarks that compare against external crates (pulls in a lot of deps)
-            # HACK: We add 'bench' as a feature so dev-dependencies can be included as optional
-            # regular dependencies behind a feature flag. This solves problems with feature
-            # unification. 
-            # HACK: We can not specify --features=bench in a workspace environment, instead
-            # we enable all features (which makes sense from a test coverage perspective).
-            # TODO: We don't need an optimized build here, re-using debug build would be ok.
-            cargo bench --bench benchmark $PACKAGES --all-features -- --test
-      - store_artifacts:
-          path: substrate-runtime-wasm/runtime.wasm
-          destination: runtime.wasm
-      #- store_artifacts:
-      #    path: target/release/substrate-node
-      #    destination: node-{{ arch }}
+            cargo clippy $PACKAGES --all-targets --all-features
+            # TODO: Run over wasm targets (which are not part of the workspace)
+            # TODO: Clippy different feature sets (std, test, bench, ...)
+      - save-sccache-cache
+      - codechecks
 
 workflows:
   version: 2
-  build:
+  weekly:
+    triggers:
+      - schedule:
+          # Weekly on Sunday 0am.
+          cron: "0 0 * * 0"
+          filters:
+            branches:
+              only:
+                - master
     jobs:
-      - build
+      # Rebuild docker build environment to get up-to-date dependencies
+      # and build cache.
+      - rebuild-docker
+  commit:
+    jobs:
+      - build-docker
+      - tests:
+          requires:
+            - build-docker
+      - benchmarks:
+          requires:
+            - build-docker
+      - rustformat:
+          requires:
+            - build-docker
+      - build-no-std:
+          requires:
+            - build-docker
+      - build-wasm-runtime:
+          requires:
+            - build-docker
+      - build-node:
+          requires:
+            - build-docker
+            - build-wasm-runtime
+      - clippy:
+          requires:
+            - build-docker
+
