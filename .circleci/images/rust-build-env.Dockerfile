@@ -45,9 +45,8 @@ RUN true \
  # Download codechecks deps
  && cd /root/project/.circleci/codechecks \
  && yarn \
- # Prebuild in debug+coverage and release mode
+ # Fetch project dependencies
  && cd /root/project \
- && CARGO_INCREMENTAL=0 RUSTFLAGS="$COVFLAGS" cargo +$NIGHTLY build --all --all-targets --all-features \
- && RUSTFLAGS="-Dwarnings" cargo build --release --all --all-targets --all-features \
+ && cargo fetch \
  # Compress cargo caches
  && cargo cache --autoclean-expensive
