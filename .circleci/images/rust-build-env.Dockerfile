@@ -6,9 +6,6 @@
 # https://github.com/integer32llc/rust-playground/blob/master/compiler/base/Dockerfile
 FROM circleci/rust:1-node
 
-# TODO: Make it work with non-priviliged `circleci` user
-USER root
-
 # The latest nightly
 # TODO: Update manually. 
 ENV NIGHTLY="nightly-2019-08-15"
