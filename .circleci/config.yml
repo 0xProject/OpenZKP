@@ -28,7 +28,7 @@ executors:
       # Necessary for `docker manifest` subcommand
       DOCKER_CLI_EXPERIMENTAL: enabled
       # Bump the tag version whenever changes are made.
-      IMAGE: &build_image "0xchain/rust-build-env:3"
+      IMAGE: &build_image "0xchain/rust-build-env:3-local"
   docker-rust:
     docker:
       - image: *build_image
@@ -99,17 +99,22 @@ jobs:
     # We need more resources to build the image
     resource_class: xlarge
     steps:
-      - checkout
+      - run:
+          name: Stop if image exits
+          command: |
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            docker manifest inspect $IMAGE && (
+              # See https://support.circleci.com/hc/en-us/articles/360015562253-Conditionally-end-a-running-job-gracefully
+              circleci-agent step halt
+            )
       - setup_remote_docker:
           docker_layer_caching: true
+      - checkout
       - run:
           name: Build and publish docker image if not exist
           command: |
-            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin;
-            docker manifest inspect $IMAGE || (
-              docker build -t $IMAGE . -f .circleci/images/rust-build-env.Dockerfile;
-              docker push $IMAGE
-            )
+            docker build -t $IMAGE . -f .circleci/images/rust-build-env.Dockerfile;
+            docker push $IMAGE
   tests:
     # See https://github.com/mozilla/grcov#grcov-with-travis
     # Requires nightly because of: https://github.com/rust-lang/rust/issues/42524
