@@ -51,3 +51,12 @@ RUN true \
  && cargo fetch \
  # Compress cargo caches
  && cargo cache --autoclean-expensive
+
+# Pre-build packages
+ENV PACKAGES="--all --exclude substrate-node"
+
+RUN true \
+ && cd $HOME/project \
+ && CARGO_INCREMENTAL=0 RUSTFLAGS="$COVFLAGS" cargo +$NIGHTLY build $PACKAGES --tests --all-features \
+ && RUSTFLAGS="-Dwarnings" cargo clippy $PACKAGES --all-targets --all-features \
+ && cargo build --release --bench benchmark $PACKAGES --all-features
