@@ -41,6 +41,23 @@ executors:
       NO_STD_PACKAGES: macros_decl u256 primefield ecc starkdex stark substrate-runtime
 
 commands:
+  stop-if-image-exits:
+    steps:
+      - run:
+          name: Stop if image exits
+          command: |
+            docker manifest inspect $IMAGE && (
+              # See https://support.circleci.com/hc/en-us/articles/360015562253-Conditionally-end-a-running-job-gracefully
+              circleci-agent step halt
+            ) || true
+  publish-image:
+    steps:
+      - run:
+          name: Build and publish docker image
+          command: |
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            docker build -t $IMAGE . -f .circleci/images/rust-build-env.Dockerfile
+            docker push $IMAGE
   enable-sccache:
     steps:
       - restore_cache:
@@ -88,33 +105,17 @@ jobs:
       - checkout
       - setup_remote_docker:
           docker_layer_caching: true
-      - run:
-          name: Build and publish docker image
-          command: |
-            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
-            docker build -t $IMAGE . -f .circleci/images/rust-build-env.Dockerfile
-            docker push $IMAGE
+      - publish-image
   build-docker:
     executor: docker-builder
     # We need more resources to build the image
     resource_class: xlarge
     steps:
-      - run:
-          name: Stop if image exits
-          command: |
-            docker manifest inspect $IMAGE && (
-              # See https://support.circleci.com/hc/en-us/articles/360015562253-Conditionally-end-a-running-job-gracefully
-              circleci-agent step halt
-            ) || true
+      - stop-if-image-exits
       - setup_remote_docker:
           docker_layer_caching: true
       - checkout
-      - run:
-          name: Build and publish docker image if not exist
-          command: |
-            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
-            docker build -t $IMAGE . -f .circleci/images/rust-build-env.Dockerfile;
-            docker push $IMAGE
+      - publish-image
   tests:
     # See https://github.com/mozilla/grcov#grcov-with-travis
     # Requires nightly because of: https://github.com/rust-lang/rust/issues/42524

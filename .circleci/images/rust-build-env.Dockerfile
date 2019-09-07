@@ -11,6 +11,10 @@ FROM circleci/rust:1-node
 ENV NIGHTLY="nightly-2019-08-15"
 
 RUN true \
+ # For the rocksdb dependency of substrate-node
+ && sudo apt-get install clang \
+ # For coverage reports
+ && sudo apt-get install lcov \
  # Install Nightly with rustfmt, wasm and Cortex-M3 support
  && rustup toolchain install $NIGHTLY \
  && rustup target add wasm32-unknown-unknown --toolchain $NIGHTLY \
@@ -23,10 +27,6 @@ RUN true \
  && cargo install twiggy \
  && cargo install cargo-cache \
  && cargo install grcov \
- # For the rocksdb dependency of substrate-node
- && apt-get install clang \
- # For coverage reports
- && apt-get install lcov \
  # Compress cargo caches
  && cargo cache --autoclean-expensive
 
