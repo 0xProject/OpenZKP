@@ -276,6 +276,12 @@ jobs:
             # TODO: Clippy different feature sets (std, test, bench, ...)
       - save-sccache-cache
       - codechecks
+  accept:
+    executor: circleci/buildpack-deps
+    steps:
+      - run:
+          name: Stop
+          command: circleci-agent step halt
 
 workflows:
   version: 2
@@ -317,4 +323,12 @@ workflows:
       - clippy:
           requires:
             - build-docker
-
+      # `accept` is a phony job which requires every check for a commit.
+      # This allows us to set a single 'required status check' in GitHub.
+      - accept:
+          requires:
+            - clippy
+            - tests
+            - benchmarks
+            - build-no-std
+            - build-node
