@@ -328,6 +328,7 @@ workflows:
       # This allows us to set a single 'required status check' in GitHub.
       - accept:
           requires:
+            - rustformat
             - clippy
             - tests
             - benchmarks
