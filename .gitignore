@@ -17,7 +17,7 @@ Cargo.lock
 **/*.rs.bk
 
 # Wasm binaries
-substrate-runtime-wasm/runtime.wasm
+*.wasm
 wasm/bin
 wasm/pkg
 wasm-pack.log
