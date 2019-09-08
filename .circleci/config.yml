@@ -277,7 +277,8 @@ jobs:
       - save-sccache-cache
       - codechecks
   accept:
-    executor: circleci/buildpack-deps
+    docker:
+      - image: circleci/buildpack-deps
     steps:
       - run:
           name: Stop
