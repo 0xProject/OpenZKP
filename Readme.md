@@ -1,7 +1,7 @@
 # Crypto support library for StarkDEX
 
 [![CircleCI](https://img.shields.io/circleci/build/github/0xProject/starkcrypto)](https://circleci.com/gh/0xProject/starkcrypto)
-[![Coveralls github](https://img.shields.io/coveralls/github/0xProject/starkcrypto)](https://coveralls.io/github/0xProject/starkcrypto)
+[![Codecov](https://img.shields.io/codecov/c/gh/0xproject/starkcrypto)](https://codecov.io/gh/0xProject/starkcrypto)
 
 <!-- TODO: License, Docs, Chat -->
 
