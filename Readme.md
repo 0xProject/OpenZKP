@@ -1,8 +1,8 @@
 # Crypto support library for StarkDEX
 
-[![CircleCI](https://circleci.com/gh/0xProject/starkcrypto.svg?style=svg)](https://circleci.com/gh/0xProject/starkcrypto)
+[![CircleCI](https://img.shields.io/circleci/build/github/0xProject/starkcrypto)](https://circleci.com/gh/0xProject/starkcrypto)
 
-[![Coverage Status](https://coveralls.io/repos/github/0xProject/starkcrypto/badge.svg?branch=master)](https://coveralls.io/github/0xProject/starkcrypto?branch=master)
+[![Coveralls github](https://img.shields.io/coveralls/github/0xProject/starkcrypto)](https://coveralls.io/github/0xProject/starkcrypto)
 
 <!-- TODO: License, Docs, Chat -->
 
