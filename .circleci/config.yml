@@ -141,9 +141,16 @@ jobs:
           command: |
             zip -0 target/ccov.zip `find . \( -name "*.gc*" \) -print`
             grcov target/ccov.zip $GRCOVFLAGS -t lcov -o target/lcov.info
+      - run:
+          name: Submit to coveralls
+          command: |
             grcov target/ccov.zip $GRCOVFLAGS -t coveralls+ --commit-sha $CIRCLE_SHA1 --service-name circleci --service-number $CIRCLE_BUILD_NUM --token $COVERALLS_SECRET -o target/coveralls.json
             cat target/coveralls.json | jq .git.branch=\"$CIRCLE_BRANCH\" > target/coveralls.fix.json
             curl -S -X POST -F "json_file=@target/coveralls.fix.json" "https://coveralls.io/api/v1/jobs"
+      - run:
+          name: Submit to codecov
+          command: |
+            bash <(curl -s https://codecov.io/bash)
       - store_artifacts:
           path: target/lcov.info
           destination: lcov.info
@@ -269,6 +276,13 @@ jobs:
             # TODO: Clippy different feature sets (std, test, bench, ...)
       - save-sccache-cache
       - codechecks
+  accept:
+    docker:
+      - image: circleci/buildpack-deps
+    steps:
+      - run:
+          name: Stop
+          command: circleci-agent step halt
 
 workflows:
   version: 2
@@ -310,4 +324,13 @@ workflows:
       - clippy:
           requires:
             - build-docker
-
+      # `accept` is a phony job which requires every check for a commit.
+      # This allows us to set a single 'required status check' in GitHub.
+      - accept:
+          requires:
+            - rustformat
+            - clippy
+            - tests
+            - benchmarks
+            - build-no-std
+            - build-node
