@@ -3,6 +3,8 @@
 [![CircleCI](https://img.shields.io/circleci/build/github/0xProject/starkcrypto)](https://circleci.com/gh/0xProject/starkcrypto)
 [![Codecov](https://img.shields.io/codecov/c/gh/0xproject/starkcrypto)](https://codecov.io/gh/0xProject/starkcrypto)
 
+**Note.** Code coverage in Rust is still very early days. The above number is likely inaccurate. Please view the coverage report for details.
+
 <!-- TODO: License, Docs, Chat -->
 
 NOTE: Modular inversion is not constant time.
