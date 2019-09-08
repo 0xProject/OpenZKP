@@ -135,7 +135,9 @@ jobs:
       - run:
           name: Run tests
           command: |
+            # TODO: Store test results in json `--format json`
             CARGO_INCREMENTAL=0 RUSTFLAGS="$COVFLAGS" cargo +$NIGHTLY test $PACKAGES --all-features -- --nocapture
+      # TODO: Submit to CircleCI: https://circleci.com/docs/2.0/collect-test-data/
       - run:
           name: Combine coverage
           command: |
