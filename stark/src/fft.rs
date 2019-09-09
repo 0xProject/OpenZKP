@@ -64,26 +64,26 @@ fn bit_reversal_fft(coefficients: &mut [FieldElement], root: &FieldElement) {
             for i in block_start..block_start + block_size {
                 let j = i + block_size;
                 let (left, right) = coefficients.split_at_mut(j);
-                radix_2(&twiddle_factor, &mut left[i], &mut right[0]);
+                right[0] *= &twiddle_factor;
+                radix_2(&mut left[i], &mut right[0]);
             }
             twiddle_factor *= &twiddle_factor_update;
         }
     }
 }
 
+fn recursive_radix_2(root: &FieldElement, x: &mut [FieldElement]) {
+    
+}
+
 /// Transforms (x0, x1) to (x0 + x1, x0 - x1)
-fn butterfly(x0: &mut FieldElement, x1: &mut FieldElement) {
+fn radix_2(x0: &mut FieldElement, x1: &mut FieldElement) {
     // OPT: Inplace +- operation like in gcd::mat_mul.
     let t = x0.clone();
     *x0 += &*x1;
     // OPT: sub_from_assign
     *x1 -= t;
     x1.neg_assign();
-}
-
-fn radix_2(omega: &FieldElement, x0: &mut FieldElement, x1: &mut FieldElement) {
-    *x1 *= omega;
-    butterfly(x0, x1);
 }
 
 // See https://math.stackexchange.com/questions/1626897/whats-the-formulation-of-n-point-radix-n-for-ntt/1627247
@@ -96,11 +96,11 @@ fn radix_4(
     x2: &mut FieldElement,
     x3: &mut FieldElement,
 ) {
-    butterfly(x0, x2);
-    butterfly(x1, x3);
+    radix_2(x0, x2);
+    radix_2(x1, x3);
     *x3 *= omega;
-    butterfly(x0, x1);
-    butterfly(x2, x3);
+    radix_2(x0, x1);
+    radix_2(x2, x3);
 }
 
 // TODO expose public ifft function which accepts bit-reversed input instead.
@@ -135,8 +135,27 @@ fn reverse(x: u64, bits: u32) -> u64 {
 mod tests {
     use super::*;
     use crate::polynomial::DensePolynomial;
-    use macros_decl::u256h;
+    use macros_decl::{field_element, u256h};
     use quickcheck_macros::quickcheck;
+
+    #[test]
+    fn test_radix_2() {
+        let omega =
+            field_element!("02e0c4cea248e9d049a1e2c26af44db60bdbd436fc6dead7d90a17f21893632e");
+        let mut x0 =
+            field_element!("0234287dcbaffe7f969c748655fca9e58fa8120b6d56eb0c1080d17957ebe47b");
+        let mut x1 =
+            field_element!("06c81c707ecc44b5f60297ec08d2d585513c1ba022dd93af66a1dbacb162a3f3");
+        radix_2(&omega, &mut x0, &mut x1);
+        assert_eq!(
+            x0,
+            field_element!("0310d8aa75e2e2e5e6bb8e1b24f62fb604667974ffc4a30e18837a909c98864e")
+        );
+        assert_eq!(
+            x1,
+            field_element!("01577851217d1a19467d5af1870324151ae9aaa1dae9330a087e2862133f42a8")
+        );
+    }
 
     #[test]
     fn fft_one_element_test() {
