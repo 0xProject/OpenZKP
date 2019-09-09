@@ -17,7 +17,7 @@ Cargo.lock
 **/*.rs.bk
 
 # Wasm binaries
-substrate-runtime-wasm/runtime.wasm
+*.wasm
 wasm/bin
 wasm/pkg
 wasm-pack.log
@@ -27,3 +27,7 @@ wasm-pack.log
 
 # Ignore the substrate ui for now
 substrate-ui
+
+# Codechecks is written in javascript
+node_modules
+yarn-error.log

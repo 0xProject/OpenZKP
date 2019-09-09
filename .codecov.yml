@@ -1,0 +1,4 @@
+# See: https://docs.codecov.io/docs/codecov-yaml
+# Validate using `curl -X POST --data-binary @.codecov.yml https://codecov.io/validate`
+codecov:
+  branch: master
