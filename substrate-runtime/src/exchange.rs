@@ -17,6 +17,8 @@ use u256::U256;
 /// The module's configuration trait.
 pub trait Trait: finality::Trait {}
 
+pub const SIZE_LIMIT: u32 = 1024; // The max number of transactions we reasonably expect in one proof
+
 // This module's storage items.
 decl_storage! {
     trait Store for Module<T: Trait> as Exchange {
@@ -28,6 +30,8 @@ decl_storage! {
         AvailableID get(get_available_id): u32 = 0;
         // Contains a listing of freed ids, and at key 0 a max id released which is known to always be free
         RecycledID get(get_recycled_id) build(|_config: &GenesisConfig<T>| {vec![(0_u32,0_u32)]}): map u32 => u32;
+        // Stores and holds the current number of transactions
+        BlockTransactions get(current_size) : u32 = 0;
     }
 
     // Used for testing
@@ -61,12 +65,13 @@ decl_module! {
             Ok(())
         }
 
+        //TODO - Dos protection
         pub fn vault_registration(origin, token_id: [u8; 24]) -> Result {
             let sender = ensure_signed(origin)?;
             ensure!(<PublicKeys<T>>::exists(sender.clone()), "Sender not registered");
             let stark_sender = <PublicKeys<T>>::get(sender);
 
-            let next = <AvailableID<T>>::take();
+            let next = <AvailableID<T>>::get();
 
             if next == 0 {
                 let id = <RecycledID<T>>::get(next);
@@ -94,15 +99,21 @@ decl_module! {
         // TODO - When adding block proofs we can require this shows up in the deposit proof.
         pub fn deposit_authorized(origin, vault_id: u32, amount: u64) -> Result {
             ensure_root(origin)?;
+            let tx_count = <BlockTransactions<T>>::get();
+            ensure!(tx_count< SIZE_LIMIT, "Full block");
             ensure!(<Vaults<T>>::exists(vault_id), "User should register first");
             let mut data = <Vaults<T>>::get(vault_id);
             data.balance += amount;
+            <BlockTransactions<T>>::put(tx_count+1);
             Ok(())
         }
 
         // TODO - Edge case grief-ing where you can just pick another trade id and someone else's order won't go through, really should be hashes.
         pub fn execute_order(origin, order: TakerMessage, sig: Signature) -> Result {
             let sender = ensure_signed(origin)?;
+            let tx_count = <BlockTransactions<T>>::get();
+            ensure!(tx_count< SIZE_LIMIT, "Full block");
+
             ensure!(<PublicKeys<T>>::exists(sender.clone()), "Sender not registered");
             let stark_sender = <PublicKeys<T>>::get(sender);
 
@@ -150,7 +161,7 @@ decl_module! {
             // If a vault is empty we delete it, and add it's id to the listing of available ones
             if maker_vault_a.balance == 0 {
                 <Vaults<T>>::remove(order.maker_message.vault_a);
-                let next = <AvailableID<T>>::take();
+                let next = <AvailableID<T>>::get();
                 <RecycledID<T>>::insert(next+1, order.maker_message.vault_a);
                 <AvailableID<T>>::put(next+1);
             } else {
@@ -158,7 +169,7 @@ decl_module! {
             }
             if taker_vault_b.balance == 0 {
                 <Vaults<T>>::remove(order.vault_b);
-                let next = <AvailableID<T>>::take();
+                let next = <AvailableID<T>>::get();
                 <RecycledID<T>>::insert(next+1, order.vault_b);
                 <AvailableID<T>>::put(next+1);
             } else {
@@ -169,12 +180,16 @@ decl_module! {
             <Vaults<T>>::insert(order.vault_a, taker_vault_a);
             <Vaults<T>>::insert(order.maker_message.vault_b, maker_vault_b);
             <ExecutedIds<T>>::insert(order.maker_message.trade_id, true);
+            <BlockTransactions<T>>::put(tx_count+1);
             Ok(())
         }
 
         pub fn withdraw(origin, vault_id: u32, amount: u64, sig: Signature) -> Result {
             let sender = ensure_signed(origin)?;
             ensure!(<PublicKeys<T>>::exists(sender.clone()), "Sender not registered");
+            let tx_count = <BlockTransactions<T>>::get();
+            ensure!(tx_count< SIZE_LIMIT, "Full block");
+
             let stark_sender = <PublicKeys<T>>::get(sender);
 
             let mut sender_vault = <Vaults<T>>::get(vault_id);
@@ -188,12 +203,14 @@ decl_module! {
             sender_vault.balance -= amount;
             <Nonces<T>>::insert(stark_sender, nonce+1);
             <Vaults<T>>::insert(vault_id, sender_vault);
+            <BlockTransactions<T>>::put(tx_count+1);
             Ok(())
         }
 
         fn on_finalize() {
             let vaults_hash = Self::hash_balance_tree();
             <finality::Module<T>>::add_hash(vaults_hash);
+            <BlockTransactions<T>>::kill();
         }
     }
 }
