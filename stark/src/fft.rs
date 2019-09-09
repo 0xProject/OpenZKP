@@ -5,6 +5,8 @@ use primefield::FieldElement;
 use std::prelude::v1::*;
 use u256::U256;
 
+// OPT: Implement parallel strategies: https://inf.ethz.ch/personal/markusp/teaching/263-2300-ETH-spring12/slides/class19.pdf
+
 pub fn fft(a: &[FieldElement]) -> Vec<FieldElement> {
     let mut result = a.to_vec();
     let root = FieldElement::root(result.len()).expect("No root of unity for input length");
@@ -69,6 +71,35 @@ fn bit_reversal_fft(coefficients: &mut [FieldElement], root: &FieldElement) {
             twiddle_factor *= &twiddle_factor_update;
         }
     }
+}
+
+pub fn butterfly(x0: &mut FieldElement, x1: &mut FieldElement) {
+    // OPT: Inplace +- operation like in gcd::mat_mul.
+    let t = x0.clone();
+    *x0 += &*x1;
+    *x1 -= t;
+}
+
+#[allow(dead_code)]
+pub fn radix_2(omega: &FieldElement, x0: &mut FieldElement, x1: &mut FieldElement) {
+    *x1 *= omega;
+    butterfly(x0, x1);
+}
+
+// See https://math.stackexchange.com/questions/1626897/whats-the-formulation-of-n-point-radix-n-for-ntt/1627247
+#[allow(dead_code)]
+pub fn radix_4(
+    omega: &FieldElement,
+    x0: &mut FieldElement,
+    x1: &mut FieldElement,
+    x2: &mut FieldElement,
+    x3: &mut FieldElement,
+) {
+    butterfly(x0, x2);
+    butterfly(x1, x3);
+    *x3 *= omega;
+    butterfly(x0, x1);
+    butterfly(x1, x2);
 }
 
 // TODO expose public ifft function which accepts bit-reversed input instead.
