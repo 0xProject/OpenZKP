@@ -319,14 +319,12 @@ jobs:
           at: /tmp/workspace
       - enable-sccache
       - run:
-          name: Build node executable (disabled)
+          name: Build node executable
           command: |
-            #pushd substrate-node
-            #cp ../substrate-runtime-wasm/runtime.wasm ./assets/runtime.wasm
-            # TODO: This builds rocksdb as a dependency in c++, this is not
-            # currently covered by sccache, but could be.
-            # TODO: This build times out on CI.
-            # cargo build --release
+            pushd substrate-node
+            cp /tmp/workspace/runtime.wasm ./assets/runtime.wasm
+            cargo build --release
+            git checkout --force ./assets/runtime.wasm
       - save-sccache-cache
       - codechecks
   clippy:
