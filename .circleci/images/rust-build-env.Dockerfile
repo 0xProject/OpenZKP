@@ -61,11 +61,7 @@ RUN true \
  && RUSTFLAGS="-Dwarnings" cargo clippy $PACKAGES --all-targets --all-features \
  && cargo build --release --bench benchmark $PACKAGES --all-features
 
-# Pre-build all packages
-ENV PACKAGES="--all"
-
+# Pre-build substrate-node
 RUN true \
- && cd $HOME/project \
- && CARGO_INCREMENTAL=0 RUSTFLAGS="$COVFLAGS" cargo +$NIGHTLY build $PACKAGES --tests --all-features \
- && RUSTFLAGS="-Dwarnings" cargo clippy $PACKAGES --all-targets --all-features \
- && cargo build --release --bench benchmark $PACKAGES --all-features
+ && cd $HOME/project/substrate-node \
+ && cargo build --release
