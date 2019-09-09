@@ -325,6 +325,9 @@ jobs:
             cargo build --release
             git checkout --force ./assets/runtime.wasm
       - save-sccache-cache
+      - store_artifacts:
+          path: target/release/substrate-node
+          destination: substrate-node
       - codechecks
   clippy:
     executor: docker-rust
