@@ -100,7 +100,7 @@ fn radix_4(
     butterfly(x1, x3);
     *x3 *= omega;
     butterfly(x0, x1);
-    butterfly(x1, x2);
+    butterfly(x2, x3);
 }
 
 // TODO expose public ifft function which accepts bit-reversed input instead.
