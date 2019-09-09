@@ -20,25 +20,24 @@ pub trait Trait: finality::Trait {}
 // This module's storage items.
 decl_storage! {
     trait Store for Module<T: Trait> as Exchange {
-        pub PublicKeys : map T::AccountId => PublicKey;
-        pub Nonces : map PublicKey => u32;
-        pub Asset1 get(balance): map PublicKey => u32;
-        pub Vaults get(get_vault): map u32 => Vault;
-        pub ExecutedIds get(is_executed): map u32 => bool;
+        PublicKeys : map T::AccountId => PublicKey;
+        Nonces : map PublicKey => u32;
+        Vaults get(get_vault): map u32 => Vault;
+        ExecutedIds get(is_executed): map u32 => bool;
         // The available id is the index of the tree which has the most recently freed value
-        AvailableID: u32 = 0;
+        AvailableID get(get_available_id): u32 = 0;
         // Contains a listing of freed ids, and at key 0 a max id released which is known to always be free
-        RecycledID build(|_config: &GenesisConfig<T>| {vec![(0_u32,0_u32)]}): map u32 => u32;
+        RecycledID get(get_recycled_id) build(|_config: &GenesisConfig<T>| {vec![(0_u32,0_u32)]}): map u32 => u32;
     }
 
     // Used for testing
     add_extra_genesis {
-        config(owners): Vec<(T::AccountId, PublicKey, u32, u32)>;
+        config(owners): Vec<(T::AccountId, u32, u32, Vault)>;
 
         build(|storage: &mut StorageOverlay, _: &mut ChildrenStorageOverlay, config: &GenesisConfig<T>| {
             with_storage(storage, || {
-                for (ref acct, ref key, nonce, balance) in &config.owners {
-                    let _ = <Module<T>>::balance_set_up(acct.clone(), key.clone(), *nonce, *balance);
+                for (ref acct, vault_id, nonce, ref vault) in &config.owners {
+                    let _ = <Module<T>>::vault_set_up(acct.clone(), *vault_id, *nonce, vault.clone());
                 }
             });
         });
@@ -48,30 +47,7 @@ decl_storage! {
 decl_module! {
     /// The module declaration.
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
-        // This is an example of our sig verification but will be eventually removed
-        pub fn send_tokens(origin, amount: u32, to: PublicKey, sig: Signature) -> Result {
-            let sender = ensure_signed(origin)?;
-
-            ensure!(<PublicKeys<T>>::exists(sender.clone()), "Sender not registered");
-            ensure!(<Nonces<T>>::exists(to.clone()), "To address not registered");
-
-            let stark_sender = <PublicKeys<T>>::get(sender);
-            let nonce = <Nonces<T>>::get(stark_sender.clone());
-            let balance = <Asset1<T>>::get(stark_sender.clone());
-            ensure!(balance > amount, "You don't have enough token");
-
-            let hash = hash(U256::from((u64::from(nonce) << 32)+ u64::from(amount)).to_bytes_be(), to.x);
-
-            ensure!(verify(hash, &sig, &stark_sender), "Invalid Signature");
-
-            let their_balance = <Asset1<T>>::get(to.clone());
-
-             <Asset1<T>>::insert(stark_sender.clone(), balance - amount);
-             <Asset1<T>>::insert(to.clone(), their_balance + amount);
-             <Nonces<T>>::insert(stark_sender.clone(), nonce+1);
-             Ok(())
-        }
-
+        // Associates a default substrate key with a stark key.
         pub fn register(origin, who: PublicKey, sig: Signature) -> Result {
             let sender = ensure_signed(origin)?;
             let data : Vec<u8> = sender.clone().encode();
@@ -80,13 +56,12 @@ decl_module! {
 
             ensure!(verify(field_version.as_montgomery().to_bytes_be(), &sig, &who), "Invalid Signature");
 
-            <Asset1<T>>::insert(who.clone(), 0);
             <Nonces<T>>::insert(who.clone(), 0);
             <PublicKeys<T>>::insert(sender, who);
             Ok(())
         }
 
-        pub fn setup_vault(origin, token_id: [u8; 24]) -> Result {
+        pub fn vault_registration(origin, token_id: [u8; 24]) -> Result {
             let sender = ensure_signed(origin)?;
             ensure!(<PublicKeys<T>>::exists(sender.clone()), "Sender not registered");
             let stark_sender = <PublicKeys<T>>::get(sender);
@@ -149,11 +124,11 @@ decl_module! {
             ensure!(maker_vault_a.owner == maker_vault_b.owner, "Mismatch in maker vault owners");
             // Check that the vault asset types are what is indicated
             ensure!(order.maker_message.token_a == maker_vault_a.token_id, "Token in maker order vault_a doesn't match vault token type");
-            ensure!(order.maker_message.token_b == maker_vault_b.token_id, "Token in maker order vault_a doesn't match vault token type");
+            ensure!(order.maker_message.token_b == maker_vault_b.token_id, "Token in maker order vault_b doesn't match vault token type");
 
             // Checks that the a vaults and be vaults have the same asset types across maker and taker.
-            ensure!(maker_vault_a.token_id == taker_vault_a.token_id, "Mismatched token types");
-            ensure!(maker_vault_b.token_id == taker_vault_a.token_id, "Mismatched token types");
+            ensure!(maker_vault_a.token_id == taker_vault_a.token_id, "Mismatched token_a types");
+            ensure!(maker_vault_b.token_id == taker_vault_b.token_id, "Mismatched token_b types");
 
             // Checks that we can transfer amount_a of tokens from maker and amount_b of tokens from taker
             ensure!(order.maker_message.amount_a <= maker_vault_a.balance, "Not enough funds in maker's source vault");
@@ -228,17 +203,13 @@ pub const EMPTY_VAULT_HASH: [u8; 32] =
     hex!("049ee3eba8c1600700ee1b87eb599f16716b0b1022947733551fde4050ca6804");
 
 impl<T: Trait> Module<T> {
-    // Note this function is only used for testing and should never be made pub
     #[cfg(feature = "std")]
-    fn balance_set_up(
-        substrate_who: T::AccountId,
-        who: PublicKey,
-        balance: u32,
-        nonce: u32,
-    ) -> Result {
-        <Asset1<T>>::insert(who.clone(), balance);
-        <Nonces<T>>::insert(who.clone(), nonce);
-        <PublicKeys<T>>::insert(substrate_who, who);
+    fn vault_set_up(substrate_who: T::AccountId, which: u32, nonce: u32, vault: Vault) -> Result {
+        let max_id = <RecycledID<T>>::get(0);
+        <RecycledID<T>>::insert(0, max_id + 1);
+        <PublicKeys<T>>::insert(substrate_who, vault.owner.clone());
+        <Nonces<T>>::insert(vault.owner.clone(), nonce);
+        <Vaults<T>>::insert(which, vault);
         Ok(())
     }
 
@@ -267,7 +238,7 @@ impl<T: Trait> Module<T> {
             .collect();
 
         let depth = 32 - power_of_two.leading_zeros();
-        for _ in 0..depth {
+        for _ in 0..(depth - 1) {
             layer = layer
                 .chunks(2)
                 .map(|chunk| hash(chunk[0], chunk[1]))
@@ -340,8 +311,37 @@ mod tests {
             u256h!("02c1e9550e66958296d11b60f8e8e7a7ad990d07fa65d5f7652c4a6c87d4e3cc");
         let remco_private =
             u256h!("04c1e9550e66958296d11b60f8e8e7a7ad990d07fa65d5f7652c4a6c87d4e3cc");
-        let paul_public = public_key(&paul_private.to_bytes_be()).into();
-        let remco_public = public_key(&remco_private.to_bytes_be()).into();
+        let paul_public: PublicKey = public_key(&paul_private.to_bytes_be()).into();
+        let remco_public: PublicKey = public_key(&remco_private.to_bytes_be()).into();
+
+        // Note - not realistic ids
+        let eth_id: [u8; 24] = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+        ];
+        let dai_id: [u8; 24] = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
+        ];
+
+        let paul_eth_vault = Vault {
+            owner:    paul_public.clone(),
+            token_id: eth_id,
+            balance:  100,
+        };
+        let paul_dai_vault = Vault {
+            owner:    paul_public.clone(),
+            token_id: dai_id,
+            balance:  1000,
+        };
+        let remco_eth_vault = Vault {
+            owner:    remco_public.clone(),
+            token_id: eth_id,
+            balance:  100,
+        };
+        let remco_dai_vault = Vault {
+            owner:    remco_public.clone(),
+            token_id: dai_id,
+            balance:  1000,
+        };
 
         let mut t = system::GenesisConfig::<ExchangeTest>::default()
             .build_storage()
@@ -349,8 +349,14 @@ mod tests {
             .0;
         t.extend(
             GenesisConfig::<ExchangeTest> {
-                // Your genesis kitties
-                owners: vec![(0, paul_public, 500, 50), (1, remco_public, 50, 0)],
+                // (owner substrate id, new vault id, nonce, vault)
+                // Note that this method will reset the substrate account id system on each call.
+                owners: vec![
+                    (0, 0, 0, paul_eth_vault),
+                    (0, 1, 0, paul_dai_vault),
+                    (1, 2, 1, remco_eth_vault),
+                    (1, 3, 1, remco_dai_vault),
+                ],
             }
             .build_storage()
             .unwrap()
@@ -409,29 +415,409 @@ mod tests {
         });
     }
 
+    // Test of totally valid transaction
     #[test]
-    fn allows_owner_to_move() {
+    fn valid_exchange() {
+        let paul_private =
+            u256h!("02c1e9550e66958296d11b60f8e8e7a7ad990d07fa65d5f7652c4a6c87d4e3cc");
+        let remco_private =
+            u256h!("04c1e9550e66958296d11b60f8e8e7a7ad990d07fa65d5f7652c4a6c87d4e3cc");
+
+        let eth_id: [u8; 24] = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+        ];
+        let dai_id: [u8; 24] = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
+        ];
+
+        let mut paul_maker = MakerMessage {
+            vault_a:  0,
+            vault_b:  1,
+            amount_a: 1,
+            amount_b: 300,
+            token_a:  eth_id,
+            token_b:  dai_id,
+            trade_id: 0,
+            sig:      Signature {
+                r: [0; 32],
+                s: [0; 32],
+            },
+        };
+        let hashed_maker = maker_hash(&paul_maker);
+        let maker_sig: Signature = sign(&hashed_maker, &paul_private.to_bytes_be()).into();
+        paul_maker.sig = maker_sig;
+
+        let remco_taker = TakerMessage {
+            maker_message: paul_maker,
+            vault_a:       2,
+            vault_b:       3,
+        };
+        let hashed_taker = taker_hash(&remco_taker);
+        let taker_sig: Signature = sign(&hashed_taker, &remco_private.to_bytes_be()).into();
+
+        with_externalities(&mut new_test_ext(), || {
+            assert_ok!(Exchange::execute_order(
+                Origin::signed(1),
+                remco_taker,
+                taker_sig
+            ));
+            assert_eq!(Exchange::get_vault(0).balance, 99);
+            assert_eq!(Exchange::get_vault(1).balance, 1300);
+            assert_eq!(Exchange::get_vault(2).balance, 101);
+            assert_eq!(Exchange::get_vault(3).balance, 700);
+            assert_eq!(
+                Exchange::hash_balance_tree(),
+                hex!("0192788d854aab1b0cbee2da24082981e021f51e0197828631a7b552355ab99e")
+            );
+        });
+    }
+
+    // Test of valid replayed transaction
+    #[test]
+    fn valid_replayed_transaction() {
+        let paul_private =
+            u256h!("02c1e9550e66958296d11b60f8e8e7a7ad990d07fa65d5f7652c4a6c87d4e3cc");
+        let remco_private =
+            u256h!("04c1e9550e66958296d11b60f8e8e7a7ad990d07fa65d5f7652c4a6c87d4e3cc");
+
+        let eth_id: [u8; 24] = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+        ];
+        let dai_id: [u8; 24] = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
+        ];
+
+        let mut paul_maker = MakerMessage {
+            vault_a:  0,
+            vault_b:  1,
+            amount_a: 1,
+            amount_b: 300,
+            token_a:  eth_id,
+            token_b:  dai_id,
+            trade_id: 0,
+            sig:      Signature {
+                r: [0; 32],
+                s: [0; 32],
+            },
+        };
+        let hashed_maker = maker_hash(&paul_maker);
+        let maker_sig: Signature = sign(&hashed_maker, &paul_private.to_bytes_be()).into();
+        paul_maker.sig = maker_sig;
+
+        let remco_taker = TakerMessage {
+            maker_message: paul_maker,
+            vault_a:       2,
+            vault_b:       3,
+        };
+        let hashed_taker = taker_hash(&remco_taker);
+        let taker_sig: Signature = sign(&hashed_taker, &remco_private.to_bytes_be()).into();
+
+        with_externalities(&mut new_test_ext(), || {
+            assert_ok!(Exchange::execute_order(
+                Origin::signed(1),
+                remco_taker.clone(),
+                taker_sig.clone()
+            ));
+            assert_eq!(
+                Exchange::execute_order(Origin::signed(1), remco_taker, taker_sig),
+                Err("Trade has already been executed")
+            );
+        });
+    }
+
+    // Test of totally valid withdraw
+    #[test]
+    fn valid_withdraw() {
+        let remco_private =
+            u256h!("04c1e9550e66958296d11b60f8e8e7a7ad990d07fa65d5f7652c4a6c87d4e3cc");
+        let remco_public: PublicKey = public_key(&remco_private.to_bytes_be()).into();
+
+        let eth_id: [u8; 24] = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+        ];
+        let remco_eth_vault = Vault {
+            owner:    remco_public.clone(),
+            token_id: eth_id,
+            balance:  100,
+        };
+
+        // In our init we gave the remco key a nonce of one, and now we are withdrawing
+        // 10
+        let hash = hash(
+            ((U256::from(1_u64) << 64) + U256::from(10)).to_bytes_be(),
+            remco_eth_vault.vault_hash(),
+        );
+        let sig: Signature = sign(&hash, &remco_private.to_bytes_be()).into();
+
+        with_externalities(&mut new_test_ext(), || {
+            assert_ok!(Exchange::withdraw(Origin::signed(1), 2, 10, sig));
+            assert_eq!(Exchange::get_vault(2).balance, 90);
+        });
+    }
+    // Test of invalid withdraw conditions
+    #[test]
+    fn invalid_withdraw() {
+        let remco_private =
+            u256h!("04c1e9550e66958296d11b60f8e8e7a7ad990d07fa65d5f7652c4a6c87d4e3cc");
+        let remco_public: PublicKey = public_key(&remco_private.to_bytes_be()).into();
+
+        let eth_id: [u8; 24] = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+        ];
+        let remco_eth_vault = Vault {
+            owner:    remco_public.clone(),
+            token_id: eth_id,
+            balance:  100,
+        };
+
+        // In our init we gave the remco key a nonce of one, and now we are withdrawing
+        // 10
+        let hash_1 = hash(
+            ((U256::from(1_u64) << 64) + U256::from(10)).to_bytes_be(),
+            remco_eth_vault.vault_hash(),
+        );
+        let sig_1: Signature = sign(&hash_1, &remco_private.to_bytes_be()).into();
+
+        let remco_eth_vault = Vault {
+            owner:    remco_public.clone(),
+            token_id: eth_id,
+            balance:  90,
+        };
+        let hash_2 = hash(
+            ((U256::from(2_u64) << 64) + U256::from(101)).to_bytes_be(),
+            remco_eth_vault.vault_hash(),
+        );
+        let sig_2: Signature = sign(&hash_2, &remco_private.to_bytes_be()).into();
+
+        with_externalities(&mut new_test_ext(), || {
+            assert_ok!(Exchange::withdraw(Origin::signed(1), 2, 10, sig_1.clone()));
+            // Invalid signature because it signs a lower nonce than the system knows
+            assert_eq!(
+                Exchange::withdraw(Origin::signed(1), 2, 10, sig_1.clone()),
+                Err("Invalid Signature")
+            );
+            assert_eq!(
+                Exchange::withdraw(Origin::signed(1), 0, 10, sig_1),
+                Err("Sender doesn't own the vault")
+            );
+            assert_eq!(
+                Exchange::withdraw(Origin::signed(1), 2, 101, sig_2),
+                Err("Trying to withdraw too much")
+            );
+        });
+    }
+
+    // Test of each invalid condition in transaction
+    #[test]
+    fn invalid_exchange() {
+        let paul_private =
+            u256h!("02c1e9550e66958296d11b60f8e8e7a7ad990d07fa65d5f7652c4a6c87d4e3cc");
+        let remco_private =
+            u256h!("04c1e9550e66958296d11b60f8e8e7a7ad990d07fa65d5f7652c4a6c87d4e3cc");
+
+        let eth_id: [u8; 24] = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+        ];
+        let dai_id: [u8; 24] = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
+        ];
+        let zrx_id: [u8; 24] = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3,
+        ];
+
+        let mut paul_maker = MakerMessage {
+            vault_a:  5,
+            vault_b:  5,
+            amount_a: 1_000_000,
+            amount_b: 100_000,
+            token_a:  zrx_id,
+            token_b:  zrx_id,
+            trade_id: 0,
+            sig:      Signature {
+                r: [0; 32],
+                s: [0; 32],
+            },
+        };
+        let hashed_maker = maker_hash(&paul_maker);
+        let maker_sig: Signature = sign(&hashed_maker, &paul_private.to_bytes_be()).into();
+        paul_maker.sig = maker_sig;
+
+        let mut remco_taker = TakerMessage {
+            maker_message: paul_maker,
+            vault_a:       5,
+            vault_b:       5,
+        };
+        let hashed_taker = taker_hash(&remco_taker);
+        let taker_sig: Signature = sign(&hashed_taker, &remco_private.to_bytes_be()).into();
+
+        with_externalities(&mut new_test_ext(), || {
+            assert_eq!(
+                Exchange::execute_order(Origin::signed(1), remco_taker.clone(), taker_sig.clone()),
+                Err("Missing taker vault a")
+            );
+            remco_taker.vault_a = 0;
+            assert_eq!(
+                Exchange::execute_order(Origin::signed(1), remco_taker.clone(), taker_sig.clone()),
+                Err("Missing taker vault b")
+            );
+            remco_taker.vault_b = 3;
+            assert_eq!(
+                Exchange::execute_order(Origin::signed(1), remco_taker.clone(), taker_sig.clone()),
+                Err("Missing maker vault a")
+            );
+            remco_taker.maker_message.vault_a = 1;
+            assert_eq!(
+                Exchange::execute_order(Origin::signed(1), remco_taker.clone(), taker_sig.clone()),
+                Err("Missing maker vault b")
+            );
+            remco_taker.maker_message.vault_b = 2;
+
+            assert_eq!(
+                Exchange::execute_order(Origin::signed(1), remco_taker.clone(), taker_sig.clone()),
+                Err("Mismatch in taker vault owners")
+            );
+            remco_taker.vault_a = 2;
+            remco_taker.vault_b = 3;
+            assert_eq!(
+                Exchange::execute_order(Origin::signed(1), remco_taker.clone(), taker_sig.clone()),
+                Err("Mismatch in maker vault owners")
+            );
+            remco_taker.maker_message.vault_a = 1;
+            remco_taker.maker_message.vault_b = 0;
+
+            assert_eq!(
+                Exchange::execute_order(Origin::signed(1), remco_taker.clone(), taker_sig.clone()),
+                Err("Token in maker order vault_a doesn't match vault token type")
+            );
+            remco_taker.maker_message.token_a = dai_id;
+            assert_eq!(
+                Exchange::execute_order(Origin::signed(1), remco_taker.clone(), taker_sig.clone()),
+                Err("Token in maker order vault_b doesn't match vault token type")
+            );
+            remco_taker.maker_message.token_b = eth_id;
+
+            assert_eq!(
+                Exchange::execute_order(Origin::signed(1), remco_taker.clone(), taker_sig.clone()),
+                Err("Mismatched token_a types")
+            );
+            remco_taker.maker_message.vault_a = 0;
+            remco_taker.maker_message.token_a = eth_id;
+            assert_eq!(
+                Exchange::execute_order(Origin::signed(1), remco_taker.clone(), taker_sig.clone()),
+                Err("Mismatched token_b types")
+            );
+            remco_taker.maker_message.vault_b = 1;
+            remco_taker.maker_message.token_b = dai_id;
+
+            assert_eq!(
+                Exchange::execute_order(Origin::signed(1), remco_taker.clone(), taker_sig.clone()),
+                Err("Not enough funds in maker's source vault")
+            );
+            remco_taker.maker_message.amount_a = 1;
+            assert_eq!(
+                Exchange::execute_order(Origin::signed(1), remco_taker.clone(), taker_sig.clone()),
+                Err("Not enough funds in taker's source vault")
+            );
+            remco_taker.maker_message.amount_b = 300;
+
+            assert_eq!(
+                Exchange::execute_order(Origin::signed(1), remco_taker.clone(), taker_sig.clone()),
+                Err("Maker message improperly signed")
+            );
+        });
+    }
+
+    // Test of emptying a vault and the id getting recycled
+    #[test]
+    fn id_recycling() {
         let paul_private =
             u256h!("02c1e9550e66958296d11b60f8e8e7a7ad990d07fa65d5f7652c4a6c87d4e3cc");
         let remco_private =
             u256h!("04c1e9550e66958296d11b60f8e8e7a7ad990d07fa65d5f7652c4a6c87d4e3cc");
         let paul_public: PublicKey = public_key(&paul_private.to_bytes_be()).into();
-        let remco_public: PublicKey = public_key(&remco_private.to_bytes_be()).into();
 
-        let hash = hash(
-            U256::from(((50_u64) << 32) + 40).to_bytes_be(),
-            remco_public.x,
-        );
-        let sig = sign(&hash, &paul_private.to_bytes_be()).into();
+        let eth_id: [u8; 24] = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+        ];
+        let dai_id: [u8; 24] = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
+        ];
+        let zrx_id: [u8; 24] = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
+        ];
+
+        // This order will empty vault 0 for the maker and vault 3 for the taker
+        let mut paul_maker = MakerMessage {
+            vault_a:  0,
+            vault_b:  1,
+            amount_a: 100,
+            amount_b: 1000,
+            token_a:  eth_id,
+            token_b:  dai_id,
+            trade_id: 0,
+            sig:      Signature {
+                r: [0; 32],
+                s: [0; 32],
+            },
+        };
+        let hashed_maker = maker_hash(&paul_maker);
+        let maker_sig: Signature = sign(&hashed_maker, &paul_private.to_bytes_be()).into();
+        paul_maker.sig = maker_sig;
+
+        let remco_taker = TakerMessage {
+            maker_message: paul_maker,
+            vault_a:       2,
+            vault_b:       3,
+        };
+        let hashed_taker = taker_hash(&remco_taker);
+        let taker_sig: Signature = sign(&hashed_taker, &remco_private.to_bytes_be()).into();
+
+        let zero_vault = Vault {
+            owner:    PublicKey {
+                x: [0; 32],
+                y: [0; 32],
+            },
+            token_id: [0; 24],
+            balance:  0,
+        };
+        let mut test_vault = Vault {
+            owner:    paul_public.clone(),
+            token_id: eth_id,
+            balance:  0,
+        };
+
         with_externalities(&mut new_test_ext(), || {
-            assert_ok!(Exchange::send_tokens(
-                Origin::signed(0),
-                40,
-                remco_public.clone(),
-                sig
+            assert_ok!(Exchange::execute_order(
+                Origin::signed(1),
+                remco_taker,
+                taker_sig
             ));
-            assert_eq!(Exchange::balance(remco_public), 90);
-            assert_eq!(Exchange::balance(paul_public), 460);
+            // Check that the vaults are deleted
+            assert_eq!(Exchange::get_vault(0), zero_vault.clone());
+            assert_eq!(Exchange::get_vault(3), zero_vault);
+
+            // Check that the index of the next vault released is 2
+            assert_eq!(Exchange::get_available_id(), 2);
+
+            // Check that the indexing contains each possible new vault.
+            assert_eq!(Exchange::get_recycled_id(2), 3);
+            assert_eq!(Exchange::get_recycled_id(1), 0);
+            assert_eq!(Exchange::get_recycled_id(0), 4);
+
+            // Check that a new vault is registerable and gets the right id.
+            assert_ok!(Exchange::vault_registration(Origin::signed(0), eth_id));
+            assert_ok!(Exchange::vault_registration(Origin::signed(0), dai_id));
+            assert_ok!(Exchange::vault_registration(Origin::signed(0), zrx_id));
+
+            // Checks that each vault is assigned to recycled ids then to properly
+            // incrementing new ones.
+            assert_eq!(Exchange::get_vault(3), test_vault.clone());
+            test_vault.token_id = dai_id;
+            assert_eq!(Exchange::get_vault(0), test_vault.clone());
+            test_vault.token_id = zrx_id;
+            assert_eq!(Exchange::get_vault(4), test_vault.clone());
+            assert_eq!(Exchange::get_available_id(), 0);
+            assert_eq!(Exchange::get_recycled_id(0), 5);
         });
     }
 }
