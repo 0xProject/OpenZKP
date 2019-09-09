@@ -3,7 +3,7 @@ use std::convert::TryFrom;
 use tiny_keccak::Keccak;
 use u256::U256;
 
-#[cfg(feature = "std")]
+#[cfg(all(feature = "std", feature = "prover"))]
 use rayon::prelude::*;
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
