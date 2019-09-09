@@ -17,7 +17,7 @@ use u256::U256;
 /// The module's configuration trait.
 pub trait Trait: finality::Trait {}
 
-pub const SIZE_LIMIT : u32 = 1024; // The max number of transactions we reasonably expect in one proof
+pub const SIZE_LIMIT: u32 = 1024; // The max number of transactions we reasonably expect in one proof
 
 // This module's storage items.
 decl_storage! {
