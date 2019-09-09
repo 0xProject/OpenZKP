@@ -36,7 +36,7 @@ pub struct TakerMessage {
     pub vault_b:       u32,
 }
 
-#[derive(PartialEq, Encode, Default, Clone, Decode)]
+#[derive(PartialEq, Encode, Default, Clone, Decode, Eq)]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct Vault {
     pub owner:    PublicKey,

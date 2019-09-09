@@ -9,7 +9,9 @@ fn from_bytes(bytes: &[u8; 32]) -> U256 {
 
 fn from_24_bytes(bytes: &[u8; 24]) -> U256 {
     let mut padded = [0_u8; 32];
-    padded.copy_from_slice(bytes);
+    let mut padded_vec = vec![0, 0, 0, 0, 0, 0, 0, 0];
+    padded_vec.extend_from_slice(bytes);
+    padded.copy_from_slice(padded_vec.as_slice());
     U256::from_bytes_be(&padded)
 }
 
