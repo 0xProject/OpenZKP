@@ -23,10 +23,6 @@ executors:
   minimal:
     docker:
       - image: circleci/buildpack-deps
-    steps:
-      - run:
-          name: Stop
-          command: circleci-agent step halt
   # TODO: Add a container with fixed versions for reproducible builds from master.
   docker-builder:
     docker:
@@ -358,8 +354,8 @@ workflows:
           requires:
             - build-docker
       - benchmark-ec2:
-          requres:
-            - benchmark
+          requires:
+            - benchmarks
       # `accept` is a phony job which requires every check for a commit.
       # This allows us to set a single 'required status check' in GitHub.
       - accept:
