@@ -229,6 +229,7 @@ jobs:
             - criterion.tgz
       - store_artifacts:
           path: criterion.tgz
+          destination: criterion.tgz
   benchmark-store:
     # Stores criterion results as baseline.
     executor: minimal
