@@ -38,9 +38,11 @@
     // TODO: missing_debug_implementations,
 ))]
 
+pub mod fft;
 mod field;
 mod montgomery;
 mod square_root;
+mod utils;
 
 pub use field::FieldElement;
 

@@ -17,6 +17,7 @@ quickcheck = { version = "0.8", optional = true}
 # optional, or it will enable the `std` flag on various dependencies. Cargo
 # does not allow dev-dependencies to be optional.
 criterion = { version = "0.2.0", optional = true }
+criterion-utils = { path = "../criterion-utils", optional = true }
 quickcheck_macros = { version = "0.8", optional = true }
 
 [[bench]]
@@ -26,7 +27,10 @@ required-features = ["bench"]
 
 [features]
 default = [ "std" ]
-bench = ["criterion"]
+bench = [
+    "criterion",
+    "criterion-utils",
+]
 test = [
     "quickcheck",
     "quickcheck_macros",
@@ -38,5 +42,5 @@ std = [
     "no-std-compat/std",
     "itertools/use_std",
     "crunchy/std",
-    "hex"
+    "hex",
 ]
