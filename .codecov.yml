@@ -2,3 +2,7 @@
 # Validate using `curl -X POST --data-binary @.codecov.yml https://codecov.io/validate`
 codecov:
   branch: master
+
+# Do not post comments in PRs.
+# TODO: Enable again once code coverage is more accurate.
+comment: off
