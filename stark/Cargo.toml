@@ -43,6 +43,7 @@ std = [
     "no-std-compat/std",
     "itertools/use_std",
     "rayon",
+    "hex"
 ]
 test = [
     "u256/test",
