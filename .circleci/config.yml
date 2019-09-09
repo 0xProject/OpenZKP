@@ -313,6 +313,7 @@ jobs:
       - codechecks
   build-node:
     executor: docker-rust
+    resource_class: xlarge
     steps:
       - checkout
       - attach_workspace:
