@@ -20,6 +20,13 @@ version: 2.1
 # TODO: Sync `TODO` and other comments.
 
 executors:
+  minimal:
+    docker:
+      - image: circleci/buildpack-deps
+    steps:
+      - run:
+          name: Stop
+          command: circleci-agent step halt
   # TODO: Add a container with fixed versions for reproducible builds from master.
   docker-builder:
     docker:
@@ -164,7 +171,10 @@ jobs:
       - enable-sccache
       - run:
           name: Build benchmarks in release mode on stable
-          command: cargo build --release --bench benchmark $PACKAGES --all-features
+          command: |
+            # Clean out old builds (if any)
+            rm target/release/benchmark-* || true
+            cargo build --release --bench benchmark $PACKAGES --all-features
       - save-sccache-cache
       - run:
           name: Test benchmarks
@@ -179,7 +189,29 @@ jobs:
             # we enable all features (which makes sense from a test coverage perspective).
             # TODO: We don't need an optimized build here, re-using debug build would be ok.
             cargo bench --bench benchmark $PACKAGES --all-features -- --test
+      - run:
+          # The artifact glob would have picked these up
+          name: Cleanup target folder for wokspace glob
+          command: rm target/release/benchmark-*.d
+      - persist_to_workspace:
+          root: target/release
+          paths:
+            - benchmark-*
       - codechecks
+  benchmark-ec2:
+    # Run benchmarks on AWS EC2
+    # See https://engineering.mongodb.com/post/reducing-variability-in-performance-tests-on-ec2-setup-and-key-results
+    executor: minimal
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Copy benchmarks to ECS
+          command: |
+            mkdir $CIRCLE_BUILD_NUM
+            cp /tmp/workspace/benchmark-* ./$CIRCLE_BUILD_NUM
+            scp -r -o StrictHostKeyChecking=no ./$CIRCLE_BUILD_NUM ec2-user@ec2-18-208-129-239.compute-1.amazonaws.com:~/
+            ssh 'for b in ./$CIRCLE_BUILD_NUM/*; do ./$b --noplot; done'
   rustformat:
     executor: docker-rust
     steps:
@@ -279,8 +311,7 @@ jobs:
       - save-sccache-cache
       - codechecks
   accept:
-    docker:
-      - image: circleci/buildpack-deps
+    executor: minimal
     steps:
       - run:
           name: Stop
@@ -326,6 +357,9 @@ workflows:
       - clippy:
           requires:
             - build-docker
+      - benchmark-ec2:
+          requres:
+            - benchmark
       # `accept` is a phony job which requires every check for a commit.
       # This allows us to set a single 'required status check' in GitHub.
       - accept:
