@@ -1,51 +1,89 @@
 // We want these functions to be called `fft`
 #![allow(clippy::module_name_repetitions)]
-use crate::{utils::Reversible, FieldElement};
+use crate::FieldElement;
 use std::prelude::v1::*;
-use u256::U256;
 
+// TODO: Create a dedicated type for permuted vectors
+
+/// Permute index for an FFT of `size`
+///
+/// The permutation is it's own inverse. The permutation is currently
+/// a 'bit-reversal' one, where each index has its binary representation
+/// reversed.
+pub fn permute_index(size: usize, index: usize) -> usize {
+    const USIZE_BITS: usize = 0_usize.count_zeros() as usize;
+    debug_assert!(index < size);
+    if size == 1 {
+        0
+    } else {
+        debug_assert!(size.is_power_of_two());
+        let bits = size.trailing_zeros() as usize;
+        index.reverse_bits() >> (USIZE_BITS - bits)
+    }
+}
+
+/// Permute an array of FFT results.
+// TODO expose public ifft function which accepts bit-reversed input instead.
+pub fn permute<T>(v: &mut [T]) {
+    let n = v.len();
+    for i in 0..n {
+        let j = permute_index(n, i);
+        if j > i {
+            v.swap(i, j);
+        }
+    }
+}
+
+/// Out-of-place FFT with non-permuted result.
 pub fn fft(a: &[FieldElement]) -> Vec<FieldElement> {
-    let mut result = a.to_vec();
-    let root = FieldElement::root(result.len()).expect("No root of unity for input length");
-    bit_reversal_fft(result.as_mut_slice(), &root);
-    bit_reversal_permute(result.as_mut_slice());
+    let mut result = a.to_owned();
+    fft_permuted(&mut result);
+    permute(&mut result);
     result
 }
 
-// TODO: Create a dedicated type for bit reversed vectors
-pub fn fft_cofactor_bit_reversed(a: &[FieldElement], cofactor: &FieldElement) -> Vec<FieldElement> {
-    let mut result = a.to_vec();
+/// Out-of-place inverse FFT with non-permuted result.
+pub fn ifft(a: &[FieldElement]) -> Vec<FieldElement> {
+    let mut result = a.to_owned();
+    ifft_permuted(&mut result);
+    permute(&mut result);
+    result
+}
+
+/// In-place permuted FFT.
+pub fn fft_permuted(x: &mut [FieldElement]) {
+    let root = FieldElement::root(x.len()).expect("No root of unity for input length");
+    fft_permuted_root(&root, x);
+}
+
+/// In-place permuted FFT with a cofactor.
+pub fn fft_cofactor_permuted(cofactor: &FieldElement, x: &mut [FieldElement]) {
+    // TODO: Use geometric_series
     let mut c = FieldElement::ONE;
-    for element in &mut result {
+    for element in x.iter_mut() {
         *element *= &c;
         c *= cofactor;
     }
-
-    let root = FieldElement::root(result.len()).expect("No root of unity for input length");
-    bit_reversal_fft(result.as_mut_slice(), &root);
-    result
+    fft_permuted(x);
 }
 
-pub fn ifft(a: &[FieldElement]) -> Vec<FieldElement> {
-    let mut result = a.to_vec();
-    let n_elements = U256::from(a.len());
+/// In-place permuted inverse FFT with cofactor.
+pub fn ifft_permuted(x: &mut [FieldElement]) {
     // OPT: make inv_root function.
-    let inverse_root = FieldElement::root(n_elements.clone())
+    let inverse_root = FieldElement::root(x.len())
         .expect("No root of unity for input length")
         .inv()
         .expect("No inverse for FieldElement::ZERO");
-    bit_reversal_fft(result.as_mut_slice(), &inverse_root);
-    bit_reversal_permute(result.as_mut_slice());
-    let inverse_length = FieldElement::from(n_elements)
+    let inverse_length = FieldElement::from(x.len())
         .inv()
         .expect("No inverse length for empty list");
-    for e in &mut result {
+    fft_permuted_root(&inverse_root, x);
+    for e in x {
         *e *= &inverse_length;
     }
-    result
 }
 
-fn bit_reversal_fft(coefficients: &mut [FieldElement], root: &FieldElement) {
+fn fft_permuted_root(root: &FieldElement, coefficients: &mut [FieldElement]) {
     let n_elements = coefficients.len();
     debug_assert!(n_elements.is_power_of_two());
     debug_assert!(root.pow(n_elements).is_one());
@@ -57,7 +95,8 @@ fn bit_reversal_fft(coefficients: &mut [FieldElement], root: &FieldElement) {
         let twiddle_factor_update = root.pow(block_size);
         for block in 0..n_blocks {
             // TODO: Do without casts.
-            let block_start = 2 * reverse(block as u64, layer) as usize * block_size;
+            debug_assert!(block < n_blocks);
+            let block_start = 2 * permute_index(n_blocks, block) * block_size;
             for i in block_start..block_start + block_size {
                 let j = i + block_size;
                 let left = coefficients[i].clone();
@@ -70,32 +109,6 @@ fn bit_reversal_fft(coefficients: &mut [FieldElement], root: &FieldElement) {
     }
 }
 
-// TODO expose public ifft function which accepts bit-reversed input instead.
-pub fn bit_reversal_permute<T>(v: &mut [T]) {
-    let n = v.len() as u64;
-    let n_bits = 63 - n.leading_zeros();
-    debug_assert_eq!(1 << n_bits, n);
-
-    for i in 0..n {
-        let j = reverse(i, n_bits);
-        if j > i {
-            // TODO - potentially implement pure safe version
-            v.swap(j as usize, i as usize) // swap is unsafe when i == j but
-                                           // this is impossible here
-        }
-    }
-}
-
-fn reverse(x: u64, bits: u32) -> u64 {
-    debug_assert!(bits <= 64);
-    debug_assert!(bits == 64 || x < (1_u64 << bits));
-    if bits == 0 {
-        0
-    } else {
-        x.bit_reverse() >> (64 - bits)
-    }
-}
-
 // Quickcheck needs pass by value
 #[allow(clippy::needless_pass_by_value)]
 #[cfg(test)]
@@ -103,6 +116,7 @@ mod tests {
     use super::*;
     use macros_decl::u256h;
     use quickcheck_macros::quickcheck;
+    use u256::U256;
 
     // O(n^2) reference implementation evaluating
     //     x_i' = Sum_j x_j * omega_n^(ij)
@@ -122,6 +136,23 @@ mod tests {
             root_i *= &root;
         }
         result
+    }
+
+    #[test]
+    fn test_permute() {
+        assert_eq!(permute_index(4, 0), 0);
+        assert_eq!(permute_index(4, 1), 2);
+        assert_eq!(permute_index(4, 2), 1);
+        assert_eq!(permute_index(4, 3), 3);
+    }
+
+    #[quickcheck]
+    fn check_permute(size: usize, index: usize) {
+        let size = size.next_power_of_two();
+        let index = index % size;
+        let permuted = permute_index(size, index);
+        assert!(permuted < size);
+        assert_eq!(permute_index(size, permuted), index);
     }
 
     #[test]
@@ -197,7 +228,7 @@ mod tests {
             )),
         ];
 
-        let mut res = fft(&vector);
+        let res = fft(&vector);
         let expected = reference_fft(&vector);
         assert_eq!(res, expected);
 
@@ -234,8 +265,9 @@ mod tests {
             u256h!("048bad0760f8b52ee4f9a46964bcf1ba9439a9467b2576176b1319cec9f12db0")
         );
 
-        res = fft_cofactor_bit_reversed(&vector, &cofactor);
-        bit_reversal_permute(&mut res);
+        let mut res = vector.clone();
+        fft_cofactor_permuted(&cofactor, &mut res);
+        permute(&mut res);
 
         assert_eq!(
             U256::from(&res[0]),
@@ -278,5 +310,22 @@ mod tests {
         }
         let truncated = &v[0..(1 + v.len()).next_power_of_two() / 2];
         truncated.to_vec() == ifft(&fft(truncated))
+    }
+
+    #[quickcheck]
+    fn ifft_permuted_is_inverse(v: Vec<FieldElement>) {
+        if v.is_empty() {
+            return;
+        }
+        let original = &v[0..(1 + v.len()).next_power_of_two() / 2];
+        let mut copy = original.to_owned();
+
+        // TODO: Make it work without the permutes in between
+        fft_permuted(&mut copy);
+        permute(&mut copy);
+        ifft_permuted(&mut copy);
+        permute(&mut copy);
+
+        assert_eq!(copy, original)
     }
 }
