@@ -215,7 +215,7 @@ jobs:
             # TODO: Fix concurrency. We don't want multiple benchmarks in parallel.
             mkdir $CIRCLE_BUILD_NUM target
             cp /tmp/workspace/benchmark-* ./$CIRCLE_BUILD_NUM
-            cp criterion ./target || echo No reference results found
+            mv criterion ./target || echo No reference results found
             scp $SSH_OPT -r ./$CIRCLE_BUILD_NUM ./target $HOST:~/
             for bench in ./$CIRCLE_BUILD_NUM/*; do
               # Note: works better if gnuplot is installed on the machine
