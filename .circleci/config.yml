@@ -215,20 +215,21 @@ jobs:
             # TODO: Fix concurrency. We don't want multiple benchmarks in parallel.
             mkdir $CIRCLE_BUILD_NUM target
             cp /tmp/workspace/benchmark-* ./$CIRCLE_BUILD_NUM
-            mv criterion ./target || echo No reference results found
-            scp $SSH_OPT -r ./$CIRCLE_BUILD_NUM ./target $HOST:~/
+            scp $SSH_OPT -r ./$CIRCLE_BUILD_NUM ./criterion.tgz $HOST:~/
+            ssh $SSH_OPT $HOST tar xzf ./criterion.tgz
             for bench in ./$CIRCLE_BUILD_NUM/*; do
               # Note: works better if gnuplot is installed on the machine
               ssh $SSH_OPT $HOST $bench --color always
             done
-            scp $SSH_OPT -r $HOST:~/target/criterion .
-            ssh $SSH_OPT $HOST rm -r ./$CIRCLE_BUILD_NUM ./target
+            ssh $SSH_OPT $HOST tar czf ./criterion.tgz ./target/criterion
+            scp $SSH_OPT -r $HOST:~/criterion.tgz .
+            ssh $SSH_OPT $HOST rm -r ./$CIRCLE_BUILD_NUM ./target ./criterion.tgz
       - persist_to_workspace:
           root: .
           paths:
-            - criterion
+            - criterion.tgz
       - store_artifacts:
-          path: criterion
+          path: criterion.tgz
   benchmark-store:
     # Stores criterion results as baseline.
     executor: minimal
@@ -240,7 +241,7 @@ jobs:
           name: Save sccache cache
           key: benchmark-criterion-v1-{{ epoch }}
           paths:
-            - ./criterionn
+            - ./criterion.tgz
   rustformat:
     executor: docker-rust
     steps:
