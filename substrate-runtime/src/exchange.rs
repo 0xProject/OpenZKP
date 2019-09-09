@@ -465,7 +465,10 @@ mod tests {
             assert_eq!(Exchange::get_vault(1).balance, 1300);
             assert_eq!(Exchange::get_vault(2).balance, 101);
             assert_eq!(Exchange::get_vault(3).balance, 700);
-            assert_eq!(Exchange::hash_balance_tree(), hex!("0192788d854aab1b0cbee2da24082981e021f51e0197828631a7b552355ab99e"));
+            assert_eq!(
+                Exchange::hash_balance_tree(),
+                hex!("0192788d854aab1b0cbee2da24082981e021f51e0197828631a7b552355ab99e")
+            );
         });
     }
 
