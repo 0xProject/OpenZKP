@@ -1,7 +1,7 @@
 use super::{Hash, Hashable};
 use std::prelude::v1::*;
 
-#[cfg(feature = "std")]
+#[cfg(feature = "mmap")]
 use crate::mmap_vec::MmapVec;
 
 pub trait VectorCommitment
@@ -43,7 +43,7 @@ impl<Leaf: Hashable + Clone> VectorCommitment for Vec<Leaf> {
     }
 }
 
-#[cfg(feature = "std")]
+#[cfg(feature = "mmap")]
 impl<Leaf: Hashable + Clone> VectorCommitment for MmapVec<Leaf> {
     type Leaf = Leaf;
 

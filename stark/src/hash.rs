@@ -1,5 +1,6 @@
 #[cfg(feature = "std")]
 use hex;
+
 #[cfg(feature = "std")]
 use std::fmt;
 
