@@ -213,10 +213,12 @@ jobs:
           name: Execute benchmarks on ECS
           command: |
             # TODO: Fix concurrency. We don't want multiple benchmarks in parallel.
-            mkdir $CIRCLE_BUILD_NUM target
+            mkdir $CIRCLE_BUILD_NUM
             cp /tmp/workspace/benchmark-* ./$CIRCLE_BUILD_NUM
-            scp $SSH_OPT -r ./$CIRCLE_BUILD_NUM ./criterion.tgz $HOST:~/
-            ssh $SSH_OPT $HOST tar xzf ./criterion.tgz
+            scp $SSH_OPT -r ./$CIRCLE_BUILD_NUM $HOST:~/
+            scp $SSH_OPT -r ./criterion.tgz $HOST:~/ &&
+              ssh $SSH_OPT $HOST tar xzf ./criterion.tgz ||
+              echo "No previous results cached"
             for bench in ./$CIRCLE_BUILD_NUM/*; do
               # Note: works better if gnuplot is installed on the machine
               ssh $SSH_OPT $HOST $bench --color always
