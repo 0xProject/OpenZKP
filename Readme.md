@@ -1,12 +1,15 @@
 # Crypto support library for StarkDEX
 
-[![CircleCI](https://circleci.com/gh/0xProject/starkcrypto.svg?style=svg)](https://circleci.com/gh/0xProject/starkcrypto)
-
-[![Coverage Status](https://coveralls.io/repos/github/0xProject/starkcrypto/badge.svg?branch=master)](https://coveralls.io/github/0xProject/starkcrypto?branch=master)
-
+[![CircleCI](https://img.shields.io/circleci/build/github/0xProject/starkcrypto)](https://circleci.com/gh/0xProject/starkcrypto)
+[![Codecov](https://img.shields.io/codecov/c/gh/0xproject/starkcrypto)](https://codecov.io/gh/0xProject/starkcrypto)
 <!-- TODO: License, Docs, Chat -->
 
-NOTE: Modular inversion is not constant time.
+**Warning.** Side-channel resistance is currently not implemented. This library
+is optimized for performance and does not use slower side-channel resistant
+algorithms. Please evaluate the risks before using with sensitive data.
+
+**Note.** Code coverage in Rust is still very early days. The above number is
+likely inaccurate. Please view the coverage report for details.
 
 ## Testing
 
