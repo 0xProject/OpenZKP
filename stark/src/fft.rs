@@ -63,32 +63,33 @@ fn bit_reversal_fft(coefficients: &mut [FieldElement], root: &FieldElement) {
             let block_start = 2 * reverse(block as u64, layer) as usize * block_size;
             for i in block_start..block_start + block_size {
                 let j = i + block_size;
-                let left = coefficients[i].clone();
-                let right = &coefficients[j] * &twiddle_factor;
-                coefficients[i] = &left + &right;
-                coefficients[j] = left - right;
+                let (left, right) = coefficients.split_at_mut(j);
+                radix_2(&twiddle_factor, &mut left[i], &mut right[0]);
             }
             twiddle_factor *= &twiddle_factor_update;
         }
     }
 }
 
-pub fn butterfly(x0: &mut FieldElement, x1: &mut FieldElement) {
+/// Transforms (x0, x1) to (x0 + x1, x0 - x1)
+fn butterfly(x0: &mut FieldElement, x1: &mut FieldElement) {
     // OPT: Inplace +- operation like in gcd::mat_mul.
     let t = x0.clone();
     *x0 += &*x1;
+    // OPT: sub_from_assign
     *x1 -= t;
+    x1.neg_assign();
 }
 
-#[allow(dead_code)]
-pub fn radix_2(omega: &FieldElement, x0: &mut FieldElement, x1: &mut FieldElement) {
+fn radix_2(omega: &FieldElement, x0: &mut FieldElement, x1: &mut FieldElement) {
     *x1 *= omega;
     butterfly(x0, x1);
 }
 
 // See https://math.stackexchange.com/questions/1626897/whats-the-formulation-of-n-point-radix-n-for-ntt/1627247
+// TODO: use
 #[allow(dead_code)]
-pub fn radix_4(
+fn radix_4(
     omega: &FieldElement,
     x0: &mut FieldElement,
     x1: &mut FieldElement,
