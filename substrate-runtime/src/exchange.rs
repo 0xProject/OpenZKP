@@ -255,7 +255,7 @@ impl<T: Trait> Module<T> {
             .collect();
 
         let depth = 32 - power_of_two.leading_zeros();
-        for _ in 0..depth {
+        for _ in 0..(depth - 1) {
             layer = layer
                 .chunks(2)
                 .map(|chunk| hash(chunk[0], chunk[1]))
@@ -482,6 +482,10 @@ mod tests {
             assert_eq!(Exchange::get_vault(1).balance, 1300);
             assert_eq!(Exchange::get_vault(2).balance, 101);
             assert_eq!(Exchange::get_vault(3).balance, 700);
+            assert_eq!(
+                Exchange::hash_balance_tree(),
+                hex!("0192788d854aab1b0cbee2da24082981e021f51e0197828631a7b552355ab99e")
+            );
         });
     }
 
