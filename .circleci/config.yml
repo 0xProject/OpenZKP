@@ -198,16 +198,49 @@ jobs:
     # Run benchmarks on AWS EC2
     # See https://engineering.mongodb.com/post/reducing-variability-in-performance-tests-on-ec2-setup-and-key-results
     executor: minimal
+    environment:
+      SSH_OPT: -o StrictHostKeyChecking=no
+      HOST: ec2-user@ec2-18-208-129-239.compute-1.amazonaws.com
     steps:
+      - restore_cache:
+          name: Restore master benchmark results
+          keys:
+            - benchmark-criterion-v1
       - attach_workspace:
+          # Restoring benchmark executables.
           at: /tmp/workspace
       - run:
-          name: Copy benchmarks to ECS
+          name: Execute benchmarks on ECS
           command: |
-            mkdir $CIRCLE_BUILD_NUM
+            # TODO: Fix concurrency. We don't want multiple benchmarks in parallel.
+            mkdir $CIRCLE_BUILD_NUM target
             cp /tmp/workspace/benchmark-* ./$CIRCLE_BUILD_NUM
-            scp -r -o StrictHostKeyChecking=no ./$CIRCLE_BUILD_NUM ec2-user@ec2-18-208-129-239.compute-1.amazonaws.com:~/
-            ssh 'for b in ./$CIRCLE_BUILD_NUM/*; do ./$b --noplot; done'
+            cp criterion ./target
+            scp $SSH_OPT -r ./$CIRCLE_BUILD_NUM ./target $HOST:~/
+            for bench in ./$CIRCLE_BUILD_NUM/*; do
+              # Note: works better if gnuplot is installed on the machine
+              ssh $SSH_OPT $HOST $bench --color always
+            done
+            scp $SSH_OPT -r $HOST:~/target/criterion .
+            ssh $SSH_OPT $HOST rm -r ./$CIRCLE_BUILD_NUM ./target
+      - persist_to_workspace:
+          root: .
+          paths:
+            - criterion
+      - store_artifacts:
+          path: criterion
+  benchmark-store:
+    # Stores criterion results as baseline.
+    executor: minimal
+    steps:
+      - attach_workspace:
+          # Restoring benchmark criterion result folder
+          at: .
+      - save_cache:
+          name: Save sccache cache
+          key: benchmark-criterion-v1-{{ epoch }}
+          paths:
+            - ./criterionn
   rustformat:
     executor: docker-rust
     steps:
@@ -356,6 +389,12 @@ workflows:
       - benchmark-ec2:
           requires:
             - benchmarks
+      - benchmark-store:
+          requires:
+            - benchmark-ec2
+          filters:
+            branches:
+              only: master
       # `accept` is a phony job which requires every check for a commit.
       # This allows us to set a single 'required status check' in GitHub.
       - accept:
