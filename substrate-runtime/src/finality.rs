@@ -39,7 +39,8 @@ decl_storage! {
         NextProof get(get_ready_for_proof): bool = true;
 
         Validators get(get_validator_key): map T::AccountId => PublicKey;
-        NumValidators get(get_number_of_validators): u32 = 0;
+        // TODO - Figure out why the extra genesis doesn't override the default
+        NumValidators get(get_number_of_validators): u32 = 3;
     }
         // Used for testing
     add_extra_genesis {
@@ -72,20 +73,17 @@ decl_module! {
 
             //TODO - This will be sliced out for a starkdex proof.
             let public : PublicInput = recorded.public.as_slice().into();
-            println!("{:?}", public);
-            println!("{:?}", &recorded.proof[(recorded.proof.len() - 100)..recorded.proof.len()]);
             ensure!(check_proof(
                 recorded.proof.as_slice(),
                 &get_fibonacci_constraints(&public),
                 &public,
-                // TODO - These params should be stored or provided instead of hardcoded
-                &ProofParams {
-                    blowup: 				  16,
-                    pow_bits: 				  12,
-                    queries:   				  20,
-                    fri_layout:               vec![2, 3],
-                    constraints_degree_bound: 1,
-                },
+                & ProofParams {
+                blowup:                   16,
+                pow_bits:                 12,
+                queries:                  20,
+                fri_layout:               vec![3, 2],
+                constraints_degree_bound: 1,
+            },
                 2,
                 1024
             ), "The proof is invalid");
@@ -143,7 +141,8 @@ impl<T: Trait> Module<T> {
         if status.0 + status.1 == number_of_validators {
             // TODO - Abstract as adjustable constants [it is set as 2/3 approval needed
             // right now]
-            if 3 * status.0 > 2 * number_of_validators {
+            println!("Ran check");
+            if 3 * status.0 >= 2 * number_of_validators {
                 Self::deposit_event(Event::Finalized(which, vault_hash));
                 // Clears out unneeded hashes and resets to allow next proof.
                 let last_link = <LinkTop<T>>::get();
@@ -174,10 +173,15 @@ impl<T: Trait> Module<T> {
     // TODO - When we figure out other ways to add validators we can remove this
     #[cfg(feature = "std")]
     fn add_validator(substrate_key: T::AccountId, stark_key: PublicKey) -> Result {
-        let num = <NumValidators<T>>::take();
+        let num = <NumValidators<T>>::get();
         <NumValidators<T>>::put(num+1);
         <Validators<T>>::insert(substrate_key, stark_key);
         Ok(())
+    }
+    #[cfg(feature = "std")]
+    fn open_proof_at(which: u32) {
+        <NextProof<T>>::put(false);
+        <LinkedHash<T>>::insert(<LinkTop<T>>::get(), which);
     }
 }
 
@@ -294,7 +298,7 @@ mod tests {
             &get_trace_table(1024, &private),
             &constraints,
             &public,
-            &ProofParams {
+            & ProofParams {
                 blowup:                   16,
                 pow_bits:                 12,
                 queries:                  20,
@@ -302,21 +306,6 @@ mod tests {
                 constraints_degree_bound: 1,
             },
         );
-
-        assert!(check_proof(
-            actual.proof.as_slice(),
-            &constraints,
-            &public,
-            &ProofParams {
-                blowup:                   16,
-                pow_bits:                 12,
-                queries:                  20,
-                fri_layout:               vec![3, 2],
-                constraints_degree_bound: 1,
-            },
-            2,
-            1024
-        ));
 
         with_externalities(&mut new_test_ext(), || {
             FinalityProof::add_hash([1; 32]);
@@ -335,7 +324,35 @@ mod tests {
         })
     }
     #[test]
-    fn updates_properly_with_total_approval() {
+    fn updates_properly_with_approval() {
+
+        let paul_private =
+            u256h!("02c1e9550e66958296d11b60f8e8e7a7ad990d07fa65d5f7652c4a6c87d4e3cc");
+        let remco_private =
+            u256h!("04c1e9550e66958296d11b60f8e8e7a7ad990d07fa65d5f7652c4a6c87d4e3cc");
+        let mason_private =
+            u256h!("05c1e9550e66958296d11b60f8e8e7a7ad990d07fa65d5f7652c4a6c87d4e3cc");
+
+        let hash_1 = hash([1; 32], [1; 32]);
+        let hash_2 = hash([2; 32], [2; 32]);
+        let paul_sig = sign(&hash_2, &paul_private.to_bytes_be());
+        let remco_sig = sign(&hash_2, &remco_private.to_bytes_be());
+        let mason_sig = sign(&hash_2, &mason_private.to_bytes_be());
+
+        with_externalities(&mut new_test_ext(), || {
+            FinalityProof::add_hash(hash_1);
+            // Note duplicates are possible in block hash [substrate blocks confirm fast so may not include any tx]
+            FinalityProof::add_hash(hash_1);
+            FinalityProof::add_hash(hash_2);
+            FinalityProof::open_proof_at(3);
+            assert_ok!(FinalityProof::issue_signature(Origin::signed(0), paul_sig.into()));
+            assert_ok!(FinalityProof::issue_signature(Origin::signed(1), remco_sig.into()));
+            assert_ok!(FinalityProof::issue_signature(Origin::signed(2), mason_sig.into()));
+            assert_eq!(FinalityProof::get_current_link(), 2);
+            assert_eq!(FinalityProof::get_ready_for_proof(), true);
+            assert_eq!(FinalityProof::get_vault_hash(2), [0; 32]);
+            assert_eq!(FinalityProof::get_vault_hash(3), hash_2);
+        })
         
     }
     #[test]
