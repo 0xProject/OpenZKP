@@ -128,8 +128,8 @@ mod tests {
         for _ in 0..x.len() {
             let mut sum = FieldElement::ZERO;
             let mut root_ij = FieldElement::ONE;
-            for j in 0..x.len() {
-                sum += &x[j] * &root_ij;
+            for xj in x {
+                sum += xj * &root_ij;
                 root_ij *= &root_i;
             }
             result.push(sum);

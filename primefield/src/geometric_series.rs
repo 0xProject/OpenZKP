@@ -14,7 +14,7 @@ impl GeometricSeries {
     }
 
     /// Transform the series
-    pub fn step_by(mut self, step: usize) -> GeometricSeries {
+    pub fn step_by(mut self, step: usize) -> Self {
         assert!(step > 0);
         self.step = self.step.pow(step);
         self.length /= step;
