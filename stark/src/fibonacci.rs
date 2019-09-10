@@ -13,6 +13,7 @@ pub struct PublicInput {
     pub value: FieldElement,
 }
 
+#[derive(PartialEq, Clone)]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct PrivateInput {
     pub secret: FieldElement,

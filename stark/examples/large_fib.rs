@@ -1,4 +1,5 @@
 #![warn(clippy::all)]
+use log::info;
 use macros_decl::u256h;
 use primefield::FieldElement;
 use stark::{
@@ -10,6 +11,8 @@ use std::{env, time::Instant};
 use u256::U256;
 
 fn main() {
+    env_logger::init();
+
     let args: Vec<String> = env::args().collect();
     if args.len() > 1 {
         rayon::ThreadPoolBuilder::new()
@@ -17,6 +20,7 @@ fn main() {
             .build_global()
             .expect("Error building Rayon thread pool.");
     }
+    info!("Starting Fibonacci benchmark...");
 
     let mut public = PublicInput {
         index: 1_000_000,
