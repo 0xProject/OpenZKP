@@ -3,6 +3,8 @@
 use crate::wrappers::*;
 use parity_codec::{Decode, Encode};
 use rstd::prelude::*;
+#[cfg(feature = "std")]
+use runtime_io::{with_storage, ChildrenStorageOverlay, StorageOverlay};
 use stark::{
     check_proof,
     fibonacci::{get_fibonacci_constraints, PublicInput},
@@ -27,16 +29,29 @@ pub trait Trait: system::Trait {
 // TODO - A linked list analogue is much better suited to this than a mapping
 decl_storage! {
     trait Store for Module<T: Trait> as FinalityProof {
-        VaultChain get(get_vault_hash) : map u32 => [u8; 32]; // Records each vault hash status
+        // TODO - Change the hash to be a totally empty vault tree
+        VaultChain get(get_vault_hash) build(|_config: &GenesisConfig<T>| {vec![(0_u32, [0; 32])]}) : map u32 => [u8; 32]; // Records each vault hash status
         VoteCount  get(get_vote_count) : (u32, u32) = (0, 0); // (number for, number against)
-        MaxIndex get(get_max_index): u32 = 0;
+        MaxIndex get(get_max_index): u32 = 1;
 
-        LinkTop get(get_current_link) : u32 = 0; // The index which has the end of the linked list
-        LinkedHash get(get_hash_link) : map u32 => u32; // Contains a reference to the id of each link in the list
+        LinkTop get(get_current_link) : u32 = 1; // The index which has the end of the linked list
+        LinkedHash get(get_hash_link) build(|_config: &GenesisConfig<T>| {vec![(0_u32, 0_u32)]}): map u32 => u32; // Contains a reference to the id of each link in the list
         NextProof get(get_ready_for_proof): bool = true;
 
         Validators get(get_validator_key): map T::AccountId => PublicKey;
-        NumValidators get(get_number_of_validators): u32 = 3;
+        NumValidators get(get_number_of_validators): u32 = 0;
+    }
+        // Used for testing
+    add_extra_genesis {
+        config(authorities): Vec<(T::AccountId, PublicKey)>;
+
+        build(|storage: &mut StorageOverlay, _: &mut ChildrenStorageOverlay, config: &GenesisConfig<T>| {
+            with_storage(storage, || {
+                for (ref acct, ref key) in &config.authorities {
+                    let _ = <Module<T>>::add_validator(acct.clone(), key.clone());
+                }
+            });
+        });
     }
 }
 
@@ -57,7 +72,9 @@ decl_module! {
 
             //TODO - This will be sliced out for a starkdex proof.
             let public : PublicInput = recorded.public.as_slice().into();
-            assert!(check_proof(
+            println!("{:?}", public);
+            println!("{:?}", &recorded.proof[(recorded.proof.len() - 100)..recorded.proof.len()]);
+            ensure!(check_proof(
                 recorded.proof.as_slice(),
                 &get_fibonacci_constraints(&public),
                 &public,
@@ -153,6 +170,15 @@ impl<T: Trait> Module<T> {
         <VaultChain<T>>::insert(index, vault_hash);
         <MaxIndex<T>>::put(index + 1);
     }
+    
+    // TODO - When we figure out other ways to add validators we can remove this
+    #[cfg(feature = "std")]
+    fn add_validator(substrate_key: T::AccountId, stark_key: PublicKey) -> Result {
+        let num = <NumValidators<T>>::take();
+        <NumValidators<T>>::put(num+1);
+        <Validators<T>>::insert(substrate_key, stark_key);
+        Ok(())
+    }
 }
 
 // TODO - Replace with a hash type from the merkle system in stark.
@@ -166,5 +192,154 @@ decl_event! {
         Rebuked(u32, HashContainer, PublicKey),
         Finalized(u32, HashContainer),
         Failed(u32, HashContainer),
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use macros_decl::u256h;
+    use u256::U256;
+    use primitives::{Blake2Hasher, H256};
+    use runtime_io::with_externalities;
+    use runtime_primitives::{
+        testing::{Digest, DigestItem, Header},
+        traits::{BlakeTwo256, IdentityLookup},
+        BuildStorage,
+    };
+    use primefield::FieldElement;
+    use starkdex::wrappers::{public_key, sign};
+    use stark::{
+        fibonacci::{get_fibonacci_constraints, get_trace_table, PrivateInput, PublicInput},
+        stark_proof, ProofParams,
+    };
+    use support::{assert_ok, impl_outer_origin};
+
+    impl_outer_origin! {
+        pub enum Origin for FinalityTest {}
+    }
+
+    // For testing the module, we construct most of a mock runtime. This means
+    // first constructing a configuration type (`Test`) which `impl`s each of the
+    // configuration traits of modules we want to use.
+    #[derive(Clone, Eq, PartialEq)]
+    pub struct FinalityTest;
+    impl system::Trait for FinalityTest {
+        type AccountId = u64;
+        type BlockNumber = u64;
+        type Digest = Digest;
+        type Event = ();
+        type Hash = H256;
+        type Hashing = BlakeTwo256;
+        type Header = Header;
+        type Index = u64;
+        type Log = DigestItem;
+        type Lookup = IdentityLookup<Self::AccountId>;
+        type Origin = Origin;
+    }
+    impl Trait for FinalityTest {
+        type Event = ();
+    }
+    type FinalityProof = Module<FinalityTest>;
+
+    // This function basically just builds a genesis storage key/value store
+    // according to our desired mockup.
+    fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
+        let paul_private =
+            u256h!("02c1e9550e66958296d11b60f8e8e7a7ad990d07fa65d5f7652c4a6c87d4e3cc");
+        let remco_private =
+            u256h!("04c1e9550e66958296d11b60f8e8e7a7ad990d07fa65d5f7652c4a6c87d4e3cc");
+        let mason_private =
+            u256h!("05c1e9550e66958296d11b60f8e8e7a7ad990d07fa65d5f7652c4a6c87d4e3cc");
+        let paul_public: PublicKey = public_key(&paul_private.to_bytes_be()).into();
+        let remco_public: PublicKey = public_key(&remco_private.to_bytes_be()).into();
+        let mason_public: PublicKey = public_key(&mason_private.to_bytes_be()).into();
+
+        let mut t = system::GenesisConfig::<FinalityTest>::default()
+            .build_storage()
+            .unwrap()
+            .0;
+        t.extend(
+            GenesisConfig::<FinalityTest> {
+                authorities: vec![
+                    (0, paul_public),
+                    (1, remco_public),
+                    (2, mason_public),
+                ],
+            }
+            .build_storage()
+            .unwrap()
+            .0,
+        );
+        t.into()
+    }
+
+    #[test]
+    fn proof_posts_right() {
+        let public = PublicInput {
+            index: 1000,
+            value: FieldElement::from(u256h!(
+                "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
+            )),
+        };
+        let private = PrivateInput {
+            secret: FieldElement::from(u256h!(
+                "00000000000000000000000000000000000000000000000000000000cafebabe"
+            )),
+        };
+        let constraints = &get_fibonacci_constraints(&public);
+        let actual = stark_proof(
+            &get_trace_table(1024, &private),
+            &constraints,
+            &public,
+            &ProofParams {
+                blowup:                   16,
+                pow_bits:                 12,
+                queries:                  20,
+                fri_layout:               vec![3, 2],
+                constraints_degree_bound: 1,
+            },
+        );
+
+        assert!(check_proof(
+            actual.proof.as_slice(),
+            &constraints,
+            &public,
+            &ProofParams {
+                blowup:                   16,
+                pow_bits:                 12,
+                queries:                  20,
+                fri_layout:               vec![3, 2],
+                constraints_degree_bound: 1,
+            },
+            2,
+            1024
+        ));
+
+        with_externalities(&mut new_test_ext(), || {
+            FinalityProof::add_hash([1; 32]);
+            // Note duplicates are possible in block hash [substrate blocks confirm fast so may not include any tx]
+            FinalityProof::add_hash([1; 32]);
+            FinalityProof::add_hash([2; 32]);
+            FinalityProof::add_hash([3; 32]);
+            assert_ok!(FinalityProof::prove_chain(
+                    Origin::signed(0), 
+                    RecordedProof{
+                        proof:  actual.proof.clone(),
+                        public: public.into(),
+                    },
+                    3 
+                ));
+        })
+    }
+    #[test]
+    fn updates_properly_with_total_approval() {
+        
+    }
+    #[test]
+    fn rebukes_proofs_properly() {
+
     }
 }
