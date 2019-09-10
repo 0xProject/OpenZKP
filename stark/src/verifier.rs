@@ -285,7 +285,7 @@ fn fri_fold(
         let mut next_coset = Vec::with_capacity(coset.len() / 2);
 
         for (k, pair) in coset_full.chunks(2).enumerate() {
-            let x = &eval_x[fft::permute_index(index + k, len / 2) * step];
+            let x = &eval_x[fft::permute_index(len / 2, index + k) * step];
             next_coset.push(fri_single_fold(&pair[0], &pair[1], x, &mutable_eval_copy));
         }
         len /= 2;
