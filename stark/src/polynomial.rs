@@ -7,7 +7,7 @@ use primefield::{
 use std::{
     cmp::max,
     collections::BTreeMap,
-    ops::{Add, AddAssign, DivAssign, Mul, MulAssign, Sub, SubAssign},
+    ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign},
     prelude::v1::*,
 };
 use u256::{commutative_binop, noncommutative_binop};
@@ -286,6 +286,16 @@ impl DivAssign<SparsePolynomial> for DensePolynomial {
         }
         let _ = self.0.drain(0..denominator_degree);
         self.canonicalize();
+    }
+}
+
+impl Div<SparsePolynomial> for DensePolynomial {
+    type Output = DensePolynomial;
+
+    fn div(self, denominator: SparsePolynomial) -> DensePolynomial {
+        let mut copy = self.clone();
+        copy /= denominator;
+        copy
     }
 }
 
