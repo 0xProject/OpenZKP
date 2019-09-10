@@ -1,4 +1,5 @@
 #![warn(clippy::all)]
+use env_logger;
 use log::info;
 use macros_decl::u256h;
 use primefield::FieldElement;

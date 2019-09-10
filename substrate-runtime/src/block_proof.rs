@@ -283,7 +283,7 @@ mod tests {
             let _ = BlockProof::dispatch(
                 Call::set(RecordedProof {
                     proof:  actual.proof.clone(),
-                    public: incorrect_public.into(),
+                    public: (&incorrect_public).into(),
                 }),
                 RawOrigin::Inherent.into(),
             );

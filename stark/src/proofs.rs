@@ -1,5 +1,6 @@
 use crate::{
     channel::{ProverChannel, RandomGenerator, Writable},
+    check_proof,
     constraint::Constraint,
     hash::Hash,
     hashable::Hashable,
@@ -99,8 +100,10 @@ impl VectorCommitment for FriLeaves {
     }
 }
 
-// TODO: Look into lifetime annotations here. For now ignore the hint.
+// False positive: `for<'a>` annotation is required.
 #[allow(single_use_lifetimes)]
+// TODO: Simplify
+#[allow(clippy::cognitive_complexity)]
 pub fn stark_proof<Public>(
     trace: &TraceTable,
     constraints: &[Constraint],
@@ -108,8 +111,7 @@ pub fn stark_proof<Public>(
     params: &ProofParams,
 ) -> ProverChannel
 where
-    for<'a> ProverChannel: Writable<&'a Public>,
-    for<'b> ProverChannel: Writable<&'b Hash>,
+    for<'a> &'a Public: Into<Vec<u8>>,
 {
     info!("Starting Stark proof.");
     info!("Proof parameters: {:?}", params);
@@ -127,7 +129,7 @@ where
     // Initialize a proof channel with the public input.
     info!("Writing public input to channel.");
     let mut proof = ProverChannel::new();
-    proof.write(public);
+    proof.initialize(&public.into());
 
     // 1. Trace commitment.
     //
@@ -215,21 +217,36 @@ where
     info!("Query indices: {:?}", query_indices);
 
     // Decommit the trace table values.
+    info!("Decommit the trace table values.");
     for &index in &query_indices {
         proof.write(tree.leaf(index));
     }
     proof.write(&tree.open(&query_indices).unwrap());
 
     // Decommit the constraint values
+    info!("Decommit the constraint values.");
     for &index in &query_indices {
         proof.write(c_tree.leaf(index));
     }
     proof.write(&c_tree.open(&query_indices).unwrap());
 
     // Decommit the FRI layer values
+    info!("Decommit the FRI layer values.");
     decommit_fri_layers_and_trees(fri_trees.as_slice(), query_indices.as_slice(), &mut proof);
 
+    // Verify proof
+    info!("Verify proof.");
+    assert!(check_proof(
+        proof.proof.as_slice(),
+        constraints,
+        public,
+        params,
+        trace.num_columns(),
+        trace.num_rows()
+    ));
+
     // Q.E.D.
+    // TODO: Return bytes, or a result structure
     proof
 }
 

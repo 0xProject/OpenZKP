@@ -72,4 +72,5 @@ mmap = [
 ]
 prover = [
     "std", # TODO: Make prove run in no-std wasm.
+    "mmap", # TODO: Allow prover to work without mmap
 ]
