@@ -113,11 +113,14 @@ where
 {
     info!("Starting Stark proof.");
     info!("Proof parameters: {:?}", params);
+    // TODO: Use a proper size human formating function
+    #[allow(clippy::cast_precision_loss)]
+    let size_mb = (trace.num_rows() * trace.num_columns() * 32) as f64 / 1_000_000_f64;
     info!(
         "Trace table {} rows {} columns ({} MB)",
         trace.num_rows(),
         trace.num_columns(),
-        (trace.num_rows() * trace.num_columns() * 32) as f64 / 1000_000_f64
+        size_mb
     );
     info!("Constraint system {} constraints", constraints.len());
 
