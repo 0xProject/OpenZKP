@@ -18,6 +18,9 @@ rayon = { version = "1.0.3", optional = true }
 memmap = { version = "^0.7.0", optional = true }
 tempfile = { version = "^3.1.0", optional = true }
 quickcheck = { version = "0.8", optional = true }
+# TODO: Switch to slog
+log = { version = "0.4.8", default_features = false }
+env_logger = { version = "0.6.2", optional = true }
 
 # HACK: Criterion is really a dev-dependency, but it's important that it's
 # optional, or it will enable the `std` flag on various dependencies. Cargo
@@ -42,6 +45,7 @@ std = [
     "starkdex/std",
     "no-std-compat/std",
     "itertools/use_std",
+    "log/std",
     "rayon",
     "hex"
 ]
@@ -57,6 +61,9 @@ test = [
 bench = [
     "criterion",
     "num_cpus",
+]
+examples = [
+    "env_logger"
 ]
 mmap = [
     "std",
