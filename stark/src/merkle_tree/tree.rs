@@ -18,8 +18,10 @@ pub struct Tree<Container: VectorCommitment> {
 
 impl<Container: VectorCommitment> Tree<Container> {
     pub fn from_leaves(leaves: Container) -> Result<Self> {
-        let skip_layers = 2_usize;
+        Self::from_leaves_skip_layers(leaves, 1)
+    }
 
+    pub fn from_leaves_skip_layers(leaves: Container, skip_layers: usize) -> Result<Self> {
         let size = leaves.len();
         if size == 0 {
             return Ok(Self {
@@ -224,9 +226,11 @@ mod tests {
     }
 
     #[quickcheck]
-    fn test_merkle_tree(depth: usize, indices: Vec<usize>, seed: U256) {
+    fn test_merkle_tree(depth: usize, skip: usize, indices: Vec<usize>, seed: U256) {
         // We want tests up to depth 8; adjust the input
         let depth = depth % 9;
+        // We want to skip up to 3 layers; adjust the input
+        let skip = skip % 4;
         let num_leaves = 1_usize << depth;
         let indices: Vec<_> = indices.iter().map(|&i| i % num_leaves).collect();
         let leaves: Vec<_> = (0..num_leaves)
@@ -234,7 +238,7 @@ mod tests {
             .collect();
 
         // Build the tree
-        let tree = Tree::from_leaves(leaves).unwrap();
+        let tree = Tree::from_leaves_skip_layers(leaves, skip).unwrap();
         let root = tree.commitment();
 
         // Open indices
