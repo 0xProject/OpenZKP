@@ -5,6 +5,17 @@ use std::collections::VecDeque;
 #[cfg(feature = "std")]
 use rayon::prelude::*;
 
+fn for_each<F>(slice: &mut [Hash], f: F)
+where
+    F: Fn((usize, &mut Hash)) -> () + Sync + Send,
+{
+    #[cfg(feature = "std")]
+    slice.par_iter_mut().enumerate().for_each(f);
+
+    #[cfg(not(feature = "std"))]
+    slice.iter_mut().enumerate().for_each(f);
+}
+
 /// Merkle tree
 ///
 /// The tree will become the owner of the `Container`. This is necessary because
@@ -79,13 +90,9 @@ impl<Container: VectorCommitment> Tree<Container> {
                 .unwrap()
                 .as_index();
             let leaf_layer = &mut nodes[start..=end];
-            let action = |(i, hash): (usize, &mut Hash)| {
+            for_each(leaf_layer, |(i, hash)| {
                 *hash = compute(&leaves, Index::from_depth_offset(depth, i).unwrap())
-            };
-            #[cfg(feature = "std")]
-            leaf_layer.par_iter_mut().enumerate().for_each(action);
-            #[cfg(not(feature = "std"))]
-            leaf_layer.iter_mut().enumerate().for_each(action);
+            });
             for depth in (0..depth).rev() {
                 for i in Index::iter_layer(depth) {
                     nodes[i.as_index()] = Node(
