@@ -25,7 +25,6 @@ pub fn check_proof<Public>(
 ) -> bool
 where
     for<'a> &'a Public: Into<Vec<u8>>,
-    VerifierChannel: Replayable<Hash>,
 {
     let eval_domain_size = trace_len * params.blowup;
     let eval_x = root_series(eval_domain_size).collect::<Vec<_>>();

@@ -110,8 +110,6 @@ pub fn stark_proof<Public>(
 ) -> ProverChannel
 where
     for<'a> &'a Public: Into<Vec<u8>>,
-    for<'a> ProverChannel: Writable<&'a Public>,
-    for<'b> ProverChannel: Writable<&'b Hash>,
 {
     info!("Starting Stark proof.");
     info!("Proof parameters: {:?}", params);
@@ -129,7 +127,7 @@ where
     // Initialize a proof channel with the public input.
     info!("Writing public input to channel.");
     let mut proof = ProverChannel::new();
-    proof.write(public);
+    proof.initialize(&public.into());
 
     // 1. Trace commitment.
     //
