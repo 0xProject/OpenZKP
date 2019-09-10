@@ -1,9 +1,13 @@
-use crate::{Constraints, ProverChannel, TraceTable};
+use crate::{
+    channel::{ProverChannel, Replayable, VerifierChannel, Writable},
+    constraints::Constraints,
+    trace_table::TraceTable,
+};
 
 pub trait ConstraintSystem
 where
-    ProverChannel: Writable<&Public>,
-    VerifierChannel: Replayable<Public>,
+    for<'a> ProverChannel: Writable<&'a Public>,
+    for<'b> ProverChannel: Writable<&'b Hash>,
 {
     type Public;
     type Private;

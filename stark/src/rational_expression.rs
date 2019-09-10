@@ -1,6 +1,9 @@
 use crate::polynomial::{DensePolynomial, SparsePolynomial};
 use primefield::FieldElement;
-use std::ops::{Add, Div, Mul, Sub};
+use std::{
+    cmp::max,
+    ops::{Add, Mul, Sub},
+};
 
 #[derive(Clone, Debug)]
 pub enum RationalExpression {
@@ -11,7 +14,6 @@ pub enum RationalExpression {
     Sub(Box<RationalExpression>, Box<RationalExpression>),
     Mul(Box<RationalExpression>, Box<RationalExpression>),
     Pow(Box<RationalExpression>, usize),
-    Div(Box<RationalExpression>, Box<RationalExpression>),
 }
 
 impl RationalExpression {
@@ -56,16 +58,6 @@ impl Mul for RationalExpression {
     }
 }
 
-impl Div for RationalExpression {
-    type Output = Self;
-
-    fn div(self, other: Self) -> Self {
-        RationalExpression::Div(Box::new(self), Box::new(other))
-    }
-}
-
-#[allow(dead_code)] // TODO
-use RationalExpression::*;
 impl RationalExpression {
     /// Numerator and denominator degree of the expression in X.
     ///
@@ -77,10 +69,9 @@ impl RationalExpression {
             X => 1,
             Constant(_) => 0,
             Trace(..) => trace_degree,
-            Add(a, b) => std::cmp::max(a.degree(trace_degree), b.degree(trace_degree)),
-            Sub(a, b) => std::cmp::max(a.degree(trace_degree), b.degree(trace_degree)),
+            Add(a, b) => max(a.degree(trace_degree), b.degree(trace_degree)),
+            Sub(a, b) => max(a.degree(trace_degree), b.degree(trace_degree)),
             Mul(a, b) => a.degree(trace_degree) + b.degree(trace_degree),
-            Div(a, b) => a.degree(trace_degree) - b.degree(trace_degree),
             Pow(a, n) => n * a.degree(trace_degree),
         }
     }
@@ -97,7 +88,6 @@ impl RationalExpression {
             &Trace(i, j) => trace_table(i, j),
             Add(a, b) => a.eval(trace_table, x) + b.eval(trace_table, x),
             Sub(a, b) => a.eval(trace_table, x) - b.eval(trace_table, x),
-            Div(a, b) => a.eval(trace_table, x) / b.eval(trace_table, x),
             _ => unimplemented!(),
         }
     }
@@ -113,21 +103,19 @@ impl RationalExpression {
             Self::Add(a, b) => a.eval_on_domain(trace_table) + b.eval_on_domain(trace_table),
             Self::Sub(a, b) => a.eval_on_domain(trace_table) - b.eval_on_domain(trace_table),
             Self::Mul(a, b) => a.eval_on_domain(trace_table) * b.eval_on_domain(trace_table),
-            Self::Div(a, b) => a.eval_on_domain(trace_table) / b.get_denominator(),
             _ => unimplemented!(),
         }
     }
 
-    fn get_denominator(&self) -> SparsePolynomial {
-        match self {
-            Self::X => SparsePolynomial::new(&[(FieldElement::ONE, 1)]),
-            Self::Constant(c) => SparsePolynomial::new(&[(c.clone(), 0)]),
-            Self::Add(a, b) => a.get_denominator() + b.get_denominator(),
-            Self::Sub(a, b) => a.get_denominator() - b.get_denominator(),
-            Self::Div(..) => panic!(),
-            Self::Trace(..) => panic!(),
-            Self::Mul(a, b) => a.get_denominator() * b.get_denominator(),
-            Self::Pow(a, n) => panic!(),
-        }
-    }
+    // fn get_denominator(&self) -> SparsePolynomial {
+    //     match self {
+    //         Self::X => SparsePolynomial::new(&[(FieldElement::ONE, 1)]),
+    //         Self::Constant(c) => SparsePolynomial::new(&[(c.clone(), 0)]),
+    //         Self::Add(a, b) => a.get_denominator() + b.get_denominator(),
+    //         Self::Sub(a, b) => a.get_denominator() - b.get_denominator(),
+    //         Self::Trace(..) => panic!(),
+    //         Self::Mul(a, b) => a.get_denominator() * b.get_denominator(),
+    //         Self::Pow(a, n) => panic!(),
+    //     }
+    // }
 }
