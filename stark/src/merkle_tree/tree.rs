@@ -85,11 +85,7 @@ impl<Container: VectorCommitment> Tree<Container> {
         // OPT: Parallel implementation.
         if leaf_depth >= skip_layers {
             let depth = leaf_depth - skip_layers;
-            let start = Index::from_depth_offset(depth, 0).unwrap().as_index();
-            let end = Index::from_depth_offset(depth, Index::size_at_depth(depth) - 1)
-                .unwrap()
-                .as_index();
-            let leaf_layer = &mut nodes[start..=end];
+            let leaf_layer = &mut nodes[Index::layer_range(depth)];
             for_each(leaf_layer, |(i, hash)| {
                 *hash = compute(&leaves, Index::from_depth_offset(depth, i).unwrap())
             });

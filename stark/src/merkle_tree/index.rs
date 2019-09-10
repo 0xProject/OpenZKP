@@ -1,6 +1,6 @@
 use super::{Error, Result};
 use crate::require;
-use std::convert::TryFrom;
+use std::{convert::TryFrom, ops::RangeInclusive};
 
 #[cfg(feature = "std")]
 use std::fmt;
@@ -64,6 +64,13 @@ impl Index {
             size:   1_usize << depth,
             offset: 0,
         }
+    }
+
+    pub fn layer_range(depth: usize) -> RangeInclusive<usize> {
+        // TODO: Overflow check
+        let start = Index::from_depth_offset(depth, 0).unwrap();
+        let end = Index::from_depth_offset(depth, Index::size_at_depth(depth) - 1).unwrap();
+        start.as_index()..=end.as_index()
     }
 
     // At level `depth` there are 2^depth nodes at offsets [0..2^depth-1]
