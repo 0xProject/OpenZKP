@@ -1,5 +1,5 @@
 use super::{Commitment, Error, Hash, Hashable, Index, Node, Proof, Result, VectorCommitment};
-use crate::require;
+use crate::{mmap_vec::MmapVec, require};
 use std::{collections::VecDeque, ops::Index as IndexOp};
 
 /// Merkle tree
@@ -10,10 +10,9 @@ use std::{collections::VecDeque, ops::Index as IndexOp};
 // OPT: Do not store leaf hashes but re-create.
 // OPT: Allow up to `n` lower layers to be skipped.
 // TODO: Make hash depend on type.
-#[derive(Clone, Debug)]
 pub struct Tree<Container: VectorCommitment> {
     commitment: Commitment,
-    nodes:      Vec<Hash>,
+    nodes:      MmapVec<Hash>,
     leaves:     Container,
 }
 
@@ -25,14 +24,17 @@ impl<Container: VectorCommitment> Tree<Container> {
                 // TODO: Ideally give the empty tree a unique flag value.
                 // Size zero commitment always exists
                 commitment: Commitment::from_size_hash(size, &Hash::default()).unwrap(),
-                nodes: vec![],
+                nodes: MmapVec::with_capacity(0),
                 leaves,
             });
         }
         // TODO: Support non power of two sizes
         require!(size.is_power_of_two(), Error::NumLeavesNotPowerOfTwo);
         require!(size <= Index::max_size(), Error::TreeToLarge);
-        let mut nodes = vec![Hash::default(); 2 * size - 1];
+        let mut nodes = MmapVec::with_capacity(2 * size - 1);
+        for _ in 0..(2 * size - 1) {
+            nodes.push(Hash::default());
+        }
 
         // Hash the tree
         // TODO: leaves.iter().enumerate()
