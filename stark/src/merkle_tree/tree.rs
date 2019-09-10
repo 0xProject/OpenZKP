@@ -47,18 +47,11 @@ impl<Container: VectorCommitment> Tree<Container> {
         // OPT: Parallel implementation.
         if Index::depth_for_size(size) >= 1 {
             let depth = Index::depth_for_size(size) - 1;
-            for i in Index::iter_layer(depth) {
-                result.nodes[i.as_index()] = Node(
-                    &result.leaves.leaf_hash(i.left_child().offset()),
-                    &result.leaves.leaf_hash(i.right_child().offset()),
-                )
-                .hash()
-            }
-            for depth in (0..depth).rev() {
+            for depth in (0..=depth).rev() {
                 for i in Index::iter_layer(depth) {
                     result.nodes[i.as_index()] = Node(
-                        &result.nodes[i.left_child().as_index()],
-                        &result.nodes[i.right_child().as_index()],
+                        &result.node_hash(i.left_child()),
+                        &result.node_hash(i.right_child()),
                     )
                     .hash();
                 }
