@@ -289,6 +289,7 @@ impl SubAssign<&Self> for SparsePolynomial {
     }
 }
 
+#[allow(clippy::suspicious_op_assign_impl)] // Allow use of + in this implementation.
 impl MulAssign<&Self> for SparsePolynomial {
     fn mul_assign(&mut self, other: &Self) {
         let mut result = BTreeMap::new();
