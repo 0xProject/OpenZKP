@@ -28,16 +28,14 @@ executors:
       # Necessary for `docker manifest` subcommand
       DOCKER_CLI_EXPERIMENTAL: enabled
       # Bump the tag version whenever changes are made.
-      IMAGE: &build_image "0xchain/rust-build-env:5"
+      IMAGE: &build_image "0xchain/rust-build-env:6"
   docker-rust:
     docker:
       - image: *build_image
     environment:
+      # See also environment variables declared in rust-build-env.Dockerfile
       RUST_BACKTRACE: "1"
-      RUSTFLAGS: -Dwarnings
       SCCACHE_CACHE_SIZE: 1G
-      # Exclude substrate-node (also pulls in a lot of deps, and currently fails)
-      PACKAGES: --all --exclude substrate-node
       NO_STD_PACKAGES: macros_decl u256 primefield ecc starkdex stark substrate-runtime
 
 commands:

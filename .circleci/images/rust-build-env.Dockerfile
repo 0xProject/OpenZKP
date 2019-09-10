@@ -55,10 +55,13 @@ RUN true \
 # Pre-build packages except node
 ENV PACKAGES="--all --exclude substrate-node"
 
+# Warnings are not accepted in CI build
+ENV RUSTFLAGS="-Dwarnings"
+
 RUN true \
  && cd $HOME/project \
  && CARGO_INCREMENTAL=0 RUSTFLAGS="$COVFLAGS" cargo +$NIGHTLY build $PACKAGES --tests --all-features \
- && RUSTFLAGS="-Dwarnings" cargo clippy $PACKAGES --all-targets --all-features \
+ && cargo clippy $PACKAGES --all-targets --all-features \
  && cargo build --release --bench benchmark $PACKAGES --all-features
 
 # Pre-build substrate-node
