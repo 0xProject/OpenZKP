@@ -5,6 +5,7 @@ use std::collections::VecDeque;
 #[cfg(feature = "std")]
 use rayon::prelude::*;
 
+// Utility function to parallelize iff on std
 fn for_each<F>(slice: &mut [Hash], f: F)
 where
     F: Fn((usize, &mut Hash)) -> () + Sync + Send,
@@ -14,6 +15,21 @@ where
 
     #[cfg(not(feature = "std"))]
     slice.iter_mut().enumerate().for_each(f);
+}
+
+// Utility function to compute the first layer of the tree from the leaves
+fn compute<C: VectorCommitment>(leaves: &C, index: Index) -> Hash {
+    let leaf_depth = Index::depth_for_size(leaves.len());
+    assert!(index.depth() <= leaf_depth);
+    if index.depth() == leaf_depth {
+        leaves.leaf_hash(index.offset())
+    } else {
+        Node(
+            &compute(leaves, index.left_child()),
+            &compute(leaves, index.right_child()),
+        )
+        .hash()
+    }
 }
 
 /// Merkle tree
@@ -67,36 +83,24 @@ impl<Container: VectorCommitment> Tree<Container> {
             MmapVec::with_capacity(0)
         };
 
-        fn compute<C: VectorCommitment>(leaves: &C, index: Index) -> Hash {
-            let leaf_depth = Index::depth_for_size(leaves.len());
-            assert!(index.depth() <= leaf_depth);
-            if index.depth() == leaf_depth {
-                leaves.leaf_hash(index.offset())
-            } else {
-                Node(
-                    &compute(leaves, index.left_child()),
-                    &compute(leaves, index.right_child()),
-                )
-                .hash()
-            }
-        }
-
-        // Hash the tree
-        // OPT: Parallel implementation.
+        // Hash the tree nodes
+        // OPT: Instead of layer at a time, have each thread compute a subtree.
         if leaf_depth >= skip_layers {
             let depth = leaf_depth - skip_layers;
             let leaf_layer = &mut nodes[Index::layer_range(depth)];
+            // First layer
             for_each(leaf_layer, |(i, hash)| {
                 *hash = compute(&leaves, Index::from_depth_offset(depth, i).unwrap())
             });
+            // Upper layers
             for depth in (0..depth).rev() {
-                for i in Index::iter_layer(depth) {
-                    nodes[i.as_index()] = Node(
-                        &nodes[i.left_child().as_index()],
-                        &nodes[i.right_child().as_index()],
-                    )
-                    .hash()
-                }
+                // TODO: This makes assumptions about how Index works.
+                let (tree, previous) =
+                    nodes.split_at_mut(Index::from_depth_offset(depth + 1, 0).unwrap().as_index());
+                let current = &mut tree[Index::layer_range(depth)];
+                for_each(current, |(i, hash)| {
+                    *hash = Node(&previous[i << 1], &previous[i << 1 | 1]).hash()
+                });
             }
         }
 

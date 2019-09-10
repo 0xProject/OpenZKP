@@ -68,8 +68,8 @@ impl Index {
 
     pub fn layer_range(depth: usize) -> RangeInclusive<usize> {
         // TODO: Overflow check
-        let start = Index::from_depth_offset(depth, 0).unwrap();
-        let end = Index::from_depth_offset(depth, Index::size_at_depth(depth) - 1).unwrap();
+        let start = Self::from_depth_offset(depth, 0).unwrap();
+        let end = Self::from_depth_offset(depth, Self::size_at_depth(depth) - 1).unwrap();
         start.as_index()..=end.as_index()
     }
 
