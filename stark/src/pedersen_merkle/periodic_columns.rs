@@ -1040,14 +1040,13 @@ mod tests {
     use super::*;
     use crate::polynomial::DensePolynomial;
     use ecc::Affine;
-    use primefield::geometric_series::geometric_series;
+    use primefield::geometric_series::root_series;
     use starkdex::PEDERSEN_POINTS;
 
     #[test]
     fn left_coefficients_match() {
-        let omega: FieldElement = FieldElement::root(LEFT_X_COEFFICIENTS.len()).unwrap();
-        let evaluation_points = geometric_series(&FieldElement::ONE, &omega, 252);
-        let left_points = evaluation_points.into_iter().map(|f: FieldElement| {
+        let evaluation_points = root_series(LEFT_X_COEFFICIENTS.len()).take(252);
+        let left_points = evaluation_points.map(|f: FieldElement| {
             Affine::Point {
                 x: DensePolynomial::new(&LEFT_X_COEFFICIENTS).evaluate(&f),
                 y: DensePolynomial::new(&LEFT_Y_COEFFICIENTS).evaluate(&f),
@@ -1061,9 +1060,8 @@ mod tests {
 
     #[test]
     fn right_coefficients_match() {
-        let omega: FieldElement = FieldElement::root(RIGHT_X_COEFFICIENTS.len()).unwrap();
-        let evaluation_points = geometric_series(&FieldElement::ONE, &omega, 252);
-        let right_points = evaluation_points.into_iter().map(|f: FieldElement| {
+        let evaluation_points = root_series(RIGHT_X_COEFFICIENTS.len()).take(252);
+        let right_points = evaluation_points.map(|f: FieldElement| {
             Affine::Point {
                 x: DensePolynomial::new(&RIGHT_X_COEFFICIENTS).evaluate(&f),
                 y: DensePolynomial::new(&RIGHT_Y_COEFFICIENTS).evaluate(&f),

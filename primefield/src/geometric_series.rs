@@ -42,6 +42,9 @@ impl Iterator for GeometricSeries {
     }
 }
 
+// TODO: Implement multiplication for GeometricSeries x GeometricSeries and
+// GeometricSeries x FieldElement.
+
 pub fn geometric_series(base: &FieldElement, step: &FieldElement) -> GeometricSeries {
     GeometricSeries {
         current: base.clone(),

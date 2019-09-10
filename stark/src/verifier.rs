@@ -27,9 +27,7 @@ where
     Public: PartialEq + Clone + Into<Vec<u8>>,
     VerifierChannel: Replayable<Public> + Replayable<Hash>,
 {
-    let omega = FieldElement::root(trace_len * params.blowup).unwrap();
     let eval_domain_size = trace_len * params.blowup;
-
     let eval_x = root_series(eval_domain_size).collect::<Vec<_>>();
 
     let mut channel = VerifierChannel::new(proposed_proof.to_vec());
@@ -224,7 +222,7 @@ where
     let interp_root = FieldElement::root(len).unwrap();
     for key in &previous_indices {
         let calculated = fri_folds[key].clone();
-        let x_pow = interp_root.pow(key.bit_reverse_at(len));
+        let x_pow = interp_root.pow(fft::permute_index(len, *key));
         let committed = DensePolynomial::new(&last_layer_coefficient).evaluate(&x_pow);
 
         if committed != calculated.clone() {
@@ -287,7 +285,7 @@ fn fri_fold(
         let mut next_coset = Vec::with_capacity(coset.len() / 2);
 
         for (k, pair) in coset_full.chunks(2).enumerate() {
-            let x = &eval_x[(index + k).bit_reverse_at(len / 2) * step];
+            let x = &eval_x[fft::permute_index(index + k, len / 2) * step];
             next_coset.push(fri_single_fold(&pair[0], &pair[1], x, &mutable_eval_copy));
         }
         len /= 2;
