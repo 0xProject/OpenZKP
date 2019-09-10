@@ -1,6 +1,7 @@
 use crate::{constraint::Constraint, polynomial::SparsePolynomial};
 use primefield::FieldElement;
-use std::prelude::v1::*;
+use std::{convert::TryInto, prelude::v1::*};
+use u256::U256;
 
 #[cfg(feature = "prover")]
 use crate::TraceTable;
@@ -23,6 +24,21 @@ impl From<&PublicInput> for Vec<u8> {
         let mut bytes = [public_input.index.to_be_bytes()].concat();
         bytes.extend_from_slice(&public_input.value.as_montgomery().to_bytes_be());
         bytes
+    }
+}
+
+// Used in substrate-runtime
+impl From<&[u8]> for PublicInput {
+    fn from(public_input: &[u8]) -> Self {
+        assert!(public_input.len() >= 40);
+        let index64 = u64::from_be_bytes((&public_input[0..8]).try_into().unwrap());
+        // TODO: Use TryFrom
+        #[allow(clippy::cast_possible_truncation)]
+        let index = index64 as usize;
+        let value = FieldElement::from_montgomery(U256::from_bytes_be(
+            (&public_input[8..40]).try_into().unwrap(),
+        ));
+        Self { index, value }
     }
 }
 
