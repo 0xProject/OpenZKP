@@ -1,4 +1,3 @@
-use crate::channel::{ProverChannel, Writable};
 use primefield::FieldElement;
 use std::{prelude::v1::*, vec};
 
@@ -19,7 +18,7 @@ pub struct PrivateInput {
 
 impl From<&PublicInput> for Vec<u8> {
     fn from(public_input: &PublicInput) -> Self {
-        let mut bytes: Vec<u8> = vec![];
+        let mut bytes: Self = vec![];
         bytes.extend_from_slice(&public_input.path_length.to_be_bytes());
         bytes.extend_from_slice(&public_input.root.as_montgomery().to_bytes_be());
         bytes.extend_from_slice(&public_input.leaf.as_montgomery().to_bytes_be());
@@ -76,7 +75,7 @@ mod tests {
         // first constraint coefficient) matches the the one in
         // pedersen_merkle_proof_annotations.txt.
         let mut proof = ProverChannel::new();
-        proof.initialize(&Vec<u8>::from(&SHORT_PUBLIC_INPUT));
+        proof.initialize(&Vec::from(&SHORT_PUBLIC_INPUT));
 
         // This is /pedersen merkle/STARK/Original/Commit on Trace
         proof.write(&Hash::new(hex!(

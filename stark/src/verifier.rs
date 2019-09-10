@@ -15,6 +15,8 @@ use primefield::{
 use std::{collections::BTreeMap, prelude::v1::*};
 use u256::U256;
 
+// False positive, for<'a> is required.
+#[allow(single_use_lifetimes)]
 pub fn check_proof<Public>(
     proposed_proof: &[u8],
     constraints: &[Constraint],
@@ -30,7 +32,7 @@ where
     let eval_x = root_series(eval_domain_size).collect::<Vec<_>>();
 
     let mut channel = VerifierChannel::new(proposed_proof.to_vec());
-    let bytes: Vec<u8> = public.clone().into();
+    let bytes: Vec<u8> = public.into();
     channel.initialize(&bytes);
 
     // Get the low degree root commitment, and constraint root commitment

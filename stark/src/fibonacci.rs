@@ -1,7 +1,6 @@
-use crate::{channel::*, constraint::Constraint, polynomial::SparsePolynomial};
+use crate::{constraint::Constraint, polynomial::SparsePolynomial};
 use primefield::FieldElement;
-use std::{convert::TryInto, prelude::v1::*};
-use u256::U256;
+use std::prelude::v1::*;
 
 #[cfg(feature = "prover")]
 use crate::TraceTable;

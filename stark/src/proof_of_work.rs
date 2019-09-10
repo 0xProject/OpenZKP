@@ -9,6 +9,8 @@ use rayon::prelude::*;
 // Difficulty threshold after which a multi-threaded solver is used.
 // Note: tests should use a difficulty below this  threshold .
 #[cfg(all(feature = "std", feature = "prover"))]
+// False positive, constant is used when `std` is set
+#[allow(dead_code)]
 const THREADED_THRESHOLD: usize = 10;
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -79,6 +81,8 @@ impl Challenge {
 
     // TODO: Make tests compatible with the proof of work values from this function
     #[cfg(feature = "std")]
+    // False positive, constant is used when `std` is set
+    #[allow(dead_code)]
     fn solve_threaded(&self) -> Response {
         // NOTE: Rayon does not support open ended ranges, so we need to use a closed
         // one.

@@ -100,8 +100,10 @@ impl VectorCommitment for FriLeaves {
     }
 }
 
-// TODO: Look into lifetime annotations here. For now ignore the hint.
+// False positive: `for<'a>` annotation is required.
 #[allow(single_use_lifetimes)]
+// TODO: Simplify
+#[allow(clippy::cognitive_complexity)]
 pub fn stark_proof<Public>(
     trace: &TraceTable,
     constraints: &[Constraint],
