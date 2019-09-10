@@ -7,20 +7,32 @@ use stark::{
     stark_proof, ProofParams,
 };
 
+use log::info;
 use macros_decl::{field_element, hex};
 use primefield::FieldElement;
 use std::time::Instant;
 use u256::U256;
 
 fn main() {
+    env_logger::init();
+
+    info!("Starting Pederson benchmark...");
     let start = Instant::now();
 
+    info!("Constructing public input...");
     let public_input = STARKWARE_PUBLIC_INPUT;
+    info!("Public input: {:?}", public_input);
+
+    info!("Constructing private input...");
     let private_input = starkware_private_input();
+
+    info!("Constructing trace table...");
     let trace_table = get_trace_table(&public_input, &private_input);
 
+    info!("Constructing constraint system...");
     let constraints = &get_pedersen_merkle_constraints(&public_input);
 
+    info!("Constructing proof...");
     let proof = stark_proof(&trace_table, &constraints, &public_input, &ProofParams {
         blowup:                   16,
         pow_bits:                 28,
@@ -29,6 +41,7 @@ fn main() {
         constraints_degree_bound: 2,
     });
 
+    info!("Spot checking proof...");
     assert_eq!(
         proof.proof[0..32],
         hex!("b00a4c7f03959e01df2504fb73d2b238a8ab08b2000000000000000000000000")

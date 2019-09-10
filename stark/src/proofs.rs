@@ -12,6 +12,7 @@ use crate::{
     TraceTable,
 };
 use itertools::Itertools;
+use log::info;
 use primefield::{
     fft::{self, fft_cofactor_permuted, ifft},
     FieldElement,
@@ -110,7 +111,18 @@ where
     for<'a> ProverChannel: Writable<&'a Public>,
     for<'b> ProverChannel: Writable<&'b Hash>,
 {
+    info!("Starting Stark proof.");
+    info!("Proof parameters: {:?}", params);
+    info!(
+        "Trace table {} rows {} columns ({} MB)",
+        trace.num_rows(),
+        trace.num_columns(),
+        (trace.num_rows() * trace.num_columns() * 32) as f64 / 1000_000_f64
+    );
+    info!("Constraint system {} constraints", constraints.len());
+
     // Initialize a proof channel with the public input.
+    info!("Writing public input to channel.");
     let mut proof = ProverChannel::new();
     proof.write(public);
 
@@ -118,11 +130,13 @@ where
     //
 
     // Compute the low degree extension of the trace table.
+    info!("Compute the low degree extension of the trace table.");
     let trace_polynomials = interpolate_trace_table(&trace);
     let trace_lde = calculate_low_degree_extensions(&trace_polynomials, params.blowup);
 
     // Construct a merkle tree over the LDE trace
     // and write the root to the channel.
+    info!("Construct a merkle tree over the LDE trace and write the root to the channel.");
     let tree = merkle_tree::Tree::from_leaves(trace_lde).unwrap();
     proof.write(tree.commitment());
 
@@ -130,12 +144,14 @@ where
     //
 
     // Read constraint coefficients from the channel.
+    info!("Read constraint coefficients from the channel.");
     let mut constraint_coefficients = Vec::with_capacity(2 * constraints.len());
     for _ in constraints {
         constraint_coefficients.push(proof.get_random());
         constraint_coefficients.push(proof.get_random());
     }
 
+    info!("Compute constraint polynomials.");
     let constraint_polynomials = get_constraint_polynomials(
         &trace_polynomials,
         constraints,
@@ -143,9 +159,11 @@ where
         params.constraints_degree_bound,
     );
 
+    info!("Compute the low degree extension of constraint polynomials.");
     let constraint_lde = calculate_low_degree_extensions(&constraint_polynomials, params.blowup);
     // Construct a merkle tree over the LDE combined constraints
     // and write the root to the channel.
+    info!("Compute the merkle tree over the LDE constraint polynomials.");
     let c_tree = merkle_tree::Tree::from_leaves(constraint_lde).unwrap();
     proof.write(c_tree.commitment());
 
@@ -155,10 +173,12 @@ where
     // Read the out of domain sampling point from the channel.
     // (and do a bunch more things)
     // TODO: expand
+    info!("Read the out of domain sampling values from the channel.");
     let (oods_point, oods_coefficients) =
         get_out_of_domain_information(&mut proof, &trace_polynomials, &constraint_polynomials);
 
     // Divide out the OODS points from the constraints and combine.
+    info!("Divide out the OODS points from the constraints and combine.");
     let oods_polynomial = calculate_fri_polynomial(
         &trace_polynomials,
         &constraint_polynomials,
@@ -167,9 +187,11 @@ where
     );
 
     // 4. FRI layers with trees
+    info!("FRI layers with trees.");
     let fri_trees = perform_fri_layering(&oods_polynomial, &mut proof, &params);
 
     // 5. Proof of work
+    info!("Proof of work.");
     let pow_seed: proof_of_work::ChallengeSeed = proof.get_random();
     let pow_challenge = pow_seed.with_difficulty(params.pow_bits);
     let pow_response = pow_challenge.solve();
@@ -180,12 +202,14 @@ where
     //
 
     // Fetch query indices from channel.
+    info!("Fetch query indices from channel.");
     let eval_domain_size = trace.num_rows() * params.blowup;
     let query_indices = get_indices(
         params.queries,
         64 - eval_domain_size.leading_zeros() - 1,
         &mut proof,
     );
+    info!("Query indices: {:?}", query_indices);
 
     // Decommit the trace table values.
     for &index in &query_indices {
@@ -250,6 +274,7 @@ pub fn calculate_low_degree_extensions(
 }
 
 // TODO: shift polynomial by FieldElement::GENERATOR outside of this function.
+// TODO fix name typo
 fn evalute_polynomial_on_domain(
     constraint_polynomial: &DensePolynomial,
     blowup: usize,

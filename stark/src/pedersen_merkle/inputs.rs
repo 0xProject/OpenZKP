@@ -2,12 +2,16 @@ use crate::channel::{ProverChannel, Writable};
 use primefield::FieldElement;
 use std::{prelude::v1::*, vec};
 
+#[derive(PartialEq, Clone)]
+#[cfg_attr(feature = "std", derive(Debug))]
 pub struct PublicInput {
     pub path_length: usize,
     pub leaf:        FieldElement,
     pub root:        FieldElement,
 }
 
+#[derive(PartialEq, Clone)]
+#[cfg_attr(feature = "std", derive(Debug))]
 pub struct PrivateInput {
     pub directions: Vec<bool>,
     pub path:       Vec<FieldElement>,
