@@ -5,7 +5,7 @@ use std::{collections::VecDeque, ops::Index as IndexOp};
 /// Merkle tree
 ///
 /// The tree will become the owner of the `Container`. This is necessary because
-/// when low layer-omissionn is implemented we need immutable access to the
+/// when low layer-omission is implemented we need immutable access to the
 /// leaves. If shared ownership is required the `Container` can be an `Rc<_>`.
 // OPT: Do not store leaf hashes but re-create.
 // OPT: Allow up to `n` lower layers to be skipped.
@@ -31,26 +31,26 @@ impl<Container: VectorCommitment> Tree<Container> {
         // TODO: Support non power of two sizes
         require!(size.is_power_of_two(), Error::NumLeavesNotPowerOfTwo);
         require!(size <= Index::max_size(), Error::TreeToLarge);
-        let mut nodes = MmapVec::with_capacity(2 * size - 1);
-        for _ in 0..(2 * size - 1) {
+        let array_size = 2 * size - 1;
+        let mut nodes = MmapVec::with_capacity(array_size);
+        for _ in 0..array_size {
             nodes.push(Hash::default());
         }
 
         // Hash the tree
-        // TODO: leaves.iter().enumerate()
         // OPT: Parallel implementation.
-        // OPT: Layer at a time has better cache locality.
-        for i in 0..size {
-            // `i` should always be less than `size`.
-            let mut cursor = Index::from_size_offset(size, i).unwrap();
-            nodes[cursor.as_index()] = leaves.leaf_hash(i);
-            while cursor.is_right() {
-                cursor = cursor.parent().unwrap();
-                nodes[cursor.as_index()] = Node(
-                    &nodes[cursor.left_child().as_index()],
-                    &nodes[cursor.right_child().as_index()],
+        // Hash leaves
+        let depth = Index::depth_for_size(size);
+        for i in Index::iter_layer(depth) {
+            nodes[i.as_index()] = leaves.leaf_hash(i.offset());
+        }
+        for depth in (0..depth).rev() {
+            for i in Index::iter_layer(depth) {
+                nodes[i.as_index()] = Node(
+                    &nodes[i.left_child().as_index()],
+                    &nodes[i.right_child().as_index()],
                 )
-                .hash()
+                .hash();
             }
         }
 
