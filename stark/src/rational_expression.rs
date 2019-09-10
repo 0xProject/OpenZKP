@@ -1,3 +1,5 @@
+use crate::polynomial::DensePolynomial;
+use crate::polynomial::SparsePolynomial;
 use primefield::FieldElement;
 use std::ops::{Add, Div, Mul, Sub};
 
@@ -7,15 +9,15 @@ pub enum RationalExpression {
     Constant(FieldElement),
     Trace(usize, isize),
     Add(Box<RationalExpression>, Box<RationalExpression>),
-    Neg(Box<RationalExpression>),
+    Sub(Box<RationalExpression>, Box<RationalExpression>),
     Mul(Box<RationalExpression>, Box<RationalExpression>),
-    Inv(Box<RationalExpression>),
-    Exp(Box<RationalExpression>, usize),
+    Pow(Box<RationalExpression>, usize),
+    Div(Box<RationalExpression>, Box<RationalExpression>),
 }
 
 impl RationalExpression {
     pub fn pow(&self, exponent: usize) -> RationalExpression {
-        RationalExpression::Exp(Box::new(self.clone()), exponent)
+        RationalExpression::Pow(Box::new(self.clone()), exponent)
     }
 }
 
@@ -62,21 +64,19 @@ impl Div for RationalExpression {
     type Output = Self;
 
     fn div(self, other: Self) -> Self {
-        RationalExpression::Mul(
-            Box::new(self),
-            Box::new(RationalExpression::Inv(Box::new(other))),
-        )
+        RationalExpression::Div(Box::new(self), Box::new(other))
     }
 }
 
 #[allow(dead_code)] // TODO
+use RationalExpression::*;
 impl RationalExpression {
+
     /// Numerator and denominator degree of the expression in X.
     ///
     /// Calculates an upper bound. Cancelations may occur.
     // Note: We can have trace polynomials of different degree here if we want.
     pub fn degree(&self, trace_degree: usize) -> (usize, usize) {
-        use RationalExpression::*;
         match self {
             X => (1, 0),
             Constant(_) => (0, 0),
@@ -107,23 +107,48 @@ impl RationalExpression {
 
     pub fn eval(
         &self,
-        trace_table: &Fn(usize, &FieldElement) -> FieldElement,
+        trace_table: &dyn Fn(usize, isize) -> FieldElement,
         x: &FieldElement,
-        g: &FieldElement,
     ) -> FieldElement {
         use RationalExpression::*;
         match self {
             X => x.clone(),
             Constant(value) => value.clone(),
-            &Trace(i, j) => trace_table(i, &(x * g.pow(j.into()))),
-            Add(a, b) => a.eval(trace_table, x, g) + b.eval(trace_table, x, g),
-            Neg(a) => -&a.eval(trace_table, x, g),
+            &Trace(i, j) => trace_table(i, j),
+            Add(a, b) => a.eval(trace_table, x) + b.eval(trace_table, x),
+            Neg(a) => -&a.eval(trace_table, x),
             Inv(a) => {
-                a.eval(trace_table, x, g)
+                a.eval(trace_table, x)
                     .inv()
                     .expect("Division by zero while evaluating RationalExpression.")
             }
             _ => unimplemented!(),
+        }
+    }
+
+    pub fn eval_on_domain(
+        &self,
+        trace_table: &Fn(usize, isize) -> DensePolynomial,
+    ) -> DensePolynomial {
+        match self {
+            X => DensePolynomial::new(&[FieldElement::ZERO, FieldElement::ONE]),
+            Constant(value) => DensePolynomial::new(&[value.clone()]),
+            &Trace(i, j) => trace_table(i, j),
+            Add(a, b) => a.eval_on_domain(trace_table) + b.eval_on_domain(trace_table),
+            Neg(a) => -&a.eval_on_domain(trace_table),
+            Div(a, b) => a.eval_on_domain(trace_table) / b.get_denominator(),
+            _ => unimplemented!(),
+        }
+    }
+
+    fn get_denominator(&self) -> SparsePolynomial {
+        match self {
+            Self::X => SparsePolynomial::new(&[(FieldElement::ONE,1)]),
+            Self::Constant(c) => SparsePolynomial::new(&[(c.clone(), 0)]),
+            Self::Add(a, b) => a.get_denominator(trace_table, x) + b.get_denominator(trace_table, x),
+            Self::Neg(a) => -&a.get_denominator(trace_table, x, g),
+            Self::Div => panic!(),
+            Self::Trace(i, j) => panic!(),
         }
     }
 }
