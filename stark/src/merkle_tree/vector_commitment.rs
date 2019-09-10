@@ -1,4 +1,4 @@
-use super::{Hash, Hashable};
+use super::{Hash, Hashable, Result, Tree};
 use std::prelude::v1::*;
 
 #[cfg(feature = "mmap")]
@@ -6,6 +6,7 @@ use crate::mmap_vec::MmapVec;
 
 pub trait VectorCommitment
 where
+    Self: Sized,
     Self::Leaf: Hashable,
 {
     type Leaf;
@@ -22,7 +23,9 @@ where
         self.leaf(index).hash()
     }
 
-    // TODO: Add `commit(&self) -> (Commitment, Tree)`
+    fn commit(self) -> Result<Tree<Self>> {
+        Tree::from_leaves(self)
+    }
 }
 
 // TODO ExactSizeIterator + Index<usize>

@@ -4,7 +4,7 @@ use crate::{
     hash::Hash,
     hashable::Hashable,
     masked_keccak::MaskedKeccak,
-    merkle_tree::{self, VectorCommitment},
+    merkle_tree::{Tree, VectorCommitment},
     mmap_vec::MmapVec,
     polynomial::{DensePolynomial, SparsePolynomial},
     proof_of_work,
@@ -61,7 +61,7 @@ struct FriLeaves {
     layer:      Vec<FieldElement>,
 }
 
-type FriTree = merkle_tree::Tree<FriLeaves>;
+type FriTree = Tree<FriLeaves>;
 
 // Merkle tree for FRI layers with coset size
 impl VectorCommitment for FriLeaves {
@@ -140,7 +140,7 @@ where
     // Construct a merkle tree over the LDE trace
     // and write the root to the channel.
     info!("Construct a merkle tree over the LDE trace and write the root to the channel.");
-    let tree = merkle_tree::Tree::from_leaves(trace_lde).unwrap();
+    let tree = trace_lde.commit().unwrap();
     proof.write(tree.commitment());
 
     // 2. Constraint commitment
@@ -167,7 +167,7 @@ where
     // Construct a merkle tree over the LDE combined constraints
     // and write the root to the channel.
     info!("Compute the merkle tree over the LDE constraint polynomials.");
-    let c_tree = merkle_tree::Tree::from_leaves(constraint_lde).unwrap();
+    let c_tree = constraint_lde.commit().unwrap();
     proof.write(c_tree.commitment());
 
     // 3. Out of domain sampling
@@ -724,7 +724,7 @@ mod tests {
             u256h!("03dbc6c47df0606997c2cefb20c4277caf2b76bca1d31c13432f71cdd93b3718")
         );
 
-        let tree = merkle_tree::Tree::from_leaves(LDEn).unwrap();
+        let tree = LDEn.commit().unwrap();
         // Checks that the merklelizable implementation is working [implicit check of
         // most previous steps]
         assert_eq!(
@@ -770,7 +770,7 @@ mod tests {
             field_element!("05b841208b357e29ac1fe7a654efebe1ae152104571e695f311a353d4d5cabfb")
         );
 
-        let c_tree = merkle_tree::Tree::from_leaves(CC).unwrap();
+        let c_tree = CC.commit().unwrap();
         // Checks both that the merkle tree is working for this groupable type and that
         // the constraints are properly calculated on the domain
         assert_eq!(
