@@ -28,10 +28,14 @@ pub trait Trait: system::Trait {
 decl_storage! {
     trait Store for Module<T: Trait> as FinalityProof {
         VaultChain get(get_vault_hash) : map u32 => [u8; 32]; // Records each vault hash status
-        VoteCount  get(get_vote_count) : map u32  => (u32, u32); // (number for, number against)
-        Sigs get(get_signature) : map (u32, T::AccountId) => Signature;
-        Validators get(get_validator_key): map T::AccountId => PublicKey;
+        VoteCount  get(get_vote_count) : (u32, u32) = (0, 0); // (number for, number against)
         MaxIndex get(get_max_index): u32 = 0;
+
+        LinkTop get(get_current_link) : u32 = 0; // The index which has the end of the linked list
+        LinkedHash get(get_hash_link) : map u32 => u32; // Contains a reference to the id of each link in the list
+        NextProof get(get_ready_for_proof): bool = true;
+
+        Validators get(get_validator_key): map T::AccountId => PublicKey;
         NumValidators get(get_number_of_validators): u32 = 3;
     }
 }
@@ -41,9 +45,13 @@ decl_module! {
         fn deposit_event() = default;
 
         // TODO - Want this to take a url pull or a ipfs hash to reduce node size
-        pub fn prove_chain(origin, recorded: RecordedProof, start_index: u32, end_index: u32) -> Result {
+        pub fn prove_chain(origin, recorded: RecordedProof, end_index: u32) -> Result {
             let _ = ensure_signed(origin)?; //TODO - Do we need this? Do we want to lock to validators or add a cost?
+            ensure!(<NextProof<T>>::get(), "Voting not open");
+            ensure!(end_index < <MaxIndex<T>>::get(), "This end hash hasn't been recorded yet");
 
+            let last_link = <LinkTop<T>>::get();
+            let start_index = <LinkedHash<T>>::get(last_link-1);
             let _start_hash = <VaultChain<T>>::get(start_index);
             let _end_hash = <VaultChain<T>>::get(end_index);
 
@@ -65,45 +73,46 @@ decl_module! {
                 1024
             ), "The proof is invalid");
 
-            <VoteCount<T>>::insert(end_index, (0, 0));
+            <NextProof<T>>::put(false);
+            <LinkedHash<T>>::insert(last_link, end_index);
             Self::deposit_event(Event::ProofRecorded(start_index, end_index, recorded));
             Ok(())
         }
 
-        pub fn issue_signature(origin, which: u32, sig: Signature) -> Result {
+        pub fn issue_signature(origin, sig: Signature) -> Result {
+            ensure!(!<NextProof<T>>::get(), "Voting not open");
             let who = ensure_signed(origin)?;
             ensure!(<Validators<T>>::exists(who.clone()), "Called by non validator");
-            let max = <MaxIndex<T>>::take();
-            ensure!(which < max, "Invalid block number");
-            let public = <Validators<T>>::get(who);
 
+            let public = <Validators<T>>::get(who);
+            let last_link = <LinkTop<T>>::get();
+            let which = <LinkedHash<T>>::get(last_link);
             let vault_hash = <VaultChain<T>>::get(which);
+
             ensure!(verify(vault_hash, &sig, &public), "Invalid Signature");
             Self::deposit_event(Event::Signed(which, vault_hash, sig, public));
-
-            ensure!(<VoteCount<T>>::exists(which), "Can't vote on proof for this endpoint");
-            let mut status : (u32, u32) = <VoteCount<T>>::get(which);
+            let mut status : (u32, u32) = <VoteCount<T>>::get();
             status.0 += 1_u32;
-            <VoteCount<T>>::insert(which, status);
+            <VoteCount<T>>::put(status);
             Self::check_finality(which, &mut status, vault_hash);
 
             Ok(())
         }
 
-        pub fn issue_rebuke(origin, which: u32) -> Result {
+        pub fn issue_rebuke(origin) -> Result {
+            ensure!(!<NextProof<T>>::get(), "Voting not open");
             let who = ensure_signed(origin)?;
             ensure!(<Validators<T>>::exists(who.clone()), "Called by non validator");
-            let max = <MaxIndex<T>>::take();
-            ensure!(which < max, "Invalid block number");
+
             let public = <Validators<T>>::get(who);
-
+            let last_link = <LinkTop<T>>::get();
+            let which = <LinkedHash<T>>::get(last_link);
             let vault_hash = <VaultChain<T>>::get(which);
-            Self::deposit_event(Event::Rebuked(which, vault_hash, public));
 
-            ensure!(<VoteCount<T>>::exists(which), "Can't vote on proof for this endpoint");
-            let mut status : (u32, u32) = <VoteCount<T>>::get(which);
+            Self::deposit_event(Event::Rebuked(which, vault_hash, public));
+            let mut status : (u32, u32) = <VoteCount<T>>::get();
             status.1 += 1_u32;
-            <VoteCount<T>>::insert(which, status);
+            <VoteCount<T>>::put(status);
             Self::check_finality(which, &mut status, vault_hash);
 
             Ok(())
@@ -119,9 +128,23 @@ impl<T: Trait> Module<T> {
             // right now]
             if 3 * status.0 > 2 * number_of_validators {
                 Self::deposit_event(Event::Finalized(which, vault_hash));
+                // Clears out unneeded hashes and resets to allow next proof.
+                let last_link = <LinkTop<T>>::get();
+                let previous = <LinkedHash<T>>::get(last_link - 1);
+                for hash_index in previous..which {
+                    // Removes the unneeded hashes from runtime memory.
+                    <VaultChain<T>>::remove(hash_index);
+                }
+                // Moves the chain forward
+                <LinkTop<T>>::put(last_link + 1);
             } else {
                 Self::deposit_event(Event::Failed(which, vault_hash));
             }
+            // Remove the vote count from runtime memory.
+            // Note - Killing the vote count resets it back to (0,0)
+            <VoteCount<T>>::kill();
+            // Allows another proof submission
+            <NextProof<T>>::put(true);
         }
     }
 
