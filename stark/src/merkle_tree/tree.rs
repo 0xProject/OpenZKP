@@ -18,6 +18,8 @@ pub struct Tree<Container: VectorCommitment> {
 
 impl<Container: VectorCommitment> Tree<Container> {
     pub fn from_leaves(leaves: Container) -> Result<Self> {
+        let skip_layers = 2_usize;
+
         let size = leaves.len();
         if size == 0 {
             return Ok(Self {
@@ -31,12 +33,23 @@ impl<Container: VectorCommitment> Tree<Container> {
         // TODO: Support non power of two sizes
         require!(size.is_power_of_two(), Error::NumLeavesNotPowerOfTwo);
         require!(size <= Index::max_size(), Error::TreeToLarge);
-        let array_size = size - 1;
-        let mut nodes = MmapVec::with_capacity(array_size);
-        for _ in 0..array_size {
-            nodes.push(Hash::default());
-        }
 
+        // Allocate result
+        let leaf_depth = Index::depth_for_size(size);
+        let nodes = if leaf_depth >= skip_layers {
+            // The array size is the largest index + 1
+            let depth = leaf_depth - skip_layers;
+            let max_index = Index::from_depth_offset(depth, Index::size_at_depth(depth) - 1)
+                .unwrap()
+                .as_index();
+            let mut nodes = MmapVec::with_capacity(max_index + 1);
+            for _ in 0..=max_index {
+                nodes.push(Hash::default());
+            }
+            nodes
+        } else {
+            MmapVec::with_capacity(0)
+        };
         let mut result = Self {
             commitment: Commitment::default(),
             nodes,
@@ -45,15 +58,19 @@ impl<Container: VectorCommitment> Tree<Container> {
 
         // Hash the tree
         // OPT: Parallel implementation.
-        if Index::depth_for_size(size) >= 1 {
-            let depth = Index::depth_for_size(size) - 1;
+        if leaf_depth >= skip_layers {
+            let depth = leaf_depth - skip_layers;
             for depth in (0..=depth).rev() {
                 for i in Index::iter_layer(depth) {
-                    result.nodes[i.as_index()] = Node(
-                        &result.node_hash(i.left_child()),
-                        &result.node_hash(i.right_child()),
-                    )
-                    .hash();
+                    result.nodes[i.as_index()] = if i.depth() == leaf_depth {
+                        result.leaves.leaf_hash(i.offset())
+                    } else {
+                        Node(
+                            &result.node_hash(i.left_child()),
+                            &result.node_hash(i.right_child()),
+                        )
+                        .hash()
+                    }
                 }
             }
         }
