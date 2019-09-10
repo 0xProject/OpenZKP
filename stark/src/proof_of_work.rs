@@ -6,6 +6,11 @@ use u256::U256;
 #[cfg(all(feature = "std", feature = "prover"))]
 use rayon::prelude::*;
 
+// Difficulty threshold after which a multi-threaded solver is used.
+// Note: tests should use a difficulty below this  threshold .
+#[cfg(all(feature = "std", feature = "prover"))]
+const THREADED_THRESHOLD: usize = 10;
+
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct ChallengeSeed([u8; 32]);
@@ -57,6 +62,13 @@ impl Challenge {
 #[cfg(feature = "prover")]
 impl Challenge {
     pub fn solve(&self) -> Response {
+        #[cfg(features = "std")]
+        {
+            if self.difficulty > THREADED_THRESHOLD {
+                return self.solve_threaded();
+            }
+        }
+
         // We assume a nonce exists and will be found in reasonable time.
         #[allow(clippy::maybe_infinite_iter)]
         (0_u64..)
@@ -67,9 +79,7 @@ impl Challenge {
 
     // TODO: Make tests compatible with the proof of work values from this function
     #[cfg(feature = "std")]
-    // TODO: Use threaded solver
-    #[allow(dead_code)]
-    pub fn solve_threaded(&self) -> Response {
+    fn solve_threaded(&self) -> Response {
         // NOTE: Rayon does not support open ended ranges, so we need to use a closed
         // one.
         (0..u64::max_value())
