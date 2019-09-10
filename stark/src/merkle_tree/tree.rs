@@ -38,7 +38,7 @@ impl<Container: VectorCommitment> Tree<Container> {
 
         // Allocate result
         let leaf_depth = Index::depth_for_size(size);
-        let nodes = if leaf_depth >= skip_layers {
+        let mut nodes = if leaf_depth >= skip_layers {
             // The array size is the largest index + 1
             let depth = leaf_depth - skip_layers;
             let max_index = Index::from_depth_offset(depth, Index::size_at_depth(depth) - 1)
@@ -52,33 +52,54 @@ impl<Container: VectorCommitment> Tree<Container> {
         } else {
             MmapVec::with_capacity(0)
         };
-        let mut result = Self {
-            commitment: Commitment::default(),
-            nodes,
-            leaves,
-        };
+
+        fn compute<C: VectorCommitment>(leaves: &C, index: Index) -> Hash {
+            let leaf_depth = Index::depth_for_size(leaves.len());
+            assert!(index.depth() <= leaf_depth);
+            if index.depth() == leaf_depth {
+                leaves.leaf_hash(index.offset())
+            } else {
+                Node(
+                    &compute(leaves, index.left_child()),
+                    &compute(leaves, index.right_child()),
+                )
+                .hash()
+            }
+        }
 
         // Hash the tree
         // OPT: Parallel implementation.
         if leaf_depth >= skip_layers {
             let depth = leaf_depth - skip_layers;
-            for i in Index::iter_layer(depth) {
-                result.nodes[i.as_index()] = result.compute_hash(i);
+            let start = Index::from_depth_offset(depth, 0).unwrap().as_index();
+            let end = Index::from_depth_offset(depth, Index::size_at_depth(depth) - 1)
+                .unwrap()
+                .as_index();
+            for (i, hash) in nodes[start..=end].iter_mut().enumerate() {
+                *hash = compute(&leaves, Index::from_depth_offset(depth, i).unwrap());
             }
             for depth in (0..depth).rev() {
                 for i in Index::iter_layer(depth) {
-                    result.nodes[i.as_index()] = Node(
-                        &result.nodes[i.left_child().as_index()],
-                        &result.nodes[i.right_child().as_index()],
+                    nodes[i.as_index()] = Node(
+                        &nodes[i.left_child().as_index()],
+                        &nodes[i.right_child().as_index()],
                     )
                     .hash()
                 }
             }
         }
 
-        result.commitment =
-            Commitment::from_size_hash(size, &result.node_hash(Index::root())).unwrap();
-        Ok(result)
+        let root_hash = if nodes.is_empty() {
+            compute(&leaves, Index::root())
+        } else {
+            nodes[0].clone()
+        };
+        let commitment = Commitment::from_size_hash(size, &root_hash).unwrap();
+        Ok(Self {
+            commitment,
+            nodes,
+            leaves,
+        })
     }
 
     pub fn commitment(&self) -> &Commitment {
@@ -97,24 +118,20 @@ impl<Container: VectorCommitment> Tree<Container> {
         self.leaves.leaf(index)
     }
 
-    fn compute_hash(&self, index: Index) -> Hash {
-        assert!(index.depth() <= self.leaf_depth());
-        if index.depth() == self.leaf_depth() {
-            self.leaves.leaf_hash(index.offset())
-        } else {
-            Node(
-                &self.compute_hash(index.left_child()),
-                &self.compute_hash(index.right_child()),
-            )
-            .hash()
-        }
-    }
-
     pub fn node_hash(&self, index: Index) -> Hash {
         if index.as_index() < self.nodes.len() {
             self.nodes[index.as_index()].clone()
         } else {
-            self.compute_hash(index)
+            assert!(index.depth() <= self.leaf_depth());
+            if index.depth() == self.leaf_depth() {
+                self.leaves.leaf_hash(index.offset())
+            } else {
+                Node(
+                    &self.node_hash(index.left_child()),
+                    &self.node_hash(index.right_child()),
+                )
+                .hash()
+            }
         }
     }
 
