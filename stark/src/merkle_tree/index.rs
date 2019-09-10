@@ -163,6 +163,14 @@ impl Index {
         let prefix = a >> (0_usize.count_zeros() - prefix_length);
         Self(prefix)
     }
+
+    /// Concatenate `other`'s path to ours.
+    pub fn concat(self, other: Self) -> Self {
+        // TODO: Check overflow
+        let other_depth = other.depth();
+        let other_path = other.0 ^ 1_usize << other_depth;
+        Self(self.0 << other_depth | other_path)
+    }
 }
 
 #[cfg(feature = "std")]
