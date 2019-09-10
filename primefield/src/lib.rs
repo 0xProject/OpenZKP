@@ -40,6 +40,7 @@
 
 pub mod fft;
 mod field;
+pub mod geometric_series;
 mod montgomery;
 mod square_root;
 mod utils;
