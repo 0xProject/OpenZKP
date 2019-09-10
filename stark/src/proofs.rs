@@ -217,21 +217,25 @@ where
     info!("Query indices: {:?}", query_indices);
 
     // Decommit the trace table values.
+    info!("Decommit the trace table values.");
     for &index in &query_indices {
         proof.write(tree.leaf(index));
     }
     proof.write(&tree.open(&query_indices).unwrap());
 
     // Decommit the constraint values
+    info!("Decommit the constraint values.");
     for &index in &query_indices {
         proof.write(c_tree.leaf(index));
     }
     proof.write(&c_tree.open(&query_indices).unwrap());
 
     // Decommit the FRI layer values
+    info!("Decommit the FRI layer values.");
     decommit_fri_layers_and_trees(fri_trees.as_slice(), query_indices.as_slice(), &mut proof);
 
     // Verify proof
+    info!("Verify proof.");
     assert!(check_proof(
         proof.proof.as_slice(),
         constraints,
