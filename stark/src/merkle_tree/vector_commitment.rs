@@ -6,8 +6,8 @@ use crate::mmap_vec::MmapVec;
 
 pub trait VectorCommitment
 where
-    Self: Sized,
-    Self::Leaf: Hashable,
+    Self: Sync + Sized,
+    Self::Leaf: Sync + Hashable,
 {
     type Leaf;
 
@@ -32,7 +32,7 @@ where
 
 // TODO ExactSizeIterator + Index<usize>
 
-impl<Leaf: Hashable + Clone> VectorCommitment for Vec<Leaf> {
+impl<Leaf: Hashable + Clone + Sync> VectorCommitment for Vec<Leaf> {
     type Leaf = Leaf;
 
     fn len(&self) -> usize {
@@ -49,7 +49,7 @@ impl<Leaf: Hashable + Clone> VectorCommitment for Vec<Leaf> {
 }
 
 #[cfg(feature = "mmap")]
-impl<Leaf: Hashable + Clone> VectorCommitment for MmapVec<Leaf> {
+impl<Leaf: Hashable + Clone + Sync> VectorCommitment for MmapVec<Leaf> {
     type Leaf = Leaf;
 
     fn len(&self) -> usize {

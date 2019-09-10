@@ -2,6 +2,9 @@ use super::{Commitment, Error, Hash, Hashable, Index, Node, Proof, Result, Vecto
 use crate::{mmap_vec::MmapVec, require};
 use std::collections::VecDeque;
 
+#[cfg(feature = "std")]
+use rayon::prelude::*;
+
 /// Merkle tree
 ///
 /// The tree will become the owner of the `Container`. This is necessary because
@@ -75,9 +78,14 @@ impl<Container: VectorCommitment> Tree<Container> {
             let end = Index::from_depth_offset(depth, Index::size_at_depth(depth) - 1)
                 .unwrap()
                 .as_index();
-            for (i, hash) in nodes[start..=end].iter_mut().enumerate() {
-                *hash = compute(&leaves, Index::from_depth_offset(depth, i).unwrap());
-            }
+            let leaf_layer = &mut nodes[start..=end];
+            let action = |(i, hash): (usize, &mut Hash)| {
+                *hash = compute(&leaves, Index::from_depth_offset(depth, i).unwrap())
+            };
+            #[cfg(feature = "std")]
+            leaf_layer.par_iter_mut().enumerate().for_each(action);
+            #[cfg(not(feature = "std"))]
+            leaf_layer.iter_mut().enumerate().for_each(action);
             for depth in (0..depth).rev() {
                 for i in Index::iter_layer(depth) {
                     nodes[i.as_index()] = Node(
