@@ -17,6 +17,16 @@ pub struct PrivateInput {
     pub path:       Vec<FieldElement>,
 }
 
+impl From<&PublicInput> for Vec<u8> {
+    fn from(public_input: &PublicInput) -> Self {
+        let mut bytes: Vec<u8> = vec![];
+        bytes.extend_from_slice(&public_input.path_length.to_be_bytes());
+        bytes.extend_from_slice(&public_input.root.as_montgomery().to_bytes_be());
+        bytes.extend_from_slice(&public_input.leaf.as_montgomery().to_bytes_be());
+        bytes
+    }
+}
+
 impl Writable<&PublicInput> for ProverChannel {
     fn write(&mut self, public_input: &PublicInput) {
         let mut bytes: Vec<u8> = vec![];

@@ -1,5 +1,6 @@
 use crate::{
     channel::{ProverChannel, RandomGenerator, Writable},
+    check_proof,
     constraint::Constraint,
     hash::Hash,
     hashable::Hashable,
@@ -108,6 +109,7 @@ pub fn stark_proof<Public>(
     params: &ProofParams,
 ) -> ProverChannel
 where
+    for<'a> &'a Public: Into<Vec<u8>>,
     for<'a> ProverChannel: Writable<&'a Public>,
     for<'b> ProverChannel: Writable<&'b Hash>,
 {
@@ -229,7 +231,18 @@ where
     // Decommit the FRI layer values
     decommit_fri_layers_and_trees(fri_trees.as_slice(), query_indices.as_slice(), &mut proof);
 
+    // Verify proof
+    assert!(check_proof(
+        proof.proof.as_slice(),
+        constraints,
+        public,
+        params,
+        trace.num_columns(),
+        trace.num_rows()
+    ));
+
     // Q.E.D.
+    // TODO: Return bytes, or a result structure
     proof
 }
 

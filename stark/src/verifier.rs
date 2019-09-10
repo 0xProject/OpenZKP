@@ -24,8 +24,8 @@ pub fn check_proof<Public>(
     trace_len: usize,
 ) -> bool
 where
-    Public: PartialEq + Clone + Into<Vec<u8>>,
-    VerifierChannel: Replayable<Public> + Replayable<Hash>,
+    for<'a> &'a Public: Into<Vec<u8>>,
+    VerifierChannel: Replayable<Hash>,
 {
     let eval_domain_size = trace_len * params.blowup;
     let eval_x = root_series(eval_domain_size).collect::<Vec<_>>();
