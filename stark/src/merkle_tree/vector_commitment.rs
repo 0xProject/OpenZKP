@@ -1,4 +1,4 @@
-use super::{Hash, Hashable, Result, Tree};
+use super::{Commitment, Hash, Hashable, Result, Tree};
 use std::prelude::v1::*;
 
 #[cfg(feature = "mmap")]
@@ -23,8 +23,10 @@ where
         self.leaf(index).hash()
     }
 
-    fn commit(self) -> Result<Tree<Self>> {
-        Tree::from_leaves(self)
+    fn commit(self) -> Result<(Commitment, Tree<Self>)> {
+        let tree = Tree::from_leaves(self)?;
+        let commitment = tree.commitment().clone();
+        Ok((commitment, tree))
     }
 }
 
