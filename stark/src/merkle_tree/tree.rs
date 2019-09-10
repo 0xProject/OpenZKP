@@ -62,17 +62,16 @@ impl<Container: VectorCommitment> Tree<Container> {
         // OPT: Parallel implementation.
         if leaf_depth >= skip_layers {
             let depth = leaf_depth - skip_layers;
-            for depth in (0..=depth).rev() {
+            for i in Index::iter_layer(depth) {
+                result.nodes[i.as_index()] = result.compute_hash(i);
+            }
+            for depth in (0..depth).rev() {
                 for i in Index::iter_layer(depth) {
-                    result.nodes[i.as_index()] = if i.depth() == leaf_depth {
-                        result.leaves.leaf_hash(i.offset())
-                    } else {
-                        Node(
-                            &result.node_hash(i.left_child()),
-                            &result.node_hash(i.right_child()),
-                        )
-                        .hash()
-                    }
+                    result.nodes[i.as_index()] = Node(
+                        &result.nodes[i.left_child().as_index()],
+                        &result.nodes[i.right_child().as_index()],
+                    )
+                    .hash()
                 }
             }
         }
@@ -98,20 +97,24 @@ impl<Container: VectorCommitment> Tree<Container> {
         self.leaves.leaf(index)
     }
 
+    fn compute_hash(&self, index: Index) -> Hash {
+        assert!(index.depth() <= self.leaf_depth());
+        if index.depth() == self.leaf_depth() {
+            self.leaves.leaf_hash(index.offset())
+        } else {
+            Node(
+                &self.compute_hash(index.left_child()),
+                &self.compute_hash(index.right_child()),
+            )
+            .hash()
+        }
+    }
+
     pub fn node_hash(&self, index: Index) -> Hash {
         if index.as_index() < self.nodes.len() {
             self.nodes[index.as_index()].clone()
         } else {
-            assert!(index.depth() <= self.leaf_depth());
-            if index.depth() == self.leaf_depth() {
-                self.leaves.leaf_hash(index.offset())
-            } else {
-                Node(
-                    &self.node_hash(index.left_child()),
-                    &self.node_hash(index.right_child()),
-                )
-                .hash()
-            }
+            self.compute_hash(index)
         }
     }
 
