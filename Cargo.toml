@@ -3,6 +3,7 @@ members = [
     "macros_lib",
     "macros_impl",
     "macros_decl",
+    "criterion-utils",
     "u256",
     "primefield",
     "ecc",

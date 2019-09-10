@@ -33,7 +33,7 @@ harness = false
 required-features = ["bench"]
 
 [features]
-default = [ "std", "prover" ]
+default = [ "std", "prover", "mmap" ]
 std = [
     "macros-decl/std",
     "u256/std",
@@ -43,6 +43,7 @@ std = [
     "no-std-compat/std",
     "itertools/use_std",
     "rayon",
+    "hex"
 ]
 test = [
     "u256/test",

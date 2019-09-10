@@ -1,7 +1,9 @@
 // TODO: Naming?
 #![allow(clippy::module_name_repetitions)]
-use crate::fft::{fft, ifft};
-use primefield::FieldElement;
+use primefield::{
+    fft::{fft, ifft},
+    FieldElement,
+};
 use std::{
     cmp::max,
     collections::BTreeMap,

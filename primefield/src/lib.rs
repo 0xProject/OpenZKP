@@ -38,7 +38,9 @@
     // TODO: missing_debug_implementations,
 ))]
 
+pub mod fft;
 mod field;
+pub mod geometric_series;
 mod montgomery;
 mod square_root;
 
