@@ -16,6 +16,7 @@ use u256::{commutative_binop, noncommutative_binop};
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct DensePolynomial(Vec<FieldElement>);
 
+// TODO: Move into separate file or combine these into an enum.
 #[derive(PartialEq, Clone)]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct SparsePolynomial(BTreeMap<usize, FieldElement>);
@@ -210,6 +211,40 @@ impl SparsePolynomial {
             .1
     }
 }
+
+impl AddAssign<&Self> for SparsePolynomial {
+    fn add_assign(&mut self, other: &Self) {
+        for (degree, coefficient) in &other.0 {
+            *self.0.entry(*degree).or_insert(FieldElement::ZERO) += coefficient;
+        }
+    }
+}
+
+impl SubAssign<&Self> for SparsePolynomial {
+    fn sub_assign(&mut self, other: &Self) {
+        for (degree, coefficient) in &other.0 {
+            *self.0.entry(*degree).or_insert(FieldElement::ZERO) -= coefficient;
+        }
+    }
+}
+
+impl MulAssign<&Self> for SparsePolynomial {
+    fn mul_assign(&mut self, other: &Self) {
+        let mut result = BTreeMap::new();
+        for (degree, coefficient) in &self.0 {
+            for (other_degree, other_coefficient) in &other.0 {
+                *result
+                    .entry(degree + other_degree)
+                    .or_insert(FieldElement::ZERO) += coefficient * other_coefficient;
+            }
+        }
+        *self = Self(result);
+    }
+}
+
+commutative_binop!(SparsePolynomial, Add, add, AddAssign, add_assign);
+commutative_binop!(SparsePolynomial, Mul, mul, MulAssign, mul_assign);
+noncommutative_binop!(SparsePolynomial, Sub, sub, SubAssign, sub_assign);
 
 #[allow(clippy::suspicious_op_assign_impl)] // Allows us to use `+` here.
 impl MulAssign<SparsePolynomial> for DensePolynomial {
@@ -436,6 +471,15 @@ mod tests {
     }
 
     #[quickcheck]
+    fn sparse_difference_evaluation_equivalence(
+        a: SparsePolynomial,
+        b: SparsePolynomial,
+        x: FieldElement,
+    ) -> bool {
+        a.evaluate(&x) - b.evaluate(&x) == (a - b).evaluate(&x)
+    }
+
+    #[quickcheck]
     fn product_evaluation_equivalence(
         a: DensePolynomial,
         b: DensePolynomial,
@@ -447,6 +491,21 @@ mod tests {
     #[quickcheck]
     fn sparse_product_evaluation_equivalence(
         a: DensePolynomial,
+        b: SparsePolynomial,
+        x: FieldElement,
+    ) -> bool {
+        let evaluate_first = a.evaluate(&x) * b.evaluate(&x);
+
+        let mut product = a.clone();
+        product *= b;
+        let evaluate_last = product.evaluate(&x);
+
+        evaluate_first == evaluate_last
+    }
+
+    #[quickcheck]
+    fn sparse_sparse_product_evaluation_equivalence(
+        a: SparsePolynomial,
         b: SparsePolynomial,
         x: FieldElement,
     ) -> bool {
@@ -496,8 +555,6 @@ mod tests {
 
     #[quickcheck]
     fn addition_subtraction_inverse(a: DensePolynomial, b: DensePolynomial) -> bool {
-        // We cannot directly check for equality of the two sides because adding and
-        // subtracting b can change the length of a.
         &a + &b - b == a
     }
 
