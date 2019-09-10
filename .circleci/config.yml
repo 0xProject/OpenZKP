@@ -5,20 +5,17 @@ version: 2.1
 #  example projects as guides. This is probably only worthwhile on `master`.
 #  See https://doc.rust-lang.org/rustc/profile-guided-optimization.html
 
-# TODO: Generate rustdoc and host somewhere
-
 # TODO: Push relevant packages to crates.io
 
+# TODO: Generate rustdoc and host somewhere
 # TODO: Report documentation coverage.
 # TODO: Codecheck on documentation coverage changes.
-
-# TODO: Run benchmarks on reliable machine.
 # TODO: Codecheck on benchmark changes.
-
 # TODO: Submit all codecheck from `master` stats to Metabase.
 
 # TODO: Sync `TODO` and other comments.
 
+# OPT: Create docker images tailored for each job
 executors:
   minimal:
     docker:
@@ -31,16 +28,14 @@ executors:
       # Necessary for `docker manifest` subcommand
       DOCKER_CLI_EXPERIMENTAL: enabled
       # Bump the tag version whenever changes are made.
-      IMAGE: &build_image "0xchain/rust-build-env:4"
+      IMAGE: &build_image "0xchain/rust-build-env:6"
   docker-rust:
     docker:
       - image: *build_image
     environment:
+      # See also environment variables declared in rust-build-env.Dockerfile
       RUST_BACKTRACE: "1"
-      RUSTFLAGS: -Dwarnings
       SCCACHE_CACHE_SIZE: 1G
-      # Exclude substrate-node (also pulls in a lot of deps, and currently fails)
-      PACKAGES: --all --exclude substrate-node
       NO_STD_PACKAGES: macros_decl u256 primefield ecc starkdex stark substrate-runtime
 
 commands:
@@ -232,6 +227,7 @@ jobs:
             - criterion.tgz
       - store_artifacts:
           path: criterion.tgz
+          destination: criterion.tgz
   benchmark-store:
     # Stores criterion results as baseline.
     executor: minimal
@@ -313,21 +309,23 @@ jobs:
       - codechecks
   build-node:
     executor: docker-rust
+    resource_class: xlarge
     steps:
       - checkout
       - attach_workspace:
           at: /tmp/workspace
       - enable-sccache
       - run:
-          name: Build node executable (disabled)
+          name: Build node executable
           command: |
-            #pushd substrate-node
-            #cp ../substrate-runtime-wasm/runtime.wasm ./assets/runtime.wasm
-            # TODO: This builds rocksdb as a dependency in c++, this is not
-            # currently covered by sccache, but could be.
-            # TODO: This build times out on CI.
-            # cargo build --release
+            pushd substrate-node
+            cp /tmp/workspace/runtime.wasm ./assets/runtime.wasm
+            cargo build --release
+            git checkout --force ./assets/runtime.wasm
       - save-sccache-cache
+      - store_artifacts:
+          path: target/release/substrate-node
+          destination: substrate-node
       - codechecks
   clippy:
     executor: docker-rust
