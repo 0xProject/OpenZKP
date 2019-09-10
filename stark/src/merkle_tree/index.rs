@@ -1,9 +1,11 @@
 use super::{Error, Result};
 use crate::require;
-use std::convert::TryFrom;
+use std::{convert::TryFrom, ops::RangeInclusive};
 
 #[cfg(feature = "std")]
 use std::fmt;
+
+const USIZE_BITS: usize = 0_usize.count_zeros() as usize;
 
 /// Index into a balanced binary tree
 ///
@@ -35,12 +37,18 @@ pub struct Index(usize);
 
 impl Index {
     pub const fn max_size() -> usize {
-        // Bit counts can always be represented as `usize`.
-        1_usize << (0_usize.count_zeros() as usize - 1)
+        1_usize << (USIZE_BITS - 1)
     }
 
-    pub const fn nodes_at_depth(depth: usize) -> usize {
+    pub const fn size_at_depth(depth: usize) -> usize {
+        // Note: We can not do checks in a `const fn`.
+        // assert!(depth < USIZE_BITS);
         1_usize << depth
+    }
+
+    pub fn depth_for_size(size: usize) -> usize {
+        // TODO: Add checks
+        size.next_power_of_two().trailing_zeros() as usize
     }
 
     pub const fn root() -> Self {
@@ -51,12 +59,30 @@ impl Index {
         Self(index + 1)
     }
 
+    pub fn iter_layer(depth: usize) -> LayerIter {
+        LayerIter {
+            size:   1_usize << depth,
+            offset: 0,
+        }
+    }
+
+    pub fn layer_range(depth: usize) -> RangeInclusive<usize> {
+        // TODO: Overflow check
+        let start = Self::from_depth_offset(depth, 0).unwrap();
+        let end = Self::from_depth_offset(depth, Self::size_at_depth(depth) - 1).unwrap();
+        start.as_index()..=end.as_index()
+    }
+
     // At level `depth` there are 2^depth nodes at offsets [0..2^depth-1]
     pub fn from_size_offset(size: usize, offset: usize) -> Result<Self> {
         require!(size.is_power_of_two(), Error::NumLeavesNotPowerOfTwo);
         require!(size <= Self::max_size(), Error::TreeToLarge);
         require!(offset < size, Error::IndexOutOfRange);
         Ok(Self(size | offset))
+    }
+
+    pub fn from_depth_offset(depth: usize, offset: usize) -> Result<Self> {
+        Self::from_size_offset(Self::size_at_depth(depth), offset)
     }
 
     pub fn as_index(self) -> usize {
@@ -144,12 +170,40 @@ impl Index {
         let prefix = a >> (0_usize.count_zeros() - prefix_length);
         Self(prefix)
     }
+
+    /// Concatenate `other`'s path to ours.
+    pub fn concat(self, other: Self) -> Self {
+        // TODO: Check overflow
+        let other_depth = other.depth();
+        let other_path = other.0 ^ 1_usize << other_depth;
+        Self(self.0 << other_depth | other_path)
+    }
 }
 
 #[cfg(feature = "std")]
 impl fmt::Debug for Index {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Index({:}, {:})", self.depth(), self.offset())
+    }
+}
+
+pub struct LayerIter {
+    size:   usize,
+    offset: usize,
+}
+
+/// Iterating on an Index will go right until the end of the layer.
+impl Iterator for LayerIter {
+    type Item = Index;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.offset < self.size {
+            let item = Index::from_size_offset(self.size, self.offset).unwrap();
+            self.offset += 1;
+            Some(item)
+        } else {
+            None
+        }
     }
 }
 
@@ -171,7 +225,7 @@ mod test {
     #[quickcheck]
     pub fn test_depth_offset_roundtrip(depth: usize, offset: usize) -> bool {
         let depth = depth % (Index::max_size().trailing_zeros() as usize);
-        let offset = offset % Index::nodes_at_depth(depth);
+        let offset = offset % Index::size_at_depth(depth);
         let index = Index::from_size_offset(1_usize << depth, offset).unwrap();
         index.depth() == depth && index.offset() == offset
     }

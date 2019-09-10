@@ -3,7 +3,7 @@ use crate::require;
 use itertools::Itertools;
 use std::prelude::v1::*;
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct Commitment {
     size: usize,

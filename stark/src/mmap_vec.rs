@@ -2,6 +2,7 @@
 #![allow(unsafe_code)]
 use memmap::{MmapMut, MmapOptions};
 use std::{
+    cmp::max,
     marker::PhantomData,
     mem::size_of,
     ops::{Deref, DerefMut},
@@ -9,6 +10,9 @@ use std::{
     slice,
 };
 use tempfile::tempfile;
+
+// TODO: Variant of MmapVec where it switched between Vec and Mmap after
+//       a treshold size.
 
 pub struct MmapVec<T: Clone> {
     mmap:     MmapMut,
@@ -19,17 +23,16 @@ pub struct MmapVec<T: Clone> {
 
 impl<T: Clone> MmapVec<T> {
     pub fn with_capacity(capacity: usize) -> Self {
-        debug_assert!(capacity > 0);
         // From https://docs.rs/tempfile/3.1.0/tempfile/: tempfile() relies on
         // the OS to remove the temporary file once the last handle is closed.
         let file = tempfile().expect("cannot create temporary file");
         // TODO: Round up to nearest 4KB
-        let size = capacity * size_of::<T>();
+        // Note: mmaped files can not be empty, so we use at leas one byte.
+        let size = max(1, capacity * size_of::<T>());
         file.set_len(size as u64)
             .expect("cannot set mmap file length");
         let mmap = unsafe { MmapOptions::new().len(size).map_mut(&file) }
             .expect("cannot access memory mapped file");
-
         Self {
             mmap,
             length: 0,
@@ -104,6 +107,12 @@ mod tests {
     use u256::U256;
 
     #[test]
+    fn test_empty() {
+        let empty = MmapVec::<u64>::with_capacity(0);
+        assert_eq!(empty.len(), 0);
+    }
+
+    #[test]
     fn test_len() {
         let mut m: MmapVec<FieldElement> = MmapVec::with_capacity(2);
         m.push(FieldElement::ONE);
@@ -138,12 +147,6 @@ mod tests {
         for i in 0..10_u64 {
             assert_eq!(m[i as usize], FieldElement::from(U256::from(i + 1)))
         }
-    }
-
-    #[test]
-    #[should_panic]
-    fn test_positive_capacity_required() {
-        let _: MmapVec<u64> = MmapVec::with_capacity(0);
     }
 
     #[test]

@@ -4,7 +4,7 @@ use crate::{
     hash::Hash,
     hashable::Hashable,
     masked_keccak::MaskedKeccak,
-    merkle_tree::{self, VectorCommitment},
+    merkle_tree::{Tree, VectorCommitment},
     mmap_vec::MmapVec,
     polynomial::{DensePolynomial, SparsePolynomial},
     proof_of_work,
@@ -61,7 +61,7 @@ struct FriLeaves {
     layer:      Vec<FieldElement>,
 }
 
-type FriTree = merkle_tree::Tree<FriLeaves>;
+type FriTree = Tree<FriLeaves>;
 
 // Merkle tree for FRI layers with coset size
 impl VectorCommitment for FriLeaves {
@@ -140,8 +140,8 @@ where
     // Construct a merkle tree over the LDE trace
     // and write the root to the channel.
     info!("Construct a merkle tree over the LDE trace and write the root to the channel.");
-    let tree = merkle_tree::Tree::from_leaves(trace_lde).unwrap();
-    proof.write(tree.commitment());
+    let (commitment, tree) = trace_lde.commit().unwrap();
+    proof.write(&commitment);
 
     // 2. Constraint commitment
     //
@@ -167,8 +167,8 @@ where
     // Construct a merkle tree over the LDE combined constraints
     // and write the root to the channel.
     info!("Compute the merkle tree over the LDE constraint polynomials.");
-    let c_tree = merkle_tree::Tree::from_leaves(constraint_lde).unwrap();
-    proof.write(c_tree.commitment());
+    let (commitment, c_tree) = constraint_lde.commit().unwrap();
+    proof.write(&commitment);
 
     // 3. Out of domain sampling
     //
@@ -724,11 +724,11 @@ mod tests {
             u256h!("03dbc6c47df0606997c2cefb20c4277caf2b76bca1d31c13432f71cdd93b3718")
         );
 
-        let tree = merkle_tree::Tree::from_leaves(LDEn).unwrap();
+        let (commitment, tree) = LDEn.commit().unwrap();
         // Checks that the merklelizable implementation is working [implicit check of
         // most previous steps]
         assert_eq!(
-            tree.commitment().hash().as_bytes(),
+            commitment.hash().as_bytes(),
             hex!("018dc61f748b1a6c440827876f30f63cb6c4c188000000000000000000000000")
         );
 
@@ -770,14 +770,14 @@ mod tests {
             field_element!("05b841208b357e29ac1fe7a654efebe1ae152104571e695f311a353d4d5cabfb")
         );
 
-        let c_tree = merkle_tree::Tree::from_leaves(CC).unwrap();
+        let (commitment, c_tree) = CC.commit().unwrap();
         // Checks both that the merkle tree is working for this groupable type and that
         // the constraints are properly calculated on the domain
         assert_eq!(
-            hex::encode(c_tree.commitment().hash().as_bytes()),
+            hex::encode(commitment.hash().as_bytes()),
             "e276ce1357d4030a4c84cdfdb4dd77845d3f80e9000000000000000000000000"
         );
-        proof.write(c_tree.commitment());
+        proof.write(&commitment);
 
         let (oods_point, oods_coefficients) =
             get_out_of_domain_information(&mut proof, &TPn, &constraint_polynomials);

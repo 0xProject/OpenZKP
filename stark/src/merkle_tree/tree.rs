@@ -1,59 +1,117 @@
 use super::{Commitment, Error, Hash, Hashable, Index, Node, Proof, Result, VectorCommitment};
-use crate::require;
-use std::{collections::VecDeque, ops::Index as IndexOp};
+use crate::{mmap_vec::MmapVec, require};
+use std::collections::VecDeque;
+
+#[cfg(feature = "std")]
+use rayon::prelude::*;
+
+// Utility function to parallelize iff on std
+fn for_each<F>(slice: &mut [Hash], f: F)
+where
+    F: Fn((usize, &mut Hash)) -> () + Sync + Send,
+{
+    #[cfg(feature = "std")]
+    slice.par_iter_mut().enumerate().for_each(f);
+
+    #[cfg(not(feature = "std"))]
+    slice.iter_mut().enumerate().for_each(f);
+}
+
+// Utility function to compute the first layer of the tree from the leaves
+fn compute<C: VectorCommitment>(leaves: &C, index: Index) -> Hash {
+    let leaf_depth = Index::depth_for_size(leaves.len());
+    assert!(index.depth() <= leaf_depth);
+    if index.depth() == leaf_depth {
+        leaves.leaf_hash(index.offset())
+    } else {
+        Node(
+            &compute(leaves, index.left_child()),
+            &compute(leaves, index.right_child()),
+        )
+        .hash()
+    }
+}
 
 /// Merkle tree
 ///
 /// The tree will become the owner of the `Container`. This is necessary because
-/// when low layer-omissionn is implemented we need immutable access to the
+/// when low layer-omission is implemented we need immutable access to the
 /// leaves. If shared ownership is required the `Container` can be an `Rc<_>`.
 // OPT: Do not store leaf hashes but re-create.
 // OPT: Allow up to `n` lower layers to be skipped.
 // TODO: Make hash depend on type.
-#[derive(Clone, Debug)]
 pub struct Tree<Container: VectorCommitment> {
     commitment: Commitment,
-    nodes:      Vec<Hash>,
+    nodes:      MmapVec<Hash>,
     leaves:     Container,
 }
 
 impl<Container: VectorCommitment> Tree<Container> {
     pub fn from_leaves(leaves: Container) -> Result<Self> {
+        Self::from_leaves_skip_layers(leaves, 1)
+    }
+
+    pub fn from_leaves_skip_layers(leaves: Container, skip_layers: usize) -> Result<Self> {
         let size = leaves.len();
         if size == 0 {
             return Ok(Self {
                 // TODO: Ideally give the empty tree a unique flag value.
                 // Size zero commitment always exists
                 commitment: Commitment::from_size_hash(size, &Hash::default()).unwrap(),
-                nodes: vec![],
+                nodes: MmapVec::with_capacity(0),
                 leaves,
             });
         }
         // TODO: Support non power of two sizes
         require!(size.is_power_of_two(), Error::NumLeavesNotPowerOfTwo);
         require!(size <= Index::max_size(), Error::TreeToLarge);
-        let mut nodes = vec![Hash::default(); 2 * size - 1];
 
-        // Hash the tree
-        // TODO: leaves.iter().enumerate()
-        // OPT: Parallel implementation.
-        // OPT: Layer at a time has better cache locality.
-        for i in 0..size {
-            // `i` should always be less than `size`.
-            let mut cursor = Index::from_size_offset(size, i).unwrap();
-            nodes[cursor.as_index()] = leaves.leaf_hash(i);
-            while cursor.is_right() {
-                cursor = cursor.parent().unwrap();
-                nodes[cursor.as_index()] = Node(
-                    &nodes[cursor.left_child().as_index()],
-                    &nodes[cursor.right_child().as_index()],
-                )
-                .hash()
+        // Allocate result
+        let leaf_depth = Index::depth_for_size(size);
+        let mut nodes = if leaf_depth >= skip_layers {
+            // The array size is the largest index + 1
+            let depth = leaf_depth - skip_layers;
+            let max_index = Index::from_depth_offset(depth, Index::size_at_depth(depth) - 1)
+                .unwrap()
+                .as_index();
+            let mut nodes = MmapVec::with_capacity(max_index + 1);
+            for _ in 0..=max_index {
+                nodes.push(Hash::default());
+            }
+            nodes
+        } else {
+            MmapVec::with_capacity(0)
+        };
+
+        // Hash the tree nodes
+        // OPT: Instead of layer at a time, have each thread compute a subtree.
+        if leaf_depth >= skip_layers {
+            let depth = leaf_depth - skip_layers;
+            let leaf_layer = &mut nodes[Index::layer_range(depth)];
+            // First layer
+            for_each(leaf_layer, |(i, hash)| {
+                *hash = compute(&leaves, Index::from_depth_offset(depth, i).unwrap())
+            });
+            // Upper layers
+            for depth in (0..depth).rev() {
+                // TODO: This makes assumptions about how Index works.
+                let (tree, previous) =
+                    nodes.split_at_mut(Index::from_depth_offset(depth + 1, 0).unwrap().as_index());
+                let current = &mut tree[Index::layer_range(depth)];
+                for_each(current, |(i, hash)| {
+                    *hash = Node(&previous[i << 1], &previous[i << 1 | 1]).hash()
+                });
             }
         }
 
+        let root_hash = if nodes.is_empty() {
+            compute(&leaves, Index::root())
+        } else {
+            nodes[0].clone()
+        };
+        let commitment = Commitment::from_size_hash(size, &root_hash).unwrap();
         Ok(Self {
-            commitment: Commitment::from_size_hash(size, &nodes[0])?,
+            commitment,
             nodes,
             leaves,
         })
@@ -63,12 +121,33 @@ impl<Container: VectorCommitment> Tree<Container> {
         &self.commitment
     }
 
+    pub fn leaf_depth(&self) -> usize {
+        Index::depth_for_size(self.leaves().len())
+    }
+
     pub fn leaves(&self) -> &Container {
         &self.leaves
     }
 
     pub fn leaf(&self, index: usize) -> Container::Leaf {
         self.leaves.leaf(index)
+    }
+
+    pub fn node_hash(&self, index: Index) -> Hash {
+        if index.as_index() < self.nodes.len() {
+            self.nodes[index.as_index()].clone()
+        } else {
+            assert!(index.depth() <= self.leaf_depth());
+            if index.depth() == self.leaf_depth() {
+                self.leaves.leaf_hash(index.offset())
+            } else {
+                Node(
+                    &self.node_hash(index.left_child()),
+                    &self.node_hash(index.right_child()),
+                )
+                .hash()
+            }
+        }
     }
 
     pub fn open(&self, indices: &[usize]) -> Result<Proof> {
@@ -96,18 +175,10 @@ impl<Container: VectorCommitment> Tree<Container> {
                 }
 
                 // Add a sibling hash to the decommitment
-                hashes.push(self[sibling].clone());
+                hashes.push(self.node_hash(sibling));
             }
         }
         Proof::from_hashes(self.commitment(), &proof_indices, &hashes)
-    }
-}
-
-impl<Container: VectorCommitment> IndexOp<Index> for Tree<Container> {
-    type Output = Hash;
-
-    fn index(&self, index: Index) -> &Self::Output {
-        &self.nodes[index.as_index()]
     }
 }
 
@@ -190,9 +261,11 @@ mod tests {
     }
 
     #[quickcheck]
-    fn test_merkle_tree(depth: usize, indices: Vec<usize>, seed: U256) {
+    fn test_merkle_tree(depth: usize, skip: usize, indices: Vec<usize>, seed: U256) {
         // We want tests up to depth 8; adjust the input
         let depth = depth % 9;
+        // We want to skip up to 3 layers; adjust the input
+        let skip = skip % 4;
         let num_leaves = 1_usize << depth;
         let indices: Vec<_> = indices.iter().map(|&i| i % num_leaves).collect();
         let leaves: Vec<_> = (0..num_leaves)
@@ -200,7 +273,7 @@ mod tests {
             .collect();
 
         // Build the tree
-        let tree = Tree::from_leaves(leaves).unwrap();
+        let tree = Tree::from_leaves_skip_layers(leaves, skip).unwrap();
         let root = tree.commitment();
 
         // Open indices
