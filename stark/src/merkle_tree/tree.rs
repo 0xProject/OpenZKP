@@ -1,6 +1,6 @@
 use super::{Commitment, Error, Hash, Hashable, Index, Node, Proof, Result, VectorCommitment};
 use crate::{mmap_vec::MmapVec, require};
-use std::{collections::VecDeque, ops::Index as IndexOp};
+use std::collections::VecDeque;
 
 /// Merkle tree
 ///
@@ -31,38 +31,51 @@ impl<Container: VectorCommitment> Tree<Container> {
         // TODO: Support non power of two sizes
         require!(size.is_power_of_two(), Error::NumLeavesNotPowerOfTwo);
         require!(size <= Index::max_size(), Error::TreeToLarge);
-        let array_size = 2 * size - 1;
+        let array_size = size - 1;
         let mut nodes = MmapVec::with_capacity(array_size);
         for _ in 0..array_size {
             nodes.push(Hash::default());
         }
 
+        let mut result = Self {
+            commitment: Commitment::default(),
+            nodes,
+            leaves,
+        };
+
         // Hash the tree
         // OPT: Parallel implementation.
-        // Hash leaves
-        let depth = Index::depth_for_size(size);
-        for i in Index::iter_layer(depth) {
-            nodes[i.as_index()] = leaves.leaf_hash(i.offset());
-        }
-        for depth in (0..depth).rev() {
+        if Index::depth_for_size(size) >= 1 {
+            let depth = Index::depth_for_size(size) - 1;
             for i in Index::iter_layer(depth) {
-                nodes[i.as_index()] = Node(
-                    &nodes[i.left_child().as_index()],
-                    &nodes[i.right_child().as_index()],
+                result.nodes[i.as_index()] = Node(
+                    &result.leaves.leaf_hash(i.left_child().offset()),
+                    &result.leaves.leaf_hash(i.right_child().offset()),
                 )
-                .hash();
+                .hash()
+            }
+            for depth in (0..depth).rev() {
+                for i in Index::iter_layer(depth) {
+                    result.nodes[i.as_index()] = Node(
+                        &result.nodes[i.left_child().as_index()],
+                        &result.nodes[i.right_child().as_index()],
+                    )
+                    .hash();
+                }
             }
         }
 
-        Ok(Self {
-            commitment: Commitment::from_size_hash(size, &nodes[0])?,
-            nodes,
-            leaves,
-        })
+        result.commitment =
+            Commitment::from_size_hash(size, &result.node_hash(Index::root())).unwrap();
+        Ok(result)
     }
 
     pub fn commitment(&self) -> &Commitment {
         &self.commitment
+    }
+
+    pub fn leaf_depth(&self) -> usize {
+        Index::depth_for_size(self.leaves().len())
     }
 
     pub fn leaves(&self) -> &Container {
@@ -71,6 +84,23 @@ impl<Container: VectorCommitment> Tree<Container> {
 
     pub fn leaf(&self, index: usize) -> Container::Leaf {
         self.leaves.leaf(index)
+    }
+
+    pub fn node_hash(&self, index: Index) -> Hash {
+        if index.as_index() < self.nodes.len() {
+            self.nodes[index.as_index()].clone()
+        } else {
+            assert!(index.depth() <= self.leaf_depth());
+            if index.depth() == self.leaf_depth() {
+                self.leaves.leaf_hash(index.offset())
+            } else {
+                Node(
+                    &self.node_hash(index.left_child()),
+                    &self.node_hash(index.right_child()),
+                )
+                .hash()
+            }
+        }
     }
 
     pub fn open(&self, indices: &[usize]) -> Result<Proof> {
@@ -98,18 +128,10 @@ impl<Container: VectorCommitment> Tree<Container> {
                 }
 
                 // Add a sibling hash to the decommitment
-                hashes.push(self[sibling].clone());
+                hashes.push(self.node_hash(sibling));
             }
         }
         Proof::from_hashes(self.commitment(), &proof_indices, &hashes)
-    }
-}
-
-impl<Container: VectorCommitment> IndexOp<Index> for Tree<Container> {
-    type Output = Hash;
-
-    fn index(&self, index: Index) -> &Self::Output {
-        &self.nodes[index.as_index()]
     }
 }
 
