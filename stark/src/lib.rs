@@ -42,9 +42,7 @@
 
 mod channel;
 mod constraint;
-mod fft;
 pub mod fibonacci;
-mod geometric_series;
 mod hash;
 mod hashable;
 mod masked_keccak;
@@ -52,7 +50,6 @@ pub mod merkle_tree;
 mod polynomial;
 mod proof_of_work;
 mod proof_params;
-mod utils;
 mod verifier;
 
 pub use channel::{ProverChannel, VerifierChannel};
@@ -90,6 +87,11 @@ pub use proofs::stark_proof;
 #[cfg(feature = "prover")]
 pub use trace_table::TraceTable;
 
-// Exports for benchmarking
-// TODO: Avoid publicly exposing.
-pub use fft::fft_cofactor_bit_reversed;
+#[macro_export]
+macro_rules! require {
+    ($condition:expr, $err:expr) => {
+        if !$condition {
+            return Err($err);
+        }
+    };
+}

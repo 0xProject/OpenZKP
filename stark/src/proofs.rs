@@ -1,7 +1,6 @@
 use crate::{
     channel::{ProverChannel, RandomGenerator, Writable},
     constraint::Constraint,
-    fft::{fft_cofactor_bit_reversed, ifft},
     hash::Hash,
     hashable::Hashable,
     masked_keccak::MaskedKeccak,
@@ -10,11 +9,13 @@ use crate::{
     polynomial::{DensePolynomial, SparsePolynomial},
     proof_of_work,
     proof_params::ProofParams,
-    utils::Reversible,
     TraceTable,
 };
 use itertools::Itertools;
-use primefield::FieldElement;
+use primefield::{
+    fft::{fft_cofactor_permuted, ifft},
+    FieldElement,
+};
 use rayon::prelude::*;
 use std::{prelude::v1::*, vec};
 use u256::U256;
@@ -263,9 +264,9 @@ fn evalute_polynomial_on_domain(
         let reverse_index = index.bit_reverse_at(blowup);
         let cofactor =
             &shift_factor * extended_domain_generator.pow(U256::from(reverse_index as u64));
-        result.extend(fft_cofactor_bit_reversed(
-            constraint_polynomial.coefficients(),
+        result.extend(fft_cofactor_permuted(
             &cofactor,
+            constraint_polynomial.coefficients(),
         ));
     }
     result
@@ -465,10 +466,10 @@ mod tests {
     use super::*;
     use crate::{
         fibonacci::{get_fibonacci_constraints, get_trace_table, PrivateInput, PublicInput},
-        geometric_series::geometric_series,
         verifier::check_proof,
     };
     use macros_decl::{field_element, hex, u256h};
+    use primefield::geometric_series::geometric_series;
     use u256::U256;
 
     #[test]
