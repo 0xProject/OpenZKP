@@ -1,7 +1,6 @@
 use crate::{
     channel::{ProverChannel, RandomGenerator, Writable},
     constraint::Constraint,
-    fft::{fft_cofactor_bit_reversed, ifft},
     hash::Hash,
     hashable::Hashable,
     masked_keccak::MaskedKeccak,
@@ -10,11 +9,13 @@ use crate::{
     polynomial::{DensePolynomial, SparsePolynomial},
     proof_of_work,
     proof_params::ProofParams,
-    utils::Reversible,
     TraceTable,
 };
 use itertools::Itertools;
-use primefield::FieldElement;
+use primefield::{
+    fft::{self, fft_cofactor_permuted, ifft},
+    FieldElement,
+};
 use rayon::prelude::*;
 use std::{prelude::v1::*, vec};
 use u256::U256;
@@ -260,13 +261,14 @@ fn evalute_polynomial_on_domain(
 
     let mut result: MmapVec<FieldElement> = MmapVec::with_capacity(extended_domain_length);
     for index in 0..blowup {
-        let reverse_index = index.bit_reverse_at(blowup);
+        let reverse_index = fft::permute_index(blowup, index);
         let cofactor =
             &shift_factor * extended_domain_generator.pow(U256::from(reverse_index as u64));
-        result.extend(fft_cofactor_bit_reversed(
-            constraint_polynomial.coefficients(),
-            &cofactor,
-        ));
+
+        // TODO: Copy free
+        let mut copy = constraint_polynomial.coefficients().to_owned();
+        fft_cofactor_permuted(&cofactor, &mut copy);
+        result.extend(copy);
     }
     result
 }
@@ -465,10 +467,10 @@ mod tests {
     use super::*;
     use crate::{
         fibonacci::{get_fibonacci_constraints, get_trace_table, PrivateInput, PublicInput},
-        geometric_series::geometric_series,
         verifier::check_proof,
     };
     use macros_decl::{field_element, hex, u256h};
+    use primefield::geometric_series::geometric_series;
     use u256::U256;
 
     #[test]
@@ -677,8 +679,10 @@ mod tests {
 
         // Checks that the low degree extension calculation is working
         let i = 13644_usize;
-        let reverse_i = i.bit_reverse_at(eval_domain_size);
-        let eval_offset_x = geometric_series(&gen, &omega, eval_domain_size);
+        let reverse_i = fft::permute_index(eval_domain_size, i);
+        let eval_offset_x = geometric_series(&gen, &omega)
+            .take(eval_domain_size)
+            .collect::<Vec<_>>();
         assert_eq!(TPn[0].evaluate(&eval_offset_x[reverse_i]), LDEn[0][i]);
         assert_eq!(TPn[1].evaluate(&eval_offset_x[reverse_i]), LDEn[1][i]);
 
@@ -734,7 +738,7 @@ mod tests {
         let CC = calculate_low_degree_extensions(&constraint_polynomials, params.blowup);
         // Checks that our constraints are properly calculated on the domain
         assert_eq!(
-            CC[0][123.bit_reverse_at(eval_domain_size)].clone(),
+            CC[0][fft::permute_index(eval_domain_size, 123)].clone(),
             field_element!("05b841208b357e29ac1fe7a654efebe1ae152104571e695f311a353d4d5cabfb")
         );
 

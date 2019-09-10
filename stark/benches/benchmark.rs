@@ -8,7 +8,7 @@ use macros_decl::u256h;
 use primefield::FieldElement;
 use rayon::ThreadPoolBuilder;
 use stark::{
-    check_proof, fft_cofactor_bit_reversed,
+    check_proof,
     fibonacci::{get_fibonacci_constraints, get_trace_table, PrivateInput, PublicInput},
     merkle_tree, stark_proof, ProofParams,
 };
@@ -74,37 +74,6 @@ fn merkle_tree_threads(crit: &mut Criterion) {
     log_thread_bench(crit, "Merkle tree threads", size, move |bench| {
         let leaves: Vec<_> = (0..size).map(U256::from).collect();
         bench.iter(|| black_box(merkle_tree::Tree::from_leaves(black_box(leaves.clone()))))
-    });
-}
-
-fn fft_size(crit: &mut Criterion) {
-    log_size_bench(crit, "FFT size", &SIZES, move |bench, size| {
-        let cofactor = FieldElement::from(u256h!(
-            "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
-        ));
-        let leaves: Vec<_> = (0..size).map(FieldElement::from).collect();
-        bench.iter(|| {
-            black_box(fft_cofactor_bit_reversed(
-                black_box(&leaves),
-                black_box(&cofactor),
-            ))
-        })
-    });
-}
-
-fn fft_threads(crit: &mut Criterion) {
-    let size: usize = *SIZES.last().unwrap();
-    log_thread_bench(crit, "FFT threads", size, move |bench| {
-        let cofactor = FieldElement::from(u256h!(
-            "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
-        ));
-        let leaves: Vec<_> = (0..size).map(FieldElement::from).collect();
-        bench.iter(|| {
-            black_box(fft_cofactor_bit_reversed(
-                black_box(&leaves),
-                black_box(&cofactor),
-            ))
-        })
     });
 }
 
@@ -188,8 +157,6 @@ fn proof_check(crit: &mut Criterion) {
 fn criterion_benchmark(c: &mut Criterion) {
     merkle_tree_size(c);
     merkle_tree_threads(c);
-    fft_size(c);
-    fft_threads(c);
     proof_check(c);
 }
 

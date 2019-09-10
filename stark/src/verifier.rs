@@ -1,16 +1,17 @@
 use crate::{
     channel::*,
     constraint::Constraint,
-    fft::ifft,
-    geometric_series::geometric_series,
     hash::*,
     merkle_tree::{Commitment, Proof},
     polynomial::DensePolynomial,
     proof_of_work,
     proof_params::ProofParams,
-    utils::*,
 };
-use primefield::FieldElement;
+use primefield::{
+    fft::{self, ifft},
+    geometric_series::root_series,
+    FieldElement,
+};
 use std::{collections::BTreeMap, prelude::v1::*};
 use u256::U256;
 
@@ -26,10 +27,8 @@ where
     Public: PartialEq + Clone + Into<Vec<u8>>,
     VerifierChannel: Replayable<Public> + Replayable<Hash>,
 {
-    let omega = FieldElement::root(trace_len * params.blowup).unwrap();
     let eval_domain_size = trace_len * params.blowup;
-
-    let eval_x = geometric_series(&FieldElement::ONE, &omega, eval_domain_size);
+    let eval_x = root_series(eval_domain_size).collect::<Vec<_>>();
 
     let mut channel = VerifierChannel::new(proposed_proof.to_vec());
     let bytes: Vec<u8> = public.clone().into();
@@ -157,7 +156,7 @@ where
                     if k > 0 {
                         coset.push(fri_folds.get(&n).unwrap().clone());
                     } else {
-                        let z_reverse = queries[z].bit_reverse_at(eval_domain_size);
+                        let z_reverse = fft::permute_index(eval_domain_size, queries[z]);
                         coset.push(out_of_domain_element(
                             lde_values[z].1.as_slice(),
                             &constraint_values[z].1,
@@ -223,7 +222,7 @@ where
     let interp_root = FieldElement::root(len).unwrap();
     for key in &previous_indices {
         let calculated = fri_folds[key].clone();
-        let x_pow = interp_root.pow(key.bit_reverse_at(len));
+        let x_pow = interp_root.pow(fft::permute_index(len, *key));
         let committed = DensePolynomial::new(&last_layer_coefficient).evaluate(&x_pow);
 
         if committed != calculated.clone() {
@@ -286,7 +285,7 @@ fn fri_fold(
         let mut next_coset = Vec::with_capacity(coset.len() / 2);
 
         for (k, pair) in coset_full.chunks(2).enumerate() {
-            let x = &eval_x[(index + k).bit_reverse_at(len / 2) * step];
+            let x = &eval_x[fft::permute_index(len / 2, index + k) * step];
             next_coset.push(fri_single_fold(&pair[0], &pair[1], x, &mutable_eval_copy));
         }
         len /= 2;
