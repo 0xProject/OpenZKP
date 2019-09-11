@@ -274,6 +274,8 @@ pub fn get_constraint_polynomials(
     let mut constraint_polynomial =
         DensePolynomial::from_vec(vec![FieldElement::ZERO; constraints_degree_bound]);
     let trace_length = trace_polynomials[0].len();
+
+    // TODO: Compute in parallel
     for (i, constraint) in constraints.iter().enumerate() {
         let mut p = (constraint.base)(trace_polynomials);
         let mut base_length = p.len();
