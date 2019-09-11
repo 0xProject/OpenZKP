@@ -208,6 +208,10 @@ mod tests {
     use super::*;
 
     use macros_decl::u256h;
+    use openstark::{
+        fibonacci::{get_fibonacci_constraints, get_trace_table, PrivateInput, PublicInput},
+        stark_proof, ProofParams,
+    };
     use primefield::FieldElement;
     use primitives::{Blake2Hasher, H256};
     use runtime_io::with_externalities;
@@ -215,10 +219,6 @@ mod tests {
         testing::{Digest, DigestItem, Header},
         traits::{BlakeTwo256, IdentityLookup},
         BuildStorage,
-    };
-    use stark::{
-        fibonacci::{get_fibonacci_constraints, get_trace_table, PrivateInput, PublicInput},
-        stark_proof, ProofParams,
     };
     use starkdex::wrappers::{public_key, sign};
     use support::{assert_ok, impl_outer_origin};
