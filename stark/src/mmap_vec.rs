@@ -90,7 +90,7 @@ impl<T: Clone + PartialEq> PartialEq for MmapVec<T> {
 impl<T: Clone> Clone for MmapVec<T> {
     fn clone(&self) -> Self {
         let mut clone = Self::with_capacity(self.capacity);
-        clone.extend(&self);
+        clone.extend(self.iter());
         clone
     }
 }
