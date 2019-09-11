@@ -50,23 +50,21 @@ impl DensePolynomial {
     }
 
     pub fn low_degree_extension(&self, blowup: usize) -> MmapVec<FieldElement> {
-        // TODO: Reduce copies
-        let extended_domain_length = self.len() * blowup;
-        let extended_domain_generator = FieldElement::root(extended_domain_length)
-            .expect("No generator for extended_domain_length.");
         // TODO: shift polynomial by FieldElement::GENERATOR outside of this function.
-        let shift_factor = FieldElement::GENERATOR;
+        const SHIFT_FACTOR: FieldElement = FieldElement::GENERATOR;
+        let length = self.len() * blowup;
+        let generator =
+            FieldElement::root(length).expect("No generator for extended_domain_length.");
+        let mut result: MmapVec<FieldElement> = MmapVec::with_capacity(length);
+        for i in 0..blowup {
+            // Append a copy of coefficients to result
+            // TODO: Use copy_from_slice
+            result.extend(self.coefficients().iter());
 
-        let mut result: MmapVec<FieldElement> = MmapVec::with_capacity(extended_domain_length);
-        for index in 0..blowup {
-            let reverse_index = permute_index(blowup, index);
-            let cofactor =
-                &shift_factor * extended_domain_generator.pow(U256::from(reverse_index as u64));
-
-            // TODO: Copy free
-            let mut copy = self.coefficients().to_owned();
-            fft_cofactor_permuted(&cofactor, &mut copy);
-            result.extend(copy);
+            // Take a slice of the coefficients and FFT
+            let range = &mut result[i * self.len()..(i + 1) * self.len()];
+            let cofactor = &SHIFT_FACTOR * generator.pow(permute_index(blowup, i));
+            fft_cofactor_permuted(&cofactor, range);
         }
         result
     }
