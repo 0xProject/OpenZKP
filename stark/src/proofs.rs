@@ -285,7 +285,7 @@ pub fn get_constraint_polynomials(
         }
         p *= constraint.numerator.clone();
         p /= constraint.denominator.clone();
-        constraint_polynomial += &(&constraint_coefficients[2 * i] * &p);
+        constraint_polynomial += &constraint_coefficients[2 * i] * &p;
         let adjustment_degree = constraints_degree_bound * trace_length - base_length
             + constraint.denominator.degree()
             - constraint.numerator.degree();
