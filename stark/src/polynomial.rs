@@ -5,6 +5,7 @@ use primefield::{
     fft::{fft, fft_cofactor_permuted, ifft, permute_index},
     FieldElement,
 };
+use rayon::prelude::*;
 use std::{
     cmp::max,
     collections::BTreeMap,
@@ -56,15 +57,21 @@ impl DensePolynomial {
         let generator =
             FieldElement::root(length).expect("No generator for extended_domain_length.");
         let mut result: MmapVec<FieldElement> = MmapVec::with_capacity(length);
-        for i in 0..blowup {
-            // Append a copy of coefficients to result
-            result.extend_from_slice(&self.coefficients());
 
-            // Take a slice of the coefficients and FFT
-            let range = &mut result[i * self.len()..(i + 1) * self.len()];
-            let cofactor = &SHIFT_FACTOR * generator.pow(permute_index(blowup, i));
-            fft_cofactor_permuted(&cofactor, range);
-        }
+        // Initialize to zero
+        // TODO: Avoid initialization
+        result.resize(length, FieldElement::ZERO);
+
+        // Compute cosets in parallel
+        result
+            .as_mut_slice()
+            .par_chunks_mut(self.len())
+            .enumerate()
+            .for_each(|(i, slice)| {
+                let cofactor = &SHIFT_FACTOR * generator.pow(permute_index(blowup, i));
+                slice.clone_from_slice(&self.coefficients());
+                fft_cofactor_permuted(&cofactor, slice);
+            });
         result
     }
 
