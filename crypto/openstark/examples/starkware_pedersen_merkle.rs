@@ -13,6 +13,10 @@ use primefield::FieldElement;
 use std::time::Instant;
 use u256::U256;
 
+// Need to import to active the logging allocator
+#[allow(unused_imports)]
+use logging_allocator;
+
 fn main() {
     env_logger::init();
 

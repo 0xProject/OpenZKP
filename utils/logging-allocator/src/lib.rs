@@ -1,10 +1,11 @@
-use log::{error, info, trace, warn};
+use log::{error, info, warn};
 use std::{
     alloc::{GlobalAlloc, Layout, System},
     ptr::null_mut,
     sync::atomic::{AtomicUsize, Ordering::SeqCst},
 };
 
+// TODO: Make it store a static ref to an inner allocator (defaults to System)
 pub struct LoggingAllocator {
     info:      usize,
     warn:      usize,
@@ -32,11 +33,9 @@ impl LoggingAllocator {
 unsafe impl GlobalAlloc for LoggingAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         if layout.size() < self.info {
-            trace!(
-                "Allocating {:?} MB on heap ({:?} MB allocated)",
-                layout.size() / 1_000_000,
-                self.allocated() / 1_000_000
-            );
+            // Do nothing for small allocations
+            // Note that the log messages themselves also make small
+            // allocations, and we want to prevent infinite recursion.
         } else if layout.size() < self.warn {
             info!(
                 "Allocating {:?} MB on heap ({:?} MB allocated)",
@@ -76,6 +75,6 @@ unsafe impl GlobalAlloc for LoggingAllocator {
     }
 }
 
-#[cfg(enable)]
+#[cfg(feature = "enable")]
 #[global_allocator]
 pub static ALLOCATOR: LoggingAllocator = LoggingAllocator::new();

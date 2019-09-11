@@ -7,6 +7,7 @@ edition = "2018"
 [dependencies]
 macros-decl = { path = "../../utils/macros-decl", default-features = false }
 mmap-vec = { path = "../../utils/mmap-vec", default-features = false }
+logging-allocator = { path = "../../utils/logging-allocator", optional = true }
 u256 = { path = "../../algebra/u256", default-features = false }
 primefield = { path = "../../algebra/primefield", default-features = false }
 hash = { path = "../../crypto/hash", default-features = false }
@@ -73,6 +74,7 @@ bench = [
     "criterion-utils",
 ]
 examples = [
+    "logging-allocator",
     "env_logger",
 ]
 prover = [
