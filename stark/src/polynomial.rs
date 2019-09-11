@@ -5,7 +5,6 @@ use primefield::{
     fft::{fft, fft_cofactor_permuted, ifft, permute_index},
     FieldElement,
 };
-use rayon::prelude::*;
 use std::{
     cmp::max,
     collections::BTreeMap,
@@ -13,6 +12,9 @@ use std::{
     prelude::v1::*,
 };
 use u256::{commutative_binop, noncommutative_binop};
+
+#[cfg(feature = "std")]
+use rayon::prelude::*;
 
 #[derive(PartialEq, Clone)]
 #[cfg_attr(feature = "std", derive(Debug))]
@@ -50,6 +52,7 @@ impl DensePolynomial {
         result
     }
 
+    #[cfg(feature = "std")]
     pub fn low_degree_extension(&self, blowup: usize) -> MmapVec<FieldElement> {
         // TODO: shift polynomial by FieldElement::GENERATOR outside of this function.
         const SHIFT_FACTOR: FieldElement = FieldElement::GENERATOR;
