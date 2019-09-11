@@ -1,0 +1,5 @@
+[package]
+name = "tracing-allocator"
+version = "0.1.0"
+authors = ["Remco Bloemen <remco@0x.org>"]
+edition = "2018"

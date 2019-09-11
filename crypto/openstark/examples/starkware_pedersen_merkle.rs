@@ -10,9 +10,7 @@ use stark::{
     },
     stark_proof, ProofParams,
 };
-use std::{
-    time::Instant,
-};
+use std::time::Instant;
 use u256::U256;
 
 fn main() {

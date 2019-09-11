@@ -5,8 +5,9 @@ authors = ["Remco Bloemen <remco@0x.org>"]
 edition = "2018"
 
 [dependencies]
-macros-decl = { path = "../macros_decl",  default_features = false }
+macros-decl = { path = "../../utils/macros-decl",  default_features = false }
 u256 =  { path = "../u256", default_features = false }
+
 no-std-compat = { version = "0.1.0", features = [ "alloc" ] }
 hex = { version = "", optional = true }
 itertools = { version = "0.8.0", default_features = false }
@@ -17,7 +18,7 @@ quickcheck = { version = "0.8", optional = true}
 # optional, or it will enable the `std` flag on various dependencies. Cargo
 # does not allow dev-dependencies to be optional.
 criterion = { version = "0.2.0", optional = true }
-criterion-utils = { path = "../criterion-utils", optional = true }
+criterion-utils = { path = "../../utils/criterion-utils", optional = true }
 quickcheck_macros = { version = "0.8", optional = true }
 
 [[bench]]

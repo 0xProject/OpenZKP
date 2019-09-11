@@ -15,9 +15,10 @@ crate-type = ["cdylib", "rlib"]
 default = ["console_error_panic_hook"]
 
 [dependencies]
-u256 = { path = "../u256" }
-primefield = { path = "../primefield" }
-starkdex = { path = "../starkdex" }
+u256 = { path = "../algebra/u256" }
+primefield = { path = "../algebra/primefield" }
+starkdex = { path = "../algebra/starkdex" }
+
 cfg-if = "0.1.2"
 wasm-bindgen = { version = "0.2", features = ["serde-serialize"] }
 hex = "0.3.2"

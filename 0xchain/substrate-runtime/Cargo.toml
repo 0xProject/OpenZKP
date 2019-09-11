@@ -4,6 +4,17 @@ edition = '2018'
 name = 'substrate-runtime'
 version = '1.0.0'
 
+[dependencies]
+macros-decl = { path = "../../utils/macros-decl", default-features = false }
+u256 = { path = "../../algebra/u256", default_features = false }
+primefield = { path = "../../algebra/primefield", default_features = false }
+openstark = { path = "../../crypto/openstark", default_features = false }
+starkdex = { path = "../../0xchain/starkdex", default_features = false }
+
+safe-mix = { version = "1.0", default-features = false }
+serde = { version = "1.0", features = ["derive"], optional = true }
+itertools = { version = "0.8.0", default_features = false }
+
 [features]
 default = ['std']
 std = [
@@ -29,22 +40,12 @@ std = [
     'consensus_authorities/std',
     'offchain-primitives/std',
     'macros-decl/std',
-    'stark/std',
+    'openstark/std',
     'starkdex/std',
 ]
 test = [
-    'stark/prover',
+    'openstark/prover',
 ]
-
-[dependencies]
-macros-decl = { path = "../macros_decl", default-features = false }
-u256 = { path = "../u256", default_features = false }
-primefield = { path = "../primefield", default_features = false }
-starkdex = { path = "../starkdex", default_features = false }
-stark = { path = "../stark", default_features = false }
-safe-mix = { version = "1.0", default-features = false }
-serde = { version = "1.0", features = ["derive"], optional = true }
-itertools = { version = "0.8.0", default_features = false }
 
 [dependencies.aura]
 default_features = false

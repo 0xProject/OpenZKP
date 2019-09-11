@@ -7,6 +7,7 @@ version = '1.0.0'
 
 [dependencies]
 substrate-runtime = { path = '../substrate-runtime' }
+
 error-chain = '0.12'
 exit-future = '0.1'
 futures = '0.1'

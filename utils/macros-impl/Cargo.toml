@@ -8,6 +8,7 @@ edition = "2018"
 proc-macro = true
 
 [dependencies]
-macros-lib = { path = "../macros_lib" }
+macros-lib = { path = "../macros-lib" }
+
 proc-macro2 = "0.4"
 proc-macro-hack = "0.5.8"

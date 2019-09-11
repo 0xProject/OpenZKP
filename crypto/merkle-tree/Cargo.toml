@@ -1,12 +1,10 @@
 [package]
-name = "u256"
+name = "merkle-tree"
 version = "0.1.0"
 authors = ["Remco Bloemen <remco@0x.org>"]
 edition = "2018"
 
 [dependencies]
-macros-decl = { path = "../../utils/macros-decl", default_features = false }
-
 no-std-compat = { version = "0.1.0", features = [ "alloc" ] }
 itertools = { version = "0.8.0", default_features = false }
 crunchy = { version = "0.2.2", default_features = false }
@@ -36,7 +34,6 @@ test = [
     "quickcheck_macros"
 ]
 std = [
-    "macros-decl/std",
     "no-std-compat/std",
     "itertools/use_std",
     "crunchy/std",

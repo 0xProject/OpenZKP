@@ -5,8 +5,9 @@ authors = ["Remco Bloemen <remco@0x.org>"]
 edition = "2018"
 
 [dependencies]
+macros-impl = { path = "../macros-impl" }
+
 proc-macro-hack = "0.5"
-macros-impl = { path = "../macros_impl" }
 
 [features]
 default = ["std"]
