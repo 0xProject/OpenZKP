@@ -15,6 +15,7 @@ use tempfile::tempfile;
 // TODO: Variant of MmapVec where it switched between Vec and Mmap after
 //       a treshold size.
 
+#[derive(Debug)] // TODO: Custom implementation
 pub struct MmapVec<T: Clone> {
     mmap:     MmapMut,
     length:   usize,
@@ -56,6 +57,16 @@ impl<T: Clone> MmapVec<T> {
         self[end] = next;
     }
 
+    pub fn resize(&mut self, size: usize, fill: T) {
+        if size > self.capacity {
+            panic!("MmapVec is at capacity")
+        }
+        while self.length < size {
+            self.push(fill.clone());
+        }
+        self.length = size;
+    }
+
     #[inline]
     pub fn as_slice(&self) -> &[T] {
         self
@@ -64,6 +75,23 @@ impl<T: Clone> MmapVec<T> {
     #[inline]
     pub fn as_mut_slice(&mut self) -> &mut [T] {
         self
+    }
+}
+
+impl<T: Clone + PartialEq> PartialEq for MmapVec<T> {
+    fn eq(&self, other: &Self) -> bool {
+        if self.len() != other.len() {
+            return false;
+        }
+        self.iter().zip(other.iter()).all(|(a, b)| a == b)
+    }
+}
+
+impl<T: Clone> Clone for MmapVec<T> {
+    fn clone(&self) -> Self {
+        let mut clone = Self::with_capacity(self.capacity);
+        clone.extend(&self);
+        clone
     }
 }
 
