@@ -275,7 +275,7 @@ pub fn get_constraint_polynomials(
     constraints_degree_bound: usize,
 ) -> Vec<DensePolynomial> {
     let mut constraint_polynomial =
-        DensePolynomial::new(&vec![FieldElement::ZERO; constraints_degree_bound]);
+        DensePolynomial::from_vec(vec![FieldElement::ZERO; constraints_degree_bound]);
     let trace_length = trace_polynomials[0].len();
     for (i, constraint) in constraints.iter().enumerate() {
         let mut p = (constraint.base)(trace_polynomials);
@@ -303,8 +303,8 @@ pub fn get_constraint_polynomials(
         }
     }
     constraint_polynomials
-        .iter()
-        .map(|x| DensePolynomial::new(x))
+        .into_iter()
+        .map(|x| DensePolynomial::from_vec(x))
         .collect()
 }
 
