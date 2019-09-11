@@ -28,6 +28,11 @@ impl DensePolynomial {
         Self(coefficients.to_vec())
     }
 
+    pub fn from_vec(coefficients: Vec<FieldElement>) -> Self {
+        assert!(coefficients.len().is_power_of_two());
+        Self(coefficients)
+    }
+
     // Note that the length of a polynomial is not its degree, because the leading
     // coefficient of a DensePolynomial can be zero.
     pub fn len(&self) -> usize {

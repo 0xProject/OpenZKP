@@ -127,12 +127,11 @@ where
     info!("Constraint system {} constraints", constraints.len());
 
     // Initialize a proof channel with the public input.
-    info!("Writing public input to channel.");
+    info!("Initialize channel with public input.");
     let mut proof = ProverChannel::new();
     proof.initialize(&public.into());
 
     // 1. Trace commitment.
-    //
 
     // Compute the low degree extension of the trace table.
     info!("Compute the low degree extension of the trace table.");
@@ -146,7 +145,6 @@ where
     proof.write(&commitment);
 
     // 2. Constraint commitment
-    //
 
     // Read constraint coefficients from the channel.
     info!("Read constraint coefficients from the channel.");
@@ -173,7 +171,6 @@ where
     proof.write(&commitment);
 
     // 3. Out of domain sampling
-    //
 
     // Read the out of domain sampling point from the channel.
     // (and do a bunch more things)

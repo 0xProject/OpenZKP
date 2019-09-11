@@ -1,5 +1,8 @@
 use crate::{mmap_vec::MmapVec, polynomial::DensePolynomial};
-use primefield::{fft::ifft, FieldElement};
+use primefield::{
+    fft::{ifft_permuted, permute},
+    FieldElement,
+};
 use rayon::prelude::*;
 use std::{
     ops::{Index, IndexMut},
@@ -53,6 +56,7 @@ impl TraceTable {
     /// the index accessors or the column iterator instead. It is unfortunately
     /// not possible to get a slice of a column (since the representation is
     /// row first.)
+    // TODO: Use strides
     pub fn column_to_mmapvec(&self, j: usize) -> MmapVec<FieldElement> {
         let mut result: MmapVec<FieldElement> = MmapVec::with_capacity(self.trace_length);
         for v in self.iter_column(j) {
@@ -62,7 +66,6 @@ impl TraceTable {
     }
 
     pub fn interpolate(&self) -> Vec<DensePolynomial> {
-        let mut result: Vec<DensePolynomial> = Vec::with_capacity(self.num_columns());
         (0..self.num_columns())
             .into_par_iter()
             // OPT: Use and FFT that can transform the entire table in one pass,
@@ -71,9 +74,19 @@ impl TraceTable {
             // so it can be replaced by a matrix of coefficients.
             // OPT: Avoid double vector allocation here. Implement From<Vec<FieldElement>> for
             // DensePolynomial?
-            .map(|j| DensePolynomial::new(&ifft(self.column_to_mmapvec(j).as_slice())))
-            .collect_into_vec(&mut result);
-        result
+            .map(|j| {
+                // Copy column to vec
+                let mut vec = Vec::with_capacity(self.num_rows());
+                for v in self.iter_column(j) {
+                    vec.push(v.clone());
+                }
+
+                // Transform to coefficients
+                ifft_permuted(&mut vec);
+                permute(&mut vec);
+                DensePolynomial::from_vec(vec)
+            })
+            .collect::<Vec<DensePolynomial>>()
     }
 }
 
