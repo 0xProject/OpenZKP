@@ -1,81 +1,13 @@
 #![warn(clippy::all)]
-use criterion::{
-    black_box, criterion_group, criterion_main, AxisScale, Bencher, Criterion,
-    ParameterizedBenchmark, PlotConfiguration, Throughput,
-};
-use lazy_static::lazy_static;
+use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use macros_decl::u256h;
-use primefield::FieldElement;
-use rayon::ThreadPoolBuilder;
-use stark::{
+use openstark::{
     check_proof,
     fibonacci::{get_fibonacci_constraints, get_trace_table, PrivateInput, PublicInput},
-    merkle_tree, stark_proof, ProofParams,
+    stark_proof, ProofParams,
 };
-use std::{convert::TryInto, marker::Send};
+use primefield::FieldElement;
 use u256::U256;
-
-const SIZES: [usize; 6] = [64, 256, 1024, 4096, 16384, 65536];
-lazy_static! {
-    // Create an exponential number of threads up to the number of cpus.
-    static ref THREADS: Vec<usize> = (0..=num_cpus::get().trailing_zeros())
-        .map(|log| 1usize << log)
-        .collect();
-}
-
-/// Utility function for log-log benchmark plots over a size parameter.
-fn log_size_bench<F>(crit: &mut Criterion, id: &str, sizes: &'static [usize], mut f: F)
-where
-    F: FnMut(&mut Bencher, usize) + 'static,
-{
-    crit.bench(
-        id,
-        ParameterizedBenchmark::new(id, move |bench, &&size| f(bench, size), sizes)
-            .sample_size(10)
-            .throughput(|&&s| Throughput::Elements(s.try_into().unwrap()))
-            .plot_config(PlotConfiguration::default().summary_scale(AxisScale::Logarithmic)),
-    );
-}
-
-/// Utility function for log-log benchmark plots over the number of threads in
-/// the thread-pool.
-fn log_thread_bench<F>(crit: &mut Criterion, id: &str, size: usize, mut f: F)
-where
-    F: FnMut(&mut Bencher) + 'static + Send,
-{
-    crit.bench(
-        id,
-        ParameterizedBenchmark::new(
-            id,
-            move |bench, &&num_threads| {
-                let pool = ThreadPoolBuilder::new()
-                    .num_threads(num_threads)
-                    .build()
-                    .expect("Building benchmark thread pool failed.");
-                pool.install(|| f(bench))
-            },
-            THREADS.iter(),
-        )
-        .sample_size(10)
-        .throughput(move |_| Throughput::Elements(size.try_into().unwrap()))
-        .plot_config(PlotConfiguration::default().summary_scale(AxisScale::Logarithmic)),
-    );
-}
-
-fn merkle_tree_size(crit: &mut Criterion) {
-    log_size_bench(crit, "Merkle tree size", &SIZES, move |bench, size| {
-        let leaves: Vec<_> = (0..size).map(U256::from).collect();
-        bench.iter(|| black_box(merkle_tree::Tree::from_leaves(black_box(leaves.clone()))))
-    });
-}
-
-fn merkle_tree_threads(crit: &mut Criterion) {
-    let size: usize = *SIZES.last().unwrap();
-    log_thread_bench(crit, "Merkle tree threads", size, move |bench| {
-        let leaves: Vec<_> = (0..size).map(U256::from).collect();
-        bench.iter(|| black_box(merkle_tree::Tree::from_leaves(black_box(leaves.clone()))))
-    });
-}
 
 fn proof_make(crit: &mut Criterion) {
     let public = PublicInput {
@@ -155,8 +87,6 @@ fn proof_check(crit: &mut Criterion) {
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
-    merkle_tree_size(c);
-    merkle_tree_threads(c);
     proof_check(c);
 }
 

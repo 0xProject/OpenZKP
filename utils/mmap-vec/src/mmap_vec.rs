@@ -44,6 +44,10 @@ impl<T: Clone> MmapVec<T> {
         }
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.length == 0
+    }
+
     pub fn len(&self) -> usize {
         self.length
     }

@@ -33,7 +33,7 @@ impl VectorCommitment for PolyLDE {
 
     fn leaf(&self, index: usize) -> Self::Leaf {
         let mut ret = Vec::with_capacity(self.0.len());
-        for item in self.0.iter() {
+        for item in &self.0 {
             ret.push(item[index].as_montgomery().clone())
         }
         ret
@@ -46,7 +46,7 @@ impl VectorCommitment for PolyLDE {
         } else {
             // Concatenate the element hashes and hash the result.
             let mut hasher = MaskedKeccak::new();
-            for value in self.0.iter() {
+            for value in &self.0 {
                 hasher.update(value[index].hash().as_bytes());
             }
             hasher.hash()

@@ -23,3 +23,9 @@ impl MaskedKeccak {
         Hash::new(result)
     }
 }
+
+impl Default for MaskedKeccak {
+    fn default() -> Self {
+        Self::new()
+    }
+}
