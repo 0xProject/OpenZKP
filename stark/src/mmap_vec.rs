@@ -1,5 +1,6 @@
 // This module abstracts low-level `unsafe` behaviour
 #![allow(unsafe_code)]
+use log::*;
 use memmap::{MmapMut, MmapOptions};
 use std::{
     cmp::max,
@@ -29,6 +30,7 @@ impl<T: Clone> MmapVec<T> {
         // TODO: Round up to nearest 4KB
         // Note: mmaped files can not be empty, so we use at leas one byte.
         let size = max(1, capacity * size_of::<T>());
+        info!("Allocating {} MB in temp file", size / 1_000_000);
         file.set_len(size as u64)
             .expect("cannot set mmap file length");
         let mmap = unsafe { MmapOptions::new().len(size).map_mut(&file) }
