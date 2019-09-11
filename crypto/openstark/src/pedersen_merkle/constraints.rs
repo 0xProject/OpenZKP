@@ -8,7 +8,7 @@ use crate::{
     },
     polynomial::{DensePolynomial, SparsePolynomial},
 };
-use ecc::Affine;
+use elliptic_curve::Affine;
 use primefield::FieldElement;
 use starkdex::SHIFT_POINT;
 use std::{prelude::v1::*, vec};

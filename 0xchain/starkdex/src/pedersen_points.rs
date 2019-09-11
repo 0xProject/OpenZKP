@@ -1,4 +1,4 @@
-use ecc::Affine;
+use elliptic_curve::Affine;
 use macros_decl::field_element;
 use primefield::FieldElement;
 use u256::U256;

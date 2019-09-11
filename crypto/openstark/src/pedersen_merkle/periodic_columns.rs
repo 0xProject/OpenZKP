@@ -1039,7 +1039,7 @@ pub const RIGHT_Y_COEFFICIENTS: [FieldElement; 256] = [
 mod tests {
     use super::*;
     use crate::polynomial::DensePolynomial;
-    use ecc::Affine;
+    use elliptic_curve::Affine;
     use primefield::geometric_series::root_series;
     use starkdex::PEDERSEN_POINTS;
 

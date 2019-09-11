@@ -2,7 +2,7 @@ use crate::{
     pedersen_merkle::inputs::{PrivateInput, PublicInput},
     TraceTable,
 };
-use ecc::Affine;
+use elliptic_curve::Affine;
 use primefield::FieldElement;
 use starkdex::{PEDERSEN_POINTS, SHIFT_POINT};
 use std::prelude::v1::*;

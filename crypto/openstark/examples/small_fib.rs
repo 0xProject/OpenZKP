@@ -2,11 +2,11 @@
 use env_logger;
 use log::info;
 use macros_decl::u256h;
-use primefield::FieldElement;
-use stark::{
+use openstark::{
     fibonacci::{get_fibonacci_constraints, get_trace_table, PrivateInput, PublicInput},
     stark_proof, ProofParams,
 };
+use primefield::FieldElement;
 use std::time::Instant;
 use u256::U256;
 

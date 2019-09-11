@@ -2,50 +2,51 @@ use crate::{
     channel::{ProverChannel, RandomGenerator, Writable},
     check_proof,
     constraint::Constraint,
-    hash::Hash,
-    hashable::Hashable,
-    masked_keccak::MaskedKeccak,
-    merkle_tree::{Tree, VectorCommitment},
-    mmap_vec::MmapVec,
     polynomial::{DensePolynomial, SparsePolynomial},
     proof_of_work,
     proof_params::ProofParams,
     TraceTable,
 };
+use hash::{Hash, Hashable, MaskedKeccak};
 use itertools::Itertools;
 use log::info;
+use merkle_tree::{Tree, VectorCommitment};
+use mmap_vec::MmapVec;
 use primefield::FieldElement;
 use rayon::prelude::*;
 use std::{prelude::v1::*, vec};
 use u256::U256;
 
+#[derive(Clone, Debug)]
+struct PolyLDE(Vec<MmapVec<FieldElement>>);
+
 /// Merkle trees over trace table LDE and constraint LDE
 // Clippy false positive
 #[allow(clippy::use_self)]
-impl VectorCommitment for Vec<MmapVec<FieldElement>> {
+impl VectorCommitment for PolyLDE {
     // TODO: Copy free implementation. Maybe have index as a leaf type.
     type Leaf = Vec<U256>;
 
     fn len(&self) -> usize {
-        self.first().map_or(0, MmapVec::len)
+        self.0.first().map_or(0, MmapVec::len)
     }
 
     fn leaf(&self, index: usize) -> Self::Leaf {
-        let mut ret = Vec::with_capacity(self.len());
-        for item in self.iter() {
+        let mut ret = Vec::with_capacity(self.0.len());
+        for item in self.0.iter() {
             ret.push(item[index].as_montgomery().clone())
         }
         ret
     }
 
     fn leaf_hash(&self, index: usize) -> Hash {
-        if self.len() == 1 {
+        if self.0.len() == 1 {
             // For a single element, return its hash.
-            self[0][index].hash()
+            self.0[0][index].hash()
         } else {
             // Concatenate the element hashes and hash the result.
             let mut hasher = MaskedKeccak::new();
-            for value in self.iter() {
+            for value in self.0.iter() {
                 hasher.update(value[index].hash().as_bytes());
             }
             hasher.hash()
@@ -133,10 +134,12 @@ where
     // Compute the low degree extension of the trace table.
     info!("Compute the low degree extension of the trace table.");
     let trace_polynomials = trace.interpolate();
-    let trace_lde = trace_polynomials
-        .par_iter()
-        .map(|p| p.low_degree_extension(params.blowup))
-        .collect::<Vec<_>>();
+    let trace_lde = PolyLDE(
+        trace_polynomials
+            .par_iter()
+            .map(|p| p.low_degree_extension(params.blowup))
+            .collect::<Vec<_>>(),
+    );
 
     // Construct a merkle tree over the LDE trace
     // and write the root to the channel.
@@ -163,10 +166,12 @@ where
     );
 
     info!("Compute the low degree extension of constraint polynomials.");
-    let constraint_lde = constraint_polynomials
-        .par_iter()
-        .map(|p| p.low_degree_extension(params.blowup))
-        .collect::<Vec<_>>();
+    let constraint_lde = PolyLDE(
+        constraint_polynomials
+            .par_iter()
+            .map(|p| p.low_degree_extension(params.blowup))
+            .collect::<Vec<_>>(),
+    );
     // Construct a merkle tree over the LDE combined constraints
     // and write the root to the channel.
     info!("Compute the merkle tree over the LDE constraint polynomials.");
@@ -660,10 +665,11 @@ mod tests {
         // Checks that the trace table polynomial interpolation is working
         assert_eq!(TPn[0].evaluate(&g.pow(1000)), trace[(1000, 0)]);
 
-        let LDEn = TPn
-            .par_iter()
-            .map(|p| p.low_degree_extension(params.blowup))
-            .collect::<Vec<_>>();
+        let LDEn = PolyLDE(
+            TPn.par_iter()
+                .map(|p| p.low_degree_extension(params.blowup))
+                .collect::<Vec<_>>(),
+        );
 
         // Checks that the low degree extension calculation is working
         let i = 13644_usize;
@@ -671,8 +677,8 @@ mod tests {
         let eval_offset_x = geometric_series(&gen, &omega)
             .take(eval_domain_size)
             .collect::<Vec<_>>();
-        assert_eq!(TPn[0].evaluate(&eval_offset_x[reverse_i]), LDEn[0][i]);
-        assert_eq!(TPn[1].evaluate(&eval_offset_x[reverse_i]), LDEn[1][i]);
+        assert_eq!(TPn[0].evaluate(&eval_offset_x[reverse_i]), LDEn.0[0][i]);
+        assert_eq!(TPn[1].evaluate(&eval_offset_x[reverse_i]), LDEn.0[1][i]);
 
         // Checks that the groupable trait is properly grouping for &[Vec<FieldElement>]
         assert_eq!(
@@ -723,13 +729,15 @@ mod tests {
         );
         assert_eq!(constraint_polynomials.len(), 1);
         assert_eq!(constraint_polynomials[0].len(), 1024);
-        let CC = constraint_polynomials
-            .par_iter()
-            .map(|p| p.low_degree_extension(params.blowup))
-            .collect::<Vec<_>>();
+        let CC = PolyLDE(
+            constraint_polynomials
+                .par_iter()
+                .map(|p| p.low_degree_extension(params.blowup))
+                .collect::<Vec<_>>(),
+        );
         // Checks that our constraints are properly calculated on the domain
         assert_eq!(
-            CC[0][permute_index(eval_domain_size, 123)].clone(),
+            CC.0[0][permute_index(eval_domain_size, 123)].clone(),
             field_element!("05b841208b357e29ac1fe7a654efebe1ae152104571e695f311a353d4d5cabfb")
         );
 

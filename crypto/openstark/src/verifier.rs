@@ -1,12 +1,9 @@
 use crate::{
-    channel::*,
-    constraint::Constraint,
-    hash::*,
-    merkle_tree::{Commitment, Proof},
-    polynomial::DensePolynomial,
-    proof_of_work,
+    channel::*, constraint::Constraint, polynomial::DensePolynomial, proof_of_work,
     proof_params::ProofParams,
 };
+use hash::Hash;
+use merkle_tree::{Commitment, Proof};
 use primefield::{
     fft::{self, ifft},
     geometric_series::root_series,

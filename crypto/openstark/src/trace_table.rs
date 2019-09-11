@@ -1,4 +1,5 @@
-use crate::{mmap_vec::MmapVec, polynomial::DensePolynomial};
+use crate::polynomial::DensePolynomial;
+use mmap_vec::MmapVec;
 use primefield::{
     fft::{ifft_permuted, permute},
     FieldElement,

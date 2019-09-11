@@ -1,5 +1,6 @@
 use crate::orders;
-use ecc;
+use elliptic_curve::Affine;
+use elliptic_curve_crypto as ecc;
 use std::prelude::v1::*;
 use u256::U256;
 
@@ -27,8 +28,8 @@ pub fn hash(a: &[u8; 32], b: &[u8; 32]) -> [u8; 32] {
 pub fn public_key(private_key: &[u8; 32]) -> ([u8; 32], [u8; 32]) {
     let p = ecc::private_to_public(&from_bytes(private_key));
     match p {
-        ecc::Affine::Zero => panic!(),
-        ecc::Affine::Point { x, y } => (U256::from(x).to_bytes_be(), U256::from(y).to_bytes_be()),
+        Affine::Zero => panic!(),
+        Affine::Point { x, y } => (U256::from(x).to_bytes_be(), U256::from(y).to_bytes_be()),
     }
 }
 
@@ -46,7 +47,7 @@ pub fn verify(
         &from_bytes(message_hash),
         &from_bytes(signature.0),
         &from_bytes(signature.1),
-        &ecc::Affine::Point {
+        &Affine::Point {
             x: U256::from_bytes_be(public_key.0).into(),
             y: U256::from_bytes_be(public_key.1).into(),
         },

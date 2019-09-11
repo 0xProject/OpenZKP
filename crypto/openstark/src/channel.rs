@@ -1,7 +1,9 @@
 // TODO: Naming?
 #![allow(clippy::module_name_repetitions)]
-use crate::{hash::Hash, merkle_tree, proof_of_work};
+use crate::proof_of_work;
+use hash::Hash;
 use macros_decl::u256h;
+use merkle_tree;
 use primefield::FieldElement;
 use std::prelude::v1::*;
 use tiny_keccak::Keccak;

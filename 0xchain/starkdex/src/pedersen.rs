@@ -1,5 +1,5 @@
 use crate::pedersen_points::PEDERSEN_POINTS;
-use ecc::{Affine, Jacobian};
+use elliptic_curve::{Affine, Jacobian};
 use macros_decl::u256h;
 use primefield::FieldElement;
 use std::prelude::v1::*;

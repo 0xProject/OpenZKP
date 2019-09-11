@@ -43,10 +43,6 @@
 mod channel;
 mod constraint;
 pub mod fibonacci;
-mod hash;
-mod hashable;
-mod masked_keccak;
-pub mod merkle_tree;
 mod polynomial;
 mod proof_of_work;
 mod proof_params;

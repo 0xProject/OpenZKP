@@ -61,10 +61,8 @@ pub fn short_private_input() -> PrivateInput {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        channel::{ProverChannel, RandomGenerator, Writable},
-        hash::Hash,
-    };
+    use crate::channel::{ProverChannel, RandomGenerator, Writable};
+    use hash::Hash;
     use macros_decl::hex;
     use u256::U256;
 

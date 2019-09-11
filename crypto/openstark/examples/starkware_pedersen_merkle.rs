@@ -1,8 +1,7 @@
 use env_logger;
-use log::{error, info};
+use log::info;
 use macros_decl::{field_element, hex};
-use primefield::FieldElement;
-use stark::{
+use openstark::{
     pedersen_merkle::{
         constraints::get_pedersen_merkle_constraints,
         inputs::{PrivateInput, PublicInput},
@@ -10,6 +9,7 @@ use stark::{
     },
     stark_proof, ProofParams,
 };
+use primefield::FieldElement;
 use std::time::Instant;
 use u256::U256;
 
