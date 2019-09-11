@@ -317,7 +317,7 @@ mod tests {
                 Origin::signed(0),
                 RecordedProof {
                     proof:  actual.proof.clone(),
-                    public: public.into(),
+                    public: (&public).into(),
                 },
                 3
             ));
