@@ -32,26 +32,35 @@ impl LoggingAllocator {
 unsafe impl GlobalAlloc for LoggingAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         if layout.size() < self.info {
-            trace!("Allocating {:?} MB on heap ({:?} MB allocated)",
+            trace!(
+                "Allocating {:?} MB on heap ({:?} MB allocated)",
                 layout.size() / 1_000_000,
-                self.allocated() / 1_000_000);
+                self.allocated() / 1_000_000
+            );
         } else if layout.size() < self.warn {
-            info!("Allocating {:?} MB on heap ({:?} MB allocated)",
+            info!(
+                "Allocating {:?} MB on heap ({:?} MB allocated)",
                 layout.size() / 1_000_000,
-                self.allocated() / 1_000_000);
+                self.allocated() / 1_000_000
+            );
         } else if layout.size() < self.error {
-            warn!("Allocating {:?} MB on heap ({:?} MB allocated)",
+            warn!(
+                "Allocating {:?} MB on heap ({:?} MB allocated)",
                 layout.size() / 1_000_000,
-                self.allocated() / 1_000_000);
+                self.allocated() / 1_000_000
+            );
         } else if layout.size() < self.reject {
-            error!("Allocating {:?} MB on heap ({:?} MB allocated)",
+            error!(
+                "Allocating {:?} MB on heap ({:?} MB allocated)",
                 layout.size() / 1_000_000,
-                self.allocated() / 1_000_000);
+                self.allocated() / 1_000_000
+            );
         } else {
             error!(
                 "Rejecting {:?} MB allocation on heap ({:?} MB allocated)",
                 layout.size() / 1_000_000,
-                self.allocated() / 1_000_000);
+                self.allocated() / 1_000_000
+            );
             return null_mut();
         }
         let result = System.alloc(layout);
