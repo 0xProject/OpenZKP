@@ -12,7 +12,7 @@ use rstd::{prelude::*, result::Result};
 use support::{decl_module, decl_storage, StorageValue};
 use system::ensure_inherent;
 
-use stark::{
+use openstark::{
     check_proof,
     fibonacci::{get_fibonacci_constraints, PublicInput},
     ProofParams,
@@ -197,6 +197,10 @@ mod tests {
     use super::*;
 
     use macros_decl::u256h;
+    use openstark::{
+        fibonacci::{get_fibonacci_constraints, get_trace_table, PrivateInput, PublicInput},
+        stark_proof, ProofParams,
+    };
     use primefield::FieldElement;
     use primitives::{Blake2Hasher, H256};
     use runtime_io::with_externalities;
@@ -204,10 +208,6 @@ mod tests {
         testing::{Digest, DigestItem, Header},
         traits::{BlakeTwo256, IdentityLookup},
         BuildStorage,
-    };
-    use stark::{
-        fibonacci::{get_fibonacci_constraints, get_trace_table, PrivateInput, PublicInput},
-        stark_proof, ProofParams,
     };
     use support::impl_outer_origin;
     use system::RawOrigin;

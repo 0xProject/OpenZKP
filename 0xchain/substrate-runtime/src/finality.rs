@@ -1,13 +1,13 @@
 // TODO - Add method system to add or remove validators [and look into substrate
 // native modules like democracy]
 use crate::wrappers::*;
-use parity_codec::{Decode, Encode};
-use rstd::prelude::*;
-use stark::{
+use openstark::{
     check_proof,
     fibonacci::{get_fibonacci_constraints, PublicInput},
     ProofParams,
 };
+use parity_codec::{Decode, Encode};
+use rstd::prelude::*;
 use support::{
     decl_event, decl_module, decl_storage, dispatch::Result, ensure, StorageMap, StorageValue,
 };
