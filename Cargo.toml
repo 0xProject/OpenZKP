@@ -1,19 +1,22 @@
 [workspace]
 members = [
-    "macros_lib",
-    "macros_impl",
-    "macros_decl",
-    "criterion-utils",
-    "u256",
-    "primefield",
-    "ecc",
-    "starkdex",
-    "stark",
-    "substrate-node",
-    "substrate-runtime",
+    "utils/macros_lib",
+    "utils/macros_impl",
+    "utils/macros_decl",
+    "utils/criterion_utils",
+    "utils/logging_alloc",
+    "utils/mmap_vec",
+    "algebra/u256",
+    "algebra/primefield",
+    "algebra/curves",
+    "crypto/merkle_tree",
+    "crypto/ecc",
+    "openstark",
+    "0xchain/starkdex",
+    "0xchain/substrate-node",
+    "0xchain/substrate-runtime",
 ]
 
-# Don't forget to run `cargo clean` to force a rebuild of all dependencies!
 [profile.release]
 opt-level = 3
 lto = true
@@ -23,4 +26,4 @@ panic = 'unwind'
 # that sets #[no_std].
 # TODO: Remove pending merger of https://github.com/RustCrypto/utils/pull/30
 [replace]
-"hex-literal:0.1.4" = { path = "./hex-literal" }
+"hex-literal:0.1.4" = { path = "./vendor/hex-literal" }
