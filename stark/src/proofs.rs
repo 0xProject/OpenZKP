@@ -15,7 +15,7 @@ use crate::{
 use itertools::Itertools;
 use log::info;
 use primefield::{
-    fft::{self, fft_cofactor_permuted, ifft},
+    fft::{self, fft_cofactor_permuted},
     FieldElement,
 };
 use rayon::prelude::*;
@@ -136,7 +136,7 @@ where
 
     // Compute the low degree extension of the trace table.
     info!("Compute the low degree extension of the trace table.");
-    let trace_polynomials = interpolate_trace_table(&trace);
+    let trace_polynomials = trace.interpolate();
     let trace_lde = calculate_low_degree_extensions(&trace_polynomials, params.blowup);
 
     // Construct a merkle tree over the LDE trace
@@ -265,37 +265,22 @@ fn get_indices(num: usize, bits: u32, proof: &mut ProverChannel) -> Vec<usize> {
     query_indices
 }
 
-pub fn interpolate_trace_table(table: &TraceTable) -> Vec<DensePolynomial> {
-    let mut result: Vec<DensePolynomial> = Vec::with_capacity(table.num_columns());
-    (0..table.num_columns())
-        .into_par_iter()
-        // OPT: Use and FFT that can transform the entire table in one pass,
-        // working on whole rows at a time. That is, it is vectorized over rows.
-        // OPT: Use an in-place FFT. We don't need the trace table after this,
-        // so it can be replaced by a matrix of coefficients.
-        // OPT: Avoid double vector allocation here. Implement From<Vec<FieldElement>> for
-        // DensePolynomial?
-        .map(|j| DensePolynomial::new(&ifft(table.column_to_mmapvec(j).as_slice())))
-        .collect_into_vec(&mut result);
-    result
-}
-
 pub fn calculate_low_degree_extensions(
-    trace_polynomials: &[DensePolynomial],
+    polynomials: &[DensePolynomial],
     blowup: usize,
 ) -> Vec<MmapVec<FieldElement>> {
     let mut low_degree_extensions: Vec<MmapVec<FieldElement>> =
-        Vec::with_capacity(trace_polynomials.len());
-    trace_polynomials
+        Vec::with_capacity(polynomials.len());
+    polynomials
         .par_iter()
-        .map(|p| evalute_polynomial_on_domain(&p, blowup))
+        .map(|p| evaluate_polynomial_on_domain(&p, blowup))
         .collect_into_vec(&mut low_degree_extensions);
     low_degree_extensions
 }
 
 // TODO: shift polynomial by FieldElement::GENERATOR outside of this function.
 // TODO fix name typo
-fn evalute_polynomial_on_domain(
+fn evaluate_polynomial_on_domain(
     constraint_polynomial: &DensePolynomial,
     blowup: usize,
 ) -> MmapVec<FieldElement> {
@@ -458,7 +443,7 @@ fn perform_fri_layering(
     // TODO: fold fri_polynomial without cloning it first.
     let mut p = fri_polynomial.clone();
     for &n_reductions in &params.fri_layout {
-        let layer = evalute_polynomial_on_domain(&p, params.blowup).to_vec();
+        let layer = evaluate_polynomial_on_domain(&p, params.blowup).to_vec();
         // FRI layout values are small.
         #[allow(clippy::cast_possible_truncation)]
         let coset_size = 2_usize.pow(n_reductions as u32);
@@ -716,7 +701,7 @@ mod tests {
         let trace = get_trace_table(1024, &private);
         assert_eq!(trace[(1000, 0)], public.value);
 
-        let TPn = interpolate_trace_table(&trace);
+        let TPn = trace.interpolate();
         // Checks that the trace table polynomial interpolation is working
         assert_eq!(TPn[0].evaluate(&g.pow(1000)), trace[(1000, 0)]);
 
