@@ -38,6 +38,9 @@
     // TODO: missing_debug_implementations,
 ))]
 
+#[cfg(not(feature = "std"))]
+extern crate no_std_compat as std;
+
 mod commitment;
 /// Implements Vector Commitments using Merkle Trees.
 ///
