@@ -67,6 +67,15 @@ impl<T: Clone> MmapVec<T> {
         self.length = size;
     }
 
+    pub fn extend_from_slice(&mut self, slice: &[T]) {
+        if self.length + slice.len() > self.capacity {
+            panic!("MmapVec would grow beyond capacity")
+        }
+        let start = self.length;
+        self.length += slice.len();
+        self.as_mut_slice()[start..].clone_from_slice(slice);
+    }
+
     #[inline]
     pub fn as_slice(&self) -> &[T] {
         self

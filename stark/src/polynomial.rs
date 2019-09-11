@@ -11,7 +11,7 @@ use std::{
     ops::{Add, AddAssign, DivAssign, Mul, MulAssign, Sub, SubAssign},
     prelude::v1::*,
 };
-use u256::{commutative_binop, noncommutative_binop, U256};
+use u256::{commutative_binop, noncommutative_binop};
 
 #[derive(PartialEq, Clone)]
 #[cfg_attr(feature = "std", derive(Debug))]
@@ -58,8 +58,7 @@ impl DensePolynomial {
         let mut result: MmapVec<FieldElement> = MmapVec::with_capacity(length);
         for i in 0..blowup {
             // Append a copy of coefficients to result
-            // TODO: Use copy_from_slice
-            result.extend(self.coefficients().iter());
+            result.extend_from_slice(&self.coefficients());
 
             // Take a slice of the coefficients and FFT
             let range = &mut result[i * self.len()..(i + 1) * self.len()];
