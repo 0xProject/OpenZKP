@@ -1,10 +1,15 @@
 // TODO: Naming?
 #![allow(clippy::module_name_repetitions)]
+#[cfg(feature = "std")]
 use crate::mmap_vec::MmapVec;
 use primefield::{
-    fft::{fft, fft_cofactor_permuted, ifft, permute_index},
+    fft::{fft, ifft},
     FieldElement,
 };
+#[cfg(feature = "std")]
+use primefield::{fft_cofactor_permuted, permute_index};
+#[cfg(feature = "std")]
+use rayon::prelude::*;
 use std::{
     cmp::max,
     collections::BTreeMap,
@@ -12,9 +17,6 @@ use std::{
     prelude::v1::*,
 };
 use u256::{commutative_binop, noncommutative_binop};
-
-#[cfg(feature = "std")]
-use rayon::prelude::*;
 
 #[derive(PartialEq, Clone)]
 #[cfg_attr(feature = "std", derive(Debug))]
