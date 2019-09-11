@@ -346,13 +346,6 @@ fn get_out_of_domain_information(
     (oods_point, oods_coefficients)
 }
 
-fn divide_out_point(p: &DensePolynomial, x: &FieldElement) -> DensePolynomial {
-    let denominator = SparsePolynomial::new(&[(-x, 0), (FieldElement::ONE, 1)]);
-    let mut result = p - SparsePolynomial::new(&[(p.evaluate(x), 0)]);
-    result /= denominator;
-    result
-}
-
 fn calculate_fri_polynomial(
     trace_polynomials: &[DensePolynomial],
     constraint_polynomials: &[DensePolynomial],
@@ -365,20 +358,16 @@ fn calculate_fri_polynomial(
 
     let mut fri_polynomial = DensePolynomial::new(&[FieldElement::ZERO]);
     for (i, trace_polynomial) in trace_polynomials.iter().enumerate() {
+        fri_polynomial += &oods_coefficients[2 * i] * trace_polynomial.divide_out_point(oods_point);
         fri_polynomial +=
-            &oods_coefficients[2 * i] * &divide_out_point(trace_polynomial, oods_point);
-        fri_polynomial += &oods_coefficients[2 * i + 1]
-            * &divide_out_point(trace_polynomial, &shifted_oods_point);
+            &oods_coefficients[2 * i + 1] * trace_polynomial.divide_out_point(&shifted_oods_point);
     }
 
     let offset = 2 * trace_polynomials.len();
     let constraints_degree_bound = constraint_polynomials.len();
     for (i, constraint_polynomial) in constraint_polynomials.iter().enumerate() {
         fri_polynomial += &oods_coefficients[offset + i]
-            * &divide_out_point(
-                constraint_polynomial,
-                &oods_point.pow(constraints_degree_bound),
-            );
+            * constraint_polynomial.divide_out_point(&oods_point.pow(constraints_degree_bound));
     }
     fri_polynomial
 }

@@ -75,6 +75,13 @@ impl DensePolynomial {
         result
     }
 
+    pub fn divide_out_point(&self, x: &FieldElement) -> Self {
+        let denominator = SparsePolynomial::new(&[(-x, 0), (FieldElement::ONE, 1)]);
+        let mut result = self - SparsePolynomial::new(&[(self.evaluate(x), 0)]);
+        result /= denominator;
+        result
+    }
+
     // Returns a polynomial such that f.shift(s)(x) = f(s * y).
     pub fn shift(&self, factor: &FieldElement) -> Self {
         let mut shifted_coefficients = self.0.clone();
@@ -177,17 +184,34 @@ commutative_binop!(DensePolynomial, Add, add, AddAssign, add_assign);
 commutative_binop!(DensePolynomial, Mul, mul, MulAssign, mul_assign);
 noncommutative_binop!(DensePolynomial, Sub, sub, SubAssign, sub_assign);
 
+impl MulAssign<&FieldElement> for DensePolynomial {
+    fn mul_assign(&mut self, other: &FieldElement) {
+        self.0.iter_mut().for_each(|x| *x *= other);
+    }
+}
+
+impl Mul<&FieldElement> for DensePolynomial {
+    type Output = DensePolynomial;
+
+    fn mul(mut self, other: &FieldElement) -> DensePolynomial {
+        self *= other;
+        self
+    }
+}
+
+impl Mul<DensePolynomial> for &FieldElement {
+    type Output = DensePolynomial;
+
+    fn mul(self, other: DensePolynomial) -> DensePolynomial {
+        other.mul(self)
+    }
+}
+
 impl Mul<&DensePolynomial> for &FieldElement {
     type Output = DensePolynomial;
 
     fn mul(self, other: &DensePolynomial) -> DensePolynomial {
         DensePolynomial(other.0.iter().map(|x| x * self).collect())
-    }
-}
-
-impl MulAssign<&FieldElement> for DensePolynomial {
-    fn mul_assign(&mut self, other: &FieldElement) {
-        self.0.iter_mut().for_each(|x| *x *= other);
     }
 }
 
