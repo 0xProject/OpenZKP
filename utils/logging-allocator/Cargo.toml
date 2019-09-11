@@ -8,7 +8,8 @@ edition = "2018"
 log = { version = "0.4.8", default_features = false }
 
 [features]
-default = [ "std"]
+default = [ "std", "enable" ]
 std = [
     "log/std",
 ]
+enable = []
