@@ -33,6 +33,7 @@ std = [
     "macros-decl/std",
     "u256/std",
     "primefield/std",
+    "elliptic-curve/std",
     "no-std-compat/std",
     "itertools/use_std",
 ]
@@ -41,6 +42,7 @@ test = [
     "quickcheck_macros",
     "u256/test",
     "primefield/test",
+    "elliptic-curve/std",
 ]
 bench = ["criterion"]
 unsafe_ecdsa = []

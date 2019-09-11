@@ -49,13 +49,6 @@ pub use curve::Affine;
 pub use jacobian::Jacobian;
 pub use wnaf::{base_mul, double_base_mul, double_mul, mul, window_table_affine};
 
-// The ECDSA functions are not implemented for security.
-#[cfg(feature = "unsafe_ecdsa")]
-mod ecdsa;
-
-#[cfg(feature = "unsafe_ecdsa")]
-pub use ecdsa::{private_to_public, sign, verify};
-
 use macros_decl::u256h;
 use primefield::FieldElement;
 use u256::U256;

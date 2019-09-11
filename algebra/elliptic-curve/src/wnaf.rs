@@ -1,7 +1,7 @@
 use crate::{curve::Affine, jacobian::Jacobian};
 use itertools::izip;
 use primefield::FieldElement;
-use std::prelude::v1::*;
+use std::{prelude::v1::*, vec};
 use u256::U256;
 
 pub fn window_table(p: &Affine, naf: &mut [Jacobian]) {
