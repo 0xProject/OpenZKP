@@ -1,0 +1,14 @@
+[package]
+name = "macros-impl"
+version = "0.1.0"
+authors = ["Remco Bloemen <remco@0x.org>"]
+edition = "2018"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+macros-lib = { path = "../macros-lib" }
+
+proc-macro2 = "0.4"
+proc-macro-hack = "0.5.8"
