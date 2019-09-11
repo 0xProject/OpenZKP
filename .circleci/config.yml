@@ -36,7 +36,7 @@ executors:
       # See also environment variables declared in rust-build-env.Dockerfile
       RUST_BACKTRACE: "1"
       SCCACHE_CACHE_SIZE: 1G
-      NO_STD_PACKAGES: macros_decl u256 primefield ecc starkdex stark substrate-runtime
+      NO_STD_PACKAGES: macros_decl u256 primefield elliptic-curve hash merkle-tree elliptic-curve-crypto starkdex openstark substrate-runtime
 
 commands:
   stop-if-image-exists:
