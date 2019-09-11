@@ -1,4 +1,4 @@
-use crate::{channel::*, constraint::Constraint, polynomial::SparsePolynomial};
+use crate::{constraint::Constraint, polynomial::SparsePolynomial};
 use primefield::FieldElement;
 use std::{convert::TryInto, prelude::v1::*};
 use u256::U256;
@@ -19,26 +19,15 @@ pub struct PrivateInput {
     pub secret: FieldElement,
 }
 
-// TODO: We are abusing Writable here to do initialization. We should
-// probably have a dedicated trait for initializing a channel.
-impl Writable<&PublicInput> for ProverChannel {
-    fn write(&mut self, public: &PublicInput) {
-        let mut bytes = [public.index.to_be_bytes()].concat();
-        bytes.extend_from_slice(&public.value.as_montgomery().to_bytes_be());
-        // TODO: Move initalize into the Writable trait.
-        self.initialize(bytes.as_slice());
-        self.proof.clear();
-    }
-}
-
-impl From<PublicInput> for Vec<u8> {
-    fn from(public_input: PublicInput) -> Self {
+impl From<&PublicInput> for Vec<u8> {
+    fn from(public_input: &PublicInput) -> Self {
         let mut bytes = [public_input.index.to_be_bytes()].concat();
         bytes.extend_from_slice(&public_input.value.as_montgomery().to_bytes_be());
         bytes
     }
 }
 
+// Used in substrate-runtime
 impl From<&[u8]> for PublicInput {
     fn from(public_input: &[u8]) -> Self {
         assert!(public_input.len() >= 40);
@@ -50,23 +39,6 @@ impl From<&[u8]> for PublicInput {
             (&public_input[8..40]).try_into().unwrap(),
         ));
         Self { index, value }
-    }
-}
-
-impl Replayable<PublicInput> for VerifierChannel {
-    fn replay(&mut self) -> PublicInput {
-        // Need to make a temporary copy here to satisfy the borrow checker.
-        // We can not guarantee proof won't change in `initialize`.
-        // TODO: Move to verifier.
-        self.initialize(self.proof[0..40].to_vec().as_slice());
-        PublicInput {
-            index: u64::from_be_bytes((&self.proof[0..8]).try_into().unwrap())
-                .try_into()
-                .expect("Index too large."),
-            value: FieldElement::from_montgomery(U256::from_bytes_be(
-                (&self.proof[8..40]).try_into().unwrap(),
-            )),
-        }
     }
 }
 

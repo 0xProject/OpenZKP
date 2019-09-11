@@ -15,6 +15,8 @@ use primefield::{
 use std::{collections::BTreeMap, prelude::v1::*};
 use u256::U256;
 
+// False positive, for<'a> is required.
+#[allow(single_use_lifetimes)]
 pub fn check_proof<Public>(
     proposed_proof: &[u8],
     constraints: &[Constraint],
@@ -24,14 +26,13 @@ pub fn check_proof<Public>(
     trace_len: usize,
 ) -> bool
 where
-    Public: PartialEq + Clone + Into<Vec<u8>>,
-    VerifierChannel: Replayable<Public> + Replayable<Hash>,
+    for<'a> &'a Public: Into<Vec<u8>>,
 {
     let eval_domain_size = trace_len * params.blowup;
     let eval_x = root_series(eval_domain_size).collect::<Vec<_>>();
 
     let mut channel = VerifierChannel::new(proposed_proof.to_vec());
-    let bytes: Vec<u8> = public.clone().into();
+    let bytes: Vec<u8> = public.into();
     channel.initialize(&bytes);
 
     // Get the low degree root commitment, and constraint root commitment

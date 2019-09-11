@@ -9,20 +9,24 @@ mod index;
 mod node;
 mod proof;
 mod result;
-mod vector_commitment;
 
 #[cfg(feature = "prover")]
 mod tree;
+
+#[cfg(feature = "prover")]
+mod vector_commitment;
 
 use crate::{hash::Hash, hashable::Hashable};
 
 pub use commitment::Commitment;
 pub use proof::Proof;
 pub use result::{Error, Result};
-pub use vector_commitment::VectorCommitment;
 
 #[cfg(feature = "prover")]
 pub use tree::Tree;
+
+#[cfg(feature = "prover")]
+pub use vector_commitment::VectorCommitment;
 
 use index::Index;
 use node::Node;

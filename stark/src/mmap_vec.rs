@@ -1,7 +1,9 @@
 // This module abstracts low-level `unsafe` behaviour
 #![allow(unsafe_code)]
+use log::*;
 use memmap::{MmapMut, MmapOptions};
 use std::{
+    cmp::max,
     marker::PhantomData,
     mem::size_of,
     ops::{Deref, DerefMut},
@@ -10,6 +12,10 @@ use std::{
 };
 use tempfile::tempfile;
 
+// TODO: Variant of MmapVec where it switched between Vec and Mmap after
+//       a treshold size.
+
+#[derive(Debug)] // TODO: Custom implementation
 pub struct MmapVec<T: Clone> {
     mmap:     MmapMut,
     length:   usize,
@@ -19,17 +25,17 @@ pub struct MmapVec<T: Clone> {
 
 impl<T: Clone> MmapVec<T> {
     pub fn with_capacity(capacity: usize) -> Self {
-        debug_assert!(capacity > 0);
         // From https://docs.rs/tempfile/3.1.0/tempfile/: tempfile() relies on
         // the OS to remove the temporary file once the last handle is closed.
         let file = tempfile().expect("cannot create temporary file");
         // TODO: Round up to nearest 4KB
-        let size = capacity * size_of::<T>();
+        // Note: mmaped files can not be empty, so we use at leas one byte.
+        let size = max(1, capacity * size_of::<T>());
+        info!("Allocating {} MB in temp file", size / 1_000_000);
         file.set_len(size as u64)
             .expect("cannot set mmap file length");
         let mmap = unsafe { MmapOptions::new().len(size).map_mut(&file) }
             .expect("cannot access memory mapped file");
-
         Self {
             mmap,
             length: 0,
@@ -51,6 +57,25 @@ impl<T: Clone> MmapVec<T> {
         self[end] = next;
     }
 
+    pub fn resize(&mut self, size: usize, fill: T) {
+        if size > self.capacity {
+            panic!("MmapVec is at capacity")
+        }
+        while self.length < size {
+            self.push(fill.clone());
+        }
+        self.length = size;
+    }
+
+    pub fn extend_from_slice(&mut self, slice: &[T]) {
+        if self.length + slice.len() > self.capacity {
+            panic!("MmapVec would grow beyond capacity")
+        }
+        let start = self.length;
+        self.length += slice.len();
+        self.as_mut_slice()[start..].clone_from_slice(slice);
+    }
+
     #[inline]
     pub fn as_slice(&self) -> &[T] {
         self
@@ -59,6 +84,23 @@ impl<T: Clone> MmapVec<T> {
     #[inline]
     pub fn as_mut_slice(&mut self) -> &mut [T] {
         self
+    }
+}
+
+impl<T: Clone + PartialEq> PartialEq for MmapVec<T> {
+    fn eq(&self, other: &Self) -> bool {
+        if self.len() != other.len() {
+            return false;
+        }
+        self.iter().zip(other.iter()).all(|(a, b)| a == b)
+    }
+}
+
+impl<T: Clone> Clone for MmapVec<T> {
+    fn clone(&self) -> Self {
+        let mut clone = Self::with_capacity(self.capacity);
+        clone.extend(self.iter());
+        clone
     }
 }
 
@@ -104,6 +146,12 @@ mod tests {
     use u256::U256;
 
     #[test]
+    fn test_empty() {
+        let empty = MmapVec::<u64>::with_capacity(0);
+        assert_eq!(empty.len(), 0);
+    }
+
+    #[test]
     fn test_len() {
         let mut m: MmapVec<FieldElement> = MmapVec::with_capacity(2);
         m.push(FieldElement::ONE);
@@ -138,12 +186,6 @@ mod tests {
         for i in 0..10_u64 {
             assert_eq!(m[i as usize], FieldElement::from(U256::from(i + 1)))
         }
-    }
-
-    #[test]
-    #[should_panic]
-    fn test_positive_capacity_required() {
-        let _: MmapVec<u64> = MmapVec::with_capacity(0);
     }
 
     #[test]

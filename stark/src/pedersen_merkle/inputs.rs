@@ -1,4 +1,3 @@
-use crate::channel::{ProverChannel, Writable};
 use primefield::FieldElement;
 use std::{prelude::v1::*, vec};
 
@@ -17,19 +16,19 @@ pub struct PrivateInput {
     pub path:       Vec<FieldElement>,
 }
 
-impl Writable<&PublicInput> for ProverChannel {
-    fn write(&mut self, public_input: &PublicInput) {
-        let mut bytes: Vec<u8> = vec![];
+impl From<&PublicInput> for Vec<u8> {
+    fn from(public_input: &PublicInput) -> Self {
+        let mut bytes: Self = vec![];
         bytes.extend_from_slice(&public_input.path_length.to_be_bytes());
         bytes.extend_from_slice(&public_input.root.as_montgomery().to_bytes_be());
         bytes.extend_from_slice(&public_input.leaf.as_montgomery().to_bytes_be());
-        self.initialize(&bytes);
-        self.proof.clear();
+        bytes
     }
 }
 
 #[cfg(test)]
 use macros_decl::field_element;
+
 #[cfg(test)]
 use u256::U256;
 
@@ -42,6 +41,7 @@ pub const SHORT_PUBLIC_INPUT: PublicInput = PublicInput {
 
 #[cfg(test)]
 const SHORT_DIRECTIONS: [bool; 4] = [true, false, true, true];
+
 #[cfg(test)]
 const SHORT_PATH: [FieldElement; 4] = [
     field_element!("01"),
@@ -49,6 +49,7 @@ const SHORT_PATH: [FieldElement; 4] = [
     field_element!("03"),
     field_element!("04"),
 ];
+
 #[cfg(test)]
 pub fn short_private_input() -> PrivateInput {
     PrivateInput {
@@ -74,7 +75,7 @@ mod tests {
         // first constraint coefficient) matches the the one in
         // pedersen_merkle_proof_annotations.txt.
         let mut proof = ProverChannel::new();
-        proof.write(&SHORT_PUBLIC_INPUT);
+        proof.initialize(&Vec::from(&SHORT_PUBLIC_INPUT));
 
         // This is /pedersen merkle/STARK/Original/Commit on Trace
         proof.write(&Hash::new(hex!(

@@ -1,9 +1,15 @@
 // TODO: Naming?
 #![allow(clippy::module_name_repetitions)]
+#[cfg(feature = "std")]
+use crate::mmap_vec::MmapVec;
+#[cfg(feature = "std")]
+use primefield::fft::{fft_cofactor_permuted, permute_index};
 use primefield::{
     fft::{fft, ifft},
     FieldElement,
 };
+#[cfg(feature = "std")]
+use rayon::prelude::*;
 use std::{
     cmp::max,
     collections::BTreeMap,
@@ -28,6 +34,11 @@ impl DensePolynomial {
         Self(coefficients.to_vec())
     }
 
+    pub fn from_vec(coefficients: Vec<FieldElement>) -> Self {
+        assert!(coefficients.len().is_power_of_two());
+        Self(coefficients)
+    }
+
     // Note that the length of a polynomial is not its degree, because the leading
     // coefficient of a DensePolynomial can be zero.
     pub fn len(&self) -> usize {
@@ -40,6 +51,39 @@ impl DensePolynomial {
             result *= x;
             result += coefficient;
         }
+        result
+    }
+
+    #[cfg(feature = "std")]
+    pub fn low_degree_extension(&self, blowup: usize) -> MmapVec<FieldElement> {
+        // TODO: shift polynomial by FieldElement::GENERATOR outside of this function.
+        const SHIFT_FACTOR: FieldElement = FieldElement::GENERATOR;
+        let length = self.len() * blowup;
+        let generator =
+            FieldElement::root(length).expect("No generator for extended_domain_length.");
+        let mut result: MmapVec<FieldElement> = MmapVec::with_capacity(length);
+
+        // Initialize to zero
+        // TODO: Avoid initialization
+        result.resize(length, FieldElement::ZERO);
+
+        // Compute cosets in parallel
+        result
+            .as_mut_slice()
+            .par_chunks_mut(self.len())
+            .enumerate()
+            .for_each(|(i, slice)| {
+                let cofactor = &SHIFT_FACTOR * generator.pow(permute_index(blowup, i));
+                slice.clone_from_slice(&self.coefficients());
+                fft_cofactor_permuted(&cofactor, slice);
+            });
+        result
+    }
+
+    pub fn divide_out_point(&self, x: &FieldElement) -> Self {
+        let denominator = SparsePolynomial::new(&[(-x, 0), (FieldElement::ONE, 1)]);
+        let mut result = self - SparsePolynomial::new(&[(self.evaluate(x), 0)]);
+        result /= denominator;
         result
     }
 
@@ -145,17 +189,34 @@ commutative_binop!(DensePolynomial, Add, add, AddAssign, add_assign);
 commutative_binop!(DensePolynomial, Mul, mul, MulAssign, mul_assign);
 noncommutative_binop!(DensePolynomial, Sub, sub, SubAssign, sub_assign);
 
+impl MulAssign<&FieldElement> for DensePolynomial {
+    fn mul_assign(&mut self, other: &FieldElement) {
+        self.0.iter_mut().for_each(|x| *x *= other);
+    }
+}
+
+impl Mul<&FieldElement> for DensePolynomial {
+    type Output = Self;
+
+    fn mul(mut self, other: &FieldElement) -> Self {
+        self *= other;
+        self
+    }
+}
+
+impl Mul<DensePolynomial> for &FieldElement {
+    type Output = DensePolynomial;
+
+    fn mul(self, other: DensePolynomial) -> DensePolynomial {
+        other.mul(self)
+    }
+}
+
 impl Mul<&DensePolynomial> for &FieldElement {
     type Output = DensePolynomial;
 
     fn mul(self, other: &DensePolynomial) -> DensePolynomial {
         DensePolynomial(other.0.iter().map(|x| x * self).collect())
-    }
-}
-
-impl MulAssign<&FieldElement> for DensePolynomial {
-    fn mul_assign(&mut self, other: &FieldElement) {
-        self.0.iter_mut().for_each(|x| *x *= other);
     }
 }
 
