@@ -137,7 +137,7 @@ where
     info!("Compute the low degree extension of the trace table.");
     let trace_polynomials = trace.interpolate();
     let trace_lde = trace_polynomials
-        .iter()
+        .par_iter()
         .map(|p| p.low_degree_extension(params.blowup))
         .collect::<Vec<_>>();
 
@@ -167,7 +167,7 @@ where
 
     info!("Compute the low degree extension of constraint polynomials.");
     let constraint_lde = constraint_polynomials
-        .iter()
+        .par_iter()
         .map(|p| p.low_degree_extension(params.blowup))
         .collect::<Vec<_>>();
     // Construct a merkle tree over the LDE combined constraints
@@ -673,7 +673,7 @@ mod tests {
         assert_eq!(TPn[0].evaluate(&g.pow(1000)), trace[(1000, 0)]);
 
         let LDEn = TPn
-            .iter()
+            .par_iter()
             .map(|p| p.low_degree_extension(params.blowup))
             .collect::<Vec<_>>();
 
@@ -736,7 +736,7 @@ mod tests {
         assert_eq!(constraint_polynomials.len(), 1);
         assert_eq!(constraint_polynomials[0].len(), 1024);
         let CC = constraint_polynomials
-            .iter()
+            .par_iter()
             .map(|p| p.low_degree_extension(params.blowup))
             .collect::<Vec<_>>();
         // Checks that our constraints are properly calculated on the domain
