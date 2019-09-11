@@ -291,14 +291,14 @@ jobs:
       - run:
           name: Build wasm substrate runtime
           command: |
-            pushd substrate-runtime-wasm
+            pushd 0xchain/substrate-runtime-wasm
             cargo +$NIGHTLY build --release
             cp target/wasm32-unknown-unknown/release/substrate_node_runtime_wasm.wasm ./target/runtime.wasm
       - save-sccache-cache
       - run:
           name: Optimize for size
           command: |
-            pushd substrate-runtime-wasm/target
+            pushd 0xchain/substrate-runtime-wasm/target
             ls -l runtime.wasm
             wasm-gc runtime.wasm
             # OPT: Run wasm-opt -O3 runtime.wasm -o runtime.wasm
@@ -306,14 +306,14 @@ jobs:
       - run:
           name: List top 50 space consumers
           command: |
-            pushd substrate-runtime-wasm/target
+            pushd 0xchain/substrate-runtime-wasm/target
             twiggy top -n 50 runtime.wasm
       - persist_to_workspace:
-          root: substrate-runtime-wasm/target
+          root: 0xchain/substrate-runtime-wasm/target
           paths:
             - runtime.wasm
       - store_artifacts:
-          path: substrate-runtime-wasm/runtime.wasm
+          path: 0xchain/substrate-runtime-wasm/runtime.wasm
           destination: runtime.wasm
       - codechecks
   build-node:
@@ -327,7 +327,7 @@ jobs:
       - run:
           name: Build node executable
           command: |
-            pushd substrate-node
+            pushd 0xchain/substrate-node
             cp /tmp/workspace/runtime.wasm ./assets/runtime.wasm
             cargo build --release
             git checkout --force ./assets/runtime.wasm
