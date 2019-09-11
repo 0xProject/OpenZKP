@@ -1,5 +1,6 @@
 // This module abstracts low-level `unsafe` behaviour
 #![allow(unsafe_code)]
+use log::*;
 use memmap::{MmapMut, MmapOptions};
 use std::{
     cmp::max,
@@ -14,6 +15,7 @@ use tempfile::tempfile;
 // TODO: Variant of MmapVec where it switched between Vec and Mmap after
 //       a treshold size.
 
+#[derive(Debug)] // TODO: Custom implementation
 pub struct MmapVec<T: Clone> {
     mmap:     MmapMut,
     length:   usize,
@@ -29,6 +31,7 @@ impl<T: Clone> MmapVec<T> {
         // TODO: Round up to nearest 4KB
         // Note: mmaped files can not be empty, so we use at leas one byte.
         let size = max(1, capacity * size_of::<T>());
+        info!("Allocating {} MB in temp file", size / 1_000_000);
         file.set_len(size as u64)
             .expect("cannot set mmap file length");
         let mmap = unsafe { MmapOptions::new().len(size).map_mut(&file) }
@@ -54,6 +57,25 @@ impl<T: Clone> MmapVec<T> {
         self[end] = next;
     }
 
+    pub fn resize(&mut self, size: usize, fill: T) {
+        if size > self.capacity {
+            panic!("MmapVec is at capacity")
+        }
+        while self.length < size {
+            self.push(fill.clone());
+        }
+        self.length = size;
+    }
+
+    pub fn extend_from_slice(&mut self, slice: &[T]) {
+        if self.length + slice.len() > self.capacity {
+            panic!("MmapVec would grow beyond capacity")
+        }
+        let start = self.length;
+        self.length += slice.len();
+        self.as_mut_slice()[start..].clone_from_slice(slice);
+    }
+
     #[inline]
     pub fn as_slice(&self) -> &[T] {
         self
@@ -62,6 +84,23 @@ impl<T: Clone> MmapVec<T> {
     #[inline]
     pub fn as_mut_slice(&mut self) -> &mut [T] {
         self
+    }
+}
+
+impl<T: Clone + PartialEq> PartialEq for MmapVec<T> {
+    fn eq(&self, other: &Self) -> bool {
+        if self.len() != other.len() {
+            return false;
+        }
+        self.iter().zip(other.iter()).all(|(a, b)| a == b)
+    }
+}
+
+impl<T: Clone> Clone for MmapVec<T> {
+    fn clone(&self) -> Self {
+        let mut clone = Self::with_capacity(self.capacity);
+        clone.extend(self.iter());
+        clone
     }
 }
 

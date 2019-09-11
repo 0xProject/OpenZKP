@@ -36,7 +36,7 @@ harness = false
 required-features = ["bench"]
 
 [features]
-default = [ "std", "prover", "mmap" ]
+default = [ "std", "prover", "mmap", "examples" ]
 std = [
     "macros-decl/std",
     "u256/std",
