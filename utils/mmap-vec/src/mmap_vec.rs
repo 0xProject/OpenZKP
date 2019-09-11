@@ -142,8 +142,6 @@ impl<T: Clone> DerefMut for MmapVec<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use primefield::FieldElement;
-    use u256::U256;
 
     #[test]
     fn test_empty() {
@@ -153,38 +151,38 @@ mod tests {
 
     #[test]
     fn test_len() {
-        let mut m: MmapVec<FieldElement> = MmapVec::with_capacity(2);
-        m.push(FieldElement::ONE);
-        m.push(FieldElement::ZERO);
+        let mut m: MmapVec<String> = MmapVec::with_capacity(2);
+        m.push("Hello".to_string());
+        m.push("World".to_string());
         assert_eq!(m.len(), 2);
     }
 
     #[test]
     fn test_slice() {
         fn slice_function<T>(_x: &[T]) {}
-        let m: MmapVec<FieldElement> = MmapVec::with_capacity(1);
+        let m: MmapVec<String> = MmapVec::with_capacity(1);
         slice_function(m.as_slice());
     }
 
     #[test]
     fn test_mut_slice() {
         fn mut_slice_function<T>(mut _x: &[T]) {}
-        let mut m: MmapVec<FieldElement> = MmapVec::with_capacity(1);
+        let mut m: MmapVec<String> = MmapVec::with_capacity(1);
         mut_slice_function(m.as_mut_slice());
     }
 
     #[test]
     fn field_element_mmap_vec() {
-        let mut m: MmapVec<FieldElement> = MmapVec::with_capacity(10);
-        let v = vec![FieldElement::ONE; 10];
+        let mut m: MmapVec<usize> = MmapVec::with_capacity(10);
+        let v = vec![42; 10];
         m.extend(v.as_slice());
 
         for (i, x) in m.iter_mut().enumerate() {
-            *x += FieldElement::from(U256::from(i));
+            *x += i;
         }
 
-        for i in 0..10_u64 {
-            assert_eq!(m[i as usize], FieldElement::from(U256::from(i + 1)))
+        for i in 0..10 {
+            assert_eq!(m[i], 42 + i)
         }
     }
 
