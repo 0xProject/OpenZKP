@@ -1,5 +1,5 @@
 use env_logger;
-use log::info;
+use log::{error, info};
 use macros_decl::{field_element, hex};
 use primefield::FieldElement;
 use stark::{
@@ -18,15 +18,17 @@ use u256::U256;
 
 struct TracingAllocator;
 const INFO: usize = 1_000_000;
-const REJECT: usize = 10_000_000;
+const ERROR: usize = 10_000_000;
+const REJECT: usize = 1_000_000_000;
 
 unsafe impl GlobalAlloc for TracingAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         if layout.size() > INFO {
-            info!("Allocating {:?} MB on heap", layout.size() / 1_000_000);
-        }
-        if layout.size() > REJECT {
-            panic!("Trying to allocate {:?} MB", layout.size() / 1_000_000);
+            if layout.size() > ERROR {
+                error!("Allocating {:?} MB on heap", layout.size() / 1_000_000);
+            } else {
+                info!("Allocating {:?} MB on heap", layout.size() / 1_000_000);
+            }
         }
         System.alloc(layout)
     }
