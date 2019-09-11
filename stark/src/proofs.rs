@@ -136,7 +136,10 @@ where
     // Compute the low degree extension of the trace table.
     info!("Compute the low degree extension of the trace table.");
     let trace_polynomials = trace.interpolate();
-    let trace_lde = calculate_low_degree_extensions(&trace_polynomials, params.blowup);
+    let trace_lde = trace_polynomials
+        .iter()
+        .map(|p| p.low_degree_extension(params.blowup))
+        .collect::<Vec<_>>();
 
     // Construct a merkle tree over the LDE trace
     // and write the root to the channel.
@@ -163,7 +166,10 @@ where
     );
 
     info!("Compute the low degree extension of constraint polynomials.");
-    let constraint_lde = calculate_low_degree_extensions(&constraint_polynomials, params.blowup);
+    let constraint_lde = constraint_polynomials
+        .iter()
+        .map(|p| p.low_degree_extension(params.blowup))
+        .collect::<Vec<_>>();
     // Construct a merkle tree over the LDE combined constraints
     // and write the root to the channel.
     info!("Compute the merkle tree over the LDE constraint polynomials.");
@@ -260,44 +266,6 @@ fn get_indices(num: usize, bits: u32, proof: &mut ProverChannel) -> Vec<usize> {
     query_indices.truncate(num);
     (&mut query_indices).sort_unstable();
     query_indices
-}
-
-pub fn calculate_low_degree_extensions(
-    polynomials: &[DensePolynomial],
-    blowup: usize,
-) -> Vec<MmapVec<FieldElement>> {
-    let mut low_degree_extensions: Vec<MmapVec<FieldElement>> =
-        Vec::with_capacity(polynomials.len());
-    polynomials
-        .par_iter()
-        .map(|p| evaluate_polynomial_on_domain(&p, blowup))
-        .collect_into_vec(&mut low_degree_extensions);
-    low_degree_extensions
-}
-
-// TODO: shift polynomial by FieldElement::GENERATOR outside of this function.
-// TODO fix name typo
-fn evaluate_polynomial_on_domain(
-    constraint_polynomial: &DensePolynomial,
-    blowup: usize,
-) -> MmapVec<FieldElement> {
-    let extended_domain_length = constraint_polynomial.len() * blowup;
-    let extended_domain_generator = FieldElement::root(extended_domain_length)
-        .expect("No generator for extended_domain_length.");
-    let shift_factor = FieldElement::GENERATOR;
-
-    let mut result: MmapVec<FieldElement> = MmapVec::with_capacity(extended_domain_length);
-    for index in 0..blowup {
-        let reverse_index = fft::permute_index(blowup, index);
-        let cofactor =
-            &shift_factor * extended_domain_generator.pow(U256::from(reverse_index as u64));
-
-        // TODO: Copy free
-        let mut copy = constraint_polynomial.coefficients().to_owned();
-        fft_cofactor_permuted(&cofactor, &mut copy);
-        result.extend(copy);
-    }
-    result
 }
 
 pub fn get_constraint_polynomials(
@@ -440,7 +408,9 @@ fn perform_fri_layering(
     // TODO: fold fri_polynomial without cloning it first.
     let mut p = fri_polynomial.clone();
     for &n_reductions in &params.fri_layout {
-        let layer = evaluate_polynomial_on_domain(&p, params.blowup).to_vec();
+        // TODO: Avoid copies
+        let layer = p.low_degree_extension(params.blowup).to_vec();
+
         // FRI layout values are small.
         #[allow(clippy::cast_possible_truncation)]
         let coset_size = 2_usize.pow(n_reductions as u32);
@@ -702,7 +672,10 @@ mod tests {
         // Checks that the trace table polynomial interpolation is working
         assert_eq!(TPn[0].evaluate(&g.pow(1000)), trace[(1000, 0)]);
 
-        let LDEn = calculate_low_degree_extensions(&TPn, params.blowup);
+        let LDEn = TPn
+            .iter()
+            .map(|p| p.low_degree_extension(params.blowup))
+            .collect::<Vec<_>>();
 
         // Checks that the low degree extension calculation is working
         let i = 13644_usize;
@@ -762,7 +735,10 @@ mod tests {
         );
         assert_eq!(constraint_polynomials.len(), 1);
         assert_eq!(constraint_polynomials[0].len(), 1024);
-        let CC = calculate_low_degree_extensions(&constraint_polynomials, params.blowup);
+        let CC = constraint_polynomials
+            .iter()
+            .map(|p| p.low_degree_extension(params.blowup))
+            .collect::<Vec<_>>();
         // Checks that our constraints are properly calculated on the domain
         assert_eq!(
             CC[0][fft::permute_index(eval_domain_size, 123)].clone(),

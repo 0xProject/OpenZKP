@@ -1,7 +1,8 @@
 // TODO: Naming?
 #![allow(clippy::module_name_repetitions)]
+use crate::mmap_vec::MmapVec;
 use primefield::{
-    fft::{fft, ifft},
+    fft::{fft, fft_cofactor_permuted, ifft, permute_index},
     FieldElement,
 };
 use std::{
@@ -10,7 +11,7 @@ use std::{
     ops::{Add, AddAssign, DivAssign, Mul, MulAssign, Sub, SubAssign},
     prelude::v1::*,
 };
-use u256::{commutative_binop, noncommutative_binop};
+use u256::{commutative_binop, noncommutative_binop, U256};
 
 #[derive(PartialEq, Clone)]
 #[cfg_attr(feature = "std", derive(Debug))]
@@ -44,6 +45,28 @@ impl DensePolynomial {
         for coefficient in self.0.iter().rev() {
             result *= x;
             result += coefficient;
+        }
+        result
+    }
+
+    pub fn low_degree_extension(&self, blowup: usize) -> MmapVec<FieldElement> {
+        // TODO: Reduce copies
+        let extended_domain_length = self.len() * blowup;
+        let extended_domain_generator = FieldElement::root(extended_domain_length)
+            .expect("No generator for extended_domain_length.");
+        // TODO: shift polynomial by FieldElement::GENERATOR outside of this function.
+        let shift_factor = FieldElement::GENERATOR;
+
+        let mut result: MmapVec<FieldElement> = MmapVec::with_capacity(extended_domain_length);
+        for index in 0..blowup {
+            let reverse_index = permute_index(blowup, index);
+            let cofactor =
+                &shift_factor * extended_domain_generator.pow(U256::from(reverse_index as u64));
+
+            // TODO: Copy free
+            let mut copy = self.coefficients().to_owned();
+            fft_cofactor_permuted(&cofactor, &mut copy);
+            result.extend(copy);
         }
         result
     }

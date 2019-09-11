@@ -72,8 +72,6 @@ impl TraceTable {
             // working on whole rows at a time. That is, it is vectorized over rows.
             // OPT: Use an in-place FFT. We don't need the trace table after this,
             // so it can be replaced by a matrix of coefficients.
-            // OPT: Avoid double vector allocation here. Implement From<Vec<FieldElement>> for
-            // DensePolynomial?
             .map(|j| {
                 // Copy column to vec
                 let mut vec = Vec::with_capacity(self.num_rows());
