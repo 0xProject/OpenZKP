@@ -238,23 +238,8 @@ where
     }
     let trace_getter = |i, j| trace_values.get(&(i, j)).unwrap().clone();
 
-    let claimed_oods_value =
-        combine_constraints(&constraints, &constraint_coefficients).eval(&trace_getter, &oods_point);
-
-    // let mut claimed_oods_value = FieldElement::ZERO;
-    // for (i, constraint) in constraints.iter().enumerate() {
-    //     let mut x =
-    // (constraint.base)(&mock_polynomials).evaluate(&FieldElement::ONE);
-    //     x *= constraint.numerator.evaluate(&oods_point);
-    //     x /= constraint.denominator.evaluate(&oods_point);
-    //     claimed_oods_value += &constraint_coefficients[2 * i] * &x;
-    //
-    //     // TODO: make this work when params.constraints_degree_bound is not 1.
-    //     let trace_length = 100;
-    //     let adjustment_degree = constraint.denominator.degree(trace_length) -
-    // constraint.numerator.degree(trace_length);     let adjustment =
-    // oods_point.pow(adjustment_degree);     claimed_oods_value +=
-    // &constraint_coefficients[2 * i + 1] * adjustment * &x; }
+    let claimed_oods_value = combine_constraints(&constraints, &constraint_coefficients, trace_len)
+        .eval(&trace_getter, &oods_point);
 
     claimed_oods_value == oods_values[2 * trace_cols]
 }

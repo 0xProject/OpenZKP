@@ -2,7 +2,7 @@ use crate::{
     channel::*,
     constraint::Constraint,
     polynomial::SparsePolynomial,
-    rational_expression::{RationalExpression, RationalExpression::Trace, RationalExpression::X, RationalExpression::Constant},
+    rational_expression::RationalExpression::{self, Constant, Trace, X},
 };
 use primefield::FieldElement;
 use std::{convert::TryInto, prelude::v1::*};

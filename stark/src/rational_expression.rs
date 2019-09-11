@@ -2,7 +2,7 @@ use crate::polynomial::{DensePolynomial, SparsePolynomial};
 use primefield::FieldElement;
 use std::{
     cmp::max,
-    ops::{Add, Mul, Sub, Div},
+    ops::{Add, Div, Mul, Sub},
 };
 
 #[derive(Clone, Debug)]
@@ -86,7 +86,11 @@ impl RationalExpression {
         }
     }
 
-    pub fn eval(&self, trace_table: &dyn Fn(usize, isize) -> FieldElement, x: &FieldElement) -> FieldElement {
+    pub fn eval(
+        &self,
+        trace_table: &dyn Fn(usize, isize) -> FieldElement,
+        x: &FieldElement,
+    ) -> FieldElement {
         use RationalExpression::*;
         match self {
             X => x.clone(),
@@ -94,7 +98,7 @@ impl RationalExpression {
             &Trace(i, j) => trace_table(i, j),
             Add(a, b) => a.eval(trace_table, x) + b.eval(trace_table, x),
             Sub(a, b) => a.eval(trace_table, x) - b.eval(trace_table, x),
-            Self::Div(_, _) => panic!(),
+            Self::Div(..) => panic!(),
             _ => unimplemented!(),
         }
     }
@@ -111,7 +115,7 @@ impl RationalExpression {
             Self::Sub(a, b) => a.eval_on_domain(trace_table) - b.eval_on_domain(trace_table),
             Self::Mul(a, b) => a.eval_on_domain(trace_table) * b.eval_on_domain(trace_table),
             Self::Div(a, b) => a.eval_on_domain(trace_table) / b.get_denominator(),
-            Self::Pow(a, n) => panic!(),    
+            Self::Pow(a, n) => panic!(),
         }
     }
 
@@ -124,7 +128,7 @@ impl RationalExpression {
             Self::Trace(..) => panic!(),
             Self::Mul(a, b) => a.get_denominator() * b.get_denominator(),
             Self::Pow(a, n) => panic!(),
-            Self::Div(_, _) => panic!(),
+            Self::Div(..) => panic!(),
         }
     }
 }

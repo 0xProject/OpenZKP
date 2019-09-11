@@ -307,6 +307,7 @@ pub fn get_constraint_polynomials(
     constraint_coefficients: &[FieldElement],
     constraints_degree_bound: usize,
 ) -> Vec<DensePolynomial> {
+    let trace_length = trace_polynomials[0].len();
     let traces: Vec<DensePolynomial> = trace_polynomials.to_vec();
     let trace_getter = Box::new(move |i, _| {
         let p: &DensePolynomial = traces.get(i).unwrap();
@@ -314,7 +315,8 @@ pub fn get_constraint_polynomials(
     });
 
     let constraint_polynomial =
-        combine_constraints(&constraints, &constraint_coefficients).eval_on_domain(&trace_getter);
+        combine_constraints(&constraints, &constraint_coefficients, trace_length)
+            .eval_on_domain(&trace_getter);
 
     let mut constraint_polynomials: Vec<Vec<FieldElement>> = vec![vec![]; constraints_degree_bound];
     for chunk in constraint_polynomial
