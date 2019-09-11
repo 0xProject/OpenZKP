@@ -61,15 +61,6 @@ pub use verifier::check_proof;
 #[cfg_attr(feature = "std", macro_use)]
 extern crate no_std_compat as std;
 
-// Conditionally include MmapVec. If the feature is disabled substitute Vec
-// instead.
-#[cfg(feature = "mmap")]
-mod mmap_vec;
-#[cfg(not(feature = "mmap"))]
-mod mmap_vec {
-    pub use std::vec::Vec as MmapVec;
-}
-
 // Prover functionality is only available if the feature is set. Currently
 // requires std. TODO: Make it work without std.
 //
@@ -86,12 +77,3 @@ mod trace_table;
 pub use proofs::stark_proof;
 #[cfg(feature = "prover")]
 pub use trace_table::TraceTable;
-
-#[macro_export]
-macro_rules! require {
-    ($condition:expr, $err:expr) => {
-        if !$condition {
-            return Err($err);
-        }
-    };
-}

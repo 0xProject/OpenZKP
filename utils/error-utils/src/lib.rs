@@ -38,16 +38,11 @@
     // TODO: missing_debug_implementations,
 ))]
 
-#[cfg(feature = "std")]
-mod mmap_vec;
-
-#[cfg(feature = "std")]
-pub use crate::mmap_vec::MmapVec;
-
-// In no std mode, substitute no_std_compat
-#[cfg(not(feature = "std"))]
-#[cfg_attr(feature = "std", macro_use)]
-extern crate no_std_compat as std;
-
-#[cfg(not(feature = "std"))]
-pub use std::vec::Vec as MmapVec;
+#[macro_export]
+macro_rules! require {
+    ($condition:expr, $err:expr) => {
+        if !$condition {
+            return Err($err);
+        }
+    };
+}

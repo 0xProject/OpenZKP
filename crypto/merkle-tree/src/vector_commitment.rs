@@ -1,4 +1,5 @@
-use super::{Commitment, Hash, Hashable, Result, Tree};
+use crate::{Commitment, Result, Tree};
+use hash::{Hash, Hashable};
 use std::prelude::v1::*;
 
 #[cfg(feature = "mmap")]

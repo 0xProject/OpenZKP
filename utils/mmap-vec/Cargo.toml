@@ -1,5 +1,20 @@
 [package]
-name = "tracing-allocator"
+name = "mmap-vec"
 version = "0.1.0"
 authors = ["Remco Bloemen <remco@0x.org>"]
 edition = "2018"
+
+[dependencies]
+no-std-compat = { version = "0.1.0", features = [ "alloc" ] }
+log = { version = "0.4.8", default_features = false }
+memmap = { version = "^0.7.0", optional = true }
+tempfile = { version = "^3.1.0", optional = true }
+
+[features]
+default = ["std"]
+std = [
+    "no-std-compat/std",
+    "log/std",
+    "memmap",
+    "tempfile"
+]

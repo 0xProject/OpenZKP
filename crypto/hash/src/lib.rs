@@ -38,16 +38,8 @@
     // TODO: missing_debug_implementations,
 ))]
 
-#[cfg(feature = "std")]
-mod mmap_vec;
+mod hash;
+mod hashable;
+mod masked_keccak;
 
-#[cfg(feature = "std")]
-pub use crate::mmap_vec::MmapVec;
-
-// In no std mode, substitute no_std_compat
-#[cfg(not(feature = "std"))]
-#[cfg_attr(feature = "std", macro_use)]
-extern crate no_std_compat as std;
-
-#[cfg(not(feature = "std"))]
-pub use std::vec::Vec as MmapVec;
+pub use crate::{hash::Hash, hashable::Hashable, masked_keccak::MaskedKeccak};

@@ -1,5 +1,6 @@
-use super::{Commitment, Error, Hash, Hashable, Index, Node, Result};
-use crate::require;
+use crate::{Commitment, Error, Index, Node, Result};
+use error_utils::require;
+use hash::{Hash, Hashable};
 use itertools::Itertools;
 use std::{collections::VecDeque, prelude::v1::*};
 

@@ -1,5 +1,6 @@
-use super::{Error, Hash, Index, Result};
-use crate::require;
+use crate::{Error, Index, Result};
+use error_utils::require;
+use hash::Hash;
 use itertools::Itertools;
 use std::prelude::v1::*;
 

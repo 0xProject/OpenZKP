@@ -1,5 +1,7 @@
-use super::{Commitment, Error, Hash, Hashable, Index, Node, Proof, Result, VectorCommitment};
-use crate::{mmap_vec::MmapVec, require};
+use crate::{Commitment, Error, Index, Node, Proof, Result, VectorCommitment};
+use error_utils::require;
+use hash::{Hash, Hashable};
+use mmap_vec::MmapVec;
 use std::collections::VecDeque;
 
 #[cfg(feature = "std")]

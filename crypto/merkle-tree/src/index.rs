@@ -1,5 +1,5 @@
-use super::{Error, Result};
-use crate::require;
+use crate::{Error, Result};
+use error_utils::require;
 use std::{convert::TryFrom, ops::RangeInclusive};
 
 #[cfg(feature = "std")]

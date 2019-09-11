@@ -1,5 +1,4 @@
-use super::{Hash, Hashable};
-use crate::masked_keccak::MaskedKeccak;
+use hash::{Hash, Hashable, MaskedKeccak};
 
 #[derive(Clone)]
 #[cfg_attr(feature = "std", derive(Debug))]
