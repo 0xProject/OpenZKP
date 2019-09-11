@@ -141,11 +141,10 @@ impl<T: Trait> Module<T> {
         if status.0 + status.1 == number_of_validators {
             // TODO - Abstract as adjustable constants [it is set as 2/3 approval needed
             // right now]
-            println!("Ran check");
+            let last_link = <LinkTop<T>>::get();
             if 3 * status.0 >= 2 * number_of_validators {
                 Self::deposit_event(Event::Finalized(which, vault_hash));
                 // Clears out unneeded hashes and resets to allow next proof.
-                let last_link = <LinkTop<T>>::get();
                 let previous = <LinkedHash<T>>::get(last_link - 1);
                 for hash_index in previous..which {
                     // Removes the unneeded hashes from runtime memory.
@@ -161,6 +160,8 @@ impl<T: Trait> Module<T> {
             <VoteCount<T>>::kill();
             // Allows another proof submission
             <NextProof<T>>::put(true);
+            // Clear the unneeded link pointer
+            <LinkedHash<T>>::remove(last_link);
         }
     }
 
@@ -169,16 +170,19 @@ impl<T: Trait> Module<T> {
         <VaultChain<T>>::insert(index, vault_hash);
         <MaxIndex<T>>::put(index + 1);
     }
-    
+
     // TODO - When we figure out other ways to add validators we can remove this
     #[cfg(feature = "std")]
     fn add_validator(substrate_key: T::AccountId, stark_key: PublicKey) -> Result {
         let num = <NumValidators<T>>::get();
-        <NumValidators<T>>::put(num+1);
+        <NumValidators<T>>::put(num + 1);
         <Validators<T>>::insert(substrate_key, stark_key);
         Ok(())
     }
+
+    // TODO - Weird flag about this being unused when it shouldn't be
     #[cfg(feature = "std")]
+    #[allow(dead_code)]
     fn open_proof_at(which: u32) {
         <NextProof<T>>::put(false);
         <LinkedHash<T>>::insert(<LinkTop<T>>::get(), which);
@@ -199,13 +203,12 @@ decl_event! {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     use macros_decl::u256h;
-    use u256::U256;
+    use primefield::FieldElement;
     use primitives::{Blake2Hasher, H256};
     use runtime_io::with_externalities;
     use runtime_primitives::{
@@ -213,13 +216,13 @@ mod tests {
         traits::{BlakeTwo256, IdentityLookup},
         BuildStorage,
     };
-    use primefield::FieldElement;
-    use starkdex::wrappers::{public_key, sign};
     use stark::{
         fibonacci::{get_fibonacci_constraints, get_trace_table, PrivateInput, PublicInput},
         stark_proof, ProofParams,
     };
+    use starkdex::wrappers::{public_key, sign};
     use support::{assert_ok, impl_outer_origin};
+    use u256::U256;
 
     impl_outer_origin! {
         pub enum Origin for FinalityTest {}
@@ -267,11 +270,7 @@ mod tests {
             .0;
         t.extend(
             GenesisConfig::<FinalityTest> {
-                authorities: vec![
-                    (0, paul_public),
-                    (1, remco_public),
-                    (2, mason_public),
-                ],
+                authorities: vec![(0, paul_public), (1, remco_public), (2, mason_public)],
             }
             .build_storage()
             .unwrap()
@@ -298,7 +297,7 @@ mod tests {
             &get_trace_table(1024, &private),
             &constraints,
             &public,
-            & ProofParams {
+            &ProofParams {
                 blowup:                   16,
                 pow_bits:                 12,
                 queries:                  20,
@@ -309,23 +308,23 @@ mod tests {
 
         with_externalities(&mut new_test_ext(), || {
             FinalityProof::add_hash([1; 32]);
-            // Note duplicates are possible in block hash [substrate blocks confirm fast so may not include any tx]
+            // Note duplicates are possible in block hash [substrate blocks confirm fast so
+            // may not include any tx]
             FinalityProof::add_hash([1; 32]);
             FinalityProof::add_hash([2; 32]);
             FinalityProof::add_hash([3; 32]);
             assert_ok!(FinalityProof::prove_chain(
-                    Origin::signed(0), 
-                    RecordedProof{
-                        proof:  actual.proof.clone(),
-                        public: public.into(),
-                    },
-                    3 
-                ));
+                Origin::signed(0),
+                RecordedProof {
+                    proof:  actual.proof.clone(),
+                    public: public.into(),
+                },
+                3
+            ));
         })
     }
     #[test]
     fn updates_properly_with_approval() {
-
         let paul_private =
             u256h!("02c1e9550e66958296d11b60f8e8e7a7ad990d07fa65d5f7652c4a6c87d4e3cc");
         let remco_private =
@@ -341,22 +340,57 @@ mod tests {
 
         with_externalities(&mut new_test_ext(), || {
             FinalityProof::add_hash(hash_1);
-            // Note duplicates are possible in block hash [substrate blocks confirm fast so may not include any tx]
+            // Note duplicates are possible in block hash [substrate blocks confirm fast so
+            // may not include any tx]
             FinalityProof::add_hash(hash_1);
             FinalityProof::add_hash(hash_2);
             FinalityProof::open_proof_at(3);
-            assert_ok!(FinalityProof::issue_signature(Origin::signed(0), paul_sig.into()));
-            assert_ok!(FinalityProof::issue_signature(Origin::signed(1), remco_sig.into()));
-            assert_ok!(FinalityProof::issue_signature(Origin::signed(2), mason_sig.into()));
+            assert_ok!(FinalityProof::issue_signature(
+                Origin::signed(0),
+                paul_sig.into()
+            ));
+            assert_ok!(FinalityProof::issue_signature(
+                Origin::signed(1),
+                remco_sig.into()
+            ));
+            assert_ok!(FinalityProof::issue_signature(
+                Origin::signed(2),
+                mason_sig.into()
+            ));
             assert_eq!(FinalityProof::get_current_link(), 2);
             assert_eq!(FinalityProof::get_ready_for_proof(), true);
             assert_eq!(FinalityProof::get_vault_hash(2), [0; 32]);
             assert_eq!(FinalityProof::get_vault_hash(3), hash_2);
         })
-        
     }
     #[test]
     fn rebukes_proofs_properly() {
+        let paul_private =
+            u256h!("02c1e9550e66958296d11b60f8e8e7a7ad990d07fa65d5f7652c4a6c87d4e3cc");
 
+        let hash_1 = hash([1; 32], [1; 32]);
+        let hash_2 = hash([2; 32], [2; 32]);
+        let paul_sig = sign(&hash_2, &paul_private.to_bytes_be());
+
+        with_externalities(&mut new_test_ext(), || {
+            FinalityProof::add_hash(hash_1);
+            // Note duplicates are possible in block hash [substrate blocks confirm fast so
+            // may not include any tx]
+            FinalityProof::add_hash(hash_1);
+            FinalityProof::add_hash(hash_2);
+            FinalityProof::open_proof_at(3);
+            assert_ok!(FinalityProof::issue_signature(
+                Origin::signed(0),
+                paul_sig.into()
+            ));
+            assert_ok!(FinalityProof::issue_rebuke(Origin::signed(1)));
+            assert_ok!(FinalityProof::issue_rebuke(Origin::signed(2)));
+            assert_eq!(FinalityProof::get_current_link(), 1);
+            assert_eq!(FinalityProof::get_ready_for_proof(), true);
+            assert_eq!(FinalityProof::get_hash_link(1), 0);
+            assert_eq!(FinalityProof::get_vault_hash(1), hash_1);
+            assert_eq!(FinalityProof::get_vault_hash(2), hash_1);
+            assert_eq!(FinalityProof::get_vault_hash(3), hash_2);
+        })
     }
 }
