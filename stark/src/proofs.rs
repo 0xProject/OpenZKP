@@ -14,10 +14,7 @@ use crate::{
 };
 use itertools::Itertools;
 use log::info;
-use primefield::{
-    fft::{self, fft_cofactor_permuted},
-    FieldElement,
-};
+use primefield::FieldElement;
 use rayon::prelude::*;
 use std::{prelude::v1::*, vec};
 use u256::U256;
@@ -304,7 +301,7 @@ pub fn get_constraint_polynomials(
     }
     constraint_polynomials
         .into_iter()
-        .map(|x| DensePolynomial::from_vec(x))
+        .map(DensePolynomial::from_vec)
         .collect()
 }
 
@@ -456,7 +453,7 @@ mod tests {
         verifier::check_proof,
     };
     use macros_decl::{field_element, hex, u256h};
-    use primefield::geometric_series::geometric_series;
+    use primefield::{fft::permute_index, geometric_series::geometric_series};
     use u256::U256;
 
     #[test]
@@ -668,7 +665,7 @@ mod tests {
 
         // Checks that the low degree extension calculation is working
         let i = 13644_usize;
-        let reverse_i = fft::permute_index(eval_domain_size, i);
+        let reverse_i = permute_index(eval_domain_size, i);
         let eval_offset_x = geometric_series(&gen, &omega)
             .take(eval_domain_size)
             .collect::<Vec<_>>();
@@ -730,7 +727,7 @@ mod tests {
             .collect::<Vec<_>>();
         // Checks that our constraints are properly calculated on the domain
         assert_eq!(
-            CC[0][fft::permute_index(eval_domain_size, 123)].clone(),
+            CC[0][permute_index(eval_domain_size, 123)].clone(),
             field_element!("05b841208b357e29ac1fe7a654efebe1ae152104571e695f311a353d4d5cabfb")
         );
 

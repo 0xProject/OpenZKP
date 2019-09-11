@@ -191,9 +191,9 @@ impl MulAssign<&FieldElement> for DensePolynomial {
 }
 
 impl Mul<&FieldElement> for DensePolynomial {
-    type Output = DensePolynomial;
+    type Output = Self;
 
-    fn mul(mut self, other: &FieldElement) -> DensePolynomial {
+    fn mul(mut self, other: &FieldElement) -> Self {
         self *= other;
         self
     }

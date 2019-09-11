@@ -26,6 +26,9 @@ unsafe impl GlobalAlloc for TracingAllocator {
         if layout.size() > INFO {
             if layout.size() > ERROR {
                 error!("Allocating {:?} MB on heap", layout.size() / 1_000_000);
+                if layout.size() > REJECT {
+                    panic!("Rejecting allocation");
+                }
             } else {
                 info!("Allocating {:?} MB on heap", layout.size() / 1_000_000);
             }
