@@ -1,6 +1,6 @@
 use crate::{
     channel::{ProverChannel, RandomGenerator, Writable},
-    constraint::Constraint,
+    constraint::{combine_constraints, Constraint},
     hash::Hash,
     hashable::Hashable,
     masked_keccak::MaskedKeccak,
@@ -307,24 +307,14 @@ pub fn get_constraint_polynomials(
     constraint_coefficients: &[FieldElement],
     constraints_degree_bound: usize,
 ) -> Vec<DensePolynomial> {
-    let mut constraint_polynomial =
-        DensePolynomial::new(&vec![FieldElement::ZERO; constraints_degree_bound]);
-    let trace_length = trace_polynomials[0].len();
-    for (i, constraint) in constraints.iter().enumerate() {
-        let mut p = (constraint.base)(trace_polynomials);
-        let mut base_length = p.len();
-        if base_length > trace_length {
-            base_length -= 1;
-        }
-        p *= constraint.numerator.clone();
-        p /= constraint.denominator.clone();
-        constraint_polynomial += &(&constraint_coefficients[2 * i] * &p);
-        let adjustment_degree = constraints_degree_bound * trace_length - base_length
-            + constraint.denominator.degree()
-            - constraint.numerator.degree();
-        p *= SparsePolynomial::new(&[(FieldElement::ONE, adjustment_degree)]);
-        constraint_polynomial += &constraint_coefficients[2 * i + 1] * &p;
-    }
+    let traces: Vec<DensePolynomial> = trace_polynomials.to_vec();
+    let trace_getter = Box::new(move |i, _| {
+        let p: &DensePolynomial = traces.get(i).unwrap();
+        p.next()
+    });
+
+    let constraint_polynomial =
+        combine_constraints(&constraints, &constraint_coefficients).eval_on_domain(&trace_getter);
 
     let mut constraint_polynomials: Vec<Vec<FieldElement>> = vec![vec![]; constraints_degree_bound];
     for chunk in constraint_polynomial

@@ -1,6 +1,6 @@
 use crate::{
     channel::*,
-    constraint::Constraint,
+    constraint::{combine_constraints, Constraint},
     hash::*,
     merkle_tree::{Commitment, Proof},
     polynomial::DensePolynomial,
@@ -231,28 +231,30 @@ where
     }
 
     // Checks that the oods point calculation matches the constraint calculation
-    // TODO: don't use DensePolynomial for this.
-    let mut mock_polynomials: Vec<DensePolynomial> = vec![];
+    let mut trace_values: BTreeMap<(usize, isize), FieldElement> = BTreeMap::new();
     for i in 0..trace_cols {
-        let fake_polynomial = DensePolynomial::new(&ifft(&[
-            oods_values[2 * i].clone(),
-            oods_values[2 * i + 1].clone(),
-        ]));
-        mock_polynomials.push(fake_polynomial);
+        trace_values.insert((i, 0), oods_values[2 * i].clone());
+        trace_values.insert((i, 1), oods_values[2 * i + 1].clone());
     }
+    let trace_getter = |i, j| trace_values.get(&(i, j)).unwrap().clone();
 
-    let mut claimed_oods_value = FieldElement::ZERO;
-    for (i, constraint) in constraints.iter().enumerate() {
-        let mut x = (constraint.base)(&mock_polynomials).evaluate(&FieldElement::ONE);
-        x *= constraint.numerator.evaluate(&oods_point);
-        x /= constraint.denominator.evaluate(&oods_point);
-        claimed_oods_value += &constraint_coefficients[2 * i] * &x;
+    let claimed_oods_value =
+        combine_constraints(&constraints, &constraint_coefficients).eval(&trace_getter, &oods_point);
 
-        // TODO: make this work when params.constraints_degree_bound is not 1.
-        let adjustment_degree = constraint.denominator.degree() - constraint.numerator.degree();
-        let adjustment = oods_point.pow(adjustment_degree);
-        claimed_oods_value += &constraint_coefficients[2 * i + 1] * adjustment * &x;
-    }
+    // let mut claimed_oods_value = FieldElement::ZERO;
+    // for (i, constraint) in constraints.iter().enumerate() {
+    //     let mut x =
+    // (constraint.base)(&mock_polynomials).evaluate(&FieldElement::ONE);
+    //     x *= constraint.numerator.evaluate(&oods_point);
+    //     x /= constraint.denominator.evaluate(&oods_point);
+    //     claimed_oods_value += &constraint_coefficients[2 * i] * &x;
+    //
+    //     // TODO: make this work when params.constraints_degree_bound is not 1.
+    //     let trace_length = 100;
+    //     let adjustment_degree = constraint.denominator.degree(trace_length) -
+    // constraint.numerator.degree(trace_length);     let adjustment =
+    // oods_point.pow(adjustment_degree);     claimed_oods_value +=
+    // &constraint_coefficients[2 * i + 1] * adjustment * &x; }
 
     claimed_oods_value == oods_values[2 * trace_cols]
 }

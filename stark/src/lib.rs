@@ -77,8 +77,8 @@ mod mmap_vec {
 // requires std. TODO: Make it work without std.
 //
 // Optional prover functionality. Note that prover requires std.
-#[cfg(feature = "prover")]
-pub mod pedersen_merkle;
+// #[cfg(feature = "prover")]
+// pub mod pedersen_merkle;
 #[cfg(feature = "prover")]
 mod proofs;
 #[cfg(feature = "prover")]
