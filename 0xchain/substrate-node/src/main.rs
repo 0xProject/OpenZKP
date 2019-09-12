@@ -2,6 +2,8 @@
 //       See https://github.com/rust-lang/cargo/issues/5034
 // For clippy lints see: https://rust-lang.github.io/rust-clippy/master
 // For rustc lints see: https://doc.rust-lang.org/rustc/lints/index.html
+#![cfg_attr(not(feature = "std"), no_std)]
+#![forbid(unsafe_code)]
 #![warn(
     // Enable sets of warnings
     clippy::all,
@@ -29,13 +31,11 @@
     single_use_lifetimes,
     trivial_casts,
     trivial_numeric_casts,
-    // TODO: unreachable_pub,
+    unreachable_pub,
     unsafe_code,
     variant_size_differences
 )]
-#![cfg_attr(feature = "std", warn(
-    // TODO: missing_debug_implementations,
-))]
+#![cfg_attr(feature = "std", warn(missing_debug_implementations,))]
 
 mod assets;
 mod chain_spec;
