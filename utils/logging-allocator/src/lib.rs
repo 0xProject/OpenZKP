@@ -45,6 +45,7 @@ use std::{
 };
 
 // TODO: Make it store a static ref to an inner allocator (defaults to System)
+#[cfg_attr(feature = "std", derive(Debug))]
 pub struct LoggingAllocator {
     info:      usize,
     warn:      usize,
@@ -105,14 +106,14 @@ unsafe impl GlobalAlloc for LoggingAllocator {
         }
         let result = System.alloc(layout);
         if !result.is_null() {
-            self.allocated.fetch_add(layout.size(), SeqCst);
+            let _ = self.allocated.fetch_add(layout.size(), SeqCst);
         }
         result
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
         System.dealloc(ptr, layout);
-        self.allocated.fetch_sub(layout.size(), SeqCst);
+        let _ = self.allocated.fetch_sub(layout.size(), SeqCst);
     }
 }
 

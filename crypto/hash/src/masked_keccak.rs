@@ -29,3 +29,10 @@ impl Default for MaskedKeccak {
         Self::new()
     }
 }
+
+#[cfg(feature = "std")]
+impl std::fmt::Debug for MaskedKeccak {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(fmt, "MaskedKeccak(...)")
+    }
+}

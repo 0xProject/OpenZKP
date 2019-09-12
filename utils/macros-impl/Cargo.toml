@@ -12,3 +12,7 @@ macros-lib = { path = "../macros-lib" }
 
 proc-macro2 = "0.4"
 proc-macro-hack = "0.5.8"
+
+[features]
+default = [ "std" ]
+std = []

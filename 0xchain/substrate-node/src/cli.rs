@@ -2,13 +2,13 @@ use crate::{chain_spec, service};
 use futures::{future, sync::oneshot, Future};
 use log::info;
 use std::{cell::RefCell, ops::Deref};
-pub use substrate_cli::{error, IntoExit, VersionInfo};
+pub(crate) use substrate_cli::{error, IntoExit, VersionInfo};
 use substrate_cli::{informant, parse_and_execute, NoCustom};
 use substrate_service::{Roles as ServiceRoles, ServiceFactory};
 use tokio::runtime::Runtime;
 
 /// Parse command line arguments into service configuration.
-pub fn run<I, T, E>(args: I, exit: E, version: &VersionInfo) -> error::Result<()>
+pub(crate) fn run<I, T, E>(args: I, exit: E, version: &VersionInfo) -> error::Result<()>
 where
     I: IntoIterator<Item = T>,
     T: Into<std::ffi::OsString> + Clone,
@@ -83,7 +83,8 @@ where
 }
 
 // handles ctrl-c
-pub struct Exit;
+pub(crate) struct Exit;
+
 impl IntoExit for Exit {
     type Exit = future::MapErr<oneshot::Receiver<()>, fn(oneshot::Canceled) -> ()>;
 

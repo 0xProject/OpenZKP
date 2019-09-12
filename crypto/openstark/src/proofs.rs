@@ -270,7 +270,7 @@ fn get_indices(num: usize, bits: u32, proof: &mut ProverChannel) -> Vec<usize> {
     query_indices
 }
 
-pub fn get_constraint_polynomials(
+pub(crate) fn get_constraint_polynomials(
     trace_polynomials: &[DensePolynomial],
     constraints: &[Constraint],
     constraint_coefficients: &[FieldElement],

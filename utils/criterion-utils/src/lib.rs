@@ -48,7 +48,7 @@ use std::convert::TryInto;
 lazy_static! {
     // Create an exponential number of threads up to the number of cpus.
     static ref THREADS: Vec<usize> = (0..=num_cpus::get().trailing_zeros())
-        .map(|log| 1usize << log)
+        .map(|log| 1_usize << log)
         .collect();
 }
 
@@ -72,7 +72,7 @@ pub fn log_size_bench<F>(crit: &mut Criterion, id: &str, sizes: &'static [usize]
 where
     F: FnMut(&mut Bencher, usize) + 'static,
 {
-    crit.bench(
+    let _ = crit.bench(
         id,
         ParameterizedBenchmark::new(id, move |bench, &&size| f(bench, size), sizes)
             .sample_size(10)
@@ -90,7 +90,7 @@ pub fn log_thread_bench<F>(crit: &mut Criterion, id: &str, size: usize, mut f: F
 where
     F: FnMut(&mut Bencher) + 'static + Send,
 {
-    crit.bench(
+    let _ = crit.bench(
         id,
         ParameterizedBenchmark::new(
             id,

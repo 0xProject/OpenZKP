@@ -114,7 +114,7 @@ fn montgomery_convert(x: (u64, u64, u64, u64)) -> (u64, u64, u64, u64) {
 
     // Clippy thinks casting u64 to u128 is lossy
     #[allow(clippy::cast_lossless)]
-    pub fn mac(a: u64, b: u64, c: u64, carry: u64) -> (u64, u64) {
+    const fn mac(a: u64, b: u64, c: u64, carry: u64) -> (u64, u64) {
         let ret = (a as u128) + ((b as u128) * (c as u128)) + (carry as u128);
         // We want truncation here
         #[allow(clippy::cast_possible_truncation)]
@@ -168,7 +168,7 @@ fn montgomery_convert(x: (u64, u64, u64, u64)) -> (u64, u64, u64, u64) {
 
     // Final reduction
     if (a3, a2, a1, a0) >= (M.3, M.2, M.1, M.0) {
-        pub const fn sbb(a: u64, b: u64, borrow: u64) -> (u64, u64) {
+        const fn sbb(a: u64, b: u64, borrow: u64) -> (u64, u64) {
             let ret = (a as u128).wrapping_sub((b as u128) + ((borrow >> 63) as u128));
             // We want truncation here
             #[allow(clippy::cast_possible_truncation)]
@@ -237,7 +237,7 @@ mod test {
     // directly. Instead we go roundabout and compare their `.to_string()`.
 
     #[test]
-    pub fn hex_positive() {
+    fn hex_positive() {
         assert_eq!(hex(quote! {""}).to_string(), quote! {*b""}.to_string());
         assert_eq!(hex(quote! {"00"}).to_string(), quote! {*b"\0"}.to_string());
         assert_eq!(
@@ -255,7 +255,7 @@ mod test {
     }
 
     #[test]
-    pub fn hex_negative() {
+    fn hex_negative() {
         assert_eq!(
             hex(quote! {0x00000234320323247423897429387489237498273498237498237489237492384723984783928}).to_string(),
             quote! {compile_error ! { "Expected hexadecimal string" }}.to_string());
@@ -280,7 +280,7 @@ mod test {
     }
 
     #[test]
-    pub fn u256h_positive() {
+    fn u256h_positive() {
         assert_eq!(
             u256h(quote! {""}).to_string(),
             quote! {U256::from_limbs(0u64, 0u64, 0u64, 0u64)}.to_string()
@@ -293,7 +293,7 @@ mod test {
     }
 
     #[test]
-    pub fn field_element_positive() {
+    fn field_element_positive() {
         assert_eq!(
             field_element(quote! {""}).to_string(),
             quote! {FieldElement::from_montgomery(

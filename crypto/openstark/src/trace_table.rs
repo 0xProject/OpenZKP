@@ -10,6 +10,7 @@ use std::{
     prelude::v1::*,
 };
 
+#[cfg_attr(feature = "std", derive(Debug))]
 pub struct TraceTable {
     trace_length: usize,
     num_columns:  usize,

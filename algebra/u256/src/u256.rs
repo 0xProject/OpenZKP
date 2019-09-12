@@ -875,7 +875,7 @@ mod tests {
     use quickcheck_macros::quickcheck;
 
     #[allow(dead_code)]
-    pub const TEST_CONST: U256 =
+    const TEST_CONST: U256 =
         u256h!("0800000000000010ffffffffffffffffffffffffffffffffffffffffffffffff");
 
     #[test]

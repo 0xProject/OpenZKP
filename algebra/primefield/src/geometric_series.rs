@@ -2,6 +2,7 @@ use crate::FieldElement;
 use std::prelude::v1::*;
 
 #[derive(Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "std", derive(Debug))]
 pub struct GeometricSeries {
     current: FieldElement,
     step:    FieldElement,

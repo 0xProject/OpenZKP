@@ -68,6 +68,7 @@ impl ProofInherentData for InherentData {
 }
 
 #[cfg(feature = "std")]
+#[derive(Debug)]
 pub struct InherentDataProvider;
 
 #[cfg(feature = "std")]
@@ -222,7 +223,10 @@ mod tests {
     // first constructing a configuration type (`Test`) which `impl`s each of the
     // configuration traits of modules we want to use.
     #[derive(Clone, Eq, PartialEq)]
+    // TODO: Why does this need to be pub
+    #[allow(unreachable_pub)]
     pub struct Test;
+
     impl system::Trait for Test {
         type AccountId = u64;
         type BlockNumber = u64;

@@ -93,7 +93,11 @@ impl From<MakerMessage> for starkdex::wrappers::MakerMessage {
     }
 }
 
-pub fn taker_verify(taker_message: TakerMessage, sig: &Signature, public: &PublicKey) -> bool {
+pub(crate) fn taker_verify(
+    taker_message: TakerMessage,
+    sig: &Signature,
+    public: &PublicKey,
+) -> bool {
     starkdex::wrappers::taker_verify(
         &taker_message.maker_message.into(),
         taker_message.vault_a,
@@ -103,25 +107,25 @@ pub fn taker_verify(taker_message: TakerMessage, sig: &Signature, public: &Publi
     )
 }
 
-pub fn verify(hash: [u8; 32], sig: &Signature, public: &PublicKey) -> bool {
+pub(crate) fn verify(hash: [u8; 32], sig: &Signature, public: &PublicKey) -> bool {
     starkdex::wrappers::verify(&hash, (&sig.r, &sig.s), (&public.x, &public.y))
 }
 
-pub fn maker_verify(message: MakerMessage, sig: &Signature, public: &PublicKey) -> bool {
+pub(crate) fn maker_verify(message: MakerMessage, sig: &Signature, public: &PublicKey) -> bool {
     starkdex::wrappers::maker_verify(&message.into(), (&sig.r, &sig.s), (&public.x, &public.y))
 }
 
-pub fn hash(in_a: [u8; 32], in_b: [u8; 32]) -> [u8; 32] {
+pub(crate) fn hash(in_a: [u8; 32], in_b: [u8; 32]) -> [u8; 32] {
     starkdex::wrappers::hash(&in_a, &in_b)
 }
 
 #[allow(dead_code)]
-pub fn maker_hash(message: &MakerMessage) -> [u8; 32] {
+pub(crate) fn maker_hash(message: &MakerMessage) -> [u8; 32] {
     starkdex::wrappers::maker_hash(&message.clone().into())
 }
 
 #[allow(dead_code)]
-pub fn taker_hash(message: &TakerMessage) -> [u8; 32] {
+pub(crate) fn taker_hash(message: &TakerMessage) -> [u8; 32] {
     starkdex::wrappers::taker_hash(
         &maker_hash(&message.maker_message),
         message.vault_a,

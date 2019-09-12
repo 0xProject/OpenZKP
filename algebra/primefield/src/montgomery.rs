@@ -11,16 +11,17 @@ use u256::{
 // TODO: Make these `const fn` once https://github.com/rust-lang/rust/issues/49146 lands.
 
 // M64 = -MODULUS^(-1) mod 2^64
-pub const M64: u64 = 0xffff_ffff_ffff_ffff; // = -1
+const M64: u64 = 0xffff_ffff_ffff_ffff; // = -1
 
 // R2 = 2^512 mod MODULUS
-pub const R1: U256 = u256h!("07fffffffffffdf0ffffffffffffffffffffffffffffffffffffffffffffffe1");
-pub const R2: U256 = u256h!("07ffd4ab5e008810ffffffffff6f800000000001330ffffffffffd737e000401");
-pub const R3: U256 = u256h!("038e5f79873c0a6df47d84f8363000187545706677ffcc06cc7177d1406df18e");
+pub(crate) const R1: U256 =
+    u256h!("07fffffffffffdf0ffffffffffffffffffffffffffffffffffffffffffffffe1");
+const R2: U256 = u256h!("07ffd4ab5e008810ffffffffff6f800000000001330ffffffffffd737e000401");
+const R3: U256 = u256h!("038e5f79873c0a6df47d84f8363000187545706677ffcc06cc7177d1406df18e");
 
 // We rebind variables for readability
 #[allow(clippy::shadow_unrelated)]
-pub const fn to_montgomery_const(x: &U256) -> U256 {
+pub(crate) const fn to_montgomery_const(x: &U256) -> U256 {
     let k = x.c0.wrapping_mul(R2.c0).wrapping_mul(M64);
     let (a0, carry) = mac(0, x.c0, R2.c0, 0);
     let (a1, carry) = mac(0, x.c0, R2.c1, carry);
@@ -86,7 +87,7 @@ pub const fn to_montgomery_const(x: &U256) -> U256 {
 
 // We rebind variables for readability
 #[allow(clippy::shadow_unrelated)]
-pub fn redc(lo: &U256, hi: &U256) -> U256 {
+pub(crate) fn redc(lo: &U256, hi: &U256) -> U256 {
     // Algorithm 14.32 from Handbook of Applied Cryptography.
     // TODO: Optimize for the specific values of M64 and MODULUS.
     let ui = lo.c0.wrapping_mul(M64);
@@ -124,7 +125,7 @@ pub fn redc(lo: &U256, hi: &U256) -> U256 {
 
 // We rebind variables for readability
 #[allow(clippy::shadow_unrelated)]
-pub fn mul_redc(x: &U256, y: &U256) -> U256 {
+pub(crate) fn mul_redc(x: &U256, y: &U256) -> U256 {
     // TODO: This might not be faster than:
     // let (lo, hi) = x.mul_full(y);
     // return redc(&lo, &hi);
@@ -181,21 +182,21 @@ pub fn mul_redc(x: &U256, y: &U256) -> U256 {
     r
 }
 
-pub fn sqr_redc(a: &U256) -> U256 {
+pub(crate) fn sqr_redc(a: &U256) -> U256 {
     let (lo, hi) = a.sqr_full();
     redc(&lo, &hi)
 }
 
-pub fn inv_redc(n: &U256) -> Option<U256> {
+pub(crate) fn inv_redc(n: &U256) -> Option<U256> {
     n.invmod(&FieldElement::MODULUS)
         .map(|ni| mul_redc(&ni, &R3))
 }
 
-pub fn to_montgomery(n: &U256) -> U256 {
+pub(crate) fn to_montgomery(n: &U256) -> U256 {
     mul_redc(n, &R2)
 }
 
-pub fn from_montgomery(n: &U256) -> U256 {
+pub(crate) fn from_montgomery(n: &U256) -> U256 {
     redc(n, &U256::ZERO)
 }
 

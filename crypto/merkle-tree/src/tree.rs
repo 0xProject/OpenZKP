@@ -42,6 +42,7 @@ fn compute<C: VectorCommitment>(leaves: &C, index: Index) -> Hash {
 // OPT: Do not store leaf hashes but re-create.
 // OPT: Allow up to `n` lower layers to be skipped.
 // TODO: Make hash depend on type.
+#[cfg_attr(feature = "std", derive(Debug))]
 pub struct Tree<Container: VectorCommitment> {
     commitment: Commitment,
     nodes:      MmapVec<Hash>,
