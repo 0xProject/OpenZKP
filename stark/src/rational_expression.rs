@@ -299,8 +299,9 @@ impl RationalExpression {
             &Trace(i, j) => trace_table(i, j),
             Add(a, b) => a.eval(trace_table, x) + b.eval(trace_table, x),
             Sub(a, b) => a.eval(trace_table, x) - b.eval(trace_table, x),
-            Self::Div(..) => panic!(),
-            _ => unimplemented!(),
+            Mul(a, b) => a.eval(trace_table, x) * b.eval(trace_table, x),
+            Div(a, b) => a.eval(trace_table, x) / b.eval(trace_table, x),
+            Pow(a, n) => a.eval(trace_table, x).pow(*n),
         }
     }
 

@@ -39,11 +39,11 @@ pub fn combine_constraints(
             constraint.base.clone() * constraint.numerator.clone() / constraint.denominator.clone();
         let degree_adjustment =
             RationalExpression::X.pow(target_degree - x.degree(trace_length));
-        println!("Constraint #{:?}!", i);
-        if i < 2 {
-            assert_eq!(target_degree, 1024);
-            assert_eq!(x.degree(trace_length), 1);
-        }
+        // println!("Constraint #{:?}!", i);
+        // if i < 2 {
+        //     assert_eq!(target_degree, 1024);
+        //     assert_eq!(x.degree(trace_length), 1);
+        // }
 
         result = result + Constant(coefficients[2 * i].clone()) * x.clone();
         result = result + Constant(coefficients[2 * i + 1].clone()) * x * degree_adjustment;
