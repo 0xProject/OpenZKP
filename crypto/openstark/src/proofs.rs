@@ -296,7 +296,7 @@ pub(crate) fn get_constraint_polynomials(
         combine_constraints(&constraints, &constraint_coefficients, trace_length)
             .eval_on_domain(&trace_getter);
 
-    assert_eq!(constraint_polynomial.len(), 2 * trace_length);
+    // assert_eq!(constraint_polynomial.len(), 2 * trace_length);
     // assert_eq!(constraint_polynomial.evaluate(&FieldElement::GENERATOR), FieldElement::ZERO);
     let mut constraint_polynomials: Vec<Vec<FieldElement>> = vec![vec![]; constraints_degree_bound];
     for chunk in constraint_polynomial
