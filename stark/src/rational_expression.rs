@@ -20,16 +20,72 @@ pub enum RationalExpression {
 
 #[derive(Clone, Debug)]
 pub struct RationalExpressionStruct {
-    numerator:   RationalExpression, // cannot have div
-    denominator: RationalExpression,
+    pub numerator:   RationalExpression, // cannot have div
+    pub denominator: RationalExpression,
+}
+
+impl RationalExpressionStruct {
+    pub fn pow(&self, n: usize) -> Self {
+        RationalExpressionStruct {
+            numerator:   self.numerator.pow(n),
+            denominator: self.denominator.pow(n),
+        }
+    }
+}
+
+impl Add for RationalExpressionStruct {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self {
+        RationalExpressionStruct {
+            numerator:   self.numerator * other.denominator.clone() + other.numerator * self.denominator.clone(),
+            denominator: self.denominator * other.denominator,
+        }
+    }
+}
+
+impl Sub for RationalExpressionStruct {
+    type Output = Self;
+
+    fn sub(self, other: Self) -> Self {
+        RationalExpressionStruct {
+            numerator:   self.numerator * other.denominator.clone() - other.numerator * self.denominator.clone(),
+            denominator: self.denominator * other.denominator,
+        }
+    }
+}
+
+impl Mul for RationalExpressionStruct {
+    type Output = Self;
+
+    fn mul(self, other: Self) -> Self {
+        RationalExpressionStruct {
+            numerator:   self.numerator * other.numerator,
+            denominator: self.denominator * other.denominator,
+        }
+    }
+}
+
+impl Div for RationalExpressionStruct {
+    type Output = Self;
+
+    fn div(self, other: Self) -> Self {
+        RationalExpressionStruct {
+            numerator:   self.numerator * other.denominator,
+            denominator: self.denominator * other.numerator,
+        }
+    }
 }
 
 // Effectively a sparse polynomial!
 #[derive(Clone, Debug)]
-struct GroupedRationalExpression(pub BTreeMap<Vec<(usize, isize)>, RationalExpression>);
+struct GroupedRationalExpression(pub BTreeMap<Vec<(usize, isize)>, RationalExpressionStruct>);
 
 impl GroupedRationalExpression {
-    pub fn new(key: Vec<(usize, isize)>, value: RationalExpression) -> GroupedRationalExpression {
+    pub fn new(
+        key: Vec<(usize, isize)>,
+        value: RationalExpressionStruct,
+    ) -> GroupedRationalExpression {
         let mut map = BTreeMap::new();
         map.insert(key, value);
         GroupedRationalExpression(map)
@@ -37,7 +93,7 @@ impl GroupedRationalExpression {
 
     fn pow(&self, n: usize) -> Self {
         let mut result = self.clone();
-        let r: RationalExpression = self.0.get(&vec![]).unwrap().clone();
+        let r: RationalExpressionStruct = self.0.get(&vec![]).unwrap().clone();
         GroupedRationalExpression::new(vec![], r.pow(n))
     }
 
@@ -59,14 +115,22 @@ impl GroupedRationalExpression {
             let c = result.get(&indices);
             match c {
                 Some(c_a) => result.insert(indices, c_a.clone() - coefficient),
-                None => result.insert(indices, RationalExpression::from(0) - coefficient),
+                None => {
+                    result.insert(
+                        indices,
+                        RationalExpressionStruct {
+                            numerator:   0.into(),
+                            denominator: 1.into(),
+                        } - coefficient,
+                    )
+                }
             };
         }
         GroupedRationalExpression(result)
     }
 
     fn mul(a: Self, b: Self) -> Self {
-        let mut result: BTreeMap<Vec<(usize, isize)>, RationalExpression> = BTreeMap::new();
+        let mut result: BTreeMap<Vec<(usize, isize)>, RationalExpressionStruct> = BTreeMap::new();
         for (indices, coefficient) in a.0 {
             for (other_indices, other_coefficient) in b.0.clone() {
                 let mut new_indices = [&indices[..], &other_indices[..]].concat();
@@ -95,7 +159,7 @@ impl GroupedRationalExpression {
         assert_eq!(keys[0].len(), 0);
         let divisor = denominator.0.get(&vec![]).unwrap();
 
-        let mut result: BTreeMap<Vec<(usize, isize)>, RationalExpression> = BTreeMap::new();
+        let mut result: BTreeMap<Vec<(usize, isize)>, RationalExpressionStruct> = BTreeMap::new();
         for (indices, coefficient) in numerator.0 {
             result.insert(indices, coefficient / divisor.clone());
         }
@@ -107,9 +171,9 @@ impl From<RationalExpression> for GroupedRationalExpression {
     fn from(value: RationalExpression) -> Self {
         use RationalExpression::*;
         match value {
-            X => GroupedRationalExpression::new(vec![], X),
-            Constant(c) => GroupedRationalExpression::new(vec![], Constant(c)),
-            Trace(i, j) => GroupedRationalExpression::new(vec![(i, j)], 1.into()),
+            X => GroupedRationalExpression::new(vec![], RationalExpressionStruct{numerator: X, denominator: 1.into()}),
+            Constant(c) => GroupedRationalExpression::new(vec![],  RationalExpressionStruct{numerator: Constant(c), denominator: 1.into()}),
+            Trace(i, j) => GroupedRationalExpression::new(vec![(i, j)], RationalExpressionStruct{numerator: 1.into(), denominator: 1.into()}),
             Add(a, b) => Self::add((*a).into(), (*b).into()),
             Sub(a, b) => Self::sub((*a).into(), (*b).into()),
             Mul(a, b) => Self::mul((*a).into(), (*b).into()),
@@ -217,21 +281,9 @@ impl RationalExpression {
                 .fold(DensePolynomial::new(&[FieldElement::ONE]), |x, (i, j)| {
                     x * trace_table(*i, *j)
                 });
-            result += product * coefficients.get_denominator();
+            result += product * coefficients.numerator.clone().get_denominator() / coefficients.denominator.get_denominator();
         }
         result
-        // match self {
-        //     Self::X => DensePolynomial::new(&[FieldElement::ZERO,
-        // FieldElement::ONE]),     Self::Constant(value) =>
-        // DensePolynomial::new(&[value.clone()]),     &Self::Trace(i,
-        // j) => trace_table(i, j),     Self::Add(a, b) =>
-        // a.eval_on_domain(trace_table) + b.eval_on_domain(trace_table),
-        //     Self::Sub(a, b) => a.eval_on_domain(trace_table) -
-        // b.eval_on_domain(trace_table),     Self::Mul(a, b) =>
-        // a.eval_on_domain(trace_table) * b.get_denominator(),
-        //     Self::Div(a, b) => a.eval_on_domain(trace_table) /
-        // b.get_denominator(),     Self::Pow(a, n) => panic!(),
-        // }
     }
 
     fn get_denominator(&self) -> SparsePolynomial {
