@@ -7,6 +7,7 @@ use crate::{
         },
     },
     polynomial::{DensePolynomial, SparsePolynomial},
+    rational_expression::RationalExpression::{self, Constant, PeriodicColumn, Trace, X},
 };
 use elliptic_curve::Affine;
 use primefield::FieldElement;
@@ -17,245 +18,202 @@ use u256::U256;
 // TODO: Naming
 #[allow(clippy::module_name_repetitions)]
 pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constraint> {
-    fn get_left_bit(trace_polynomials: &[DensePolynomial]) -> DensePolynomial {
-        &trace_polynomials[0]
-            - &FieldElement::from(U256::from(2_u64)) * &trace_polynomials[0].next()
-    }
-    fn get_right_bit(trace_polynomials: &[DensePolynomial]) -> DensePolynomial {
-        &trace_polynomials[4]
-            - &FieldElement::from(U256::from(2_u64)) * &trace_polynomials[4].next()
-    }
-
     let path_length = public_input.path_length;
     let trace_length = path_length * 256;
     let root = public_input.root.clone();
     let leaf = public_input.leaf.clone();
     let field_element_bits = 252;
 
-    let g = FieldElement::root(trace_length).unwrap();
-    let no_rows = SparsePolynomial::new(&[(FieldElement::ONE, 0)]);
-    let first_row = SparsePolynomial::new(&[(-&FieldElement::ONE, 0), (FieldElement::ONE, 1)]);
-    let last_row = SparsePolynomial::new(&[(-&g.pow(trace_length - 1), 0), (FieldElement::ONE, 1)]);
-    let hash_end_rows = SparsePolynomial::new(&[
-        (FieldElement::ONE, path_length),
-        (-&g.pow(path_length * (trace_length - 1)), 0),
-    ]);
-    let field_element_end_rows = SparsePolynomial::new(&[
-        (-&g.pow(field_element_bits * path_length), 0),
-        (FieldElement::ONE, path_length),
-    ]);
-    let hash_start_rows =
-        SparsePolynomial::new(&[(FieldElement::ONE, path_length), (-&FieldElement::ONE, 0)]);
-    let every_row =
-        SparsePolynomial::new(&[(FieldElement::ONE, trace_length), (-&FieldElement::ONE, 0)]);
+    let trace_generator = Constant(FieldElement::root(trace_length).unwrap());
+
+    let no_rows = RationalExpression::from(1);
+    let first_row = X - trace_generator.pow(0);
+    let last_row = X - trace_generator.pow(trace_length - 1);
+    let every_row = X.pow(trace_length) - 1.into();
+    let hash_end_rows = X.pow(path_length) - trace_generator.pow(path_length * (trace_length - 1));
+    let field_element_end_rows =
+        X.pow(path_length) - trace_generator.pow(path_length * field_element_bits);
+    let hash_start_rows = X.pow(path_length) - 1.into();
 
     let (shift_point_x, shift_point_y) = match SHIFT_POINT {
         Affine::Zero => panic!(),
         Affine::Point { x, y } => (x, y),
     };
 
-    let q_x_left_1 = SparsePolynomial::periodic(&LEFT_X_COEFFICIENTS, path_length);
-    let q_x_left_2 = SparsePolynomial::periodic(&LEFT_X_COEFFICIENTS, path_length);
-    let q_y_left = SparsePolynomial::periodic(&LEFT_Y_COEFFICIENTS, path_length);
-    let q_x_right_1 = SparsePolynomial::periodic(&RIGHT_X_COEFFICIENTS, path_length);
-    let q_x_right_2 = SparsePolynomial::periodic(&RIGHT_X_COEFFICIENTS, path_length);
-    let q_y_right = SparsePolynomial::periodic(&RIGHT_Y_COEFFICIENTS, path_length);
+    let q_x_left = PeriodicColumn(SparsePolynomial::periodic(
+        &LEFT_X_COEFFICIENTS,
+        path_length,
+    ));
+    let q_y_left = PeriodicColumn(SparsePolynomial::periodic(
+        &LEFT_Y_COEFFICIENTS,
+        path_length,
+    ));
+    let q_x_right = PeriodicColumn(SparsePolynomial::periodic(
+        &RIGHT_X_COEFFICIENTS,
+        path_length,
+    ));
+    let q_y_right = PeriodicColumn(SparsePolynomial::periodic(
+        &RIGHT_Y_COEFFICIENTS,
+        path_length,
+    ));
+
+    let left_bit = Trace(0, 0) - Trace(0, 1) * 2.into();
+    let right_bit = Trace(4, 0) - Trace(4, 1) * 2.into();
 
     vec![
         Constraint {
-            base:        Box::new(|tp| tp[0].clone()),
+            base:        Trace(0, 0),
             numerator:   no_rows.clone(),
             denominator: no_rows.clone(),
         },
         Constraint {
-            base:        Box::new(|tp| tp[1].clone()),
+            base:        Trace(1, 0),
             numerator:   no_rows.clone(),
             denominator: no_rows.clone(),
         },
         Constraint {
-            base:        Box::new(|tp| tp[2].clone()),
+            base:        Trace(2, 0),
             numerator:   no_rows.clone(),
             denominator: no_rows.clone(),
         },
         Constraint {
-            base:        Box::new(|tp| tp[3].clone()),
+            base:        Trace(3, 0),
             numerator:   no_rows.clone(),
             denominator: no_rows.clone(),
         },
         Constraint {
-            base:        Box::new(|tp| tp[4].clone()),
+            base:        Trace(4, 0),
             numerator:   no_rows.clone(),
             denominator: no_rows.clone(),
         },
         Constraint {
-            base:        Box::new(|tp| tp[5].clone()),
+            base:        Trace(5, 0),
             numerator:   no_rows.clone(),
             denominator: no_rows.clone(),
         },
         Constraint {
-            base:        Box::new(|tp| tp[6].clone()),
+            base:        Trace(6, 0),
             numerator:   no_rows.clone(),
             denominator: no_rows.clone(),
         },
         Constraint {
-            base:        Box::new(|tp| tp[7].clone()),
+            base:        Trace(7, 0),
             numerator:   no_rows.clone(),
             denominator: no_rows.clone(),
         },
         Constraint {
-            base:        Box::new(move |tp| {
-                (SparsePolynomial::new(&[(leaf.clone(), 0)]) - &tp[0])
-                    * (SparsePolynomial::new(&[(leaf.clone(), 0)]) - &tp[4])
-            }),
+            base:        (Constant(leaf.clone()) - Trace(0, 0))
+                * (Constant(leaf.clone()) - Trace(4, 0)),
             numerator:   no_rows.clone(),
             denominator: first_row.clone(),
         },
         Constraint {
-            base:        Box::new(move |tp| SparsePolynomial::new(&[(root.clone(), 0)]) - &tp[6]),
+            base:        Constant(root) - Trace(6, 0),
             numerator:   no_rows.clone(),
             denominator: last_row.clone(),
         },
         Constraint {
-            base:        Box::new(|tp| (&tp[6] - tp[0].next()) * (&tp[6] - tp[4].next())),
+            base:        (Trace(6, 0) - Trace(0, 1)) * (Trace(6, 0) - Trace(4, 1)),
             numerator:   last_row.clone(),
             denominator: hash_end_rows.clone(),
         },
         Constraint {
-            base:        Box::new(move |tp| {
-                &tp[6] - SparsePolynomial::new(&[(shift_point_x.clone(), 0)])
-            }),
+            base:        Trace(6, 0) - Constant(shift_point_x),
             numerator:   no_rows.clone(),
             denominator: hash_start_rows.clone(),
         },
         Constraint {
-            base:        Box::new(move |tp| {
-                &tp[7] - SparsePolynomial::new(&[(shift_point_y.clone(), 0)])
-            }),
+            base:        Trace(7, 0) - Constant(shift_point_y),
             numerator:   no_rows.clone(),
             denominator: hash_start_rows.clone(),
         },
         Constraint {
-            base:        Box::new(|tp| {
-                let left_bit = get_left_bit(tp);
-                &left_bit * (&left_bit - SparsePolynomial::new(&[(FieldElement::ONE, 0)]))
-            }),
+            base:        left_bit.clone() * (left_bit.clone() - 1.into()),
             numerator:   hash_end_rows.clone(),
             denominator: every_row.clone(),
         },
         Constraint {
-            base:        Box::new(move |tp| {
-                let left_bit = get_left_bit(tp);
-                left_bit * (&tp[7] - q_y_left.clone())
-                    - tp[1].next() * (&tp[6] - q_x_left_1.clone())
-            }),
+            base:        left_bit.clone() * (Trace(7, 0) - q_y_left)
+                - Trace(1, 1) * (Trace(6, 0) - q_x_left.clone()),
             numerator:   hash_end_rows.clone(),
             denominator: every_row.clone(),
         },
         Constraint {
-            base:        Box::new(move |tp| {
-                let left_bit = get_left_bit(tp);
-                tp[1].next().square() - left_bit * (&tp[6] + q_x_left_2.clone() + tp[2].next())
-            }),
+            base:        Trace(1, 1) * Trace(1, 1)
+                - left_bit.clone() * (Trace(6, 0) + q_x_left + Trace(2, 1)),
             numerator:   hash_end_rows.clone(),
             denominator: every_row.clone(),
         },
         Constraint {
-            base:        Box::new(move |tp| {
-                let left_bit = get_left_bit(tp);
-                &left_bit * (tp[7].clone() + tp[3].next())
-                    - tp[1].next() * (tp[6].clone() - tp[2].next())
-            }),
+            base:        left_bit.clone() * (Trace(7, 0) + Trace(3, 1))
+                - Trace(1, 1) * (Trace(6, 0) - Trace(2, 1)),
             numerator:   hash_end_rows.clone(),
             denominator: every_row.clone(),
         },
         Constraint {
-            base:        Box::new(move |tp| {
-                let left_bit = get_left_bit(tp);
-                (SparsePolynomial::new(&[(FieldElement::ONE, 0)]) - &left_bit)
-                    * (tp[6].clone() - tp[2].next())
-            }),
+            base:        (Constant(FieldElement::ONE) - left_bit.clone())
+                * (Trace(6, 0) - Trace(2, 1)),
             numerator:   hash_end_rows.clone(),
             denominator: every_row.clone(),
         },
         Constraint {
-            base:        Box::new(move |tp| {
-                let left_bit = get_left_bit(tp);
-                (SparsePolynomial::new(&[(FieldElement::ONE, 0)]) - &left_bit)
-                    * (tp[7].clone() - tp[3].next())
-            }),
+            base:        (Constant(FieldElement::ONE) - left_bit.clone())
+                * (Trace(7, 0) - Trace(3, 1)),
             numerator:   hash_end_rows.clone(),
             denominator: every_row.clone(),
         },
         Constraint {
-            base:        Box::new(move |tp| tp[0].clone()),
+            base:        Trace(0, 0),
             numerator:   no_rows.clone(),
             denominator: field_element_end_rows.clone(),
         },
         Constraint {
-            base:        Box::new(move |tp| tp[0].clone()),
+            base:        Trace(0, 0),
             numerator:   no_rows.clone(),
             denominator: hash_end_rows.clone(),
         },
         Constraint {
-            base:        Box::new(|tp| {
-                let right_bit = get_right_bit(tp);
-                right_bit.clone() * (&right_bit - SparsePolynomial::new(&[(FieldElement::ONE, 0)]))
-            }),
+            base:        right_bit.clone() * (right_bit.clone() - 1.into()),
             numerator:   hash_end_rows.clone(),
             denominator: every_row.clone(),
         },
         Constraint {
-            base:        Box::new(move |tp| {
-                let right_bit = get_right_bit(tp);
-                right_bit * (&tp[3].next() - q_y_right.clone())
-                    - tp[5].next() * (&tp[2].next() - q_x_right_1.clone())
-            }),
+            base:        right_bit.clone() * (Trace(3, 1) - q_y_right.clone())
+                - Trace(5, 1) * (Trace(2, 1) - q_x_right.clone()),
             numerator:   hash_end_rows.clone(),
             denominator: every_row.clone(),
         },
         Constraint {
-            base:        Box::new(move |tp| {
-                let right_bit = get_right_bit(tp);
-                tp[5].next().square()
-                    - right_bit * (&tp[2].next() + q_x_right_2.clone() + tp[6].next())
-            }),
+            base:        Trace(5, 1) * Trace(5, 1)
+                - right_bit.clone() * (Trace(2, 1) + q_x_right.clone() + Trace(6, 1)),
             numerator:   hash_end_rows.clone(),
             denominator: every_row.clone(),
         },
         Constraint {
-            base:        Box::new(move |tp| {
-                let right_bit = get_right_bit(tp);
-                &right_bit * (tp[3].next() + tp[7].next())
-                    - tp[5].next() * (tp[2].next() - tp[6].next())
-            }),
+            base:        right_bit.clone() * (Trace(3, 1) + Trace(7, 1))
+                - Trace(5, 1) * (Trace(2, 1) - Trace(6, 1)),
             numerator:   hash_end_rows.clone(),
             denominator: every_row.clone(),
         },
         Constraint {
-            base:        Box::new(move |tp| {
-                let right_bit = get_right_bit(tp);
-                (SparsePolynomial::new(&[(FieldElement::ONE, 0)]) - &right_bit)
-                    * (tp[2].next() - tp[6].next())
-            }),
+            base:        (Constant(FieldElement::ONE) - right_bit.clone())
+                * (Trace(2, 1) - Trace(6, 1)),
             numerator:   hash_end_rows.clone(),
             denominator: every_row.clone(),
         },
         Constraint {
-            base:        Box::new(move |tp| {
-                let right_bit = get_right_bit(tp);
-                (SparsePolynomial::new(&[(FieldElement::ONE, 0)]) - &right_bit)
-                    * (tp[3].next() - tp[7].next())
-            }),
+            base:        (Constant(FieldElement::ONE) - right_bit.clone())
+                * (Trace(3, 1) - Trace(7, 1)),
             numerator:   hash_end_rows.clone(),
             denominator: every_row.clone(),
         },
         Constraint {
-            base:        Box::new(move |tp| tp[4].clone()),
+            base:        Trace(4, 0),
             numerator:   no_rows.clone(),
             denominator: field_element_end_rows.clone(),
         },
         Constraint {
-            base:        Box::new(move |tp| tp[4].clone()),
+            base:        Trace(4, 0),
             numerator:   no_rows.clone(),
             denominator: hash_end_rows.clone(),
         },

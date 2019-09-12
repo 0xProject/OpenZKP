@@ -43,6 +43,7 @@ pub mod fibonacci;
 mod polynomial;
 mod proof_of_work;
 mod proof_params;
+mod rational_expression;
 mod verifier;
 
 pub use channel::{ProverChannel, VerifierChannel};
