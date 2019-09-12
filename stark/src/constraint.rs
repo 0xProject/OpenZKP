@@ -39,9 +39,10 @@ pub fn combine_constraints(
             constraint.base.clone() * constraint.numerator.clone() / constraint.denominator.clone();
         result = result + Constant(coefficients[2 * i].clone()) * x.clone();
         let degree_adjustment =
-            RationalExpression::X.pow(target_degree -
-        result.degree(trace_length)); result = result +
-        Constant(coefficients[2 * i + 1].clone()) * x * degree_adjustment;
+            RationalExpression::X.pow(target_degree - result.degree(trace_length));
+        // assert_eq!(target_degree, 1024);
+        // assert_eq!(result.degree(trace_length), 1);
+        result = result + Constant(coefficients[2 * i + 1].clone()) * x * degree_adjustment;
     }
     // let mason: usize = result.degree(trace_length);
     // assert_eq!(mason, trace_length);
