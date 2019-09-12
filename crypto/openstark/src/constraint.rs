@@ -28,10 +28,11 @@ pub fn combine_constraints(
         .map(|c| c.degree(trace_length))
         .max()
         .unwrap();
-    let result_degree = max_degree.next_power_of_two();
+    let result_degree = max_degree.next_power_of_two() - 1;
 
     let mut result = RationalExpression::from(0);
     for (i, constraint) in constraints.iter().enumerate() {
+        if i == 30 {break;}
         let x =
             constraint.base.clone() * constraint.numerator.clone() / constraint.denominator.clone();
         let degree_adjustment = RationalExpression::X.pow(result_degree - x.degree(trace_length));

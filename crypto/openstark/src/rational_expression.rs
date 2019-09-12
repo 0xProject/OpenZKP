@@ -267,7 +267,7 @@ impl RationalExpression {
         match self {
             X => 1,
             Constant(_) => 0,
-            Trace(..) => trace_degree,
+            Trace(..) => trace_degree - 1,
             PeriodicColumn(p) => p.degree(),
             Add(a, b) => max(a.degree(trace_degree), b.degree(trace_degree)),
             Sub(a, b) => max(a.degree(trace_degree), b.degree(trace_degree)),
