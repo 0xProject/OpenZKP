@@ -2,7 +2,8 @@ use crate::{Constraints, ProverChannel, TraceTable};
 
 pub trait ConstraintSystem
 where
-ProverChannel: Writable<&Public>,         VerifierChannel: Replayable<Public>, 
+    ProverChannel: Writable<&Public>,
+    VerifierChannel: Replayable<Public>,
 {
     type Public;
     type Private;
