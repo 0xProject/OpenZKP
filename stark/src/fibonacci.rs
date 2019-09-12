@@ -110,7 +110,7 @@ pub fn get_fibonacci_constraints(public_input: &PublicInput) -> Vec<Constraint> 
         Constraint {
             base:        Trace(1, 1) - Trace(0, 0) - Trace(1, 0),
             numerator:   last_row.clone(),
-            denominator: every_row,
+            denominator: every_row.clone(),
         },
         Constraint {
             base:        Trace(0, 0) - 1.into(),
