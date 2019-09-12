@@ -361,6 +361,19 @@ jobs:
             cargo install cargo-audit
             cargo install cargo-geiger
       - run:
+          name: Check lints.rs copies
+          command: |
+            # Make sure all lib.rs and main.rs files start with the same prefix
+            correct=$(cat ./lints.rs)
+            lines=$(wc -l < ./lints.rs)
+            files=$(find . \( -name target -prune \) -o \( -name lib.rs -o -name main.rs \) -print)
+            for file in $files; do
+                start=$(head -n $lines $file)
+                if [ "$start" != "$correct" ]; then
+                    echo "Incorrect lints in $file"
+                fi
+            done
+      - run:
           name: Generate lockfile
           command: cargo generate-lockfile
       - run:
@@ -382,7 +395,7 @@ jobs:
           command: |
             pushd 0xchain/substrate-runtime-wasm
             cargo audit
-
+      - codechecks
   accept:
     executor: minimal
     steps:
@@ -430,6 +443,9 @@ workflows:
       - clippy:
           requires:
             - build-docker
+      - analysis:
+          requires:
+            - build-docker
       - benchmark-ec2:
           requires:
             - benchmarks
@@ -445,6 +461,7 @@ workflows:
           requires:
             - rustformat
             - clippy
+            - analysis
             - tests
             - benchmarks
             - build-no-std
