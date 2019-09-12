@@ -303,21 +303,11 @@ impl RationalExpression {
         let grouped = GroupedRationalExpression::from(self.clone());
         let mut result = DensePolynomial::new(&[FieldElement::ZERO]);
         for (indices, coefficients) in grouped.0 {
-            // assert!(indices.len() <= 1);
             let product = indices
                 .iter()
                 .fold(DensePolynomial::new(&[FieldElement::ONE]), |x, (i, j)| {
                     x * trace_table(*i, *j)
                 });
-            println!("indices: {:?}", indices);
-            println!("numerator: {:?}", coefficients.numerator.get_denominator());
-            let x: DensePolynomial =
-                product.clone() * coefficients.numerator.clone().get_denominator();
-            println!(
-                "denominator {:?}",
-                coefficients.denominator.get_denominator()
-            );
-            let y = x / coefficients.denominator.get_denominator();
             result += product * coefficients.numerator.clone().get_denominator()
                 / coefficients.denominator.get_denominator();
         }

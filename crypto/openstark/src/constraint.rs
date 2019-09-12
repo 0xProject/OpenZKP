@@ -39,6 +39,7 @@ pub fn combine_constraints(
         result = result + Constant(coefficients[2 * i].clone()) * x.clone();
         result = result + Constant(coefficients[2 * i + 1].clone()) * x * degree_adjustment;
     }
+    // assert_eq!(result_degree, 2 * trace_length);
     debug_assert_eq!(result.degree(trace_length), result_degree);
     result
 }
