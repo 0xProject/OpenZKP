@@ -309,9 +309,13 @@ pub fn get_constraint_polynomials(
 ) -> Vec<DensePolynomial> {
     let trace_length = trace_polynomials[0].len();
     let traces: Vec<DensePolynomial> = trace_polynomials.to_vec();
-    let trace_getter = Box::new(move |i, _| {
+    let trace_getter = Box::new(move |i, j| {
         let p: &DensePolynomial = traces.get(i).unwrap();
-        p.next()
+        match j {
+            1 => panic!(), // p.next(),
+            0 => p.clone(),
+            _ => panic!(),
+        }
     });
 
     let constraint_polynomial =

@@ -37,8 +37,15 @@ impl Add for RationalExpressionStruct {
     type Output = Self;
 
     fn add(self, other: Self) -> Self {
+        // if true {
+        //     return RationalExpressionStruct {
+        //         numerator:   self.numerator + other.numerator,
+        //         denominator: self.denominator,
+        //     };
+        // }
         RationalExpressionStruct {
-            numerator:   self.numerator * other.denominator.clone() + other.numerator * self.denominator.clone(),
+            numerator:   self.numerator * other.denominator.clone()
+                + other.numerator * self.denominator.clone(),
             denominator: self.denominator * other.denominator,
         }
     }
@@ -48,8 +55,15 @@ impl Sub for RationalExpressionStruct {
     type Output = Self;
 
     fn sub(self, other: Self) -> Self {
+        // if true {
+        //     return RationalExpressionStruct {
+        //         numerator:   self.numerator - other.numerator,
+        //         denominator: self.denominator,
+        //     };
+        // }
         RationalExpressionStruct {
-            numerator:   self.numerator * other.denominator.clone() - other.numerator * self.denominator.clone(),
+            numerator:   self.numerator * other.denominator.clone()
+                - other.numerator * self.denominator.clone(),
             denominator: self.denominator * other.denominator,
         }
     }
@@ -158,6 +172,12 @@ impl GroupedRationalExpression {
         let keys: Vec<_> = denominator.0.keys().collect();
         assert_eq!(keys[0].len(), 0);
         let divisor = denominator.0.get(&vec![]).unwrap();
+        assert_eq!(divisor.numerator.degree(10), 1);
+        assert_eq!(divisor.denominator.degree(10), 0);
+        println!(
+            "div called with numerator = {:?}",
+            divisor.denominator.get_denominator()
+        );
 
         let mut result: BTreeMap<Vec<(usize, isize)>, RationalExpressionStruct> = BTreeMap::new();
         for (indices, coefficient) in numerator.0 {
@@ -171,13 +191,28 @@ impl From<RationalExpression> for GroupedRationalExpression {
     fn from(value: RationalExpression) -> Self {
         use RationalExpression::*;
         match value {
-            X => GroupedRationalExpression::new(vec![], RationalExpressionStruct{numerator: X, denominator: 1.into()}),
-            Constant(c) => GroupedRationalExpression::new(vec![],  RationalExpressionStruct{numerator: Constant(c), denominator: 1.into()}),
-            Trace(i, j) => GroupedRationalExpression::new(vec![(i, j)], RationalExpressionStruct{numerator: 1.into(), denominator: 1.into()}),
+            X => {
+                GroupedRationalExpression::new(vec![], RationalExpressionStruct {
+                    numerator:   X,
+                    denominator: 1.into(),
+                })
+            }
+            Constant(c) => {
+                GroupedRationalExpression::new(vec![], RationalExpressionStruct {
+                    numerator:   Constant(c),
+                    denominator: 1.into(),
+                })
+            }
+            Trace(i, j) => {
+                GroupedRationalExpression::new(vec![(i, j)], RationalExpressionStruct {
+                    numerator:   1.into(),
+                    denominator: 1.into(),
+                })
+            }
             Add(a, b) => Self::add((*a).into(), (*b).into()),
             Sub(a, b) => Self::sub((*a).into(), (*b).into()),
             Mul(a, b) => Self::mul((*a).into(), (*b).into()),
-            Div(a, b) => Self::div((*a).into(), (*b).into()),
+            Div(a, b) => Self::div((*a).into(), (*b).into()), // should this be being called twice?
             Pow(a, n) => GroupedRationalExpression::from(*a).pow(n),
         }
     }
@@ -276,17 +311,28 @@ impl RationalExpression {
         let grouped = GroupedRationalExpression::from(self.clone());
         let mut result = DensePolynomial::new(&[FieldElement::ZERO]);
         for (indices, coefficients) in grouped.0 {
+            assert!(indices.len() <= 1);
             let product = indices
                 .iter()
                 .fold(DensePolynomial::new(&[FieldElement::ONE]), |x, (i, j)| {
                     x * trace_table(*i, *j)
                 });
-            result += product * coefficients.numerator.clone().get_denominator() / coefficients.denominator.get_denominator();
+            println!("indices: {:?}", indices);
+            println!("numerator: {:?}", coefficients.numerator.get_denominator());
+            let x: DensePolynomial =
+                product.clone() * coefficients.numerator.clone().get_denominator();
+            println!(
+                "denominator {:?}",
+                coefficients.denominator.get_denominator()
+            );
+            let y = x / coefficients.denominator.get_denominator();
+            result += product * coefficients.numerator.clone().get_denominator()
+                / coefficients.denominator.get_denominator();
         }
         result
     }
 
-    fn get_denominator(&self) -> SparsePolynomial {
+    pub fn get_denominator(&self) -> SparsePolynomial {
         match self {
             Self::X => SparsePolynomial::new(&[(FieldElement::ONE, 1)]),
             Self::Constant(c) => SparsePolynomial::new(&[(c.clone(), 0)]),
