@@ -18,6 +18,10 @@ parking_lot = '0.7.1'
 tokio = '0.1'
 trie-root = '0.12.0'
 
+[features]
+default = ["std"]
+std = []
+
 [dependencies.basic-authorship]
 git = 'https://github.com/paritytech/substrate.git'
 package = 'substrate-basic-authorship'

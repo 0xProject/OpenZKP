@@ -15,27 +15,27 @@ const THREADED_THRESHOLD: usize = 10;
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "std", derive(Debug))]
-pub struct ChallengeSeed([u8; 32]);
+pub(crate) struct ChallengeSeed([u8; 32]);
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "std", derive(Debug))]
-pub struct Challenge {
+pub(crate) struct Challenge {
     seed:       [u8; 32],
     difficulty: usize,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "std", derive(Debug))]
-pub struct Response {
+pub(crate) struct Response {
     nonce: u64,
 }
 
 impl ChallengeSeed {
-    pub fn from_bytes(seed: [u8; 32]) -> Self {
+    pub(crate) fn from_bytes(seed: [u8; 32]) -> Self {
         Self(seed)
     }
 
-    pub fn with_difficulty(self, difficulty: usize) -> Challenge {
+    pub(crate) fn with_difficulty(self, difficulty: usize) -> Challenge {
         let mut seed = [0_u8; 32];
         let mut keccak = Keccak::new_keccak256();
         keccak.update(&hex!("0123456789abcded"));
@@ -47,7 +47,7 @@ impl ChallengeSeed {
 }
 
 impl Challenge {
-    pub fn verify(&self, response: Response) -> bool {
+    pub(crate) fn verify(&self, response: Response) -> bool {
         // TODO: return Result<()>
         // OPT: Inline Keccak256 and work directly on buffer using 'keccakf'
         let mut keccak = Keccak::new_keccak256();
@@ -63,7 +63,7 @@ impl Challenge {
 
 #[cfg(feature = "prover")]
 impl Challenge {
-    pub fn solve(&self) -> Response {
+    pub(crate) fn solve(&self) -> Response {
         #[cfg(features = "std")]
         {
             if self.difficulty > THREADED_THRESHOLD {
@@ -95,11 +95,11 @@ impl Challenge {
 }
 
 impl Response {
-    pub fn from_nonce(nonce: u64) -> Self {
+    pub(crate) fn from_nonce(nonce: u64) -> Self {
         Self { nonce }
     }
 
-    pub fn nonce(self) -> u64 {
+    pub(crate) fn nonce(self) -> u64 {
         self.nonce
     }
 }

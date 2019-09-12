@@ -6,3 +6,11 @@ pub struct Constraint {
     pub denominator: SparsePolynomial,
     pub numerator:   SparsePolynomial,
 }
+
+// TODO: Show expression
+#[cfg(feature = "std")]
+impl std::fmt::Debug for Constraint {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(fmt, "Constraint(...)")
+    }
+}

@@ -20,7 +20,8 @@ use substrate_service::{
 };
 use transaction_pool::{self, txpool::Pool as TransactionPool};
 
-pub use substrate_executor::NativeExecutor;
+// TODO: Remove: pub(crate) use substrate_executor::NativeExecutor;
+
 // Our native executor instance.
 native_executor_instance!(
 	pub Executor,
@@ -30,8 +31,17 @@ native_executor_instance!(
 );
 
 #[derive(Default)]
+// TODO: Why does this need to be pub
+#[allow(unreachable_pub)]
 pub struct NodeConfig {
     inherent_data_providers: InherentDataProviders,
+}
+
+#[cfg(feature = "std")]
+impl std::fmt::Debug for NodeConfig {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(fmt, "NodeConfig(...)")
+    }
 }
 
 construct_simple_protocol! {

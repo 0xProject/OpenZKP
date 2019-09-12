@@ -437,7 +437,7 @@ pub fn gcd_extended(mut r0: U256, mut r1: U256) -> (U256, U256, U256, bool) {
 /// It differs from `gcd_extended` in that it only computes the required
 /// cofactor, and returns `None` if the GCD is not one (i.e. when `num` does
 /// not have an inverse).
-pub fn inv_mod(modulus: &U256, num: &U256) -> Option<U256> {
+pub(crate) fn inv_mod(modulus: &U256, num: &U256) -> Option<U256> {
     let mut r0 = modulus.clone();
     let mut r1 = num.clone();
     if r1 >= r0 {

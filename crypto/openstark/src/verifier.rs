@@ -130,10 +130,15 @@ where
         return false;
     }
 
+    let coset_sizes = params
+        .fri_layout
+        .iter()
+        .map(|k| 1_usize << k)
+        .collect::<Vec<_>>();
     let mut fri_indices: Vec<usize> = queries
         .to_vec()
         .iter()
-        .map(|x| x / 2_usize.pow((params.fri_layout[0]) as u32))
+        .map(|x| x / coset_sizes[0])
         .collect();
 
     // Folded fri values from the previous layer
@@ -148,8 +153,8 @@ where
         fri_indices.dedup();
         for i in &fri_indices {
             let mut coset: Vec<FieldElement> = Vec::new();
-            for j in 0..2_usize.pow(params.fri_layout[k] as u32) {
-                let n = i * 2_usize.pow(params.fri_layout[k] as u32) + j;
+            for j in 0..coset_sizes[k] {
+                let n = i * coset_sizes[k] + j;
                 if let Ok(z) = previous_indices.binary_search(&n) {
                     if k > 0 {
                         coset.push(fri_folds.get(&n).unwrap().clone());
@@ -181,7 +186,7 @@ where
                     coset.as_slice(),
                     &eval_points[k],
                     step,
-                    2_usize.pow((params.fri_layout[k] - 1) as u32) * i,
+                    (coset_sizes[k] / 2) * i,
                     len,
                     eval_x.as_slice(),
                 ),
@@ -196,7 +201,7 @@ where
         for _ in 0..params.fri_layout[k] {
             step *= 2;
         }
-        len /= 2_usize.pow(params.fri_layout[k] as u32);
+        len /= coset_sizes[k];
 
         merkle_proof.verify(&fri_layer_values).unwrap();
         if merkle_proof.verify(&fri_layer_values).is_err() {
@@ -207,7 +212,7 @@ where
         if k + 1 < params.fri_layout.len() {
             fri_indices = fri_indices
                 .iter()
-                .map(|ind| ind / 2_usize.pow((params.fri_layout[k + 1]) as u32))
+                .map(|ind| ind / coset_sizes[k + 1])
                 .collect();
         }
     }
@@ -255,6 +260,8 @@ where
     claimed_oods_value == oods_values[2 * trace_cols]
 }
 
+// TODO: Clean up
+#[allow(clippy::cast_possible_truncation)]
 fn get_indices(num: usize, bits: u32, proof: &mut VerifierChannel) -> Vec<usize> {
     let mut query_indices = Vec::with_capacity(num + 3);
     while query_indices.len() < num {

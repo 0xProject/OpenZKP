@@ -36,18 +36,3 @@
     variant_size_differences
 )]
 #![cfg_attr(feature = "std", warn(missing_debug_implementations,))]
-
-mod binops;
-mod division;
-mod gcd;
-mod u256;
-
-// TODO: This seems out of scope for U256 to export.
-pub mod utils;
-
-pub use crate::u256::U256;
-
-// TODO: Make member functions of U256?
-pub use gcd::{gcd, gcd_extended};
-#[cfg(not(feature = "std"))]
-extern crate no_std_compat as std;

@@ -4,7 +4,7 @@ use primefield::FieldElement;
 use std::prelude::v1::*;
 use u256::U256;
 
-pub fn window_table(p: &Affine, naf: &mut [Jacobian]) {
+pub(crate) fn window_table(p: &Affine, naf: &mut [Jacobian]) {
     // naf = P, 3P, 5P, ... 15P
     // OPT: Optimal window size
     naf[0] = Jacobian::from(p);
@@ -26,7 +26,7 @@ pub fn window_table_affine(p: &Affine, naf: &mut [Affine]) {
 }
 
 // TODO: https://link.springer.com/content/pdf/10.1007/3-540-36400-5_41.pdf
-pub fn batch_convert(jacobians: &[Jacobian], affines: &mut [Affine]) {
+pub(crate) fn batch_convert(jacobians: &[Jacobian], affines: &mut [Affine]) {
     debug_assert!(jacobians.len() == affines.len());
 
     // Intermediate values
@@ -70,7 +70,7 @@ pub fn batch_convert(jacobians: &[Jacobian], affines: &mut [Affine]) {
 // OPT: Can we turn this into a left-to-right version of the algorithm
 //      so we can consume the values as they are produced and we don't
 //      need any allocations?
-pub fn non_adjacent_form(mut scalar: U256, window: usize) -> [i16; 257] {
+pub(crate) fn non_adjacent_form(mut scalar: U256, window: usize) -> [i16; 257] {
     let mask = (1_u64 << window) - 1;
     let half = 1_i16 << (window - 1);
     let mut snaf = [0_i16; 257];

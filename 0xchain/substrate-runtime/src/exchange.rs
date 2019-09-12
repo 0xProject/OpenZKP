@@ -301,7 +301,10 @@ mod tests {
     // first constructing a configuration type (`Test`) which `impl`s each of the
     // configuration traits of modules we want to use.
     #[derive(Clone, Eq, PartialEq)]
+    // TODO: Why does this need to be pub
+    #[allow(unreachable_pub)]
     pub struct ExchangeTest;
+
     impl system::Trait for ExchangeTest {
         type AccountId = u64;
         type BlockNumber = u64;
@@ -315,10 +318,13 @@ mod tests {
         type Lookup = IdentityLookup<Self::AccountId>;
         type Origin = Origin;
     }
+
     impl finality::Trait for ExchangeTest {
         type Event = ();
     }
+
     impl Trait for ExchangeTest {}
+
     type Exchange = Module<ExchangeTest>;
 
     // This function basically just builds a genesis storage key/value store

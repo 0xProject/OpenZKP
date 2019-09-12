@@ -16,8 +16,8 @@ pub const SHIFT_POINT: Affine = Affine::Point {
     )),
 };
 
-pub const N_ELEMENTS: usize = 2;
-pub const N_ELEMENT_BITS: usize = 252;
+const N_ELEMENTS: usize = 2;
+const N_ELEMENT_BITS: usize = 252;
 
 pub fn hash(elements: &[U256]) -> U256 {
     assert!(elements.len() <= N_ELEMENTS);

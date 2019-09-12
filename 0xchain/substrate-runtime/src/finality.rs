@@ -232,7 +232,10 @@ mod tests {
     // first constructing a configuration type (`Test`) which `impl`s each of the
     // configuration traits of modules we want to use.
     #[derive(Clone, Eq, PartialEq)]
+    // TODO: Why does this need to be pub
+    #[allow(unreachable_pub)]
     pub struct FinalityTest;
+
     impl system::Trait for FinalityTest {
         type AccountId = u64;
         type BlockNumber = u64;
@@ -246,9 +249,11 @@ mod tests {
         type Lookup = IdentityLookup<Self::AccountId>;
         type Origin = Origin;
     }
+
     impl Trait for FinalityTest {
         type Event = ();
     }
+
     type FinalityProof = Module<FinalityTest>;
 
     // This function basically just builds a genesis storage key/value store

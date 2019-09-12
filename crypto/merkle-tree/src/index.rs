@@ -187,6 +187,7 @@ impl fmt::Debug for Index {
     }
 }
 
+#[cfg_attr(feature = "std", derive(Debug))]
 pub struct LayerIter {
     size:   usize,
     offset: usize,
@@ -223,7 +224,7 @@ mod test {
     use quickcheck_macros::quickcheck;
 
     #[quickcheck]
-    pub fn test_depth_offset_roundtrip(depth: usize, offset: usize) -> bool {
+    fn test_depth_offset_roundtrip(depth: usize, offset: usize) -> bool {
         let depth = depth % (Index::max_size().trailing_zeros() as usize);
         let offset = offset % Index::size_at_depth(depth);
         let index = Index::from_size_offset(1_usize << depth, offset).unwrap();
@@ -231,7 +232,7 @@ mod test {
     }
 
     #[quickcheck]
-    pub fn test_children(parent: Index) {
+    fn test_children(parent: Index) {
         let left = parent.left_child();
         let right = parent.right_child();
         assert!(left.is_left());

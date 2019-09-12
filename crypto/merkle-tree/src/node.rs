@@ -2,7 +2,7 @@ use hash::{Hash, Hashable, MaskedKeccak};
 
 #[derive(Clone)]
 #[cfg_attr(feature = "std", derive(Debug))]
-pub struct Node<'a>(pub &'a Hash, pub &'a Hash);
+pub(crate) struct Node<'a>(pub(crate) &'a Hash, pub(crate) &'a Hash);
 
 impl Hashable for Node<'_> {
     fn hash(&self) -> Hash {

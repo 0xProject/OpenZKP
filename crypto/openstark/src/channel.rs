@@ -9,15 +9,15 @@ use std::prelude::v1::*;
 use tiny_keccak::Keccak;
 use u256::U256;
 
-pub trait RandomGenerator<T> {
+pub(crate) trait RandomGenerator<T> {
     fn get_random(&mut self) -> T;
 }
 
-pub trait Writable<T> {
+pub(crate) trait Writable<T> {
     fn write(&mut self, data: T);
 }
 
-pub trait Replayable<T> {
+pub(crate) trait Replayable<T> {
     fn replay(&mut self) -> T;
 
     fn replay_many(&mut self, count: usize) -> Vec<T> {
@@ -25,6 +25,7 @@ pub trait Replayable<T> {
     }
 }
 
+// TODO: Limit to crate
 #[derive(PartialEq, Eq, Clone, Default)]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct PublicCoin {
@@ -48,14 +49,14 @@ pub struct VerifierChannel {
 }
 
 impl PublicCoin {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             digest:  [0; 32],
             counter: 0,
         }
     }
 
-    pub fn seed(&mut self, seed: &[u8]) {
+    pub(crate) fn seed(&mut self, seed: &[u8]) {
         let mut keccak = Keccak::new_keccak256();
         keccak.update(seed);
         keccak.finalize(&mut self.digest);

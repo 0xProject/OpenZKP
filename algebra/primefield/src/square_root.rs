@@ -2,7 +2,7 @@ use crate::field::FieldElement;
 use macros_decl::u256h;
 use u256::U256;
 
-pub fn square_root(a: &FieldElement) -> Option<FieldElement> {
+pub(crate) fn square_root(a: &FieldElement) -> Option<FieldElement> {
     if is_quadratic_residue(a) {
         Some(tonelli_shanks(a))
     } else {

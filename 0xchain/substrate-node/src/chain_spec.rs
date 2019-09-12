@@ -12,13 +12,13 @@ use substrate_service;
 
 /// Specialized `ChainSpec`. This is a specialization of the general Substrate
 /// `ChainSpec` type.
-pub type ChainSpec = substrate_service::ChainSpec<GenesisConfig>;
+pub(crate) type ChainSpec = substrate_service::ChainSpec<GenesisConfig>;
 
 /// The chain specification option. This is expected to come in from the CLI and
 /// is little more than one of a number of alternatives which can easily be
 /// converted from a string (`--chain=...`) into a `ChainSpec`.
 #[derive(Clone, Debug)]
-pub enum Alternative {
+pub(crate) enum Alternative {
     /// Whatever the current runtime is, with just Alice as an auth.
     Development,
     /// Whatever the current runtime is, with simple Alice/Bob auths.
