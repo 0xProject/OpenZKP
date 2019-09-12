@@ -7,7 +7,7 @@ use crate::{
         },
     },
     polynomial::{DensePolynomial, SparsePolynomial},
-    rational_expression::RationalExpression::{self, Constant, Trace, X},
+    rational_expression::RationalExpression::{self, Constant, PeriodicColumn, Trace, X},
 };
 use ecc::Affine;
 use primefield::FieldElement;
@@ -40,19 +40,22 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constr
         Affine::Point { x, y } => (x, y),
     };
 
-    // let q_x_left_1 = SparsePolynomial::periodic(&LEFT_X_COEFFICIENTS,
-    // path_length); let q_x_left_2 =
-    // SparsePolynomial::periodic(&LEFT_X_COEFFICIENTS, path_length);
-    // let q_y_left = SparsePolynomial::periodic(&LEFT_Y_COEFFICIENTS, path_length);
-    // let q_x_right_1 = SparsePolynomial::periodic(&RIGHT_X_COEFFICIENTS,
-    // path_length); let q_x_right_2 =
-    // SparsePolynomial::periodic(&RIGHT_X_COEFFICIENTS, path_length);
-    // let q_y_right = SparsePolynomial::periodic(&RIGHT_Y_COEFFICIENTS,
-    // path_length);
-    let q_x_left = RationalExpression::from(1);
-    let q_y_left = RationalExpression::from(1);
-    let q_x_right = RationalExpression::from(1);
-    let q_y_right = RationalExpression::from(1);
+    let q_x_left = PeriodicColumn(SparsePolynomial::periodic(
+        &LEFT_X_COEFFICIENTS,
+        path_length,
+    ));
+    let q_y_left = PeriodicColumn(SparsePolynomial::periodic(
+        &LEFT_Y_COEFFICIENTS,
+        path_length,
+    ));
+    let q_x_right = PeriodicColumn(SparsePolynomial::periodic(
+        &RIGHT_X_COEFFICIENTS,
+        path_length,
+    ));
+    let q_y_right = PeriodicColumn(SparsePolynomial::periodic(
+        &RIGHT_Y_COEFFICIENTS,
+        path_length,
+    ));
 
     let left_bit = Trace(0, 0) - Trace(0, 1) * 2.into();
     let right_bit = Trace(4, 0) - Trace(4, 1) * 2.into();
@@ -136,24 +139,26 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constr
             denominator: every_row.clone(),
         },
         Constraint {
-            base: Trace(1, 1) * Trace(1, 1)
+            base:        Trace(1, 1) * Trace(1, 1)
                 - left_bit.clone() * (Trace(6, 0) + q_x_left + Trace(2, 1)),
             numerator:   hash_end_rows.clone(),
             denominator: every_row.clone(),
         },
         Constraint {
-            base: left_bit.clone() * (Trace(7, 0) + Trace(3, 1))
+            base:        left_bit.clone() * (Trace(7, 0) + Trace(3, 1))
                 - Trace(1, 1) * (Trace(6, 0) - Trace(2, 1)),
             numerator:   hash_end_rows.clone(),
             denominator: every_row.clone(),
         },
         Constraint {
-            base: (Constant(FieldElement::ONE) - left_bit.clone()) * (Trace(6, 0) - Trace(2, 1)),
+            base:        (Constant(FieldElement::ONE) - left_bit.clone())
+                * (Trace(6, 0) - Trace(2, 1)),
             numerator:   hash_end_rows.clone(),
             denominator: every_row.clone(),
         },
         Constraint {
-            base: (Constant(FieldElement::ONE) - left_bit.clone()) * (Trace(7, 0) - Trace(3, 1)),
+            base:        (Constant(FieldElement::ONE) - left_bit.clone())
+                * (Trace(7, 0) - Trace(3, 1)),
             numerator:   hash_end_rows.clone(),
             denominator: every_row.clone(),
         },
@@ -168,35 +173,37 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constr
             denominator: hash_end_rows.clone(),
         },
         Constraint {
-            base: right_bit.clone() * (right_bit.clone() - 1.into()),
+            base:        right_bit.clone() * (right_bit.clone() - 1.into()),
             numerator:   hash_end_rows.clone(),
             denominator: every_row.clone(),
         },
         Constraint {
-            base: right_bit.clone() * (Trace(3, 1) - q_y_right.clone())
+            base:        right_bit.clone() * (Trace(3, 1) - q_y_right.clone())
                 - Trace(5, 1) * (Trace(2, 1) - q_x_right.clone()),
             numerator:   hash_end_rows.clone(),
             denominator: every_row.clone(),
         },
         Constraint {
-            base: Trace(5, 1) * Trace(5, 1)
+            base:        Trace(5, 1) * Trace(5, 1)
                 - right_bit.clone() * (Trace(2, 1) + q_x_right.clone() + Trace(6, 1)),
             numerator:   hash_end_rows.clone(),
             denominator: every_row.clone(),
         },
         Constraint {
-            base: right_bit.clone() * (Trace(3, 1) + Trace(7, 1))
+            base:        right_bit.clone() * (Trace(3, 1) + Trace(7, 1))
                 - Trace(5, 1) * (Trace(2, 1) - Trace(6, 1)),
             numerator:   hash_end_rows.clone(),
             denominator: every_row.clone(),
         },
         Constraint {
-            base: (Constant(FieldElement::ONE) - right_bit.clone()) * (Trace(2, 1) - Trace(6, 1)),
+            base:        (Constant(FieldElement::ONE) - right_bit.clone())
+                * (Trace(2, 1) - Trace(6, 1)),
             numerator:   hash_end_rows.clone(),
             denominator: every_row.clone(),
         },
         Constraint {
-            base: (Constant(FieldElement::ONE) - right_bit.clone()) * (Trace(3, 1) - Trace(7, 1)),
+            base:        (Constant(FieldElement::ONE) - right_bit.clone())
+                * (Trace(3, 1) - Trace(7, 1)),
             numerator:   hash_end_rows.clone(),
             denominator: every_row.clone(),
         },

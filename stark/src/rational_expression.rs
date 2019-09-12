@@ -11,6 +11,7 @@ pub enum RationalExpression {
     X,
     Constant(FieldElement),
     Trace(usize, isize),
+    PeriodicColumn(SparsePolynomial),
     Add(Box<RationalExpression>, Box<RationalExpression>),
     Sub(Box<RationalExpression>, Box<RationalExpression>),
     Mul(Box<RationalExpression>, Box<RationalExpression>),
@@ -209,6 +210,12 @@ impl From<RationalExpression> for GroupedRationalExpression {
                     denominator: 1.into(),
                 })
             }
+            PeriodicColumn(p) => {
+                GroupedRationalExpression::new(vec![], RationalExpressionStruct {
+                    numerator:   PeriodicColumn(p),
+                    denominator: 1.into(),
+                })
+            }
             Add(a, b) => Self::add((*a).into(), (*b).into()),
             Sub(a, b) => Self::sub((*a).into(), (*b).into()),
             Mul(a, b) => Self::mul((*a).into(), (*b).into()),
@@ -279,6 +286,7 @@ impl RationalExpression {
             X => 1,
             Constant(_) => 0,
             Trace(..) => trace_degree,
+            PeriodicColumn(p) => p.degree(),
             Add(a, b) => max(a.degree(trace_degree), b.degree(trace_degree)),
             Sub(a, b) => max(a.degree(trace_degree), b.degree(trace_degree)),
             Mul(a, b) => a.degree(trace_degree) + b.degree(trace_degree),
@@ -297,6 +305,7 @@ impl RationalExpression {
             X => x.clone(),
             Constant(value) => value.clone(),
             &Trace(i, j) => trace_table(i, j),
+            PeriodicColumn(p) => p.evaluate(x),
             Add(a, b) => a.eval(trace_table, x) + b.eval(trace_table, x),
             Sub(a, b) => a.eval(trace_table, x) - b.eval(trace_table, x),
             Mul(a, b) => a.eval(trace_table, x) * b.eval(trace_table, x),
@@ -312,7 +321,7 @@ impl RationalExpression {
         let grouped = GroupedRationalExpression::from(self.clone());
         let mut result = DensePolynomial::new(&[FieldElement::ZERO]);
         for (indices, coefficients) in grouped.0 {
-            assert!(indices.len() <= 1);
+            // assert!(indices.len() <= 1);
             let product = indices
                 .iter()
                 .fold(DensePolynomial::new(&[FieldElement::ONE]), |x, (i, j)| {
@@ -337,6 +346,7 @@ impl RationalExpression {
         match self {
             Self::X => SparsePolynomial::new(&[(FieldElement::ONE, 1)]),
             Self::Constant(c) => SparsePolynomial::new(&[(c.clone(), 0)]),
+            Self::PeriodicColumn(p) => p.clone(),
             Self::Add(a, b) => a.get_denominator() + b.get_denominator(),
             Self::Sub(a, b) => a.get_denominator() - b.get_denominator(),
             Self::Mul(a, b) => a.get_denominator() * b.get_denominator(),
