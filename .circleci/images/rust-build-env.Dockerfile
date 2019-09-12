@@ -72,5 +72,5 @@ RUN true \
 
 # Pre-build substrate-node
 RUN true \
- && cd $HOME/project/substrate-node \
+ && cd $HOME/project/0xchain/substrate-node \
  && cargo build --release
