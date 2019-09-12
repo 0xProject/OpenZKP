@@ -27,6 +27,12 @@ RUN true \
  && cargo install twiggy \
  && cargo install cargo-cache \
  && cargo install grcov \
+ # More analysis tools
+ && cargo install cargo-outdated \
+ && cargo install cargo-audit \
+ && cargo install cargo-geiger \
+ && sudo apt-get install python3-pip \
+ && python3 -m pip install remarshal --user \
  # Compress cargo caches
  && cargo cache --autoclean-expensive
 

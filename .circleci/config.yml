@@ -28,7 +28,7 @@ executors:
       # Necessary for `docker manifest` subcommand
       DOCKER_CLI_EXPERIMENTAL: enabled
       # Bump the tag version whenever changes are made.
-      IMAGE: &build_image "0xchain/rust-build-env:6"
+      IMAGE: &build_image "0xchain/rust-build-env:7"
   docker-rust:
     docker:
       - image: *build_image
@@ -353,15 +353,6 @@ jobs:
     executor: docker-rust
     steps:
       - checkout
-      - run:
-          name: Install tools
-          command: |
-            # TODO: Move to docker file
-            cargo install cargo-outdated
-            cargo install cargo-audit
-            cargo install cargo-geiger
-            sudo apt-get install python3-pip
-            python3 -m pip install remarshal --user
       - run:
           name: Check lints.rs copies
           command: |
