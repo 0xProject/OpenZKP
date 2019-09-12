@@ -753,6 +753,7 @@ mod tests {
             &constraint_coefficients,
             params.constraints_degree_bound,
         );
+        assert!(false);
         assert_eq!(constraint_polynomials.len(), 1);
         assert_eq!(constraint_polynomials[0].len(), 1024);
         let CC = calculate_low_degree_extensions(&constraint_polynomials, params.blowup);

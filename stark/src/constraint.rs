@@ -1,7 +1,9 @@
-use crate::{polynomial::SparsePolynomial, rational_expression::RationalExpression};
+use crate::{
+    polynomial::SparsePolynomial,
+    rational_expression::RationalExpression::{self, Constant},
+};
 use primefield::FieldElement;
 use std::prelude::v1::*;
-use crate::rational_expression::RationalExpression::Constant;
 
 pub struct Constraint {
     pub base:        RationalExpression,
@@ -28,7 +30,8 @@ pub fn combine_constraints(
         .max()
         .unwrap();
     for (i, constraint) in constraints.iter().enumerate() {
-        let x = constraint.base.clone() * constraint.numerator.clone() / constraint.denominator.clone();
+        let x =
+            constraint.base.clone() * constraint.numerator.clone() / constraint.denominator.clone();
         result = result + Constant(coefficients[2 * i].clone()) * x.clone();
         let degree_adjustment = RationalExpression::X.pow(10);
         result = result + Constant(coefficients[2 * i + 1].clone()) * x * degree_adjustment;

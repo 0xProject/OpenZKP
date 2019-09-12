@@ -96,10 +96,10 @@ pub fn get_fibonacci_constraints(public_input: &PublicInput) -> Vec<Constraint> 
     let trace_generator = RationalExpression::Constant(FieldElement::root(trace_length).unwrap());
 
     let no_rows = RationalExpression::from(1);
-    let first_row = RationalExpression::from(1) / (X - trace_generator.pow(0));
-    let claim_row = RationalExpression::from(1) / (X - trace_generator.pow(claim_index));
-    let last_row = RationalExpression::from(1) / (X - trace_generator.pow(trace_length - 1));
-    let every_row = (X - trace_generator.pow(trace_length)) / (X.pow(trace_length) - 1.into());
+    let first_row = X - trace_generator.pow(0);
+    let claim_row = X - trace_generator.pow(claim_index);
+    let last_row = X - trace_generator.pow(trace_length - 1);
+    let every_row = X.pow(trace_length) - 1.into();
 
     vec![
         Constraint {

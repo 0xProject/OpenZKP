@@ -260,6 +260,16 @@ impl MulAssign<SparsePolynomial> for DensePolynomial {
     }
 }
 
+impl Mul<SparsePolynomial> for DensePolynomial {
+    type Output = DensePolynomial;
+
+    fn mul(self, other: SparsePolynomial) -> DensePolynomial {
+        let mut copy = self.clone();
+        copy *= other;
+        copy
+    }
+}
+
 // This assumes that the sparse polynomial exactly divides the dense one, and
 // will panic if that is not the case.
 #[allow(clippy::suspicious_op_assign_impl)] // Allows us to use `*` here.
