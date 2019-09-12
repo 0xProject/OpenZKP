@@ -18,6 +18,12 @@ pub enum RationalExpression {
     Pow(Box<RationalExpression>, usize),
 }
 
+#[derive(Clone, Debug)]
+pub struct RationalExpressionStruct {
+    numerator:   RationalExpression, // cannot have div
+    denominator: RationalExpression,
+}
+
 // Effectively a sparse polynomial!
 #[derive(Clone, Debug)]
 struct GroupedRationalExpression(pub BTreeMap<Vec<(usize, isize)>, RationalExpression>);
@@ -203,23 +209,29 @@ impl RationalExpression {
         &self,
         trace_table: &dyn Fn(usize, isize) -> DensePolynomial,
     ) -> DensePolynomial {
-        // let grouped = GroupedRationalExpression::from(*self);
-        // for (indices, coefficients) in grouped.0: {
-        //
-        // }
-
-
-
-        match self {
-            Self::X => DensePolynomial::new(&[FieldElement::ZERO, FieldElement::ONE]),
-            Self::Constant(value) => DensePolynomial::new(&[value.clone()]),
-            &Self::Trace(i, j) => trace_table(i, j),
-            Self::Add(a, b) => a.eval_on_domain(trace_table) + b.eval_on_domain(trace_table),
-            Self::Sub(a, b) => a.eval_on_domain(trace_table) - b.eval_on_domain(trace_table),
-            Self::Mul(a, b) => a.eval_on_domain(trace_table) * b.get_denominator(),
-            Self::Div(a, b) => a.eval_on_domain(trace_table) / b.get_denominator(),
-            Self::Pow(a, n) => panic!(),
+        let grouped = GroupedRationalExpression::from(self.clone());
+        let mut result = DensePolynomial::new(&[FieldElement::ZERO]);
+        for (indices, coefficients) in grouped.0 {
+            let product = indices
+                .iter()
+                .fold(DensePolynomial::new(&[FieldElement::ONE]), |x, (i, j)| {
+                    x * trace_table(*i, *j)
+                });
+            result += product * coefficients.get_denominator();
         }
+        result
+        // match self {
+        //     Self::X => DensePolynomial::new(&[FieldElement::ZERO,
+        // FieldElement::ONE]),     Self::Constant(value) =>
+        // DensePolynomial::new(&[value.clone()]),     &Self::Trace(i,
+        // j) => trace_table(i, j),     Self::Add(a, b) =>
+        // a.eval_on_domain(trace_table) + b.eval_on_domain(trace_table),
+        //     Self::Sub(a, b) => a.eval_on_domain(trace_table) -
+        // b.eval_on_domain(trace_table),     Self::Mul(a, b) =>
+        // a.eval_on_domain(trace_table) * b.get_denominator(),
+        //     Self::Div(a, b) => a.eval_on_domain(trace_table) /
+        // b.get_denominator(),     Self::Pow(a, n) => panic!(),
+        // }
     }
 
     fn get_denominator(&self) -> SparsePolynomial {
