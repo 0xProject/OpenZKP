@@ -349,7 +349,7 @@ jobs:
             # TODO: Clippy different feature sets (std, test, bench, ...)
       - save-sccache-cache
       - codechecks
-  check-deps:
+  analysis:
     executor: docker-rust
     steps:
       - checkout
