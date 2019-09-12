@@ -745,13 +745,14 @@ mod tests {
             hex!("b7d80385fa0c8879473cdf987ea7970bb807aec78bb91af39a1504d965ad8e92")
         );
 
-        // let mut constraint_coefficients = vec![FieldElement::ZERO; 2 * constraints.len()];
-        // constraint_coefficients[0] = FieldElement::ONE;
+        // let mut constraint_coefficients = vec![FieldElement::ZERO; 2 *
+        // constraints.len()]; constraint_coefficients[0] = FieldElement::ONE;
         // constraint_coefficients[1] = FieldElement::ONE;
         // constraint_coefficients[2] = FieldElement::ONE;
         // constraint_coefficients[3] = FieldElement::ONE;
 
-        let mut constraint_coefficients: Vec<FieldElement> = Vec::with_capacity(2 * constraints.len());
+        let mut constraint_coefficients: Vec<FieldElement> =
+            Vec::with_capacity(2 * constraints.len());
         for _ in &constraints {
             constraint_coefficients.push(proof.get_random());
             constraint_coefficients.push(proof.get_random());
@@ -774,18 +775,20 @@ mod tests {
         );
         // assert_eq!(
         //     CC[0][fft::permute_index(eval_domain_size, 123)].clone(),
-        //     field_element!("000aea0317b2784aa6b4e0f3529a04d4d7fd26d1e5ceef7eabd53919e05a6bc9")
-        // );
+        //     field_element!("
+        // 000aea0317b2784aa6b4e0f3529a04d4d7fd26d1e5ceef7eabd53919e05a6bc9") );
         // assert_eq!(
         //     CC[0][fft::permute_index(eval_domain_size, 123)].clone(),
-        //     field_element!("0462a7fcd1c1d94cc7df8669ad4b524570c2784de136fcbe20a8cd94f121c316")
-        // );
+        //     field_element!("
+        // 0462a7fcd1c1d94cc7df8669ad4b524570c2784de136fcbe20a8cd94f121c316") );
         // assert_eq!(
         //     CC[0][fft::permute_index(eval_domain_size, 123)].clone(),
-        //     field_element!("046d91ffe97451976e94675cffe5571a48bf9f1fc705ec3ccc7e06aed17c2edf")
-        // );
-        // 06f21229474ea64c19979a659600bc24b85d6b665ee26745f987d7e031ec5d67 reversed order
-        // 0713afbaeaecdb47c6cf28a20cf53efc8a89594670ec1671595960c8229993a5 in "normal order"
+        //     field_element!("
+        // 046d91ffe97451976e94675cffe5571a48bf9f1fc705ec3ccc7e06aed17c2edf") );
+        // 06f21229474ea64c19979a659600bc24b85d6b665ee26745f987d7e031ec5d67 reversed
+        // order
+        // 0713afbaeaecdb47c6cf28a20cf53efc8a89594670ec1671595960c8229993a5 in "normal
+        // order"
 
         let c_tree = merkle_tree::Tree::from_leaves(CC).unwrap();
         // Checks both that the merkle tree is working for this groupable type and that
