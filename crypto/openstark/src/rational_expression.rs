@@ -201,7 +201,7 @@ impl From<RationalExpression> for GroupedRationalExpression {
             Add(a, b) => Self::add((*a).into(), (*b).into()),
             Sub(a, b) => Self::sub((*a).into(), (*b).into()),
             Mul(a, b) => Self::mul((*a).into(), (*b).into()),
-            Div(a, b) => Self::div((*a).into(), (*b).into()), // should this be being called twice?
+            Div(a, b) => Self::div((*a).into(), (*b).into()),
             Pow(a, n) => GroupedRationalExpression::from(*a).pow(n),
         }
     }
