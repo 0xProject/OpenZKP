@@ -370,7 +370,9 @@ jobs:
             for file in $files; do
                 start=$(head -n $lines $file)
                 if [ "$start" != "$correct" ]; then
-                    echo "Incorrect lints in $file"
+                    echo "Incorrect lints in $file:"
+                    echo "$start" | diff -wb -U3 --minimal --color - ./lints.rs
+                    echo ""
                 fi
             done
       - run:
