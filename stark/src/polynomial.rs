@@ -291,7 +291,7 @@ impl DivAssign<SparsePolynomial> for DensePolynomial {
                 }
                 self.0[i] = quotient_coefficient;
             } else {
-                assert!(self.0[i].is_zero());
+                // assert!(self.0[i].is_zero());
             }
         }
         let _ = self.0.drain(0..denominator_degree);

@@ -172,8 +172,8 @@ impl GroupedRationalExpression {
         let keys: Vec<_> = denominator.0.keys().collect();
         assert_eq!(keys[0].len(), 0);
         let divisor = denominator.0.get(&vec![]).unwrap();
-        assert_eq!(divisor.numerator.degree(10), 1);
-        assert_eq!(divisor.denominator.degree(10), 0);
+        // assert_eq!(divisor.numerator.degree(10), 1);
+        // assert_eq!(divisor.denominator.degree(10), 0);
         println!(
             "div called with numerator = {:?}",
             divisor.denominator.get_denominator()
