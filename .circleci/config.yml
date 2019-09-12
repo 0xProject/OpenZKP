@@ -384,7 +384,7 @@ jobs:
             cargo audit
       - run:
           name: Check for use of unsafe in workspace
-          command: 
+          command: |
             workspace=$(toml2json < ./Cargo.toml  | jq '.workspace.members[]' -r)
             for member in $workspace; do
               pushd $member
