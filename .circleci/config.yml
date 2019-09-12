@@ -360,6 +360,7 @@ jobs:
             cargo install cargo-outdated
             cargo install cargo-audit
             cargo install cargo-geiger
+            sudo apt-get install python3-pip
             python3 -m pip install remarshal --user
       - run:
           name: Check lints.rs copies
