@@ -371,7 +371,7 @@ jobs:
                 start=$(head -n $lines $file)
                 if [ "$start" != "$correct" ]; then
                     echo "Incorrect lints in $file:"
-                    echo "$start" | diff -wb -U3 --minimal --color - ./lints.rs
+                    echo "$start" | diff -wb -U3 --minimal --color - ./lints.rs || true
                     echo ""
                 fi
             done
