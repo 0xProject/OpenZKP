@@ -18,7 +18,7 @@ use u256::U256;
 use logging_allocator;
 
 fn main() {
-    // env_logger::init();
+    env_logger::init();
 
     info!("Starting Pederson benchmark...");
     let start = Instant::now();

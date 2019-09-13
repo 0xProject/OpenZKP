@@ -12,7 +12,7 @@ use std::{env, time::Instant};
 use u256::U256;
 
 fn main() {
-    // env_logger::init();
+    env_logger::init();
 
     let args: Vec<String> = env::args().collect();
     if args.len() > 1 {
