@@ -129,6 +129,9 @@ where
     );
     info!("Constraint system {} constraints", constraints.len());
 
+    // TODO: Remove
+    // let constraints = &constraints[0..4];
+
     // Initialize a proof channel with the public input.
     info!("Initialize channel with public input.");
     let mut proof = ProverChannel::new();
@@ -201,21 +204,18 @@ where
 
     info!("Verify constraint evaluations.");
     {
-        let x = geometric_series(
-            &FieldElement::GENERATOR,
-            &FieldElement::root(trace_2.num_rows()).unwrap(),
-        )
-        .take(trace_2.num_rows());
-        for (i, x) in x.enumerate() {
-            for j in 0..trace_2.num_columns() {
-                // println!("{:?} {:?}", (i, j), x);
+        for j in 0..constraints.len() {
+            println!("Constraint {:?}", j);
+            let x = geometric_series(
+                &FieldElement::GENERATOR,
+                &FieldElement::root(trace_2.num_rows()).unwrap(),
+            )
+            .take(trace_2.num_rows());
+            for (i, x) in x.enumerate() {
                 let y1 = cpolys[j].evaluate(&x);
                 let y2 = constraints[j].expr.eval(&trace_2, i, &x);
-                // println!("{:?}", constraints[j].expr);
-                // println!("{:?} {:?}", y1, y2);
                 debug_assert_eq!(y1, y2);
             }
-            // break;
         }
     }
 
@@ -241,6 +241,7 @@ where
         constraint_polynomials[0].evaluate(&q),
         constraint_polynomials_2[0].evaluate(&q)
     );
+    unimplemented!();
 
     info!("Compute the low degree extension of constraint polynomials.");
     let constraint_lde = PolyLDE(
@@ -373,13 +374,14 @@ pub(crate) fn get_constraint_polynomials(
         p *= constraint.numerator.clone();
         p /= constraint.denominator.clone();
         cpolys.push(p.clone());
-        p *= SparsePolynomial::new(&[
+        let adjustment = SparsePolynomial::new(&[
             (constraint_coefficients[2 * i].clone(), 0),
             (
                 constraint_coefficients[2 * i + 1].clone(),
                 adjustment_degree,
             ),
         ]);
+        p *= adjustment;
         constraint_polynomial += &p;
         println!("adjustment_degree = {:?}", adjustment_degree);
         println!(
@@ -431,17 +433,16 @@ pub(crate) fn get_constraint_polynomials_2(
                     (num, den)
                 );
                 println!("{:?} {:?}", &coefficient_low, &coefficient_high);
-                // (c0 + c1 * x^d) * C(x)
-                (Constant(coefficient_low.clone())
-                    + Constant(coefficient_high.clone()) * X.pow(adjustment_degree))
-                    * constraint.expr.clone()
+                let adjustment = Constant(coefficient_low.clone())
+                    + Constant(coefficient_high.clone()) * X.pow(adjustment_degree);
+                adjustment * constraint.expr.clone()
             },
         )
         .sum();
     // TODO: Simplify
     println!("{:?}", expr);
 
-    // Evaluate on trace domain
+    // Evaluate on part of LDE domain
     let mut values: MmapVec<FieldElement> = MmapVec::with_capacity(trace_table.num_rows());
     let x = geometric_series(
         &FieldElement::GENERATOR,
@@ -457,6 +458,11 @@ pub(crate) fn get_constraint_polynomials_2(
     // Convert to DensePolynomial
     ifft_permuted(&mut values);
     permute(&mut values);
+    for (f, y) in geometric_series(&FieldElement::ONE, &FieldElement::GENERATOR.inv().unwrap())
+        .zip(values.iter_mut())
+    {
+        *y *= &f;
+    }
     // TODO: Move MmapVec into DensePolynomial
     vec![DensePolynomial::new(&values)]
 }

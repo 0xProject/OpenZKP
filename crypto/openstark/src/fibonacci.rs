@@ -102,7 +102,7 @@ pub fn get_fibonacci_constraints(public_input: &PublicInput) -> Vec<Constraint> 
             denominator: first_row,
         },
         Constraint {
-            expr:        (Trace(1, 0) - (&claim_value).into()) * on_row(claim_index),
+            expr:        (Trace(0, 0) - (&claim_value).into()) * on_row(claim_index),
             base:        Box::new(move |tp| {
                 &tp[0] - SparsePolynomial::new(&[(claim_value.clone(), 0)])
             }),
