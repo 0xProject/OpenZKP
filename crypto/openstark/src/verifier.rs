@@ -1,8 +1,6 @@
 use crate::{
     channel::*,
     constraint::{combine_constraints, Constraint},
-    hash::*,
-    merkle_tree::{Commitment, Proof},
     polynomial::DensePolynomial,
     proof_of_work,
     proof_params::ProofParams,

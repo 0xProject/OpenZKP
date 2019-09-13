@@ -1,5 +1,4 @@
 [alias]
-b = "build --all-features"
 t = "test --all-features"
 b = "build --all-features --all-targets"
 lint = "clippy --all-features --all-targets -- -D warnings"

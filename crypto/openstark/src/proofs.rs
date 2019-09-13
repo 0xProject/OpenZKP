@@ -1,11 +1,6 @@
 use crate::{
     channel::{ProverChannel, RandomGenerator, Writable},
     constraint::{combine_constraints, Constraint},
-    hash::Hash,
-    hashable::Hashable,
-    masked_keccak::MaskedKeccak,
-    merkle_tree::{self, VectorCommitment},
-    mmap_vec::MmapVec,
     check_proof,
     polynomial::{DensePolynomial, SparsePolynomial},
     proof_of_work,
