@@ -188,23 +188,35 @@ where
     );
 
     info!("Compute offset trace table (temporary)");
-    let mut trace_2 = TraceTable::new(trace.num_rows(), trace.num_columns());
+    // TODO: Re-use values computed for trace_lde here
+    let mut trace_coset = TraceTable::new(trace.num_rows(), trace.num_columns());
     {
         let x = geometric_series(
             &FieldElement::GENERATOR,
-            &FieldElement::root(trace_2.num_rows()).unwrap(),
+            &FieldElement::root(trace_coset.num_rows()).unwrap(),
         )
-        .take(trace_2.num_rows());
+        .take(trace_coset.num_rows());
         for (i, x) in x.enumerate() {
-            for j in 0..trace_2.num_columns() {
-                trace_2[(i, j)] = trace_polynomials[j].evaluate(&x);
+            for j in 0..trace_coset.num_columns() {
+                trace_coset[(i, j)] = trace_polynomials[j].evaluate(&x);
+            }
+        }
+    }
+    // Spot check
+    {
+        let coset = FieldElement::GENERATOR;
+        let omega = FieldElement::root(trace_coset.num_rows()).unwrap();
+        for i in 0..100 {
+            let x = &coset * omega.pow(i);
+            for j in 0..trace_coset.num_columns() {
+                debug_assert_eq!(trace_coset[(i, j)], trace_polynomials[j].evaluate(&x));
             }
         }
     }
 
     info!("Compute constraint polynomials 2.");
     let constraint_polynomials_2 = get_constraint_polynomials_2(
-        &trace_2,
+        &trace_coset,
         constraints,
         &constraint_coefficients,
         params.constraints_degree_bound,
@@ -381,7 +393,7 @@ pub(crate) fn get_constraint_polynomials(
 }
 
 pub(crate) fn get_constraint_polynomials_2(
-    trace_table: &TraceTable,
+    trace_coset: &TraceTable,
     constraints: &[Constraint],
     constraint_coefficients: &[FieldElement],
     constraints_degree_bound: usize,
@@ -395,8 +407,8 @@ pub(crate) fn get_constraint_polynomials_2(
         .zip(constraint_coefficients.iter().tuples())
         .map(
             |(constraint, (coefficient_low, coefficient_high))| -> RationalExpression {
-                let (num, den) = constraint.expr.degree(trace_table.num_rows());
-                let adjustment_degree = trace_table.num_rows() + den - num;
+                let (num, den) = constraint.expr.degree(trace_coset.num_rows());
+                let adjustment_degree = trace_coset.num_rows() + den - num;
                 let adjustment = Constant(coefficient_low.clone())
                     + Constant(coefficient_high.clone()) * X.pow(adjustment_degree);
                 adjustment * constraint.expr.clone()
@@ -406,15 +418,15 @@ pub(crate) fn get_constraint_polynomials_2(
     // TODO: Simplify expression
     println!("Combined constraint expression: {:?}", expr);
 
-    // Evaluate on part of LDE domain
-    let mut values: MmapVec<FieldElement> = MmapVec::with_capacity(trace_table.num_rows());
+    // Evaluate on the coset trace table
+    let mut values: MmapVec<FieldElement> = MmapVec::with_capacity(trace_coset.num_rows());
     let x = geometric_series(
         &FieldElement::GENERATOR,
-        &FieldElement::root(trace_table.num_rows()).unwrap(),
+        &FieldElement::root(trace_coset.num_rows()).unwrap(),
     )
-    .take(trace_table.num_rows());
+    .take(trace_coset.num_rows());
     for (i, x) in x.enumerate() {
-        let y = expr.eval(trace_table, i, &x);
+        let y = expr.eval(trace_coset, i, &x);
         values.push(y);
     }
 
