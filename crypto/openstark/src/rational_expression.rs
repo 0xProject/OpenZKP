@@ -19,6 +19,14 @@ pub enum RationalExpression {
 }
 
 impl RationalExpression {
+    pub fn neg(&self) -> RationalExpression {
+        RationalExpression::Neg(Box::new(self.clone()))
+    }
+
+    pub fn inv(&self) -> RationalExpression {
+        RationalExpression::Inv(Box::new(self.clone()))
+    }
+
     pub fn pow(&self, exponent: usize) -> RationalExpression {
         RationalExpression::Exp(Box::new(self.clone()), exponent)
     }
@@ -48,10 +56,7 @@ impl Sub for RationalExpression {
     type Output = Self;
 
     fn sub(self, other: Self) -> Self {
-        RationalExpression::Add(
-            Box::new(self),
-            Box::new(RationalExpression::Neg(Box::new(other))),
-        )
+        self + other.neg()
     }
 }
 
@@ -67,14 +72,10 @@ impl Div for RationalExpression {
     type Output = Self;
 
     fn div(self, other: Self) -> Self {
-        RationalExpression::Mul(
-            Box::new(self),
-            Box::new(RationalExpression::Inv(Box::new(other))),
-        )
+        self * other.inv()
     }
 }
 
-#[allow(dead_code)] // TODO
 impl RationalExpression {
     /// Numerator and denominator degree of the expression in X.
     ///
