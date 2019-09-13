@@ -16,6 +16,10 @@ pub enum RationalExpression {
     Inv(Box<RationalExpression>),
     Exp(Box<RationalExpression>, usize),
     Poly(DensePolynomial, Box<RationalExpression>),
+
+    // TODO: Non-static lifetime.
+    // TODO: Include evaluation domain info in lookup.
+    Lookup(Box<RationalExpression>, &'static [FieldElement]),
 }
 
 impl RationalExpression {
@@ -112,6 +116,7 @@ impl RationalExpression {
                 let (n, d) = a.degree(trace_degree);
                 (p.degree() * n, p.degree() * d)
             }
+            Lookup(a, _) => a.degree(trace_degree),
         }
     }
 
@@ -144,6 +149,7 @@ impl RationalExpression {
             }
             Exp(a, i) => a.eval(trace_table, row, x).pow(*i),
             Poly(p, a) => p.evaluate(&a.eval(trace_table, row, x)),
+            Lookup(_, t) => t[row % t.len()].clone(),
         }
     }
 }
