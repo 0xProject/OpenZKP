@@ -188,17 +188,20 @@ where
     );
 
     info!("Compute offset trace table (temporary)");
-    // TODO: Re-use values computed for trace_lde here
     let mut trace_coset = TraceTable::new(trace.num_rows(), trace.num_columns());
     {
+        let trace_lde: &[MmapVec<FieldElement>] = &tree.leaves().0;
         let x = geometric_series(
             &FieldElement::GENERATOR,
             &FieldElement::root(trace_coset.num_rows()).unwrap(),
         )
         .take(trace_coset.num_rows());
+        // OPT: Benchmark with flipped order of loops
         for (i, x) in x.enumerate() {
             for j in 0..trace_coset.num_columns() {
-                trace_coset[(i, j)] = trace_polynomials[j].evaluate(&x);
+                let lde = &trace_lde[j];
+                let index = permute_index(lde.len(), i * params.blowup);
+                trace_coset[(i, j)] = lde[index].clone();
             }
         }
     }
