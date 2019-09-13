@@ -187,8 +187,15 @@ where
             .collect::<Vec<_>>()
     );
 
-    info!("Compute offset trace table (temporary)");
-    let mut trace_coset = TraceTable::new(trace.num_rows(), trace.num_columns());
+    // TODO: Avoid this copy and use trace_lde directly in
+    // get_constraint_polynomials_2
+    info!("Compute offset trace table");
+    // TODO: Round up to power of two.
+    debug_assert!(params.constraints_degree_bound.is_power_of_two());
+    let mut trace_coset = TraceTable::new(
+        trace.num_rows() * params.constraints_degree_bound,
+        trace.num_columns(),
+    );
     {
         let trace_lde: &[MmapVec<FieldElement>] = &tree.leaves().0;
         let x = geometric_series(
@@ -200,7 +207,8 @@ where
         for (i, x) in x.enumerate() {
             for j in 0..trace_coset.num_columns() {
                 let lde = &trace_lde[j];
-                let index = permute_index(lde.len(), i * params.blowup);
+                let index = i * params.blowup / params.constraints_degree_bound;
+                let index = permute_index(lde.len(), index);
                 trace_coset[(i, j)] = lde[index].clone();
             }
         }
@@ -233,11 +241,13 @@ where
     );
 
     // Verify that they are equal
-    let q = constraint_coefficients[0].pow(3);
-    assert_eq!(
-        constraint_polynomials[0].evaluate(&q),
-        constraint_polynomials_2[0].evaluate(&q)
-    );
+    for i in 0..constraint_polynomials.len() {
+        let q = constraint_coefficients[0].pow(3);
+        assert_eq!(
+            constraint_polynomials[i].evaluate(&q),
+            constraint_polynomials_2[i].evaluate(&q)
+        );
+    }
 
     info!("Compute the low degree extension of constraint polynomials.");
     let constraint_lde = PolyLDE(
