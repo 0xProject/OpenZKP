@@ -285,16 +285,22 @@ pub(crate) fn get_constraint_polynomials(
         let mut p = (constraint.base)(trace_polynomials);
         let mut base_length = p.len();
         if base_length > trace_length {
+            // TODO: Is this a hack?
             base_length -= 1;
         }
-        p *= constraint.numerator.clone();
-        p /= constraint.denominator.clone();
-        constraint_polynomial += &constraint_coefficients[2 * i] * &p;
         let adjustment_degree = constraints_degree_bound * trace_length - base_length
             + constraint.denominator.degree()
             - constraint.numerator.degree();
-        p *= SparsePolynomial::new(&[(FieldElement::ONE, adjustment_degree)]);
-        constraint_polynomial += &constraint_coefficients[2 * i + 1] * &p;
+        p *= constraint.numerator.clone();
+        p /= constraint.denominator.clone();
+        p *= SparsePolynomial::new(&[
+            (constraint_coefficients[2 * i].clone(), 0),
+            (
+                constraint_coefficients[2 * i + 1].clone(),
+                adjustment_degree,
+            ),
+        ]);
+        constraint_polynomial += &p;
     }
 
     let mut constraint_polynomials: Vec<Vec<FieldElement>> = vec![vec![]; constraints_degree_bound];
