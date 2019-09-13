@@ -1,4 +1,4 @@
-use crate::trace_table::TraceTable;
+use crate::{polynomial::DensePolynomial, trace_table::TraceTable};
 use primefield::FieldElement;
 use std::{
     iter::Sum,
@@ -15,6 +15,7 @@ pub enum RationalExpression {
     Mul(Box<RationalExpression>, Box<RationalExpression>),
     Inv(Box<RationalExpression>),
     Exp(Box<RationalExpression>, usize),
+    Poly(DensePolynomial, Box<RationalExpression>),
 }
 
 impl RationalExpression {
@@ -106,11 +107,21 @@ impl RationalExpression {
                 let (n, d) = a.degree(trace_degree);
                 (e * n, e * d)
             }
+            Poly(p, a) => {
+                let (n, d) = a.degree(trace_degree);
+                (p.degree() * n, p.degree() * d)
+            }
         }
     }
 
     // TODO: Simplify: constant propagation, 0 + a, 0 * a, 1 * a, neg(neg(a)), a^0,
     // a^1 inv(inv(a)).
+
+    // TODO: Factor out parts that depend only on X (periodic columns) and
+    // pre-compute them. Observe that denominators tend to depend only on X, so
+    // we avoid a lot of inversions this way. Note that lookups are not cheap
+    // though, and sometimes evaluating X may be cheaper than a lookup. ->
+    // Benchmark.
 
     pub fn eval(&self, trace_table: &TraceTable, row: usize, x: &FieldElement) -> FieldElement {
         use RationalExpression::*;
@@ -131,6 +142,7 @@ impl RationalExpression {
                     .expect("Division by zero while evaluating RationalExpression.")
             }
             Exp(a, i) => a.eval(trace_table, row, x).pow(*i),
+            Poly(p, a) => p.evaluate(&a.eval(trace_table, row, x)),
         }
     }
 }
