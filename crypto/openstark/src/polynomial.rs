@@ -45,6 +45,14 @@ impl DensePolynomial {
         self.0.len()
     }
 
+    pub fn degree(&self) -> usize {
+        let mut degree = self.len() - 1;
+        while self.0[degree] == FieldElement::ZERO {
+            degree -= 1;
+        }
+        degree
+    }
+
     pub fn evaluate(&self, x: &FieldElement) -> FieldElement {
         let mut result = FieldElement::ZERO;
         for coefficient in self.0.iter().rev() {
@@ -386,7 +394,45 @@ impl Arbitrary for SparsePolynomial {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use primefield::geometric_series::geometric_series;
     use quickcheck_macros::quickcheck;
+
+    fn shift(factor: &FieldElement, x: &[FieldElement]) -> Vec<FieldElement> {
+        let mut coefficients = ifft(x);
+        for (c, power) in coefficients
+            .iter_mut()
+            .zip(geometric_series(&FieldElement::ONE, factor))
+        {
+            *c *= power;
+        }
+        fft(&coefficients)
+    }
+
+    #[test]
+    fn test_poly_multiply() {
+        let p_1 = dense_polynomial(&[1, 2, 5, 7]);
+        let p_2 = dense_polynomial(&[3, 4, 5, 6]);
+        let r = &p_1 * &p_2;
+        println!("p_1 = {:?}", p_1);
+        println!("p_2 = {:?}", p_2);
+        println!("r = {:?}", r);
+
+        // Evaluate on domains
+        let n = 4_usize;
+        let omega = FieldElement::root(n).unwrap();
+        let domain = (0..n).map(|i| omega.pow(i)).collect::<Vec<_>>();
+        println!("domain = {:?}", domain);
+        let y_1 = domain.iter().map(|x| p_1.evaluate(x)).collect::<Vec<_>>();
+        let y_2 = domain.iter().map(|x| p_2.evaluate(x)).collect::<Vec<_>>();
+        println!("y_1 = {:?}", y_1);
+        println!("y_2 = {:?}", y_2);
+
+        // Create interpolating domain
+        // let rho = FieldElement::root(2 * n).unwrap();
+        // let idomain = domain.iter().map(|x| x * rho).collect::<Vec<_>>();
+        // println!("idomain = {:?}", idomain);
+        // let iy_1 = shift(rho, &y_1);
+    }
 
     fn dense_polynomial(coefficients: &[isize]) -> DensePolynomial {
         let mut p = DensePolynomial(

@@ -43,6 +43,7 @@ pub mod fibonacci;
 mod polynomial;
 mod proof_of_work;
 mod proof_params;
+mod rational_expression;
 mod verifier;
 
 pub use channel::{ProverChannel, VerifierChannel};
@@ -58,8 +59,8 @@ extern crate no_std_compat as std;
 // requires std. TODO: Make it work without std.
 //
 // Optional prover functionality. Note that prover requires std.
-#[cfg(feature = "prover")]
-pub mod pedersen_merkle;
+//#[cfg(feature = "prover")]
+// pub mod pedersen_merkle;
 #[cfg(feature = "prover")]
 mod proofs;
 #[cfg(feature = "prover")]

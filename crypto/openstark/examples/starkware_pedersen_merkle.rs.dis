@@ -35,6 +35,7 @@ fn main() {
 
     info!("Constructing constraint system...");
     let constraints = &get_pedersen_merkle_constraints(&public_input);
+    info!("Constructed {:?} constraints", constraints);
 
     info!("Constructing proof...");
     let proof = stark_proof(&trace_table, &constraints, &public_input, &ProofParams {

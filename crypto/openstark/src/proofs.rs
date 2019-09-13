@@ -5,6 +5,7 @@ use crate::{
     polynomial::{DensePolynomial, SparsePolynomial},
     proof_of_work,
     proof_params::ProofParams,
+    rational_expression::RationalExpression,
     TraceTable,
 };
 use hash::{Hash, Hashable, MaskedKeccak};
@@ -12,7 +13,11 @@ use itertools::Itertools;
 use log::info;
 use merkle_tree::{Tree, VectorCommitment};
 use mmap_vec::MmapVec;
-use primefield::FieldElement;
+use primefield::{
+    fft::{ifft_permuted, permute, permute_index},
+    geometric_series::{geometric_series, root_series},
+    FieldElement,
+};
 use rayon::prelude::*;
 use std::{prelude::v1::*, vec};
 use u256::U256;
@@ -134,6 +139,13 @@ where
     // Compute the low degree extension of the trace table.
     info!("Compute the low degree extension of the trace table.");
     let trace_polynomials = trace.interpolate();
+    info!(
+        "Trace degrees: {:?}",
+        trace_polynomials
+            .iter()
+            .map(|p| p.degree())
+            .collect::<Vec<_>>()
+    );
     let trace_lde = PolyLDE(
         trace_polynomials
             .par_iter()
@@ -158,11 +170,76 @@ where
     }
 
     info!("Compute constraint polynomials.");
-    let constraint_polynomials = get_constraint_polynomials(
+    let (constraint_polynomials, cpolys) = get_constraint_polynomials(
         &trace_polynomials,
         constraints,
         &constraint_coefficients,
         params.constraints_degree_bound,
+    );
+    info!(
+        "Constraint degrees: {:?}",
+        constraint_polynomials
+            .iter()
+            .map(|p| p.degree())
+            .collect::<Vec<_>>()
+    );
+
+    info!("Compute offset trace table (temporary)");
+    let mut trace_2 = TraceTable::new(trace.num_rows(), trace.num_columns());
+    {
+        let x = geometric_series(
+            &FieldElement::GENERATOR,
+            &FieldElement::root(trace_2.num_rows()).unwrap(),
+        )
+        .take(trace_2.num_rows());
+        for (i, x) in x.enumerate() {
+            for j in 0..trace_2.num_columns() {
+                trace_2[(i, j)] = trace_polynomials[j].evaluate(&x);
+            }
+        }
+    }
+
+    info!("Verify constraint evaluations.");
+    {
+        let x = geometric_series(
+            &FieldElement::GENERATOR,
+            &FieldElement::root(trace_2.num_rows()).unwrap(),
+        )
+        .take(trace_2.num_rows());
+        for (i, x) in x.enumerate() {
+            for j in 0..trace_2.num_columns() {
+                // println!("{:?} {:?}", (i, j), x);
+                let y1 = cpolys[j].evaluate(&x);
+                let y2 = constraints[j].expr.eval(&trace_2, i, &x);
+                // println!("{:?}", constraints[j].expr);
+                // println!("{:?} {:?}", y1, y2);
+                debug_assert_eq!(y1, y2);
+            }
+            // break;
+        }
+    }
+
+    info!("Compute constraint polynomials 2.");
+    let constraint_polynomials_2 = get_constraint_polynomials_2(
+        &trace_2,
+        constraints,
+        &constraint_coefficients,
+        params.constraints_degree_bound,
+        &constraint_polynomials,
+    );
+    info!(
+        "Constraint degrees: {:?}",
+        constraint_polynomials_2
+            .iter()
+            .map(|p| p.degree())
+            .collect::<Vec<_>>()
+    );
+
+    // Verify that they are equal
+    let q = constraint_coefficients[0].pow(3);
+    assert_eq!(
+        constraint_polynomials[0].evaluate(&q),
+        constraint_polynomials_2[0].evaluate(&q)
     );
 
     info!("Compute the low degree extension of constraint polynomials.");
@@ -195,6 +272,7 @@ where
         &oods_point,
         &oods_coefficients,
     );
+    info!("Oods poly degree: {}", oods_polynomial.degree());
 
     // 4. FRI layers with trees
     info!("FRI layers with trees.");
@@ -275,10 +353,11 @@ pub(crate) fn get_constraint_polynomials(
     constraints: &[Constraint],
     constraint_coefficients: &[FieldElement],
     constraints_degree_bound: usize,
-) -> Vec<DensePolynomial> {
+) -> (Vec<DensePolynomial>, Vec<DensePolynomial>) {
     let mut constraint_polynomial =
         DensePolynomial::from_vec(vec![FieldElement::ZERO; constraints_degree_bound]);
     let trace_length = trace_polynomials[0].len();
+    let mut cpolys: Vec<DensePolynomial> = Vec::new();
 
     // TODO: Compute in parallel
     for (i, constraint) in constraints.iter().enumerate() {
@@ -289,12 +368,19 @@ pub(crate) fn get_constraint_polynomials(
         }
         p *= constraint.numerator.clone();
         p /= constraint.denominator.clone();
+        cpolys.push(p.clone());
         constraint_polynomial += &constraint_coefficients[2 * i] * &p;
         let adjustment_degree = constraints_degree_bound * trace_length - base_length
             + constraint.denominator.degree()
             - constraint.numerator.degree();
+        println!("adjustment_degree = {:?}", adjustment_degree);
         p *= SparsePolynomial::new(&[(FieldElement::ONE, adjustment_degree)]);
         constraint_polynomial += &constraint_coefficients[2 * i + 1] * &p;
+        println!(
+            "{:?} {:?}",
+            &constraint_coefficients[2 * i],
+            &constraint_coefficients[2 * i + 1]
+        );
     }
 
     let mut constraint_polynomials: Vec<Vec<FieldElement>> = vec![vec![]; constraints_degree_bound];
@@ -306,10 +392,67 @@ pub(crate) fn get_constraint_polynomials(
             constraint_polynomials[i].push(coefficient.clone());
         }
     }
-    constraint_polynomials
-        .into_iter()
-        .map(DensePolynomial::from_vec)
-        .collect()
+    (
+        constraint_polynomials
+            .into_iter()
+            .map(DensePolynomial::from_vec)
+            .collect(),
+        cpolys,
+    )
+}
+
+pub(crate) fn get_constraint_polynomials_2(
+    trace_table: &TraceTable,
+    constraints: &[Constraint],
+    constraint_coefficients: &[FieldElement],
+    constraints_degree_bound: usize,
+    truth: &[DensePolynomial],
+) -> Vec<DensePolynomial> {
+    debug_assert_eq!(constraints_degree_bound, 1);
+
+    // Combine rational expressions
+    use RationalExpression::*;
+    let expr: RationalExpression = constraints
+        .iter()
+        .zip(constraint_coefficients.iter().tuples())
+        .map(
+            |(constraint, (coefficient_low, coefficient_high))| -> RationalExpression {
+                let (num, den) = constraint.expr.degree(trace_table.num_rows());
+                let adjustment_degree = trace_table.num_rows() + den - num;
+                println!(
+                    "adjustment_degree = {:?} {:?}",
+                    adjustment_degree,
+                    (num, den)
+                );
+                println!("{:?} {:?}", &coefficient_low, &coefficient_high);
+                // (c0 + c1 * x^d) * C(x)
+                (Constant(coefficient_low.clone())
+                    + Constant(coefficient_high.clone()) * X.pow(adjustment_degree))
+                    * constraint.expr.clone()
+            },
+        )
+        .sum();
+    // TODO: Simplify
+    println!("{:?}", expr);
+
+    // Evaluate on trace domain
+    let mut values: MmapVec<FieldElement> = MmapVec::with_capacity(trace_table.num_rows());
+    let x = geometric_series(
+        &FieldElement::GENERATOR,
+        &FieldElement::root(trace_table.num_rows()).unwrap(),
+    )
+    .take(trace_table.num_rows());
+    for (i, x) in x.enumerate() {
+        let y = expr.eval(trace_table, i, &x);
+        debug_assert_eq!(y, truth[0].evaluate(&x));
+        values.push(y);
+    }
+
+    // Convert to DensePolynomial
+    ifft_permuted(&mut values);
+    permute(&mut values);
+    // TODO: Move MmapVec into DensePolynomial
+    vec![DensePolynomial::new(&values)]
 }
 
 fn get_out_of_domain_information(
@@ -721,7 +864,7 @@ mod tests {
             constraint_coefficients.push(proof.get_random());
         }
 
-        let constraint_polynomials = get_constraint_polynomials(
+        let (constraint_polynomials, _) = get_constraint_polynomials(
             &TPn,
             &constraints,
             &constraint_coefficients,

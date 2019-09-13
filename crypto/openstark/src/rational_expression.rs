@@ -1,5 +1,9 @@
+use crate::trace_table::TraceTable;
 use primefield::FieldElement;
-use std::ops::{Add, Div, Mul, Sub};
+use std::{
+    iter::Sum,
+    ops::{Add, Div, Mul, Sub},
+};
 
 #[derive(Clone, Debug)]
 pub enum RationalExpression {
@@ -105,25 +109,41 @@ impl RationalExpression {
         }
     }
 
-    pub fn eval(
-        &self,
-        trace_table: &Fn(usize, &FieldElement) -> FieldElement,
-        x: &FieldElement,
-        g: &FieldElement,
-    ) -> FieldElement {
+    // TODO: Simplify: constant propagation, 0 + a, 0 * a, 1 * a, neg(neg(a)), a^0,
+    // a^1 inv(inv(a)).
+
+    pub fn eval(&self, trace_table: &TraceTable, row: usize, x: &FieldElement) -> FieldElement {
         use RationalExpression::*;
         match self {
             X => x.clone(),
             Constant(value) => value.clone(),
-            &Trace(i, j) => trace_table(i, &(x * g.pow(j.into()))),
-            Add(a, b) => a.eval(trace_table, x, g) + b.eval(trace_table, x, g),
-            Neg(a) => -&a.eval(trace_table, x, g),
+            Trace(i, o) => {
+                let n = trace_table.num_rows() as isize;
+                let row = ((n + (row as isize) + *o) % n) as usize;
+                trace_table[(row, *i)].clone()
+            }
+            Add(a, b) => a.eval(trace_table, row, x) + b.eval(trace_table, row, x),
+            Neg(a) => -&a.eval(trace_table, row, x),
+            Mul(a, b) => a.eval(trace_table, row, x) * b.eval(trace_table, row, x),
             Inv(a) => {
-                a.eval(trace_table, x, g)
+                a.eval(trace_table, row, x)
                     .inv()
                     .expect("Division by zero while evaluating RationalExpression.")
             }
-            _ => unimplemented!(),
+            Exp(a, i) => a.eval(trace_table, row, x).pow(*i),
+        }
+    }
+}
+
+impl Sum<RationalExpression> for RationalExpression {
+    fn sum<I>(mut iter: I) -> Self
+    where
+        I: Iterator<Item = RationalExpression>,
+    {
+        if let Some(expr) = iter.next() {
+            iter.fold(expr, |a, b| a + b)
+        } else {
+            0.into()
         }
     }
 }
