@@ -127,7 +127,11 @@ where
         trace.num_columns(),
         size_mb
     );
-    info!("Constraint system {} constraints", constraints.len());
+    info!(
+        "Constraint system {} constraints of max degree {}",
+        constraints.len(),
+        params.constraints_degree_bound
+    );
 
     // TODO: Remove
     // let constraints = &constraints[0..4];
@@ -428,7 +432,9 @@ pub(crate) fn get_constraint_polynomials_2(
             },
         )
         .sum();
-    // TODO: Simplify expression
+    // OPT: Simplify expression
+    // OPT: Some subexpressions have much lower degree, we can evaluate them on a
+    // smaller domain and combine the results in coefficient form. Similarl
     println!("Combined constraint expression: {:?}", expr);
 
     // Evaluate on the coset trace table
@@ -439,6 +445,14 @@ pub(crate) fn get_constraint_polynomials_2(
     )
     .take(trace_coset.num_rows());
     for (i, x) in x.enumerate() {
+        if i % 100000 == 0 {
+            info!(
+                "Row {:?} out of {:?} ({:?} %)",
+                i,
+                trace_coset.num_rows(),
+                100_f32 * (i as f32) / (trace_coset.num_rows() as f32)
+            );
+        }
         let y = expr.eval(trace_coset, i, &x);
         values.push(y);
     }
@@ -452,8 +466,20 @@ pub(crate) fn get_constraint_polynomials_2(
         // Shift out the generator from the evaluation domain.
         *y *= &f;
     }
-    // TODO: Move MmapVec into DensePolynomial
-    vec![DensePolynomial::new(&values)]
+    let mut constraint_polynomials: Vec<Vec<FieldElement>> =
+        vec![
+            Vec::with_capacity(trace_coset.num_rows() / constraints_degree_bound);
+            constraints_degree_bound
+        ];
+    for chunk in values.chunks_exact(constraints_degree_bound) {
+        for (i, coefficient) in chunk.iter().enumerate() {
+            constraint_polynomials[i].push(coefficient.clone());
+        }
+    }
+    constraint_polynomials
+        .into_iter()
+        .map(DensePolynomial::from_vec)
+        .collect()
 }
 
 fn get_out_of_domain_information(
