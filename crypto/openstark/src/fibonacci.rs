@@ -79,7 +79,7 @@ pub fn get_fibonacci_constraints(public_input: &PublicInput) -> Vec<Constraint> 
     use crate::rational_expression::RationalExpression;
     use RationalExpression::*;
     let g = Constant(trace_generator);
-    let on_row = |index| RationalExpression::from(1) / (X - g.pow(index));
+    let on_row = |index| (X - g.pow(index)).inv();
     let reevery_row = || (X - g.pow(trace_length - 1)) / (X.pow(trace_length) - 1.into());
 
     vec![
