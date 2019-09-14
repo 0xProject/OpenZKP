@@ -176,21 +176,6 @@ where
         constraint_coefficients.push(proof.get_random());
     }
 
-    info!("Compute constraint polynomials.");
-    let constraint_polynomials = get_constraint_polynomials(
-        &trace_polynomials,
-        constraints,
-        &constraint_coefficients,
-        params.constraints_degree_bound,
-    );
-    info!(
-        "Constraint degrees: {:?}",
-        constraint_polynomials
-            .iter()
-            .map(|p| p.degree())
-            .collect::<Vec<_>>()
-    );
-
     // TODO: Avoid this copy and use trace_lde directly in
     // get_constraint_polynomials_2
     info!("Compute offset trace table");
@@ -228,6 +213,29 @@ where
             }
         }
     }
+
+    info!("Checking constraint consistency.");
+    check_constraint_consistency(
+        &trace_polynomials,
+        &trace_coset,
+        constraints,
+        params.constraints_degree_bound,
+    );
+
+    info!("Compute constraint polynomials.");
+    let constraint_polynomials = get_constraint_polynomials(
+        &trace_polynomials,
+        constraints,
+        &constraint_coefficients,
+        params.constraints_degree_bound,
+    );
+    info!(
+        "Constraint degrees: {:?}",
+        constraint_polynomials
+            .iter()
+            .map(|p| p.degree())
+            .collect::<Vec<_>>()
+    );
 
     info!("Compute constraint polynomials 2.");
     let constraint_polynomials_2 = get_constraint_polynomials_2(
@@ -357,6 +365,31 @@ fn get_indices(num: usize, bits: u32, proof: &mut ProverChannel) -> Vec<usize> {
     query_indices.truncate(num);
     (&mut query_indices).sort_unstable();
     query_indices
+}
+
+pub(crate) fn check_constraint_consistency(
+    trace_polynomials: &[DensePolynomial],
+    trace_coset: &TraceTable,
+    constraints: &[Constraint],
+    constraints_degree_bound: usize,
+) {
+    for (i, constraint) in constraints.iter().enumerate() {
+        info!("Checking constraint {:?}", i);
+        let mut p = (constraint.base)(trace_polynomials);
+        p *= constraint.numerator.clone();
+        p /= constraint.denominator.clone();
+        let x = geometric_series(
+            &FieldElement::GENERATOR,
+            &FieldElement::root(trace_coset.num_rows()).unwrap(),
+        )
+        .take(trace_coset.num_rows())
+        .take(100);
+        for (i, x) in x.enumerate() {
+            let y1 = constraint.expr.eval(trace_coset, i, &x);
+            let y2 = p.evaluate(&x);
+            debug_assert_eq!(y1, y2);
+        }
+    }
 }
 
 pub(crate) fn get_constraint_polynomials(
