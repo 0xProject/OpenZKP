@@ -85,11 +85,14 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constr
     // Repeating patterns
     // TODO: Clean this up
     let trace_generator = Constant(FieldElement::root(trace_length).unwrap());
-    let on_first_row = |a: RationalExpression| a / (X - trace_generator.clone());
+    let on_first_row = |a: RationalExpression| a / (X - Constant(FieldElement::ONE));
     let on_last_row = |a: RationalExpression| a / (X - trace_generator.pow(trace_length - 1));
     let on_hash_end_rows = |a: RationalExpression| {
         a * (X - trace_generator.pow(trace_length - 1))
             / (X.pow(path_length) - trace_generator.pow(path_length * (trace_length - 1)))
+    };
+    let on_no_hash_rows = |a: RationalExpression| {
+        a / (X.pow(path_length) - trace_generator.pow(path_length * (trace_length - 1)))
     };
     let on_hash_start_rows = |a: RationalExpression| a / (X.pow(path_length) - 1.into());
     let on_hash_loop_rows = |a: RationalExpression| {
@@ -271,13 +274,13 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constr
             denominator: field_element_end_rows.clone(),
         },
         Constraint {
-            expr:        on_hash_end_rows(Trace(0, 0)),
+            expr:        on_no_hash_rows(Trace(0, 0)),
             base:        Box::new(move |tp| tp[0].clone()),
             numerator:   no_rows.clone(),
             denominator: hash_end_rows.clone(),
         },
         Constraint {
-            expr:        on_hash_end_rows(right_bit.clone() * (right_bit.clone() - 1.into())),
+            expr:        on_hash_loop_rows(right_bit.clone() * (right_bit.clone() - 1.into())),
             base:        Box::new(|tp| {
                 let right_bit = get_right_bit(tp);
                 right_bit.clone() * (&right_bit - SparsePolynomial::new(&[(FieldElement::ONE, 0)]))
@@ -337,7 +340,7 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constr
             denominator: every_row.clone(),
         },
         Constraint {
-            expr:        on_hash_start_rows(
+            expr:        on_hash_loop_rows(
                 (Constant(FieldElement::ONE) - right_bit.clone()) * (Trace(3, 1) - Trace(7, 1)),
             ),
             base:        Box::new(move |tp| {
@@ -355,7 +358,7 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constr
             denominator: field_element_end_rows.clone(),
         },
         Constraint {
-            expr:        on_hash_end_rows(Trace(4, 0)),
+            expr:        on_no_hash_rows(Trace(4, 0)),
             base:        Box::new(move |tp| tp[4].clone()),
             numerator:   no_rows.clone(),
             denominator: hash_end_rows.clone(),
