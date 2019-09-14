@@ -17,11 +17,15 @@ use starkdex::SHIFT_POINT;
 use std::{cmp::min, prelude::v1::*, vec};
 use u256::U256;
 
-fn compute_lookup(p: &DensePolynomial) -> Vec<FieldElement> {
+fn compute_lookup(coefficients: &[FieldElement]) -> Vec<FieldElement> {
     info!("Precomputing lookup table...");
     const TRACE_LENGTH: usize = 8192 * 256;
     const DEGREE: usize = 2;
 
+    // HACK: This is part of public input.
+    let path_length: usize = 8192;
+
+    let p = DensePolynomial::new(coefficients);
     let coset_size = TRACE_LENGTH * DEGREE;
     let size = min(p.degree() * DEGREE, coset_size);
     // HACK: Lookup won't be periodic in a coset domain, allocate full size.
@@ -35,21 +39,17 @@ fn compute_lookup(p: &DensePolynomial) -> Vec<FieldElement> {
     .take(size);
     // OPT: Use an FFT to evaluate
     for x in x {
-        result.push(p.evaluate(&x))
+        result.push(p.evaluate(&x.pow(path_length)))
     }
     info!("precomputing done.");
     result
 }
 
 lazy_static! {
-    static ref LEFT_X_LOOKUP: Vec<FieldElement> =
-        compute_lookup(&DensePolynomial::new(&LEFT_X_COEFFICIENTS));
-    static ref LEFT_Y_LOOKUP: Vec<FieldElement> =
-        compute_lookup(&DensePolynomial::new(&LEFT_Y_COEFFICIENTS));
-    static ref RIGHT_X_LOOKUP: Vec<FieldElement> =
-        compute_lookup(&DensePolynomial::new(&RIGHT_X_COEFFICIENTS));
-    static ref RIGHT_Y_LOOKUP: Vec<FieldElement> =
-        compute_lookup(&DensePolynomial::new(&RIGHT_Y_COEFFICIENTS));
+    static ref LEFT_X_LOOKUP: Vec<FieldElement> = compute_lookup(&LEFT_X_COEFFICIENTS);
+    static ref LEFT_Y_LOOKUP: Vec<FieldElement> = compute_lookup(&LEFT_Y_COEFFICIENTS);
+    static ref RIGHT_X_LOOKUP: Vec<FieldElement> = compute_lookup(&RIGHT_X_COEFFICIENTS);
+    static ref RIGHT_Y_LOOKUP: Vec<FieldElement> = compute_lookup(&RIGHT_Y_COEFFICIENTS);
 }
 
 // TODO: Naming
@@ -102,51 +102,20 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constr
     // RationalExpression based constraints
     use RationalExpression::*;
 
-    let periodic_left_x = Lookup(
-        Box::new(Poly(
-            DensePolynomial::new(&LEFT_X_COEFFICIENTS),
-            Box::new(X.pow(path_length)),
-        )),
-        &LEFT_X_LOOKUP,
-    );
-    let periodic_left_y = Lookup(
-        Box::new(Poly(
-            DensePolynomial::new(&LEFT_Y_COEFFICIENTS),
-            Box::new(X.pow(path_length)),
-        )),
-        &LEFT_Y_LOOKUP,
-    );
-    let periodic_right_x = Lookup(
-        Box::new(Poly(
-            DensePolynomial::new(&RIGHT_X_COEFFICIENTS),
-            Box::new(X.pow(path_length)),
-        )),
-        &RIGHT_X_LOOKUP,
-    );
-    let periodic_right_y = Lookup(
-        Box::new(Poly(
-            DensePolynomial::new(&RIGHT_Y_COEFFICIENTS),
-            Box::new(X.pow(path_length)),
-        )),
-        &RIGHT_Y_LOOKUP,
-    );
-
-    let periodic_left_x = Poly(
-        DensePolynomial::new(&LEFT_X_COEFFICIENTS),
-        Box::new(X.pow(path_length)),
-    );
-    let periodic_left_y = Poly(
-        DensePolynomial::new(&LEFT_Y_COEFFICIENTS),
-        Box::new(X.pow(path_length)),
-    );
-    let periodic_right_x = Poly(
-        DensePolynomial::new(&RIGHT_X_COEFFICIENTS),
-        Box::new(X.pow(path_length)),
-    );
-    let periodic_right_y = Poly(
-        DensePolynomial::new(&RIGHT_Y_COEFFICIENTS),
-        Box::new(X.pow(path_length)),
-    );
+    // Periodic columns
+    let periodic = |coefficients, lookup| {
+        Lookup(
+            Box::new(Poly(
+                DensePolynomial::new(coefficients),
+                Box::new(X.pow(path_length)),
+            )),
+            lookup,
+        )
+    };
+    let periodic_left_x = periodic(&LEFT_X_COEFFICIENTS, &LEFT_X_LOOKUP);
+    let periodic_left_y = periodic(&LEFT_Y_COEFFICIENTS, &LEFT_Y_LOOKUP);
+    let periodic_right_x = periodic(&RIGHT_X_COEFFICIENTS, &RIGHT_X_LOOKUP);
+    let periodic_right_y = periodic(&RIGHT_Y_COEFFICIENTS, &RIGHT_Y_LOOKUP);
 
     // Repeating patterns
     // TODO: Clean this up
