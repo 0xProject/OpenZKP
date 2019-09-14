@@ -420,11 +420,19 @@ pub(crate) fn get_constraint_polynomials(
         if base_length > trace_length {
             // TODO: Is this a hack?
             base_length -= 1;
+            info!("Applying base_length hack");
         }
         let adjustment_degree = constraints_degree_bound * trace_length - base_length
             + constraint.denominator.degree()
             - constraint.numerator.degree();
-        info!("Constraint {:?} adjustment {:?}", i, adjustment_degree);
+        info!(
+            "Constraint {:?} adjustment {:?} ({:?}, {:?}, {:?})",
+            i,
+            adjustment_degree,
+            base_length,
+            constraint.denominator.degree(),
+            constraint.numerator.degree()
+        );
         p *= constraint.numerator.clone();
         p /= constraint.denominator.clone();
         let adjustment = SparsePolynomial::new(&[
@@ -459,8 +467,12 @@ pub(crate) fn get_constraint_polynomials_2(
     constraint_coefficients: &[FieldElement],
     constraints_degree_bound: usize,
 ) -> Vec<DensePolynomial> {
-    debug_assert_eq!(constraints_degree_bound, 1);
-    let trace_degree = trace_coset.num_rows() / constraints_degree_bound;
+    // TODO: Compute from constraint system.
+    assert_eq!(trace_coset.num_rows() % constraints_degree_bound, 0);
+    let coset_length = trace_coset.num_rows();
+    let trace_length = coset_length / constraints_degree_bound;
+    let trace_degree = trace_length - 1;
+    let target_degree = coset_length - 1;
 
     // Combine rational expressions
     use RationalExpression::*;
@@ -471,8 +483,13 @@ pub(crate) fn get_constraint_polynomials_2(
         .map(
             |((i, constraint), (coefficient_low, coefficient_high))| -> RationalExpression {
                 let (num, den) = constraint.expr.degree(trace_degree);
-                let adjustment_degree = trace_coset.num_rows() + den - num;
-                info!("Constraint {:?} adjustment {:?}", i, adjustment_degree);
+                let adjustment_degree = target_degree + den - num;
+                info!(
+                    "Constraint {:?} adjustment {:?} {:?}",
+                    i,
+                    adjustment_degree,
+                    (num, den)
+                );
                 let adjustment = Constant(coefficient_low.clone())
                     + Constant(coefficient_high.clone()) * X.pow(adjustment_degree);
                 adjustment * constraint.expr.clone()
