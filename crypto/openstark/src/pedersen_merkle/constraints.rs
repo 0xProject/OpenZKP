@@ -17,6 +17,7 @@ use starkdex::SHIFT_POINT;
 use std::{cmp::min, prelude::v1::*, vec};
 use u256::U256;
 
+// TODO: MmapVec
 fn compute_lookup(coefficients: &[FieldElement]) -> Vec<FieldElement> {
     info!("Precomputing lookup table...");
     const TRACE_LENGTH: usize = 8192 * 256;

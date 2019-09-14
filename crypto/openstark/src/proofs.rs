@@ -218,13 +218,14 @@ where
         }
     }
 
-    info!("Checking constraint consistency.");
-    check_constraint_consistency(
-        &trace_polynomials,
-        &trace_coset,
-        constraints,
-        params.constraints_degree_bound,
-    );
+    // NOTE: It's correct now.
+    // info!("Checking constraint consistency.");
+    // check_constraint_consistency(
+    //     &trace_polynomials,
+    //     &trace_coset,
+    //     constraints,
+    //     params.constraints_degree_bound,
+    // );
 
     info!("Compute constraint polynomials.");
     let constraint_polynomials = get_constraint_polynomials(
@@ -423,6 +424,7 @@ pub(crate) fn get_constraint_polynomials(
         let adjustment_degree = constraints_degree_bound * trace_length - base_length
             + constraint.denominator.degree()
             - constraint.numerator.degree();
+        info!("Constraint {:?} adjustment {:?}", i, adjustment_degree);
         p *= constraint.numerator.clone();
         p /= constraint.denominator.clone();
         let adjustment = SparsePolynomial::new(&[
@@ -458,16 +460,19 @@ pub(crate) fn get_constraint_polynomials_2(
     constraints_degree_bound: usize,
 ) -> Vec<DensePolynomial> {
     debug_assert_eq!(constraints_degree_bound, 1);
+    let trace_degree = trace_coset.num_rows() / constraints_degree_bound;
 
     // Combine rational expressions
     use RationalExpression::*;
     let expr: RationalExpression = constraints
         .iter()
+        .enumerate()
         .zip(constraint_coefficients.iter().tuples())
         .map(
-            |(constraint, (coefficient_low, coefficient_high))| -> RationalExpression {
-                let (num, den) = constraint.expr.degree(trace_coset.num_rows());
+            |((i, constraint), (coefficient_low, coefficient_high))| -> RationalExpression {
+                let (num, den) = constraint.expr.degree(trace_degree);
                 let adjustment_degree = trace_coset.num_rows() + den - num;
+                info!("Constraint {:?} adjustment {:?}", i, adjustment_degree);
                 let adjustment = Constant(coefficient_low.clone())
                     + Constant(coefficient_high.clone()) * X.pow(adjustment_degree);
                 adjustment * constraint.expr.clone()
@@ -475,8 +480,8 @@ pub(crate) fn get_constraint_polynomials_2(
         )
         .sum();
     // OPT: Simplify expression
-    // OPT: Some subexpressions have much lower degree, we can evaluate them on a
-    // smaller domain and combine the results in coefficient form. Similarl
+    // OPT: Some sub-expressions have much lower degree, we can evaluate them on a
+    // smaller domain and combine the results in coefficient form.
     println!("Combined constraint expression: {:?}", expr);
 
     // Evaluate on the coset trace table
@@ -486,6 +491,7 @@ pub(crate) fn get_constraint_polynomials_2(
         &FieldElement::root(trace_coset.num_rows()).unwrap(),
     )
     .take(trace_coset.num_rows());
+    // TODO: Parallelize
     for (i, x) in x.enumerate() {
         if i % 100000 == 0 {
             info!(

@@ -151,7 +151,8 @@ impl RationalExpression {
     }
 
     // TODO: Simplify: constant propagation, 0 + a, 0 * a, 1 * a, neg(neg(a)), a^0,
-    // a^1 inv(inv(a)).
+    // a^1 inv(inv(a)). Maybe even 2*a => a+a, though for this we'd like graphs so
+    // we can do CSE.
 
     // TODO: Factor out parts that depend only on X (periodic columns) and
     // pre-compute them. Observe that denominators tend to depend only on X, so
