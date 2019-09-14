@@ -10,7 +10,7 @@ use crate::{
 };
 use hash::{Hash, Hashable, MaskedKeccak};
 use itertools::Itertools;
-use log::info;
+use log::{error, info};
 use merkle_tree::{Tree, VectorCommitment};
 use mmap_vec::MmapVec;
 use primefield::{
@@ -176,62 +176,12 @@ where
         constraint_coefficients.push(proof.get_random());
     }
 
-    // TODO: Avoid this copy and use trace_lde directly in
-    // get_constraint_polynomials_2
-    info!("Compute offset trace table");
-    // TODO: Round up to power of two.
-    debug_assert!(params.constraints_degree_bound.is_power_of_two());
-    let mut trace_coset = TraceTable::new(
-        trace.num_rows() * params.constraints_degree_bound,
-        trace.num_columns(),
-    );
-    {
-        let trace_lde: &[MmapVec<FieldElement>] = &tree.leaves().0;
-        let x = geometric_series(
-            &FieldElement::GENERATOR,
-            &FieldElement::root(trace_coset.num_rows()).unwrap(),
-        )
-        .take(trace_coset.num_rows());
-        // OPT: Benchmark with flipped order of loops
-        for (i, x) in x.enumerate() {
-            for j in 0..trace_coset.num_columns() {
-                let lde = &trace_lde[j];
-                let index = i * params.blowup / params.constraints_degree_bound;
-                let index = permute_index(lde.len(), index);
-                trace_coset[(i, j)] = lde[index].clone();
-            }
-        }
-    }
-
-    info!("Checking trace coset consistency.");
-    {
-        let x = geometric_series(
-            &FieldElement::GENERATOR,
-            &FieldElement::root(trace_coset.num_rows()).unwrap(),
-        )
-        .take(trace_coset.num_rows());
-        // Spot check every 100k, about 40 points
-        for (i, x) in x.enumerate().step_by(100000) {
-            for j in 0..trace_coset.num_columns() {
-                assert_eq!(trace_coset[(i, j)], trace_polynomials[j].evaluate(&x));
-            }
-        }
-    }
-
-    // NOTE: It's correct now.
-    // info!("Checking constraint consistency.");
-    // check_constraint_consistency(
-    //     &trace_polynomials,
-    //     &trace_coset,
-    //     constraints,
-    //     params.constraints_degree_bound,
-    // );
-
     info!("Compute constraint polynomials.");
     let constraint_polynomials = get_constraint_polynomials(
-        &trace_polynomials,
+        &tree.leaves(),
         constraints,
         &constraint_coefficients,
+        trace.num_rows(),
         params.constraints_degree_bound,
     );
     info!(
@@ -241,30 +191,6 @@ where
             .map(|p| p.degree())
             .collect::<Vec<_>>()
     );
-
-    info!("Compute constraint polynomials 2.");
-    let constraint_polynomials_2 = get_constraint_polynomials_2(
-        &trace_coset,
-        constraints,
-        &constraint_coefficients,
-        params.constraints_degree_bound,
-    );
-    info!(
-        "Constraint degrees: {:?}",
-        constraint_polynomials_2
-            .iter()
-            .map(|p| p.degree())
-            .collect::<Vec<_>>()
-    );
-
-    // Verify that they are equal
-    for i in 0..constraint_polynomials.len() {
-        let q = constraint_coefficients[0].pow(3);
-        assert_eq!(
-            constraint_polynomials[i].evaluate(&q),
-            constraint_polynomials_2[i].evaluate(&q)
-        );
-    }
 
     info!("Compute the low degree extension of constraint polynomials.");
     let constraint_lde = PolyLDE(
@@ -343,18 +269,42 @@ where
 
     // Verify proof
     info!("Verify proof.");
-    assert!(check_proof(
+    if !check_proof(
         proof.proof.as_slice(),
         constraints,
         public,
         params,
         trace.num_columns(),
-        trace.num_rows()
-    ));
+        trace.num_rows(),
+    ) {
+        // TODO: Return Error (or panic)
+        error!("Verifying proof failed.");
+    }
 
     // Q.E.D.
     // TODO: Return bytes, or a result structure
     proof
+}
+
+fn extract_trace_coset(trace_lde: &PolyLDE, size: usize) -> TraceTable {
+    let trace_lde: &[MmapVec<FieldElement>] = &trace_lde.0;
+    let lde_size = trace_lde[0].len();
+    let mut trace_coset = TraceTable::new(size, trace_lde.len());
+    let x = geometric_series(
+        &FieldElement::GENERATOR,
+        &FieldElement::root(trace_coset.num_rows()).unwrap(),
+    )
+    .take(trace_coset.num_rows());
+    // OPT: Benchmark with flipped order of loops
+    for (i, x) in x.enumerate() {
+        for j in 0..trace_coset.num_columns() {
+            let lde = &trace_lde[j];
+            let index = i * lde_size / size;
+            let index = permute_index(lde.len(), index);
+            trace_coset[(i, j)] = lde[index].clone();
+        }
+    }
+    trace_coset
 }
 
 fn get_indices(num: usize, bits: u32, proof: &mut ProverChannel) -> Vec<usize> {
@@ -372,109 +322,21 @@ fn get_indices(num: usize, bits: u32, proof: &mut ProverChannel) -> Vec<usize> {
     query_indices
 }
 
-pub(crate) fn check_constraint_consistency(
-    trace_polynomials: &[DensePolynomial],
-    trace_coset: &TraceTable,
-    constraints: &[Constraint],
-    constraints_degree_bound: usize,
-) {
-    for (i, constraint) in constraints.iter().enumerate() {
-        info!("Checking constraint {:?}", i);
-        // info!("{:?}", constraint.expr);
-        let mut p = (constraint.base)(trace_polynomials);
-        p *= constraint.numerator.clone();
-        p /= constraint.denominator.clone();
-        let x = geometric_series(
-            &FieldElement::GENERATOR,
-            &FieldElement::root(trace_coset.num_rows()).unwrap(),
-        )
-        .take(trace_coset.num_rows());
-        // Check every 100k points, about 40 points
-        for (i, x) in x.enumerate().step_by(100000) {
-            let y1 = constraint.expr.eval(trace_coset, i, &x);
-            let y2 = p.evaluate(&x);
-            if y1 != y2 {
-                info!("{:?}", constraint.expr);
-            }
-            // println!("{:?} {:?} {:?} {:?}", i, x, y1, y2);
-            assert_eq!(y1, y2);
-        }
-    }
-}
-
-pub(crate) fn get_constraint_polynomials(
-    trace_polynomials: &[DensePolynomial],
+fn get_constraint_polynomials(
+    trace_lde: &PolyLDE,
     constraints: &[Constraint],
     constraint_coefficients: &[FieldElement],
+    trace_length: usize,
     constraints_degree_bound: usize,
 ) -> Vec<DensePolynomial> {
-    let mut constraint_polynomial =
-        DensePolynomial::from_vec(vec![FieldElement::ZERO; constraints_degree_bound]);
-    let trace_length = trace_polynomials[0].len();
-    let mut cpolys: Vec<DensePolynomial> = Vec::new();
-
-    // TODO: Compute in parallel
-    for (i, constraint) in constraints.iter().enumerate() {
-        let mut p = (constraint.base)(trace_polynomials);
-        let mut base_length = p.len();
-        if base_length > trace_length {
-            // TODO: Is this a hack?
-            base_length -= 1;
-            info!("Applying base_length hack");
-        }
-        let adjustment_degree = constraints_degree_bound * trace_length - base_length
-            + constraint.denominator.degree()
-            - constraint.numerator.degree();
-        info!(
-            "Constraint {:?} adjustment {:?} ({:?}, {:?}, {:?})",
-            i,
-            adjustment_degree,
-            base_length,
-            constraint.denominator.degree(),
-            constraint.numerator.degree()
-        );
-        p *= constraint.numerator.clone();
-        p /= constraint.denominator.clone();
-        let adjustment = SparsePolynomial::new(&[
-            (constraint_coefficients[2 * i].clone(), 0),
-            (
-                constraint_coefficients[2 * i + 1].clone(),
-                adjustment_degree,
-            ),
-        ]);
-        p *= adjustment;
-        constraint_polynomial += &p;
-    }
-
-    let mut constraint_polynomials: Vec<Vec<FieldElement>> = vec![vec![]; constraints_degree_bound];
-    for chunk in constraint_polynomial
-        .coefficients()
-        .chunks_exact(constraints_degree_bound)
-    {
-        for (i, coefficient) in chunk.iter().enumerate() {
-            constraint_polynomials[i].push(coefficient.clone());
-        }
-    }
-    constraint_polynomials
-        .into_iter()
-        .map(DensePolynomial::from_vec)
-        .collect()
-}
-
-pub(crate) fn get_constraint_polynomials_2(
-    trace_coset: &TraceTable,
-    constraints: &[Constraint],
-    constraint_coefficients: &[FieldElement],
-    constraints_degree_bound: usize,
-) -> Vec<DensePolynomial> {
-    // TODO: Compute from constraint system.
-    assert_eq!(trace_coset.num_rows() % constraints_degree_bound, 0);
-    let coset_length = trace_coset.num_rows();
-    let trace_length = coset_length / constraints_degree_bound;
+    let coset_length = trace_length * constraints_degree_bound;
     let trace_degree = trace_length - 1;
     let target_degree = coset_length - 1;
 
-    // Combine rational expressions
+    info!("Compute offset trace table");
+    let trace_coset = extract_trace_coset(trace_lde, coset_length);
+
+    info!("Combine rational expressions");
     use RationalExpression::*;
     let expr: RationalExpression = constraints
         .iter()
@@ -499,16 +361,17 @@ pub(crate) fn get_constraint_polynomials_2(
     // OPT: Simplify expression
     // OPT: Some sub-expressions have much lower degree, we can evaluate them on a
     // smaller domain and combine the results in coefficient form.
-    println!("Combined constraint expression: {:?}", expr);
+    info!("Combined constraint expression: {:?}", expr);
 
     // Evaluate on the coset trace table
+    info!("Evaluate on the coset trace table");
     let mut values: MmapVec<FieldElement> = MmapVec::with_capacity(trace_coset.num_rows());
     let x = geometric_series(
         &FieldElement::GENERATOR,
         &FieldElement::root(trace_coset.num_rows()).unwrap(),
     )
     .take(trace_coset.num_rows());
-    // TODO: Parallelize
+    // OPT: Parallelize
     for (i, x) in x.enumerate() {
         if i % 100000 == 0 {
             info!(
@@ -518,13 +381,14 @@ pub(crate) fn get_constraint_polynomials_2(
                 100_f32 * (i as f32) / (trace_coset.num_rows() as f32)
             );
         }
-        let y = expr.eval(trace_coset, i, &x);
+        let y = expr.eval(&trace_coset, i, &x);
         values.push(y);
     }
 
-    // Convert from values to coefficients
+    info!("Convert from values to coefficients");
     ifft_permuted(&mut values);
     permute(&mut values);
+    // OPT: Merge with even-odd separation loop.
     for (f, y) in geometric_series(&FieldElement::ONE, &FieldElement::GENERATOR.inv().unwrap())
         .zip(values.iter_mut())
     {
@@ -959,9 +823,10 @@ mod tests {
         }
 
         let constraint_polynomials = get_constraint_polynomials(
-            &TPn,
+            &tree.leaves(),
             &constraints,
             &constraint_coefficients,
+            trace.num_rows(),
             params.constraints_degree_bound,
         );
         assert_eq!(constraint_polynomials.len(), 1);

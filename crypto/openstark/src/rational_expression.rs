@@ -98,6 +98,19 @@ impl Div for RationalExpression {
     }
 }
 
+impl Sum<RationalExpression> for RationalExpression {
+    fn sum<I>(mut iter: I) -> Self
+    where
+        I: Iterator<Item = RationalExpression>,
+    {
+        if let Some(expr) = iter.next() {
+            iter.fold(expr, |a, b| a + b)
+        } else {
+            0.into()
+        }
+    }
+}
+
 impl RationalExpression {
     /// Numerator and denominator degree of the expression in X.
     ///
@@ -183,19 +196,6 @@ impl RationalExpression {
             Exp(a, i) => a.eval(trace_table, row, x).pow(*i),
             Poly(p, a) => p.evaluate(&a.eval(trace_table, row, x)),
             Lookup(_, t) => t[row].clone(),
-        }
-    }
-}
-
-impl Sum<RationalExpression> for RationalExpression {
-    fn sum<I>(mut iter: I) -> Self
-    where
-        I: Iterator<Item = RationalExpression>,
-    {
-        if let Some(expr) = iter.next() {
-            iter.fold(expr, |a, b| a + b)
-        } else {
-            0.into()
         }
     }
 }
