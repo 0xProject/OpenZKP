@@ -12,13 +12,13 @@ use crate::{
 use elliptic_curve::Affine;
 use lazy_static::lazy_static;
 use log::info;
+use mmap_vec::MmapVec;
 use primefield::{geometric_series::geometric_series, FieldElement};
 use starkdex::SHIFT_POINT;
 use std::{cmp::min, prelude::v1::*, vec};
 use u256::U256;
 
-// TODO: MmapVec
-fn compute_lookup(coefficients: &[FieldElement]) -> Vec<FieldElement> {
+fn compute_lookup(coefficients: &[FieldElement]) -> MmapVec<FieldElement> {
     info!("Precomputing lookup table...");
     const TRACE_LENGTH: usize = 8192 * 256;
     const DEGREE: usize = 2;
@@ -31,7 +31,7 @@ fn compute_lookup(coefficients: &[FieldElement]) -> Vec<FieldElement> {
     let size = min(p.degree() * DEGREE, coset_size);
     // HACK: Lookup won't be periodic in a coset domain, allocate full size.
     let size = coset_size;
-    let mut result = Vec::with_capacity(size);
+    let mut result = MmapVec::with_capacity(size);
 
     let x = geometric_series(
         &FieldElement::GENERATOR,
@@ -39,6 +39,7 @@ fn compute_lookup(coefficients: &[FieldElement]) -> Vec<FieldElement> {
     )
     .take(size);
     // OPT: Use an FFT to evaluate
+    // OPT: Parallel evaluation
     for x in x {
         result.push(p.evaluate(&x.pow(path_length)))
     }
@@ -47,10 +48,10 @@ fn compute_lookup(coefficients: &[FieldElement]) -> Vec<FieldElement> {
 }
 
 lazy_static! {
-    static ref LEFT_X_LOOKUP: Vec<FieldElement> = compute_lookup(&LEFT_X_COEFFICIENTS);
-    static ref LEFT_Y_LOOKUP: Vec<FieldElement> = compute_lookup(&LEFT_Y_COEFFICIENTS);
-    static ref RIGHT_X_LOOKUP: Vec<FieldElement> = compute_lookup(&RIGHT_X_COEFFICIENTS);
-    static ref RIGHT_Y_LOOKUP: Vec<FieldElement> = compute_lookup(&RIGHT_Y_COEFFICIENTS);
+    static ref LEFT_X_LOOKUP: MmapVec<FieldElement> = compute_lookup(&LEFT_X_COEFFICIENTS);
+    static ref LEFT_Y_LOOKUP: MmapVec<FieldElement> = compute_lookup(&LEFT_Y_COEFFICIENTS);
+    static ref RIGHT_X_LOOKUP: MmapVec<FieldElement> = compute_lookup(&RIGHT_X_COEFFICIENTS);
+    static ref RIGHT_Y_LOOKUP: MmapVec<FieldElement> = compute_lookup(&RIGHT_Y_COEFFICIENTS);
 }
 
 // TODO: Naming
