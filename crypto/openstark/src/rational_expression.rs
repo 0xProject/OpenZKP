@@ -136,7 +136,9 @@ impl RationalExpression {
             Constant(value) => value.clone(),
             Trace(i, o) => {
                 let n = trace_table.num_rows() as isize;
-                let row = ((n + (row as isize) + *o) % n) as usize;
+                // HACK: This needs to be set to the constraint_degree_bound
+                let oversampling = 2;
+                let row = ((n + (row as isize) + oversampling * *o) % n) as usize;
                 trace_table[(row, *i)].clone()
             }
             Add(a, b) => a.eval(trace_table, row, x) + b.eval(trace_table, row, x),
