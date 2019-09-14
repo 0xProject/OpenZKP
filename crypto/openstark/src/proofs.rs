@@ -209,7 +209,7 @@ where
         for i in 0..100 {
             let x = &coset * omega.pow(i);
             for j in 0..trace_coset.num_columns() {
-                debug_assert_eq!(trace_coset[(i, j)], trace_polynomials[j].evaluate(&x));
+                assert_eq!(trace_coset[(i, j)], trace_polynomials[j].evaluate(&x));
             }
         }
     }
@@ -383,11 +383,12 @@ pub(crate) fn check_constraint_consistency(
             &FieldElement::root(trace_coset.num_rows()).unwrap(),
         )
         .take(trace_coset.num_rows())
-        .take(100);
+        .take(10);
         for (i, x) in x.enumerate() {
             let y1 = constraint.expr.eval(trace_coset, i, &x);
             let y2 = p.evaluate(&x);
-            debug_assert_eq!(y1, y2);
+            println!("{:?} {:?} {:?} {:?}", i, x, y1, y2);
+            assert_eq!(y1, y2);
         }
     }
 }
@@ -490,7 +491,7 @@ pub(crate) fn get_constraint_polynomials_2(
         values.push(y);
     }
 
-    // Convert to DensePolynomial
+    // Convert from values to coefficients
     ifft_permuted(&mut values);
     permute(&mut values);
     for (f, y) in geometric_series(&FieldElement::ONE, &FieldElement::GENERATOR.inv().unwrap())
@@ -499,6 +500,8 @@ pub(crate) fn get_constraint_polynomials_2(
         // Shift out the generator from the evaluation domain.
         *y *= &f;
     }
+
+    // Convert to even and odd coefficient polynomials
     let mut constraint_polynomials: Vec<Vec<FieldElement>> =
         vec![
             Vec::with_capacity(trace_coset.num_rows() / constraints_degree_bound);
