@@ -202,12 +202,16 @@ where
             }
         }
     }
-    // Spot check
+
+    info!("Checking trace coset consistency.");
     {
-        let coset = FieldElement::GENERATOR;
-        let omega = FieldElement::root(trace_coset.num_rows()).unwrap();
-        for i in 0..100 {
-            let x = &coset * omega.pow(i);
+        let x = geometric_series(
+            &FieldElement::GENERATOR,
+            &FieldElement::root(trace_coset.num_rows()).unwrap(),
+        )
+        .take(trace_coset.num_rows());
+        // Spot check every 100k, about 40 points
+        for (i, x) in x.enumerate().step_by(100000) {
             for j in 0..trace_coset.num_columns() {
                 assert_eq!(trace_coset[(i, j)], trace_polynomials[j].evaluate(&x));
             }
@@ -375,6 +379,7 @@ pub(crate) fn check_constraint_consistency(
 ) {
     for (i, constraint) in constraints.iter().enumerate() {
         info!("Checking constraint {:?}", i);
+        // info!("{:?}", constraint.expr);
         let mut p = (constraint.base)(trace_polynomials);
         p *= constraint.numerator.clone();
         p /= constraint.denominator.clone();
@@ -382,12 +387,15 @@ pub(crate) fn check_constraint_consistency(
             &FieldElement::GENERATOR,
             &FieldElement::root(trace_coset.num_rows()).unwrap(),
         )
-        .take(trace_coset.num_rows())
-        .take(10);
-        for (i, x) in x.enumerate() {
+        .take(trace_coset.num_rows());
+        // Check every 100k points, about 40 points
+        for (i, x) in x.enumerate().step_by(100000) {
             let y1 = constraint.expr.eval(trace_coset, i, &x);
             let y2 = p.evaluate(&x);
-            println!("{:?} {:?} {:?} {:?}", i, x, y1, y2);
+            if y1 != y2 {
+                info!("{:?}", constraint.expr);
+            }
+            // println!("{:?} {:?} {:?} {:?}", i, x, y1, y2);
             assert_eq!(y1, y2);
         }
     }
