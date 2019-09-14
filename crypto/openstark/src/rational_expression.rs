@@ -173,16 +173,23 @@ impl RationalExpression {
     // though, and sometimes evaluating X may be cheaper than a lookup. ->
     // Benchmark.
 
-    pub fn eval(&self, trace_table: &TraceTable, row: usize, x: &FieldElement) -> FieldElement {
+    pub fn eval(
+        &self,
+        trace_table: &TraceTable,
+        row: (usize, usize),
+        x: &FieldElement,
+    ) -> FieldElement {
         use RationalExpression::*;
         match self {
             X => x.clone(),
             Constant(value) => value.clone(),
             Trace(i, o) => {
                 let n = trace_table.num_rows() as isize;
-                // HACK: This needs to be set to the constraint_degree_bound
-                let oversampling = 2;
-                let row = ((n + (row as isize) + oversampling * *o) % n) as usize;
+                // OPT: Instead of the row.0 factor we can pass a non-oversampled
+                // trace table. Multiple cosets are completely indpendent from
+                // RationalExpression's perspective. This should give better
+                // cache locality. Lookup will need to be changed though.
+                let row = ((n + (row.1 as isize) + (row.0 as isize) * *o) % n) as usize;
                 trace_table[(row, *i)].clone()
             }
             Add(a, b) => a.eval(trace_table, row, x) + b.eval(trace_table, row, x),
@@ -195,7 +202,7 @@ impl RationalExpression {
             }
             Exp(a, i) => a.eval(trace_table, row, x).pow(*i),
             Poly(p, a) => p.evaluate(&a.eval(trace_table, row, x)),
-            Lookup(_, t) => t[row].clone(),
+            Lookup(_, t) => t[row.1].clone(),
         }
     }
 }

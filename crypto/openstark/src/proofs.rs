@@ -381,7 +381,7 @@ fn get_constraint_polynomials(
                 100_f32 * (i as f32) / (trace_coset.num_rows() as f32)
             );
         }
-        let y = expr.eval(&trace_coset, i, &x);
+        let y = expr.eval(&trace_coset, (constraints_degree_bound, i), &x);
         values.push(y);
     }
 
