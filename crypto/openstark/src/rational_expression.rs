@@ -5,7 +5,7 @@ use std::{
     ops::{Add, Div, Mul, Sub},
 };
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub enum RationalExpression {
     X,
     Constant(FieldElement),
@@ -20,6 +20,24 @@ pub enum RationalExpression {
     // TODO: Non-static lifetime.
     // TODO: Include evaluation domain info in lookup.
     Lookup(Box<RationalExpression>, &'static [FieldElement]),
+}
+
+impl std::fmt::Debug for RationalExpression {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        use RationalExpression::*;
+        match self {
+            X => write!(fmt, "X"),
+            Constant(a) => write!(fmt, "{:?}", a),
+            Trace(i, j) => write!(fmt, "Trace({}, {})", i, j),
+            Add(a, b) => write!(fmt, "({:?} + {:?}", a, b),
+            Neg(a) => write!(fmt, "-{:?}", a),
+            Mul(a, b) => write!(fmt, "({:?} * {:?})", a, b),
+            Inv(a) => write!(fmt, "1/{:?}", a),
+            Exp(a, e) => write!(fmt, "{:?}^{:?}", a, e),
+            Poly(_, a) => write!(fmt, "P({:?})", a),
+            Lookup(a, _) => write!(fmt, "Lookup({:?})", a),
+        }
+    }
 }
 
 impl RationalExpression {
@@ -120,6 +138,18 @@ impl RationalExpression {
         }
     }
 
+    /// If the expression is constant, return the constant.
+    pub fn eval_constant(&self) -> Option<FieldElement> {
+        // TODO
+        unimplemented!()
+    }
+
+    /// If the expression depends only on x, return the value for some x
+    pub fn eval_x(&self, x: &FieldElement) -> Option<FieldElement> {
+        // TODO
+        unimplemented!()
+    }
+
     // TODO: Simplify: constant propagation, 0 + a, 0 * a, 1 * a, neg(neg(a)), a^0,
     // a^1 inv(inv(a)).
 
@@ -151,7 +181,7 @@ impl RationalExpression {
             }
             Exp(a, i) => a.eval(trace_table, row, x).pow(*i),
             Poly(p, a) => p.evaluate(&a.eval(trace_table, row, x)),
-            Lookup(_, t) => t[row % t.len()].clone(),
+            Lookup(_, t) => t[row].clone(),
         }
     }
 }
