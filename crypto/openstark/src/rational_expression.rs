@@ -151,10 +151,50 @@ impl RationalExpression {
         }
     }
 
-    /// If the expression is constant, return the constant.
-    pub fn eval_constant(&self) -> Option<FieldElement> {
-        // TODO
-        unimplemented!()
+    /// Constant propagatate
+    pub fn constant_propagate(self) -> Self {
+        use RationalExpression::*;
+        match self {
+            Add(a, b) => {
+                let a = a.constant_propagate();
+                let b = b.constant_propagate();
+                match (a, b) {
+                    (Constant(a), Constant(b)) => Constant(a + b),
+                    (a, b) => a + b,
+                }
+            }
+            Mul(a, b) => {
+                let a = a.constant_propagate();
+                let b = b.constant_propagate();
+                match (a, b) {
+                    (Constant(a), Constant(b)) => Constant(a * b),
+                    (a, b) => a * b,
+                }
+            }
+            Neg(a) => {
+                let a = a.constant_propagate();
+                match a {
+                    // TODO: impl std::ops::Neg for FieldElement
+                    Constant(a) => Constant(FieldElement::ZERO - a),
+                    a => a.neg(),
+                }
+            }
+            Inv(a) => {
+                let a = a.constant_propagate();
+                match a {
+                    Constant(a) => Constant(a.inv().expect("Division by zero.")),
+                    a => a.inv(),
+                }
+            }
+            Exp(a, e) => {
+                let a = a.constant_propagate();
+                match a {
+                    Constant(a) => Constant(a.pow(e)),
+                    a => a.pow(e),
+                }
+            }
+            e => e,
+        }
     }
 
     /// If the expression depends only on x, return the value for some x

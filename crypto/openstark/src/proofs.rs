@@ -358,6 +358,7 @@ fn get_constraint_polynomials(
             },
         )
         .sum();
+    let expr = expr.constant_propagate();
     // OPT: Simplify expression
     // OPT: Some sub-expressions have much lower degree, we can evaluate them on a
     // smaller domain and combine the results in coefficient form.
