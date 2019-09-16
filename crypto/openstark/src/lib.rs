@@ -71,3 +71,13 @@ mod trace_table;
 pub use proofs::stark_proof;
 #[cfg(feature = "prover")]
 pub use trace_table::TraceTable;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use env_logger;
+
+    pub(crate) fn init() {
+        let _ = env_logger::builder().is_test(true).try_init();
+    }
+}

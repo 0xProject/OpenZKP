@@ -20,11 +20,11 @@ use u256::U256;
 
 fn compute_lookup(coefficients: &[FieldElement]) -> MmapVec<FieldElement> {
     info!("Precomputing lookup table...");
-    const TRACE_LENGTH: usize = 8192 * 256;
+    const TRACE_LENGTH: usize = 4 * 256;
     const DEGREE: usize = 2;
 
     // HACK: This is part of public input.
-    let path_length: usize = 8192;
+    let path_length: usize = 4;
 
     let p = DensePolynomial::new(coefficients);
     let coset_size = TRACE_LENGTH * DEGREE;
@@ -416,9 +416,10 @@ mod tests {
     };
 
     // TODO: Implement verifier and re-enable
-    #[ignore]
     #[test]
     fn short_pedersen_merkle() {
+        crate::tests::init();
+
         let public_input = SHORT_PUBLIC_INPUT;
         let private_input = short_private_input();
         let trace_table = get_trace_table(&public_input, &private_input);
