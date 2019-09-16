@@ -132,6 +132,5 @@ mod tests {
             constraints_degree_bound: 1,
         });
         assert!(actual.proof.len() < decommitment_size_upper_bound(12, 2, vec![2, 1, 4, 2], 20));
-        p
     }
 }
