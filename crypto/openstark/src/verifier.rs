@@ -7,7 +7,7 @@ use crate::{
 };
 use hash::Hash;
 use merkle_tree::{Commitment, Proof};
-use primefield::{fft::self, geometric_series::root_series, FieldElement};
+use primefield::{fft, geometric_series::root_series, FieldElement};
 use std::{collections::BTreeMap, prelude::v1::*};
 use u256::U256;
 
