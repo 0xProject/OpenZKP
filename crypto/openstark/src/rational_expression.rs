@@ -151,46 +151,66 @@ impl RationalExpression {
         }
     }
 
-    /// Constant propagatate
-    pub fn constant_propagate(self) -> Self {
+    /// Simplify the expression
+    ///
+    /// Does constant propagation and simplifies expressions like `0 + a`,
+    /// `0 * a`, `1 * a`, `-(-a)`, `1/(1/a)`, `a^0` and `a^1`.
+    pub fn simplify(self) -> Self {
         use RationalExpression::*;
         match self {
             Add(a, b) => {
-                let a = a.constant_propagate();
-                let b = b.constant_propagate();
+                let a = a.simplify();
+                let b = b.simplify();
                 match (a, b) {
+                    (a, Constant(FieldElement::ZERO)) => a,
+                    (Constant(FieldElement::ZERO), b) => b,
                     (Constant(a), Constant(b)) => Constant(a + b),
                     (a, b) => a + b,
                 }
             }
             Mul(a, b) => {
-                let a = a.constant_propagate();
-                let b = b.constant_propagate();
+                let a = a.simplify();
+                let b = b.simplify();
                 match (a, b) {
+                    (a, Constant(FieldElement::ZERO)) => Constant(FieldElement::ZERO),
+                    (Constant(FieldElement::ZERO), b) => Constant(FieldElement::ZERO),
+                    (a, Constant(FieldElement::ONE)) => a,
+                    (Constant(FieldElement::ONE), b) => b,
                     (Constant(a), Constant(b)) => Constant(a * b),
                     (a, b) => a * b,
                 }
             }
             Neg(a) => {
-                let a = a.constant_propagate();
+                let a = a.simplify();
                 match a {
                     // TODO: impl std::ops::Neg for FieldElement
                     Constant(a) => Constant(FieldElement::ZERO - a),
+                    Neg(a) => *a,
                     a => a.neg(),
                 }
             }
             Inv(a) => {
-                let a = a.constant_propagate();
+                let a = a.simplify();
                 match a {
                     Constant(a) => Constant(a.inv().expect("Division by zero.")),
+                    Inv(a) => *a,
                     a => a.inv(),
                 }
             }
             Exp(a, e) => {
-                let a = a.constant_propagate();
+                let a = a.simplify();
+                match (a, e) {
+                    (a, 0) => Constant(FieldElement::ONE),
+                    (a, 1) => a,
+                    (Constant(a), e) => Constant(a.pow(e)),
+                    (a, e) => a.pow(e),
+                }
+            }
+            Lookup(a, t) => {
+                let a = a.simplify();
                 match a {
-                    Constant(a) => Constant(a.pow(e)),
-                    a => a.pow(e),
+                    a @ Constant(_) => a,
+                    a => Lookup(Box::new(a), t),
                 }
             }
             e => e,
@@ -202,10 +222,6 @@ impl RationalExpression {
         // TODO
         unimplemented!()
     }
-
-    // TODO: Simplify: constant propagation, 0 + a, 0 * a, 1 * a, neg(neg(a)), a^0,
-    // a^1 inv(inv(a)). Maybe even 2*a => a+a, though for this we'd like graphs so
-    // we can do CSE.
 
     // TODO: Factor out parts that depend only on X (periodic columns) and
     // pre-compute them. Observe that denominators tend to depend only on X, so
