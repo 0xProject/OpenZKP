@@ -13,7 +13,7 @@ use rayon::prelude::*;
 use std::{
     cmp::max,
     collections::BTreeMap,
-    ops::{Add, AddAssign, DivAssign, Mul, MulAssign, Sub, SubAssign},
+    ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign},
     prelude::v1::*,
 };
 use u256::{commutative_binop, noncommutative_binop};
@@ -23,7 +23,7 @@ use u256::{commutative_binop, noncommutative_binop};
 pub struct DensePolynomial(Vec<FieldElement>);
 
 // TODO: Move into separate file or combine these into an enum.
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct SparsePolynomial(BTreeMap<usize, FieldElement>);
 
@@ -247,6 +247,10 @@ impl SparsePolynomial {
         Self(map)
     }
 
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
     pub fn degree(&self) -> usize {
         *self
             .0
@@ -271,6 +275,26 @@ impl SparsePolynomial {
             .expect("SparsePolynomial cannot be empty")
             .1
     }
+
+    pub fn pow(&self, n: usize) -> Self {
+        match self.len() {
+            1 => {
+                let (degree, coefficient) = self.0.iter().next().unwrap();
+                Self::new(&[(coefficient.pow(n), n * degree)])
+            }
+            _ => panic!(),
+        }
+    }
+}
+
+impl From<SparsePolynomial> for DensePolynomial {
+    fn from(s: SparsePolynomial) -> Self {
+        let mut result = vec![FieldElement::ZERO; (s.degree() + 1).next_power_of_two()];
+        for (degree, coefficient) in s.0 {
+            result[degree] = coefficient.clone();
+        }
+        DensePolynomial::from_vec(result)
+    }
 }
 
 impl AddAssign<&Self> for SparsePolynomial {
@@ -289,7 +313,6 @@ impl SubAssign<&Self> for SparsePolynomial {
     }
 }
 
-#[allow(clippy::suspicious_op_assign_impl)] // Allow use of + in this implementation.
 impl MulAssign<&Self> for SparsePolynomial {
     fn mul_assign(&mut self, other: &Self) {
         let mut result = BTreeMap::new();
@@ -322,6 +345,16 @@ impl MulAssign<SparsePolynomial> for DensePolynomial {
     }
 }
 
+impl Mul<SparsePolynomial> for DensePolynomial {
+    type Output = DensePolynomial;
+
+    fn mul(self, other: SparsePolynomial) -> DensePolynomial {
+        let mut copy = self.clone();
+        copy *= other;
+        copy
+    }
+}
+
 // This assumes that the sparse polynomial exactly divides the dense one, and
 // will panic if that is not the case.
 #[allow(clippy::suspicious_op_assign_impl)] // Allows us to use `*` here.
@@ -348,6 +381,16 @@ impl DivAssign<SparsePolynomial> for DensePolynomial {
         }
         let _ = self.0.drain(0..denominator_degree);
         self.canonicalize();
+    }
+}
+
+impl Div<SparsePolynomial> for DensePolynomial {
+    type Output = DensePolynomial;
+
+    fn div(self, denominator: SparsePolynomial) -> DensePolynomial {
+        let mut copy = self.clone();
+        copy /= denominator;
+        copy
     }
 }
 
