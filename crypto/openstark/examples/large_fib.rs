@@ -3,9 +3,9 @@ use env_logger;
 use log::info;
 use macros_decl::u256h;
 use openstark::{
-    check_proof,
+    check_proof, decommitment_size_upper_bound,
     fibonacci::{get_fibonacci_constraints, get_trace_table, PrivateInput, PublicInput},
-    stark_proof, ProofParams, decommitment_size_upper_bound,
+    stark_proof, ProofParams,
 };
 use primefield::FieldElement;
 use std::{env, time::Instant};
@@ -48,8 +48,11 @@ fn main() {
     println!("{:?}", potential_proof.coin.digest);
     println!("Time elapsed in proof function is: {:?}", duration);
     println!("The proof length is {}", potential_proof.proof.len());
-    println!("The estimated size bound is: {}", decommitment_size_upper_bound(20, 2, fri_layout.clone() , 20));
-    
+    println!(
+        "The estimated size bound is: {}",
+        decommitment_size_upper_bound(20, 2, fri_layout.clone(), 20)
+    );
+
     let verified = check_proof(
         potential_proof.proof.as_slice(),
         &constraints,
