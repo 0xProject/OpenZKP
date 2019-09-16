@@ -709,8 +709,7 @@ mod tests {
             hex!("b7d80385fa0c8879473cdf987ea7970bb807aec78bb91af39a1504d965ad8e92")
         );
 
-        let mut constraint_coefficients: Vec<FieldElement> =
-            Vec::with_capacity(2 * constraints.len());
+        let mut constraint_coefficients = Vec::with_capacity(2 * constraints.len());
         for _ in &constraints {
             constraint_coefficients.push(proof.get_random());
             constraint_coefficients.push(proof.get_random());
