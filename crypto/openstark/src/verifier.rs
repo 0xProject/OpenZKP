@@ -7,11 +7,7 @@ use crate::{
 };
 use hash::Hash;
 use merkle_tree::{Commitment, Proof};
-use primefield::{
-    fft::{self, ifft},
-    geometric_series::root_series,
-    FieldElement,
-};
+use primefield::{fft::self, geometric_series::root_series, FieldElement};
 use std::{collections::BTreeMap, prelude::v1::*};
 use u256::U256;
 
@@ -239,8 +235,8 @@ where
     // Checks that the oods point calculation matches the constraint calculation
     let mut trace_values: BTreeMap<(usize, isize), FieldElement> = BTreeMap::new();
     for i in 0..trace_cols {
-        trace_values.insert((i, 0), oods_values[2 * i].clone());
-        trace_values.insert((i, 1), oods_values[2 * i + 1].clone());
+        let _ = trace_values.insert((i, 0), oods_values[2 * i].clone());
+        let _ = trace_values.insert((i, 1), oods_values[2 * i + 1].clone());
     }
     let trace_getter = |i, j| trace_values.get(&(i, j)).unwrap().clone();
 

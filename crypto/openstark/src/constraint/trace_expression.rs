@@ -4,9 +4,8 @@ use crate::{
 };
 use primefield::FieldElement;
 use std::{
-    cmp::{max, Ord},
-    collections::BTreeSet,
-    ops::{Add, AddAssign, Mul, MulAssign, Sub, SubAssign},
+    cmp::max,
+    ops::{Add, AddAssign, Mul, Sub},
 };
 
 #[derive(Clone, Debug)]

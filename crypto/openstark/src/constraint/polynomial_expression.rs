@@ -1,12 +1,6 @@
-use crate::polynomial::{DensePolynomial, SparsePolynomial};
-use core::cmp::Ordering;
-use lazy_static::*;
+use crate::polynomial::SparsePolynomial;
 use primefield::FieldElement;
-use std::{
-    cmp::{max, Ord},
-    collections::BTreeSet,
-    ops::{Add, AddAssign, Mul, MulAssign, Sub, SubAssign},
-};
+use std::ops::{Add, AddAssign, Mul, MulAssign, Sub, SubAssign};
 use u256::{commutative_binop, noncommutative_binop};
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]

@@ -1,6 +1,6 @@
 use crate::{
     constraint::{
-        polynomial_expression::PolynomialExpression::{self, Constant, X},
+        polynomial_expression::PolynomialExpression::{self, X},
         trace_expression::TraceExpression,
     },
     polynomial::{DensePolynomial, SparsePolynomial},
@@ -20,7 +20,7 @@ impl Constraint {
     }
 }
 
-pub fn combine_constraints(
+pub(crate) fn combine_constraints(
     constraints: &[Constraint],
     coefficients: &[FieldElement],
     trace_length: usize,
@@ -52,16 +52,17 @@ pub fn combine_constraints(
     result
 }
 
-pub struct GroupedConstraints(
+// TODO: make this private
+pub(crate) struct GroupedConstraints(
     BTreeMap<(PolynomialExpression, PolynomialExpression), TraceExpression>,
 );
 
 impl GroupedConstraints {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self(BTreeMap::new())
     }
 
-    pub fn insert(
+    pub(crate) fn insert(
         &mut self,
         key: (PolynomialExpression, PolynomialExpression),
         value: TraceExpression,
@@ -69,7 +70,7 @@ impl GroupedConstraints {
         *self.0.entry(key).or_insert(TraceExpression::from(0)) += value;
     }
 
-    pub fn eval_on_domain(
+    pub(crate) fn eval_on_domain(
         &self,
         trace_table: &dyn Fn(usize, isize) -> DensePolynomial,
     ) -> DensePolynomial {
@@ -85,7 +86,7 @@ impl GroupedConstraints {
         result
     }
 
-    pub fn eval(
+    pub(crate) fn eval(
         &self,
         trace_table: &dyn Fn(usize, isize) -> FieldElement,
         x: &FieldElement,

@@ -1,8 +1,4 @@
-use crate::{
-    channel::*,
-    constraint::{Constant, Constraint, Trace, X},
-    polynomial::SparsePolynomial,
-};
+use crate::constraint::{Constant, Constraint, Trace, X};
 use primefield::FieldElement;
 use std::{convert::TryInto, prelude::v1::*};
 use u256::U256;
