@@ -6,16 +6,13 @@ use crate::{
             LEFT_X_COEFFICIENTS, LEFT_Y_COEFFICIENTS, RIGHT_X_COEFFICIENTS, RIGHT_Y_COEFFICIENTS,
         },
     },
-    polynomial::{DensePolynomial, SparsePolynomial},
+    polynomial::SparsePolynomial,
 };
 use elliptic_curve::Affine;
 use primefield::FieldElement;
 use starkdex::SHIFT_POINT;
 use std::{prelude::v1::*, vec};
-use u256::U256;
 
-// TODO: Naming
-#[allow(clippy::module_name_repetitions)]
 pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constraint> {
     let path_length = public_input.path_length;
     let trace_length = path_length * 256;

@@ -2,7 +2,7 @@ use crate::{
     channel::{ProverChannel, RandomGenerator, Writable},
     check_proof,
     constraint::{combine_constraints, Constraint},
-    polynomial::{DensePolynomial, SparsePolynomial},
+    polynomial::DensePolynomial,
     proof_of_work,
     proof_params::ProofParams,
     TraceTable,
@@ -240,15 +240,15 @@ where
     decommit_fri_layers_and_trees(fri_trees.as_slice(), query_indices.as_slice(), &mut proof);
 
     // Verify proof
-    // info!("Verify proof.");
-    // assert!(check_proof(
-    //     proof.proof.as_slice(),
-    //     constraints,
-    //     public,
-    //     params,
-    //     trace.num_columns(),
-    //     trace.num_rows()
-    // ));
+    info!("Verify proof.");
+    assert!(check_proof(
+        proof.proof.as_slice(),
+        constraints,
+        public,
+        params,
+        trace.num_columns(),
+        trace.num_rows()
+    ));
 
     // Q.E.D.
     // TODO: Return bytes, or a result structure
