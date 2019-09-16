@@ -11,7 +11,7 @@ use std::fmt;
 
 // TODO: Reconsider type name
 #[allow(clippy::module_name_repetitions)]
-#[derive(PartialEq, Eq, Clone)]
+#[derive(PartialEq, Eq, Clone, PartialOrd, Ord)]
 pub struct FieldElement(U256);
 
 impl FieldElement {
