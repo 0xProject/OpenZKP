@@ -106,7 +106,7 @@ mod tests {
         fibonacci::{get_fibonacci_constraints, get_trace_table, PrivateInput, PublicInput},
         proofs::*,
     };
-    use macros_decl::{u256h};
+    use macros_decl::u256h;
     use primefield::FieldElement;
     use u256::U256;
 
