@@ -105,9 +105,8 @@ mod tests {
     use crate::{
         fibonacci::{get_fibonacci_constraints, get_trace_table, PrivateInput, PublicInput},
         proofs::*,
-        verifier::check_proof,
     };
-    use macros_decl::{field_element, hex, u256h};
+    use macros_decl::{u256h};
     use primefield::FieldElement;
     use u256::U256;
 
