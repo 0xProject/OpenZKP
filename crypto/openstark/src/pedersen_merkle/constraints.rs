@@ -13,7 +13,7 @@ use primefield::FieldElement;
 use starkdex::SHIFT_POINT;
 use std::{prelude::v1::*, vec};
 
-pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constraint> {
+pub fn get_constraints(public_input: &PublicInput) -> Vec<Constraint> {
     let path_length = public_input.path_length;
     let trace_length = path_length * 256;
     let root = public_input.root.clone();
@@ -35,19 +35,19 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constr
         Affine::Point { x, y } => (x, y),
     };
 
-    let q_x_left = PeriodicColumn(SparsePolynomial::periodic(
+    let left_pedersen_points_x = PeriodicColumn(SparsePolynomial::periodic(
         &LEFT_X_COEFFICIENTS,
         path_length,
     ));
-    let q_y_left = PeriodicColumn(SparsePolynomial::periodic(
+    let left_pedersen_points_y = PeriodicColumn(SparsePolynomial::periodic(
         &LEFT_Y_COEFFICIENTS,
         path_length,
     ));
-    let q_x_right = PeriodicColumn(SparsePolynomial::periodic(
+    let right_pedersen_points_x = PeriodicColumn(SparsePolynomial::periodic(
         &RIGHT_X_COEFFICIENTS,
         path_length,
     ));
-    let q_y_right = PeriodicColumn(SparsePolynomial::periodic(
+    let right_pedersen_points_y = PeriodicColumn(SparsePolynomial::periodic(
         &RIGHT_Y_COEFFICIENTS,
         path_length,
     ));
@@ -127,14 +127,14 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constr
             denominator: every_row.clone(),
         },
         Constraint {
-            base:        left_bit.clone() * (Trace(7, 0) - q_y_left)
-                - Trace(1, 1) * (Trace(6, 0) - q_x_left.clone()),
+            base:        left_bit.clone() * (Trace(7, 0) - left_pedersen_points_y)
+                - Trace(1, 1) * (Trace(6, 0) - left_pedersen_points_x.clone()),
             numerator:   hash_end_rows.clone(),
             denominator: every_row.clone(),
         },
         Constraint {
             base:        Trace(1, 1) * Trace(1, 1)
-                - left_bit.clone() * (Trace(6, 0) + q_x_left + Trace(2, 1)),
+                - left_bit.clone() * (Trace(6, 0) + left_pedersen_points_x + Trace(2, 1)),
             numerator:   hash_end_rows.clone(),
             denominator: every_row.clone(),
         },
@@ -170,14 +170,14 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constr
             denominator: every_row.clone(),
         },
         Constraint {
-            base:        right_bit.clone() * (Trace(3, 1) - q_y_right.clone())
-                - Trace(5, 1) * (Trace(2, 1) - q_x_right.clone()),
+            base:        right_bit.clone() * (Trace(3, 1) - right_pedersen_points_y.clone())
+                - Trace(5, 1) * (Trace(2, 1) - right_pedersen_points_x.clone()),
             numerator:   hash_end_rows.clone(),
             denominator: every_row.clone(),
         },
         Constraint {
             base:        Trace(5, 1) * Trace(5, 1)
-                - right_bit.clone() * (Trace(2, 1) + q_x_right.clone() + Trace(6, 1)),
+                - right_bit.clone() * (Trace(2, 1) + right_pedersen_points_x.clone() + Trace(6, 1)),
             numerator:   hash_end_rows.clone(),
             denominator: every_row.clone(),
         },
@@ -228,7 +228,7 @@ mod tests {
         let private_input = short_private_input();
         let trace_table = get_trace_table(&public_input, &private_input);
 
-        let constraints = &get_pedersen_merkle_constraints(&public_input);
+        let constraints = &get_constraints(&public_input);
 
         let proof = stark_proof(&trace_table, &constraints, &public_input, &ProofParams {
             blowup:                   16,

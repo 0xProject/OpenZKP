@@ -3,9 +3,9 @@ use log::info;
 use macros_decl::{field_element, hex};
 use openstark::{
     pedersen_merkle::{
-        constraints::get_pedersen_merkle_constraints,
-        inputs::{PrivateInput, PublicInput},
-        trace_table::get_trace_table,
+        get_constraints,
+        PrivateInput, PublicInput,
+        get_trace_table,
     },
     stark_proof, ProofParams,
 };
@@ -34,7 +34,7 @@ fn main() {
     let trace_table = get_trace_table(&public_input, &private_input);
 
     info!("Constructing constraint system...");
-    let constraints = &get_pedersen_merkle_constraints(&public_input);
+    let constraints = &get_constraints(&public_input);
 
     info!("Constructing proof...");
     let proof = stark_proof(&trace_table, &constraints, &public_input, &ProofParams {
