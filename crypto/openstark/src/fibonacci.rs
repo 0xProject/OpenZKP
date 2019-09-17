@@ -1,4 +1,4 @@
-use crate::constraint::{Constant, Constraint, Trace, X};
+use crate::constraint_system::{Constant, Constraint, Trace, X};
 use primefield::FieldElement;
 use std::{convert::TryInto, prelude::v1::*};
 use u256::U256;

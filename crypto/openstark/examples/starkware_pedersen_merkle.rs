@@ -2,11 +2,7 @@ use env_logger;
 use log::info;
 use macros_decl::{field_element, hex};
 use openstark::{
-    pedersen_merkle::{
-        get_constraints,
-        PrivateInput, PublicInput,
-        get_trace_table,
-    },
+    pedersen_merkle::{get_constraints, get_trace_table, PrivateInput, PublicInput},
     stark_proof, ProofParams,
 };
 use primefield::FieldElement;

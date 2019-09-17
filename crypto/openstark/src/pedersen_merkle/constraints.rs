@@ -1,5 +1,5 @@
 use crate::{
-    constraint::{Constant, Constraint, PeriodicColumn, Trace, X},
+    constraint_system::{Constant, Constraint, PeriodicColumn, Trace, X},
     pedersen_merkle::{
         inputs::PublicInput,
         periodic_columns::{
@@ -13,6 +13,7 @@ use primefield::FieldElement;
 use starkdex::SHIFT_POINT;
 use std::{prelude::v1::*, vec};
 
+#[allow(clippy::module_name_repetitions)] // TODO move this into a trait.
 pub fn get_constraints(public_input: &PublicInput) -> Vec<Constraint> {
     let path_length = public_input.path_length;
     let trace_length = path_length * 256;
