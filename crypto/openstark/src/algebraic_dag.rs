@@ -303,7 +303,14 @@ impl AlgebraicGraph {
                 Inv(a) => self.values[a.0].inv().expect("Division by zero"),
                 Exp(a, e) => self.values[a.0].pow(*e),
                 Poly(p, a) => p.evaluate(&self.values[a.0]),
-                Geometric(b, o) => b * o.pow(row.1),
+                Geometric(b, o) => {
+                    // TODO: We assume sequential rows here starting at 0
+                    if row.1 == 0 {
+                        b.clone()
+                    } else {
+                        o * &self.values[i]
+                    }
+                }
             };
             self.values[i] = value;
         }
