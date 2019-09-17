@@ -70,6 +70,7 @@ impl GroupedConstraints {
         *self.0.entry(key).or_insert(TraceExpression::from(0)) += value;
     }
 
+    #[cfg(feature = "prover")]
     pub(crate) fn eval_on_domain(
         &self,
         trace_table: &dyn Fn(usize, isize) -> DensePolynomial,

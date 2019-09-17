@@ -13,7 +13,7 @@ use std::{
 #[cfg_attr(feature = "std", derive(Debug))]
 pub enum TraceExpression {
     Trace(usize, isize),
-    PolynomialExpression(PolynomialExpression),
+    PolynomialExpression(Box<PolynomialExpression>),
     Add(Box<TraceExpression>, Box<TraceExpression>),
     Sub(Box<TraceExpression>, Box<TraceExpression>),
     Mul(Box<TraceExpression>, Box<TraceExpression>),
@@ -126,7 +126,7 @@ impl TraceExpression {
         use TraceExpression::*;
         match self {
             &Trace(i, j) => Polynomial::Dense(trace(i, j)),
-            PolynomialExpression(p) => Polynomial::Sparse(SparsePolynomial::from(p.clone())),
+            PolynomialExpression(p) => Polynomial::Sparse(SparsePolynomial::from(*p.clone())),
             Add(a, b) => a.evaluate_for_dense(trace) + b.evaluate_for_dense(trace),
             Sub(a, b) => a.evaluate_for_dense(trace) - b.evaluate_for_dense(trace),
             Mul(a, b) => a.evaluate_for_dense(trace) * b.evaluate_for_dense(trace),
@@ -141,7 +141,7 @@ impl TraceExpression {
         use TraceExpression::*;
         match self {
             &Trace(i, j) => trace(i, j),
-            PolynomialExpression(p) => SparsePolynomial::from(p.clone()).evaluate(x),
+            PolynomialExpression(p) => SparsePolynomial::from(*p.clone()).evaluate(x),
             Add(a, b) => a.evaluate_for_element(trace, x) + b.evaluate_for_element(trace, x),
             Sub(a, b) => a.evaluate_for_element(trace, x) - b.evaluate_for_element(trace, x),
             Mul(a, b) => a.evaluate_for_element(trace, x) * b.evaluate_for_element(trace, x),
@@ -151,13 +151,13 @@ impl TraceExpression {
 
 impl From<PolynomialExpression> for TraceExpression {
     fn from(p: PolynomialExpression) -> Self {
-        Self::PolynomialExpression(p)
+        Self::PolynomialExpression(Box::new(p))
     }
 }
 
 impl From<FieldElement> for TraceExpression {
     fn from(x: FieldElement) -> Self {
-        TraceExpression::PolynomialExpression(PolynomialExpression::Constant(x))
+        TraceExpression::PolynomialExpression(Box::new(PolynomialExpression::Constant(x)))
     }
 }
 
