@@ -4,7 +4,10 @@ use crate::{
 use log::info;
 use macros_decl::field_element;
 use primefield::FieldElement;
-use std::{ops::Neg, prelude::v1::*};
+use std::{
+    ops::{MulAssign, Neg},
+    prelude::v1::*,
+};
 use tiny_keccak::Keccak;
 use u256::U256;
 
@@ -39,8 +42,9 @@ pub struct Node {
     /// Period after which node values repeat
     period: usize,
 
-    /// Current value
-    // TODO: Remove
+    /// Scratch space for the evaluators
+    // TODO: Something cleaner
+    note: FieldElement,
     value: FieldElement,
 }
 
@@ -205,6 +209,7 @@ impl AlgebraicGraph {
                 hash,
                 period,
                 value: FieldElement::ZERO,
+                note: FieldElement::ZERO,
             });
             Index(index)
         }
@@ -371,7 +376,9 @@ impl AlgebraicGraph {
     }
 
     // TODO: Batch invert: combine all space-like Inv nodes to a batch inversion
-    // scheme.
+    // scheme. Probably the best way to do this is to batch computations in chunks
+    // of, say, 64, and use batch inversion on those. The trade-off is between
+    // amortization and cache-locality.
 
     // TODO: next(&self, &TraceTable) -> (i, FieldElement)
     #[inline(never)]
@@ -382,35 +389,38 @@ impl AlgebraicGraph {
         x: &FieldElement,
     ) -> FieldElement {
         for i in 0..self.nodes.len() {
-            let value = match &self.nodes[i].op {
-                Constant(a) => a.clone(),
+            let (previous, current) = self.nodes.split_at_mut(i);
+            let Node {
+                op, value, note, ..
+            } = &mut current[0];
+            match op {
+                // TODO: Only on init
+                Constant(a) => *value = a.clone(),
                 Trace(i, j) => {
                     let n = trace_table.num_rows() as isize;
-                    let row = ((n + (row.1 as isize) + (row.0 as isize) * j) % n) as usize;
-                    trace_table[(row, *i)].clone()
+                    let row = ((n + (row.1 as isize) + (row.0 as isize) * *j) % n) as usize;
+                    *value = trace_table[(row, *i)].clone()
                 }
-                Add(a, b) => &self[*a].value + &self[*b].value,
-                Neg(a) => -&self[*a].value,
-                Mul(a, b) => &self[*a].value * &self[*b].value,
-                Inv(a) => self[*a].value.inv().expect("Division by zero"),
-                Exp(a, e) => self[*a].value.pow(*e),
-                Poly(p, a) => p.evaluate(&self[*a].value),
+                Add(a, b) => *value = &previous[a.0].value + &previous[b.0].value,
+                Neg(a) => *value = -&previous[a.0].value,
+                Mul(a, b) => *value = &previous[a.0].value * &previous[b.0].value,
+                Inv(a) => *value = previous[a.0].value.inv().expect("Division by zero"),
+                Exp(a, e) => *value = previous[a.0].value.pow(*e),
+                Poly(p, a) => *value = p.evaluate(&previous[a.0].value),
                 Coset(c, s) => {
-                    // TODO: We assume sequential rows here starting at 0
                     if row.1 == 0 {
-                        c.clone()
+                        *note = FieldElement::root(*s).unwrap();
+                        *value = c.clone();
                     } else {
                         if *s == 2 {
-                            -&self[Index(i)].value
+                            value.neg_assign();
                         } else {
-                            // TODO: Cache root
-                            FieldElement::root(*s).unwrap() * &self[Index(i)].value
+                            value.mul_assign(&*note);
                         }
                     }
                 }
-                Lookup(v) => v.0[row.1 % v.0.len()].clone(),
+                Lookup(v) => self.nodes[i].value = v.0[row.1 % v.0.len()].clone(),
             };
-            self.nodes[i].value = value;
         }
         self.nodes.last().unwrap().value.clone()
     }
