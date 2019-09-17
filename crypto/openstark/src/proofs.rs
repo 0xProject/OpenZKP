@@ -1,4 +1,5 @@
 use crate::{
+    algebraic_dag::AlgebraicGraph,
     channel::{ProverChannel, RandomGenerator, Writable},
     check_proof,
     constraint::Constraint,
@@ -358,11 +359,15 @@ fn get_constraint_polynomials(
             },
         )
         .sum();
+    info!("Combined constraint expression: {:?}", expr);
     let expr = expr.simplify();
     // OPT: Simplify expression
     // OPT: Some sub-expressions have much lower degree, we can evaluate them on a
     // smaller domain and combine the results in coefficient form.
-    info!("Combined constraint expression: {:?}", expr);
+    info!("Simplified constraint expression: {:?}", expr);
+
+    let mut dag = AlgebraicGraph::from_expression(expr.clone());
+    info!("Combined constraint graph: {:?}", dag);
 
     // Evaluate on the coset trace table
     info!("Evaluate on the coset trace table");
@@ -383,6 +388,9 @@ fn get_constraint_polynomials(
             );
         }
         let y = expr.eval(&trace_coset, (constraints_degree_bound, i), &x);
+        let y2 = dag.eval(&trace_coset, (constraints_degree_bound, i), &x);
+        println!("{:?} {:?}", y, y2);
+        debug_assert_eq!(y, y2);
         values.push(y);
     }
 

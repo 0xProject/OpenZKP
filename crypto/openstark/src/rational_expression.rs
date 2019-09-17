@@ -2,9 +2,10 @@ use crate::{polynomial::DensePolynomial, trace_table::TraceTable};
 use primefield::FieldElement;
 use std::{
     iter::Sum,
-    ops::{Add, Div, Mul, Sub},
+    ops::{Add, Div, Mul, Neg, Sub},
 };
 
+// TODO: Rename to algebraic expression
 #[derive(Clone)]
 pub enum RationalExpression {
     X,
@@ -29,7 +30,7 @@ impl std::fmt::Debug for RationalExpression {
             X => write!(fmt, "X"),
             Constant(a) => write!(fmt, "{:?}", a),
             Trace(i, j) => write!(fmt, "Trace({}, {})", i, j),
-            Add(a, b) => write!(fmt, "({:?} + {:?}", a, b),
+            Add(a, b) => write!(fmt, "({:?} + {:?})", a, b),
             Neg(a) => write!(fmt, "-{:?}", a),
             Mul(a, b) => write!(fmt, "({:?} * {:?})", a, b),
             Inv(a) => write!(fmt, "1/{:?}", a),
@@ -219,8 +220,24 @@ impl RationalExpression {
 
     /// If the expression depends only on x, return the value for some x
     pub fn eval_x(&self, x: &FieldElement) -> Option<FieldElement> {
-        // TODO
-        unimplemented!()
+        use RationalExpression::*;
+        Some(match self {
+            X => x.clone(),
+            Constant(value) => value.clone(),
+            Trace(i, o) => return None,
+            Add(a, b) => a.eval_x(x)? + b.eval_x(x)?,
+            Neg(a) => (&a.eval_x(x)?).neg(),
+            Mul(a, b) => a.eval_x(x)? * b.eval_x(x)?,
+            Inv(a) => {
+                a.eval_x(x)?
+                    .inv()
+                    .expect("Division by zero while evaluating RationalExpression.")
+            }
+            Exp(a, i) => a.eval_x(x)?.pow(*i),
+            Poly(p, a) => p.evaluate(&a.eval_x(x)?),
+            // TODO: We could maybe use the lookup, but we don't know the index
+            Lookup(e, _) => e.eval_x(x)?,
+        })
     }
 
     // TODO: Factor out parts that depend only on X (periodic columns) and
@@ -242,7 +259,7 @@ impl RationalExpression {
             Trace(i, o) => {
                 let n = trace_table.num_rows() as isize;
                 // OPT: Instead of the row.0 factor we can pass a non-oversampled
-                // trace table. Multiple cosets are completely indpendent from
+                // trace table. Multiple cosets are completely independent from
                 // RationalExpression's perspective. This should give better
                 // cache locality. Lookup will need to be changed though.
                 let row = ((n + (row.1 as isize) + (row.0 as isize) * *o) % n) as usize;

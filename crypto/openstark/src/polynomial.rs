@@ -19,8 +19,14 @@ use std::{
 use u256::{commutative_binop, noncommutative_binop};
 
 #[derive(PartialEq, Clone)]
-#[cfg_attr(feature = "std", derive(Debug))]
 pub struct DensePolynomial(Vec<FieldElement>);
+
+#[cfg(feature = "std")]
+impl std::fmt::Debug for DensePolynomial {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(fmt, "DensePolynomial(degree = {:?})", self.degree())
+    }
+}
 
 #[derive(PartialEq, Clone)]
 #[cfg_attr(feature = "std", derive(Debug))]
