@@ -46,15 +46,24 @@ pub struct ProofParams {
     pub constraints_degree_bound: usize,
 }
 
-// A default un-optimized 50 bit secure system.
-#[allow(dead_code)]
-fn params_suggestion(constraints_degree_bound: usize) -> ProofParams {
-    ProofParams {
-        blowup: 16,
-        pow_bits: 12,
-        queries: 20,
-        fri_layout: vec![3, 2],
-        constraints_degree_bound,
+impl ProofParams {
+    #[allow(dead_code)]
+    fn suggested(constraints_degree_bound: usize, domain_size_log: usize) -> Self {
+        let num_threes = (domain_size_log - 8) / 3;
+        let mut fri_layout = vec![3; num_threes];
+        if num_threes * 3 == (domain_size_log - 8) {
+            fri_layout.push(domain_size_log - (8 + num_threes * 3));
+        }
+
+        // TODO - Examine if we want to up these security params further.
+        // 15*4 + 30 = 90
+        Self {
+            blowup: 16,
+            pow_bits: 30,
+            queries: 30,
+            fri_layout,
+            constraints_degree_bound,
+        }
     }
 }
 
@@ -97,6 +106,119 @@ pub fn decommitment_size_upper_bound(
         total_decommitment += 2_usize.pow(current_size as u32) - queries;
     }
     32 * total_decommitment
+}
+
+#[allow(dead_code)]
+fn total_search(domain_size: usize, num_cols: usize, queries: usize) -> (Vec<usize>, usize) {
+    let mut current_min = usize::max_value();
+    let mut current_partition = Vec::new();
+
+    // Searches each possible total number of reductions
+    for i in 1..(domain_size - 1) {
+        let (min_vec, min_cost) = partion_search(i, domain_size, num_cols, queries);
+
+        if min_cost < current_min {
+            current_min = min_cost;
+            current_partition = min_vec;
+        }
+    }
+    (current_partition, current_min)
+}
+
+// Searches over all permutations of all partitions of the n provided to find
+// min upper bound cost.
+#[allow(dead_code)]
+#[allow(clippy::cast_sign_loss)]
+fn partion_search(
+    n: usize,
+    domain_size: usize,
+    num_cols: usize,
+    queries: usize,
+) -> (Vec<usize>, usize) {
+    let mut partion = vec![0; n]; // We know the max size is n ones
+    partion[0] = n;
+    let mut k: i32 = 0;
+
+    let mut current_min = usize::max_value();
+    let mut current_partition = Vec::new();
+
+    loop {
+        let trimmed: Vec<usize> = partion.clone().into_iter().filter(|x| *x != 0).collect();
+        let upper_bound =
+            decommitment_size_upper_bound(domain_size, num_cols, trimmed.clone(), queries);
+        let (permuted, permuted_upper) = permutation_search(
+            trimmed.as_slice(),
+            upper_bound,
+            domain_size,
+            num_cols,
+            queries,
+        );
+
+        if permuted_upper < current_min && !permuted.is_empty() {
+            current_min = permuted_upper;
+            current_partition = permuted;
+        }
+
+        let mut rem_value = 0;
+        while k >= 0 && partion[k as usize] == 1 {
+            rem_value += partion[k as usize];
+            partion[k as usize] = 0;
+            k -= 1;
+        }
+
+        if k < 0 {
+            break;
+        }
+
+        partion[k as usize] -= 1;
+        rem_value += 1;
+
+        while rem_value > partion[k as usize] {
+            partion[k as usize + 1] = partion[k as usize];
+            rem_value -= partion[k as usize];
+            k += 1;
+        }
+
+        partion[k as usize + 1] = rem_value;
+        k += 1;
+    }
+
+    (current_partition, current_min)
+}
+
+#[allow(dead_code)]
+fn permutation_search(
+    partion: &[usize],
+    cost: usize,
+    domain_size: usize,
+    num_cols: usize,
+    queries: usize,
+) -> (Vec<usize>, usize) {
+    let mut mut_part = partion.to_vec();
+    let n = mut_part.len();
+
+    let mut current_min = cost;
+    let mut current_partition = partion.to_vec();
+
+    // This inefficient brute force search doubles up since swap(1, 2) = swap(2, 1)
+    // Moreover since partitions have repeated elements often this transformation is
+    // trivial We should monitor running time and if it becomes a problem fix
+    // this.
+    for i in 0..n {
+        for j in 0..n {
+            if i != j {
+                mut_part.swap(i, j);
+                let upper_bound =
+                    decommitment_size_upper_bound(domain_size, num_cols, mut_part.clone(), queries);
+                if upper_bound < current_min {
+                    current_min = upper_bound;
+                    current_partition = mut_part.clone();
+                }
+                mut_part.swap(i, j);
+            }
+        }
+    }
+    (current_partition, current_min)
 }
 
 #[cfg(test)]
