@@ -5,7 +5,7 @@ use crate::{
 use primefield::FieldElement;
 use std::{
     cmp::max,
-    ops::{Add, AddAssign, Mul, Neg, Sub},
+    ops::{Add, AddAssign, Mul, Sub},
 };
 
 #[derive(Clone, Debug)]
@@ -68,7 +68,7 @@ impl Sub for Polynomial {
             }
             Self::Sparse(a) => {
                 match other {
-                    Self::Dense(b) => Self::from(&b - a),
+                    Self::Dense(b) => Self::from(a - &b),
                     Self::Sparse(b) => Self::from(a - b),
                 }
             }
@@ -199,7 +199,7 @@ impl Sub<TraceExpression> for FieldElement {
     type Output = TraceExpression;
 
     fn sub(self, other: TraceExpression) -> TraceExpression {
-        other - TraceExpression::from(self)
+        TraceExpression::from(self) - other
     }
 }
 
@@ -207,6 +207,6 @@ impl Sub<TraceExpression> for isize {
     type Output = TraceExpression;
 
     fn sub(self, other: TraceExpression) -> TraceExpression {
-        other - TraceExpression::from(self)
+        TraceExpression::from(self) - other
     }
 }

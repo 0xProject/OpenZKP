@@ -222,7 +222,6 @@ mod tests {
         proofs::stark_proof,
     };
 
-    // TODO: Implement verifier and re-enable
     #[test]
     fn short_pedersen_merkle() {
         let public_input = SHORT_PUBLIC_INPUT;

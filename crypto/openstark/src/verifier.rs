@@ -115,22 +115,13 @@ where
     }
 
     // Gets the values and checks the constraint decommitment
-    dbg!(queries.clone());
-    let constraint_values: Vec<(usize, Vec<FieldElement>)> = queries
-        .iter()
-        .map({
-            |&index| {
-                (
-                    index,
-                    (0..params.constraints_degree_bound)
-                        .map(|_| Replayable::<FieldElement>::replay(&mut channel))
-                        .collect(), /* FieldElement::from_montgomery(Replayable::<U256>::
-                                     * replay(&mut channel)), */
-                )
-            }
-        })
-        .collect();
-    dbg!(constraint_values.clone());
+    let mut constraint_values = Vec::with_capacity(queries.len());
+    for query_index in &queries {
+        constraint_values.push((
+            *query_index,
+            Replayable::<FieldElement>::replay_many(&mut channel, params.constraints_degree_bound),
+        ));
+    }
     let constraint_proof_length = constraint_commitment.proof_size(&queries).unwrap();
     dbg!(constraint_proof_length);
     let constraint_hashes: Vec<Hash> =
@@ -260,11 +251,7 @@ where
     let claimed_oods_value = combine_constraints(&constraints, &constraint_coefficients, trace_len)
         .eval(&trace_getter, &oods_point);
 
-    claimed_oods_value
-        == reconstruct_oods_value(
-            &oods_values[2 * trace_cols..],
-            &oods_point,
-        )
+    claimed_oods_value == get_oods_value(&oods_values[2 * trace_cols..], &oods_point)
 }
 
 // TODO: Clean up
@@ -322,7 +309,7 @@ fn fri_single_fold(
 #[allow(clippy::too_many_arguments)]
 fn out_of_domain_element(
     poly_points_u: &[U256],
-    constraint_point_u: &[FieldElement],
+    constraint_oods_values: &[FieldElement],
     x_cord: &FieldElement,
     oods_point: &FieldElement,
     oods_values: &[FieldElement],
@@ -334,8 +321,6 @@ fn out_of_domain_element(
         .iter()
         .map(|i| FieldElement::from_montgomery(i.clone()))
         .collect();
-    let constraint_point = reconstruct_oods_value(constraint_point_u, oods_point);
-    dbg!(constraint_point.clone());
     let x_transform = x_cord * FieldElement::GENERATOR;
     let omega = FieldElement::root(eval_domain_size).unwrap();
     let g = omega.pow(blowup);
@@ -347,15 +332,15 @@ fn out_of_domain_element(
         r += &oods_coefficients[2 * i + 1] * (&poly_points[i] - &oods_values[2 * i + 1])
             / (&x_transform - &g * oods_point);
     }
-    for i in 0..constraint_point_u.len() {
+    for (i, constraint_oods_value) in constraint_oods_values.iter().enumerate() {
         r += &oods_coefficients[2 * poly_points.len() + i]
-            * (&constraint_point_u[i] - &oods_values[poly_points.len() * 2 + i])
-            / (&x_transform - oods_point.pow(constraint_point_u.len()));
+            * (constraint_oods_value - &oods_values[poly_points.len() * 2 + i])
+            / (&x_transform - oods_point.pow(constraint_oods_values.len()));
     }
     r
 }
 
-fn reconstruct_oods_value(values: &[FieldElement], oods_point: &FieldElement) -> FieldElement {
+fn get_oods_value(values: &[FieldElement], oods_point: &FieldElement) -> FieldElement {
     assert!(values.len().is_power_of_two());
 
     let mut result = FieldElement::ZERO;
