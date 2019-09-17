@@ -123,15 +123,11 @@ where
         ));
     }
     let constraint_proof_length = constraint_commitment.proof_size(&queries).unwrap();
-    dbg!(constraint_proof_length);
     let constraint_hashes: Vec<Hash> =
         Replayable::<Hash>::replay_many(&mut channel, constraint_proof_length);
     let constraint_proof =
         Proof::from_hashes(&constraint_commitment, &queries, &constraint_hashes).unwrap();
-    dbg!(constraint_values.clone());
     if constraint_proof.verify(&constraint_values).is_err() {
-        // TODO: Return Error
-        panic!();
         return false;
     }
 
@@ -208,8 +204,6 @@ where
         }
         len /= coset_sizes[k];
 
-        dbg!(fri_layer_values.clone());
-        // this is the bad place.
         merkle_proof.verify(&fri_layer_values).unwrap();
         if merkle_proof.verify(&fri_layer_values).is_err() {
             return false;
