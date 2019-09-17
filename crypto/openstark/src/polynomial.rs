@@ -293,7 +293,7 @@ impl From<SparsePolynomial> for DensePolynomial {
         for (degree, coefficient) in s.0 {
             result[degree] = coefficient.clone();
         }
-        DensePolynomial::from_vec(result)
+        Self::from_vec(result)
     }
 }
 
@@ -347,9 +347,9 @@ impl MulAssign<SparsePolynomial> for DensePolynomial {
 }
 
 impl Mul<SparsePolynomial> for DensePolynomial {
-    type Output = DensePolynomial;
+    type Output = Self;
 
-    fn mul(self, other: SparsePolynomial) -> DensePolynomial {
+    fn mul(self, other: SparsePolynomial) -> Self {
         let mut copy = self.clone();
         copy *= other;
         copy
@@ -386,9 +386,9 @@ impl DivAssign<SparsePolynomial> for DensePolynomial {
 }
 
 impl Div<SparsePolynomial> for DensePolynomial {
-    type Output = DensePolynomial;
+    type Output = Self;
 
-    fn div(self, denominator: SparsePolynomial) -> DensePolynomial {
+    fn div(self, denominator: SparsePolynomial) -> Self {
         let mut copy = self.clone();
         copy /= denominator;
         copy

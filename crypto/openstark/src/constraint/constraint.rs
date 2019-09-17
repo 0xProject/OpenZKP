@@ -1,12 +1,12 @@
-#[cfg(feature = "prover")]
-use crate::polynomial::DensePolynomial;
 use crate::{
     constraint::{
         polynomial_expression::PolynomialExpression::{self, Constant, X},
         trace_expression::TraceExpression,
     },
-    polynomial::SparsePolynomial,
+    polynomial::{SparsePolynomial},
 };
+#[cfg(feature = "prover")]
+use crate::polynomial::DensePolynomial;
 use primefield::FieldElement;
 use std::{collections::BTreeMap, prelude::v1::*};
 
@@ -69,7 +69,7 @@ impl GroupedConstraints {
         key: (PolynomialExpression, PolynomialExpression),
         value: TraceExpression,
     ) {
-        *self.0.entry(key).or_insert(TraceExpression::from(0)) += value;
+        *self.0.entry(key).or_insert_with(|| TraceExpression::from(0)) += value;
     }
 
     #[cfg(feature = "prover")]
@@ -80,8 +80,6 @@ impl GroupedConstraints {
         let mut result = DensePolynomial::new(&[FieldElement::ZERO]);
         for ((numerator, denominator), base) in &self.0 {
             let mut increment: DensePolynomial = base.evaluate_smarter(trace_table);
-            // It's possible that not all the terms are needed in this multiplication,
-            // because...?
             increment *= SparsePolynomial::from(numerator.clone());
             increment /= SparsePolynomial::from(denominator.clone());
             result += increment;

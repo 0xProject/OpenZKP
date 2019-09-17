@@ -170,7 +170,7 @@ impl From<isize> for TraceExpression {
 impl<T: Into<TraceExpression>> Add<T> for TraceExpression {
     type Output = Self;
 
-    fn add(self, other: T) -> TraceExpression {
+    fn add(self, other: T) -> Self {
         Self::Add(Box::new(self.clone()), Box::new(other.into()))
     }
 }
@@ -178,7 +178,7 @@ impl<T: Into<TraceExpression>> Add<T> for TraceExpression {
 impl<T: Into<TraceExpression>> Sub<T> for TraceExpression {
     type Output = Self;
 
-    fn sub(self, other: T) -> TraceExpression {
+    fn sub(self, other: T) -> Self {
         Self::Sub(Box::new(self.clone()), Box::new(other.into()))
     }
 }
@@ -186,7 +186,7 @@ impl<T: Into<TraceExpression>> Sub<T> for TraceExpression {
 impl<T: Into<TraceExpression>> Mul<T> for TraceExpression {
     type Output = Self;
 
-    fn mul(self, other: T) -> TraceExpression {
+    fn mul(self, other: T) -> Self {
         Self::Mul(Box::new(self.clone()), Box::new(other.into()))
     }
 }

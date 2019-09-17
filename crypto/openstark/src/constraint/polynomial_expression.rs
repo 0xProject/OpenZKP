@@ -32,15 +32,15 @@ impl From<PolynomialExpression> for SparsePolynomial {
     fn from(p: PolynomialExpression) -> Self {
         use PolynomialExpression::*;
         match p {
-            X => SparsePolynomial::new(&[(FieldElement::ONE, 1)]),
-            Constant(c) => SparsePolynomial::new(&[(c, 0)]),
+            X => Self::new(&[(FieldElement::ONE, 1)]),
+            Constant(c) => Self::new(&[(c, 0)]),
             PeriodicColumn(p) => p,
-            Pow(a, n) => SparsePolynomial::from(*a).pow(n),
+            Pow(a, n) => Self::from(*a).pow(n),
             Neg(a) => {
-                SparsePolynomial::new(&[(FieldElement::ZERO, 0)]) - SparsePolynomial::from(*a)
+                Self::new(&[(FieldElement::ZERO, 0)]) - Self::from(*a)
             }
-            Add(a, b) => SparsePolynomial::from(*a) + SparsePolynomial::from(*b),
-            Mul(a, b) => SparsePolynomial::from(*a) * SparsePolynomial::from(*b),
+            Add(a, b) => Self::from(*a) + Self::from(*b),
+            Mul(a, b) => Self::from(*a) * Self::from(*b),
         }
     }
 }
