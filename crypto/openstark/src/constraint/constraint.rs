@@ -1,6 +1,6 @@
 use crate::{
     constraint::{
-        polynomial_expression::PolynomialExpression::{self, X},
+        polynomial_expression::PolynomialExpression::{self, Constant, X},
         trace_expression::TraceExpression,
     },
     polynomial::{DensePolynomial, SparsePolynomial},
@@ -40,13 +40,13 @@ pub(crate) fn combine_constraints(
                 - constraint.numerator.degree(),
         );
 
+        let base: TraceExpression = constraint.base.clone();
+        let c = Constant(coefficients[2 * i].clone())
+            + degree_adjustment * Constant(coefficients[2 * i + 1].clone());
+
         result.insert(
             (constraint.numerator.clone(), constraint.denominator.clone()),
-            constraint.base.clone() * coefficients[2 * i].clone(),
-        );
-        result.insert(
-            (constraint.numerator.clone(), constraint.denominator.clone()),
-            constraint.base.clone() * degree_adjustment * coefficients[2 * i + 1].clone(),
+            base * c,
         );
     }
     result
@@ -76,7 +76,7 @@ impl GroupedConstraints {
     ) -> DensePolynomial {
         let mut result = DensePolynomial::new(&[FieldElement::ZERO]);
         for ((numerator, denominator), base) in &self.0 {
-            let mut increment: DensePolynomial = base.evaluate_for_dense(trace_table);
+            let mut increment: DensePolynomial = base.evaluate_smarter(trace_table);
             // It's possible that not all the terms are needed in this multiplication,
             // because...?
             increment *= SparsePolynomial::from(numerator.clone());
