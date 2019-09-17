@@ -4,6 +4,7 @@ use crate::{
 };
 use primefield::FieldElement;
 use std::{
+    boxed::Box,
     cmp::max,
     ops::{Add, AddAssign, Mul, Sub},
 };

@@ -1,6 +1,9 @@
 use crate::polynomial::SparsePolynomial;
 use primefield::FieldElement;
-use std::ops::{Add, AddAssign, Mul, MulAssign, Sub, SubAssign};
+use std::{
+    boxed::Box,
+    ops::{Add, AddAssign, Mul, MulAssign, Sub, SubAssign},
+};
 use u256::{commutative_binop, noncommutative_binop};
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
