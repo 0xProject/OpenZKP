@@ -3,7 +3,6 @@ use crate::{
     proof_params::ProofParams,
 };
 use hash::Hash;
-use itertools::Itertools;
 use merkle_tree::{Commitment, Proof};
 use primefield::{
     fft::{self, ifft},
@@ -261,7 +260,7 @@ where
         claimed_oods_value += &constraint_coefficients[2 * i + 1] * adjustment * &x;
     }
 
-    claimed_oods_value == reconstruct_oods_value(&oods_values[2 * trace_cols..], &oods_point)
+    claimed_oods_value == get_oods_value(&oods_values[2 * trace_cols..], &oods_point)
 }
 
 // TODO: Clean up
@@ -350,7 +349,7 @@ fn out_of_domain_element(
     r
 }
 
-fn reconstruct_oods_value(values: &[FieldElement], oods_point: &FieldElement) -> FieldElement {
+fn get_oods_value(values: &[FieldElement], oods_point: &FieldElement) -> FieldElement {
     assert!(values.len().is_power_of_two());
 
     let mut result = FieldElement::ZERO;
