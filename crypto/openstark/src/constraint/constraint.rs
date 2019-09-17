@@ -1,9 +1,11 @@
+#[cfg(feature = "prover")]
+use crate::polynomial::DensePolynomial;
 use crate::{
     constraint::{
         polynomial_expression::PolynomialExpression::{self, Constant, X},
         trace_expression::TraceExpression,
     },
-    polynomial::{DensePolynomial, SparsePolynomial},
+    polynomial::SparsePolynomial,
 };
 use primefield::FieldElement;
 use std::{collections::BTreeMap, prelude::v1::*};
