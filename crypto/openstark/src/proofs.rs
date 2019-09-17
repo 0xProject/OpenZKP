@@ -367,6 +367,10 @@ fn get_constraint_polynomials(
     info!("Simplified constraint expression: {:?}", expr);
 
     let mut dag = AlgebraicGraph::from_expression(expr.clone());
+    dag.use_geometric(
+        &FieldElement::GENERATOR,
+        &FieldElement::root(trace_coset.num_rows()).unwrap(),
+    );
     info!("Combined constraint graph: {:?}", dag);
 
     // Evaluate on the coset trace table
@@ -387,10 +391,8 @@ fn get_constraint_polynomials(
                 100_f32 * (i as f32) / (trace_coset.num_rows() as f32)
             );
         }
-        let y = expr.eval(&trace_coset, (constraints_degree_bound, i), &x);
-        let y2 = dag.eval(&trace_coset, (constraints_degree_bound, i), &x);
-        // println!("{:?} {:?}", y, y2);
-        debug_assert_eq!(y, y2);
+        // let y = expr.eval(&trace_coset, (constraints_degree_bound, i), &x);
+        let y = dag.eval(&trace_coset, (constraints_degree_bound, i), &x);
         values.push(y);
     }
 
