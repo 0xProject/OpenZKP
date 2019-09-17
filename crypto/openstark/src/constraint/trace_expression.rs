@@ -5,16 +5,96 @@ use crate::{
 use primefield::FieldElement;
 use std::{
     cmp::max,
-    ops::{Add, AddAssign, Mul, Sub},
+    ops::{Add, AddAssign, Mul, Neg, Sub},
 };
 
 #[derive(Clone, Debug)]
 pub enum TraceExpression {
     Trace(usize, isize),
     PolynomialExpression(PolynomialExpression),
-    Neg(Box<TraceExpression>),
     Add(Box<TraceExpression>, Box<TraceExpression>),
+    Sub(Box<TraceExpression>, Box<TraceExpression>),
     Mul(Box<TraceExpression>, Box<TraceExpression>),
+}
+
+enum Polynomial {
+    Dense(DensePolynomial),
+    Sparse(SparsePolynomial),
+}
+
+impl From<SparsePolynomial> for Polynomial {
+    fn from(s: SparsePolynomial) -> Self {
+        Self::Sparse(s)
+    }
+}
+
+impl From<DensePolynomial> for Polynomial {
+    fn from(d: DensePolynomial) -> Self {
+        Self::Dense(d)
+    }
+}
+
+impl Add for Polynomial {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self {
+        match self {
+            Self::Dense(a) => {
+                match other {
+                    Self::Dense(b) => Self::Dense(&a + &b),
+                    Self::Sparse(b) => Self::Dense(&a + b),
+                }
+            }
+            Self::Sparse(a) => {
+                match other {
+                    Self::Dense(b) => Self::Dense(&b + a),
+                    Self::Sparse(b) => Self::Sparse(a + b),
+                }
+            }
+        }
+    }
+}
+
+impl Sub for Polynomial {
+    type Output = Self;
+
+    fn sub(self, other: Self) -> Self {
+        match self {
+            Self::Dense(a) => {
+                match other {
+                    Self::Dense(b) => Self::from(&a - &b),
+                    Self::Sparse(b) => Self::from(&a - b),
+                }
+            }
+            Self::Sparse(a) => {
+                match other {
+                    Self::Dense(b) => Self::from(&b - a),
+                    Self::Sparse(b) => Self::from(a - b),
+                }
+            }
+        }
+    }
+}
+
+impl Mul for Polynomial {
+    type Output = Self;
+
+    fn mul(self, other: Self) -> Self {
+        match self {
+            Self::Dense(a) => {
+                match other {
+                    Self::Dense(b) => Self::from(a * b),
+                    Self::Sparse(b) => Self::from(a * b),
+                }
+            }
+            Self::Sparse(a) => {
+                match other {
+                    Self::Dense(b) => Self::from(b * a),
+                    Self::Sparse(b) => Self::from(a * b),
+                }
+            }
+        }
+    }
 }
 
 impl TraceExpression {
@@ -23,22 +103,30 @@ impl TraceExpression {
         match self {
             Trace(..) => trace_length - 1,
             PolynomialExpression(p) => p.degree(),
-            Neg(a) => a.degree(trace_length),
             Add(a, b) => max(a.degree(trace_length), b.degree(trace_length)),
+            Sub(a, b) => max(a.degree(trace_length), b.degree(trace_length)),
             Mul(a, b) => a.degree(trace_length) + b.degree(trace_length),
         }
     }
 
-    pub fn evaluate_for_dense(
+    pub fn evaluate_smarter(
         &self,
         trace: &dyn Fn(usize, isize) -> DensePolynomial,
     ) -> DensePolynomial {
+        let p = self.evaluate_for_dense(trace);
+        match p {
+            Polynomial::Dense(d) => d,
+            Polynomial::Sparse(s) => DensePolynomial::from(s),
+        }
+    }
+
+    fn evaluate_for_dense(&self, trace: &dyn Fn(usize, isize) -> DensePolynomial) -> Polynomial {
         use TraceExpression::*;
         match self {
-            &Trace(i, j) => trace(i, j),
-            PolynomialExpression(p) => DensePolynomial::from(SparsePolynomial::from(p.clone())),
-            Neg(a) => DensePolynomial::new(&[FieldElement::ZERO]) - a.evaluate_for_dense(trace),
+            &Trace(i, j) => Polynomial::Dense(trace(i, j)),
+            PolynomialExpression(p) => Polynomial::Sparse(SparsePolynomial::from(p.clone())),
             Add(a, b) => a.evaluate_for_dense(trace) + b.evaluate_for_dense(trace),
+            Sub(a, b) => a.evaluate_for_dense(trace) - b.evaluate_for_dense(trace),
             Mul(a, b) => a.evaluate_for_dense(trace) * b.evaluate_for_dense(trace),
         }
     }
@@ -52,8 +140,8 @@ impl TraceExpression {
         match self {
             &Trace(i, j) => trace(i, j),
             PolynomialExpression(p) => SparsePolynomial::from(p.clone()).evaluate(x),
-            Neg(a) => -&a.evaluate_for_element(trace, x),
             Add(a, b) => a.evaluate_for_element(trace, x) + b.evaluate_for_element(trace, x),
+            Sub(a, b) => a.evaluate_for_element(trace, x) - b.evaluate_for_element(trace, x),
             Mul(a, b) => a.evaluate_for_element(trace, x) * b.evaluate_for_element(trace, x),
         }
     }
@@ -89,7 +177,7 @@ impl<T: Into<TraceExpression>> Sub<T> for TraceExpression {
     type Output = Self;
 
     fn sub(self, other: T) -> TraceExpression {
-        self + Self::Neg(Box::new(other.into()))
+        Self::Sub(Box::new(self.clone()), Box::new(other.into()))
     }
 }
 
@@ -111,7 +199,7 @@ impl Sub<TraceExpression> for FieldElement {
     type Output = TraceExpression;
 
     fn sub(self, other: TraceExpression) -> TraceExpression {
-        TraceExpression::Neg(Box::new(other - self))
+        other - TraceExpression::from(self)
     }
 }
 
@@ -119,6 +207,6 @@ impl Sub<TraceExpression> for isize {
     type Output = TraceExpression;
 
     fn sub(self, other: TraceExpression) -> TraceExpression {
-        TraceExpression::Neg(Box::new(other - TraceExpression::from(self)))
+        other - TraceExpression::from(self)
     }
 }
