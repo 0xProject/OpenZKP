@@ -88,10 +88,8 @@ pub fn decommitment_size_upper_bound(
     for i in fri_layout {
         // This worst case assumes that only one in each group is from the previous
         // layer.
-        if current_size > i {
-            current_size -= i;
-            total_decommitment += queries * (current_size + 2_usize.pow(i as u32) - 1);
-        }
+        current_size -= i;
+        total_decommitment += queries * (current_size + 2_usize.pow(i as u32) - 1);
     }
     // Decommits all of the remaining elements
     let final_list = 2_usize.pow(current_size as u32);
