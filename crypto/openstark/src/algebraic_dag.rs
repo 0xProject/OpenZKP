@@ -488,7 +488,7 @@ impl AlgebraicGraph {
                 Lookup(v) if v.0.len() > CHUNK_SIZE => {
                     // OPT: Bulk copy
                     for i in 0..CHUNK_SIZE {
-                        values[i] = v.0[row.1 % v.0.len()].clone();
+                        values[i] = v.0[(row.1 + i) % v.0.len()].clone();
                     }
                 }
                 _ => {}
