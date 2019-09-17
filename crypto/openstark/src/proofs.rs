@@ -371,6 +371,7 @@ fn get_constraint_polynomials(
     dag.optimize();
     dag.lookup_tables();
     let result = dag.tree_shake(result);
+    dag.init();
     info!("Combined constraint graph: {:?}", dag);
 
     // Evaluate on the coset trace table

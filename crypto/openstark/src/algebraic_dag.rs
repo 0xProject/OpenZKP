@@ -11,6 +11,8 @@ use std::{
 use tiny_keccak::Keccak;
 use u256::U256;
 
+const CHUNK_SIZE: usize = 1;
+
 /// Evaluation graph for algebraic expressions over a coset.
 #[derive(Clone, PartialEq)]
 pub struct AlgebraicGraph {
@@ -45,7 +47,7 @@ pub struct Node {
     /// Scratch space for the evaluators
     // TODO: Something cleaner
     note: FieldElement,
-    value: FieldElement,
+    values: [FieldElement; CHUNK_SIZE],
 }
 
 /// Algebraic operations supported by the graph.
@@ -208,7 +210,7 @@ impl AlgebraicGraph {
                 op: operation,
                 hash,
                 period,
-                value: FieldElement::ZERO,
+                values: [FieldElement::ZERO; CHUNK_SIZE],
                 note: FieldElement::ZERO,
             });
             Index(index)
@@ -290,6 +292,8 @@ impl AlgebraicGraph {
         let mut subdag = self.clone();
         let index = subdag.tree_shake(index);
         let fake_table = TraceTable::new(0, 0);
+        info!("Lookup {:?}", subdag);
+        subdag.init();
         for i in 0..node.period {
             result.push(subdag.eval(&fake_table, (1, i), &FieldElement::ZERO));
         }
@@ -380,6 +384,38 @@ impl AlgebraicGraph {
     // of, say, 64, and use batch inversion on those. The trade-off is between
     // amortization and cache-locality.
 
+    pub fn init(&mut self) {
+        for i in 0..self.nodes.len() {
+            let (previous, current) = self.nodes.split_at_mut(i);
+            let Node {
+                op, values, note, ..
+            } = &mut current[0];
+            match op {
+                Constant(a) => {
+                    for i in 0..CHUNK_SIZE {
+                        values[i] = a.clone();
+                    }
+                }
+                Coset(c, s) => {
+                    let root = FieldElement::root(*s).unwrap();
+                    let mut acc = c.clone();
+                    for i in 0..CHUNK_SIZE {
+                        values[i] = acc.clone();
+                        acc *= &root;
+                    }
+                    *note = root.pow(CHUNK_SIZE);
+                }
+                Lookup(v) if v.0.len() <= CHUNK_SIZE => {
+                    assert_eq!(CHUNK_SIZE % v.0.len(), 0);
+                    for i in 0..CHUNK_SIZE {
+                        values[i] *= v.0[i % v.0.len()].clone();
+                    }
+                }
+                _ => {}
+            };
+        }
+    }
+
     // TODO: next(&self, &TraceTable) -> (i, FieldElement)
     #[inline(never)]
     pub fn eval(
@@ -388,41 +424,75 @@ impl AlgebraicGraph {
         row: (usize, usize),
         x: &FieldElement,
     ) -> FieldElement {
+        if row.0 % CHUNK_SIZE > 0 {
+            return self.nodes.last().unwrap().values[row.0 % CHUNK_SIZE].clone();
+        }
         for i in 0..self.nodes.len() {
             let (previous, current) = self.nodes.split_at_mut(i);
             let Node {
-                op, value, note, ..
+                op, values, note, ..
             } = &mut current[0];
             match op {
-                // TODO: Only on init
-                Constant(a) => *value = a.clone(),
-                Trace(i, j) => {
+                Trace(c, o) => {
                     let n = trace_table.num_rows() as isize;
-                    let row = ((n + (row.1 as isize) + (row.0 as isize) * *j) % n) as usize;
-                    *value = trace_table[(row, *i)].clone()
-                }
-                Add(a, b) => *value = &previous[a.0].value + &previous[b.0].value,
-                Neg(a) => *value = -&previous[a.0].value,
-                Mul(a, b) => *value = &previous[a.0].value * &previous[b.0].value,
-                Inv(a) => *value = previous[a.0].value.inv().expect("Division by zero"),
-                Exp(a, e) => *value = previous[a.0].value.pow(*e),
-                Poly(p, a) => *value = p.evaluate(&previous[a.0].value),
-                Coset(c, s) => {
-                    if row.1 == 0 {
-                        *note = FieldElement::root(*s).unwrap();
-                        *value = c.clone();
-                    } else {
-                        if *s == 2 {
-                            value.neg_assign();
-                        } else {
-                            value.mul_assign(&*note);
-                        }
+                    for i in 0..CHUNK_SIZE {
+                        let row = ((n + (row.1 as isize) + (row.0 as isize) * *o) % n) as usize;
+                        values[i] = trace_table[(row, *c)].clone();
                     }
                 }
-                Lookup(v) => self.nodes[i].value = v.0[row.1 % v.0.len()].clone(),
+                Add(a, b) => {
+                    let a = &previous[a.0].values;
+                    let b = &previous[b.0].values;
+                    for i in 0..CHUNK_SIZE {
+                        values[i] = &a[i] + &b[i]
+                    }
+                }
+                Neg(a) => {
+                    let a = &previous[a.0].values;
+                    for i in 0..CHUNK_SIZE {
+                        values[i] = a[i].neg()
+                    }
+                }
+                Mul(a, b) => {
+                    let a = &previous[a.0].values;
+                    let b = &previous[b.0].values;
+                    for i in 0..CHUNK_SIZE {
+                        values[i] = &a[i] * &b[i]
+                    }
+                }
+                Inv(a) => {
+                    let a = &previous[a.0].values;
+                    // TODO: Batch invert
+                    for i in 0..CHUNK_SIZE {
+                        values[i] = a[i].inv().unwrap()
+                    }
+                }
+                Exp(a, e) => {
+                    let a = &previous[a.0].values;
+                    for i in 0..CHUNK_SIZE {
+                        values[i] = a[i].pow(*e)
+                    }
+                }
+                Poly(p, a) => {
+                    let a = &previous[a.0].values;
+                    for i in 0..CHUNK_SIZE {
+                        values[i] = p.evaluate(&a[i])
+                    }
+                }
+                Coset(c, s) if row.1 != 0 && *s > CHUNK_SIZE => {
+                    for i in 0..CHUNK_SIZE {
+                        values[i] *= &*note;
+                    }
+                }
+                Lookup(v) if v.0.len() > CHUNK_SIZE => {
+                    for i in 0..CHUNK_SIZE {
+                        values[i] = v.0[row.1 % v.0.len()].clone();
+                    }
+                }
+                _ => {}
             };
         }
-        self.nodes.last().unwrap().value.clone()
+        self.nodes.last().unwrap().values[0].clone()
     }
 }
 
