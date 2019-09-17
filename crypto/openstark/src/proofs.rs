@@ -389,7 +389,7 @@ fn get_constraint_polynomials(
         }
         let y = expr.eval(&trace_coset, (constraints_degree_bound, i), &x);
         let y2 = dag.eval(&trace_coset, (constraints_degree_bound, i), &x);
-        println!("{:?} {:?}", y, y2);
+        // println!("{:?} {:?}", y, y2);
         debug_assert_eq!(y, y2);
         values.push(y);
     }
