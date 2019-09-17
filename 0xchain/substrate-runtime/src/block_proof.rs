@@ -183,7 +183,9 @@ impl<T: Trait> ProvideInherent for Module<T> {
             },
             2,
             1024,
-        ).is_ok() {
+        )
+        .is_ok()
+        {
             Ok(())
         } else {
             Err(InherentError::InvalidProof(

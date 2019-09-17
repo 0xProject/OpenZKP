@@ -21,7 +21,7 @@ pub fn check_proof<Public>(
     params: &ProofParams,
     trace_cols: usize,
     trace_len: usize,
-) -> Result<() ,&'static str>
+) -> Result<(), &'static str>
 where
     for<'a> &'a Public: Into<Vec<u8>>,
 {
@@ -35,8 +35,7 @@ where
     // Get the low degree root commitment, and constraint root commitment
     // TODO: Make it work as channel.read()
     let low_degree_extension_root = Replayable::<Hash>::replay(&mut channel);
-    let lde_commitment =
-        Commitment::from_size_hash(eval_domain_size, &low_degree_extension_root)?;
+    let lde_commitment = Commitment::from_size_hash(eval_domain_size, &low_degree_extension_root)?;
     let mut constraint_coefficients: Vec<FieldElement> = Vec::with_capacity(2 * constraints.len());
     for _ in constraints {
         constraint_coefficients.push(channel.get_random());
@@ -61,9 +60,10 @@ where
     let mut eval_points: Vec<FieldElement> = Vec::with_capacity(params.fri_layout.len() + 1);
     let mut fri_size = eval_domain_size >> params.fri_layout[0];
     // Get first fri root:
-    fri_commitments.push(
-        Commitment::from_size_hash(fri_size, &Replayable::<Hash>::replay(&mut channel))?,
-    );
+    fri_commitments.push(Commitment::from_size_hash(
+        fri_size,
+        &Replayable::<Hash>::replay(&mut channel),
+    )?);
     // Get fri roots and eval points from the channel random
     for &x in params.fri_layout.iter().skip(1) {
         fri_size >>= x;
@@ -74,9 +74,10 @@ where
             channel.get_random()
         };
         eval_points.push(eval_point);
-        fri_commitments.push(
-            Commitment::from_size_hash(fri_size, &Replayable::<Hash>::replay(&mut channel))? ,
-        );
+        fri_commitments.push(Commitment::from_size_hash(
+            fri_size,
+            &Replayable::<Hash>::replay(&mut channel),
+        )?);
     }
     // Gets the last layer and the polynomial coefficients
     eval_points.push(channel.get_random());
@@ -233,7 +234,7 @@ where
         let committed = DensePolynomial::new(&last_layer_coefficient).evaluate(&x_pow);
 
         if committed != calculated.clone() {
-            return Err("Oods point calculation mismatched to commitment")
+            return Err("Oods point calculation mismatched to commitment");
         }
     }
 
@@ -358,6 +359,7 @@ fn out_of_domain_element(
 }
 
 fn get_oods_value(values: &[FieldElement], oods_point: &FieldElement) -> FieldElement {
+    // TODO - Check if this is 100% unreachable, if so remove if not error.
     assert!(values.len().is_power_of_two());
 
     let mut result = FieldElement::ZERO;
@@ -415,6 +417,7 @@ mod tests {
             },
             2,
             1024
-        ).is_ok());
+        )
+        .is_ok());
     }
 }
