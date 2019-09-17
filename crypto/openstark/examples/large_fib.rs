@@ -34,7 +34,7 @@ fn main() {
     };
     let trace_table = get_trace_table(1_048_576, &private);
     public.value = trace_table[(public.index, 0)].clone();
-    let fri_layout = vec![3, 4, 5, 2, 3];
+    let fri_layout = vec![3, 3, 3, 3, 3, 2];
     let start = Instant::now();
     let constraints = get_fibonacci_constraints(&public);
     let potential_proof = stark_proof(&trace_table, &constraints, &public, &ProofParams {
