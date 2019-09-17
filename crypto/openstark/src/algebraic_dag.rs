@@ -56,19 +56,33 @@ pub enum Operation {
     Inv(Index),
     Exp(Index, usize),
     Poly(DensePolynomial, Index),
+    Lookup(Vec<FieldElement>),
 }
 
 /// Reference to a node in the graph.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, PartialEq)]
 pub struct Index(usize);
 
 use Operation::*;
 
+impl std::fmt::Debug for Index {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(fmt, "{:>3}", self.0)
+    }
+}
+
 impl std::fmt::Debug for AlgebraicGraph {
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(fmt, "AlgebraicGraph:")?;
-        for i in 0..self.nodes.len() {
-            writeln!(fmt, "{:?}: {:?}", i, self.nodes[i])?
+        for (i, n) in self.nodes.iter().enumerate() {
+            writeln!(
+                fmt,
+                "{:?}: {:016x} {:>8} {:?}",
+                Index(i),
+                n.hash.as_montgomery().c0,
+                n.period,
+                n.op
+            )?
         }
         Ok(())
     }
@@ -140,32 +154,31 @@ impl AlgebraicGraph {
                 t *= c;
                 t
             }
+            // This would need to be the same as the replaced operation
+            Lookup(_) => panic!("hash(Lookup) not implemented."),
         }
     }
 
     fn period(&self, operation: &Operation) -> usize {
         fn lcm(a: usize, b: usize) -> usize {
-            if a == 0 || b == 0 {
-                0
-            } else {
-                // TODO: Compute it for real. For powers of two this works.
-                std::cmp::max(a, b)
-            }
+            // TODO: Compute it for real. For powers of two this works.
+            std::cmp::max(a, b)
         }
         match operation {
             Coset(_, s) => *s,
             Constant(_) => 1,
-            Trace(..) => 0,
+            Trace(..) => self.coset_size,
             Add(a, b) => lcm(self[*a].period, self[*b].period),
             Neg(a) => self[*a].period,
             Mul(a, b) => lcm(self[*a].period, self[*b].period),
             Inv(a) => self[*a].period,
-            Exp(a, _) => self[*a].period,
+            Exp(a, e) => self[*a].period,
             Poly(_, a) => self[*a].period,
+            Lookup(v) => v.len(),
         }
     }
 
-    /// Insert the given node and return it's index
+    /// Insert the operation and return it's node index
     ///
     /// If an algebraically identical node already exits, that index will be
     /// returned instead.
@@ -229,7 +242,9 @@ impl AlgebraicGraph {
     pub fn optimize(&mut self) {
         for i in 0..self.nodes.len() {
             let op = match &self.nodes[i].op {
-                // TODO: We can also do the constant propagation here.
+                // TODO: We can also do the constant propagation here. We can even
+                // fold constant propagation in with lookup tables, as it is
+                // equivalent to a repeating pattern of size one.
                 Mul(a, b) => {
                     match (&self[*a].op, &self[*b].op) {
                         (Constant(a), Coset(c, s)) => Coset(a * c, *s),
@@ -246,15 +261,37 @@ impl AlgebraicGraph {
                 }
                 // TODO: Neg(a), Inv(a) also preserve some of the coset nature,
                 // but change the ordering in a way that Coset currently can not
-                // represent.
+                // represent. We could re-introduce Geometric for this.
                 n => n.clone(),
             };
+            self.nodes[i].period = self.period(&op);
             self.nodes[i].op = op;
         }
     }
 
+    fn make_lookup(&self, index: Index) -> Vec<FieldElement> {
+        let node = &self[index];
+        assert!(node.period <= 1024);
+        let mut result = Vec::with_capacity(node.period);
+        let mut subdag = self.clone();
+        let index = subdag.tree_shake(index);
+        let fake_table = TraceTable::new(0, 0);
+        for i in 0..node.period {
+            result.push(subdag.eval(&fake_table, (1, i), &FieldElement::ZERO));
+        }
+        result
+    }
+
+    pub fn lookup_tables(&mut self) {
+        const TRESHOLD: usize = 1024;
+        // Select all nodes qualifying for lookup.
+        // Find out which nodes would be made redundant.
+
+        // Recurse from the result, whenever <= TRESHOlD => Replace with Lookup.
+    }
+
     /// Remove unnecessary nodes
-    fn tree_shake(&mut self, tip: Index) -> Index {
+    pub fn tree_shake(&mut self, tip: Index) -> Index {
         // Find all used nodes
         let mut used = vec![false; self.nodes.len()];
         fn recurse(nodes: &[Node], used: &mut [bool], i: usize) {
@@ -312,8 +349,6 @@ impl AlgebraicGraph {
         numbers[tip.0]
     }
 
-    // TODO: Lookup tables.
-
     // TODO: Batch invert: combine all space-like Inv nodes to a batch inversion
     // scheme.
 
@@ -351,6 +386,7 @@ impl AlgebraicGraph {
                         }
                     }
                 }
+                Lookup(v) => v[row.1 % v.len()].clone(),
             };
             self.nodes[i].value = value;
         }
