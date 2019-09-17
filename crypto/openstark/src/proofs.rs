@@ -366,11 +366,8 @@ fn get_constraint_polynomials(
     // smaller domain and combine the results in coefficient form.
     info!("Simplified constraint expression: {:?}", expr);
 
-    let mut dag = AlgebraicGraph::from_expression(expr.clone());
-    dag.use_geometric(
-        &FieldElement::GENERATOR,
-        &FieldElement::root(trace_coset.num_rows()).unwrap(),
-    );
+    let mut dag = AlgebraicGraph::new(&FieldElement::GENERATOR, trace_coset.num_rows());
+    let result = dag.expression(expr.clone());
     info!("Combined constraint graph: {:?}", dag);
 
     // Evaluate on the coset trace table
