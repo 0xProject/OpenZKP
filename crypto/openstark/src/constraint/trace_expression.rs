@@ -9,7 +9,8 @@ use std::{
     ops::{Add, AddAssign, Mul, Sub},
 };
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
+#[cfg_attr(feature = "std", derive(Debug))]
 pub enum TraceExpression {
     Trace(usize, isize),
     PolynomialExpression(PolynomialExpression),

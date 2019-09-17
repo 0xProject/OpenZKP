@@ -6,7 +6,8 @@ use std::{
 };
 use u256::{commutative_binop, noncommutative_binop};
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(feature = "std", derive(Debug))]
 pub enum PolynomialExpression {
     X,
     Constant(FieldElement),

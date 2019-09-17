@@ -23,7 +23,8 @@ use u256::{commutative_binop, noncommutative_binop};
 pub struct DensePolynomial(Vec<FieldElement>);
 
 // TODO: Move into separate file or combine these into an enum.
-#[derive(PartialEq, Clone, Eq, PartialOrd, Ord, Debug)]
+#[derive(PartialEq, Clone, Eq, PartialOrd, Ord)]
+#[cfg_attr(feature = "std", derive(Debug))]
 pub struct SparsePolynomial(BTreeMap<usize, FieldElement>);
 
 impl DensePolynomial {
