@@ -56,18 +56,27 @@ pub enum Operation {
     Inv(Index),
     Exp(Index, usize),
     Poly(DensePolynomial, Index),
-    Lookup(Vec<FieldElement>),
+    Lookup(Table),
 }
 
 /// Reference to a node in the graph.
 #[derive(Clone, Copy, PartialEq)]
 pub struct Index(usize);
 
+#[derive(Clone, PartialEq)]
+pub struct Table(Vec<FieldElement>);
+
 use Operation::*;
 
 impl std::fmt::Debug for Index {
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(fmt, "{:>3}", self.0)
+    }
+}
+
+impl std::fmt::Debug for Table {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(fmt, "Table(len = {:>3})", self.0.len())
     }
 }
 
@@ -174,7 +183,7 @@ impl AlgebraicGraph {
             Inv(a) => self[*a].period,
             Exp(a, e) => self[*a].period,
             Poly(_, a) => self[*a].period,
-            Lookup(v) => v.len(),
+            Lookup(v) => v.0.len(),
         }
     }
 
@@ -284,10 +293,22 @@ impl AlgebraicGraph {
 
     pub fn lookup_tables(&mut self) {
         const TRESHOLD: usize = 1024;
-        // Select all nodes qualifying for lookup.
-        // Find out which nodes would be made redundant.
-
-        // Recurse from the result, whenever <= TRESHOlD => Replace with Lookup.
+        // TODO: Don't create a bunch of lookup tables just to throw them away
+        // later.
+        for i in 0..self.nodes.len() {
+            let node = &self.nodes[i];
+            if node.period > TRESHOLD {
+                continue;
+            }
+            if let Constant(_) = node.op {
+                continue;
+            }
+            if let Coset(..) = node.op {
+                continue;
+            }
+            let table = self.make_lookup(Index(i));
+            self.nodes[i].op = Lookup(Table(table));
+        }
     }
 
     /// Remove unnecessary nodes
@@ -352,6 +373,7 @@ impl AlgebraicGraph {
     // TODO: Batch invert: combine all space-like Inv nodes to a batch inversion
     // scheme.
 
+    // TODO: next(&self, &TraceTable) -> (i, FieldElement)
     #[inline(never)]
     pub fn eval(
         &mut self,
@@ -386,7 +408,7 @@ impl AlgebraicGraph {
                         }
                     }
                 }
-                Lookup(v) => v[row.1 % v.len()].clone(),
+                Lookup(v) => v.0[row.1 % v.0.len()].clone(),
             };
             self.nodes[i].value = value;
         }

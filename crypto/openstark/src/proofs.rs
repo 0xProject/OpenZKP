@@ -368,6 +368,9 @@ fn get_constraint_polynomials(
 
     let mut dag = AlgebraicGraph::new(&FieldElement::GENERATOR, trace_coset.num_rows());
     let result = dag.expression(expr.clone());
+    dag.optimize();
+    dag.lookup_tables();
+    let result = dag.tree_shake(result);
     info!("Combined constraint graph: {:?}", dag);
 
     // Evaluate on the coset trace table
