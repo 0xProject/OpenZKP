@@ -11,7 +11,7 @@ use std::{
 use tiny_keccak::Keccak;
 use u256::U256;
 
-const CHUNK_SIZE: usize = 1;
+const CHUNK_SIZE: usize = 2;
 
 /// Evaluation graph for algebraic expressions over a coset.
 #[derive(Clone, PartialEq)]
@@ -408,7 +408,7 @@ impl AlgebraicGraph {
                 Lookup(v) if v.0.len() <= CHUNK_SIZE => {
                     assert_eq!(CHUNK_SIZE % v.0.len(), 0);
                     for i in 0..CHUNK_SIZE {
-                        values[i] *= v.0[i % v.0.len()].clone();
+                        values[i] = v.0[i % v.0.len()].clone();
                     }
                 }
                 _ => {}
@@ -424,8 +424,8 @@ impl AlgebraicGraph {
         row: (usize, usize),
         x: &FieldElement,
     ) -> FieldElement {
-        if row.0 % CHUNK_SIZE > 0 {
-            return self.nodes.last().unwrap().values[row.0 % CHUNK_SIZE].clone();
+        if row.1 % CHUNK_SIZE > 0 {
+            return self.nodes.last().unwrap().values[row.1 % CHUNK_SIZE].clone();
         }
         for i in 0..self.nodes.len() {
             let (previous, current) = self.nodes.split_at_mut(i);
@@ -436,7 +436,8 @@ impl AlgebraicGraph {
                 Trace(c, o) => {
                     let n = trace_table.num_rows() as isize;
                     for i in 0..CHUNK_SIZE {
-                        let row = ((n + (row.1 as isize) + (row.0 as isize) * *o) % n) as usize;
+                        let row =
+                            ((n + ((row.1 + i) as isize) + (row.0 as isize) * *o) % n) as usize;
                         values[i] = trace_table[(row, *c)].clone();
                     }
                 }
@@ -462,7 +463,7 @@ impl AlgebraicGraph {
                 }
                 Inv(a) => {
                     let a = &previous[a.0].values;
-                    // TODO: Batch invert
+                    // OPT: Batch invert
                     for i in 0..CHUNK_SIZE {
                         values[i] = a[i].inv().unwrap()
                     }
@@ -485,6 +486,7 @@ impl AlgebraicGraph {
                     }
                 }
                 Lookup(v) if v.0.len() > CHUNK_SIZE => {
+                    // OPT: Bulk copy
                     for i in 0..CHUNK_SIZE {
                         values[i] = v.0[row.1 % v.0.len()].clone();
                     }
