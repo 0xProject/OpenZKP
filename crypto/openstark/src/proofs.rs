@@ -11,7 +11,7 @@ use crate::{
 };
 use hash::{Hash, Hashable, MaskedKeccak};
 use itertools::Itertools;
-use log::{error, info};
+use log::info;
 use merkle_tree::{Tree, VectorCommitment};
 use mmap_vec::MmapVec;
 use primefield::{
@@ -270,17 +270,15 @@ where
 
     // Verify proof
     info!("Verify proof.");
-    if !check_proof(
+    assert!(check_proof(
         proof.proof.as_slice(),
         constraints,
         public,
         params,
         trace.num_columns(),
-        trace.num_rows(),
-    ) {
-        // TODO: Return Error (or panic)
-        error!("Verifying proof failed.");
-    }
+        trace.num_rows()
+    )
+    .is_ok());
 
     // Q.E.D.
     // TODO: Return bytes, or a result structure
@@ -694,7 +692,8 @@ mod tests {
             },
             2,
             1024
-        ));
+        )
+        .is_ok());
     }
 
     #[test]
@@ -731,7 +730,8 @@ mod tests {
             },
             2,
             4096
-        ));
+        )
+        .is_ok());
     }
 
     // TODO: What are we actually testing here? Should we add these as debug_assert
