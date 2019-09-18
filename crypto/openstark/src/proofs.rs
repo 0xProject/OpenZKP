@@ -472,37 +472,69 @@ fn calculate_fri_polynomial(
 ) -> DensePolynomial {
     let trace_length = trace_polynomials[0].len();
     let trace_generator = FieldElement::root(trace_length).unwrap();
-    let shifted_oods_point = &trace_generator * oods_point;
-
-    let mut fri_polynomial = DensePolynomial::new(&[FieldElement::ZERO]);
-    for (i, trace_polynomial) in trace_polynomials.iter().enumerate() {
-        fri_polynomial += &oods_coefficients[2 * i] * trace_polynomial.divide_out_point(oods_point);
-        fri_polynomial +=
-            &oods_coefficients[2 * i + 1] * trace_polynomial.divide_out_point(&shifted_oods_point);
-    }
-
-    let offset = 2 * trace_polynomials.len();
     let constraints_degree_bound = constraint_polynomials.len();
-    for (i, constraint_polynomial) in constraint_polynomials.iter().enumerate() {
-        fri_polynomial += &oods_coefficients[offset + i]
-            * constraint_polynomial.divide_out_point(&oods_point.pow(constraints_degree_bound));
+    let shifted_oods_point = &trace_generator * oods_point;
+    let powered_oods_point = oods_point.pow(constraints_degree_bound);
+
+    // Coefficients of the resulting polynomial
+    // TODO: Construct with zeros
+    let mut result = MmapVec::with_capacity(trace_length);
+    for _ in 0..trace_length {
+        result.push(FieldElement::ZERO);
     }
-    fri_polynomial
+
+    // Add the Trace polynomials
+    for (poly, (c0, c1)) in trace_polynomials
+        .iter()
+        .zip(oods_coefficients.iter().tuples())
+    {
+        // Iterate over coefficients from high to low
+        let mut remainder_oods = FieldElement::ZERO;
+        let mut remainder_shifted = FieldElement::ZERO;
+        for (result, poly_coef) in result.iter_mut().zip(poly.coefficients().iter()).rev() {
+            // TODO: Have an iterator on DensPolynomial that streams out
+            // divided-out-coefficients.
+            remainder_oods *= oods_point;
+            remainder_shifted *= &shifted_oods_point;
+            remainder_oods += poly_coef;
+            remainder_shifted += poly_coef;
+            *result += c0 * (poly_coef - &remainder_oods);
+            *result += c1 * (poly_coef - &remainder_shifted);
+        }
+    }
+    let oods_coefficients = &oods_coefficients[2 * trace_polynomials.len()..];
+
+    // Add the combined constraint polynomials
+    for (poly, c) in constraint_polynomials.iter().zip(oods_coefficients.iter()) {
+        let mut remainder = FieldElement::ZERO;
+        for (result, poly_coef) in result.iter_mut().zip(poly.coefficients().iter()).rev() {
+            remainder *= &powered_oods_point;
+            remainder += poly_coef;
+            *result += c * (poly_coef - &remainder);
+        }
+    }
+    // TODO: Move MmapVec
+    DensePolynomial::new(&result)
 }
 
+// TODO: Fri fold in point domain
 fn fri_fold(p: &DensePolynomial, c: &FieldElement) -> DensePolynomial {
     let shift = FieldElement::GENERATOR;
     // Generator has an inverse
     let unshift = shift.inv().unwrap();
 
     // TODO: don't shift and unshift in this function.
-    let shifted = p.shift(&shift);
+    let mut shifted = p.clone();
+    shifted.shift(&shift);
     let coefficients: Vec<FieldElement> = shifted
         .coefficients()
-        .chunks_exact(2)
-        .map(|pair: &[FieldElement]| (&pair[0] + c * &pair[1]).double())
+        .iter()
+        .tuples()
+        .map(|(a, b)| (a + c * b).double())
         .collect();
-    DensePolynomial::from_vec(coefficients).shift(&unshift)
+    let mut result = DensePolynomial::from_vec(coefficients);
+    result.shift(&unshift);
+    result
 }
 
 fn perform_fri_layering(
@@ -531,7 +563,8 @@ fn perform_fri_layering(
             coefficient = coefficient.square();
         }
     }
-    proof.write(p.shift(&FieldElement::GENERATOR).coefficients());
+    p.shift(&FieldElement::GENERATOR);
+    proof.write(p.coefficients());
     fri_trees
 }
 
