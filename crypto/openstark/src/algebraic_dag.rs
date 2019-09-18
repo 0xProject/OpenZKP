@@ -3,7 +3,7 @@ use crate::{
 };
 use log::info;
 use macros_decl::field_element;
-use primefield::FieldElement;
+use primefield::{invert_batch_src_dst, FieldElement};
 use std::{
     ops::{MulAssign, Neg},
     prelude::v1::*,
@@ -11,7 +11,7 @@ use std::{
 use tiny_keccak::Keccak;
 use u256::U256;
 
-const CHUNK_SIZE: usize = 2;
+const CHUNK_SIZE: usize = 16;
 
 /// Evaluation graph for algebraic expressions over a coset.
 #[derive(Clone, PartialEq)]
@@ -463,10 +463,7 @@ impl AlgebraicGraph {
                 }
                 Inv(a) => {
                     let a = &previous[a.0].values;
-                    // OPT: Batch invert
-                    for i in 0..CHUNK_SIZE {
-                        values[i] = a[i].inv().unwrap()
-                    }
+                    invert_batch_src_dst(a, values);
                 }
                 Exp(a, e) => {
                     let a = &previous[a.0].values;
