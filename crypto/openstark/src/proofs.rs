@@ -389,22 +389,15 @@ fn get_constraint_polynomials(
     // split to domain up in smaller cosets and solve their expressions
     // independently. This will make all periods and therefore lookup tables
     // smaller.
+    const CHUNK_SIZE: usize = 65536;
     values
-        .par_chunks_mut(65536)
+        .par_chunks_mut(CHUNK_SIZE)
         .enumerate()
         .for_each(|(mut i, chunk)| {
-            info!("i = {:?}, len = {:?}", i, chunk.len());
+            i *= CHUNK_SIZE;
             let mut dag = dag.clone();
             dag.init(i);
             for value in chunk {
-                if i % 100000 == 0 {
-                    info!(
-                        "Row {:?} out of {:?} ({:?} %)",
-                        i,
-                        trace_coset.num_rows(),
-                        100_f32 * (i as f32) / (trace_coset.num_rows() as f32)
-                    );
-                }
                 *value = dag.next(&trace_coset);
                 i += 1;
             }

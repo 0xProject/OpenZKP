@@ -310,7 +310,6 @@ impl AlgebraicGraph {
         let mut subdag = self.clone();
         let index = subdag.tree_shake(index);
         let fake_table = TraceTable::new(0, 0);
-        info!("Lookup {:?}", subdag);
         subdag.init(0);
         for i in 0..node.period {
             result.push(subdag.next(&fake_table));
@@ -418,17 +417,25 @@ impl AlgebraicGraph {
                 Coset(c, s) => {
                     let root = FieldElement::root(*s).unwrap();
                     let mut acc = c.clone();
-                    acc *= root.pow(start);
+                    acc *= root.pow(self.row);
                     for i in 0..CHUNK_SIZE {
                         values[i] = acc.clone();
                         acc *= &root;
                     }
-                    *note = root.pow(CHUNK_SIZE);
+                    if *s > CHUNK_SIZE {
+                        *note = root.pow(CHUNK_SIZE);
+                        // OPT: Avoid this step
+                        // This is to compensate for the first round of *= note.
+                        let inv = note.inv().unwrap();
+                        for i in 0..CHUNK_SIZE {
+                            values[i] *= &inv;
+                        }
+                    }
                 }
                 Lookup(v) if v.0.len() <= CHUNK_SIZE => {
                     assert_eq!(CHUNK_SIZE % v.0.len(), 0);
                     for i in 0..CHUNK_SIZE {
-                        values[i] = v.0[(start + i) % v.0.len()].clone();
+                        values[i] = v.0[(self.row + i) % v.0.len()].clone();
                     }
                 }
                 _ => {}
@@ -496,7 +503,7 @@ impl AlgebraicGraph {
                         values[i] = p.evaluate(&a[i])
                     }
                 }
-                Coset(c, s) if self.row != 0 && *s > CHUNK_SIZE => {
+                Coset(c, s) if *s > CHUNK_SIZE => {
                     for i in 0..CHUNK_SIZE {
                         values[i] *= &*note;
                     }
