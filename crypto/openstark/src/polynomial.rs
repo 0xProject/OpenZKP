@@ -9,7 +9,6 @@ use primefield::FieldElement;
 #[cfg(feature = "std")]
 use rayon::prelude::*;
 use std::prelude::v1::*;
-use u256::{commutative_binop, noncommutative_binop};
 
 #[derive(PartialEq, Clone)]
 pub struct DensePolynomial(Vec<FieldElement>);
@@ -61,6 +60,21 @@ impl DensePolynomial {
         result
     }
 
+    /// Divide out a point in place.
+    ///
+    /// P'(X) = (P(X) - P(z)) / (X - z).
+    /// Returns P(z).
+    pub fn divide_out_point(&mut self, z: &FieldElement) -> FieldElement {
+        // Do an in-place division by (X - z) and return the remainder.
+        let mut remainder = FieldElement::ZERO;
+        for coefficient in self.0.iter_mut().rev() {
+            remainder *= z;
+            remainder += &*coefficient;
+            *coefficient -= &remainder;
+        }
+        remainder
+    }
+
     #[cfg(feature = "std")]
     pub fn low_degree_extension(&self, blowup: usize) -> MmapVec<FieldElement> {
         // TODO: shift polynomial by FieldElement::GENERATOR outside of this function.
@@ -85,17 +99,6 @@ impl DensePolynomial {
                 fft_cofactor_permuted(&cofactor, slice);
             });
         result
-    }
-
-    pub fn divide_out_point(&mut self, x: &FieldElement) {
-        // P'(X) = (P(X) - P(x)) / (X - x)
-        // Do a flooring division by (X - x)
-        // We throw away the remainder, which is equivalent
-        // to subtracting P(x).
-        for (c2, c1) in self.0.iter_mut().rev().tuples() {
-            *c1 -= x * &*c2;
-        }
-        *self.0.last_mut().unwrap() = FieldElement::ZERO;
     }
 
     // f'(x) = f(s * y).
@@ -129,7 +132,10 @@ impl Arbitrary for DensePolynomial {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use primefield::geometric_series::geometric_series;
+    use primefield::{
+        fft::{fft, ifft},
+        geometric_series::geometric_series,
+    };
     use quickcheck_macros::quickcheck;
 
     fn shift(factor: &FieldElement, x: &[FieldElement]) -> Vec<FieldElement> {
@@ -144,14 +150,12 @@ mod tests {
     }
 
     fn dense_polynomial(coefficients: &[isize]) -> DensePolynomial {
-        let mut p = DensePolynomial(
+        DensePolynomial(
             coefficients
                 .iter()
                 .map(|c| FieldElement::from(*c))
                 .collect(),
-        );
-        p.canonicalize();
-        p
+        )
     }
 
     #[test]
@@ -162,6 +166,8 @@ mod tests {
 
     #[quickcheck]
     fn shift_evaluation_equivalence(a: DensePolynomial, s: FieldElement, x: FieldElement) -> bool {
-        a.shift(&s).evaluate(&x) == a.evaluate(&(s * x))
+        let mut b = a.clone();
+        b.shift(&s);
+        b.evaluate(&x) == a.evaluate(&(s * x))
     }
 }

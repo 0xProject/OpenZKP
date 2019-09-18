@@ -200,7 +200,7 @@ impl AlgebraicGraph {
             Neg(a) => self[*a].period,
             Mul(a, b) => lcm(self[*a].period, self[*b].period),
             Inv(a) => self[*a].period,
-            Exp(a, e) => self[*a].period,
+            Exp(a, _) => self[*a].period,
             Poly(_, a) => self[*a].period,
             Lookup(v) => v.0.len(),
         }
@@ -305,7 +305,7 @@ impl AlgebraicGraph {
         let index = subdag.tree_shake(index);
         let fake_table = TraceTable::new(0, 0);
         subdag.init(0);
-        for i in 0..node.period {
+        for _ in 0..node.period {
             result.push(subdag.next(&fake_table));
         }
         result
@@ -375,8 +375,8 @@ impl AlgebraicGraph {
                     *b = numbers[b.0];
                 }
                 Inv(a) => *a = numbers[a.0],
-                Exp(a, e) => *a = numbers[a.0],
-                Poly(p, a) => *a = numbers[a.0],
+                Exp(a, _) => *a = numbers[a.0],
+                Poly(_, a) => *a = numbers[a.0],
                 _ => {}
             }
         }
@@ -393,7 +393,7 @@ impl AlgebraicGraph {
         assert_eq!(start % CHUNK_SIZE, 0);
         self.row = start;
         for i in 0..self.nodes.len() {
-            let (previous, current) = self.nodes.split_at_mut(i);
+            let (_previous, current) = self.nodes.split_at_mut(i);
             let Node {
                 op, values, note, ..
             } = &mut current[0];
@@ -491,7 +491,7 @@ impl AlgebraicGraph {
                         values[i] = p.evaluate(&a[i])
                     }
                 }
-                Coset(c, s) if *s > CHUNK_SIZE => {
+                Coset(_, s) if *s > CHUNK_SIZE => {
                     for i in 0..CHUNK_SIZE {
                         values[i] *= &*note;
                     }

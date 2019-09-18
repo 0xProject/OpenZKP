@@ -152,8 +152,8 @@ impl RationalExpression {
                 let a = a.simplify();
                 let b = b.simplify();
                 match (a, b) {
-                    (a, Constant(FieldElement::ZERO)) => Constant(FieldElement::ZERO),
-                    (Constant(FieldElement::ZERO), b) => Constant(FieldElement::ZERO),
+                    (_, Constant(FieldElement::ZERO)) => Constant(FieldElement::ZERO),
+                    (Constant(FieldElement::ZERO), _) => Constant(FieldElement::ZERO),
                     (a, Constant(FieldElement::ONE)) => a,
                     (Constant(FieldElement::ONE), b) => b,
                     (Constant(a), Constant(b)) => Constant(a * b),

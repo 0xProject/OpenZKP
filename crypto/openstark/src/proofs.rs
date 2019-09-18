@@ -291,13 +291,8 @@ fn extract_trace_coset(trace_lde: &PolyLDE, size: usize) -> TraceTable {
     let trace_lde: &[MmapVec<FieldElement>] = &trace_lde.0;
     let lde_size = trace_lde[0].len();
     let mut trace_coset = TraceTable::new(size, trace_lde.len());
-    let x = geometric_series(
-        &FieldElement::GENERATOR,
-        &FieldElement::root(trace_coset.num_rows()).unwrap(),
-    )
-    .take(trace_coset.num_rows());
     // OPT: Benchmark with flipped order of loops
-    for (i, x) in x.enumerate() {
+    for i in 0..trace_coset.num_rows() {
         for j in 0..trace_coset.num_columns() {
             let lde = &trace_lde[j];
             let index = i * lde_size / size;
