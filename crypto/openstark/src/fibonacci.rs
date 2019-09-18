@@ -1,4 +1,6 @@
-use crate::{constraint::Constraint, polynomial::SparsePolynomial};
+use crate::{
+    constraint::Constraint, polynomial::SparsePolynomial, rational_expression::RationalExpression,
+};
 use primefield::FieldElement;
 use std::{convert::TryInto, prelude::v1::*};
 use u256::U256;
@@ -56,6 +58,8 @@ pub fn get_trace_table(length: usize, private: &PrivateInput) -> TraceTable {
 }
 
 pub fn get_fibonacci_constraints(public_input: &PublicInput) -> Vec<Constraint> {
+    use RationalExpression::*;
+
     let trace_length = public_input.index.next_power_of_two();
     let claim_index = public_input.index;
     let claim_value = public_input.value.clone();
@@ -75,23 +79,32 @@ pub fn get_fibonacci_constraints(public_input: &PublicInput) -> Vec<Constraint> 
         (FieldElement::ONE, 1),
     ]);
 
+    // Constraint repetitions
+    let g = Constant(trace_generator);
+    let on_row = |index| (X - g.pow(index)).inv();
+    let reevery_row = || (X - g.pow(trace_length - 1)) / (X.pow(trace_length) - 1.into());
+
     vec![
         Constraint {
+            expr:        (Trace(0, 1) - Trace(1, 0)) * reevery_row(),
             base:        Box::new(|tp| tp[0].next() - &tp[1]),
             numerator:   last_row.clone(),
             denominator: every_row.clone(),
         },
         Constraint {
+            expr:        (Trace(1, 1) - Trace(0, 0) - Trace(1, 0)) * reevery_row(),
             base:        Box::new(|tp| tp[1].next() - &tp[1] - &tp[0]),
             numerator:   last_row.clone(),
             denominator: every_row.clone(),
         },
         Constraint {
+            expr:        (Trace(0, 0) - 1.into()) * on_row(0),
             base:        Box::new(|tp| &tp[0] - SparsePolynomial::new(&[(FieldElement::ONE, 0)])),
             numerator:   no_rows.clone(),
             denominator: first_row,
         },
         Constraint {
+            expr:        (Trace(0, 0) - (&claim_value).into()) * on_row(claim_index),
             base:        Box::new(move |tp| {
                 &tp[0] - SparsePolynomial::new(&[(claim_value.clone(), 0)])
             }),

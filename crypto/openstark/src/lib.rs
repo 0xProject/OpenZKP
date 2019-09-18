@@ -43,6 +43,7 @@ pub mod fibonacci;
 mod polynomial;
 mod proof_of_work;
 mod proof_params;
+mod rational_expression;
 mod verifier;
 
 pub use channel::{ProverChannel, VerifierChannel};
@@ -59,6 +60,8 @@ extern crate no_std_compat as std;
 //
 // Optional prover functionality. Note that prover requires std.
 #[cfg(feature = "prover")]
+mod algebraic_dag;
+#[cfg(feature = "prover")]
 pub mod pedersen_merkle;
 #[cfg(feature = "prover")]
 mod proofs;
@@ -70,3 +73,12 @@ mod trace_table;
 pub use proofs::stark_proof;
 #[cfg(feature = "prover")]
 pub use trace_table::TraceTable;
+
+#[cfg(test)]
+mod tests {
+    use env_logger;
+
+    pub(crate) fn init() {
+        let _ = env_logger::builder().is_test(true).try_init();
+    }
+}

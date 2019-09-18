@@ -68,6 +68,7 @@ test = [
     "quickcheck",
     "quickcheck_macros",
     "hex",
+    "env_logger",
 ]
 bench = [
     "criterion",

@@ -1,11 +1,19 @@
+use crate::polynomial::DensePolynomial;
 use primefield::FieldElement;
-use std::ops::{Add, Div, Mul, Sub};
+use std::{
+    iter::Sum,
+    ops::{Add, Div, Mul, Sub},
+    prelude::v1::*,
+};
 
-#[derive(Clone, Debug)]
+// TODO: Rename to algebraic expression
+#[derive(Clone)]
+#[cfg_attr(feature = "std", derive(Debug))]
 pub enum RationalExpression {
     X,
     Constant(FieldElement),
     Trace(usize, isize),
+    Polynomial(DensePolynomial, Box<RationalExpression>),
     Add(Box<RationalExpression>, Box<RationalExpression>),
     Neg(Box<RationalExpression>),
     Mul(Box<RationalExpression>, Box<RationalExpression>),
@@ -14,7 +22,15 @@ pub enum RationalExpression {
 }
 
 impl RationalExpression {
-    pub fn pow(&self, exponent: usize) -> RationalExpression {
+    pub fn neg(&self) -> Self {
+        RationalExpression::Neg(Box::new(self.clone()))
+    }
+
+    pub fn inv(&self) -> Self {
+        RationalExpression::Inv(Box::new(self.clone()))
+    }
+
+    pub fn pow(&self, exponent: usize) -> Self {
         RationalExpression::Exp(Box::new(self.clone()), exponent)
     }
 }
@@ -39,14 +55,13 @@ impl Add for RationalExpression {
     }
 }
 
+// Clippy false positive
+#[allow(clippy::suspicious_arithmetic_impl)]
 impl Sub for RationalExpression {
     type Output = Self;
 
     fn sub(self, other: Self) -> Self {
-        RationalExpression::Add(
-            Box::new(self),
-            Box::new(RationalExpression::Neg(Box::new(other))),
-        )
+        self + other.neg()
     }
 }
 
@@ -58,18 +73,29 @@ impl Mul for RationalExpression {
     }
 }
 
+// Clippy false positive
+#[allow(clippy::suspicious_arithmetic_impl)]
 impl Div for RationalExpression {
     type Output = Self;
 
     fn div(self, other: Self) -> Self {
-        RationalExpression::Mul(
-            Box::new(self),
-            Box::new(RationalExpression::Inv(Box::new(other))),
-        )
+        self * other.inv()
     }
 }
 
-#[allow(dead_code)] // TODO
+impl Sum<RationalExpression> for RationalExpression {
+    fn sum<I>(mut iter: I) -> Self
+    where
+        I: Iterator<Item = RationalExpression>,
+    {
+        if let Some(expr) = iter.next() {
+            iter.fold(expr, |a, b| a + b)
+        } else {
+            0.into()
+        }
+    }
+}
+
 impl RationalExpression {
     /// Numerator and denominator degree of the expression in X.
     ///
@@ -81,6 +107,10 @@ impl RationalExpression {
             X => (1, 0),
             Constant(_) => (0, 0),
             Trace(..) => (trace_degree, 0),
+            Polynomial(p, a) => {
+                let (n, d) = a.degree(trace_degree);
+                (p.degree() * n, p.degree() * d)
+            }
             Add(a, b) => {
                 let (an, ad) = a.degree(trace_degree);
                 let (bn, bd) = b.degree(trace_degree);
@@ -105,25 +135,65 @@ impl RationalExpression {
         }
     }
 
-    pub fn eval(
-        &self,
-        trace_table: &Fn(usize, &FieldElement) -> FieldElement,
-        x: &FieldElement,
-        g: &FieldElement,
-    ) -> FieldElement {
+    /// Simplify the expression
+    ///
+    /// Does constant propagation and simplifies expressions like `0 + a`,
+    /// `0 * a`, `1 * a`, `-(-a)`, `1/(1/a)`, `a^0` and `a^1`.
+    // TODO: Move to AlgebraicDag
+    // Repeated arms are more readable here
+    #[allow(clippy::match_same_arms)]
+    pub fn simplify(self) -> Self {
         use RationalExpression::*;
         match self {
-            X => x.clone(),
-            Constant(value) => value.clone(),
-            &Trace(i, j) => trace_table(i, &(x * g.pow(j.into()))),
-            Add(a, b) => a.eval(trace_table, x, g) + b.eval(trace_table, x, g),
-            Neg(a) => -&a.eval(trace_table, x, g),
-            Inv(a) => {
-                a.eval(trace_table, x, g)
-                    .inv()
-                    .expect("Division by zero while evaluating RationalExpression.")
+            Add(a, b) => {
+                let a = a.simplify();
+                let b = b.simplify();
+                match (a, b) {
+                    (a, Constant(FieldElement::ZERO)) => a,
+                    (Constant(FieldElement::ZERO), b) => b,
+                    (Constant(a), Constant(b)) => Constant(a + b),
+                    (a, b) => a + b,
+                }
             }
-            _ => unimplemented!(),
+            Mul(a, b) => {
+                let a = a.simplify();
+                let b = b.simplify();
+                match (a, b) {
+                    (_, Constant(FieldElement::ZERO)) => Constant(FieldElement::ZERO),
+                    (Constant(FieldElement::ZERO), _) => Constant(FieldElement::ZERO),
+                    (a, Constant(FieldElement::ONE)) => a,
+                    (Constant(FieldElement::ONE), b) => b,
+                    (Constant(a), Constant(b)) => Constant(a * b),
+                    (a, b) => a * b,
+                }
+            }
+            Neg(a) => {
+                let a = a.simplify();
+                match a {
+                    // TODO: impl std::ops::Neg for FieldElement
+                    Constant(a) => Constant(FieldElement::ZERO - a),
+                    Neg(a) => *a,
+                    a => a.neg(),
+                }
+            }
+            Inv(a) => {
+                let a = a.simplify();
+                match a {
+                    Constant(a) => Constant(a.inv().expect("Division by zero.")),
+                    Inv(a) => *a,
+                    a => a.inv(),
+                }
+            }
+            Exp(a, e) => {
+                let a = a.simplify();
+                match (a, e) {
+                    (_, 0) => Constant(FieldElement::ONE),
+                    (a, 1) => a,
+                    (Constant(a), e) => Constant(a.pow(e)),
+                    (a, e) => a.pow(e),
+                }
+            }
+            e => e,
         }
     }
 }

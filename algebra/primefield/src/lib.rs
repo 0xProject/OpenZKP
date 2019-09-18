@@ -46,7 +46,7 @@ mod square_root;
 pub use field::FieldElement;
 
 // TODO: Make member functions of FieldElement?
-pub use field::invert_batch;
+pub use field::{invert_batch, invert_batch_src_dst};
 
 // Std/no-std imports
 #[cfg(not(feature = "std"))]

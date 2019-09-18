@@ -19,8 +19,15 @@ use std::{
 use u256::{commutative_binop, noncommutative_binop};
 
 #[derive(PartialEq, Clone)]
-#[cfg_attr(feature = "std", derive(Debug))]
 pub struct DensePolynomial(Vec<FieldElement>);
+
+// We normally don't want to spill thousands of coefficients in the logs.
+#[cfg(feature = "std")]
+impl std::fmt::Debug for DensePolynomial {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(fmt, "DensePolynomial(degree = {:?})", self.degree())
+    }
+}
 
 // TODO: Move into separate file or combine these into an enum.
 #[derive(PartialEq, Clone)]
@@ -44,6 +51,16 @@ impl DensePolynomial {
     // coefficient of a DensePolynomial can be zero.
     pub fn len(&self) -> usize {
         self.0.len()
+    }
+
+    // TODO: The zero polynomial is assigned a degree of 0, but it is
+    // more correctly left undefined or sometimes assigned `-1` or `-∞`.
+    pub fn degree(&self) -> usize {
+        let mut degree = self.len() - 1;
+        while self.0[degree] == FieldElement::ZERO && degree > 0 {
+            degree -= 1;
+        }
+        degree
     }
 
     pub fn evaluate(&self, x: &FieldElement) -> FieldElement {

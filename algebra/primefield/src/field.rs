@@ -110,6 +110,20 @@ impl FieldElement {
     }
 }
 
+pub fn invert_batch_src_dst(source: &[FieldElement], destination: &mut [FieldElement]) {
+    assert_eq!(source.len(), destination.len());
+    let mut accumulator = FieldElement::ONE;
+    for i in 0..source.len() {
+        destination[i] = accumulator.clone();
+        accumulator *= &source[i];
+    }
+    accumulator = accumulator.inv().unwrap();
+    for i in (0..source.len()).rev() {
+        destination[i] *= &accumulator;
+        accumulator *= &source[i];
+    }
+}
+
 pub fn invert_batch(to_be_inverted: &[FieldElement]) -> Vec<FieldElement> {
     if to_be_inverted.is_empty() {
         return Vec::new();
