@@ -415,9 +415,7 @@ impl fmt::Display for Error {
                     "Verifier attempted to look up an empty entry in the hash map"
                 )
             }
-            Error::ProofTooLong => {
-                write!(f, "The proof length doesn't match the specification")
-            }
+            Error::ProofTooLong => write!(f, "The proof length doesn't match the specification"),
             Error::OddsCalculationFailure => {
                 write!(
                     f,
