@@ -8,34 +8,17 @@ use std::{
 
 // TODO: Rename to algebraic expression
 #[derive(Clone)]
+#[cfg_attr(feature = "std", derive(Debug))]
 pub enum RationalExpression {
     X,
     Constant(FieldElement),
     Trace(usize, isize),
+    Polynomial(DensePolynomial, Box<RationalExpression>),
     Add(Box<RationalExpression>, Box<RationalExpression>),
     Neg(Box<RationalExpression>),
     Mul(Box<RationalExpression>, Box<RationalExpression>),
     Inv(Box<RationalExpression>),
     Exp(Box<RationalExpression>, usize),
-    Poly(DensePolynomial, Box<RationalExpression>),
-}
-
-#[cfg(feature = "std")]
-impl std::fmt::Debug for RationalExpression {
-    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        use RationalExpression::*;
-        match self {
-            X => write!(fmt, "X"),
-            Constant(a) => write!(fmt, "{:?}", a),
-            Trace(i, j) => write!(fmt, "Trace({}, {})", i, j),
-            Add(a, b) => write!(fmt, "({:?} + {:?})", a, b),
-            Neg(a) => write!(fmt, "-{:?}", a),
-            Mul(a, b) => write!(fmt, "({:?} * {:?})", a, b),
-            Inv(a) => write!(fmt, "1/{:?}", a),
-            Exp(a, e) => write!(fmt, "{:?}^{:?}", a, e),
-            Poly(_, a) => write!(fmt, "P({:?})", a),
-        }
-    }
 }
 
 impl RationalExpression {
@@ -124,6 +107,10 @@ impl RationalExpression {
             X => (1, 0),
             Constant(_) => (0, 0),
             Trace(..) => (trace_degree, 0),
+            Polynomial(p, a) => {
+                let (n, d) = a.degree(trace_degree);
+                (p.degree() * n, p.degree() * d)
+            }
             Add(a, b) => {
                 let (an, ad) = a.degree(trace_degree);
                 let (bn, bd) = b.degree(trace_degree);
@@ -144,10 +131,6 @@ impl RationalExpression {
             Exp(a, e) => {
                 let (n, d) = a.degree(trace_degree);
                 (e * n, e * d)
-            }
-            Poly(p, a) => {
-                let (n, d) = a.degree(trace_degree);
-                (p.degree() * n, p.degree() * d)
             }
         }
     }

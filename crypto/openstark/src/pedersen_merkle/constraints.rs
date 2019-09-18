@@ -66,7 +66,7 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constr
 
     // Periodic columns
     let periodic = |coefficients| {
-        Poly(
+        Polynomial(
             DensePolynomial::new(coefficients),
             Box::new(X.pow(path_length)),
         )

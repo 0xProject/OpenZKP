@@ -259,6 +259,10 @@ impl AlgebraicGraph {
             RE::X => self.op(Op::Coset(self.cofactor.clone(), self.coset_size)),
             RE::Constant(a) => self.op(Op::Constant(a)),
             RE::Trace(i, j) => self.op(Op::Trace(i, j)),
+            RE::Polynomial(p, a) => {
+                let a = self.expression(*a);
+                self.op(Op::Poly(p, a))
+            }
             RE::Add(a, b) => {
                 let a = self.expression(*a);
                 let b = self.expression(*b);
@@ -280,10 +284,6 @@ impl AlgebraicGraph {
             RE::Exp(a, e) => {
                 let a = self.expression(*a);
                 self.op(Op::Exp(a, e))
-            }
-            RE::Poly(p, a) => {
-                let a = self.expression(*a);
-                self.op(Op::Poly(p, a))
             }
         }
     }
