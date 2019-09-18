@@ -46,7 +46,7 @@ mod proof_params;
 mod verifier;
 
 pub use channel::{ProverChannel, VerifierChannel};
-pub use proof_params::ProofParams;
+pub use proof_params::{decommitment_size_upper_bound, ProofParams};
 pub use verifier::check_proof;
 
 // In no std mode, substitute no_std_compat
