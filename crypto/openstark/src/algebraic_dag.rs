@@ -5,6 +5,7 @@ use log::info;
 use macros_decl::field_element;
 use primefield::{invert_batch_src_dst, FieldElement};
 use std::{
+    cmp::min,
     ops::{MulAssign, Neg},
     prelude::v1::*,
 };
@@ -319,9 +320,15 @@ impl AlgebraicGraph {
     pub fn lookup_tables(&mut self) {
         // OPT: Don't create a bunch of lookup tables just to throw them away
         // later. Analyze which nodes will be needed.
+        // TODO: Better heuristics.
+        // TODO: Make sure the target does not depend on `Trace(..)`.
+        // HACK: Don't create lookups for things large than a quarter of the
+        // trace length. This prevents lookups being created for expressions
+        // involving `Trace(..)` in very small proofs.
+        let treshold = min(LOOKUP_SIZE, self.coset_size / 4);
         for i in 0..self.nodes.len() {
             let node = &self.nodes[i];
-            if node.period > LOOKUP_SIZE {
+            if node.period > treshold {
                 continue;
             }
             if let Constant(_) = node.op {
