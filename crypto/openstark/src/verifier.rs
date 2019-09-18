@@ -248,8 +248,8 @@ where
         }
     }
 
-    // Checks that the oods point calculation matches the constraint calculation
-    // TODO: don't use DensePolynomial for this.
+    check_oods_value_matches(oods_values, oods_coefficients)
+
     let mut mock_polynomials: Vec<DensePolynomial> = vec![];
     for i in 0..trace_cols {
         let fake_polynomial = DensePolynomial::new(&ifft(&[
