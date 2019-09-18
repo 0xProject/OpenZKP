@@ -11,7 +11,17 @@ use std::{
 use tiny_keccak::Keccak;
 use u256::U256;
 
+/// Number of values to calculate at once.
+///
+/// A larger value means larger chunks for batch inversion and fewer iterations
+/// of the dag. Larger values also mean less cache locality.
 const CHUNK_SIZE: usize = 16;
+
+/// Maximum size of a periodic lookup table.
+///
+/// Sub-expressions that are discovered to be periodic get evaluated into a
+/// lookup table when the period is equal to or less than this value.
+const LOOKUP_SIZE: usize = 1024;
 
 /// Evaluation graph for algebraic expressions over a coset.
 #[derive(Clone, PartialEq)]
@@ -22,11 +32,17 @@ pub struct AlgebraicGraph {
     /// The size of the evaluation domain.
     coset_size: usize,
 
+    /// The blowup of the trace table
+    trace_blowup: usize,
+
     /// Seed value for random evaluation.
     seed: FieldElement,
 
     /// Evaluation nodes in causal order.
     nodes: Vec<Node>,
+
+    /// Current row
+    row: usize,
 }
 
 /// Node in the evaluation graph.
@@ -112,7 +128,7 @@ impl std::ops::Index<Index> for AlgebraicGraph {
 }
 
 impl AlgebraicGraph {
-    pub fn new(cofactor: &FieldElement, coset_size: usize) -> Self {
+    pub fn new(cofactor: &FieldElement, coset_size: usize, trace_blowup: usize) -> Self {
         // Create seed out of parameters
         let mut seed = [0; 32];
         let mut keccak = Keccak::new_keccak256();
@@ -122,8 +138,10 @@ impl AlgebraicGraph {
         Self {
             cofactor: cofactor.clone(),
             coset_size,
+            trace_blowup,
             seed: FieldElement::from_montgomery(U256::from_bytes_be(&seed)),
             nodes: vec![],
+            row: 0,
         }
     }
 
@@ -293,20 +311,19 @@ impl AlgebraicGraph {
         let index = subdag.tree_shake(index);
         let fake_table = TraceTable::new(0, 0);
         info!("Lookup {:?}", subdag);
-        subdag.init();
+        subdag.init(0);
         for i in 0..node.period {
-            result.push(subdag.eval(&fake_table, (1, i), &FieldElement::ZERO));
+            result.push(subdag.next(&fake_table));
         }
         result
     }
 
     pub fn lookup_tables(&mut self) {
-        const TRESHOLD: usize = 1024;
-        // TODO: Don't create a bunch of lookup tables just to throw them away
-        // later.
+        // OPT: Don't create a bunch of lookup tables just to throw them away
+        // later. Analyze which nodes will be needed.
         for i in 0..self.nodes.len() {
             let node = &self.nodes[i];
-            if node.period > TRESHOLD {
+            if node.period > LOOKUP_SIZE {
                 continue;
             }
             if let Constant(_) = node.op {
@@ -384,7 +401,9 @@ impl AlgebraicGraph {
     // of, say, 64, and use batch inversion on those. The trade-off is between
     // amortization and cache-locality.
 
-    pub fn init(&mut self) {
+    pub fn init(&mut self, start: usize) {
+        assert_eq!(start % CHUNK_SIZE, 0);
+        self.row = start;
         for i in 0..self.nodes.len() {
             let (previous, current) = self.nodes.split_at_mut(i);
             let Node {
@@ -399,6 +418,7 @@ impl AlgebraicGraph {
                 Coset(c, s) => {
                     let root = FieldElement::root(*s).unwrap();
                     let mut acc = c.clone();
+                    acc *= root.pow(start);
                     for i in 0..CHUNK_SIZE {
                         values[i] = acc.clone();
                         acc *= &root;
@@ -408,7 +428,7 @@ impl AlgebraicGraph {
                 Lookup(v) if v.0.len() <= CHUNK_SIZE => {
                     assert_eq!(CHUNK_SIZE % v.0.len(), 0);
                     for i in 0..CHUNK_SIZE {
-                        values[i] = v.0[i % v.0.len()].clone();
+                        values[i] = v.0[(start + i) % v.0.len()].clone();
                     }
                 }
                 _ => {}
@@ -418,14 +438,11 @@ impl AlgebraicGraph {
 
     // TODO: next(&self, &TraceTable) -> (i, FieldElement)
     #[inline(never)]
-    pub fn eval(
-        &mut self,
-        trace_table: &TraceTable,
-        row: (usize, usize),
-        x: &FieldElement,
-    ) -> FieldElement {
-        if row.1 % CHUNK_SIZE > 0 {
-            return self.nodes.last().unwrap().values[row.1 % CHUNK_SIZE].clone();
+    pub fn next(&mut self, trace_table: &TraceTable) -> FieldElement {
+        if self.row % CHUNK_SIZE > 0 {
+            let result = self.nodes.last().unwrap().values[self.row % CHUNK_SIZE].clone();
+            self.row += 1;
+            return result;
         }
         for i in 0..self.nodes.len() {
             let (previous, current) = self.nodes.split_at_mut(i);
@@ -436,8 +453,10 @@ impl AlgebraicGraph {
                 Trace(c, o) => {
                     let n = trace_table.num_rows() as isize;
                     for i in 0..CHUNK_SIZE {
-                        let row =
-                            ((n + ((row.1 + i) as isize) + (row.0 as isize) * *o) % n) as usize;
+                        let trace_blowup = self.trace_blowup as isize;
+                        let row = (self.row + i) as isize;
+                        let row = (n + row + trace_blowup * *o) % n;
+                        let row = row as usize;
                         values[i] = trace_table[(row, *c)].clone();
                     }
                 }
@@ -477,7 +496,7 @@ impl AlgebraicGraph {
                         values[i] = p.evaluate(&a[i])
                     }
                 }
-                Coset(c, s) if row.1 != 0 && *s > CHUNK_SIZE => {
+                Coset(c, s) if self.row != 0 && *s > CHUNK_SIZE => {
                     for i in 0..CHUNK_SIZE {
                         values[i] *= &*note;
                     }
@@ -485,12 +504,13 @@ impl AlgebraicGraph {
                 Lookup(v) if v.0.len() > CHUNK_SIZE => {
                     // OPT: Bulk copy
                     for i in 0..CHUNK_SIZE {
-                        values[i] = v.0[(row.1 + i) % v.0.len()].clone();
+                        values[i] = v.0[(self.row + i) % v.0.len()].clone();
                     }
                 }
                 _ => {}
             };
         }
+        self.row += 1;
         self.nodes.last().unwrap().values[0].clone()
     }
 }

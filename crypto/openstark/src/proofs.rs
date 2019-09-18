@@ -366,24 +366,23 @@ fn get_constraint_polynomials(
     // smaller domain and combine the results in coefficient form.
     info!("Simplified constraint expression: {:?}", expr);
 
-    let mut dag = AlgebraicGraph::new(&FieldElement::GENERATOR, trace_coset.num_rows());
-    let result = dag.expression(expr.clone());
+    let mut dag = AlgebraicGraph::new(
+        &FieldElement::GENERATOR,
+        trace_coset.num_rows(),
+        constraints_degree_bound,
+    );
+    let result = dag.expression(expr);
     dag.optimize();
     dag.lookup_tables();
     let result = dag.tree_shake(result);
-    dag.init();
+    dag.init(0);
     info!("Combined constraint graph: {:?}", dag);
 
     // Evaluate on the coset trace table
     info!("Evaluate on the coset trace table");
     let mut values: MmapVec<FieldElement> = MmapVec::with_capacity(trace_coset.num_rows());
-    let x = geometric_series(
-        &FieldElement::GENERATOR,
-        &FieldElement::root(trace_coset.num_rows()).unwrap(),
-    )
-    .take(trace_coset.num_rows());
     // OPT: Parallelize
-    for (i, x) in x.enumerate() {
+    for i in 0..trace_coset.num_rows() {
         if i % 100000 == 0 {
             info!(
                 "Row {:?} out of {:?} ({:?} %)",
@@ -392,9 +391,7 @@ fn get_constraint_polynomials(
                 100_f32 * (i as f32) / (trace_coset.num_rows() as f32)
             );
         }
-        // let y = expr.eval(&trace_coset, (constraints_degree_bound, i), &x);
-        let y = dag.eval(&trace_coset, (constraints_degree_bound, i), &x);
-        values.push(y);
+        values.push(dag.next(&trace_coset));
     }
 
     info!("Convert from values to coefficients");
