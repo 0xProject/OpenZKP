@@ -373,6 +373,7 @@ mod tests {
     };
 
     // TODO: Implement verifier and re-enable
+    #[ignore]
     #[test]
     fn short_pedersen_merkle() {
         crate::tests::init();
