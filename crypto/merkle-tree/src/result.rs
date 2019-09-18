@@ -1,4 +1,4 @@
-use std::{error, fmt};
+use std::{prelude::v1::*, error, fmt};
 pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]

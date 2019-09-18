@@ -9,7 +9,7 @@ use primefield::{
     geometric_series::root_series,
     FieldElement,
 };
-use std::{collections::BTreeMap, error, fmt::self, prelude::v1::*};
+use std::{collections::BTreeMap, error, fmt, prelude::v1::*};
 use u256::U256;
 
 // False positive, for<'a> is required.
