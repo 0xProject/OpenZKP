@@ -1,13 +1,8 @@
 use crate::{
     polynomial::DensePolynomial, rational_expression::RationalExpression, trace_table::TraceTable,
 };
-use log::info;
-use macros_decl::field_element;
 use primefield::{invert_batch_src_dst, FieldElement};
-use std::{
-    ops::{MulAssign, Neg},
-    prelude::v1::*,
-};
+use std::{ops::Neg, prelude::v1::*};
 use tiny_keccak::Keccak;
 use u256::U256;
 

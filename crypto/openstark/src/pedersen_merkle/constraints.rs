@@ -10,13 +10,9 @@ use crate::{
     rational_expression::{RationalExpression, RationalExpression::*},
 };
 use elliptic_curve::Affine;
-use lazy_static::lazy_static;
-use log::info;
-use mmap_vec::MmapVec;
-use primefield::{geometric_series::geometric_series, FieldElement};
+use primefield::FieldElement;
 use starkdex::SHIFT_POINT;
-use std::{cmp::min, prelude::v1::*, vec};
-use u256::U256;
+use std::{prelude::v1::*, vec};
 
 // TODO: Naming
 #[allow(clippy::module_name_repetitions)]

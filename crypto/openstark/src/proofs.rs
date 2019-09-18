@@ -3,7 +3,7 @@ use crate::{
     channel::{ProverChannel, RandomGenerator, Writable},
     check_proof,
     constraint::Constraint,
-    polynomial::{DensePolynomial, SparsePolynomial},
+    polynomial::DensePolynomial,
     proof_of_work,
     proof_params::ProofParams,
     rational_expression::RationalExpression,
@@ -16,7 +16,7 @@ use merkle_tree::{Tree, VectorCommitment};
 use mmap_vec::MmapVec;
 use primefield::{
     fft::{ifft_permuted, permute, permute_index},
-    geometric_series::{geometric_series, root_series},
+    geometric_series::geometric_series,
     FieldElement,
 };
 use rayon::prelude::*;

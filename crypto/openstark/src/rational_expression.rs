@@ -1,8 +1,8 @@
-use crate::{polynomial::DensePolynomial, trace_table::TraceTable};
+use crate::polynomial::DensePolynomial;
 use primefield::FieldElement;
 use std::{
     iter::Sum,
-    ops::{Add, Div, Mul, Neg, Sub},
+    ops::{Add, Div, Mul, Sub},
 };
 
 // TODO: Rename to algebraic expression

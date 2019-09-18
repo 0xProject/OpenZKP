@@ -1,7 +1,4 @@
-use crate::{
-    polynomial::{DensePolynomial, SparsePolynomial},
-    rational_expression::RationalExpression,
-};
+use crate::rational_expression::RationalExpression;
 use std::prelude::v1::*;
 
 // TODO: Remove
