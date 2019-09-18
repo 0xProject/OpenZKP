@@ -9,11 +9,7 @@ use primefield::{
     geometric_series::root_series,
     FieldElement,
 };
-use std::{
-    collections::BTreeMap,
-    fmt::{self, Debug},
-    prelude::v1::*,
-};
+use std::{collections::BTreeMap, error, fmt::self, prelude::v1::*};
 use u256::U256;
 
 // False positive, for<'a> is required.
@@ -429,7 +425,7 @@ impl fmt::Display for Error {
                 )
             }
             // This is a wrapper, so defer to the underlying types' implementation of `fmt`.
-            Error::Merkle(ref e) => e.fmt(f),
+            Error::Merkle(ref e) => std::fmt::Display::fmt(e, f),
         }
     }
 }
@@ -437,6 +433,15 @@ impl fmt::Display for Error {
 impl From<MerkleError> for Error {
     fn from(err: MerkleError) -> Self {
         Error::Merkle(err)
+    }
+}
+
+impl error::Error for Error {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
+        match *self {
+            Error::Merkle(ref e) => Some(e),
+            _ => None,
+        }
     }
 }
 
