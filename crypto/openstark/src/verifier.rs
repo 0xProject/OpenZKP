@@ -9,7 +9,9 @@ use primefield::{
     geometric_series::root_series,
     FieldElement,
 };
-use std::{collections::BTreeMap, error, fmt, prelude::v1::*};
+#[cfg(feature = "std")]
+use std::error;
+use std::{collections::BTreeMap, fmt, prelude::v1::*};
 use u256::U256;
 
 // False positive, for<'a> is required.
@@ -436,6 +438,7 @@ impl From<MerkleError> for Error {
     }
 }
 
+#[cfg(feature = "std")]
 impl error::Error for Error {
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match *self {

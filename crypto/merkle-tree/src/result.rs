@@ -1,4 +1,6 @@
-use std::{prelude::v1::*, error, fmt};
+#[cfg(feature = "std")]
+use std::error;
+use std::{fmt};
 pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -28,6 +30,7 @@ impl fmt::Display for Error {
     }
 }
 
+#[cfg(feature = "std")]
 impl error::Error for Error {
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match *self {
