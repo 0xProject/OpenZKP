@@ -1,6 +1,6 @@
 #[cfg(feature = "std")]
 use std::error;
-use std::{fmt};
+use std::fmt;
 pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
