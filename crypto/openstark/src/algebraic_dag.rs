@@ -1,14 +1,8 @@
 use crate::{
     polynomial::DensePolynomial, rational_expression::RationalExpression, trace_table::TraceTable,
 };
-use log::info;
-use macros_decl::field_element;
 use primefield::{invert_batch_src_dst, FieldElement};
-use std::{
-    cmp::min,
-    ops::{MulAssign, Neg},
-    prelude::v1::*,
-};
+use std::{cmp::min, ops::Neg, prelude::v1::*};
 use tiny_keccak::Keccak;
 use u256::U256;
 
@@ -17,6 +11,26 @@ use u256::U256;
 /// A larger value means larger chunks for batch inversion and fewer iterations
 /// of the dag. Larger values also mean less cache locality.
 const CHUNK_SIZE: usize = 16;
+// HACK: FieldElement does not implement Copy, so we need to explicitly
+// instantiate
+const CHUNK_INIT: [FieldElement; CHUNK_SIZE] = [
+    FieldElement::ZERO,
+    FieldElement::ZERO,
+    FieldElement::ZERO,
+    FieldElement::ZERO,
+    FieldElement::ZERO,
+    FieldElement::ZERO,
+    FieldElement::ZERO,
+    FieldElement::ZERO,
+    FieldElement::ZERO,
+    FieldElement::ZERO,
+    FieldElement::ZERO,
+    FieldElement::ZERO,
+    FieldElement::ZERO,
+    FieldElement::ZERO,
+    FieldElement::ZERO,
+    FieldElement::ZERO,
+];
 
 /// Maximum size of a periodic lookup table.
 ///
@@ -26,7 +40,7 @@ const LOOKUP_SIZE: usize = 1024;
 
 /// Evaluation graph for algebraic expressions over a coset.
 #[derive(Clone, PartialEq)]
-pub struct AlgebraicGraph {
+pub(crate) struct AlgebraicGraph {
     /// The cofactor of the evaluation domain.
     cofactor: FieldElement,
 
@@ -48,7 +62,7 @@ pub struct AlgebraicGraph {
 
 /// Node in the evaluation graph.
 #[derive(Clone, Debug, PartialEq)]
-pub struct Node {
+pub(crate) struct Node {
     /// The operation represented by the node
     op: Operation,
 
@@ -69,7 +83,7 @@ pub struct Node {
 
 /// Algebraic operations supported by the graph.
 #[derive(Clone, Debug, PartialEq)]
-pub enum Operation {
+enum Operation {
     Constant(FieldElement),
     Coset(FieldElement, usize),
     Trace(usize, isize),
@@ -84,12 +98,10 @@ pub enum Operation {
 
 /// Reference to a node in the graph.
 #[derive(Clone, Copy, PartialEq)]
-pub struct Index(usize);
+pub(crate) struct Index(usize);
 
 #[derive(Clone, PartialEq)]
-pub struct Table(Vec<FieldElement>);
-
-use Operation::*;
+struct Table(Vec<FieldElement>);
 
 impl std::fmt::Debug for Index {
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -120,6 +132,7 @@ impl std::fmt::Debug for AlgebraicGraph {
     }
 }
 
+// TODO: This leaks the Node type outside of this module.
 impl std::ops::Index<Index> for AlgebraicGraph {
     type Output = Node;
 
@@ -129,7 +142,7 @@ impl std::ops::Index<Index> for AlgebraicGraph {
 }
 
 impl AlgebraicGraph {
-    pub fn new(cofactor: &FieldElement, coset_size: usize, trace_blowup: usize) -> Self {
+    pub(crate) fn new(cofactor: &FieldElement, coset_size: usize, trace_blowup: usize) -> Self {
         // Create seed out of parameters
         let mut seed = [0; 32];
         let mut keccak = Keccak::new_keccak256();
@@ -152,6 +165,7 @@ impl AlgebraicGraph {
     /// If two nodes have the same random evaluation, it can be safely assumed
     /// that they are algebraically identical.
     fn hash(&self, operation: &Operation) -> FieldElement {
+        use Operation::*;
         // TODO: Validate indices
         match operation {
             Constant(value) => value.clone(),
@@ -163,8 +177,7 @@ impl AlgebraicGraph {
                 keccak.update(&i.to_be_bytes());
                 keccak.update(&o.to_be_bytes());
                 keccak.finalize(&mut result);
-                let result = FieldElement::from_montgomery(U256::from_bytes_be(&result));
-                result
+                FieldElement::from_montgomery(U256::from_bytes_be(&result))
             }
             Add(a, b) => &self[*a].hash + &self[*b].hash,
             Neg(a) => -&self[*a].hash,
@@ -194,6 +207,7 @@ impl AlgebraicGraph {
     }
 
     fn period(&self, operation: &Operation) -> usize {
+        use Operation::*;
         fn lcm(a: usize, b: usize) -> usize {
             // TODO: Compute it for real. For powers of two this works.
             std::cmp::max(a, b)
@@ -206,7 +220,7 @@ impl AlgebraicGraph {
             Neg(a) => self[*a].period,
             Mul(a, b) => lcm(self[*a].period, self[*b].period),
             Inv(a) => self[*a].period,
-            Exp(a, e) => self[*a].period,
+            Exp(a, _) => self[*a].period,
             Poly(_, a) => self[*a].period,
             Lookup(v) => v.0.len(),
         }
@@ -216,7 +230,7 @@ impl AlgebraicGraph {
     ///
     /// If an algebraically identical node already exits, that index will be
     /// returned instead.
-    pub fn op(&mut self, operation: Operation) -> Index {
+    fn op(&mut self, operation: Operation) -> Index {
         let hash = self.hash(&operation);
         if let Some(index) = self.nodes.iter().position(|n| n.hash == hash) {
             // Return existing node index
@@ -229,7 +243,7 @@ impl AlgebraicGraph {
                 op: operation,
                 hash,
                 period,
-                values: [FieldElement::ZERO; CHUNK_SIZE],
+                values: CHUNK_INIT,
                 note: FieldElement::ZERO,
             });
             Index(index)
@@ -238,42 +252,45 @@ impl AlgebraicGraph {
 
     /// Adds a rational expression to the graph and return the result node
     /// index.
-    pub fn expression(&mut self, expr: RationalExpression) -> Index {
+    pub(crate) fn expression(&mut self, expr: RationalExpression) -> Index {
+        use Operation as Op;
         use RationalExpression as RE;
         match expr {
-            RE::X => self.op(Coset(self.cofactor.clone(), self.coset_size)),
-            RE::Constant(a) => self.op(Constant(a)),
-            RE::Trace(i, j) => self.op(Trace(i, j)),
+            RE::X => self.op(Op::Coset(self.cofactor.clone(), self.coset_size)),
+            RE::Constant(a) => self.op(Op::Constant(a)),
+            RE::Trace(i, j) => self.op(Op::Trace(i, j)),
             RE::Add(a, b) => {
                 let a = self.expression(*a);
                 let b = self.expression(*b);
-                self.op(Add(a, b))
+                self.op(Op::Add(a, b))
             }
             RE::Neg(a) => {
                 let a = self.expression(*a);
-                self.op(Neg(a))
+                self.op(Op::Neg(a))
             }
             RE::Mul(a, b) => {
                 let a = self.expression(*a);
                 let b = self.expression(*b);
-                self.op(Mul(a, b))
+                self.op(Op::Mul(a, b))
             }
             RE::Inv(a) => {
                 let a = self.expression(*a);
-                self.op(Inv(a))
+                self.op(Op::Inv(a))
             }
             RE::Exp(a, e) => {
                 let a = self.expression(*a);
-                self.op(Exp(a, e))
+                self.op(Op::Exp(a, e))
             }
             RE::Poly(p, a) => {
                 let a = self.expression(*a);
-                self.op(Poly(p, a))
+                self.op(Op::Poly(p, a))
             }
         }
     }
 
-    pub fn optimize(&mut self) {
+    // TODO: Run optimization passes automatically, maybe in Init?
+    pub(crate) fn optimize(&mut self) {
+        use Operation::*;
         for i in 0..self.nodes.len() {
             let op = match &self.nodes[i].op {
                 // TODO: We can also do the constant propagation here. We can even
@@ -308,16 +325,18 @@ impl AlgebraicGraph {
         assert!(node.period <= 1024);
         let mut result = Vec::with_capacity(node.period);
         let mut subdag = self.clone();
-        let index = subdag.tree_shake(index);
+        let _ = subdag.tree_shake(index);
         let fake_table = TraceTable::new(0, 0);
         subdag.init(0);
-        for i in 0..node.period {
+        for _ in 0..node.period {
             result.push(subdag.next(&fake_table));
         }
         result
     }
 
-    pub fn lookup_tables(&mut self) {
+    // TODO: Call from `optimize`
+    pub(crate) fn lookup_tables(&mut self) {
+        use Operation::*;
         // OPT: Don't create a bunch of lookup tables just to throw them away
         // later. Analyze which nodes will be needed.
         // TODO: Better heuristics.
@@ -343,9 +362,9 @@ impl AlgebraicGraph {
     }
 
     /// Remove unnecessary nodes
-    pub fn tree_shake(&mut self, tip: Index) -> Index {
-        // Find all used nodes
-        let mut used = vec![false; self.nodes.len()];
+    // TODO: Call from `optimize`
+    pub(crate) fn tree_shake(&mut self, tip: Index) -> Index {
+        use Operation::*;
         fn recurse(nodes: &[Node], used: &mut [bool], i: usize) {
             used[i] = true;
             match &nodes[i].op {
@@ -359,11 +378,14 @@ impl AlgebraicGraph {
                     recurse(nodes, used, b.0);
                 }
                 Inv(a) => recurse(nodes, used, a.0),
-                Exp(a, e) => recurse(nodes, used, a.0),
-                Poly(p, a) => recurse(nodes, used, a.0),
+                Exp(a, _) => recurse(nodes, used, a.0),
+                Poly(_, a) => recurse(nodes, used, a.0),
                 _ => {}
             }
         }
+
+        // Find all used nodes
+        let mut used = vec![false; self.nodes.len()];
         recurse(&self.nodes, &mut used, tip.0);
 
         // Renumber indices
@@ -375,7 +397,7 @@ impl AlgebraicGraph {
                 counter += 1;
             }
         }
-        for node in self.nodes.iter_mut() {
+        for node in &mut self.nodes {
             match &mut node.op {
                 Add(a, b) => {
                     *a = numbers[a.0];
@@ -387,8 +409,8 @@ impl AlgebraicGraph {
                     *b = numbers[b.0];
                 }
                 Inv(a) => *a = numbers[a.0],
-                Exp(a, e) => *a = numbers[a.0],
-                Poly(p, a) => *a = numbers[a.0],
+                Exp(a, _) => *a = numbers[a.0],
+                Poly(_, a) => *a = numbers[a.0],
                 _ => {}
             }
         }
@@ -401,16 +423,14 @@ impl AlgebraicGraph {
         numbers[tip.0]
     }
 
-    // TODO: Batch invert: combine all space-like Inv nodes to a batch inversion
-    // scheme. Probably the best way to do this is to batch computations in chunks
-    // of, say, 64, and use batch inversion on those. The trade-off is between
-    // amortization and cache-locality.
-
-    pub fn init(&mut self, start: usize) {
+    // We want to use `for i in 0..CHUNK_SIZE` for consistency
+    #[allow(clippy::needless_range_loop)]
+    pub(crate) fn init(&mut self, start: usize) {
+        use Operation::*;
         assert_eq!(start % CHUNK_SIZE, 0);
         self.row = start;
         for i in 0..self.nodes.len() {
-            let (previous, current) = self.nodes.split_at_mut(i);
+            let (_previous, current) = self.nodes.split_at_mut(i);
             let Node {
                 op, values, note, ..
             } = &mut current[0];
@@ -449,9 +469,11 @@ impl AlgebraicGraph {
         }
     }
 
-    // TODO: next(&self, &TraceTable) -> (i, FieldElement)
+    // We want to use `for i in 0..CHUNK_SIZE` for consistency
+    #[allow(clippy::needless_range_loop)]
     #[inline(never)]
-    pub fn next(&mut self, trace_table: &TraceTable) -> FieldElement {
+    pub(crate) fn next(&mut self, trace_table: &TraceTable) -> FieldElement {
+        use Operation::*;
         if self.row % CHUNK_SIZE > 0 {
             let result = self.nodes.last().unwrap().values[self.row % CHUNK_SIZE].clone();
             self.row += 1;
@@ -464,11 +486,20 @@ impl AlgebraicGraph {
             } = &mut current[0];
             match op {
                 Trace(c, o) => {
+                    // TODO: Handle all the casting more elegantly
+                    // Sizes are small enough
+                    #[allow(clippy::cast_possible_wrap)]
                     let n = trace_table.num_rows() as isize;
                     for i in 0..CHUNK_SIZE {
+                        // Sizes are small enough
+                        #[allow(clippy::cast_possible_wrap)]
                         let trace_blowup = self.trace_blowup as isize;
+                        // Sizes are small enough
+                        #[allow(clippy::cast_possible_wrap)]
                         let row = (self.row + i) as isize;
                         let row = (n + row + trace_blowup * *o) % n;
+                        // Sizes are small enough
+                        #[allow(clippy::cast_sign_loss)]
                         let row = row as usize;
                         values[i] = trace_table[(row, *c)].clone();
                     }
@@ -509,7 +540,7 @@ impl AlgebraicGraph {
                         values[i] = p.evaluate(&a[i])
                     }
                 }
-                Coset(c, s) if *s > CHUNK_SIZE => {
+                Coset(_, s) if *s > CHUNK_SIZE => {
                     for i in 0..CHUNK_SIZE {
                         values[i] *= &*note;
                     }
@@ -530,8 +561,8 @@ impl AlgebraicGraph {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use RationalExpression as RE;
+    // use super::*;
+    // use RationalExpression as RE;
 
     // #[test]
     // fn test_expr() {

@@ -1,8 +1,8 @@
-use crate::{polynomial::DensePolynomial, trace_table::TraceTable};
+use crate::polynomial::DensePolynomial;
 use primefield::FieldElement;
 use std::{
     iter::Sum,
-    ops::{Add, Div, Mul, Neg, Sub},
+    ops::{Add, Div, Mul, Sub},
 };
 
 // TODO: Rename to algebraic expression
@@ -37,15 +37,15 @@ impl std::fmt::Debug for RationalExpression {
 }
 
 impl RationalExpression {
-    pub fn neg(&self) -> RationalExpression {
+    pub fn neg(&self) -> Self {
         RationalExpression::Neg(Box::new(self.clone()))
     }
 
-    pub fn inv(&self) -> RationalExpression {
+    pub fn inv(&self) -> Self {
         RationalExpression::Inv(Box::new(self.clone()))
     }
 
-    pub fn pow(&self, exponent: usize) -> RationalExpression {
+    pub fn pow(&self, exponent: usize) -> Self {
         RationalExpression::Exp(Box::new(self.clone()), exponent)
     }
 }
@@ -70,6 +70,8 @@ impl Add for RationalExpression {
     }
 }
 
+// Clippy false positive
+#[allow(clippy::suspicious_arithmetic_impl)]
 impl Sub for RationalExpression {
     type Output = Self;
 
@@ -86,6 +88,8 @@ impl Mul for RationalExpression {
     }
 }
 
+// Clippy false positive
+#[allow(clippy::suspicious_arithmetic_impl)]
 impl Div for RationalExpression {
     type Output = Self;
 
@@ -150,6 +154,9 @@ impl RationalExpression {
     ///
     /// Does constant propagation and simplifies expressions like `0 + a`,
     /// `0 * a`, `1 * a`, `-(-a)`, `1/(1/a)`, `a^0` and `a^1`.
+    // TODO: Move to AlgebraicDag
+    // Repeated arms are more readable here
+    #[allow(clippy::match_same_arms)]
     pub fn simplify(self) -> Self {
         use RationalExpression::*;
         match self {
@@ -167,8 +174,8 @@ impl RationalExpression {
                 let a = a.simplify();
                 let b = b.simplify();
                 match (a, b) {
-                    (a, Constant(FieldElement::ZERO)) => Constant(FieldElement::ZERO),
-                    (Constant(FieldElement::ZERO), b) => Constant(FieldElement::ZERO),
+                    (_, Constant(FieldElement::ZERO)) => Constant(FieldElement::ZERO),
+                    (Constant(FieldElement::ZERO), _) => Constant(FieldElement::ZERO),
                     (a, Constant(FieldElement::ONE)) => a,
                     (Constant(FieldElement::ONE), b) => b,
                     (Constant(a), Constant(b)) => Constant(a * b),
@@ -195,7 +202,7 @@ impl RationalExpression {
             Exp(a, e) => {
                 let a = a.simplify();
                 match (a, e) {
-                    (a, 0) => Constant(FieldElement::ONE),
+                    (_, 0) => Constant(FieldElement::ONE),
                     (a, 1) => a,
                     (Constant(a), e) => Constant(a.pow(e)),
                     (a, e) => a.pow(e),

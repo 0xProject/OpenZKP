@@ -76,7 +76,6 @@ pub use trace_table::TraceTable;
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use env_logger;
 
     pub(crate) fn init() {

@@ -10,17 +10,16 @@ use crate::{
     rational_expression::RationalExpression,
 };
 use elliptic_curve::Affine;
-use lazy_static::lazy_static;
-use log::info;
-use mmap_vec::MmapVec;
-use primefield::{geometric_series::geometric_series, FieldElement};
+use primefield::FieldElement;
 use starkdex::SHIFT_POINT;
-use std::{cmp::min, prelude::v1::*, vec};
+use std::{prelude::v1::*, vec};
 use u256::U256;
 
 // TODO: Naming
 #[allow(clippy::module_name_repetitions)]
 pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constraint> {
+    use RationalExpression::*;
+
     fn get_left_bit(trace_polynomials: &[DensePolynomial]) -> DensePolynomial {
         &trace_polynomials[0]
             - &FieldElement::from(U256::from(2_u64)) * &trace_polynomials[0].next()
@@ -64,9 +63,6 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constr
     let q_x_right_1 = SparsePolynomial::periodic(&RIGHT_X_COEFFICIENTS, path_length);
     let q_x_right_2 = SparsePolynomial::periodic(&RIGHT_X_COEFFICIENTS, path_length);
     let q_y_right = SparsePolynomial::periodic(&RIGHT_Y_COEFFICIENTS, path_length);
-
-    // RationalExpression based constraints
-    use RationalExpression::*;
 
     // Periodic columns
     let periodic = |coefficients| {

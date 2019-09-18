@@ -1,4 +1,6 @@
-use crate::{constraint::Constraint, polynomial::SparsePolynomial};
+use crate::{
+    constraint::Constraint, polynomial::SparsePolynomial, rational_expression::RationalExpression,
+};
 use primefield::FieldElement;
 use std::{convert::TryInto, prelude::v1::*};
 use u256::U256;
@@ -56,6 +58,8 @@ pub fn get_trace_table(length: usize, private: &PrivateInput) -> TraceTable {
 }
 
 pub fn get_fibonacci_constraints(public_input: &PublicInput) -> Vec<Constraint> {
+    use RationalExpression::*;
+
     let trace_length = public_input.index.next_power_of_two();
     let claim_index = public_input.index;
     let claim_value = public_input.value.clone();
@@ -76,8 +80,6 @@ pub fn get_fibonacci_constraints(public_input: &PublicInput) -> Vec<Constraint> 
     ]);
 
     // Constraint repetitions
-    use crate::rational_expression::RationalExpression;
-    use RationalExpression::*;
     let g = Constant(trace_generator);
     let on_row = |index| (X - g.pow(index)).inv();
     let reevery_row = || (X - g.pow(trace_length - 1)) / (X.pow(trace_length) - 1.into());

@@ -403,7 +403,6 @@ impl Arbitrary for SparsePolynomial {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use primefield::geometric_series::geometric_series;
     use quickcheck_macros::quickcheck;
 
     fn dense_polynomial(coefficients: &[isize]) -> DensePolynomial {

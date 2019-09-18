@@ -3,7 +3,7 @@ use crate::{
     channel::{ProverChannel, RandomGenerator, Writable},
     check_proof,
     constraint::Constraint,
-    polynomial::{DensePolynomial, SparsePolynomial},
+    polynomial::DensePolynomial,
     proof_of_work,
     proof_params::ProofParams,
     rational_expression::RationalExpression,
@@ -16,7 +16,7 @@ use merkle_tree::{Tree, VectorCommitment};
 use mmap_vec::MmapVec;
 use primefield::{
     fft::{ifft_permuted, permute, permute_index},
-    geometric_series::{geometric_series, root_series},
+    geometric_series::geometric_series,
     FieldElement,
 };
 use rayon::prelude::*;
@@ -151,7 +151,7 @@ where
         "Trace degrees: {:?}",
         trace_polynomials
             .iter()
-            .map(|p| p.degree())
+            .map(DensePolynomial::degree)
             .collect::<Vec<_>>()
     );
     let trace_lde = PolyLDE(
@@ -189,7 +189,7 @@ where
         "Constraint degrees: {:?}",
         constraint_polynomials
             .iter()
-            .map(|p| p.degree())
+            .map(DensePolynomial::degree)
             .collect::<Vec<_>>()
     );
 
@@ -291,13 +291,8 @@ fn extract_trace_coset(trace_lde: &PolyLDE, size: usize) -> TraceTable {
     let trace_lde: &[MmapVec<FieldElement>] = &trace_lde.0;
     let lde_size = trace_lde[0].len();
     let mut trace_coset = TraceTable::new(size, trace_lde.len());
-    let x = geometric_series(
-        &FieldElement::GENERATOR,
-        &FieldElement::root(trace_coset.num_rows()).unwrap(),
-    )
-    .take(trace_coset.num_rows());
     // OPT: Benchmark with flipped order of loops
-    for (i, x) in x.enumerate() {
+    for i in 0..trace_coset.num_rows() {
         for j in 0..trace_coset.num_columns() {
             let lde = &trace_lde[j];
             let index = i * lde_size / size;
@@ -330,6 +325,14 @@ fn get_constraint_polynomials(
     trace_length: usize,
     constraints_degree_bound: usize,
 ) -> Vec<DensePolynomial> {
+    use RationalExpression::*;
+
+    // OPT: Better parallelization strategies. Probably the best would be to
+    // split to domain up in smaller cosets and solve their expressions
+    // independently. This will make all periods and therefore lookup tables
+    // smaller.
+    const CHUNK_SIZE: usize = 65536;
+
     let coset_length = trace_length * constraints_degree_bound;
     let trace_degree = trace_length - 1;
     let target_degree = coset_length - 1;
@@ -338,7 +341,6 @@ fn get_constraint_polynomials(
     let trace_coset = extract_trace_coset(trace_lde, coset_length);
 
     info!("Combine rational expressions");
-    use RationalExpression::*;
     let expr: RationalExpression = constraints
         .iter()
         .enumerate()
@@ -374,7 +376,8 @@ fn get_constraint_polynomials(
     let result = dag.expression(expr);
     dag.optimize();
     dag.lookup_tables();
-    let result = dag.tree_shake(result);
+    // TODO: Track and use result reference.
+    let _ = dag.tree_shake(result);
     dag.init(0);
     info!("Combined constraint graph: {:?}", dag);
 
@@ -385,11 +388,6 @@ fn get_constraint_polynomials(
         result.push(FieldElement::ZERO);
     }
     let values = &mut result;
-    // OPT: Better parallelization strategies. Probably the best would be to
-    // split to domain up in smaller cosets and solve their expressions
-    // independently. This will make all periods and therefore lookup tables
-    // smaller.
-    const CHUNK_SIZE: usize = 65536;
     values
         .par_chunks_mut(CHUNK_SIZE)
         .enumerate()
