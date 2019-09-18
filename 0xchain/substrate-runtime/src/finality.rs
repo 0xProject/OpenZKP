@@ -86,7 +86,7 @@ decl_module! {
             },
                 2,
                 1024
-            ), "The proof is invalid");
+            ).is_ok(), "The proof is invalid");
 
             <NextProof<T>>::put(false);
             <LinkedHash<T>>::insert(last_link, end_index);

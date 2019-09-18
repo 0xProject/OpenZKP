@@ -115,7 +115,7 @@ decl_module! {
                 },
                 2,
                 1024
-            ), "The block proof is invalid");
+            ).is_ok(), "The block proof is invalid");
 
             <Self as Store>::Proof::put(recorded);
             <Self as Store>::SetProof::put(true);
@@ -183,7 +183,9 @@ impl<T: Trait> ProvideInherent for Module<T> {
             },
             2,
             1024,
-        ) {
+        )
+        .is_ok()
+        {
             Ok(())
         } else {
             Err(InherentError::InvalidProof(

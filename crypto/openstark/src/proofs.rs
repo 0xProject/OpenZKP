@@ -248,7 +248,8 @@ where
         params,
         trace.num_columns(),
         trace.num_rows()
-    ));
+    )
+    .is_ok());
 
     // Q.E.D.
     // TODO: Return bytes, or a result structure
@@ -583,7 +584,8 @@ mod tests {
             },
             2,
             1024
-        ));
+        )
+        .is_ok());
     }
 
     #[test]
@@ -620,7 +622,8 @@ mod tests {
             },
             2,
             4096
-        ));
+        )
+        .is_ok());
     }
 
     // TODO: What are we actually testing here? Should we add these as debug_assert

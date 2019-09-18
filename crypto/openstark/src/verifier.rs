@@ -3,13 +3,15 @@ use crate::{
     proof_params::ProofParams,
 };
 use hash::Hash;
-use merkle_tree::{Commitment, Proof};
+use merkle_tree::{Commitment, Error as MerkleError, Proof};
 use primefield::{
     fft::{self, ifft},
     geometric_series::root_series,
     FieldElement,
 };
-use std::{collections::BTreeMap, prelude::v1::*};
+#[cfg(feature = "std")]
+use std::error;
+use std::{collections::BTreeMap, fmt, prelude::v1::*};
 use u256::U256;
 
 // False positive, for<'a> is required.
@@ -21,7 +23,7 @@ pub fn check_proof<Public>(
     params: &ProofParams,
     trace_cols: usize,
     trace_len: usize,
-) -> bool
+) -> Result<()>
 where
     for<'a> &'a Public: Into<Vec<u8>>,
 {
@@ -35,8 +37,7 @@ where
     // Get the low degree root commitment, and constraint root commitment
     // TODO: Make it work as channel.read()
     let low_degree_extension_root = Replayable::<Hash>::replay(&mut channel);
-    let lde_commitment =
-        Commitment::from_size_hash(eval_domain_size, &low_degree_extension_root).unwrap();
+    let lde_commitment = Commitment::from_size_hash(eval_domain_size, &low_degree_extension_root)?;
     let mut constraint_coefficients: Vec<FieldElement> = Vec::with_capacity(2 * constraints.len());
     for _ in constraints {
         constraint_coefficients.push(channel.get_random());
@@ -44,7 +45,7 @@ where
     }
     let constraint_evaluated_root = Replayable::<Hash>::replay(&mut channel);
     let constraint_commitment =
-        Commitment::from_size_hash(eval_domain_size, &constraint_evaluated_root).unwrap();
+        Commitment::from_size_hash(eval_domain_size, &constraint_evaluated_root)?;
 
     // Get the oods information from the proof and random
     let oods_point: FieldElement = channel.get_random();
@@ -61,9 +62,10 @@ where
     let mut eval_points: Vec<FieldElement> = Vec::with_capacity(params.fri_layout.len() + 1);
     let mut fri_size = eval_domain_size >> params.fri_layout[0];
     // Get first fri root:
-    fri_commitments.push(
-        Commitment::from_size_hash(fri_size, &Replayable::<Hash>::replay(&mut channel)).unwrap(),
-    );
+    fri_commitments.push(Commitment::from_size_hash(
+        fri_size,
+        &Replayable::<Hash>::replay(&mut channel),
+    )?);
     // Get fri roots and eval points from the channel random
     for &x in params.fri_layout.iter().skip(1) {
         fri_size >>= x;
@@ -74,10 +76,10 @@ where
             channel.get_random()
         };
         eval_points.push(eval_point);
-        fri_commitments.push(
-            Commitment::from_size_hash(fri_size, &Replayable::<Hash>::replay(&mut channel))
-                .unwrap(),
-        );
+        fri_commitments.push(Commitment::from_size_hash(
+            fri_size,
+            &Replayable::<Hash>::replay(&mut channel),
+        )?);
     }
     // Gets the last layer and the polynomial coefficients
     eval_points.push(channel.get_random());
@@ -89,7 +91,7 @@ where
     let pow_challenge = pow_seed.with_difficulty(params.pow_bits);
     let pow_response = Replayable::<proof_of_work::Response>::replay(&mut channel);
     if !pow_challenge.verify(pow_response) {
-        return false;
+        return Err(Error::InvalidPoW);
     }
 
     // Gets queries from channel
@@ -107,12 +109,12 @@ where
             (index, held)
         })
         .collect();
-    let lde_proof_length = lde_commitment.proof_size(&queries).unwrap();
+    let lde_proof_length = lde_commitment.proof_size(&queries)?;
     let lde_hashes = Replayable::<Hash>::replay_many(&mut channel, lde_proof_length);
-    let lde_proof = Proof::from_hashes(&lde_commitment, &queries, &lde_hashes).unwrap();
+    let lde_proof = Proof::from_hashes(&lde_commitment, &queries, &lde_hashes)?;
+    // Note - we could express this a merkle error instead but this adds specificity
     if lde_proof.verify(&lde_values).is_err() {
-        // TODO: Return Error
-        return false;
+        return Err(Error::InvalidLDECommitment);
     }
 
     // Gets the values and checks the constraint decommitment
@@ -123,14 +125,14 @@ where
             Replayable::<FieldElement>::replay_many(&mut channel, params.constraints_degree_bound),
         ));
     }
-    let constraint_proof_length = constraint_commitment.proof_size(&queries).unwrap();
+    let constraint_proof_length = constraint_commitment.proof_size(&queries)?;
     let constraint_hashes: Vec<Hash> =
         Replayable::<Hash>::replay_many(&mut channel, constraint_proof_length);
     let constraint_proof =
-        Proof::from_hashes(&constraint_commitment, &queries, &constraint_hashes).unwrap();
+        Proof::from_hashes(&constraint_commitment, &queries, &constraint_hashes)?;
+    // Note - we could express this a merkle error instead but this adds specificity
     if constraint_proof.verify(&constraint_values).is_err() {
-        // TODO: Return Error
-        return false;
+        return Err(Error::InvalidConstraintCommitment);
     }
 
     let coset_sizes = params
@@ -160,7 +162,10 @@ where
                 let n = i * coset_sizes[k] + j;
                 if let Ok(z) = previous_indices.binary_search(&n) {
                     if k > 0 {
-                        coset.push(fri_folds.get(&n).unwrap().clone());
+                        coset.push(match fri_folds.get(&n) {
+                            Some(x) => x.clone(),
+                            None => return Err(Error::HashMapFailure),
+                        });
                     } else {
                         let z_reverse = fft::permute_index(eval_domain_size, queries[z]);
                         coset.push(out_of_domain_element(
@@ -172,7 +177,7 @@ where
                             oods_coefficients.as_slice(),
                             eval_domain_size,
                             params.blowup,
-                        ));
+                        )?);
                     }
                 } else {
                     coset.push(Replayable::<FieldElement>::replay(&mut channel));
@@ -196,9 +201,9 @@ where
             );
         }
 
-        let merkle_proof_length = commitment.proof_size(&fri_indices).unwrap();
+        let merkle_proof_length = commitment.proof_size(&fri_indices)?;
         let merkle_hashes = Replayable::<Hash>::replay_many(&mut channel, merkle_proof_length);
-        let merkle_proof = Proof::from_hashes(commitment, &fri_indices, &merkle_hashes).unwrap();
+        let merkle_proof = Proof::from_hashes(commitment, &fri_indices, &merkle_hashes)?;
         fri_folds = layer_folds;
 
         for _ in 0..params.fri_layout[k] {
@@ -206,10 +211,10 @@ where
         }
         len /= coset_sizes[k];
 
-        merkle_proof.verify(&fri_layer_values).unwrap();
+        // Note - we could express this a merkle error instead but this adds specificity
         if merkle_proof.verify(&fri_layer_values).is_err() {
-            return false;
-        }
+            return Err(Error::InvalidFriCommitment);
+        };
 
         previous_indices = fri_indices.clone();
         if k + 1 < params.fri_layout.len() {
@@ -220,19 +225,22 @@ where
         }
     }
     if !channel.at_end() {
-        return false;
+        return Err(Error::ProofTooLong);
     }
 
     // Checks that the calculated fri folded queries are the points interpolated by
     // the decommited polynomial.
-    let interp_root = FieldElement::root(len).unwrap();
+    let interp_root = match FieldElement::root(len) {
+        Some(x) => x,
+        None => return Err(Error::RootUnavailable),
+    };
     for key in &previous_indices {
         let calculated = fri_folds[key].clone();
         let x_pow = interp_root.pow(fft::permute_index(len, *key));
         let committed = DensePolynomial::new(&last_layer_coefficient).evaluate(&x_pow);
 
         if committed != calculated.clone() {
-            return false;
+            return Err(Error::OddsCalculationFailure);
         }
     }
 
@@ -260,7 +268,11 @@ where
         claimed_oods_value += &constraint_coefficients[2 * i + 1] * adjustment * &x;
     }
 
-    claimed_oods_value == get_oods_value(&oods_values[2 * trace_cols..], &oods_point)
+    if claimed_oods_value == get_oods_value(&oods_values[2 * trace_cols..], &oods_point) {
+        Ok(())
+    } else {
+        Err(Error::FriCalculationFailure)
+    }
 }
 
 // TODO: Clean up
@@ -325,13 +337,16 @@ fn out_of_domain_element(
     oods_coefficients: &[FieldElement],
     eval_domain_size: usize,
     blowup: usize,
-) -> FieldElement {
+) -> Result<FieldElement> {
     let poly_points: Vec<FieldElement> = poly_points_u
         .iter()
         .map(|i| FieldElement::from_montgomery(i.clone()))
         .collect();
     let x_transform = x_cord * FieldElement::GENERATOR;
-    let omega = FieldElement::root(eval_domain_size).unwrap();
+    let omega = match FieldElement::root(eval_domain_size) {
+        Some(x) => x,
+        None => return Err(Error::RootUnavailable),
+    };
     let g = omega.pow(blowup);
     let mut r = FieldElement::ZERO;
 
@@ -346,10 +361,11 @@ fn out_of_domain_element(
             * (constraint_oods_value - &oods_values[poly_points.len() * 2 + i])
             / (&x_transform - oods_point.pow(constraint_oods_values.len()));
     }
-    r
+    Ok(r)
 }
 
 fn get_oods_value(values: &[FieldElement], oods_point: &FieldElement) -> FieldElement {
+    // TODO - Check if this is 100% unreachable, if so remove if not error.
     assert!(values.len().is_power_of_two());
 
     let mut result = FieldElement::ZERO;
@@ -359,6 +375,77 @@ fn get_oods_value(values: &[FieldElement], oods_point: &FieldElement) -> FieldEl
         power *= oods_point;
     }
     result
+}
+
+type Result<T> = std::result::Result<T, Error>;
+
+// TODO - We could parametrize root unavailable with the size asked for and fri
+// error with which layer failed.
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub enum Error {
+    RootUnavailable,
+    InvalidPoW,
+    InvalidLDECommitment,
+    InvalidConstraintCommitment,
+    InvalidFriCommitment,
+    HashMapFailure,
+    ProofTooLong,
+    OddsCalculationFailure,
+    FriCalculationFailure,
+    Merkle(MerkleError),
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match *self {
+            Error::RootUnavailable => {
+                write!(f, "The prime field doesn't have a root of this order")
+            }
+            Error::InvalidPoW => write!(f, "The suggested proof of work failed to verify"),
+            Error::InvalidLDECommitment => write!(f, "The LDE merkle proof is incorrect"),
+            Error::InvalidConstraintCommitment => {
+                write!(f, "The constraint merkle proof is incorrect")
+            }
+            Error::InvalidFriCommitment => write!(f, "A FRI layer commitment is incorrect"),
+            Error::HashMapFailure => {
+                write!(
+                    f,
+                    "Verifier attempted to look up an empty entry in the hash map"
+                )
+            }
+            Error::ProofTooLong => write!(f, "The proof length doesn't match the specification"),
+            Error::OddsCalculationFailure => {
+                write!(
+                    f,
+                    "The calculated odds value doesn't match the committed one"
+                )
+            }
+            Error::FriCalculationFailure => {
+                write!(
+                    f,
+                    "The final FRI calculation suggests the committed polynomial isn't low degree"
+                )
+            }
+            // This is a wrapper, so defer to the underlying types' implementation of `fmt`.
+            Error::Merkle(ref e) => std::fmt::Display::fmt(e, f),
+        }
+    }
+}
+
+impl From<MerkleError> for Error {
+    fn from(err: MerkleError) -> Self {
+        Error::Merkle(err)
+    }
+}
+
+#[cfg(feature = "std")]
+impl error::Error for Error {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
+        match *self {
+            Error::Merkle(ref e) => Some(e),
+            _ => None,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -407,6 +494,7 @@ mod tests {
             },
             2,
             1024
-        ));
+        )
+        .is_ok());
     }
 }

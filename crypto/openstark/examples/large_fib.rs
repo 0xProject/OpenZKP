@@ -67,9 +67,5 @@ fn main() {
         2,
         1_048_576,
     );
-    if verified {
-        println!("And it was verified!");
-    } else {
-        println!("Something went wrong with verification");
-    }
+    println!("Checking the proof resulted in: {:?}", verified);
 }
