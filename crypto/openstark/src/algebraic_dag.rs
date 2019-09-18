@@ -389,11 +389,6 @@ impl AlgebraicGraph {
         numbers[tip.0]
     }
 
-    // TODO: Batch invert: combine all space-like Inv nodes to a batch inversion
-    // scheme. Probably the best way to do this is to batch computations in chunks
-    // of, say, 64, and use batch inversion on those. The trade-off is between
-    // amortization and cache-locality.
-
     pub fn init(&mut self, start: usize) {
         assert_eq!(start % CHUNK_SIZE, 0);
         self.row = start;
@@ -437,8 +432,6 @@ impl AlgebraicGraph {
         }
     }
 
-    // TODO: next(&self, &TraceTable) -> (i, FieldElement)
-    #[inline(never)]
     pub fn next(&mut self, trace_table: &TraceTable) -> FieldElement {
         if self.row % CHUNK_SIZE > 0 {
             let result = self.nodes.last().unwrap().values[self.row % CHUNK_SIZE].clone();
@@ -453,6 +446,7 @@ impl AlgebraicGraph {
             match op {
                 Trace(c, o) => {
                     let n = trace_table.num_rows() as isize;
+                    // OPT: unroll!
                     for i in 0..CHUNK_SIZE {
                         let trace_blowup = self.trace_blowup as isize;
                         let row = (self.row + i) as isize;

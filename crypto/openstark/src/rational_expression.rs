@@ -7,6 +7,7 @@ use std::{
 
 // TODO: Rename to algebraic expression
 #[derive(Clone)]
+#[cfg_attr(feature = "std", derive(Debug))]
 pub enum RationalExpression {
     X,
     Constant(FieldElement),
@@ -17,23 +18,6 @@ pub enum RationalExpression {
     Inv(Box<RationalExpression>),
     Exp(Box<RationalExpression>, usize),
     Poly(DensePolynomial, Box<RationalExpression>),
-}
-
-impl std::fmt::Debug for RationalExpression {
-    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        use RationalExpression::*;
-        match self {
-            X => write!(fmt, "X"),
-            Constant(a) => write!(fmt, "{:?}", a),
-            Trace(i, j) => write!(fmt, "Trace({}, {})", i, j),
-            Add(a, b) => write!(fmt, "({:?} + {:?})", a, b),
-            Neg(a) => write!(fmt, "-{:?}", a),
-            Mul(a, b) => write!(fmt, "({:?} * {:?})", a, b),
-            Inv(a) => write!(fmt, "1/{:?}", a),
-            Exp(a, e) => write!(fmt, "{:?}^{:?}", a, e),
-            Poly(_, a) => write!(fmt, "P({:?})", a),
-        }
-    }
 }
 
 impl RationalExpression {
@@ -150,6 +134,7 @@ impl RationalExpression {
     ///
     /// Does constant propagation and simplifies expressions like `0 + a`,
     /// `0 * a`, `1 * a`, `-(-a)`, `1/(1/a)`, `a^0` and `a^1`.
+    // TODO: Move to AlgebraicDag
     pub fn simplify(self) -> Self {
         use RationalExpression::*;
         match self {

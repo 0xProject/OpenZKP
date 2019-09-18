@@ -1,7 +1,8 @@
-use crate::{constraint::Constraint, polynomial::SparsePolynomial};
+use crate::{constraint::Constraint, rational_expression::RationalExpression};
 use primefield::FieldElement;
 use std::{convert::TryInto, prelude::v1::*};
 use u256::U256;
+use RationalExpression::*;
 
 #[cfg(feature = "prover")]
 use crate::TraceTable;
@@ -59,25 +60,9 @@ pub fn get_fibonacci_constraints(public_input: &PublicInput) -> Vec<Constraint> 
     let trace_length = public_input.index.next_power_of_two();
     let claim_index = public_input.index;
     let claim_value = public_input.value.clone();
-
     let trace_generator = FieldElement::root(trace_length).unwrap();
 
-    let no_rows = SparsePolynomial::new(&[(FieldElement::ONE, 0)]);
-    let every_row =
-        SparsePolynomial::new(&[(-&FieldElement::ONE, 0), (FieldElement::ONE, trace_length)]);
-    let first_row = SparsePolynomial::new(&[(-&FieldElement::ONE, 0), (FieldElement::ONE, 1)]);
-    let last_row = SparsePolynomial::new(&[
-        (-&trace_generator.pow(trace_length - 1), 0),
-        (FieldElement::ONE, 1),
-    ]);
-    let claim_index_row = SparsePolynomial::new(&[
-        (-&trace_generator.pow(claim_index), 0),
-        (FieldElement::ONE, 1),
-    ]);
-
     // Constraint repetitions
-    use crate::rational_expression::RationalExpression;
-    use RationalExpression::*;
     let g = Constant(trace_generator);
     let on_row = |index| (X - g.pow(index)).inv();
     let reevery_row = || (X - g.pow(trace_length - 1)) / (X.pow(trace_length) - 1.into());
