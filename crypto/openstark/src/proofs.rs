@@ -380,23 +380,39 @@ fn get_constraint_polynomials(
 
     // Evaluate on the coset trace table
     info!("Evaluate on the coset trace table");
-    let mut values: MmapVec<FieldElement> = MmapVec::with_capacity(trace_coset.num_rows());
-    // OPT: Parallelize
-    for i in 0..trace_coset.num_rows() {
-        if i % 100000 == 0 {
-            info!(
-                "Row {:?} out of {:?} ({:?} %)",
-                i,
-                trace_coset.num_rows(),
-                100_f32 * (i as f32) / (trace_coset.num_rows() as f32)
-            );
-        }
-        values.push(dag.next(&trace_coset));
+    let mut result: MmapVec<FieldElement> = MmapVec::with_capacity(trace_coset.num_rows());
+    for _ in 0..trace_coset.num_rows() {
+        result.push(FieldElement::ZERO);
     }
+    let values = &mut result;
+    // OPT: Better parallelization strategies. Probably the best would be to
+    // split to domain up in smaller cosets and solve their expressions
+    // independently. This will make all periods and therefore lookup tables
+    // smaller.
+    values
+        .par_chunks_mut(65536)
+        .enumerate()
+        .for_each(|(mut i, chunk)| {
+            info!("i = {:?}, len = {:?}", i, chunk.len());
+            let mut dag = dag.clone();
+            dag.init(i);
+            for value in chunk {
+                if i % 100000 == 0 {
+                    info!(
+                        "Row {:?} out of {:?} ({:?} %)",
+                        i,
+                        trace_coset.num_rows(),
+                        100_f32 * (i as f32) / (trace_coset.num_rows() as f32)
+                    );
+                }
+                *value = dag.next(&trace_coset);
+                i += 1;
+            }
+        });
 
     info!("Convert from values to coefficients");
-    ifft_permuted(&mut values);
-    permute(&mut values);
+    ifft_permuted(values);
+    permute(values);
     // OPT: Merge with even-odd separation loop.
     for (f, y) in geometric_series(&FieldElement::ONE, &FieldElement::GENERATOR.inv().unwrap())
         .zip(values.iter_mut())
