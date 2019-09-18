@@ -2,3 +2,4 @@
 t = "test --all-features"
 b = "build --all-features --all-targets"
 lint = "clippy --all-features --all-targets -- -D warnings"
+nostd = "check --lib --bins --no-default-features --target=thumbv7m-none-eabi"

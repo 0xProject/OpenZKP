@@ -3,6 +3,7 @@ use primefield::FieldElement;
 use std::{
     iter::Sum,
     ops::{Add, Div, Mul, Sub},
+    prelude::v1::*,
 };
 
 // TODO: Rename to algebraic expression
@@ -19,6 +20,7 @@ pub enum RationalExpression {
     Poly(DensePolynomial, Box<RationalExpression>),
 }
 
+#[cfg(feature = "std")]
 impl std::fmt::Debug for RationalExpression {
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use RationalExpression::*;
