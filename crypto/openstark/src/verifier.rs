@@ -3,14 +3,17 @@ use crate::{
     proof_params::ProofParams,
 };
 use hash::Hash;
-use merkle_tree::{Commitment, Proof};
-use merkle_tree::Error as MerkleError;
+use merkle_tree::{Commitment, Error as MerkleError, Proof};
 use primefield::{
     fft::{self, ifft},
     geometric_series::root_series,
     FieldElement,
 };
-use std::{collections::BTreeMap, prelude::v1::*, fmt, fmt::Debug};
+use std::{
+    collections::BTreeMap,
+    fmt::{self, Debug},
+    prelude::v1::*,
+};
 use u256::U256;
 
 // False positive, for<'a> is required.
@@ -90,7 +93,7 @@ where
     let pow_challenge = pow_seed.with_difficulty(params.pow_bits);
     let pow_response = Replayable::<proof_of_work::Response>::replay(&mut channel);
     if !pow_challenge.verify(pow_response) {
-        return Err(VerifierError::InvalidPoW);
+        return Err(Error::InvalidPoW);
     }
 
     // Gets queries from channel
@@ -113,7 +116,7 @@ where
     let lde_proof = Proof::from_hashes(&lde_commitment, &queries, &lde_hashes)?;
     // Note - we could express this a merkle error instead but this adds specificity
     if lde_proof.verify(&lde_values).is_err() {
-        return Err(VerifierError::InvalidLDECommitment);
+        return Err(Error::InvalidLDECommitment);
     }
 
     // Gets the values and checks the constraint decommitment
@@ -131,7 +134,7 @@ where
         Proof::from_hashes(&constraint_commitment, &queries, &constraint_hashes)?;
     // Note - we could express this a merkle error instead but this adds specificity
     if constraint_proof.verify(&constraint_values).is_err() {
-        return Err(VerifierError::InvalidConstraintCommitment);
+        return Err(Error::InvalidConstraintCommitment);
     }
 
     let coset_sizes = params
@@ -163,7 +166,7 @@ where
                     if k > 0 {
                         coset.push(match fri_folds.get(&n) {
                             Some(x) => x.clone(),
-                            None => return Err(VerifierError::HashMapError),
+                            None => return Err(Error::HashMapFailure),
                         });
                     } else {
                         let z_reverse = fft::permute_index(eval_domain_size, queries[z]);
@@ -212,7 +215,7 @@ where
 
         // Note - we could express this a merkle error instead but this adds specificity
         if merkle_proof.verify(&fri_layer_values).is_err() {
-            return Err(VerifierError::InvalidFriCommitment);
+            return Err(Error::InvalidFriCommitment);
         };
 
         previous_indices = fri_indices.clone();
@@ -224,14 +227,14 @@ where
         }
     }
     if !channel.at_end() {
-        return Err(VerifierError::ProofTooLong);
+        return Err(Error::ProofTooLong);
     }
 
     // Checks that the calculated fri folded queries are the points interpolated by
     // the decommited polynomial.
     let interp_root = match FieldElement::root(len) {
         Some(x) => x,
-        None => return Err(VerifierError::RootUnavailable),
+        None => return Err(Error::RootUnavailable),
     };
     for key in &previous_indices {
         let calculated = fri_folds[key].clone();
@@ -239,7 +242,7 @@ where
         let committed = DensePolynomial::new(&last_layer_coefficient).evaluate(&x_pow);
 
         if committed != calculated.clone() {
-            return Err(VerifierError::OddsCalculationError);
+            return Err(Error::OddsCalculationFailure);
         }
     }
 
@@ -270,7 +273,7 @@ where
     if claimed_oods_value == get_oods_value(&oods_values[2 * trace_cols..], &oods_point) {
         Ok(())
     } else {
-        Err(VerifierError::FriCalculationError)
+        Err(Error::FriCalculationFailure)
     }
 }
 
@@ -344,7 +347,7 @@ fn out_of_domain_element(
     let x_transform = x_cord * FieldElement::GENERATOR;
     let omega = match FieldElement::root(eval_domain_size) {
         Some(x) => x,
-        None => return Err(VerifierError::RootUnavailable),
+        None => return Err(Error::RootUnavailable),
     };
     let g = omega.pow(blowup);
     let mut r = FieldElement::ZERO;
@@ -376,57 +379,68 @@ fn get_oods_value(values: &[FieldElement], oods_point: &FieldElement) -> FieldEl
     result
 }
 
-type Result<T> = std::result::Result<T, VerifierError>;
+type Result<T> = std::result::Result<T, Error>;
 
-// TODO - We could parametrize root unavailable with the size asked for and fri error with which layer failed.
+// TODO - We could parametrize root unavailable with the size asked for and fri
+// error with which layer failed.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub enum VerifierError {
+pub enum Error {
     RootUnavailable,
     InvalidPoW,
     InvalidLDECommitment,
     InvalidConstraintCommitment,
     InvalidFriCommitment,
-    HashMapError,
+    HashMapFailure,
     ProofTooLong,
-    OddsCalculationError,
-    FriCalculationError,
+    OddsCalculationFailure,
+    FriCalculationFailure,
     Merkle(MerkleError),
 }
 
-impl fmt::Display for VerifierError {
+impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
-            VerifierError::RootUnavailable =>
-                write!(f, "The prime field doesn't have a root of this order"),
-            VerifierError::InvalidPoW =>
-                write!(f, "The suggested proof of work failed to verify"),
-            VerifierError::InvalidLDECommitment =>
-                write!(f, "The LDE merkle proof is incorrect"),
-            VerifierError::InvalidConstraintCommitment =>
-                write!(f, "The constraint merkle proof is incorrect"),
-            VerifierError::InvalidFriCommitment =>
-                write!(f, "A FRI layer commitment is incorrect"),
-            VerifierError::HashMapError =>
-                write!(f, "Verifier attempted to look up an empty entry in the hash map"),
-            VerifierError::ProofTooLong =>
-                write!(f, "The proof length doesn't match the specification"),
-            VerifierError::OddsCalculationError =>
-                write!(f, "The calculated odds value doesn't match the committed one"),
-            VerifierError::FriCalculationError =>
-                write!(f, "The final FRI calculation suggests the committed polynomial isn't low degree"),
+            Error::RootUnavailable => {
+                write!(f, "The prime field doesn't have a root of this order")
+            }
+            Error::InvalidPoW => write!(f, "The suggested proof of work failed to verify"),
+            Error::InvalidLDECommitment => write!(f, "The LDE merkle proof is incorrect"),
+            Error::InvalidConstraintCommitment => {
+                write!(f, "The constraint merkle proof is incorrect")
+            }
+            Error::InvalidFriCommitment => write!(f, "A FRI layer commitment is incorrect"),
+            Error::HashMapFailure => {
+                write!(
+                    f,
+                    "Verifier attempted to look up an empty entry in the hash map"
+                )
+            }
+            Error::ProofTooLong => {
+                write!(f, "The proof length doesn't match the specification")
+            }
+            Error::OddsCalculationFailure => {
+                write!(
+                    f,
+                    "The calculated odds value doesn't match the committed one"
+                )
+            }
+            Error::FriCalculationFailure => {
+                write!(
+                    f,
+                    "The final FRI calculation suggests the committed polynomial isn't low degree"
+                )
+            }
             // This is a wrapper, so defer to the underlying types' implementation of `fmt`.
-            VerifierError::Merkle(ref e) => e.fmt(f),
+            Error::Merkle(ref e) => e.fmt(f),
         }
     }
 }
 
-
-impl From<MerkleError> for VerifierError {
-    fn from(err: MerkleError) -> VerifierError {
-        VerifierError::Merkle(err)
+impl From<MerkleError> for Error {
+    fn from(err: MerkleError) -> Self {
+        Error::Merkle(err)
     }
 }
-
 
 #[cfg(test)]
 mod tests {
