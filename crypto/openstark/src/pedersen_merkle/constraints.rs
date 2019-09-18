@@ -18,42 +18,6 @@ use starkdex::SHIFT_POINT;
 use std::{cmp::min, prelude::v1::*, vec};
 use u256::U256;
 
-fn compute_lookup(coefficients: &[FieldElement]) -> MmapVec<FieldElement> {
-    info!("Precomputing lookup table...");
-    const TRACE_LENGTH: usize = 4 * 256;
-    const DEGREE: usize = 2;
-
-    // HACK: This is part of public input.
-    let path_length: usize = 4;
-
-    let p = DensePolynomial::new(coefficients);
-    let coset_size = TRACE_LENGTH * DEGREE;
-    let size = min(p.degree() * DEGREE, coset_size);
-    // HACK: Lookup won't be periodic in a coset domain, allocate full size.
-    let size = coset_size;
-    let mut result = MmapVec::with_capacity(size);
-
-    let x = geometric_series(
-        &FieldElement::GENERATOR,
-        &FieldElement::root(coset_size).unwrap(),
-    )
-    .take(size);
-    // OPT: Use an FFT to evaluate
-    // OPT: Parallel evaluation
-    for x in x {
-        result.push(p.evaluate(&x.pow(path_length)))
-    }
-    info!("precomputing done.");
-    result
-}
-
-lazy_static! {
-    static ref LEFT_X_LOOKUP: MmapVec<FieldElement> = compute_lookup(&LEFT_X_COEFFICIENTS);
-    static ref LEFT_Y_LOOKUP: MmapVec<FieldElement> = compute_lookup(&LEFT_Y_COEFFICIENTS);
-    static ref RIGHT_X_LOOKUP: MmapVec<FieldElement> = compute_lookup(&RIGHT_X_COEFFICIENTS);
-    static ref RIGHT_Y_LOOKUP: MmapVec<FieldElement> = compute_lookup(&RIGHT_Y_COEFFICIENTS);
-}
-
 // TODO: Naming
 #[allow(clippy::module_name_repetitions)]
 pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constraint> {
@@ -105,19 +69,16 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constr
     use RationalExpression::*;
 
     // Periodic columns
-    let periodic = |coefficients, lookup| {
-        Lookup(
-            Box::new(Poly(
-                DensePolynomial::new(coefficients),
-                Box::new(X.pow(path_length)),
-            )),
-            lookup,
+    let periodic = |coefficients| {
+        Poly(
+            DensePolynomial::new(coefficients),
+            Box::new(X.pow(path_length)),
         )
     };
-    let periodic_left_x = periodic(&LEFT_X_COEFFICIENTS, &LEFT_X_LOOKUP);
-    let periodic_left_y = periodic(&LEFT_Y_COEFFICIENTS, &LEFT_Y_LOOKUP);
-    let periodic_right_x = periodic(&RIGHT_X_COEFFICIENTS, &RIGHT_X_LOOKUP);
-    let periodic_right_y = periodic(&RIGHT_Y_COEFFICIENTS, &RIGHT_Y_LOOKUP);
+    let periodic_left_x = periodic(&LEFT_X_COEFFICIENTS);
+    let periodic_left_y = periodic(&LEFT_Y_COEFFICIENTS);
+    let periodic_right_x = periodic(&RIGHT_X_COEFFICIENTS);
+    let periodic_right_y = periodic(&RIGHT_Y_COEFFICIENTS);
 
     // Repeating patterns
     // TODO: Clean this up

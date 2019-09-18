@@ -17,10 +17,6 @@ pub enum RationalExpression {
     Inv(Box<RationalExpression>),
     Exp(Box<RationalExpression>, usize),
     Poly(DensePolynomial, Box<RationalExpression>),
-
-    // TODO: Non-static lifetime.
-    // TODO: Include evaluation domain info in lookup.
-    Lookup(Box<RationalExpression>, &'static [FieldElement]),
 }
 
 impl std::fmt::Debug for RationalExpression {
@@ -36,7 +32,6 @@ impl std::fmt::Debug for RationalExpression {
             Inv(a) => write!(fmt, "1/{:?}", a),
             Exp(a, e) => write!(fmt, "{:?}^{:?}", a, e),
             Poly(_, a) => write!(fmt, "P({:?})", a),
-            Lookup(a, _) => write!(fmt, "Lookup({:?})", a),
         }
     }
 }
@@ -148,7 +143,6 @@ impl RationalExpression {
                 let (n, d) = a.degree(trace_degree);
                 (p.degree() * n, p.degree() * d)
             }
-            Lookup(a, _) => a.degree(trace_degree),
         }
     }
 
@@ -207,75 +201,7 @@ impl RationalExpression {
                     (a, e) => a.pow(e),
                 }
             }
-            Lookup(a, t) => {
-                let a = a.simplify();
-                match a {
-                    a @ Constant(_) => a,
-                    a => Lookup(Box::new(a), t),
-                }
-            }
             e => e,
-        }
-    }
-
-    /// If the expression depends only on x, return the value for some x
-    pub fn eval_x(&self, x: &FieldElement) -> Option<FieldElement> {
-        use RationalExpression::*;
-        Some(match self {
-            X => x.clone(),
-            Constant(value) => value.clone(),
-            Trace(i, o) => return None,
-            Add(a, b) => a.eval_x(x)? + b.eval_x(x)?,
-            Neg(a) => (&a.eval_x(x)?).neg(),
-            Mul(a, b) => a.eval_x(x)? * b.eval_x(x)?,
-            Inv(a) => {
-                a.eval_x(x)?
-                    .inv()
-                    .expect("Division by zero while evaluating RationalExpression.")
-            }
-            Exp(a, i) => a.eval_x(x)?.pow(*i),
-            Poly(p, a) => p.evaluate(&a.eval_x(x)?),
-            // TODO: We could maybe use the lookup, but we don't know the index
-            Lookup(e, _) => e.eval_x(x)?,
-        })
-    }
-
-    // TODO: Factor out parts that depend only on X (periodic columns) and
-    // pre-compute them. Observe that denominators tend to depend only on X, so
-    // we avoid a lot of inversions this way. Note that lookups are not cheap
-    // though, and sometimes evaluating X may be cheaper than a lookup. ->
-    // Benchmark.
-
-    pub fn eval(
-        &self,
-        trace_table: &TraceTable,
-        row: (usize, usize),
-        x: &FieldElement,
-    ) -> FieldElement {
-        use RationalExpression::*;
-        match self {
-            X => x.clone(),
-            Constant(value) => value.clone(),
-            Trace(i, o) => {
-                let n = trace_table.num_rows() as isize;
-                // OPT: Instead of the row.0 factor we can pass a non-oversampled
-                // trace table. Multiple cosets are completely independent from
-                // RationalExpression's perspective. This should give better
-                // cache locality. Lookup will need to be changed though.
-                let row = ((n + (row.1 as isize) + (row.0 as isize) * *o) % n) as usize;
-                trace_table[(row, *i)].clone()
-            }
-            Add(a, b) => a.eval(trace_table, row, x) + b.eval(trace_table, row, x),
-            Neg(a) => -&a.eval(trace_table, row, x),
-            Mul(a, b) => a.eval(trace_table, row, x) * b.eval(trace_table, row, x),
-            Inv(a) => {
-                a.eval(trace_table, row, x)
-                    .inv()
-                    .expect("Division by zero while evaluating RationalExpression.")
-            }
-            Exp(a, i) => a.eval(trace_table, row, x).pow(*i),
-            Poly(p, a) => p.evaluate(&a.eval(trace_table, row, x)),
-            Lookup(_, t) => t[row.1].clone(),
         }
     }
 }

@@ -269,7 +269,6 @@ impl AlgebraicGraph {
                 let a = self.expression(*a);
                 self.op(Poly(p, a))
             }
-            RE::Lookup(a, _) => self.expression(*a),
         }
     }
 
