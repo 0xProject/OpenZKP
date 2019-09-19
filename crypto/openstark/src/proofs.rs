@@ -535,7 +535,6 @@ fn perform_fri_layering(
     for &n_reductions in &params.fri_layout {
         // Allocate next and swap ownership
         let mut layer = MmapVec::with_capacity(next_layer.len() / 2);
-        layer.resize(next_layer.len() / 2, FieldElement::ZERO);
         std::mem::swap(&mut layer, &mut next_layer);
 
         // Create tree from layer
@@ -552,17 +551,20 @@ fn perform_fri_layering(
         let mut coefficient = proof.get_random();
 
         // Fold layer once
-        fri_fold(&coefficient, &x_inv, layer, &mut next_layer);
+        let iter = izip!(x_inv.iter(), layer.iter().tuples())
+            .map(|(x_inv, (px, pnx))| (px + pnx) + &coefficient * x_inv * (px - pnx));
+        next_layer.extend(iter);
 
         // Fold layer more
         // OPT: Avoid allocating temporary layers and compute result directly.
         for _ in 1..n_reductions {
             let mut layer = MmapVec::with_capacity(next_layer.len() / 2);
-            layer.resize(next_layer.len() / 2, FieldElement::ZERO);
             std::mem::swap(&mut layer, &mut next_layer);
 
             coefficient = coefficient.square();
-            fri_fold(&coefficient, &x_inv, &layer, &mut next_layer);
+            let iter = izip!(x_inv.iter(), layer.iter().tuples())
+                .map(|(x_inv, (px, pnx))| (px + pnx) + &coefficient * x_inv * (px - pnx));
+            next_layer.extend(iter);
         }
     }
 
