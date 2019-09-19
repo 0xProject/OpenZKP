@@ -214,17 +214,8 @@ where
     // (and do a bunch more things)
     // TODO: expand
     info!("Read the out of domain sampling values from the channel.");
-    let (oods_point, oods_coefficients) =
+    let oods_polynomial =
         get_out_of_domain_information(&mut proof, &trace_polynomials, &constraint_polynomials);
-
-    // Divide out the OODS points from the constraints and combine.
-    info!("Divide out the OODS points from the constraints and combine.");
-    let oods_polynomial = calculate_fri_polynomial(
-        &trace_polynomials,
-        &constraint_polynomials,
-        &oods_point,
-        &oods_coefficients,
-    );
     info!("Oods poly degree: {}", oods_polynomial.degree());
 
     // 4. FRI layers with trees
@@ -434,7 +425,7 @@ fn get_out_of_domain_information(
     proof: &mut ProverChannel,
     trace_polynomials: &[DensePolynomial],
     constraint_polynomials: &[DensePolynomial],
-) -> (FieldElement, Vec<FieldElement>) {
+) -> DensePolynomial {
     let oods_point: FieldElement = proof.get_random();
 
     let g = FieldElement::root(trace_polynomials[0].len())
@@ -442,6 +433,7 @@ fn get_out_of_domain_information(
     let oods_point_g = &oods_point * &g;
     let oods_point_pow = oods_point.pow(constraint_polynomials.len());
 
+    // Write point evaluations to proof
     for trace_polynomial in trace_polynomials {
         proof.write(&trace_polynomial.evaluate(&oods_point));
         proof.write(&trace_polynomial.evaluate(&oods_point_g));
@@ -450,12 +442,31 @@ fn get_out_of_domain_information(
         proof.write(&constraint_polynomial.evaluate(&oods_point_pow));
     }
 
+    // Collect coefficients
     let n_coefficients = 2 * trace_polynomials.len() + constraint_polynomials.len();
-    let mut oods_coefficients = Vec::with_capacity(n_coefficients);
+    let mut oods_coefficients: Vec<FieldElement> = Vec::with_capacity(n_coefficients);
     for _ in 0..n_coefficients {
         oods_coefficients.push(proof.get_random());
     }
-    (oods_point, oods_coefficients)
+    let (trace_coefficients, constraint_coefficients) =
+        oods_coefficients.split_at(2 * trace_polynomials.len());
+
+    // Divide out points and linear sum the polynomials
+    let mut fri_polynomial = DensePolynomial::new(&[FieldElement::ZERO]);
+    for (trace_polynomial, (c0, c1)) in trace_polynomials
+        .iter()
+        .zip(trace_coefficients.iter().tuples())
+    {
+        fri_polynomial += c0 * trace_polynomial.divide_out_point(&oods_point);
+        fri_polynomial += c1 * trace_polynomial.divide_out_point(&oods_point_g);
+    }
+    for (constraint_polynomial, c) in constraint_polynomials
+        .iter()
+        .zip(constraint_coefficients.iter())
+    {
+        fri_polynomial += c * constraint_polynomial.divide_out_point(&oods_point_pow);
+    }
+    fri_polynomial
 }
 
 fn calculate_fri_polynomial(
@@ -944,13 +955,7 @@ mod tests {
         );
         proof.write(&commitment);
 
-        let (oods_point, oods_coefficients) =
-            get_out_of_domain_information(&mut proof, &TPn, &constraint_polynomials);
-        // Checks that we have derived the right out of domain sample point
-        assert_eq!(
-            U256::from(oods_point.clone()),
-            u256h!("05d677ea387ec4ebd08ec49c414f53f569f406f51e28db2c566fdd99537a97e4")
-        );
+        let CO = get_out_of_domain_information(&mut proof, &TPn, &constraint_polynomials);
         // Checks that our get out of domain function call has written the right values
         // to the proof
         assert_eq!(
@@ -958,12 +963,6 @@ mod tests {
             "c1b7a613149f857c524a724ebb54121352b9e720bf794ecebf2d78ee4e3f938b"
         );
 
-        let CO = calculate_fri_polynomial(
-            &TPn,
-            &constraint_polynomials,
-            &oods_point,
-            &oods_coefficients,
-        );
         // Checks that our out of domain evaluated constraints calculated right
         let trace_generator = FieldElement::root(eval_domain_size).unwrap();
         assert_eq!(
