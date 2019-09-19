@@ -147,8 +147,7 @@ impl RationalExpression {
     pub fn trace_degree(&self) -> (usize, usize) {
         use RationalExpression::*;
         match self {
-            X => (0, 0),
-            Constant(_) => (0, 0),
+            X | Constant(_) => (0, 0),
             Trace(..) => (1, 0),
             Polynomial(p, a) => {
                 let (n, d) = a.trace_degree();
@@ -240,16 +239,12 @@ impl RationalExpression {
         }
     }
 
-    pub fn evaluate(
-        &self,
-        x: &FieldElement,
-        trace: &dyn Fn(usize, isize) -> FieldElement,
-    ) -> FieldElement {
+    pub fn evaluate(&self, x: &FieldElement, trace: &dyn Fn(usize, isize) -> FieldElement) -> FieldElement {
         use RationalExpression::*;
         match self {
             X => x.clone(),
             Constant(c) => c.clone(),
-            &Trace(i, j) => trace(i, j),
+            &Trace(i,j) => trace(i, j),
             Polynomial(p, a) => p.evaluate(&a.evaluate(x, trace)),
             Add(a, b) => a.evaluate(x, trace) + b.evaluate(x, trace),
             Neg(a) => -&a.evaluate(x, trace),
