@@ -320,7 +320,7 @@ fn get_constraint_polynomials(
     let trace_coset = extract_trace_coset(trace_lde, coset_length);
 
     info!("Combine rational expressions");
-    let expr = combine_constraints(constraints, constraint_coefficients);
+    let expr = combine_constraints(constraints, constraint_coefficients, trace_length);
     info!("Combined constraint expression: {:?}", expr);
     let expr = expr.simplify();
     // OPT: Simplify expression

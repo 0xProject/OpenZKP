@@ -1,7 +1,7 @@
 use crate::{
     channel::*,
-    constraint::Constraint,
-    constraint_system::{combine_constraints},
+    constraint::{trace_degree, Constraint},
+    constraint_system::combine_constraints,
     polynomial::DensePolynomial,
     proof_of_work,
     proof_params::ProofParams,
@@ -15,7 +15,7 @@ use primefield::{
 };
 #[cfg(feature = "std")]
 use std::error;
-use std::{collections::BTreeMap, fmt, prelude::v1::*};
+use std::{collections::BTreeMap, convert::TryInto, fmt, prelude::v1::*};
 use u256::U256;
 
 // False positive, for<'a> is required.
@@ -245,32 +245,53 @@ where
         let committed = DensePolynomial::new(&last_layer_coefficient).evaluate(&x_pow);
 
         if committed != calculated.clone() {
-            return Err(Error::OddsCalculationFailure);
+            return Err(Error::OodsCalculationFailure);
         }
     }
 
-    check_oods_value_matches(&oods_point, &oods_values, &oods_coefficients)
-}
-
-fn check_oods_value_matches(
-    oods_point: &FieldElement,
-    oods_values: &[FieldElement],
-    oods_coefficients: &[FieldElement],
-) -> Result<()> {
-    let mut trace_values: BTreeMap<(usize, isize), FieldElement> = BTreeMap::new();
-    for i in 0..trace_cols {
-        let _ = trace_values.insert((i, 0), oods_values[2 * i].clone());
-        let _ = trace_values.insert((i, 1), oods_values[2 * i + 1].clone());
-    }
-    let trace = |i, j| trace_values.get(&(i, j)).unwrap().clone();
-
-    let claimed_oods_value =
-        combine_constraints(&constraints, &constraint_coefficients).evaluate(&oods_point, &trace);
-
-    if claimed_oods_value != get_oods_value(&oods_values[2 * trace_cols..], &oods_point) {
-        return Err(Error::FriCalculationFailure);
+    let (trace_values, constraint_values) = oods_values.split_at(2 * trace_cols);
+    if oods_value_from_trace_values(
+        &constraints,
+        &constraint_coefficients,
+        trace_len,
+        &trace_values,
+        &oods_point,
+    ) != oods_value_from_constraint_values(&constraint_values, &oods_point)
+    {
+        return Err(Error::OodsMismatch);
     }
     Ok(())
+}
+
+fn oods_value_from_trace_values(
+    constraints: &[Constraint],
+    coefficients: &[FieldElement],
+    trace_length: usize,
+    trace_values: &[FieldElement],
+    oods_point: &FieldElement,
+) -> FieldElement {
+    let trace = |i: usize, j: isize| {
+        let j: usize = j.try_into().unwrap();
+        assert!(j == 0 || j == 1);
+        trace_values[2 * i + j].clone()
+    };
+    combine_constraints(constraints, coefficients, trace_length).evaluate(oods_point, &trace)
+}
+
+fn oods_value_from_constraint_values(
+    constraint_values: &[FieldElement],
+    oods_point: &FieldElement,
+) -> FieldElement {
+    // TODO - Check if this is 100% unreachable, if so remove if not error.
+    assert!(constraint_values.len().is_power_of_two());
+
+    let mut result = FieldElement::ZERO;
+    let mut power = FieldElement::ONE;
+    for value in constraint_values {
+        result += value * &power;
+        power *= oods_point;
+    }
+    result
 }
 
 // TODO: Clean up
@@ -362,19 +383,6 @@ fn out_of_domain_element(
     Ok(r)
 }
 
-fn get_oods_value(values: &[FieldElement], oods_point: &FieldElement) -> FieldElement {
-    // TODO - Check if this is 100% unreachable, if so remove if not error.
-    assert!(values.len().is_power_of_two());
-
-    let mut result = FieldElement::ZERO;
-    let mut power = FieldElement::ONE;
-    for value in values {
-        result += value * &power;
-        power *= oods_point;
-    }
-    result
-}
-
 type Result<T> = std::result::Result<T, Error>;
 
 // TODO - We could parametrize root unavailable with the size asked for and fri
@@ -388,7 +396,8 @@ pub enum Error {
     InvalidFriCommitment,
     HashMapFailure,
     ProofTooLong,
-    OddsCalculationFailure,
+    OodsCalculationFailure,
+    OodsMismatch,
     FriCalculationFailure,
     Merkle(MerkleError),
 }
@@ -412,7 +421,7 @@ impl fmt::Display for Error {
                 )
             }
             Error::ProofTooLong => write!(f, "The proof length doesn't match the specification"),
-            Error::OddsCalculationFailure => {
+            Error::OodsCalculationFailure => {
                 write!(
                     f,
                     "The calculated odds value doesn't match the committed one"
@@ -423,6 +432,9 @@ impl fmt::Display for Error {
                     f,
                     "The final FRI calculation suggests the committed polynomial isn't low degree"
                 )
+            }
+            Error::OodsMismatch => {
+                write!(f, "Calculated oods value doesn't match the committed one")
             }
             // This is a wrapper, so defer to the underlying types' implementation of `fmt`.
             Error::Merkle(ref e) => std::fmt::Display::fmt(e, f),
