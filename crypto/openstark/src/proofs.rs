@@ -510,7 +510,7 @@ fn fri_fold(
 }
 
 fn perform_fri_layering(
-    mut layer: MmapVec<FieldElement>,
+    first_layer: MmapVec<FieldElement>,
     proof: &mut ProverChannel,
     params: &ProofParams,
 ) -> Vec<FriTree> {
@@ -518,44 +518,56 @@ fn perform_fri_layering(
 
     // Compute 1/x for the fri layer. We only compute the even coordinates.
     // OPT: Can these be efficiently computed on the fly?
-    let root_inv = FieldElement::root(layer.len()).unwrap().inv().unwrap();
-    let mut x_inv = MmapVec::with_capacity(layer.len() / 2);
-    let mut accumulator = FieldElement::ONE;
-    for _ in 0..layer.len() / 2 {
-        x_inv.push(accumulator.clone());
-        accumulator *= &root_inv;
-    }
-    permute(&mut x_inv);
+    let x_inv = {
+        let n = first_layer.len();
+        let root_inv = FieldElement::root(n).unwrap().inv().unwrap();
+        let mut x_inv = MmapVec::with_capacity(n / 2);
+        let mut accumulator = FieldElement::ONE;
+        for _ in 0..n / 2 {
+            x_inv.push(accumulator.clone());
+            accumulator *= &root_inv;
+        }
+        permute(&mut x_inv);
+        x_inv
+    };
 
+    let mut next_layer = first_layer;
     for &n_reductions in &params.fri_layout {
+        // Allocate next and swap ownership
+        let mut layer = MmapVec::with_capacity(next_layer.len() / 2);
+        layer.resize(next_layer.len() / 2, FieldElement::ZERO);
+        std::mem::swap(&mut layer, &mut next_layer);
+
         // Create tree from layer
         // FRI layout values are small.
         #[allow(clippy::cast_possible_truncation)]
         let coset_size = 2_usize.pow(n_reductions as u32);
-        // OPT: Avoid clone
-        let tree = FriTree::from_leaves(FriLeaves {
-            coset_size,
-            layer: layer.clone(),
-        })
-        .unwrap();
-        proof.write(tree.commitment());
+        let tree = FriTree::from_leaves(FriLeaves { coset_size, layer }).unwrap();
         fri_trees.push(tree);
+        let tree = fri_trees.last().unwrap();
+        let layer = &tree.leaves().layer;
+
+        // Write commitment and pull coefficient
+        proof.write(tree.commitment());
         let mut coefficient = proof.get_random();
 
-        // Fold layer
-        // OPT: Avoid allocating inner layers and compute directly to result
-        for _ in 0..n_reductions {
-            let mut next = MmapVec::with_capacity(layer.len() / 2);
-            next.resize(layer.len() / 2, FieldElement::ZERO);
-            fri_fold(&coefficient, &x_inv, &layer, &mut next);
-            std::mem::swap(&mut layer, &mut next);
+        // Fold layer once
+        fri_fold(&coefficient, &x_inv, layer, &mut next_layer);
+
+        // Fold layer more
+        for _ in 1..n_reductions {
+            let mut layer = MmapVec::with_capacity(next_layer.len() / 2);
+            layer.resize(next_layer.len() / 2, FieldElement::ZERO);
+            std::mem::swap(&mut layer, &mut next_layer);
+
             coefficient = coefficient.square();
+            fri_fold(&coefficient, &x_inv, &layer, &mut next_layer);
         }
     }
 
     // Write the final layer coefficients
-    let n_coefficients = layer.len() / params.blowup;
-    let points = &mut layer[0..n_coefficients];
+    let n_coefficients = next_layer.len() / params.blowup;
+    let points = &mut next_layer[0..n_coefficients];
     permute(points);
     ifft_permuted(points);
     permute(points);
