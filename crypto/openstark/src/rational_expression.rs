@@ -144,6 +144,40 @@ impl RationalExpression {
         }
     }
 
+    pub fn trace_degree(&self) -> (usize, usize) {
+        use RationalExpression::*;
+        match self {
+            X => (0, 0),
+            Constant(_) => (0, 0),
+            Trace(..) => (1, 0),
+            Polynomial(p, a) => {
+                let (n, d) = a.trace_degree();
+                (p.degree() * n, p.degree() * d)
+            }
+            Add(a, b) => {
+                let (an, ad) = a.trace_degree();
+                let (bn, bd) = b.trace_degree();
+                assert!(ad == 0); // TODO: Can we handle this better?
+                assert!(bd == 0);
+                (std::cmp::max(an, bn), 0)
+            }
+            Neg(a) => a.trace_degree(),
+            Mul(a, b) => {
+                let (an, ad) = a.trace_degree();
+                let (bn, bd) = b.trace_degree();
+                (an + bn, ad + bd)
+            }
+            Inv(a) => {
+                let (n, d) = a.trace_degree();
+                (d, n)
+            }
+            Exp(a, e) => {
+                let (n, d) = a.trace_degree();
+                (e * n, e * d)
+            }
+        }
+    }
+
     /// Simplify the expression
     ///
     /// Does constant propagation and simplifies expressions like `0 + a`,
