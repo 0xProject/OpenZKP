@@ -492,29 +492,22 @@ fn calculate_fri_polynomial(
     fri_polynomial
 }
 
-fn fri_fold(c: &FieldElement, source: &[FieldElement], destination: &mut [FieldElement]) {
+fn fri_fold(
+    c: &FieldElement,
+    x_inv: &[FieldElement],
+    source: &[FieldElement],
+    destination: &mut [FieldElement],
+) {
     assert_eq!(destination.len() * 2, source.len());
-    // P(x), P(-x)
-    let n = source.len();
-
-    // OPT: Compute x coordinates on the fly or keep them around between layers
-    let root_inv = FieldElement::root(n).unwrap().inv().unwrap();
-    let mut cx_inv = MmapVec::with_capacity(n);
-    let mut accumulator = c.clone();
-    for _ in 0..n {
-        cx_inv.push(accumulator.clone());
-        accumulator *= &root_inv;
-    }
-    permute(&mut cx_inv);
 
     // Note that we interpret fri as evaluated on domain with cofactor 1.
     // OPT: Parallelize
-    for ((cx_inv, _), (px, pnx), result) in izip!(
-        cx_inv.iter().tuples(),
+    for (x_inv, (px, pnx), result) in izip!(
+        x_inv.iter().step_by(2),
         source.iter().tuples(),
         destination.iter_mut()
     ) {
-        *result = (px + pnx) + cx_inv * (px - pnx);
+        *result = (px + pnx) + c * x_inv * (px - pnx);
     }
 }
 
@@ -524,6 +517,17 @@ fn perform_fri_layering(
     params: &ProofParams,
 ) -> Vec<FriTree> {
     let mut fri_trees: Vec<FriTree> = Vec::with_capacity(params.fri_layout.len());
+
+    // Compute 1/x for the fri layer
+    // OPT: Compute x coordinates on the fly or keep them around between layers
+    let root_inv = FieldElement::root(layer.len()).unwrap().inv().unwrap();
+    let mut x_inv = MmapVec::with_capacity(layer.len());
+    let mut accumulator = FieldElement::ONE;
+    for _ in 0..layer.len() {
+        x_inv.push(accumulator.clone());
+        accumulator *= &root_inv;
+    }
+    permute(&mut x_inv);
 
     for &n_reductions in &params.fri_layout {
         // Create tree from layer
@@ -545,7 +549,7 @@ fn perform_fri_layering(
         for _ in 0..n_reductions {
             let mut next = MmapVec::with_capacity(layer.len() / 2);
             next.resize(layer.len() / 2, FieldElement::ZERO);
-            fri_fold(&coefficient, &layer, &mut next);
+            fri_fold(&coefficient, &x_inv, &layer, &mut next);
             std::mem::swap(&mut layer, &mut next);
             coefficient = coefficient.square();
         }
