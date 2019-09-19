@@ -347,12 +347,7 @@ fn get_constraint_polynomials(
             },
         )
         .sum();
-    info!("Combined constraint expression: {:?}", expr);
     let expr = expr.simplify();
-    // OPT: Simplify expression
-    // OPT: Some sub-expressions have much lower degree, we can evaluate them on a
-    // smaller domain and combine the results in coefficient form.
-    info!("Simplified constraint expression: {:?}", expr);
 
     let mut dag = AlgebraicGraph::new(
         &FieldElement::GENERATOR,
@@ -365,7 +360,6 @@ fn get_constraint_polynomials(
     // TODO: Track and use result reference.
     let _ = dag.tree_shake(result);
     dag.init(0);
-    info!("Combined constraint graph: {:?}", dag);
 
     // Evaluate on the coset trace table
     info!("Evaluate on the coset trace table");
