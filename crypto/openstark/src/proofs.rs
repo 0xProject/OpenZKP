@@ -335,12 +335,6 @@ fn get_constraint_polynomials(
             |((i, constraint), (coefficient_low, coefficient_high))| -> RationalExpression {
                 let (num, den) = constraint.expr.degree(trace_degree);
                 let adjustment_degree = target_degree + den - num;
-                info!(
-                    "Constraint {:?} adjustment {:?} {:?}",
-                    i,
-                    adjustment_degree,
-                    (num, den)
-                );
                 let adjustment = Constant(coefficient_low.clone())
                     + Constant(coefficient_high.clone()) * X.pow(adjustment_degree);
                 adjustment * constraint.expr.clone()
