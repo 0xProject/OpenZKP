@@ -230,12 +230,16 @@ impl RationalExpression {
         }
     }
 
-    pub fn evaluate(&self, x: &FieldElement, trace: &dyn Fn(usize, isize) -> FieldElement) -> FieldElement {
+    pub fn evaluate(
+        &self,
+        x: &FieldElement,
+        trace: &dyn Fn(usize, isize) -> FieldElement,
+    ) -> FieldElement {
         use RationalExpression::*;
         match self {
             X => x.clone(),
             Constant(c) => c.clone(),
-            &Trace(i,j) => trace(i, j),
+            &Trace(i, j) => trace(i, j),
             Polynomial(p, a) => p.evaluate(&a.evaluate(x, trace)),
             Add(a, b) => a.evaluate(x, trace) + b.evaluate(x, trace),
             Neg(a) => -&a.evaluate(x, trace),
