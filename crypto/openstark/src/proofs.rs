@@ -422,13 +422,14 @@ fn oods_combine(
     constraint_polynomials: &[DensePolynomial],
 ) -> DensePolynomial {
     // Fetch the oods sampling point
+    let trace_length = trace_polynomials[0].len();
     let oods_point: FieldElement = proof.get_random();
-    let g = FieldElement::root(trace_polynomials[0].len())
-        .expect("No root for trace polynomial length.");
+    let g = FieldElement::root(trace_length).expect("No root for trace polynomial length.");
     let oods_point_g = &oods_point * &g;
     let oods_point_pow = oods_point.pow(constraint_polynomials.len());
 
     // Write point evaluations to proof
+    // OPT: Parallelization
     for trace_polynomial in trace_polynomials {
         proof.write(&trace_polynomial.evaluate(&oods_point));
         proof.write(&trace_polynomial.evaluate(&oods_point_g));
@@ -447,13 +448,13 @@ fn oods_combine(
         oods_coefficients.split_at(2 * trace_polynomials.len());
 
     // Divide out points and linear sum the polynomials
-    // OPT: Avoid allocations
-    let mut fri_polynomial = DensePolynomial::new(&[FieldElement::ZERO]);
+    // OPT: Parallelization
+    let mut fri_polynomial = DensePolynomial::from_vec(vec![FieldElement::ZERO; trace_length]);
     for (trace_polynomial, (c0, c1)) in trace_polynomials
         .iter()
         .zip(trace_coefficients.iter().tuples())
     {
-        fri_polynomial += c0 * trace_polynomial.divide_out_point(&oods_point);
+        trace_polynomial.divide_out_point_into(&oods_point, c0, &mut fri_polynomial);
         trace_polynomial.divide_out_point_into(&oods_point_g, c1, &mut fri_polynomial);
     }
     for (constraint_polynomial, c) in constraint_polynomials
