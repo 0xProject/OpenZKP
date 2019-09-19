@@ -1,3 +1,4 @@
+use log::info;
 use macros_decl::hex;
 use std::convert::TryFrom;
 use tiny_keccak::Keccak;
@@ -7,11 +8,11 @@ use u256::U256;
 use rayon::prelude::*;
 
 // Difficulty threshold after which a multi-threaded solver is used.
-// Note: tests should use a difficulty below this  threshold .
+// Note: tests should use a difficulty below this threshold.
 #[cfg(all(feature = "std", feature = "prover"))]
 // False positive, constant is used when `std` is set
 #[allow(dead_code)]
-const THREADED_THRESHOLD: usize = 10;
+const THREADED_THRESHOLD: usize = 16;
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "std", derive(Debug))]
@@ -64,9 +65,13 @@ impl Challenge {
 #[cfg(feature = "prover")]
 impl Challenge {
     pub(crate) fn solve(&self) -> Response {
-        #[cfg(features = "std")]
+        #[cfg(feature = "std")]
         {
             if self.difficulty > THREADED_THRESHOLD {
+                info!(
+                    "Using multi-threaded solver (difficulty = {})",
+                    self.difficulty
+                );
                 return self.solve_threaded();
             }
         }
