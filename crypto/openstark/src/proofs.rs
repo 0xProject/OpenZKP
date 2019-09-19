@@ -720,7 +720,7 @@ mod tests {
             index: 1000,
             value: tt[(1000, 0)].clone(),
         };
-        let actual = stark_proof(
+        let _actual = stark_proof(
             &get_trace_table(1024, &private),
             &get_fibonacci_constraints(&public),
             &public,
@@ -769,7 +769,7 @@ mod tests {
             value: tt[(4000, 0)].clone(),
         };
         let constraints = get_fibonacci_constraints(&public);
-        let actual = stark_proof(&tt, &constraints, &public, &ProofParams {
+        let _actual = stark_proof(&tt, &constraints, &public, &ProofParams {
             blowup:                   16,
             pow_bits:                 12,
             queries:                  20,

@@ -3,7 +3,7 @@ use env_logger;
 use log::info;
 use macros_decl::u256h;
 use openstark::{
-    check_proof, decommitment_size_upper_bound,
+    decommitment_size_upper_bound,
     fibonacci::{get_fibonacci_constraints, get_trace_table, PrivateInput, PublicInput},
     stark_proof, ProofParams,
 };
@@ -53,19 +53,19 @@ fn main() {
         decommitment_size_upper_bound(20, 2, fri_layout.clone(), 20)
     );
 
-    let verified = check_proof(
-        potential_proof.proof.as_slice(),
-        &constraints,
-        &public,
-        &ProofParams {
-            blowup:                   16,
-            pow_bits:                 12,
-            queries:                  20,
-            fri_layout:               fri_layout.clone(),
-            constraints_degree_bound: 1,
-        },
-        2,
-        1_048_576,
-    );
-    println!("Checking the proof resulted in: {:?}", verified);
+    // let verified = check_proof(
+    //     potential_proof.proof.as_slice(),
+    //     &constraints,
+    //     &public,
+    //     &ProofParams {
+    //         blowup:                   16,
+    //         pow_bits:                 12,
+    //         queries:                  20,
+    //         fri_layout:               fri_layout.clone(),
+    //         constraints_degree_bound: 1,
+    //     },
+    //     2,
+    //     1_048_576,
+    // );
+    // println!("Checking the proof resulted in: {:?}", verified);
 }

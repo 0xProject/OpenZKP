@@ -6,28 +6,18 @@ use crate::{
             LEFT_X_COEFFICIENTS, LEFT_Y_COEFFICIENTS, RIGHT_X_COEFFICIENTS, RIGHT_Y_COEFFICIENTS,
         },
     },
-    polynomial::{DensePolynomial, SparsePolynomial},
+    polynomial::DensePolynomial,
     rational_expression::RationalExpression,
 };
 use elliptic_curve::Affine;
 use primefield::FieldElement;
 use starkdex::SHIFT_POINT;
 use std::{prelude::v1::*, vec};
-use u256::U256;
 
 // TODO: Naming
 #[allow(clippy::module_name_repetitions)]
 pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constraint> {
     use RationalExpression::*;
-
-    fn get_left_bit(trace_polynomials: &[DensePolynomial]) -> DensePolynomial {
-        &trace_polynomials[0]
-            - &FieldElement::from(U256::from(2_u64)) * &trace_polynomials[0].next()
-    }
-    fn get_right_bit(trace_polynomials: &[DensePolynomial]) -> DensePolynomial {
-        &trace_polynomials[4]
-            - &FieldElement::from(U256::from(2_u64)) * &trace_polynomials[4].next()
-    }
 
     let path_length = public_input.path_length;
     let trace_length = path_length * 256;
@@ -35,34 +25,10 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constr
     let leaf = public_input.leaf.clone();
     let field_element_bits = 252;
 
-    let g = FieldElement::root(trace_length).unwrap();
-    let no_rows = SparsePolynomial::new(&[(FieldElement::ONE, 0)]);
-    let first_row = SparsePolynomial::new(&[(-&FieldElement::ONE, 0), (FieldElement::ONE, 1)]);
-    let last_row = SparsePolynomial::new(&[(-&g.pow(trace_length - 1), 0), (FieldElement::ONE, 1)]);
-    let hash_end_rows = SparsePolynomial::new(&[
-        (FieldElement::ONE, path_length),
-        (-&g.pow(path_length * (trace_length - 1)), 0),
-    ]);
-    let field_element_end_rows = SparsePolynomial::new(&[
-        (-&g.pow(field_element_bits * path_length), 0),
-        (FieldElement::ONE, path_length),
-    ]);
-    let hash_start_rows =
-        SparsePolynomial::new(&[(FieldElement::ONE, path_length), (-&FieldElement::ONE, 0)]);
-    let every_row =
-        SparsePolynomial::new(&[(FieldElement::ONE, trace_length), (-&FieldElement::ONE, 0)]);
-
     let (shift_point_x, shift_point_y) = match SHIFT_POINT {
         Affine::Zero => panic!(),
         Affine::Point { x, y } => (x, y),
     };
-
-    let q_x_left_1 = SparsePolynomial::periodic(&LEFT_X_COEFFICIENTS, path_length);
-    let q_x_left_2 = SparsePolynomial::periodic(&LEFT_X_COEFFICIENTS, path_length);
-    let q_y_left = SparsePolynomial::periodic(&LEFT_Y_COEFFICIENTS, path_length);
-    let q_x_right_1 = SparsePolynomial::periodic(&RIGHT_X_COEFFICIENTS, path_length);
-    let q_x_right_2 = SparsePolynomial::periodic(&RIGHT_X_COEFFICIENTS, path_length);
-    let q_y_right = SparsePolynomial::periodic(&RIGHT_Y_COEFFICIENTS, path_length);
 
     // Periodic columns
     let periodic = |coefficients| {
