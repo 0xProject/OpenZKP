@@ -492,23 +492,6 @@ fn calculate_fri_polynomial(
     fri_polynomial
 }
 
-fn fri_fold(
-    c: &FieldElement,
-    x_inv: &[FieldElement],
-    source: &[FieldElement],
-    destination: &mut [FieldElement],
-) {
-    assert_eq!(destination.len() * 2, source.len());
-
-    // Note that we interpret fri as evaluated on domain with cofactor 1.
-    // OPT: Parallelize
-    for (x_inv, (px, pnx), result) in
-        izip!(x_inv.iter(), source.iter().tuples(), destination.iter_mut())
-    {
-        *result = (px + pnx) + c * x_inv * (px - pnx);
-    }
-}
-
 fn perform_fri_layering(
     first_layer: MmapVec<FieldElement>,
     proof: &mut ProverChannel,
@@ -534,7 +517,7 @@ fn perform_fri_layering(
     let mut next_layer = first_layer;
     for &n_reductions in &params.fri_layout {
         // Allocate next and swap ownership
-        let mut layer = MmapVec::with_capacity(next_layer.len() / 2);
+        let mut layer = MmapVec::with_capacity(next_layer.len() / (1 << n_reductions));
         std::mem::swap(&mut layer, &mut next_layer);
 
         // Create tree from layer
@@ -550,22 +533,51 @@ fn perform_fri_layering(
         proof.write(tree.commitment());
         let mut coefficient = proof.get_random();
 
-        // Fold layer once
-        let iter = izip!(x_inv.iter(), layer.iter().tuples())
-            .map(|(x_inv, (px, pnx))| (px + pnx) + &coefficient * x_inv * (px - pnx));
-        next_layer.extend(iter);
+        // Fold layer up to three times
+        // TODO: Capture the pattern in a macro and DRY.
+        let layer = layer.iter();
+        match n_reductions {
+            1 => {
+                next_layer.extend(
+                    layer
+                        .tuples()
+                        .zip(x_inv.iter())
+                        .map(|((p0, p1), x_inv)| (p0 + p1) + &coefficient * x_inv * (p0 - p1)),
+                )
+            }
+            2 => {
+                let coefficient_2 = coefficient.pow(2);
+                next_layer.extend(
+                    layer
+                        .tuples()
+                        .zip(x_inv.iter())
+                        .map(|((p0, p1), x_inv)| (p0 + p1) + &coefficient * x_inv * (p0 - p1))
+                        .tuples()
+                        .zip(x_inv.iter())
+                        .map(|((p0, p1), x_inv)| (&p0 + &p1) + &coefficient_2 * x_inv * (p0 - p1)),
+                )
+            }
+            3 => {
+                let coefficient_2 = coefficient.square();
+                let coefficient_4 = coefficient_2.square();
+                next_layer.extend(
+                    layer
+                        .tuples()
+                        .zip(x_inv.iter())
+                        .map(|((p0, p1), x_inv)| (p0 + p1) + &coefficient * x_inv * (p0 - p1))
+                        .tuples()
+                        .zip(x_inv.iter())
+                        .map(|((p0, p1), x_inv)| (&p0 + &p1) + &coefficient_2 * x_inv * (p0 - p1))
+                        .tuples()
+                        .zip(x_inv.iter())
+                        .map(|((p0, p1), x_inv)| (&p0 + &p1) + &coefficient_4 * x_inv * (p0 - p1)),
+                )
+            }
+            _ => unimplemented!(),
+        };
 
         // Fold layer more
         // OPT: Avoid allocating temporary layers and compute result directly.
-        for _ in 1..n_reductions {
-            let mut layer = MmapVec::with_capacity(next_layer.len() / 2);
-            std::mem::swap(&mut layer, &mut next_layer);
-
-            coefficient = coefficient.square();
-            let iter = izip!(x_inv.iter(), layer.iter().tuples())
-                .map(|(x_inv, (px, pnx))| (px + pnx) + &coefficient * x_inv * (px - pnx));
-            next_layer.extend(iter);
-        }
     }
 
     // Write the final layer coefficients
