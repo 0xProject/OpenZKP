@@ -76,7 +76,7 @@ impl TraceTable {
             // so it can be replaced by a matrix of coefficients.
             .map(|j| {
                 // Copy column to vec
-                let mut vec = Vec::with_capacity(self.num_rows());
+                let mut vec = MmapVec::with_capacity(self.num_rows());
                 for v in self.iter_column(j) {
                     vec.push(v.clone());
                 }
@@ -84,7 +84,7 @@ impl TraceTable {
                 // Transform to coefficients
                 ifft_permuted(&mut vec);
                 permute(&mut vec);
-                DensePolynomial::from_vec(vec)
+                DensePolynomial::from_mmap_vec(vec)
             })
             .collect::<Vec<DensePolynomial>>()
     }

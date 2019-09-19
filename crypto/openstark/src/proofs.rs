@@ -399,9 +399,9 @@ fn get_constraint_polynomials(
     }
 
     // Convert to even and odd coefficient polynomials
-    let mut constraint_polynomials: Vec<Vec<FieldElement>> =
+    let mut constraint_polynomials: Vec<MmapVec<FieldElement>> =
         vec![
-            Vec::with_capacity(trace_coset.num_rows() / constraints_degree_bound);
+            MmapVec::with_capacity(trace_coset.num_rows() / constraints_degree_bound);
             constraints_degree_bound
         ];
     for chunk in values.chunks_exact(constraints_degree_bound) {
@@ -411,7 +411,7 @@ fn get_constraint_polynomials(
     }
     constraint_polynomials
         .into_iter()
-        .map(DensePolynomial::from_vec)
+        .map(DensePolynomial::from_mmap_vec)
         .collect()
 }
 
@@ -448,7 +448,7 @@ fn oods_combine(
 
     // Divide out points and linear sum the polynomials
     // OPT: Parallelization
-    let mut combined_polynomial = DensePolynomial::from_vec(vec![FieldElement::ZERO; trace_length]);
+    let mut combined_polynomial = DensePolynomial::zeros(trace_length);
     for (trace_polynomial, (coefficient_0, coefficient_1)) in trace_polynomials
         .iter()
         .zip(trace_coefficients.iter().tuples())

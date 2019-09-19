@@ -10,7 +10,7 @@ use rayon::prelude::*;
 use std::prelude::v1::*;
 
 #[derive(PartialEq, Clone)]
-pub struct DensePolynomial(Vec<FieldElement>);
+pub struct DensePolynomial(MmapVec<FieldElement>);
 
 // We normally don't want to spill thousands of coefficients in the logs.
 #[cfg(feature = "std")]
@@ -21,16 +21,25 @@ impl std::fmt::Debug for DensePolynomial {
 }
 
 impl DensePolynomial {
-    // Coefficents are in order of ascending degree. E.g. &[1, 2] corresponds to the
-    // polynomial f(x) = 1 + 2x.
-    pub fn new(coefficients: &[FieldElement]) -> Self {
-        assert!(coefficients.len().is_power_of_two());
-        Self(coefficients.to_vec())
-    }
-
-    pub fn from_vec(coefficients: Vec<FieldElement>) -> Self {
+    pub fn from_mmap_vec(coefficients: MmapVec<FieldElement>) -> Self {
         assert!(coefficients.len().is_power_of_two());
         Self(coefficients)
+    }
+
+    // Coefficients are in order of ascending degree. E.g. &[1, 2] corresponds to
+    // the polynomial f(x) = 1 + 2x.
+    pub fn new(coefficients: &[FieldElement]) -> Self {
+        assert!(coefficients.len().is_power_of_two());
+        let mut vec = MmapVec::with_capacity(coefficients.len());
+        vec.extend_from_slice(coefficients);
+        Self(vec)
+    }
+
+    pub fn zeros(size: usize) -> Self {
+        assert!(size.is_power_of_two());
+        let mut vec = MmapVec::with_capacity(size);
+        vec.resize(size, FieldElement::ZERO);
+        Self(vec)
     }
 
     // Note that the length of a polynomial is not its degree, because the leading
@@ -114,7 +123,7 @@ impl Arbitrary for DensePolynomial {
             length.next_power_of_two() - length
         ]);
         assert!(coefficients.len().is_power_of_two());
-        Self(coefficients)
+        Self::new(&coefficients)
     }
 }
 
@@ -123,11 +132,11 @@ mod tests {
     use super::*;
 
     fn dense_polynomial(coefficients: &[isize]) -> DensePolynomial {
-        DensePolynomial(
-            coefficients
+        DensePolynomial::new(
+            &coefficients
                 .iter()
                 .map(|c| FieldElement::from(*c))
-                .collect(),
+                .collect::<Vec<_>>(),
         )
     }
 
