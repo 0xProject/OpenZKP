@@ -123,6 +123,23 @@ impl DensePolynomial {
         remainder
     }
 
+    /// Divide out a point and add the scaled result to target.
+    ///
+    /// target += c * (P(X) - P(z)) / (X - z)
+    pub fn divide_out_point_into(
+        &self,
+        z: &FieldElement,
+        c: &FieldElement,
+        target: &mut DensePolynomial,
+    ) {
+        let mut remainder = FieldElement::ZERO;
+        for (coefficient, target) in self.0.iter().rev().zip(target.0.iter_mut().rev()) {
+            *target += c * &remainder;
+            remainder *= z;
+            remainder += coefficient;
+        }
+    }
+
     // Returns a polynomial such that f.shift(s)(x) = f(s * y).
     pub fn shift(&self, factor: &FieldElement) -> Self {
         let mut shifted_coefficients = self.0.clone();
