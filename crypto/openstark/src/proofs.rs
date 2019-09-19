@@ -502,11 +502,9 @@ fn fri_fold(
 
     // Note that we interpret fri as evaluated on domain with cofactor 1.
     // OPT: Parallelize
-    for (x_inv, (px, pnx), result) in izip!(
-        x_inv.iter().step_by(2),
-        source.iter().tuples(),
-        destination.iter_mut()
-    ) {
+    for (x_inv, (px, pnx), result) in
+        izip!(x_inv.iter(), source.iter().tuples(), destination.iter_mut())
+    {
         *result = (px + pnx) + c * x_inv * (px - pnx);
     }
 }
@@ -518,12 +516,12 @@ fn perform_fri_layering(
 ) -> Vec<FriTree> {
     let mut fri_trees: Vec<FriTree> = Vec::with_capacity(params.fri_layout.len());
 
-    // Compute 1/x for the fri layer
-    // OPT: Compute x coordinates on the fly or keep them around between layers
+    // Compute 1/x for the fri layer. We only compute the even coordinates.
+    // OPT: Can these be efficiently computed on the fly?
     let root_inv = FieldElement::root(layer.len()).unwrap().inv().unwrap();
-    let mut x_inv = MmapVec::with_capacity(layer.len());
+    let mut x_inv = MmapVec::with_capacity(layer.len() / 2);
     let mut accumulator = FieldElement::ONE;
-    for _ in 0..layer.len() {
+    for _ in 0..layer.len() / 2 {
         x_inv.push(accumulator.clone());
         accumulator *= &root_inv;
     }
