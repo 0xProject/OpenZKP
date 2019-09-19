@@ -438,29 +438,19 @@ fn get_out_of_domain_information(
     let g = FieldElement::root(trace_polynomials[0].len())
         .expect("No root for trace polynomial length.");
     let oods_point_g = &oods_point * &g;
-    let mut oods_values = Vec::with_capacity(2 * trace_polynomials.len() + 10);
+    let oods_point_pow = oods_point.pow(constraint_polynomials.len());
+
     for trace_polynomial in trace_polynomials {
-        let mut evaled = trace_polynomial.evaluate(&oods_point);
-        oods_values.push(evaled.clone());
-        evaled = trace_polynomial.evaluate(&oods_point_g);
-        oods_values.push(evaled.clone());
+        proof.write(&trace_polynomial.evaluate(&oods_point));
+        proof.write(&trace_polynomial.evaluate(&oods_point_g));
     }
     for constraint_polynomial in constraint_polynomials {
-        oods_values
-            .push(constraint_polynomial.evaluate(&oods_point.pow(constraint_polynomials.len())));
+        proof.write(&constraint_polynomial.evaluate(&oods_point_pow));
     }
 
-    for v in &oods_values {
-        proof.write(v);
-    }
-
-    let mut oods_coefficients =
-        Vec::with_capacity(2 * trace_polynomials.len() + constraint_polynomials.len());
-    for _ in trace_polynomials {
-        oods_coefficients.push(proof.get_random());
-        oods_coefficients.push(proof.get_random());
-    }
-    for _ in constraint_polynomials {
+    let n_coefficients = 2 * trace_polynomials.len() + constraint_polynomials.len();
+    let mut oods_coefficients = Vec::with_capacity(n_coefficients);
+    for _ in 0..n_coefficients {
         oods_coefficients.push(proof.get_random());
     }
     (oods_point, oods_coefficients)
