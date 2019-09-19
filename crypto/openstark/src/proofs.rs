@@ -466,20 +466,26 @@ fn calculate_fri_polynomial(
 ) -> DensePolynomial {
     let trace_length = trace_polynomials[0].len();
     let trace_generator = FieldElement::root(trace_length).unwrap();
+    let constraints_degree_bound = constraint_polynomials.len();
     let shifted_oods_point = &trace_generator * oods_point;
+    let oods_point_pow = oods_point.pow(constraints_degree_bound);
+
+    let (trace_coefficients, constraint_coefficients) =
+        oods_coefficients.split_at(2 * trace_polynomials.len());
 
     let mut fri_polynomial = DensePolynomial::new(&[FieldElement::ZERO]);
-    for (i, trace_polynomial) in trace_polynomials.iter().enumerate() {
-        fri_polynomial += &oods_coefficients[2 * i] * trace_polynomial.divide_out_point(oods_point);
-        fri_polynomial +=
-            &oods_coefficients[2 * i + 1] * trace_polynomial.divide_out_point(&shifted_oods_point);
+    for (trace_polynomial, (c0, c1)) in trace_polynomials
+        .iter()
+        .zip(trace_coefficients.iter().tuples())
+    {
+        fri_polynomial += c0 * trace_polynomial.divide_out_point(oods_point);
+        fri_polynomial += c1 * trace_polynomial.divide_out_point(&shifted_oods_point);
     }
-
-    let offset = 2 * trace_polynomials.len();
-    let constraints_degree_bound = constraint_polynomials.len();
-    for (i, constraint_polynomial) in constraint_polynomials.iter().enumerate() {
-        fri_polynomial += &oods_coefficients[offset + i]
-            * constraint_polynomial.divide_out_point(&oods_point.pow(constraints_degree_bound));
+    for (constraint_polynomial, c) in constraint_polynomials
+        .iter()
+        .zip(constraint_coefficients.iter())
+    {
+        fri_polynomial += c * constraint_polynomial.divide_out_point(&oods_point_pow);
     }
     fri_polynomial
 }
