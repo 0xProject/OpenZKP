@@ -8,11 +8,7 @@ use crate::{
 };
 use hash::Hash;
 use merkle_tree::{Commitment, Error as MerkleError, Proof};
-use primefield::{
-    fft::{self},
-    geometric_series::root_series,
-    FieldElement,
-};
+use primefield::{fft, geometric_series::root_series, FieldElement};
 #[cfg(feature = "std")]
 use std::error;
 use std::{collections::BTreeMap, convert::TryInto, fmt, prelude::v1::*};

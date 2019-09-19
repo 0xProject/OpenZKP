@@ -1,7 +1,8 @@
+#[cfg(feature = "prover")]
+use crate::trace_table::TraceTable;
 use crate::{
     constraint::{trace_degree, Constraint},
     rational_expression::RationalExpression,
-    trace_table::TraceTable,
 };
 use itertools::Itertools;
 use primefield::FieldElement;
@@ -12,6 +13,7 @@ pub(crate) trait ConstraintSystem {
 
     // TODO: these should return results.
     fn constraints(&self) -> Vec<Constraint>;
+    #[cfg(feature = "prover")]
     fn trace(&self, private: &Self::PrivateInput) -> TraceTable;
 }
 
@@ -22,7 +24,6 @@ pub(crate) fn combine_constraints(
 ) -> RationalExpression {
     assert_eq!(2 * constraints.len(), constraint_coefficients.len());
     let target_degree = trace_degree(constraints) * trace_length - 1;
-    dbg!(target_degree);
 
     constraints
         .iter()
