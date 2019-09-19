@@ -249,7 +249,10 @@ where
     }
 
     check_oods_value_matches(oods_values, oods_coefficients)
+}
 
+fn check_oods_value_matches(oods_values, oods_coefficients) -> Result<()> {
+    let trace = |i, j| -> FieldElement
     let mut mock_polynomials: Vec<DensePolynomial> = vec![];
     for i in 0..trace_cols {
         let fake_polynomial = DensePolynomial::new(&ifft(&[
@@ -272,12 +275,13 @@ where
         claimed_oods_value += &constraint_coefficients[2 * i + 1] * adjustment * &x;
     }
 
-    if claimed_oods_value == get_oods_value(&oods_values[2 * trace_cols..], &oods_point) {
-        Ok(())
-    } else {
+    if claimed_oods_value != get_oods_value(&oods_values[2 * trace_cols..], &oods_point) {
         Err(Error::FriCalculationFailure)
     }
+
+    Ok(())
 }
+
 
 // TODO: Clean up
 #[allow(clippy::cast_possible_truncation)]
