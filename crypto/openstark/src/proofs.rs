@@ -63,7 +63,7 @@ impl VectorCommitment for PolyLDE {
 #[derive(Clone, Debug)]
 struct FriLeaves {
     coset_size: usize,
-    layer:      Vec<FieldElement>,
+    layer:      MmapVec<FieldElement>,
 }
 
 type FriTree = Tree<FriLeaves>;
@@ -227,7 +227,8 @@ where
 
     // 4. FRI layers with trees
     info!("FRI layers with trees.");
-    let fri_trees = perform_fri_layering(&oods_polynomial, &mut proof, &params);
+    let first_fri_layer = oods_polynomial.low_degree_extension(params.blowup);
+    let fri_trees = perform_fri_layering(first_fri_layer, &mut proof, &params);
 
     // 5. Proof of work
     info!("Proof of work.");
@@ -491,48 +492,123 @@ fn calculate_fri_polynomial(
     fri_polynomial
 }
 
-fn fri_fold(p: &DensePolynomial, c: &FieldElement) -> DensePolynomial {
-    let shift = FieldElement::GENERATOR;
-    // Generator has an inverse
-    let unshift = shift.inv().unwrap();
-
-    // TODO: don't shift and unshift in this function.
-    let shifted = p.shift(&shift);
-    let coefficients: Vec<FieldElement> = shifted
-        .coefficients()
-        .chunks_exact(2)
-        .map(|pair: &[FieldElement]| (&pair[0] + c * &pair[1]).double())
-        .collect();
-    DensePolynomial::from_vec(coefficients).shift(&unshift)
-}
-
 fn perform_fri_layering(
-    fri_polynomial: &DensePolynomial,
+    first_layer: MmapVec<FieldElement>,
     proof: &mut ProverChannel,
     params: &ProofParams,
 ) -> Vec<FriTree> {
     let mut fri_trees: Vec<FriTree> = Vec::with_capacity(params.fri_layout.len());
 
-    // TODO: fold fri_polynomial without cloning it first.
-    let mut p = fri_polynomial.clone();
-    for &n_reductions in &params.fri_layout {
-        // TODO: Avoid copies
-        let layer = p.low_degree_extension(params.blowup).to_vec();
+    // Compute 1/x for the fri layer. We only compute the even coordinates.
+    // OPT: Can these be efficiently computed on the fly?
+    let x_inv = {
+        let n = first_layer.len();
+        let root_inv = FieldElement::root(n).unwrap().inv().unwrap();
+        let mut x_inv = MmapVec::with_capacity(n / 2);
+        let mut accumulator = FieldElement::ONE;
+        for _ in 0..n / 2 {
+            x_inv.push(accumulator.clone());
+            accumulator *= &root_inv;
+        }
+        permute(&mut x_inv);
+        x_inv
+    };
 
+    let mut next_layer = first_layer;
+    for &n_reductions in &params.fri_layout {
+        // Allocate next and swap ownership
+        let mut layer = MmapVec::with_capacity(next_layer.len() / (1 << n_reductions));
+        std::mem::swap(&mut layer, &mut next_layer);
+
+        // Create tree from layer
         // FRI layout values are small.
         #[allow(clippy::cast_possible_truncation)]
         let coset_size = 2_usize.pow(n_reductions as u32);
         let tree = FriTree::from_leaves(FriLeaves { coset_size, layer }).unwrap();
-        proof.write(tree.commitment());
         fri_trees.push(tree);
+        let tree = fri_trees.last().unwrap();
+        let layer = &tree.leaves().layer;
 
-        let mut coefficient = proof.get_random();
-        for _ in 0..n_reductions {
-            p = fri_fold(&p, &coefficient);
-            coefficient = coefficient.square();
-        }
+        // Write commitment and pull coefficient
+        proof.write(tree.commitment());
+        let coefficient = proof.get_random();
+
+        // Fold layer up to three times
+        // TODO: Capture the pattern in a macro and DRY.
+        // OPT: Parallelization
+        // OPT: The structure in x_inv should allow faster methods,
+        // like in a radix-4 and radix-8 fft.
+        let layer = layer.iter();
+        match n_reductions {
+            1 => {
+                next_layer.extend(
+                    layer
+                        .tuples()
+                        .zip(x_inv.iter())
+                        .map(|((p0, p1), x_inv)| (p0 + p1) + &coefficient * x_inv * (p0 - p1)),
+                )
+            }
+            2 => {
+                let coefficient_2 = coefficient.pow(2);
+                next_layer.extend(
+                    layer
+                        .tuples()
+                        .zip(x_inv.iter())
+                        .map(|((p0, p1), x_inv)| (p0 + p1) + &coefficient * x_inv * (p0 - p1))
+                        .tuples()
+                        .zip(x_inv.iter())
+                        .map(|((p0, p1), x_inv)| (&p0 + &p1) + &coefficient_2 * x_inv * (p0 - p1)),
+                )
+            }
+            3 => {
+                let coefficient_2 = coefficient.square();
+                let coefficient_4 = coefficient_2.square();
+                next_layer.extend(
+                    layer
+                        .tuples()
+                        .zip(x_inv.iter())
+                        .map(|((p0, p1), x_inv)| (p0 + p1) + &coefficient * x_inv * (p0 - p1))
+                        .tuples()
+                        .zip(x_inv.iter())
+                        .map(|((p0, p1), x_inv)| (&p0 + &p1) + &coefficient_2 * x_inv * (p0 - p1))
+                        .tuples()
+                        .zip(x_inv.iter())
+                        .map(|((p0, p1), x_inv)| (&p0 + &p1) + &coefficient_4 * x_inv * (p0 - p1)),
+                )
+            }
+            // TODO: Is there a use case for 4 layer folds?
+            4 => {
+                let coefficient_2 = coefficient.square();
+                let coefficient_4 = coefficient_2.square();
+                let coefficient_8 = coefficient_4.square();
+                next_layer.extend(
+                    layer
+                        .tuples()
+                        .zip(x_inv.iter())
+                        .map(|((p0, p1), x_inv)| (p0 + p1) + &coefficient * x_inv * (p0 - p1))
+                        .tuples()
+                        .zip(x_inv.iter())
+                        .map(|((p0, p1), x_inv)| (&p0 + &p1) + &coefficient_2 * x_inv * (p0 - p1))
+                        .tuples()
+                        .zip(x_inv.iter())
+                        .map(|((p0, p1), x_inv)| (&p0 + &p1) + &coefficient_4 * x_inv * (p0 - p1))
+                        .tuples()
+                        .zip(x_inv.iter())
+                        .map(|((p0, p1), x_inv)| (&p0 + &p1) + &coefficient_8 * x_inv * (p0 - p1)),
+                )
+            }
+            _ => unimplemented!(),
+        };
     }
-    proof.write(p.shift(&FieldElement::GENERATOR).coefficients());
+
+    // Write the final layer coefficients
+    let n_coefficients = next_layer.len() / params.blowup;
+    let points = &mut next_layer[0..n_coefficients];
+    permute(points);
+    ifft_permuted(points);
+    permute(points);
+    proof.write(&*points);
+
     fri_trees
 }
 
@@ -743,6 +819,8 @@ mod tests {
     // TODO - See if it's possible to do context cloning and break this into smaller tests
     #[allow(clippy::cognitive_complexity)]
     fn fib_proof_test() {
+        crate::tests::init();
+
         let public = PublicInput {
             index: 1000,
             value: FieldElement::from(u256h!(
@@ -895,7 +973,8 @@ mod tests {
             field_element!("03c6b730c58b55f44bbf3cb7ea82b2e6a0a8b23558e908b5466dfe42e821ee96")
         );
 
-        let fri_trees = perform_fri_layering(&CO, &mut proof, &params);
+        let fri_trees =
+            perform_fri_layering(CO.low_degree_extension(params.blowup), &mut proof, &params);
 
         // Checks that the first fri merkle tree root is right
         assert_eq!(
