@@ -39,6 +39,7 @@
 
 mod channel;
 mod constraint;
+mod constraint_system;
 pub mod fibonacci;
 mod polynomial;
 mod proof_of_work;

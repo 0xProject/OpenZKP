@@ -102,34 +102,43 @@ impl RationalExpression {
     /// Calculates an upper bound. Cancelations may occur.
     // Note: We can have trace polynomials of different degree here if we want.
     pub fn degree(&self, trace_degree: usize) -> (usize, usize) {
+        self.degree_impl(1, trace_degree)
+    }
+
+    pub fn trace_degree(&self) -> (usize, usize) {
+        self.degree_impl(0, 1)
+    }
+
+    // TODO: do this with a generic function.
+    fn degree_impl(&self, x_degree: usize, trace_degree: usize) -> (usize, usize) {
         use RationalExpression::*;
         match self {
-            X => (1, 0),
+            X => (x_degree, 0),
             Constant(_) => (0, 0),
             Trace(..) => (trace_degree, 0),
             Polynomial(p, a) => {
-                let (n, d) = a.degree(trace_degree);
+                let (n, d) = a.degree_impl(x_degree, trace_degree);
                 (p.degree() * n, p.degree() * d)
             }
             Add(a, b) => {
-                let (an, ad) = a.degree(trace_degree);
-                let (bn, bd) = b.degree(trace_degree);
+                let (an, ad) = a.degree_impl(x_degree, trace_degree);
+                let (bn, bd) = b.degree_impl(x_degree, trace_degree);
                 assert!(ad == 0); // TODO: Can we handle this better?
                 assert!(bd == 0);
                 (std::cmp::max(an, bn), 0)
             }
-            Neg(a) => a.degree(trace_degree),
+            Neg(a) => a.degree_impl(x_degree, trace_degree),
             Mul(a, b) => {
-                let (an, ad) = a.degree(trace_degree);
-                let (bn, bd) = b.degree(trace_degree);
+                let (an, ad) = a.degree_impl(x_degree, trace_degree);
+                let (bn, bd) = b.degree_impl(x_degree, trace_degree);
                 (an + bn, ad + bd)
             }
             Inv(a) => {
-                let (n, d) = a.degree(trace_degree);
+                let (n, d) = a.degree_impl(x_degree, trace_degree);
                 (d, n)
             }
             Exp(a, e) => {
-                let (n, d) = a.degree(trace_degree);
+                let (n, d) = a.degree_impl(x_degree, trace_degree);
                 (e * n, e * d)
             }
         }
@@ -194,6 +203,25 @@ impl RationalExpression {
                 }
             }
             e => e,
+        }
+    }
+
+    pub fn evaluate(
+        &self,
+        x: &FieldElement,
+        trace: &dyn Fn(usize, isize) -> FieldElement,
+    ) -> FieldElement {
+        use RationalExpression::*;
+        match self {
+            X => x.clone(),
+            Constant(c) => c.clone(),
+            &Trace(i, j) => trace(i, j),
+            Polynomial(p, a) => p.evaluate(&a.evaluate(x, trace)),
+            Add(a, b) => a.evaluate(x, trace) + b.evaluate(x, trace),
+            Neg(a) => -&a.evaluate(x, trace),
+            Mul(a, b) => a.evaluate(x, trace) * b.evaluate(x, trace),
+            Inv(a) => a.evaluate(x, trace).inv().expect("divided by zero"),
+            Exp(a, e) => a.evaluate(x, trace).pow(*e),
         }
     }
 }

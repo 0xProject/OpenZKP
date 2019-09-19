@@ -1,17 +1,17 @@
 use crate::{
-    channel::*, constraint::Constraint, polynomial::DensePolynomial, proof_of_work,
+    channel::*,
+    constraint::{trace_degree, Constraint},
+    constraint_system::combine_constraints,
+    polynomial::DensePolynomial,
+    proof_of_work,
     proof_params::ProofParams,
 };
 use hash::Hash;
 use merkle_tree::{Commitment, Error as MerkleError, Proof};
-use primefield::{
-    fft::{self, ifft},
-    geometric_series::root_series,
-    FieldElement,
-};
+use primefield::{fft, geometric_series::root_series, FieldElement};
 #[cfg(feature = "std")]
 use std::error;
-use std::{collections::BTreeMap, fmt, prelude::v1::*};
+use std::{collections::BTreeMap, convert::TryInto, fmt, prelude::v1::*};
 use u256::U256;
 
 // False positive, for<'a> is required.
@@ -50,11 +50,12 @@ where
     // Get the oods information from the proof and random
     let oods_point: FieldElement = channel.get_random();
     let mut oods_values: Vec<FieldElement> = Vec::with_capacity(2 * trace_cols + 1);
-    for _ in 0..(2 * trace_cols + params.constraints_degree_bound) {
+    let constraints_trace_degree = trace_degree(constraints);
+    for _ in 0..(2 * trace_cols + constraints_trace_degree) {
         oods_values.push(Replayable::<FieldElement>::replay(&mut channel));
     }
     let mut oods_coefficients: Vec<FieldElement> = Vec::with_capacity(2 * trace_cols + 1);
-    for _ in 0..2 * trace_cols + params.constraints_degree_bound {
+    for _ in 0..2 * trace_cols + constraints_trace_degree {
         oods_coefficients.push(channel.get_random());
     }
 
@@ -122,7 +123,7 @@ where
     for query_index in &queries {
         constraint_values.push((
             *query_index,
-            Replayable::<FieldElement>::replay_many(&mut channel, params.constraints_degree_bound),
+            Replayable::<FieldElement>::replay_many(&mut channel, constraints_trace_degree),
         ));
     }
     let constraint_proof_length = constraint_commitment.proof_size(&queries)?;
@@ -240,39 +241,53 @@ where
         let committed = DensePolynomial::new(&last_layer_coefficient).evaluate(&x_pow);
 
         if committed != calculated.clone() {
-            return Err(Error::OddsCalculationFailure);
+            return Err(Error::OodsCalculationFailure);
         }
     }
 
-    // Checks that the oods point calculation matches the constraint calculation
-    // TODO: don't use DensePolynomial for this.
-    let mut mock_polynomials: Vec<DensePolynomial> = vec![];
-    for i in 0..trace_cols {
-        let fake_polynomial = DensePolynomial::new(&ifft(&[
-            oods_values[2 * i].clone(),
-            oods_values[2 * i + 1].clone(),
-        ]));
-        mock_polynomials.push(fake_polynomial);
+    let (trace_values, constraint_values) = oods_values.split_at(2 * trace_cols);
+    if oods_value_from_trace_values(
+        &constraints,
+        &constraint_coefficients,
+        trace_len,
+        &trace_values,
+        &oods_point,
+    ) != oods_value_from_constraint_values(&constraint_values, &oods_point)
+    {
+        return Err(Error::OodsMismatch);
     }
+    Ok(())
+}
 
-    let mut claimed_oods_value = FieldElement::ZERO;
-    for (i, constraint) in constraints.iter().enumerate() {
-        let mut x = (constraint.base)(&mock_polynomials).evaluate(&FieldElement::ONE);
-        x *= constraint.numerator.evaluate(&oods_point);
-        x /= constraint.denominator.evaluate(&oods_point);
-        claimed_oods_value += &constraint_coefficients[2 * i] * &x;
+fn oods_value_from_trace_values(
+    constraints: &[Constraint],
+    coefficients: &[FieldElement],
+    trace_length: usize,
+    trace_values: &[FieldElement],
+    oods_point: &FieldElement,
+) -> FieldElement {
+    let trace = |i: usize, j: isize| {
+        let j: usize = j.try_into().unwrap();
+        assert!(j == 0 || j == 1);
+        trace_values[2 * i + j].clone()
+    };
+    combine_constraints(constraints, coefficients, trace_length).evaluate(oods_point, &trace)
+}
 
-        // TODO: make this work when params.constraints_degree_bound is not 1.
-        let adjustment_degree = constraint.denominator.degree() - constraint.numerator.degree();
-        let adjustment = oods_point.pow(adjustment_degree);
-        claimed_oods_value += &constraint_coefficients[2 * i + 1] * adjustment * &x;
+fn oods_value_from_constraint_values(
+    constraint_values: &[FieldElement],
+    oods_point: &FieldElement,
+) -> FieldElement {
+    // TODO - Check if this is 100% unreachable, if so remove if not error.
+    assert!(constraint_values.len().is_power_of_two());
+
+    let mut result = FieldElement::ZERO;
+    let mut power = FieldElement::ONE;
+    for value in constraint_values {
+        result += value * &power;
+        power *= oods_point;
     }
-
-    if claimed_oods_value == get_oods_value(&oods_values[2 * trace_cols..], &oods_point) {
-        Ok(())
-    } else {
-        Err(Error::FriCalculationFailure)
-    }
+    result
 }
 
 // TODO: Clean up
@@ -364,19 +379,6 @@ fn out_of_domain_element(
     Ok(r)
 }
 
-fn get_oods_value(values: &[FieldElement], oods_point: &FieldElement) -> FieldElement {
-    // TODO - Check if this is 100% unreachable, if so remove if not error.
-    assert!(values.len().is_power_of_two());
-
-    let mut result = FieldElement::ZERO;
-    let mut power = FieldElement::ONE;
-    for value in values {
-        result += value * &power;
-        power *= oods_point;
-    }
-    result
-}
-
 type Result<T> = std::result::Result<T, Error>;
 
 // TODO - We could parametrize root unavailable with the size asked for and fri
@@ -390,7 +392,8 @@ pub enum Error {
     InvalidFriCommitment,
     HashMapFailure,
     ProofTooLong,
-    OddsCalculationFailure,
+    OodsCalculationFailure,
+    OodsMismatch,
     FriCalculationFailure,
     Merkle(MerkleError),
 }
@@ -414,7 +417,7 @@ impl fmt::Display for Error {
                 )
             }
             Error::ProofTooLong => write!(f, "The proof length doesn't match the specification"),
-            Error::OddsCalculationFailure => {
+            Error::OodsCalculationFailure => {
                 write!(
                     f,
                     "The calculated odds value doesn't match the committed one"
@@ -425,6 +428,9 @@ impl fmt::Display for Error {
                     f,
                     "The final FRI calculation suggests the committed polynomial isn't low degree"
                 )
+            }
+            Error::OodsMismatch => {
+                write!(f, "Calculated oods value doesn't match the committed one")
             }
             // This is a wrapper, so defer to the underlying types' implementation of `fmt`.
             Error::Merkle(ref e) => std::fmt::Display::fmt(e, f),
@@ -473,11 +479,10 @@ mod tests {
             &constraints,
             &public,
             &ProofParams {
-                blowup:                   16,
-                pow_bits:                 12,
-                queries:                  20,
-                fri_layout:               vec![3, 2],
-                constraints_degree_bound: 1,
+                blowup:     16,
+                pow_bits:   12,
+                queries:    20,
+                fri_layout: vec![3, 2],
             },
         );
 
@@ -486,11 +491,10 @@ mod tests {
             &constraints,
             &public,
             &ProofParams {
-                blowup:                   16,
-                pow_bits:                 12,
-                queries:                  20,
-                fri_layout:               vec![3, 2],
-                constraints_degree_bound: 1,
+                blowup:     16,
+                pow_bits:   12,
+                queries:    20,
+                fri_layout: vec![3, 2],
             },
             2,
             1024

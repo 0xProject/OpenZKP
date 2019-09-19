@@ -38,11 +38,10 @@ fn main() {
     let start = Instant::now();
     let constraints = get_fibonacci_constraints(&public);
     let potential_proof = stark_proof(&trace_table, &constraints, &public, &ProofParams {
-        blowup:                   16,
-        pow_bits:                 12,
-        queries:                  20,
-        fri_layout:               fri_layout.clone(),
-        constraints_degree_bound: 1,
+        blowup:     16,
+        pow_bits:   12,
+        queries:    20,
+        fri_layout: fri_layout.clone(),
     });
     let duration = start.elapsed();
     println!("{:?}", potential_proof.coin.digest);
@@ -53,19 +52,18 @@ fn main() {
         decommitment_size_upper_bound(20, 2, fri_layout.clone(), 20)
     );
 
-    // let verified = check_proof(
-    //     potential_proof.proof.as_slice(),
-    //     &constraints,
-    //     &public,
-    //     &ProofParams {
-    //         blowup:                   16,
-    //         pow_bits:                 12,
-    //         queries:                  20,
-    //         fri_layout:               fri_layout.clone(),
-    //         constraints_degree_bound: 1,
-    //     },
-    //     2,
-    //     1_048_576,
-    // );
-    // println!("Checking the proof resulted in: {:?}", verified);
+    let verified = check_proof(
+        potential_proof.proof.as_slice(),
+        &constraints,
+        &public,
+        &ProofParams {
+            blowup: 16,
+            pow_bits: 12,
+            queries: 20,
+            fri_layout,
+        },
+        2,
+        1_048_576,
+    );
+    println!("Checking the proof resulted in: {:?}", verified);
 }
