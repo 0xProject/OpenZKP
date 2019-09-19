@@ -491,33 +491,7 @@ fn calculate_fri_polynomial(
     fri_polynomial
 }
 
-fn fri_fold(p: &DensePolynomial, c: &FieldElement) -> DensePolynomial {
-    let shift = FieldElement::GENERATOR;
-    // Generator has an inverse
-    let unshift = shift.inv().unwrap();
-
-    // TODO: don't shift and unshift in this function.
-    let shifted = p.shift(&shift);
-    let coefficients: Vec<FieldElement> = shifted
-        .coefficients()
-        .chunks_exact(2)
-        .map(|pair: &[FieldElement]| (&pair[0] + c * &pair[1]).double())
-        .collect();
-    let result = DensePolynomial::from_vec(coefficients).shift(&unshift);
-
-    // Test fri_fold_2
-    let source = p.low_degree_extension(4).to_vec();
-    let expected = result.low_degree_extension(4).to_vec();
-    let mut actual = vec![FieldElement::ZERO; expected.len()];
-    fri_fold_2(c, &source, &mut actual);
-    for i in 0..expected.len() {
-        debug_assert_eq!(actual[i], expected[i]);
-    }
-
-    result
-}
-
-fn fri_fold_2(c: &FieldElement, source: &[FieldElement], destination: &mut [FieldElement]) {
+fn fri_fold(c: &FieldElement, source: &[FieldElement], destination: &mut [FieldElement]) {
     assert_eq!(destination.len() * 2, source.len());
     // P(x), P(-x)
     let n = source.len();
@@ -550,7 +524,7 @@ fn perform_fri_layering(
         // FRI layout values are small.
         #[allow(clippy::cast_possible_truncation)]
         let coset_size = 2_usize.pow(n_reductions as u32);
-        // TODO: Avoid to_vec
+        // OPT: Avoid to_vec
         let tree = FriTree::from_leaves(FriLeaves {
             coset_size,
             layer: layer.to_vec(),
@@ -561,10 +535,11 @@ fn perform_fri_layering(
         let mut coefficient = proof.get_random();
 
         // Fold layer
+        // OPT: Avoid allocating inner layers and compute directly to result
         for _ in 0..n_reductions {
             let mut next = MmapVec::with_capacity(layer.len() / 2);
             next.resize(layer.len() / 2, FieldElement::ZERO);
-            fri_fold_2(&coefficient, &layer, &mut next);
+            fri_fold(&coefficient, &layer, &mut next);
             std::mem::swap(&mut layer, &mut next);
             coefficient = coefficient.square();
         }
