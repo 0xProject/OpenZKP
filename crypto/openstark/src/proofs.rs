@@ -503,7 +503,39 @@ fn fri_fold(p: &DensePolynomial, c: &FieldElement) -> DensePolynomial {
         .chunks_exact(2)
         .map(|pair: &[FieldElement]| (&pair[0] + c * &pair[1]).double())
         .collect();
-    DensePolynomial::from_vec(coefficients).shift(&unshift)
+    let result = DensePolynomial::from_vec(coefficients).shift(&unshift);
+
+    // Test fri_fold_2
+    let source = p.low_degree_extension(4).to_vec();
+    let expected = result.low_degree_extension(4).to_vec();
+    let mut actual = vec![FieldElement::ZERO; expected.len()];
+    fri_fold_2(c, &source, &mut actual);
+    for i in 0..expected.len() {
+        debug_assert_eq!(actual[i], expected[i]);
+    }
+
+    result
+}
+
+fn fri_fold_2(c: &FieldElement, source: &[FieldElement], destination: &mut [FieldElement]) {
+    assert_eq!(destination.len() * 2, source.len());
+    // P(x), P(-x)
+    let n = source.len();
+    let root = FieldElement::root(n).unwrap();
+    let mut x = Vec::with_capacity(n);
+    for i in 0..n {
+        x.push(root.pow(i))
+    }
+    permute(&mut x);
+    for (a, b) in x.iter().tuples() {
+        assert_eq!(&-a, b);
+    }
+
+    let mut i = 0;
+    for ((px, pnx), result) in source.iter().tuples().zip(destination.iter_mut()) {
+        *result = (px + pnx) + (c / &x[i]) * (px - pnx);
+        i += 2;
+    }
 }
 
 fn perform_fri_layering(
@@ -743,6 +775,8 @@ mod tests {
     // TODO - See if it's possible to do context cloning and break this into smaller tests
     #[allow(clippy::cognitive_complexity)]
     fn fib_proof_test() {
+        crate::tests::init();
+
         let public = PublicInput {
             index: 1000,
             value: FieldElement::from(u256h!(
