@@ -6,6 +6,7 @@ use crate::{
 };
 use itertools::Itertools;
 use primefield::FieldElement;
+use std::prelude::v1::*;
 
 #[allow(dead_code)]
 pub(crate) trait ConstraintSystem {
