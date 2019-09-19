@@ -53,11 +53,12 @@ where
     // Get the oods information from the proof and random
     let oods_point: FieldElement = channel.get_random();
     let mut oods_values: Vec<FieldElement> = Vec::with_capacity(2 * trace_cols + 1);
-    for _ in 0..(2 * trace_cols + trace_degree(constraints)) {
+    let constraints_trace_degree = trace_degree(constraints);
+    for _ in 0..(2 * trace_cols + constraints_trace_degree) {
         oods_values.push(Replayable::<FieldElement>::replay(&mut channel));
     }
     let mut oods_coefficients: Vec<FieldElement> = Vec::with_capacity(2 * trace_cols + 1);
-    for _ in 0..2 * trace_cols + trace_degree(constraints) {
+    for _ in 0..2 * trace_cols + constraints_trace_degree {
         oods_coefficients.push(channel.get_random());
     }
 
@@ -125,7 +126,7 @@ where
     for query_index in &queries {
         constraint_values.push((
             *query_index,
-            Replayable::<FieldElement>::replay_many(&mut channel, trace_degree(constraints)),
+            Replayable::<FieldElement>::replay_many(&mut channel, constraints_trace_degree),
         ));
     }
     let constraint_proof_length = constraint_commitment.proof_size(&queries)?;

@@ -311,7 +311,8 @@ fn get_constraint_polynomials(
     // smaller.
     const CHUNK_SIZE: usize = 65536;
 
-    let coset_length = trace_length * trace_degree(constraints);
+    let constraints_trace_degree = trace_degree(constraints);
+    let coset_length = trace_length * constraints_trace_degree;
     let target_degree = coset_length - 1;
 
     info!("Compute offset trace table");
@@ -348,7 +349,7 @@ fn get_constraint_polynomials(
     let mut dag = AlgebraicGraph::new(
         &FieldElement::GENERATOR,
         trace_coset.num_rows(),
-        trace_degree(constraints),
+        constraints_trace_degree,
     );
     let result = dag.expression(expr);
     dag.optimize();
@@ -392,10 +393,10 @@ fn get_constraint_polynomials(
     // Convert to even and odd coefficient polynomials
     let mut constraint_polynomials: Vec<Vec<FieldElement>> =
         vec![
-            Vec::with_capacity(trace_coset.num_rows() / trace_degree(constraints));
-            trace_degree(constraints)
+            Vec::with_capacity(trace_coset.num_rows() / constraints_trace_degree);
+            constraints_trace_degree
         ];
-    for chunk in values.chunks_exact(trace_degree(constraints)) {
+    for chunk in values.chunks_exact(constraints_trace_degree) {
         for (i, coefficient) in chunk.iter().enumerate() {
             constraint_polynomials[i].push(coefficient.clone());
         }
