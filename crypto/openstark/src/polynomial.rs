@@ -99,10 +99,31 @@ impl DensePolynomial {
     }
 
     pub fn divide_out_point(&self, x: &FieldElement) -> Self {
-        let denominator = SparsePolynomial::new(&[(-x, 0), (FieldElement::ONE, 1)]);
-        let mut result = self - SparsePolynomial::new(&[(self.evaluate(x), 0)]);
-        result /= denominator;
+        let mut result = self.clone();
+        let value = result.divide_out_point_2(x);
+        assert_eq!(value, self.evaluate(x));
         result
+    }
+
+    /// Divide out a point in place.
+    ///
+    /// P'(X) = (P(X) - P(z)) / (X - z).
+    /// Returns P(z).
+    /// See: https://en.wikipedia.org/wiki/Synthetic_division
+    pub fn divide_out_point_2(&mut self, z: &FieldElement) -> FieldElement {
+        // Do an in-place division by (X - z) and return the remainder.
+        let n = self.0.len();
+        for i in (1..n).rev() {
+            let add = z * &self.0[i];
+            self.0[i - 1] += add;
+        }
+        let remainder = self.0[0].clone();
+        for i in (1..n) {
+            let prev = self.0[i].clone();
+            self.0[i - 1] = prev;
+        }
+        self.0[n - 1] = FieldElement::ZERO;
+        remainder
     }
 
     // Returns a polynomial such that f.shift(s)(x) = f(s * y).

@@ -193,6 +193,8 @@ where
             .collect::<Vec<_>>()
     );
 
+    // OPT: It may be faster to compute the constraint LDE from the trace LDE,
+    // instead of using an FFT.
     info!("Compute the low degree extension of constraint polynomials.");
     let constraint_lde = PolyLDE(
         constraint_polynomials
