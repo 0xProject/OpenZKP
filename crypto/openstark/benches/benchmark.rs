@@ -29,11 +29,10 @@ fn proof_make(crit: &mut Criterion) {
                 &get_fibonacci_constraints(&public),
                 &public,
                 &ProofParams {
-                    blowup:                   16,
-                    pow_bits:                 12,
-                    queries:                  20,
-                    fri_layout:               vec![3, 2, 1],
-                    constraints_degree_bound: 1,
+                    blowup:     16,
+                    pow_bits:   12,
+                    queries:    20,
+                    fri_layout: vec![3, 2, 1],
                 },
             ))
         })
@@ -58,11 +57,10 @@ fn proof_check(crit: &mut Criterion) {
         &get_fibonacci_constraints(&public),
         &public,
         &ProofParams {
-            blowup:                   16,
-            pow_bits:                 12,
-            queries:                  20,
-            fri_layout:               vec![3, 2, 1],
-            constraints_degree_bound: 1,
+            blowup:     16,
+            pow_bits:   12,
+            queries:    20,
+            fri_layout: vec![3, 2, 1],
         },
     );
 
@@ -73,11 +71,10 @@ fn proof_check(crit: &mut Criterion) {
                 &get_fibonacci_constraints(&public),
                 &public,
                 &ProofParams {
-                    blowup:                   16,
-                    pow_bits:                 12,
-                    queries:                  20,
-                    fri_layout:               vec![3, 2, 1],
-                    constraints_degree_bound: 1,
+                    blowup:     16,
+                    pow_bits:   12,
+                    queries:    20,
+                    fri_layout: vec![3, 2, 1],
                 },
                 2,
                 1024,

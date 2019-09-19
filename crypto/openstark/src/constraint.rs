@@ -11,6 +11,17 @@ pub struct Constraint {
     pub numerator:   SparsePolynomial,
 }
 
+pub(crate) fn trace_degree(constraints: &[Constraint]) -> usize {
+    constraints
+        .iter()
+        .map(|c| {
+            let (numerator_degree, denominator_degree) = c.expr.trace_degree();
+            numerator_degree - denominator_degree
+        })
+        .max()
+        .expect("constraints is empty")
+}
+
 // TODO: Show expression
 #[cfg(feature = "std")]
 impl std::fmt::Debug for Constraint {

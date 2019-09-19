@@ -2,7 +2,7 @@ use crate::{
     algebraic_dag::AlgebraicGraph,
     channel::{ProverChannel, RandomGenerator, Writable},
     check_proof,
-    constraint::Constraint,
+    constraint::{trace_degree, Constraint},
     polynomial::DensePolynomial,
     proof_of_work,
     proof_params::ProofParams,
@@ -128,14 +128,7 @@ where
         trace.num_columns(),
         size_mb
     );
-    info!(
-        "Constraint system {} constraints of max degree {}",
-        constraints.len(),
-        params.constraints_degree_bound
-    );
-
-    // TODO: Remove
-    // let constraints = &constraints[0..4];
+    info!("{} constraints", constraints.len(),);
 
     // Initialize a proof channel with the public input.
     info!("Initialize channel with public input.");
@@ -183,7 +176,6 @@ where
         constraints,
         &constraint_coefficients,
         trace.num_rows(),
-        params.constraints_degree_bound,
     );
     info!(
         "Constraint degrees: {:?}",
@@ -310,7 +302,6 @@ fn get_constraint_polynomials(
     constraints: &[Constraint],
     constraint_coefficients: &[FieldElement],
     trace_length: usize,
-    constraints_degree_bound: usize,
 ) -> Vec<DensePolynomial> {
     use RationalExpression::*;
 
@@ -320,8 +311,8 @@ fn get_constraint_polynomials(
     // smaller.
     const CHUNK_SIZE: usize = 65536;
 
-    let coset_length = trace_length * constraints_degree_bound;
-    let trace_degree = trace_length - 1;
+    let constraints_trace_degree = trace_degree(constraints);
+    let coset_length = trace_length * constraints_trace_degree;
     let target_degree = coset_length - 1;
 
     info!("Compute offset trace table");
@@ -334,7 +325,7 @@ fn get_constraint_polynomials(
         .zip(constraint_coefficients.iter().tuples())
         .map(
             |((i, constraint), (coefficient_low, coefficient_high))| -> RationalExpression {
-                let (num, den) = constraint.expr.degree(trace_degree);
+                let (num, den) = constraint.expr.degree(trace_length - 1);
                 let adjustment_degree = target_degree + den - num;
                 info!(
                     "Constraint {:?} adjustment {:?} {:?}",
@@ -358,7 +349,7 @@ fn get_constraint_polynomials(
     let mut dag = AlgebraicGraph::new(
         &FieldElement::GENERATOR,
         trace_coset.num_rows(),
-        constraints_degree_bound,
+        constraints_trace_degree,
     );
     let result = dag.expression(expr);
     dag.optimize();
@@ -402,10 +393,10 @@ fn get_constraint_polynomials(
     // Convert to even and odd coefficient polynomials
     let mut constraint_polynomials: Vec<Vec<FieldElement>> =
         vec![
-            Vec::with_capacity(trace_coset.num_rows() / constraints_degree_bound);
-            constraints_degree_bound
+            Vec::with_capacity(trace_coset.num_rows() / constraints_trace_degree);
+            constraints_trace_degree
         ];
-    for chunk in values.chunks_exact(constraints_degree_bound) {
+    for chunk in values.chunks_exact(constraints_trace_degree) {
         for (i, coefficient) in chunk.iter().enumerate() {
             constraint_polynomials[i].push(coefficient.clone());
         }
@@ -660,11 +651,10 @@ mod tests {
         );
         let constraints = &get_fibonacci_constraints(&public);
         let actual = stark_proof(&tt, &constraints, &public, &ProofParams {
-            blowup:                   16,
-            pow_bits:                 0,
-            queries:                  20,
-            fri_layout:               vec![3, 2],
-            constraints_degree_bound: 1,
+            blowup:     16,
+            pow_bits:   0,
+            queries:    20,
+            fri_layout: vec![3, 2],
         });
 
         // Commitment hashes from
@@ -703,11 +693,10 @@ mod tests {
         let expected = hex!("fcf1924f84656e5068ab9cbd44ae084b235bb990eefc0fd0183c77d5645e830e");
 
         let actual = stark_proof(&tt, &constraints, &public, &ProofParams {
-            blowup:                   16,
-            pow_bits:                 12,
-            queries:                  20,
-            fri_layout:               vec![3, 2],
-            constraints_degree_bound: 1,
+            blowup:     16,
+            pow_bits:   12,
+            queries:    20,
+            fri_layout: vec![3, 2],
         });
         assert_eq!(actual.coin.digest, expected);
     }
@@ -732,10 +721,9 @@ mod tests {
                 blowup: 16, /* TODO - The blowup in the fib constraints is hardcoded to 16,
                              * we should set this back to 32 to get wider coverage when
                              * that's fixed */
-                pow_bits:                 12,
-                queries:                  20,
-                fri_layout:               vec![3, 2],
-                constraints_degree_bound: 1,
+                pow_bits:   12,
+                queries:    20,
+                fri_layout: vec![3, 2],
             },
         );
 
@@ -747,10 +735,9 @@ mod tests {
                 blowup: 16, /* TODO - The blowup in the fib constraints is hardcoded to 16,
                              * we should set this back to 32 to get wider coverage when
                              * that's fixed */
-                pow_bits:                 12,
-                queries:                  20,
-                fri_layout:               vec![3, 2],
-                constraints_degree_bound: 1,
+                pow_bits:   12,
+                queries:    20,
+                fri_layout: vec![3, 2],
             },
             2,
             1024
@@ -772,11 +759,10 @@ mod tests {
         };
         let constraints = get_fibonacci_constraints(&public);
         let actual = stark_proof(&tt, &constraints, &public, &ProofParams {
-            blowup:                   16,
-            pow_bits:                 12,
-            queries:                  20,
-            fri_layout:               vec![2, 1, 4, 2],
-            constraints_degree_bound: 1,
+            blowup:     16,
+            pow_bits:   12,
+            queries:    20,
+            fri_layout: vec![2, 1, 4, 2],
         });
 
         assert!(check_proof(
@@ -784,11 +770,10 @@ mod tests {
             &constraints,
             &public,
             &ProofParams {
-                blowup:                   16,
-                pow_bits:                 12,
-                queries:                  20,
-                fri_layout:               vec![2, 1, 4, 2],
-                constraints_degree_bound: 1,
+                blowup:     16,
+                pow_bits:   12,
+                queries:    20,
+                fri_layout: vec![2, 1, 4, 2],
             },
             2,
             4096
@@ -822,11 +807,10 @@ mod tests {
         let trace_len = 1024;
         let constraints = get_fibonacci_constraints(&public);
         let params = ProofParams {
-            blowup:                   16,
-            pow_bits:                 12,
-            queries:                  20,
-            fri_layout:               vec![3, 2],
-            constraints_degree_bound: 1,
+            blowup:     16,
+            pow_bits:   12,
+            queries:    20,
+            fri_layout: vec![3, 2],
         };
 
         let omega = FieldElement::from(u256h!(
@@ -907,7 +891,6 @@ mod tests {
             &constraints,
             &constraint_coefficients,
             trace.num_rows(),
-            params.constraints_degree_bound,
         );
         assert_eq!(constraint_polynomials.len(), 1);
         assert_eq!(constraint_polynomials[0].len(), 1024);

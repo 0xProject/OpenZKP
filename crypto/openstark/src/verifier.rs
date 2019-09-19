@@ -1,5 +1,8 @@
 use crate::{
-    channel::*, constraint::Constraint, polynomial::DensePolynomial, proof_of_work,
+    channel::*,
+    constraint::{trace_degree, Constraint},
+    polynomial::DensePolynomial,
+    proof_of_work,
     proof_params::ProofParams,
 };
 use hash::Hash;
@@ -50,11 +53,12 @@ where
     // Get the oods information from the proof and random
     let oods_point: FieldElement = channel.get_random();
     let mut oods_values: Vec<FieldElement> = Vec::with_capacity(2 * trace_cols + 1);
-    for _ in 0..(2 * trace_cols + params.constraints_degree_bound) {
+    let constraints_trace_degree = trace_degree(constraints);
+    for _ in 0..(2 * trace_cols + constraints_trace_degree) {
         oods_values.push(Replayable::<FieldElement>::replay(&mut channel));
     }
     let mut oods_coefficients: Vec<FieldElement> = Vec::with_capacity(2 * trace_cols + 1);
-    for _ in 0..2 * trace_cols + params.constraints_degree_bound {
+    for _ in 0..2 * trace_cols + constraints_trace_degree {
         oods_coefficients.push(channel.get_random());
     }
 
@@ -122,7 +126,7 @@ where
     for query_index in &queries {
         constraint_values.push((
             *query_index,
-            Replayable::<FieldElement>::replay_many(&mut channel, params.constraints_degree_bound),
+            Replayable::<FieldElement>::replay_many(&mut channel, constraints_trace_degree),
         ));
     }
     let constraint_proof_length = constraint_commitment.proof_size(&queries)?;
@@ -262,7 +266,7 @@ where
         x /= constraint.denominator.evaluate(&oods_point);
         claimed_oods_value += &constraint_coefficients[2 * i] * &x;
 
-        // TODO: make this work when params.constraints_degree_bound is not 1.
+        // TODO: make this work when constraints.degree is not 1.
         let adjustment_degree = constraint.denominator.degree() - constraint.numerator.degree();
         let adjustment = oods_point.pow(adjustment_degree);
         claimed_oods_value += &constraint_coefficients[2 * i + 1] * adjustment * &x;
@@ -473,11 +477,10 @@ mod tests {
             &constraints,
             &public,
             &ProofParams {
-                blowup:                   16,
-                pow_bits:                 12,
-                queries:                  20,
-                fri_layout:               vec![3, 2],
-                constraints_degree_bound: 1,
+                blowup:     16,
+                pow_bits:   12,
+                queries:    20,
+                fri_layout: vec![3, 2],
             },
         );
 
@@ -486,11 +489,10 @@ mod tests {
             &constraints,
             &public,
             &ProofParams {
-                blowup:                   16,
-                pow_bits:                 12,
-                queries:                  20,
-                fri_layout:               vec![3, 2],
-                constraints_degree_bound: 1,
+                blowup:     16,
+                pow_bits:   12,
+                queries:    20,
+                fri_layout: vec![3, 2],
             },
             2,
             1024

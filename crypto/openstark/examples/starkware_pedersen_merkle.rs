@@ -39,11 +39,10 @@ fn main() {
 
     info!("Constructing proof...");
     let proof = stark_proof(&trace_table, &constraints, &public_input, &ProofParams {
-        blowup:                   16,
-        pow_bits:                 28,
-        queries:                  13,
-        fri_layout:               vec![3, 3, 3, 3, 2],
-        constraints_degree_bound: 2,
+        blowup:     16,
+        pow_bits:   28,
+        queries:    13,
+        fri_layout: vec![3, 3, 3, 3, 2],
     });
 
     info!("Spot checking proof...");
