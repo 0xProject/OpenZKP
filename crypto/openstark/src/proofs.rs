@@ -250,16 +250,16 @@ where
     decommit_fri_layers_and_trees(fri_trees.as_slice(), query_indices.as_slice(), &mut proof);
 
     // Verify proof
-    // info!("Verify proof.");
-    // assert!(check_proof(
-    //     proof.proof.as_slice(),
-    //     constraints,
-    //     public,
-    //     params,
-    //     trace.num_columns(),
-    //     trace.num_rows()
-    // )
-    // .is_ok());
+    info!("Verify proof.");
+    assert!(check_proof(
+        proof.proof.as_slice(),
+        constraints,
+        public,
+        params,
+        trace.num_columns(),
+        trace.num_rows()
+    )
+    .is_ok());
 
     // Q.E.D.
     // TODO: Return bytes, or a result structure
@@ -683,7 +683,7 @@ mod tests {
             index: 1000,
             value: tt[(1000, 0)].clone(),
         };
-        let _actual = stark_proof(
+        let actual = stark_proof(
             &get_trace_table(1024, &private),
             &get_fibonacci_constraints(&public),
             &public,

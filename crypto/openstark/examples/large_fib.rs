@@ -3,7 +3,7 @@ use env_logger;
 use log::info;
 use macros_decl::u256h;
 use openstark::{
-    decommitment_size_upper_bound,
+    check_proof, decommitment_size_upper_bound,
     fibonacci::{get_fibonacci_constraints, get_trace_table, PrivateInput, PublicInput},
     stark_proof, ProofParams,
 };
