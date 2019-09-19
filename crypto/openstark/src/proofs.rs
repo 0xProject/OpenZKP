@@ -227,7 +227,8 @@ where
 
     // 4. FRI layers with trees
     info!("FRI layers with trees.");
-    let fri_trees = perform_fri_layering(&oods_polynomial, &mut proof, &params);
+    let first_fri_layer = oods_polynomial.low_degree_extension(params.blowup);
+    let fri_trees = perform_fri_layering(first_fri_layer, &mut proof, &params);
 
     // 5. Proof of work
     info!("Proof of work.");
@@ -496,28 +497,33 @@ fn fri_fold(c: &FieldElement, source: &[FieldElement], destination: &mut [FieldE
     // P(x), P(-x)
     let n = source.len();
 
-    // TODO: Compute x coordinates on the fly or keep them around between layers
-    let mut x: Vec<_> = root_series(n).collect();
-    permute(&mut x);
+    // OPT: Compute x coordinates on the fly or keep them around between layers
+    let root_inv = FieldElement::root(n).unwrap().inv().unwrap();
+    let mut x_inv = MmapVec::with_capacity(n);
+    let mut accumulator = FieldElement::ONE;
+    for _ in 0..n {
+        x_inv.push(accumulator.clone());
+        accumulator *= &root_inv;
+    }
+    permute(&mut x_inv);
 
     // Note that we interpret fri as evaluated on domain with cofactor 1.
-    for ((x, _), (px, pnx), result) in izip!(
-        x.iter().tuples(),
+    // OPT: Parallelize
+    for ((x_inv, _), (px, pnx), result) in izip!(
+        x_inv.iter().tuples(),
         source.iter().tuples(),
         destination.iter_mut()
     ) {
-        *result = (px + pnx) + (c / x) * (px - pnx);
+        *result = (px + pnx) + c * x_inv * (px - pnx);
     }
 }
 
 fn perform_fri_layering(
-    fri_polynomial: &DensePolynomial,
+    mut layer: MmapVec<FieldElement>,
     proof: &mut ProverChannel,
     params: &ProofParams,
 ) -> Vec<FriTree> {
     let mut fri_trees: Vec<FriTree> = Vec::with_capacity(params.fri_layout.len());
-
-    let mut layer = fri_polynomial.low_degree_extension(params.blowup);
 
     for &n_reductions in &params.fri_layout {
         // Create tree from layer
@@ -917,7 +923,8 @@ mod tests {
             field_element!("03c6b730c58b55f44bbf3cb7ea82b2e6a0a8b23558e908b5466dfe42e821ee96")
         );
 
-        let fri_trees = perform_fri_layering(&CO, &mut proof, &params);
+        let fri_trees =
+            perform_fri_layering(CO.low_degree_extension(params.blowup), &mut proof, &params);
 
         // Checks that the first fri merkle tree root is right
         assert_eq!(
