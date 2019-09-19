@@ -63,7 +63,7 @@ impl VectorCommitment for PolyLDE {
 #[derive(Clone, Debug)]
 struct FriLeaves {
     coset_size: usize,
-    layer:      Vec<FieldElement>,
+    layer:      MmapVec<FieldElement>,
 }
 
 type FriTree = Tree<FriLeaves>;
@@ -524,10 +524,10 @@ fn perform_fri_layering(
         // FRI layout values are small.
         #[allow(clippy::cast_possible_truncation)]
         let coset_size = 2_usize.pow(n_reductions as u32);
-        // OPT: Avoid to_vec
+        // OPT: Avoid clone
         let tree = FriTree::from_leaves(FriLeaves {
             coset_size,
-            layer: layer.to_vec(),
+            layer: layer.clone(),
         })
         .unwrap();
         proof.write(tree.commitment());
