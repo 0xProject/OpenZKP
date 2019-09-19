@@ -16,7 +16,7 @@ use merkle_tree::{Tree, VectorCommitment};
 use mmap_vec::MmapVec;
 use primefield::{
     fft::{ifft_permuted, permute, permute_index},
-    geometric_series::{geometric_series, root_series},
+    geometric_series::geometric_series,
     FieldElement,
 };
 use rayon::prelude::*;
@@ -499,22 +499,22 @@ fn fri_fold(c: &FieldElement, source: &[FieldElement], destination: &mut [FieldE
 
     // OPT: Compute x coordinates on the fly or keep them around between layers
     let root_inv = FieldElement::root(n).unwrap().inv().unwrap();
-    let mut x_inv = MmapVec::with_capacity(n);
-    let mut accumulator = FieldElement::ONE;
+    let mut cx_inv = MmapVec::with_capacity(n);
+    let mut accumulator = c.clone();
     for _ in 0..n {
-        x_inv.push(accumulator.clone());
+        cx_inv.push(accumulator.clone());
         accumulator *= &root_inv;
     }
-    permute(&mut x_inv);
+    permute(&mut cx_inv);
 
     // Note that we interpret fri as evaluated on domain with cofactor 1.
     // OPT: Parallelize
-    for ((x_inv, _), (px, pnx), result) in izip!(
-        x_inv.iter().tuples(),
+    for ((cx_inv, _), (px, pnx), result) in izip!(
+        cx_inv.iter().tuples(),
         source.iter().tuples(),
         destination.iter_mut()
     ) {
-        *result = (px + pnx) + c * x_inv * (px - pnx);
+        *result = (px + pnx) + cx_inv * (px - pnx);
     }
 }
 
