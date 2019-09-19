@@ -44,11 +44,11 @@ mod polynomial;
 mod proof_of_work;
 mod proof_params;
 mod rational_expression;
-mod verifier;
+// mod verifier;
 
 pub use channel::{ProverChannel, VerifierChannel};
 pub use proof_params::{decommitment_size_upper_bound, ProofParams};
-pub use verifier::check_proof;
+// pub use verifier::check_proof;
 
 // In no std mode, substitute no_std_compat
 #[cfg(not(feature = "std"))]

@@ -86,30 +86,16 @@ pub fn get_fibonacci_constraints(public_input: &PublicInput) -> Vec<Constraint> 
 
     vec![
         Constraint {
-            expr:        (Trace(0, 1) - Trace(1, 0)) * reevery_row(),
-            base:        Box::new(|tp| tp[0].next() - &tp[1]),
-            numerator:   last_row.clone(),
-            denominator: every_row.clone(),
+            expr: (Trace(0, 1) - Trace(1, 0)) * reevery_row(),
         },
         Constraint {
-            expr:        (Trace(1, 1) - Trace(0, 0) - Trace(1, 0)) * reevery_row(),
-            base:        Box::new(|tp| tp[1].next() - &tp[1] - &tp[0]),
-            numerator:   last_row.clone(),
-            denominator: every_row.clone(),
+            expr: (Trace(1, 1) - Trace(0, 0) - Trace(1, 0)) * reevery_row(),
         },
         Constraint {
-            expr:        (Trace(0, 0) - 1.into()) * on_row(0),
-            base:        Box::new(|tp| &tp[0] - SparsePolynomial::new(&[(FieldElement::ONE, 0)])),
-            numerator:   no_rows.clone(),
-            denominator: first_row,
+            expr: (Trace(0, 0) - 1.into()) * on_row(0),
         },
         Constraint {
-            expr:        (Trace(0, 0) - (&claim_value).into()) * on_row(claim_index),
-            base:        Box::new(move |tp| {
-                &tp[0] - SparsePolynomial::new(&[(claim_value.clone(), 0)])
-            }),
-            numerator:   no_rows,
-            denominator: claim_index_row,
+            expr: (Trace(0, 0) - (&claim_value).into()) * on_row(claim_index),
         },
     ]
 }
