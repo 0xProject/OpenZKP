@@ -98,40 +98,11 @@ impl DensePolynomial {
         result
     }
 
-    pub fn divide_out_point(&self, x: &FieldElement) -> Self {
-        let mut result = self.clone();
-        let value = result.divide_out_point_2(x);
-        assert_eq!(value, self.evaluate(x));
-        result
-    }
-
-    /// Divide out a point in place.
-    ///
-    /// P'(X) = (P(X) - P(z)) / (X - z).
-    /// Returns P(z).
-    /// See: https://en.wikipedia.org/wiki/Synthetic_division
-    pub fn divide_out_point_2(&mut self, z: &FieldElement) -> FieldElement {
-        // Do an in-place division by (X - z) and return the remainder.
-        let mut previous = FieldElement::ZERO;
-        let mut remainder = FieldElement::ZERO;
-        for coefficient in self.0.iter_mut().rev() {
-            remainder *= z;
-            remainder += &*coefficient;
-            *coefficient = previous;
-            previous = remainder.clone();
-        }
-        remainder
-    }
-
     /// Divide out a point and add the scaled result to target.
     ///
     /// target += c * (P(X) - P(z)) / (X - z)
-    pub fn divide_out_point_into(
-        &self,
-        z: &FieldElement,
-        c: &FieldElement,
-        target: &mut DensePolynomial,
-    ) {
+    /// See: https://en.wikipedia.org/wiki/Synthetic_division
+    pub fn divide_out_point_into(&self, z: &FieldElement, c: &FieldElement, target: &mut Self) {
         let mut remainder = FieldElement::ZERO;
         for (coefficient, target) in self.0.iter().rev().zip(target.0.iter_mut().rev()) {
             *target += c * &remainder;
