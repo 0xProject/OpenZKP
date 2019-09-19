@@ -10,13 +10,13 @@ use crate::{
     TraceTable,
 };
 use hash::{Hash, Hashable, MaskedKeccak};
-use itertools::Itertools;
+use itertools::{izip, Itertools};
 use log::info;
 use merkle_tree::{Tree, VectorCommitment};
 use mmap_vec::MmapVec;
 use primefield::{
     fft::{ifft_permuted, permute, permute_index},
-    geometric_series::geometric_series,
+    geometric_series::{geometric_series, root_series},
     FieldElement,
 };
 use rayon::prelude::*;
@@ -521,20 +521,18 @@ fn fri_fold_2(c: &FieldElement, source: &[FieldElement], destination: &mut [Fiel
     assert_eq!(destination.len() * 2, source.len());
     // P(x), P(-x)
     let n = source.len();
-    let root = FieldElement::root(n).unwrap();
-    let mut x = Vec::with_capacity(n);
-    for i in 0..n {
-        x.push(root.pow(i))
-    }
-    permute(&mut x);
-    for (a, b) in x.iter().tuples() {
-        assert_eq!(&-a, b);
-    }
 
-    let mut i = 0;
-    for ((px, pnx), result) in source.iter().tuples().zip(destination.iter_mut()) {
-        *result = (px + pnx) + (c / &x[i]) * (px - pnx);
-        i += 2;
+    // TODO: Compute x coordinates on the fly or keep them around between layers
+    let mut x: Vec<_> = root_series(n).collect();
+    permute(&mut x);
+
+    // Note that we interpret fri as evaluated on domain with cofactor 1.
+    for ((x, _), (px, pnx), result) in izip!(
+        x.iter().tuples(),
+        source.iter().tuples(),
+        destination.iter_mut()
+    ) {
+        *result = (px + pnx) + (c / x) * (px - pnx);
     }
 }
 
@@ -545,26 +543,41 @@ fn perform_fri_layering(
 ) -> Vec<FriTree> {
     let mut fri_trees: Vec<FriTree> = Vec::with_capacity(params.fri_layout.len());
 
-    // TODO: fold fri_polynomial without cloning it first.
-    let mut p = fri_polynomial.clone();
-    for &n_reductions in &params.fri_layout {
-        // TODO: Avoid copies
-        let layer = p.low_degree_extension(params.blowup).to_vec();
+    let mut layer = fri_polynomial.low_degree_extension(params.blowup);
 
+    for &n_reductions in &params.fri_layout {
+        // Create tree from layer
         // FRI layout values are small.
         #[allow(clippy::cast_possible_truncation)]
         let coset_size = 2_usize.pow(n_reductions as u32);
-        let tree = FriTree::from_leaves(FriLeaves { coset_size, layer }).unwrap();
+        // TODO: Avoid to_vec
+        let tree = FriTree::from_leaves(FriLeaves {
+            coset_size,
+            layer: layer.to_vec(),
+        })
+        .unwrap();
         proof.write(tree.commitment());
         fri_trees.push(tree);
-
         let mut coefficient = proof.get_random();
+
+        // Fold layer
         for _ in 0..n_reductions {
-            p = fri_fold(&p, &coefficient);
+            let mut next = MmapVec::with_capacity(layer.len() / 2);
+            next.resize(layer.len() / 2, FieldElement::ZERO);
+            fri_fold_2(&coefficient, &layer, &mut next);
+            std::mem::swap(&mut layer, &mut next);
             coefficient = coefficient.square();
         }
     }
-    proof.write(p.shift(&FieldElement::GENERATOR).coefficients());
+
+    // Write the final layer coefficients
+    let n_coefficients = layer.len() / params.blowup;
+    let points = &mut layer[0..n_coefficients];
+    permute(points);
+    ifft_permuted(points);
+    permute(points);
+    proof.write(&*points);
+
     fri_trees
 }
 
