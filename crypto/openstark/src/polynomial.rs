@@ -112,13 +112,12 @@ impl DensePolynomial {
     /// See: https://en.wikipedia.org/wiki/Synthetic_division
     pub fn divide_out_point_2(&mut self, z: &FieldElement) -> FieldElement {
         // Do an in-place division by (X - z) and return the remainder.
-        let n = self.0.len();
         let mut previous = FieldElement::ZERO;
         let mut remainder = FieldElement::ZERO;
-        for i in (0..n).rev() {
+        for coefficient in self.0.iter_mut().rev() {
             remainder *= z;
-            remainder += &self.0[i];
-            self.0[i] = previous.clone();
+            remainder += &*coefficient;
+            *coefficient = previous;
             previous = remainder.clone();
         }
         remainder
