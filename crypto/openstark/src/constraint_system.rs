@@ -21,7 +21,8 @@ pub fn combine_constraints(
     trace_length: usize,
 ) -> RationalExpression {
     assert_eq!(2 * constraints.len(), constraint_coefficients.len());
-    let target_degree = trace_degree(constraints) * (trace_length - 1);
+    let target_degree = trace_degree(constraints) * trace_length - 1;
+    dbg!(target_degree);
 
     constraints
         .iter()
