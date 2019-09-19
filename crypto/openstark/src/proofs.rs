@@ -10,7 +10,7 @@ use crate::{
     TraceTable,
 };
 use hash::{Hash, Hashable, MaskedKeccak};
-use itertools::{izip, Itertools};
+use itertools::Itertools;
 use log::info;
 use merkle_tree::{Tree, VectorCommitment};
 use mmap_vec::MmapVec;
@@ -576,9 +576,6 @@ fn perform_fri_layering(
             }
             _ => unimplemented!(),
         };
-
-        // Fold layer more
-        // OPT: Avoid allocating temporary layers and compute result directly.
     }
 
     // Write the final layer coefficients
