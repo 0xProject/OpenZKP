@@ -531,7 +531,7 @@ fn perform_fri_layering(
 
         // Write commitment and pull coefficient
         proof.write(tree.commitment());
-        let mut coefficient = proof.get_random();
+        let coefficient = proof.get_random();
 
         // Fold layer up to three times
         // TODO: Capture the pattern in a macro and DRY.
@@ -574,6 +574,27 @@ fn perform_fri_layering(
                         .tuples()
                         .zip(x_inv.iter())
                         .map(|((p0, p1), x_inv)| (&p0 + &p1) + &coefficient_4 * x_inv * (p0 - p1)),
+                )
+            }
+            // TODO: Is there a use case for 4 layer folds?
+            4 => {
+                let coefficient_2 = coefficient.square();
+                let coefficient_4 = coefficient_2.square();
+                let coefficient_8 = coefficient_4.square();
+                next_layer.extend(
+                    layer
+                        .tuples()
+                        .zip(x_inv.iter())
+                        .map(|((p0, p1), x_inv)| (p0 + p1) + &coefficient * x_inv * (p0 - p1))
+                        .tuples()
+                        .zip(x_inv.iter())
+                        .map(|((p0, p1), x_inv)| (&p0 + &p1) + &coefficient_2 * x_inv * (p0 - p1))
+                        .tuples()
+                        .zip(x_inv.iter())
+                        .map(|((p0, p1), x_inv)| (&p0 + &p1) + &coefficient_4 * x_inv * (p0 - p1))
+                        .tuples()
+                        .zip(x_inv.iter())
+                        .map(|((p0, p1), x_inv)| (&p0 + &p1) + &coefficient_8 * x_inv * (p0 - p1)),
                 )
             }
             _ => unimplemented!(),
