@@ -9,7 +9,7 @@ use crate::{
 use hash::Hash;
 use merkle_tree::{Commitment, Error as MerkleError, Proof};
 use primefield::{
-    fft::{self, ifft},
+    fft::{self},
     geometric_series::root_series,
     FieldElement,
 };

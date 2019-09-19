@@ -7,7 +7,6 @@ use crate::{
     polynomial::DensePolynomial,
     proof_of_work,
     proof_params::ProofParams,
-    rational_expression::RationalExpression,
     TraceTable,
 };
 use hash::{Hash, Hashable, MaskedKeccak};
@@ -304,8 +303,6 @@ fn get_constraint_polynomials(
     constraint_coefficients: &[FieldElement],
     trace_length: usize,
 ) -> Vec<DensePolynomial> {
-    use RationalExpression::*;
-
     // OPT: Better parallelization strategies. Probably the best would be to
     // split to domain up in smaller cosets and solve their expressions
     // independently. This will make all periods and therefore lookup tables
@@ -314,7 +311,6 @@ fn get_constraint_polynomials(
 
     let constraints_trace_degree = trace_degree(constraints);
     let coset_length = trace_length * constraints_trace_degree;
-    let target_degree = coset_length - 1;
 
     info!("Compute offset trace table");
     let trace_coset = extract_trace_coset(trace_lde, coset_length);

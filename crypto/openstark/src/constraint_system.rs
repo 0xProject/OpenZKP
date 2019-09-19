@@ -7,7 +7,7 @@ use itertools::Itertools;
 use primefield::FieldElement;
 
 #[allow(dead_code)]
-pub trait ConstraintSystem {
+pub(crate) trait ConstraintSystem {
     type PrivateInput;
 
     // TODO: these should return results.
@@ -15,7 +15,7 @@ pub trait ConstraintSystem {
     fn trace(&self, private: &Self::PrivateInput) -> TraceTable;
 }
 
-pub fn combine_constraints(
+pub(crate) fn combine_constraints(
     constraints: &[Constraint],
     constraint_coefficients: &[FieldElement],
     trace_length: usize,
@@ -26,10 +26,9 @@ pub fn combine_constraints(
 
     constraints
         .iter()
-        .enumerate()
         .zip(constraint_coefficients.iter().tuples())
         .map(
-            |((i, constraint), (coefficient_low, coefficient_high))| -> RationalExpression {
+            |(constraint, (coefficient_low, coefficient_high))| -> RationalExpression {
                 let (num, den) = constraint.expr.degree(trace_length - 1);
                 let adjustment_degree = target_degree + den - num;
                 let adjustment = RationalExpression::Constant(coefficient_low.clone())
