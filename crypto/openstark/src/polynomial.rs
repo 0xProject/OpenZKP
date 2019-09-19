@@ -98,11 +98,17 @@ impl DensePolynomial {
         result
     }
 
-    pub fn divide_out_point(&self, x: &FieldElement) -> Self {
-        let denominator = SparsePolynomial::new(&[(-x, 0), (FieldElement::ONE, 1)]);
-        let mut result = self - SparsePolynomial::new(&[(self.evaluate(x), 0)]);
-        result /= denominator;
-        result
+    /// Divide out a point and add the scaled result to target.
+    ///
+    /// target += c * (P(X) - P(z)) / (X - z)
+    /// See: https://en.wikipedia.org/wiki/Synthetic_division
+    pub fn divide_out_point_into(&self, z: &FieldElement, c: &FieldElement, target: &mut Self) {
+        let mut remainder = FieldElement::ZERO;
+        for (coefficient, target) in self.0.iter().rev().zip(target.0.iter_mut().rev()) {
+            *target += c * &remainder;
+            remainder *= z;
+            remainder += coefficient;
+        }
     }
 
     // Returns a polynomial such that f.shift(s)(x) = f(s * y).
