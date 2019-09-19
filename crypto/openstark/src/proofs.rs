@@ -449,21 +449,33 @@ fn oods_combine(
 
     // Divide out points and linear sum the polynomials
     // OPT: Parallelization
-    let mut fri_polynomial = DensePolynomial::from_vec(vec![FieldElement::ZERO; trace_length]);
-    for (trace_polynomial, (c0, c1)) in trace_polynomials
+    let mut combined_polynomial = DensePolynomial::from_vec(vec![FieldElement::ZERO; trace_length]);
+    for (trace_polynomial, (coefficient_0, coefficient_1)) in trace_polynomials
         .iter()
         .zip(trace_coefficients.iter().tuples())
     {
-        trace_polynomial.divide_out_point_into(&oods_point, c0, &mut fri_polynomial);
-        trace_polynomial.divide_out_point_into(&oods_point_g, c1, &mut fri_polynomial);
+        trace_polynomial.divide_out_point_into(
+            &oods_point,
+            coefficient_0,
+            &mut combined_polynomial,
+        );
+        trace_polynomial.divide_out_point_into(
+            &oods_point_g,
+            coefficient_1,
+            &mut combined_polynomial,
+        );
     }
-    for (constraint_polynomial, c) in constraint_polynomials
+    for (constraint_polynomial, coefficient) in constraint_polynomials
         .iter()
         .zip(constraint_coefficients.iter())
     {
-        constraint_polynomial.divide_out_point_into(&oods_point_pow, c, &mut fri_polynomial);
+        constraint_polynomial.divide_out_point_into(
+            &oods_point_pow,
+            coefficient,
+            &mut combined_polynomial,
+        );
     }
-    fri_polynomial
+    combined_polynomial
 }
 
 fn perform_fri_layering(
