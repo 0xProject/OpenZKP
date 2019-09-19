@@ -555,6 +555,7 @@ fn perform_fri_layering(
         fri_fold(&coefficient, &x_inv, layer, &mut next_layer);
 
         // Fold layer more
+        // OPT: Avoid allocating temporary layers and compute result directly.
         for _ in 1..n_reductions {
             let mut layer = MmapVec::with_capacity(next_layer.len() / 2);
             layer.resize(next_layer.len() / 2, FieldElement::ZERO);
