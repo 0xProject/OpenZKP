@@ -1,6 +1,7 @@
 use crate::{
     channel::*,
-    constraint::{trace_degree, Constraint},
+    constraint::Constraint,
+    constraint_system::{combine_constraints},
     polynomial::DensePolynomial,
     proof_of_work,
     proof_params::ProofParams,
@@ -248,40 +249,29 @@ where
         }
     }
 
-    check_oods_value_matches(oods_values, oods_coefficients)
+    check_oods_value_matches(&oods_point, &oods_values, &oods_coefficients)
 }
 
-fn check_oods_value_matches(oods_values, oods_coefficients) -> Result<()> {
-    let trace = |i, j| -> FieldElement
-    let mut mock_polynomials: Vec<DensePolynomial> = vec![];
+fn check_oods_value_matches(
+    oods_point: &FieldElement,
+    oods_values: &[FieldElement],
+    oods_coefficients: &[FieldElement],
+) -> Result<()> {
+    let mut trace_values: BTreeMap<(usize, isize), FieldElement> = BTreeMap::new();
     for i in 0..trace_cols {
-        let fake_polynomial = DensePolynomial::new(&ifft(&[
-            oods_values[2 * i].clone(),
-            oods_values[2 * i + 1].clone(),
-        ]));
-        mock_polynomials.push(fake_polynomial);
+        let _ = trace_values.insert((i, 0), oods_values[2 * i].clone());
+        let _ = trace_values.insert((i, 1), oods_values[2 * i + 1].clone());
     }
+    let trace = |i, j| trace_values.get(&(i, j)).unwrap().clone();
 
-    let mut claimed_oods_value = FieldElement::ZERO;
-    for (i, constraint) in constraints.iter().enumerate() {
-        let mut x = (constraint.base)(&mock_polynomials).evaluate(&FieldElement::ONE);
-        x *= constraint.numerator.evaluate(&oods_point);
-        x /= constraint.denominator.evaluate(&oods_point);
-        claimed_oods_value += &constraint_coefficients[2 * i] * &x;
-
-        // TODO: make this work when constraints.degree is not 1.
-        let adjustment_degree = constraint.denominator.degree() - constraint.numerator.degree();
-        let adjustment = oods_point.pow(adjustment_degree);
-        claimed_oods_value += &constraint_coefficients[2 * i + 1] * adjustment * &x;
-    }
+    let claimed_oods_value =
+        combine_constraints(&constraints, &constraint_coefficients).evaluate(&oods_point, &trace);
 
     if claimed_oods_value != get_oods_value(&oods_values[2 * trace_cols..], &oods_point) {
-        Err(Error::FriCalculationFailure)
+        return Err(Error::FriCalculationFailure);
     }
-
     Ok(())
 }
-
 
 // TODO: Clean up
 #[allow(clippy::cast_possible_truncation)]

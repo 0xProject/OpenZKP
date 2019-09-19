@@ -3,6 +3,7 @@ use crate::{
     channel::{ProverChannel, RandomGenerator, Writable},
     check_proof,
     constraint::{trace_degree, Constraint},
+    constraint_system::combine_constraints,
     polynomial::DensePolynomial,
     proof_of_work,
     proof_params::ProofParams,
@@ -319,26 +320,7 @@ fn get_constraint_polynomials(
     let trace_coset = extract_trace_coset(trace_lde, coset_length);
 
     info!("Combine rational expressions");
-    let expr: RationalExpression = constraints
-        .iter()
-        .enumerate()
-        .zip(constraint_coefficients.iter().tuples())
-        .map(
-            |((i, constraint), (coefficient_low, coefficient_high))| -> RationalExpression {
-                let (num, den) = constraint.expr.degree(trace_length - 1);
-                let adjustment_degree = target_degree + den - num;
-                info!(
-                    "Constraint {:?} adjustment {:?} {:?}",
-                    i,
-                    adjustment_degree,
-                    (num, den)
-                );
-                let adjustment = Constant(coefficient_low.clone())
-                    + Constant(coefficient_high.clone()) * X.pow(adjustment_degree);
-                adjustment * constraint.expr.clone()
-            },
-        )
-        .sum();
+    let expr = combine_constraints(constraints, constraint_coefficients);
     info!("Combined constraint expression: {:?}", expr);
     let expr = expr.simplify();
     // OPT: Simplify expression

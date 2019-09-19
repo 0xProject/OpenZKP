@@ -1,19 +1,37 @@
-use crate::{Constraints, ProverChannel, TraceTable};
+use crate::{constraint::Constraint, trace_table::TraceTable};
+use primefield::FieldElement;
+use itertools::Itertools;
+use crate::rational_expression::RationalExpression;
 
-pub trait ConstraintSystem
-where
-    ProverChannel: Writable<&Public>,
-    VerifierChannel: Replayable<Public>,
-{
-    type Public;
-    type Private;
+#[allow(dead_code)]
+pub trait ConstraintSystem {
+    type PrivateInput;
 
-    // TODO: This should return a `Result` with the `Error` type being associated
-    // type.
-    fn constraints(public: &Self::Public) -> Constraints;
+    // TODO: these should return results.
+    fn constraints(&self) -> Vec<Constraints>;
+    fn trace(&self, private: &Self::PrivateInput) -> TraceTable;
+}
 
-    // TODO: This should return a `Result` with the `Error` type being associated
-    // type. TODO: The prover should check the trace table against the
-    // `Constraints` at least in debug mode.
-    fn trace(public: &Self::Public, private: &Self::Private) -> TraceTable;
+pub fn combine_constraints(
+    constraints: &[Constraint],
+    constraint_coefficients: &[FieldElement],
+) -> RationalExpression {
+    assert_eq!(2 * constraints.len(), constraint_coefficients.len());
+    let target_degree = 
+
+    constraints
+        .iter()
+        .enumerate()
+        .zip(constraint_coefficients.iter().tuples())
+        .map(
+            |((i, constraint), (coefficient_low, coefficient_high))| -> RationalExpression {
+                let (num, den) = constraint.expr.degree(trace_degree);
+                let adjustment_degree = target_degree + den - num;
+                let adjustment = RationalExpression::Constant(coefficient_low.clone())
+                    + RationalExpression::Constant(coefficient_high.clone())
+                        * RationalExpression::X.pow(adjustment_degree);
+                adjustment * constraint.expr.clone()
+            },
+        )
+        .sum()
 }
