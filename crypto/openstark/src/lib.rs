@@ -59,6 +59,8 @@ extern crate no_std_compat as std;
 //
 // Optional prover functionality. Note that prover requires std.
 #[cfg(feature = "prover")]
+pub mod mimc;
+#[cfg(feature = "prover")]
 pub mod pedersen_merkle;
 #[cfg(feature = "prover")]
 mod proofs;
