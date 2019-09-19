@@ -536,6 +536,8 @@ fn perform_fri_layering(
         // Fold layer up to three times
         // TODO: Capture the pattern in a macro and DRY.
         // OPT: Parallelization
+        // OPT: The structure in x_inv should allow faster methods,
+        // like in a radix-4 and radix-8 fft.
         let layer = layer.iter();
         match n_reductions {
             1 => {
