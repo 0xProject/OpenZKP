@@ -82,7 +82,6 @@ decl_module! {
                 pow_bits:                 12,
                 queries:                  20,
                 fri_layout:               vec![3, 2],
-                constraints_degree_bound: 1,
             },
                 2,
                 1024
@@ -303,11 +302,10 @@ mod tests {
             &constraints,
             &public,
             &ProofParams {
-                blowup:                   16,
-                pow_bits:                 12,
-                queries:                  20,
-                fri_layout:               vec![3, 2],
-                constraints_degree_bound: 1,
+                blowup:     16,
+                pow_bits:   12,
+                queries:    20,
+                fri_layout: vec![3, 2],
             },
         );
 

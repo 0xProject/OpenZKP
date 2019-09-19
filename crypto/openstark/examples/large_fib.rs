@@ -38,11 +38,10 @@ fn main() {
     let start = Instant::now();
     let constraints = get_fibonacci_constraints(&public);
     let potential_proof = stark_proof(&trace_table, &constraints, &public, &ProofParams {
-        blowup:                   16,
-        pow_bits:                 12,
-        queries:                  20,
-        fri_layout:               fri_layout.clone(),
-        constraints_degree_bound: 1,
+        blowup:     16,
+        pow_bits:   12,
+        queries:    20,
+        fri_layout: fri_layout.clone(),
     });
     let duration = start.elapsed();
     println!("{:?}", potential_proof.coin.digest);
@@ -58,11 +57,10 @@ fn main() {
         &constraints,
         &public,
         &ProofParams {
-            blowup:                   16,
-            pow_bits:                 12,
-            queries:                  20,
-            fri_layout:               fri_layout.clone(),
-            constraints_degree_bound: 1,
+            blowup: 16,
+            pow_bits: 12,
+            queries: 20,
+            fri_layout,
         },
         2,
         1_048_576,

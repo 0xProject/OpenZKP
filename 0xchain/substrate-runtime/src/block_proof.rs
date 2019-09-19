@@ -111,7 +111,6 @@ decl_module! {
                     pow_bits: 				  12,
                     queries:   				  20,
                     fri_layout:               no_macro_vec,
-                    constraints_degree_bound: 1,
                 },
                 2,
                 1024
@@ -175,11 +174,10 @@ impl<T: Trait> ProvideInherent for Module<T> {
             &get_fibonacci_constraints(&public),
             &public,
             &ProofParams {
-                blowup:                   16,
-                pow_bits:                 12,
-                queries:                  20,
-                fri_layout:               no_macro_vec,
-                constraints_degree_bound: 1,
+                blowup:     16,
+                pow_bits:   12,
+                queries:    20,
+                fri_layout: no_macro_vec,
             },
             2,
             1024,
@@ -273,11 +271,10 @@ mod tests {
             &get_fibonacci_constraints(&public),
             &public,
             &ProofParams {
-                blowup:                   16,
-                pow_bits:                 12,
-                queries:                  20,
-                fri_layout:               vec![3, 2],
-                constraints_degree_bound: 1,
+                blowup:     16,
+                pow_bits:   12,
+                queries:    20,
+                fri_layout: vec![3, 2],
             },
         );
         let incorrect_public = PublicInput {

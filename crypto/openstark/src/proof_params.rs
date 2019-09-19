@@ -34,21 +34,11 @@ pub struct ProofParams {
     /// After `fri_layout.sum()` reductions are done, the remaining polynomial
     /// is written explicitly in coefficient form.
     pub fri_layout: Vec<usize>,
-
-    /// The highest degree of any constraint polynomial.
-    ///
-    /// The polynomial constraints are not directly commited too on the trace
-    /// domain, instead they are calculated via "Deep fri" which samples and
-    /// commits too information outside of the domain.
-    ///
-    /// This information on constraint degree allows the out of domain sampling
-    /// to provide the right number points.
-    pub constraints_degree_bound: usize,
 }
 
 impl ProofParams {
     #[allow(dead_code)]
-    fn suggested(constraints_degree_bound: usize, domain_size_log: usize) -> Self {
+    fn suggested(domain_size_log: usize) -> Self {
         let num_threes = (domain_size_log - 8) / 3;
         let mut fri_layout = vec![3; num_threes];
         if num_threes * 3 == (domain_size_log - 8) {
@@ -62,7 +52,6 @@ impl ProofParams {
             pow_bits: 30,
             queries: 30,
             fri_layout,
-            constraints_degree_bound,
         }
     }
 
@@ -135,11 +124,10 @@ mod tests {
         };
         let constraints = get_fibonacci_constraints(&public);
         let actual = stark_proof(&tt, &constraints, &public, &ProofParams {
-            blowup:                   16,
-            pow_bits:                 12,
-            queries:                  20,
-            fri_layout:               vec![2, 1, 4, 2],
-            constraints_degree_bound: 1,
+            blowup:     16,
+            pow_bits:   12,
+            queries:    20,
+            fri_layout: vec![2, 1, 4, 2],
         });
         assert!(actual.proof.len() < decommitment_size_upper_bound(12, 2, vec![2, 1, 4, 2], 20));
     }
