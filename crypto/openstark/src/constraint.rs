@@ -1,14 +1,8 @@
-use crate::{
-    polynomial::{DensePolynomial, SparsePolynomial},
-    rational_expression::RationalExpression,
-};
+use crate::rational_expression::RationalExpression;
 use std::prelude::v1::*;
 
 pub struct Constraint {
-    pub expr:        RationalExpression,
-    pub base:        Box<dyn Fn(&[DensePolynomial]) -> DensePolynomial>,
-    pub denominator: SparsePolynomial,
-    pub numerator:   SparsePolynomial,
+    pub expr: RationalExpression,
 }
 
 pub(crate) fn trace_degree(constraints: &[Constraint]) -> usize {

@@ -1,3 +1,5 @@
+#[cfg(all(feature = "std", feature = "prover"))]
+use log::info;
 use macros_decl::hex;
 use std::convert::TryFrom;
 use tiny_keccak::Keccak;
@@ -7,11 +9,11 @@ use u256::U256;
 use rayon::prelude::*;
 
 // Difficulty threshold after which a multi-threaded solver is used.
-// Note: tests should use a difficulty below this  threshold .
+// Note: tests should use a difficulty below this threshold.
 #[cfg(all(feature = "std", feature = "prover"))]
 // False positive, constant is used when `std` is set
 #[allow(dead_code)]
-const THREADED_THRESHOLD: usize = 10;
+const THREADED_THRESHOLD: usize = 16;
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "std", derive(Debug))]
@@ -64,7 +66,7 @@ impl Challenge {
 #[cfg(feature = "prover")]
 impl Challenge {
     pub(crate) fn solve(&self) -> Response {
-        #[cfg(features = "std")]
+        #[cfg(feature = "std")]
         {
             if self.difficulty > THREADED_THRESHOLD {
                 return self.solve_threaded();
@@ -72,6 +74,10 @@ impl Challenge {
         }
 
         // We assume a nonce exists and will be found in reasonable time.
+        info!(
+            "Solving {} bit proof of work single-threaded.",
+            self.difficulty
+        );
         #[allow(clippy::maybe_infinite_iter)]
         (0_u64..)
             .map(|nonce| Response { nonce })
@@ -84,6 +90,10 @@ impl Challenge {
     // False positive, constant is used when `std` is set
     #[allow(dead_code)]
     fn solve_threaded(&self) -> Response {
+        info!(
+            "Solving {} bit proof of work multi-threaded.",
+            self.difficulty
+        );
         // NOTE: Rayon does not support open ended ranges, so we need to use a closed
         // one.
         (0..u64::max_value())

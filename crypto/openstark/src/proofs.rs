@@ -319,10 +319,6 @@ fn get_constraint_polynomials(
     let expr = combine_constraints(constraints, constraint_coefficients, trace_length);
     info!("Combined constraint expression: {:?}", expr);
     let expr = expr.simplify();
-    // OPT: Simplify expression
-    // OPT: Some sub-expressions have much lower degree, we can evaluate them on a
-    // smaller domain and combine the results in coefficient form.
-    info!("Simplified constraint expression: {:?}", expr);
 
     let mut dag = AlgebraicGraph::new(
         &FieldElement::GENERATOR,
@@ -335,7 +331,6 @@ fn get_constraint_polynomials(
     // TODO: Track and use result reference.
     let _ = dag.tree_shake(result);
     dag.init(0);
-    info!("Combined constraint graph: {:?}", dag);
 
     // Evaluate on the coset trace table
     info!("Evaluate on the coset trace table");
@@ -369,9 +364,9 @@ fn get_constraint_polynomials(
     }
 
     // Convert to even and odd coefficient polynomials
-    let mut constraint_polynomials: Vec<Vec<FieldElement>> =
+    let mut constraint_polynomials: Vec<MmapVec<FieldElement>> =
         vec![
-            Vec::with_capacity(trace_coset.num_rows() / constraints_trace_degree);
+            MmapVec::with_capacity(trace_coset.num_rows() / constraints_trace_degree);
             constraints_trace_degree
         ];
     for chunk in values.chunks_exact(constraints_trace_degree) {
@@ -381,7 +376,7 @@ fn get_constraint_polynomials(
     }
     constraint_polynomials
         .into_iter()
-        .map(DensePolynomial::from_vec)
+        .map(DensePolynomial::from_mmap_vec)
         .collect()
 }
 
@@ -418,7 +413,7 @@ fn oods_combine(
 
     // Divide out points and linear sum the polynomials
     // OPT: Parallelization
-    let mut combined_polynomial = DensePolynomial::from_vec(vec![FieldElement::ZERO; trace_length]);
+    let mut combined_polynomial = DensePolynomial::zeros(trace_length);
     for (trace_polynomial, (coefficient_0, coefficient_1)) in trace_polynomials
         .iter()
         .zip(trace_coefficients.iter().tuples())
@@ -601,10 +596,7 @@ fn decommit_fri_layers_and_trees(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        fibonacci::{get_fibonacci_constraints, get_trace_table, PrivateInput, PublicInput},
-        verifier::check_proof,
-    };
+    use crate::fibonacci::{get_fibonacci_constraints, get_trace_table, PrivateInput, PublicInput};
     use macros_decl::{field_element, hex, u256h};
     use primefield::{fft::permute_index, geometric_series::geometric_series};
     use u256::U256;
