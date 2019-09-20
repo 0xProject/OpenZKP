@@ -618,16 +618,11 @@ mod tests {
         let private = PrivateInput {
             secret: field_element!("83d36de9"),
         };
-        let tt = get_trace_table(1024, &private);
+        // Copied from solidity/contracts/fibonacci/fibonacci_public_input1.json
         let public = PublicInput {
             index: 1000,
-            value: tt[(1000, 0)].clone(),
+            value: field_element!("04d5f1f669b34fb7252d5a9d0d9786b2638c27eaa04e820b38b088057960cca1"),
         };
-        // Copied from solidity/contracts/fibonacci/fibonacci_public_input1.json
-        assert_eq!(
-            tt[(1000, 0)],
-            field_element!("04d5f1f669b34fb7252d5a9d0d9786b2638c27eaa04e820b38b088057960cca1")
-        );
         let actual = stark_proof(&public, &private, &ProofParams {
             blowup:     16,
             pow_bits:   0,
@@ -658,14 +653,13 @@ mod tests {
     #[test]
     fn fib_test_1024_python_witness() {
         let private = PrivateInput {
-            secret: FieldElement::from(u256h!(
+            secret: field_element!(
                 "00000000000000000000000000000000000000000000000000000000cafebabe"
-            )),
+            ),
         };
-        let tt = get_trace_table(1024, &private);
         let public = PublicInput {
             index: 1000,
-            value: tt[(1000, 0)].clone(),
+            value: field_element!("00"),
         };
         let expected = hex!("fcf1924f84656e5068ab9cbd44ae084b235bb990eefc0fd0183c77d5645e830e");
 
@@ -685,10 +679,11 @@ mod tests {
                 "00000000000000000000000000000000000000000000000f00dbabe0cafebabe"
             )),
         };
-        let tt = get_trace_table(1024, &private);
         let public = PublicInput {
             index: 1000,
-            value: tt[(1000, 0)].clone(),
+            value: field_element!(
+                "00000000000000000000000000000000000000000000000f00dbabe0cafebabe"
+            ),
         };
         let actual = stark_proof(
             &public,
@@ -721,14 +716,15 @@ mod tests {
     #[test]
     fn fib_test_4096() {
         let private = PrivateInput {
-            secret: FieldElement::from(u256h!(
+            secret: field_element!(
                 "00000000000000000000000000000000000000000000000f00dbabe0cafebabe"
-            )),
+            ),
         };
-        let tt = get_trace_table(4096, &private);
         let public = PublicInput {
             index: 4000,
-            value: tt[(4000, 0)].clone(),
+            value: field_element!(
+                "00000000000000000000000000000000000000000000000f00dbabe0cafebabe"
+            ),
         };
         let actual = stark_proof(&public, &private, &ProofParams {
             blowup:     16,
@@ -773,7 +769,8 @@ mod tests {
             )),
         };
 
-        let trace_len = 1024;
+        let trace_len = public.trace_length();
+        assert_eq!(trace_len, 1024);
         let params = ProofParams {
             blowup:     16,
             pow_bits:   12,
@@ -781,17 +778,17 @@ mod tests {
             fri_layout: vec![3, 2],
         };
 
-        let omega = FieldElement::from(u256h!(
+        let omega = field_element!(
             "0393a32b34832dbad650df250f673d7c5edd09f076fc314a3e5a42f0606082e1"
-        ));
-        let g = FieldElement::from(u256h!(
+        );
+        let g = field_element!(
             "0659d83946a03edd72406af6711825f5653d9e35dc125289a206c054ec89c4f1"
-        ));
+        );
         let eval_domain_size = trace_len * params.blowup;
-        let gen = FieldElement::from(U256::from(3_u64));
+        let gen = FieldElement::GENERATOR;
 
         // Second check that the trace table function is working.
-        let trace = get_trace_table(1024, &private);
+        let trace = public.trace(&private);
         assert_eq!(trace[(1000, 0)], public.value);
 
         let TPn = trace.interpolate();
@@ -848,6 +845,8 @@ mod tests {
             hex!("b7d80385fa0c8879473cdf987ea7970bb807aec78bb91af39a1504d965ad8e92")
         );
 
+        let constraints = public.constraints();
+        assert_eq!(constraints.len(), 4);
         let mut constraint_coefficients = Vec::with_capacity(2 * constraints.len());
         for _ in 0..constraints.len() {
             constraint_coefficients.push(proof.get_random());

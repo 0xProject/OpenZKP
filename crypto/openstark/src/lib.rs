@@ -38,7 +38,7 @@
 #![cfg_attr(feature = "std", warn(missing_debug_implementations,))]
 
 mod channel;
-mod constraint_system;
+pub mod constraint_system;
 mod constraints;
 pub mod fibonacci;
 mod polynomial;

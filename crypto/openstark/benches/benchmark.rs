@@ -3,7 +3,7 @@ use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use macros_decl::u256h;
 use openstark::{
     check_proof,
-    fibonacci::{get_fibonacci_constraints, get_trace_table, PrivateInput, PublicInput},
+    fibonacci::{PrivateInput, PublicInput},
     stark_proof, ProofParams,
 };
 use primefield::FieldElement;
@@ -25,9 +25,8 @@ fn proof_make(crit: &mut Criterion) {
     crit.bench_function("Making an abstracted Fibonacci proof", move |bench| {
         bench.iter(|| {
             black_box(stark_proof(
-                &get_trace_table(1024, &private),
-                &get_fibonacci_constraints(&public),
                 &public,
+                &private,
                 &ProofParams {
                     blowup:     16,
                     pow_bits:   12,
@@ -53,9 +52,8 @@ fn proof_check(crit: &mut Criterion) {
     };
 
     let proof = stark_proof(
-        &get_trace_table(1024, &private),
-        &get_fibonacci_constraints(&public),
         &public,
+        &private,
         &ProofParams {
             blowup:     16,
             pow_bits:   12,
@@ -68,7 +66,6 @@ fn proof_check(crit: &mut Criterion) {
         bench.iter(|| {
             black_box(check_proof(
                 proof.proof.as_slice(),
-                &get_fibonacci_constraints(&public),
                 &public,
                 &ProofParams {
                     blowup:     16,
@@ -76,8 +73,6 @@ fn proof_check(crit: &mut Criterion) {
                     queries:    20,
                     fri_layout: vec![3, 2, 1],
                 },
-                2,
-                1024,
             ))
         })
     });

@@ -4,9 +4,10 @@ use log::info;
 use macros_decl::u256h;
 use openstark::{
     check_proof, decommitment_size_upper_bound,
-    fibonacci::{get_fibonacci_constraints, get_trace_table, PrivateInput, PublicInput},
+    fibonacci::{PrivateInput, PublicInput},
     stark_proof, ProofParams,
 };
+use openstark::constraint_system::ConstraintSystem;
 use primefield::FieldElement;
 use std::{env, time::Instant};
 use u256::U256;
@@ -32,12 +33,11 @@ fn main() {
             "00000000000000000000000000000000000000000000000000000000cafebabe"
         )),
     };
-    let trace_table = get_trace_table(1_048_576, &private);
+    let trace_table = public.trace(&private);
     public.value = trace_table[(public.index, 0)].clone();
     let fri_layout = vec![3, 3, 3, 3, 2];
     let start = Instant::now();
-    let constraints = get_fibonacci_constraints(&public);
-    let potential_proof = stark_proof(&trace_table, &constraints, &public, &ProofParams {
+    let potential_proof = stark_proof(&public, &private, &ProofParams {
         blowup:     16,
         pow_bits:   12,
         queries:    20,
@@ -54,7 +54,6 @@ fn main() {
 
     let verified = check_proof(
         potential_proof.proof.as_slice(),
-        &constraints,
         &public,
         &ProofParams {
             blowup: 16,
@@ -62,8 +61,6 @@ fn main() {
             queries: 20,
             fri_layout,
         },
-        2,
-        1_048_576,
     );
     println!("Checking the proof resulted in: {:?}", verified);
 }

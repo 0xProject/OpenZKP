@@ -3,9 +3,10 @@ use env_logger;
 use log::info;
 use macros_decl::u256h;
 use openstark::{
-    fibonacci::{get_fibonacci_constraints, get_trace_table, PrivateInput, PublicInput},
+    fibonacci::{PrivateInput, PublicInput},
     stark_proof, ProofParams,
 };
+use openstark::constraint_system::ConstraintSystem;
 use primefield::FieldElement;
 use std::time::Instant;
 use u256::U256;
@@ -31,16 +32,13 @@ fn main() {
     info!("Private input: {:?}", private);
 
     info!("Constructing trace table...");
-    let trace_table = get_trace_table(1024, &private);
+    let trace_table = public.trace(&private);
 
     // Start timer
     let start = Instant::now();
 
-    info!("Constructing constraint system...");
-    let constraints = get_fibonacci_constraints(&public);
-
     info!("Constructing proof...");
-    let potential_proof = stark_proof(&trace_table, &constraints, &public, &ProofParams {
+    let potential_proof = stark_proof(&public, &private, &ProofParams {
         blowup:     16,
         pow_bits:   12,
         queries:    20,

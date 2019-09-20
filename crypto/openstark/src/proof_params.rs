@@ -106,20 +106,22 @@ mod tests {
         fibonacci::{PrivateInput, PublicInput},
         proofs::*,
     };
-    use macros_decl::u256h;
+    use macros_decl::{field_element, u256h};
     use primefield::FieldElement;
     use u256::U256;
 
     #[test]
     fn size_estimate_test() {
         let private = PrivateInput {
-            secret: FieldElement::from(u256h!(
+            secret: field_element!(
                 "00000000000000000000000000000000000000000000000f00dbabe0cafebabe"
-            )),
+            ),
         };
         let public = PublicInput {
             index: 4000,
-            value: tt[(4000, 0)].clone(),
+            value: field_element!(
+                "00000000000000000000000000000000000000000000000f00dbabe0cafebabe"
+            ),
         };
         let actual = stark_proof(&public, &private, &ProofParams {
             blowup:     16,
