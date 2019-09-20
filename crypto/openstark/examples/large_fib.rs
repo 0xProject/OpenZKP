@@ -1,12 +1,10 @@
 #![warn(clippy::all)]
 use env_logger;
 use log::info;
-use macros_decl::u256h;
+use macros_decl::field_element;
 use openstark::{
-    check_proof,
-    constraint_system::ConstraintSystem,
-    decommitment_size_upper_bound,
-    fibonacci::{PrivateInput, PublicInput},
+    check_proof, decommitment_size_upper_bound,
+    fibonacci::{get_value, PrivateInput, PublicInput},
     stark_proof, ProofParams,
 };
 use primefield::FieldElement;
@@ -25,17 +23,13 @@ fn main() {
     }
     info!("Starting Fibonacci benchmark...");
 
-    let mut public = PublicInput {
-        index: 1_000_000,
-        value: FieldElement::ZERO, // To be overwritten with the correct value.
-    };
-    let private = PrivateInput {
-        secret: FieldElement::from(u256h!(
-            "00000000000000000000000000000000000000000000000000000000cafebabe"
-        )),
-    };
-    let trace_table = public.trace(&private);
-    public.value = trace_table[(public.index, 0)].clone();
+    let index = 1_000_000;
+    let secret = field_element!("cafebabe");
+    let value = get_value(index, &secret);
+
+    let public = PublicInput { index, value };
+    let private = PrivateInput { secret };
+
     let fri_layout = vec![3, 3, 3, 3, 2];
     let start = Instant::now();
     let potential_proof = stark_proof(&public, &private, &ProofParams {

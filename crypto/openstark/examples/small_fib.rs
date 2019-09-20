@@ -1,9 +1,8 @@
 #![warn(clippy::all)]
 use env_logger;
 use log::info;
-use macros_decl::u256h;
+use macros_decl::field_element;
 use openstark::{
-    constraint_system::ConstraintSystem,
     fibonacci::{PrivateInput, PublicInput},
     stark_proof, ProofParams,
 };
@@ -17,22 +16,17 @@ fn main() {
     info!("Constructing public input...");
     let public = PublicInput {
         index: 1000,
-        value: FieldElement::from(u256h!(
+        value: field_element!(
             "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
-        )),
+        ),
     };
     info!("Public input: {:?}", public);
 
     info!("Constructing private input...");
     let private = PrivateInput {
-        secret: FieldElement::from(u256h!(
-            "00000000000000000000000000000000000000000000000000000000cafebabe"
-        )),
+        secret: field_element!("cafebabe"),
     };
     info!("Private input: {:?}", private);
-
-    info!("Constructing trace table...");
-    let trace_table = public.trace(&private);
 
     // Start timer
     let start = Instant::now();

@@ -2,7 +2,7 @@ use crate::{
     algebraic_dag::AlgebraicGraph,
     channel::{ProverChannel, RandomGenerator, Writable},
     check_proof,
-    constraint_system::{self, ConstraintSystem},
+    constraint_system::ConstraintSystem,
     constraints::Constraints,
     polynomial::DensePolynomial,
     proof_of_work,
@@ -597,7 +597,7 @@ fn decommit_fri_layers_and_trees(
 mod tests {
     use super::*;
     use crate::{
-        fibonacci::{PrivateInput, PublicInput},
+        fibonacci::{get_value, PrivateInput, PublicInput},
         verifier::check_proof,
     };
     use macros_decl::{field_element, hex, u256h};
@@ -648,16 +648,12 @@ mod tests {
 
     #[test]
     fn fib_test_1024_python_witness() {
-        let private = PrivateInput {
-            secret: field_element!(
-                "00000000000000000000000000000000000000000000000000000000cafebabe"
-            ),
-        };
-        let public = PublicInput {
-            index: 1000,
-            value: field_element!("00"),
-        };
-        let expected = hex!("fcf1924f84656e5068ab9cbd44ae084b235bb990eefc0fd0183c77d5645e830e");
+        let index = 1000;
+        let secret = field_element!("cafebabe");
+        let value = get_value(index, &secret);
+
+        let private = PrivateInput { secret };
+        let public = PublicInput { index, value };
 
         let actual = stark_proof(&public, &private, &ProofParams {
             blowup:     16,
@@ -665,22 +661,22 @@ mod tests {
             queries:    20,
             fri_layout: vec![3, 2],
         });
-        assert_eq!(actual.coin.digest, expected);
+
+        assert_eq!(
+            actual.coin.digest,
+            hex!("fcf1924f84656e5068ab9cbd44ae084b235bb990eefc0fd0183c77d5645e830e")
+        );
     }
 
     #[test]
     fn fib_test_1024_changed_witness() {
-        let private = PrivateInput {
-            secret: FieldElement::from(u256h!(
-                "00000000000000000000000000000000000000000000000f00dbabe0cafebabe"
-            )),
-        };
-        let public = PublicInput {
-            index: 1000,
-            value: field_element!(
-                "00000000000000000000000000000000000000000000000f00dbabe0cafebabe"
-            ),
-        };
+        let index = 1000;
+        let secret = field_element!("0f00dbabe0cafebabe");
+        let value = get_value(index, &secret);
+
+        let private = PrivateInput { secret };
+        let public = PublicInput { index, value };
+
         let actual = stark_proof(&public, &private, &ProofParams {
             blowup: 16, /* TODO - The blowup in the fib constraints is hardcoded to 16,
                          * we should set this back to 32 to get wider coverage when
@@ -703,17 +699,13 @@ mod tests {
 
     #[test]
     fn fib_test_4096() {
-        let private = PrivateInput {
-            secret: field_element!(
-                "00000000000000000000000000000000000000000000000f00dbabe0cafebabe"
-            ),
-        };
-        let public = PublicInput {
-            index: 4000,
-            value: field_element!(
-                "00000000000000000000000000000000000000000000000f00dbabe0cafebabe"
-            ),
-        };
+        let index = 4000;
+        let secret = field_element!("0f00dbabe0cafebabe");
+        let value = get_value(index, &secret);
+
+        let private = PrivateInput { secret };
+        let public = PublicInput { index, value };
+
         let actual = stark_proof(&public, &private, &ProofParams {
             blowup:     16,
             pow_bits:   12,

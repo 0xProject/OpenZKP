@@ -87,3 +87,14 @@ impl From<&[u8]> for PublicInput {
         Self { index, value }
     }
 }
+
+pub fn get_value(index: usize, secret: &FieldElement) -> FieldElement {
+    let mut x = FieldElement::ONE;
+    let mut y = secret.clone();
+    for _ in 0..index {
+        let (a, b) = (y.clone(), x + y);
+        x = a;
+        y = b;
+    }
+    x
+}
