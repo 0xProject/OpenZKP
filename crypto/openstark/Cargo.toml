@@ -16,7 +16,6 @@ merkle-tree = { path = "../../crypto/merkle-tree", default-features = false }
 # TODO: Remove these
 elliptic-curve = { path = "../../algebra/elliptic-curve", default-features = false }
 elliptic-curve-crypto = { path = "../../crypto/elliptic-curve-crypto", default-features = false }
-starkdex = { path = "../../0xchain/starkdex", default-features = false }
 
 no-std-compat = { version = "0.1.0", features = [ "alloc" ] }
 itertools = { version = "0.8.0", default_features = false }
@@ -52,7 +51,6 @@ std = [
     "elliptic-curve-crypto/std",
     "hash/std",
     "merkle-tree/std",
-    "starkdex/std",
     "no-std-compat/std",
     "itertools/use_std",
     "log/std",
@@ -64,7 +62,6 @@ test = [
     "primefield/test",
     "elliptic-curve/test",
     "elliptic-curve-crypto/test",
-    "starkdex/test",
     "quickcheck",
     "quickcheck_macros",
     "hex",

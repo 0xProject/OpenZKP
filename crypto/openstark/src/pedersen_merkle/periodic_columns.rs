@@ -1038,10 +1038,9 @@ pub(crate) const RIGHT_Y_COEFFICIENTS: [FieldElement; 256] = [
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::polynomial::DensePolynomial;
+    use crate::{pedersen_merkle::pedersen_points::PEDERSEN_POINTS, polynomial::DensePolynomial};
     use elliptic_curve::Affine;
     use primefield::geometric_series::root_series;
-    use starkdex::PEDERSEN_POINTS;
 
     #[test]
     fn left_coefficients_match() {

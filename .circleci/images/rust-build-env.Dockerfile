@@ -58,8 +58,8 @@ RUN true \
  # Compress cargo caches
  && cargo cache --autoclean-expensive
 
-# Pre-build packages except node
-ENV PACKAGES="--all --exclude substrate-node"
+# Pre-build all packages
+ENV PACKAGES="--all"
 
 # Warnings are not accepted in CI build
 ENV RUSTFLAGS="-Dwarnings"
@@ -69,8 +69,3 @@ RUN true \
  && CARGO_INCREMENTAL=0 RUSTFLAGS="$COVFLAGS" cargo +$NIGHTLY build $PACKAGES --tests --all-features \
  && cargo clippy $PACKAGES --all-targets --all-features \
  && cargo build --release --bench benchmark $PACKAGES --all-features
-
-# Pre-build substrate-node
-RUN true \
- && cd $HOME/project/0xchain/substrate-node \
- && cargo build --release

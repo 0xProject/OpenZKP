@@ -1,10 +1,12 @@
 use crate::{
-    pedersen_merkle::inputs::{PrivateInput, PublicInput},
+    pedersen_merkle::{
+        inputs::{PrivateInput, PublicInput},
+        pedersen_points::{PEDERSEN_POINTS, SHIFT_POINT},
+    },
     TraceTable,
 };
 use elliptic_curve::Affine;
 use primefield::FieldElement;
-use starkdex::{PEDERSEN_POINTS, SHIFT_POINT};
 use std::prelude::v1::*;
 use u256::U256;
 

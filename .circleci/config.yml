@@ -28,7 +28,7 @@ executors:
       # Necessary for `docker manifest` subcommand
       DOCKER_CLI_EXPERIMENTAL: enabled
       # Bump the tag version whenever changes are made.
-      IMAGE: &build_image "0xchain/rust-build-env:7"
+      IMAGE: &build_image "0xchain/rust-build-env:8"
   docker-rust:
     docker:
       - image: *build_image
@@ -45,8 +45,6 @@ executors:
         crypto/merkle-tree
         crypto/elliptic-curve-crypto
         crypto/openstark
-        0xchain/starkdex
-        0xchain/substrate-runtime
 commands:
   stop-if-image-exists:
     steps:
@@ -283,59 +281,6 @@ jobs:
             done
       - save-sccache-cache
       - codechecks
-  build-wasm-runtime:
-    executor: docker-rust
-    steps:
-      - checkout
-      - enable-sccache
-      - run:
-          name: Build wasm substrate runtime
-          command: |
-            pushd 0xchain/substrate-runtime-wasm
-            cargo +$NIGHTLY build --release
-            cp target/wasm32-unknown-unknown/release/substrate_node_runtime_wasm.wasm ./target/runtime.wasm
-      - save-sccache-cache
-      - run:
-          name: Optimize for size
-          command: |
-            pushd 0xchain/substrate-runtime-wasm/target
-            ls -l runtime.wasm
-            wasm-gc runtime.wasm
-            # OPT: Run wasm-opt -O3 runtime.wasm -o runtime.wasm
-            ls -l runtime.wasm
-      - run:
-          name: List top 50 space consumers
-          command: |
-            pushd 0xchain/substrate-runtime-wasm/target
-            twiggy top -n 50 runtime.wasm
-      - persist_to_workspace:
-          root: 0xchain/substrate-runtime-wasm/target
-          paths:
-            - runtime.wasm
-      - store_artifacts:
-          path: 0xchain/substrate-runtime-wasm/runtime.wasm
-          destination: runtime.wasm
-      - codechecks
-  build-node:
-    executor: docker-rust
-    resource_class: xlarge
-    steps:
-      - checkout
-      - attach_workspace:
-          at: /tmp/workspace
-      - enable-sccache
-      - run:
-          name: Build node executable
-          command: |
-            pushd 0xchain/substrate-node
-            cp /tmp/workspace/runtime.wasm ./assets/runtime.wasm
-            cargo build --release
-            git checkout --force ./assets/runtime.wasm
-      - save-sccache-cache
-      - store_artifacts:
-          path: target/release/substrate-node
-          destination: substrate-node
-      - codechecks
   clippy:
     executor: docker-rust
     steps:
@@ -383,21 +328,11 @@ jobs:
       #         cargo geiger --all-features --all-targets
       #         popd
       #       done
-      - run:
-          name: Check for vulnerabilities in substrate-runtime-wasm
-          command: |
-            pushd 0xchain/substrate-runtime-wasm
-            cargo audit
       - codechecks
       # TODO: Fix
       # - run:
       #     name: Check for outdated dependencies
       #     command: |
-      #       cargo outdated
-      # - run:
-      #     name: Check for outdated in substrate-runtime-wasm
-      #     command: |
-      #       pushd 0xchain/substrate-runtime-wasm
       #       cargo outdated
   accept:
     executor: minimal
@@ -436,13 +371,6 @@ workflows:
       - build-no-std:
           requires:
             - build-docker
-      - build-wasm-runtime:
-          requires:
-            - build-docker
-      - build-node:
-          requires:
-            - build-docker
-            - build-wasm-runtime
       - clippy:
           requires:
             - build-docker
@@ -468,4 +396,3 @@ workflows:
             - tests
             - benchmarks
             - build-no-std
-            - build-node

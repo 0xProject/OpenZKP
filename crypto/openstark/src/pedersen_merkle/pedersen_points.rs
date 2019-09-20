@@ -3,7 +3,12 @@ use macros_decl::field_element;
 use primefield::FieldElement;
 use u256::U256;
 
-pub const PEDERSEN_POINTS: [Affine; 506] = [
+pub(crate) const SHIFT_POINT: Affine = Affine::Point {
+    x: field_element!("049ee3eba8c1600700ee1b87eb599f16716b0b1022947733551fde4050ca6804"),
+    y: field_element!("03ca0cfe4b3bc6ddf346d49d06ea0ed34e621062c0e056c1d0405d266e10268a"),
+};
+
+pub(crate) const PEDERSEN_POINTS: [Affine; 506] = [
     Affine::Point {
         x: field_element!("049ee3eba8c1600700ee1b87eb599f16716b0b1022947733551fde4050ca6804"),
         y: field_element!("03ca0cfe4b3bc6ddf346d49d06ea0ed34e621062c0e056c1d0405d266e10268a"),
