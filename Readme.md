@@ -1,17 +1,27 @@
-# Crypto support library for StarkDEX
-
+# OpenStark
+[![Crates.io](https://img.shields.io/crates/l/openstark)](/License.md)
+[![](https://docs.rs/openstark/badge.svg)](https://docs.rs/openstark)
 [![CircleCI](https://img.shields.io/circleci/build/github/0xProject/starkcrypto)](https://circleci.com/gh/0xProject/starkcrypto)
 [![Codecov](https://img.shields.io/codecov/c/gh/0xproject/starkcrypto)](https://codecov.io/gh/0xProject/starkcrypto)
-<!-- TODO: License, Docs, Chat -->
 
-**Warning.** Side-channel resistance is currently not implemented. This library
-is optimized for performance and does not use slower side-channel resistant
-algorithms. Please evaluate the risks before using with sensitive data.
+A pure-rust implementation of the STARK Zero-Knowledge Proof system.
 
-**Note.** Code coverage in Rust is still very early days. The above number is
-likely inaccurate. Please view the coverage report for details.
+See the [example](#example) below. The current version has
+
+* 🌞 a simple interface,
+* 🗜️ succinct proofs,
+* 🏎️ decent performance,
+* 🌐 webassembly support,
+* ❌ *no* high-level language,
+* ❌ *no* comprehensive security audit,
+* ❌ *no* perfect zero-knowledge.
+
+See [state](#state) below for details.
 
 ## Packages
+
+This repository is a workspace containing many small packages that could be used.
+The main package is  [`crypto/openstark`](/crypto/openstark) [![Crates.io](https://img.shields.io/crates/v/openstark)](https://crates.io/project/openstark/).
 
 | Package                                                        | Version                                                                                                             | Description                                                                                       |
 | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
@@ -22,7 +32,61 @@ likely inaccurate. Please view the coverage report for details.
 | [`0x-order-utils`](/python-packages/order_utils)               | [![PyPI](https://img.shields.io/pypi/v/0x-order-utils.svg)](https://pypi.org/project/0x-order-utils/)               | A set of utilities for generating, parsing, signing and validating 0x orders                      |
 | [`0x-sra-client`](/python-packages/sra_client)                 | [![PyPI](https://img.shields.io/pypi/v/0x-sra-client.svg)](https://pypi.org/project/0x-sra-client/)                 | A Python client for interacting with servers conforming to the Standard Relayer API specification |
 
-https://img.shields.io/crates/v/criterion-utils?label=t
+## Example
+
+```rust
+use openstark::{Provable, Verifiable};
+
+struct Claim {
+    index: usize,
+    value: FieldElement,
+}
+
+struct Secret {
+    seed: FieldElement,
+}
+
+impl Verifiable for Claim {
+    fn constraints(&self) -> Constraints {
+        Constraints {
+            // TODO
+        }
+    }
+}
+
+impl Provable<Secret> for Claim {
+    // TODO
+}
+
+pub fn main() {
+    let claim = Claim {
+        index: 5000,
+        value: field_element!(""),
+    };
+    let secret = field_element!("");
+    let proof = claim.proof(secret);
+
+    claim.verify(proof)?;
+}
+```
+
+## State
+
+**A simple interface.** The public interface is simple and is considered stable. Future versions are expected to add functionality without breaking this interface.
+
+**Succinct proofs.** For a given security parameter, the proof size is close to minimal. Significant improvements here would require innovations in the way
+constraint systems are designed or in the underlying cryptography.
+
+**Decent performance.** All steps of the proof are using asymptotically optimal algorithms and
+all of the major steps are multi-threaded. There are no hard memory requirements. We can expect a good amount of performance improvements by fine-tuning, but we don't expect orders of magnitude improvements.
+
+**Webassembly support.** All packages 
+
+**No high-level language.** Constraints are specified using their algebraic expressions. This requires complicated and careful design from the library user and is easy to do wrong, leading to insecure systems. A high level language would help make development simpler and safer and facilitate re-use of components.
+
+**No comprehensive security audit.** While development is done with the best security practices in mind, it is still very early stage and has not had the amount of expert peer review required for a production grade system.
+
+**No perfect zero-knowledge.** The current implementation provides succinct proofs but not perfect zero knownledge. While non-trivial, it is theoretically possible to learn about the secret . We expect to solve this soon.
 
 
 ## Contributing
