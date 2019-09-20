@@ -2,6 +2,7 @@ use crate::{constraints::Constraints, rational_expression::RationalExpression};
 use primefield::FieldElement;
 use std::{convert::TryInto, prelude::v1::*};
 use u256::U256;
+use crate::constraint_system::ConstraintSystem;
 
 #[cfg(feature = "prover")]
 use crate::TraceTable;
@@ -17,6 +18,49 @@ pub struct PublicInput {
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct PrivateInput {
     pub secret: FieldElement,
+}
+
+impl ConstraintSystem for PublicInput {
+    type PrivateInput = PrivateInput;
+
+    fn constraints(&self) -> Constraints {
+        use RationalExpression::*;
+
+        let trace_length = self.trace_length()
+        let claim_index = self.index;
+        let claim_value = self.value;
+
+        let trace_generator = FieldElement::root(trace_length).unwrap();
+
+        // Constraint repetitions
+        let g = Constant(trace_generator);
+        let on_row = |index| (X - g.pow(index)).inv();
+        let reevery_row = || (X - g.pow(trace_length - 1)) / (X.pow(trace_length) - 1.into());
+
+        Constraints::new(vec![
+            (Trace(0, 1) - Trace(1, 0)) * reevery_row(),
+            (Trace(1, 1) - Trace(0, 0) - Trace(1, 0)) * reevery_row(),
+            (Trace(0, 0) - 1.into()) * on_row(0),
+            (Trace(0, 0) - (&claim_value).into()) * on_row(claim_index),
+        ])
+    }
+
+    fn trace_length(&self) -> usize {
+        self.index.next_power_of_two()
+    }
+
+    #[cfg(feature = "prover")]
+    fn trace(&self, private_input: PrivateInput) -> TraceTable {
+        let mut trace = TraceTable::new(self.trace_length(), 2);
+        trace[(0, 0)] = 1.into();
+        trace[(0, 1)] = private_input.secret.clone();
+        for i in 0..(self.trace_length() - 1) {
+            trace[(i + 1, 0)] = trace[(i, 1)].clone();
+            trace[(i + 1, 1)] = &trace[(i, 0)] + &trace[(i, 1)];
+        }
+        trace
+    }
+
 }
 
 impl From<&PublicInput> for Vec<u8> {
@@ -40,39 +84,4 @@ impl From<&[u8]> for PublicInput {
         ));
         Self { index, value }
     }
-}
-
-#[cfg(feature = "prover")]
-pub fn get_trace_table(length: usize, private: &PrivateInput) -> TraceTable {
-    // Compute trace table
-    let mut trace = TraceTable::new(length, 2);
-    trace[(0, 0)] = 1.into();
-    trace[(0, 1)] = private.secret.clone();
-    for i in 0..(length - 1) {
-        trace[(i + 1, 0)] = trace[(i, 1)].clone();
-        trace[(i + 1, 1)] = &trace[(i, 0)] + &trace[(i, 1)];
-    }
-    trace
-}
-
-pub fn get_fibonacci_constraints(public_input: &PublicInput) -> Constraints {
-    use RationalExpression::*;
-
-    let trace_length = public_input.index.next_power_of_two();
-    let claim_index = public_input.index;
-    let claim_value = public_input.value.clone();
-
-    let trace_generator = FieldElement::root(trace_length).unwrap();
-
-    // Constraint repetitions
-    let g = Constant(trace_generator);
-    let on_row = |index| (X - g.pow(index)).inv();
-    let reevery_row = || (X - g.pow(trace_length - 1)) / (X.pow(trace_length) - 1.into());
-
-    Constraints::new(vec![
-        (Trace(0, 1) - Trace(1, 0)) * reevery_row(),
-        (Trace(1, 1) - Trace(0, 0) - Trace(1, 0)) * reevery_row(),
-        (Trace(0, 0) - 1.into()) * on_row(0),
-        (Trace(0, 0) - (&claim_value).into()) * on_row(claim_index),
-    ])
 }

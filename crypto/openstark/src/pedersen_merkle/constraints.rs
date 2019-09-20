@@ -150,7 +150,7 @@ mod tests {
 
         let constraints = &get_pedersen_merkle_constraints(&public_input);
 
-        let proof = stark_proof(&trace_table, &constraints, &public_input, &ProofParams {
+        let proof = stark_proof(&public_input, &private_input, &ProofParams {
             blowup:     16,
             pow_bits:   0,
             queries:    13,

@@ -123,7 +123,7 @@ mod tests {
             value: tt[(4000, 0)].clone(),
         };
         let constraints = get_fibonacci_constraints(&public);
-        let actual = stark_proof(&tt, &constraints, &public, &ProofParams {
+        let actual = stark_proof(&public, &private, &ProofParams {
             blowup:     16,
             pow_bits:   12,
             queries:    20,

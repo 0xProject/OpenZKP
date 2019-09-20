@@ -8,6 +8,7 @@ use crate::{
     proof_params::ProofParams,
     TraceTable,
 };
+use crate::constraint_system::ConstraintSystem;
 use hash::{Hash, Hashable, MaskedKeccak};
 use itertools::Itertools;
 use log::info;
@@ -107,15 +108,17 @@ impl VectorCommitment for FriLeaves {
 #[allow(single_use_lifetimes)]
 // TODO: Simplify
 #[allow(clippy::cognitive_complexity)]
-pub fn stark_proof<Public>(
-    trace: &TraceTable,
-    constraints: &Constraints,
+pub fn stark_proof<Public: ConstraintSystem>(
     public: &Public,
+    private: &<Type as constraint_system::ConstraintSystem>::PrivateInput,
     params: &ProofParams,
 ) -> ProverChannel
 where
     for<'a> &'a Public: Into<Vec<u8>>,
 {
+    let trace = public.trace(private);
+    let constraints = public.constraints();
+
     info!("Starting Stark proof.");
     info!("Proof parameters: {:?}", params);
     // TODO: Use a proper size human formating function
@@ -172,7 +175,7 @@ where
     info!("Compute constraint polynomials.");
     let constraint_polynomials = get_constraint_polynomials(
         &tree.leaves(),
-        constraints,
+        &constraints,
         &constraint_coefficients,
         trace.num_rows(),
     );
@@ -252,11 +255,8 @@ where
     info!("Verify proof.");
     assert!(check_proof(
         proof.proof.as_slice(),
-        constraints,
         public,
         params,
-        trace.num_columns(),
-        trace.num_rows()
     )
     .is_ok());
 
@@ -625,7 +625,7 @@ mod tests {
             field_element!("04d5f1f669b34fb7252d5a9d0d9786b2638c27eaa04e820b38b088057960cca1")
         );
         let constraints = &get_fibonacci_constraints(&public);
-        let actual = stark_proof(&tt, &constraints, &public, &ProofParams {
+        let actual = stark_proof(&public, &private, &ProofParams {
             blowup:     16,
             pow_bits:   0,
             queries:    20,
@@ -667,7 +667,7 @@ mod tests {
         let constraints = &get_fibonacci_constraints(&public);
         let expected = hex!("fcf1924f84656e5068ab9cbd44ae084b235bb990eefc0fd0183c77d5645e830e");
 
-        let actual = stark_proof(&tt, &constraints, &public, &ProofParams {
+        let actual = stark_proof(&public, &private, &ProofParams {
             blowup:     16,
             pow_bits:   12,
             queries:    20,
@@ -689,9 +689,8 @@ mod tests {
             value: tt[(1000, 0)].clone(),
         };
         let actual = stark_proof(
-            &get_trace_table(1024, &private),
-            &get_fibonacci_constraints(&public),
             &public,
+            &private,
             &ProofParams {
                 blowup: 16, /* TODO - The blowup in the fib constraints is hardcoded to 16,
                              * we should set this back to 32 to get wider coverage when
@@ -704,7 +703,6 @@ mod tests {
 
         assert!(check_proof(
             actual.proof.as_slice(),
-            &get_fibonacci_constraints(&public),
             &public,
             &ProofParams {
                 blowup: 16, /* TODO - The blowup in the fib constraints is hardcoded to 16,
@@ -714,8 +712,6 @@ mod tests {
                 queries:    20,
                 fri_layout: vec![3, 2],
             },
-            2,
-            1024
         )
         .is_ok());
     }
@@ -733,7 +729,7 @@ mod tests {
             value: tt[(4000, 0)].clone(),
         };
         let constraints = get_fibonacci_constraints(&public);
-        let actual = stark_proof(&tt, &constraints, &public, &ProofParams {
+        let actual = stark_proof(&public, &private, &ProofParams {
             blowup:     16,
             pow_bits:   12,
             queries:    20,
@@ -742,7 +738,6 @@ mod tests {
 
         assert!(check_proof(
             actual.proof.as_slice(),
-            &constraints,
             &public,
             &ProofParams {
                 blowup:     16,
@@ -750,8 +745,6 @@ mod tests {
                 queries:    20,
                 fri_layout: vec![2, 1, 4, 2],
             },
-            2,
-            4096
         )
         .is_ok());
     }
