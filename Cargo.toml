@@ -14,19 +14,9 @@ members = [
     "crypto/merkle-tree",
     "crypto/elliptic-curve-crypto",
     "crypto/openstark",
-    "0xchain/starkdex",
-    "0xchain/substrate-node",
-    "0xchain/substrate-runtime",
 ]
 
 [profile.release]
 opt-level = 3
 lto = true
 panic = 'unwind'
-
-# HACK: Patch replace substrate's dependency on hex-literal with a local clone
-# that sets #[no_std].
-# Version 0.2.1 has a fix, but we can not override the dependency's version
-# See https://github.com/RustCrypto/utils/pull/30
-[replace]
-"hex-literal:0.1.4" = { path = "./vendor/hex-literal" }
