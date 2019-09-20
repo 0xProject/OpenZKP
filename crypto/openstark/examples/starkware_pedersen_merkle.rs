@@ -30,9 +30,6 @@ fn main() {
     info!("Constructing private input...");
     let private_input = starkware_private_input();
 
-    info!("Constructing trace table...");
-    let trace_table = get_trace_table(&public_input, &private_input);
-
     info!("Constructing constraint system...");
     let constraints = &get_pedersen_merkle_constraints(&public_input);
     info!("Constructed {:?} constraints", constraints);
