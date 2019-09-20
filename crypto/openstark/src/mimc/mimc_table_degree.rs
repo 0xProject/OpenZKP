@@ -56,28 +56,28 @@ impl ConstraintSystem for PublicInput {
 
         Constraints::new(vec![
             // Says the next row for each row is current x_0^alpha + k
-            (Trace(0, 1) - Exp(Box::new(Trace(0, 0)), ALPHA) - k_coef.clone()) * reevery_row(),
+            (Trace(0, 1) - (Exp(Box::new(Trace(0, 0)), ALPHA) + k_coef.clone())) * reevery_row(),
             // Says the first x_0 is the before
             (Trace(0, 0) - (&self.before).into()) * on_row(0),
             // Says the the x_0 on row ROUNDS
-            (Trace(0, 0) - (&self.after).into()) * on_row(ROUNDS+1),
+            (Trace(0, 0) - (&self.after).into()) * on_row(trace_length - 1),
         ])
     }
 
     fn trace_length(&self) -> usize {
-        (ROUNDS+1).next_power_of_two()
+        ROUNDS
     }
 
     #[cfg(feature = "prover")]
     fn trace(&self, _private_input: &Self::PrivateInput) -> TraceTable {
-        let mut trace = TraceTable::new((ROUNDS + 2).next_power_of_two(), 3);
+        let mut trace = TraceTable::new(ROUNDS, 1);
 
         let mut prev = self.before.clone();
-        for i in 0..=ROUNDS {
+        for i in 0..ROUNDS {
             trace[(i, 0)] = prev.clone();
             prev = &prev.pow(ALPHA) + &K_COEF[i % 16];
         }
-        assert_eq!(trace[(ROUNDS, 0)], self.after);
+        assert_eq!(trace[(ROUNDS-1, 0)], self.after);
         trace
     }
 
@@ -88,8 +88,8 @@ impl ConstraintSystem for PublicInput {
 
 pub fn mimc(start: &FieldElement) -> FieldElement {
     let mut prev = start.clone();
-    for i in 0..ROUNDS {
-        prev = prev.pow(ALPHA) + &K_COEF[i % 16];
+    for i in 1..ROUNDS {
+        prev = prev.pow(ALPHA) + &K_COEF[(i-1) % 16];
     }
     prev
 }

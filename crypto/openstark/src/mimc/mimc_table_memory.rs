@@ -9,6 +9,7 @@ use u256::U256;
 use crate::{verifier::check_proof, polynomial::DensePolynomial};
 use macros_decl::field_element;
 use std::convert::TryInto;
+use primefield::fft::ifft;
 
 // Note - this higher memory MiMC uses a fixed alpha = 3
 const ROUNDS: usize = 8192; // 2^13 to match Guild of Weavers
@@ -52,7 +53,7 @@ impl ConstraintSystem for PublicInput {
                 Box::new(X.pow(trace_length/16)),
             )
         };
-        let k_coef = periodic(&K_COEF);
+        let k_coef = periodic(&ifft(&K_COEF.to_vec()));
 
         Constraints::new(vec![
             // Says x_1 = x_0^2 
@@ -60,30 +61,30 @@ impl ConstraintSystem for PublicInput {
             // Says x_2 = x_1*x_0
             (Trace(0, 0)*Trace(1, 0) - Trace(2, 0)) * reevery_row(),
             // Says next row's x_0 = prev row x_2 + k_this row
-            (Trace(0, 1) - Trace(2, 0) - k_coef.clone()) * reevery_row(),
+            (Trace(0, 1) - (Trace(2, 0) + k_coef.clone())) * reevery_row(),
             // Says the first x_0 is the before
             (Trace(0, 0) - (&self.before).into()) * on_row(0),
             // Says the the x_0 on row ROUNDS
-            (Trace(0, 0) - (&self.after).into()) * on_row(ROUNDS+1),
+            (Trace(0, 0) - (&self.after).into()) * on_row(trace_length-1),
         ])
     }
 
     fn trace_length(&self) -> usize {
-        (ROUNDS+1).next_power_of_two()
+        ROUNDS
     }
 
     #[cfg(feature = "prover")]
     fn trace(&self, _private_input: &Self::PrivateInput) -> TraceTable {
-        let mut trace = TraceTable::new((ROUNDS + 2).next_power_of_two(), 3);
+        let mut trace = TraceTable::new(ROUNDS, 3);
 
         let mut prev = self.before.clone();
-        for i in 0..=ROUNDS {
+        for i in 0..ROUNDS {
             trace[(i, 0)] = prev.clone();
             trace[(i, 1)] = (&trace[(i, 0)]).square();
             trace[(i, 2)] = &trace[(i, 0)] * &trace[(i, 1)];
             prev = &trace[(i, 2)] + &K_COEF[i % 16];
         }
-        assert_eq!(trace[(ROUNDS, 0)], self.after);
+        assert_eq!(trace[(ROUNDS-1, 0)], self.after);
         trace
     }
 
@@ -94,8 +95,8 @@ impl ConstraintSystem for PublicInput {
 
 pub fn mimc(start: &FieldElement) -> FieldElement {
     let mut prev = start.clone();
-    for i in 0..ROUNDS {
-        prev = prev.pow(3) + &K_COEF[i % 16];
+    for i in 1..ROUNDS {
+        prev = prev.pow(3) + &K_COEF[(i-1) % 16];
     }
     prev
 }
