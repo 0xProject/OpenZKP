@@ -93,13 +93,11 @@ pub fn main() {
 
 **A simple interface.** The public interface is simple and is considered stable. Future versions are expected to add functionality without breaking this interface.
 
-**Succinct proofs.** For a given security parameter, the proof size is close to minimal. Significant improvements here would require innovations in the way
-constraint systems are designed or in the underlying cryptography.
+**Succinct proofs.** For a given security parameter, the proof size is close to minimal. Significant improvements here would require innovations in the way constraint systems are designed or in the underlying cryptography.
 
-**Decent performance.** All steps of the proof are using asymptotically optimal algorithms and
-all of the major steps are multi-threaded. There are no hard memory requirements. We can expect a good amount of performance improvements by fine-tuning, but we don't expect orders of magnitude improvements.
+**Decent performance.** All steps of the proof are using asymptotically optimal algorithms and all of the major steps are multi-threaded. There are no hard memory requirements. We can expect a good amount of performance improvements by fine-tuning, but we don't expect orders of magnitude improvements.
 
-**Webassembly support.** All packages 
+**Webassembly support.** The verifier can be used in a WebAssembly environment without the Rust `std` lib. The prover will work too, but has not been a priority.
 
 **No high-level language.** Constraints are specified using their algebraic expressions. This requires complicated and careful design from the library user and is easy to do wrong, leading to insecure systems. A high level language would help make development simpler and safer and facilitate re-use of components.
 
@@ -107,7 +105,7 @@ all of the major steps are multi-threaded. There are no hard memory requirements
 
 **No perfect zero-knowledge.** The current implementation provides succinct proofs but not perfect zero knowledge. While non-trivial, it is theoretically possible to learn something about the secret. We expect to add perfect zero-knowledge soon.
 
-**No side-channel resistance.**
+**No side-channel resistance.** The implementation favours performance over side-channel resistance. While this is common in zero-knowledge proof system, you should be aware .
 
 **Hard-coded field and hash.** The current implementation uses a particular [prime field](/algebra/primefield) and a particular [hash function](/crypto/hash). These are inherited from Starkdex and are optimized for verification in the Ethereum Virtual Machine. In the future we may generalize this to support other use cases.
 
