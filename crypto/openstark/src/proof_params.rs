@@ -103,7 +103,7 @@ pub fn decommitment_size_upper_bound(
 mod tests {
     use super::*;
     use crate::{
-        fibonacci::{get_fibonacci_constraints, get_trace_table, PrivateInput, PublicInput},
+        fibonacci::{PrivateInput, PublicInput},
         proofs::*,
     };
     use macros_decl::u256h;
@@ -117,12 +117,10 @@ mod tests {
                 "00000000000000000000000000000000000000000000000f00dbabe0cafebabe"
             )),
         };
-        let tt = get_trace_table(4096, &private);
         let public = PublicInput {
             index: 4000,
             value: tt[(4000, 0)].clone(),
         };
-        let constraints = get_fibonacci_constraints(&public);
         let actual = stark_proof(&public, &private, &ProofParams {
             blowup:     16,
             pow_bits:   12,

@@ -26,10 +26,7 @@ impl ConstraintSystem for PublicInput {
     fn constraints(&self) -> Constraints {
         use RationalExpression::*;
 
-        let trace_length = self.trace_length()
-        let claim_index = self.index;
-        let claim_value = self.value;
-
+        let trace_length = self.trace_length();
         let trace_generator = FieldElement::root(trace_length).unwrap();
 
         // Constraint repetitions
@@ -41,7 +38,7 @@ impl ConstraintSystem for PublicInput {
             (Trace(0, 1) - Trace(1, 0)) * reevery_row(),
             (Trace(1, 1) - Trace(0, 0) - Trace(1, 0)) * reevery_row(),
             (Trace(0, 0) - 1.into()) * on_row(0),
-            (Trace(0, 0) - (&claim_value).into()) * on_row(claim_index),
+            (Trace(0, 0) - (&self.value).into()) * on_row(self.index),
         ])
     }
 
@@ -50,7 +47,7 @@ impl ConstraintSystem for PublicInput {
     }
 
     #[cfg(feature = "prover")]
-    fn trace(&self, private_input: PrivateInput) -> TraceTable {
+    fn trace(&self, private_input: &PrivateInput) -> TraceTable {
         let mut trace = TraceTable::new(self.trace_length(), 2);
         trace[(0, 0)] = 1.into();
         trace[(0, 1)] = private_input.secret.clone();
@@ -59,6 +56,10 @@ impl ConstraintSystem for PublicInput {
             trace[(i + 1, 1)] = &trace[(i, 0)] + &trace[(i, 1)];
         }
         trace
+    }
+
+    fn trace_columns(&self) -> usize {
+        2
     }
 
 }

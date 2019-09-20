@@ -7,6 +7,7 @@ use crate::{
     proof_of_work,
     proof_params::ProofParams,
     TraceTable,
+    constraint_system,
 };
 use crate::constraint_system::ConstraintSystem;
 use hash::{Hash, Hashable, MaskedKeccak};
@@ -110,7 +111,7 @@ impl VectorCommitment for FriLeaves {
 #[allow(clippy::cognitive_complexity)]
 pub fn stark_proof<Public: ConstraintSystem>(
     public: &Public,
-    private: &<Type as constraint_system::ConstraintSystem>::PrivateInput,
+    private: &Public::PrivateInput,
     params: &ProofParams,
 ) -> ProverChannel
 where
@@ -601,7 +602,10 @@ fn decommit_fri_layers_and_trees(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fibonacci::{get_fibonacci_constraints, get_trace_table, PrivateInput, PublicInput};
+    use crate::{
+        fibonacci::{PrivateInput, PublicInput},
+        verifier::check_proof,
+    };
     use macros_decl::{field_element, hex, u256h};
     use primefield::{fft::permute_index, geometric_series::geometric_series};
     use u256::U256;
@@ -624,7 +628,6 @@ mod tests {
             tt[(1000, 0)],
             field_element!("04d5f1f669b34fb7252d5a9d0d9786b2638c27eaa04e820b38b088057960cca1")
         );
-        let constraints = &get_fibonacci_constraints(&public);
         let actual = stark_proof(&public, &private, &ProofParams {
             blowup:     16,
             pow_bits:   0,
@@ -664,7 +667,6 @@ mod tests {
             index: 1000,
             value: tt[(1000, 0)].clone(),
         };
-        let constraints = &get_fibonacci_constraints(&public);
         let expected = hex!("fcf1924f84656e5068ab9cbd44ae084b235bb990eefc0fd0183c77d5645e830e");
 
         let actual = stark_proof(&public, &private, &ProofParams {
@@ -728,7 +730,6 @@ mod tests {
             index: 4000,
             value: tt[(4000, 0)].clone(),
         };
-        let constraints = get_fibonacci_constraints(&public);
         let actual = stark_proof(&public, &private, &ProofParams {
             blowup:     16,
             pow_bits:   12,
@@ -773,7 +774,6 @@ mod tests {
         };
 
         let trace_len = 1024;
-        let constraints = get_fibonacci_constraints(&public);
         let params = ProofParams {
             blowup:     16,
             pow_bits:   12,

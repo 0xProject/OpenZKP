@@ -2,7 +2,7 @@ use crate::constraints::Constraints;
 #[cfg(feature = "prover")]
 use crate::trace_table::TraceTable;
 
-pub(crate) trait ConstraintSystem {
+pub trait ConstraintSystem {
     type PrivateInput;
 
     // TODO: these should return results.

@@ -474,7 +474,6 @@ mod tests {
                 "00000000000000000000000000000000000000000000000000000000cafebabe"
             )),
         };
-        let constraints = &get_fibonacci_constraints(&public);
         let actual = stark_proof(
             &public,
             &private,
