@@ -5,7 +5,6 @@ use openstark::{
     pedersen_merkle::{
         constraints::get_pedersen_merkle_constraints,
         inputs::{PrivateInput, PublicInput},
-        trace_table::get_trace_table,
     },
     stark_proof, ProofParams,
 };
