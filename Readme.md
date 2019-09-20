@@ -11,7 +11,33 @@ algorithms. Please evaluate the risks before using with sensitive data.
 **Note.** Code coverage in Rust is still very early days. The above number is
 likely inaccurate. Please view the coverage report for details.
 
-## Testing
+## Packages
+
+| Package                                                        | Version                                                                                                             | Description                                                                                       |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| [`criterion-utils`](/utils/criterion-utils) | [![Crates.io](https://img.shields.io/crates/v/criterion-utils?label=)](https://crates.io/project/0x-contract-addresses/) | A tiny utility library for getting known deployed contract addresses for a particular network     |
+| [`error-utils`](/utils/error-utils) | [![PyPI](https://img.shields.io/pypi/v/0x-contract-artifacts.svg)](https://pypi.org/project/0x-contract-artifacts/) | 0x smart contract compilation artifacts                                                           |
+| [`0x-contract-wrappers`](/python-packages/contract_wrappers)   | [![PyPI](https://img.shields.io/pypi/v/0x-contract-wrappers.svg)](https://pypi.org/project/0x-contract-wrappers/)   | 0x smart contract wrappers                                                                        |
+| [`0x-json-schemas`](/python-packages/json_schemas)             | [![PyPI](https://img.shields.io/pypi/v/0x-json-schemas.svg)](https://pypi.org/project/0x-json-schemas/)             | 0x-related JSON schemas                                                                           |
+| [`0x-order-utils`](/python-packages/order_utils)               | [![PyPI](https://img.shields.io/pypi/v/0x-order-utils.svg)](https://pypi.org/project/0x-order-utils/)               | A set of utilities for generating, parsing, signing and validating 0x orders                      |
+| [`0x-sra-client`](/python-packages/sra_client)                 | [![PyPI](https://img.shields.io/pypi/v/0x-sra-client.svg)](https://pypi.org/project/0x-sra-client/)                 | A Python client for interacting with servers conforming to the Standard Relayer API specification |
+
+https://img.shields.io/crates/v/criterion-utils?label=t
+
+
+## Contributing
+
+See our contributing guideline.
+
+**TODO.** Contributing guideline.
+
+**TODO.** Contributing guideline.
+
+**TODO.**  Issue templates.
+
+**TODO.**  Pull request template 
+
+
 
 See CircleCI documentation on how to [run tests locally][cci-local].
 
