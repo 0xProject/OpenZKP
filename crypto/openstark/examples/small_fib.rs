@@ -16,9 +16,7 @@ fn main() {
     info!("Constructing public input...");
     let public = PublicInput {
         index: 1000,
-        value: field_element!(
-            "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
-        ),
+        value: field_element!("0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"),
     };
     info!("Public input: {:?}", public);
 
