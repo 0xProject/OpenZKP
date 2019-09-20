@@ -2,10 +2,10 @@ use crate::{
     constraint::Constraint,
     pedersen_merkle::{
         inputs::PublicInput,
+        pedersen_points::SHIFT_POINT,
         periodic_columns::{
             LEFT_X_COEFFICIENTS, LEFT_Y_COEFFICIENTS, RIGHT_X_COEFFICIENTS, RIGHT_Y_COEFFICIENTS,
         },
-pedersen_points::SHIFT_POINT,
     },
     polynomial::DensePolynomial,
     rational_expression::RationalExpression,

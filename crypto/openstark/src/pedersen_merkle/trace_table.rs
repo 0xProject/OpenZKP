@@ -1,7 +1,8 @@
 use crate::{
-    pedersen_merkle::inputs::{PrivateInput, PublicInput,
+    pedersen_merkle::{
+        inputs::{PrivateInput, PublicInput},
+        pedersen_points::{PEDERSEN_POINTS, SHIFT_POINT},
     },
-    pedersen_merkle::pedersen_points::{PEDERSEN_POINTS, SHIFT_POINT},
     TraceTable,
 };
 use elliptic_curve::Affine;
