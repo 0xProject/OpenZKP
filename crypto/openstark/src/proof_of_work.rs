@@ -1,3 +1,4 @@
+#[cfg(all(feature = "std", feature = "prover"))]
 use log::info;
 use macros_decl::hex;
 use std::convert::TryFrom;
