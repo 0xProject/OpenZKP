@@ -132,10 +132,7 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Constraint
 mod tests {
     use super::*;
     use crate::{
-        pedersen_merkle::{
-            inputs::{short_private_input, SHORT_PUBLIC_INPUT},
-            trace_table::get_trace_table,
-        },
+        pedersen_merkle::inputs::{short_private_input, SHORT_PUBLIC_INPUT},
         proof_params::ProofParams,
         proofs::stark_proof,
     };
@@ -146,11 +143,8 @@ mod tests {
 
         let public_input = SHORT_PUBLIC_INPUT;
         let private_input = short_private_input();
-        let trace_table = get_trace_table(&public_input, &private_input);
 
-        let constraints = &get_pedersen_merkle_constraints(&public_input);
-
-        let proof = stark_proof(&trace_table, &constraints, &public_input, &ProofParams {
+        let proof = stark_proof(&public_input, &private_input, &ProofParams {
             blowup:     16,
             pow_bits:   0,
             queries:    13,

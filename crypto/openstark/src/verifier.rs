@@ -1,6 +1,6 @@
 use crate::{
-    channel::*, constraints::Constraints, polynomial::DensePolynomial, proof_of_work,
-    proof_params::ProofParams,
+    channel::*, constraint_system::ConstraintSystem, constraints::Constraints,
+    polynomial::DensePolynomial, proof_of_work, proof_params::ProofParams,
 };
 use hash::Hash;
 use merkle_tree::{Commitment, Error as MerkleError, Proof};
@@ -12,17 +12,18 @@ use u256::U256;
 
 // False positive, for<'a> is required.
 #[allow(single_use_lifetimes)]
-pub fn check_proof<Public>(
+pub fn check_proof<Public: ConstraintSystem>(
     proposed_proof: &[u8],
-    constraints: &Constraints,
     public: &Public,
     params: &ProofParams,
-    trace_cols: usize,
-    trace_len: usize,
 ) -> Result<()>
 where
     for<'a> &'a Public: Into<Vec<u8>>,
 {
+    let trace_len = public.trace_length();
+    let constraints = public.constraints();
+    let trace_cols = public.trace_columns();
+
     let eval_domain_size = trace_len * params.blowup;
     let eval_x = root_series(eval_domain_size).collect::<Vec<_>>();
 
@@ -471,32 +472,19 @@ mod tests {
                 "00000000000000000000000000000000000000000000000000000000cafebabe"
             )),
         };
-        let constraints = &get_fibonacci_constraints(&public);
-        let actual = stark_proof(
-            &get_trace_table(1024, &private),
-            &constraints,
-            &public,
-            &ProofParams {
-                blowup:     16,
-                pow_bits:   12,
-                queries:    20,
-                fri_layout: vec![3, 2],
-            },
-        );
+        let actual = stark_proof(&public, &private, &ProofParams {
+            blowup:     16,
+            pow_bits:   12,
+            queries:    20,
+            fri_layout: vec![3, 2],
+        });
 
-        assert!(check_proof(
-            actual.proof.as_slice(),
-            &constraints,
-            &public,
-            &ProofParams {
-                blowup:     16,
-                pow_bits:   12,
-                queries:    20,
-                fri_layout: vec![3, 2],
-            },
-            2,
-            1024
-        )
+        assert!(check_proof(actual.proof.as_slice(), &public, &ProofParams {
+            blowup:     16,
+            pow_bits:   12,
+            queries:    20,
+            fri_layout: vec![3, 2],
+        },)
         .is_ok());
     }
 }

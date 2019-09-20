@@ -5,7 +5,6 @@ use openstark::{
     pedersen_merkle::{
         constraints::get_pedersen_merkle_constraints,
         inputs::{PrivateInput, PublicInput},
-        trace_table::get_trace_table,
     },
     stark_proof, ProofParams,
 };
@@ -30,15 +29,12 @@ fn main() {
     info!("Constructing private input...");
     let private_input = starkware_private_input();
 
-    info!("Constructing trace table...");
-    let trace_table = get_trace_table(&public_input, &private_input);
-
     info!("Constructing constraint system...");
     let constraints = &get_pedersen_merkle_constraints(&public_input);
     info!("Constructed {:?} constraints", constraints);
 
     info!("Constructing proof...");
-    let proof = stark_proof(&trace_table, &constraints, &public_input, &ProofParams {
+    let proof = stark_proof(&public_input, &private_input, &ProofParams {
         blowup:     16,
         pow_bits:   28,
         queries:    13,
