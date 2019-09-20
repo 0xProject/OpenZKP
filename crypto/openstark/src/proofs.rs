@@ -2,14 +2,13 @@ use crate::{
     algebraic_dag::AlgebraicGraph,
     channel::{ProverChannel, RandomGenerator, Writable},
     check_proof,
+    constraint_system::{self, ConstraintSystem},
     constraints::Constraints,
     polynomial::DensePolynomial,
     proof_of_work,
     proof_params::ProofParams,
     TraceTable,
-    constraint_system,
 };
-use crate::constraint_system::ConstraintSystem;
 use hash::{Hash, Hashable, MaskedKeccak};
 use itertools::Itertools;
 use log::info;
@@ -254,12 +253,7 @@ where
 
     // Verify proof
     info!("Verify proof.");
-    assert!(check_proof(
-        proof.proof.as_slice(),
-        public,
-        params,
-    )
-    .is_ok());
+    assert!(check_proof(proof.proof.as_slice(), public, params,).is_ok());
 
     // Q.E.D.
     // TODO: Return bytes, or a result structure
@@ -621,7 +615,9 @@ mod tests {
         // Copied from solidity/contracts/fibonacci/fibonacci_public_input1.json
         let public = PublicInput {
             index: 1000,
-            value: field_element!("04d5f1f669b34fb7252d5a9d0d9786b2638c27eaa04e820b38b088057960cca1"),
+            value: field_element!(
+                "04d5f1f669b34fb7252d5a9d0d9786b2638c27eaa04e820b38b088057960cca1"
+            ),
         };
         let actual = stark_proof(&public, &private, &ProofParams {
             blowup:     16,
@@ -685,31 +681,23 @@ mod tests {
                 "00000000000000000000000000000000000000000000000f00dbabe0cafebabe"
             ),
         };
-        let actual = stark_proof(
-            &public,
-            &private,
-            &ProofParams {
-                blowup: 16, /* TODO - The blowup in the fib constraints is hardcoded to 16,
-                             * we should set this back to 32 to get wider coverage when
-                             * that's fixed */
-                pow_bits:   12,
-                queries:    20,
-                fri_layout: vec![3, 2],
-            },
-        );
+        let actual = stark_proof(&public, &private, &ProofParams {
+            blowup: 16, /* TODO - The blowup in the fib constraints is hardcoded to 16,
+                         * we should set this back to 32 to get wider coverage when
+                         * that's fixed */
+            pow_bits:   12,
+            queries:    20,
+            fri_layout: vec![3, 2],
+        });
 
-        assert!(check_proof(
-            actual.proof.as_slice(),
-            &public,
-            &ProofParams {
-                blowup: 16, /* TODO - The blowup in the fib constraints is hardcoded to 16,
-                             * we should set this back to 32 to get wider coverage when
-                             * that's fixed */
-                pow_bits:   12,
-                queries:    20,
-                fri_layout: vec![3, 2],
-            },
-        )
+        assert!(check_proof(actual.proof.as_slice(), &public, &ProofParams {
+            blowup: 16, /* TODO - The blowup in the fib constraints is hardcoded to 16,
+                         * we should set this back to 32 to get wider coverage when
+                         * that's fixed */
+            pow_bits:   12,
+            queries:    20,
+            fri_layout: vec![3, 2],
+        },)
         .is_ok());
     }
 
@@ -733,16 +721,12 @@ mod tests {
             fri_layout: vec![2, 1, 4, 2],
         });
 
-        assert!(check_proof(
-            actual.proof.as_slice(),
-            &public,
-            &ProofParams {
-                blowup:     16,
-                pow_bits:   12,
-                queries:    20,
-                fri_layout: vec![2, 1, 4, 2],
-            },
-        )
+        assert!(check_proof(actual.proof.as_slice(), &public, &ProofParams {
+            blowup:     16,
+            pow_bits:   12,
+            queries:    20,
+            fri_layout: vec![2, 1, 4, 2],
+        },)
         .is_ok());
     }
 
@@ -778,12 +762,9 @@ mod tests {
             fri_layout: vec![3, 2],
         };
 
-        let omega = field_element!(
-            "0393a32b34832dbad650df250f673d7c5edd09f076fc314a3e5a42f0606082e1"
-        );
-        let g = field_element!(
-            "0659d83946a03edd72406af6711825f5653d9e35dc125289a206c054ec89c4f1"
-        );
+        let omega =
+            field_element!("0393a32b34832dbad650df250f673d7c5edd09f076fc314a3e5a42f0606082e1");
+        let g = field_element!("0659d83946a03edd72406af6711825f5653d9e35dc125289a206c054ec89c4f1");
         let eval_domain_size = trace_len * params.blowup;
         let gen = FieldElement::GENERATOR;
 

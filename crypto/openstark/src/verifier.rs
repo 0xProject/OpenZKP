@@ -1,9 +1,7 @@
 use crate::{
-    channel::*, polynomial::DensePolynomial, proof_of_work,
-    proof_params::ProofParams,
-    constraint_system::ConstraintSystem,
+    channel::*, constraint_system::ConstraintSystem, constraints::Constraints,
+    polynomial::DensePolynomial, proof_of_work, proof_params::ProofParams,
 };
-use crate::constraints::Constraints;
 use hash::Hash;
 use merkle_tree::{Commitment, Error as MerkleError, Proof};
 use primefield::{fft, geometric_series::root_series, FieldElement};
@@ -474,27 +472,19 @@ mod tests {
                 "00000000000000000000000000000000000000000000000000000000cafebabe"
             )),
         };
-        let actual = stark_proof(
-            &public,
-            &private,
-            &ProofParams {
-                blowup:     16,
-                pow_bits:   12,
-                queries:    20,
-                fri_layout: vec![3, 2],
-            },
-        );
+        let actual = stark_proof(&public, &private, &ProofParams {
+            blowup:     16,
+            pow_bits:   12,
+            queries:    20,
+            fri_layout: vec![3, 2],
+        });
 
-        assert!(check_proof(
-            actual.proof.as_slice(),
-            &public,
-            &ProofParams {
-                blowup:     16,
-                pow_bits:   12,
-                queries:    20,
-                fri_layout: vec![3, 2],
-            },
-        )
+        assert!(check_proof(actual.proof.as_slice(), &public, &ProofParams {
+            blowup:     16,
+            pow_bits:   12,
+            queries:    20,
+            fri_layout: vec![3, 2],
+        },)
         .is_ok());
     }
 }

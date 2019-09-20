@@ -1,10 +1,11 @@
+use crate::{
+    constraint_system::ConstraintSystem,
+    constraints::Constraints,
+    pedersen_merkle::{constraints::get_pedersen_merkle_constraints, trace_table::get_trace_table},
+    trace_table::TraceTable,
+};
 use primefield::FieldElement;
 use std::{prelude::v1::*, vec};
-use crate::pedersen_merkle::constraints::get_pedersen_merkle_constraints;
-use crate::pedersen_merkle::trace_table::get_trace_table;
-use crate::trace_table::TraceTable;
-use crate::constraint_system::ConstraintSystem;
- use crate::constraints::Constraints;
 
 #[derive(PartialEq, Clone)]
 #[cfg_attr(feature = "std", derive(Debug))]
@@ -27,12 +28,15 @@ impl ConstraintSystem for PublicInput {
     fn constraints(&self) -> Constraints {
         get_pedersen_merkle_constraints(self)
     }
+
     fn trace_length(&self) -> usize {
         256 * self.path_length
     }
+
     fn trace_columns(&self) -> usize {
         8
     }
+
     #[cfg(feature = "prover")]
     fn trace(&self, private: &Self::PrivateInput) -> TraceTable {
         get_trace_table(self, private)

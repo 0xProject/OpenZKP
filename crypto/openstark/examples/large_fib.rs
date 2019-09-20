@@ -3,11 +3,12 @@ use env_logger;
 use log::info;
 use macros_decl::u256h;
 use openstark::{
-    check_proof, decommitment_size_upper_bound,
+    check_proof,
+    constraint_system::ConstraintSystem,
+    decommitment_size_upper_bound,
     fibonacci::{PrivateInput, PublicInput},
     stark_proof, ProofParams,
 };
-use openstark::constraint_system::ConstraintSystem;
 use primefield::FieldElement;
 use std::{env, time::Instant};
 use u256::U256;
@@ -52,15 +53,11 @@ fn main() {
         decommitment_size_upper_bound(20, 2, fri_layout.clone(), 20)
     );
 
-    let verified = check_proof(
-        potential_proof.proof.as_slice(),
-        &public,
-        &ProofParams {
-            blowup: 16,
-            pow_bits: 12,
-            queries: 20,
-            fri_layout,
-        },
-    );
+    let verified = check_proof(potential_proof.proof.as_slice(), &public, &ProofParams {
+        blowup: 16,
+        pow_bits: 12,
+        queries: 20,
+        fri_layout,
+    });
     println!("Checking the proof resulted in: {:?}", verified);
 }

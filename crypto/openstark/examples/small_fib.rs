@@ -3,10 +3,10 @@ use env_logger;
 use log::info;
 use macros_decl::u256h;
 use openstark::{
+    constraint_system::ConstraintSystem,
     fibonacci::{PrivateInput, PublicInput},
     stark_proof, ProofParams,
 };
-use openstark::constraint_system::ConstraintSystem;
 use primefield::FieldElement;
 use std::time::Instant;
 use u256::U256;

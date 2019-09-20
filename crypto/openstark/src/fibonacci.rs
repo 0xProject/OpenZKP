@@ -1,8 +1,10 @@
-use crate::{constraints::Constraints, rational_expression::RationalExpression};
+use crate::{
+    constraint_system::ConstraintSystem, constraints::Constraints,
+    rational_expression::RationalExpression,
+};
 use primefield::FieldElement;
 use std::{convert::TryInto, prelude::v1::*};
 use u256::U256;
-use crate::constraint_system::ConstraintSystem;
 
 #[cfg(feature = "prover")]
 use crate::TraceTable;
@@ -61,7 +63,6 @@ impl ConstraintSystem for PublicInput {
     fn trace_columns(&self) -> usize {
         2
     }
-
 }
 
 impl From<&PublicInput> for Vec<u8> {
