@@ -1041,7 +1041,7 @@ mod tests {
     use crate::polynomial::DensePolynomial;
     use elliptic_curve::Affine;
     use primefield::geometric_series::root_series;
-    use starkdex::PEDERSEN_POINTS;
+    use crate::pedersen_merkle::pedersen_points::PEDERSEN_POINTS;
 
     #[test]
     fn left_coefficients_match() {

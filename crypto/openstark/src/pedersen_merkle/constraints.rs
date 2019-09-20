@@ -5,13 +5,13 @@ use crate::{
         periodic_columns::{
             LEFT_X_COEFFICIENTS, LEFT_Y_COEFFICIENTS, RIGHT_X_COEFFICIENTS, RIGHT_Y_COEFFICIENTS,
         },
+pedersen_points::SHIFT_POINT,
     },
     polynomial::DensePolynomial,
     rational_expression::RationalExpression,
 };
 use elliptic_curve::Affine;
 use primefield::FieldElement;
-use starkdex::SHIFT_POINT;
 use std::{prelude::v1::*, vec};
 
 // TODO: Naming
