@@ -68,15 +68,15 @@ impl Challenge {
         #[cfg(feature = "std")]
         {
             if self.difficulty > THREADED_THRESHOLD {
-                info!(
-                    "Using multi-threaded solver (difficulty = {})",
-                    self.difficulty
-                );
                 return self.solve_threaded();
             }
         }
 
         // We assume a nonce exists and will be found in reasonable time.
+        info!(
+            "Solving {} bit proof of work single-threaded.",
+            self.difficulty
+        );
         #[allow(clippy::maybe_infinite_iter)]
         (0_u64..)
             .map(|nonce| Response { nonce })
@@ -89,6 +89,10 @@ impl Challenge {
     // False positive, constant is used when `std` is set
     #[allow(dead_code)]
     fn solve_threaded(&self) -> Response {
+        info!(
+            "Solving {} bit proof of work multi-threaded.",
+            self.difficulty
+        );
         // NOTE: Rayon does not support open ended ranges, so we need to use a closed
         // one.
         (0..u64::max_value())

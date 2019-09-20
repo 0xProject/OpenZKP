@@ -1,6 +1,5 @@
 // TODO: Naming?
 #![allow(clippy::module_name_repetitions)]
-#[cfg(feature = "std")]
 use mmap_vec::MmapVec;
 #[cfg(feature = "std")]
 use primefield::fft::{fft_cofactor_permuted, permute_index};
