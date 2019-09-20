@@ -2,8 +2,7 @@ use crate::{
     algebraic_dag::AlgebraicGraph,
     channel::{ProverChannel, RandomGenerator, Writable},
     check_proof,
-    constraint::{trace_degree, Constraint},
-    constraint_system::combine_constraints,
+    constraints::Constraints,
     polynomial::DensePolynomial,
     proof_of_work,
     proof_params::ProofParams,
@@ -110,7 +109,7 @@ impl VectorCommitment for FriLeaves {
 #[allow(clippy::cognitive_complexity)]
 pub fn stark_proof<Public>(
     trace: &TraceTable,
-    constraints: &[Constraint],
+    constraints: &Constraints,
     public: &Public,
     params: &ProofParams,
 ) -> ProverChannel
@@ -165,7 +164,7 @@ where
     // Read constraint coefficients from the channel.
     info!("Read constraint coefficients from the channel.");
     let mut constraint_coefficients = Vec::with_capacity(2 * constraints.len());
-    for _ in constraints {
+    for _ in 0..constraints.len() {
         constraint_coefficients.push(proof.get_random());
         constraint_coefficients.push(proof.get_random());
     }
@@ -299,7 +298,7 @@ fn get_indices(num: usize, bits: u32, proof: &mut ProverChannel) -> Vec<usize> {
 
 fn get_constraint_polynomials(
     trace_lde: &PolyLDE,
-    constraints: &[Constraint],
+    constraints: &Constraints,
     constraint_coefficients: &[FieldElement],
     trace_length: usize,
 ) -> Vec<DensePolynomial> {
@@ -309,23 +308,29 @@ fn get_constraint_polynomials(
     // smaller.
     const CHUNK_SIZE: usize = 65536;
 
-    let constraints_trace_degree = trace_degree(constraints);
+    let constraints_trace_degree = constraints.trace_degree();
     let coset_length = trace_length * constraints_trace_degree;
 
     info!("Compute offset trace table");
     let trace_coset = extract_trace_coset(trace_lde, coset_length);
 
     info!("Combine rational expressions");
-    let expr = combine_constraints(constraints, constraint_coefficients, trace_length);
-    info!("Combined constraint expression: {:?}", expr);
-    let expr = expr.simplify();
+    let combined_constraints = constraints.combine(constraint_coefficients, trace_length);
+    info!("Combined constraint expression: {:?}", combined_constraints);
+    let combined_constraints = combined_constraints.simplify();
+    // OPT: Some sub-expressions have much lower degree, we can evaluate them on a
+    // smaller domain and combine the results in coefficient form.
+    info!(
+        "Simplified constraint expression: {:?}",
+        combined_constraints
+    );
 
     let mut dag = AlgebraicGraph::new(
         &FieldElement::GENERATOR,
         trace_coset.num_rows(),
         constraints_trace_degree,
     );
-    let result = dag.expression(expr);
+    let result = dag.expression(combined_constraints);
     dag.optimize();
     dag.lookup_tables();
     // TODO: Track and use result reference.
@@ -851,7 +856,7 @@ mod tests {
         );
 
         let mut constraint_coefficients = Vec::with_capacity(2 * constraints.len());
-        for _ in &constraints {
+        for _ in 0..constraints.len() {
             constraint_coefficients.push(proof.get_random());
             constraint_coefficients.push(proof.get_random());
         }

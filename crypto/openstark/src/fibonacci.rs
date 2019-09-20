@@ -1,4 +1,4 @@
-use crate::{constraint::Constraint, rational_expression::RationalExpression};
+use crate::{constraints::Constraints, rational_expression::RationalExpression};
 use primefield::FieldElement;
 use std::{convert::TryInto, prelude::v1::*};
 use u256::U256;
@@ -55,7 +55,7 @@ pub fn get_trace_table(length: usize, private: &PrivateInput) -> TraceTable {
     trace
 }
 
-pub fn get_fibonacci_constraints(public_input: &PublicInput) -> Vec<Constraint> {
+pub fn get_fibonacci_constraints(public_input: &PublicInput) -> Constraints {
     use RationalExpression::*;
 
     let trace_length = public_input.index.next_power_of_two();
@@ -69,18 +69,10 @@ pub fn get_fibonacci_constraints(public_input: &PublicInput) -> Vec<Constraint> 
     let on_row = |index| (X - g.pow(index)).inv();
     let reevery_row = || (X - g.pow(trace_length - 1)) / (X.pow(trace_length) - 1.into());
 
-    vec![
-        Constraint {
-            expr: (Trace(0, 1) - Trace(1, 0)) * reevery_row(),
-        },
-        Constraint {
-            expr: (Trace(1, 1) - Trace(0, 0) - Trace(1, 0)) * reevery_row(),
-        },
-        Constraint {
-            expr: (Trace(0, 0) - 1.into()) * on_row(0),
-        },
-        Constraint {
-            expr: (Trace(0, 0) - (&claim_value).into()) * on_row(claim_index),
-        },
-    ]
+    Constraints::new(vec![
+        (Trace(0, 1) - Trace(1, 0)) * reevery_row(),
+        (Trace(1, 1) - Trace(0, 0) - Trace(1, 0)) * reevery_row(),
+        (Trace(0, 0) - 1.into()) * on_row(0),
+        (Trace(0, 0) - (&claim_value).into()) * on_row(claim_index),
+    ])
 }

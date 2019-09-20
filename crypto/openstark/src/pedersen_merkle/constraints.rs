@@ -1,5 +1,5 @@
 use crate::{
-    constraint::Constraint,
+    constraints::Constraints,
     pedersen_merkle::{
         inputs::PublicInput,
         pedersen_points::SHIFT_POINT,
@@ -16,7 +16,7 @@ use std::{prelude::v1::*, vec};
 
 // TODO: Naming
 #[allow(clippy::module_name_repetitions)]
-pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constraint> {
+pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Constraints {
     use RationalExpression::*;
 
     let path_length = public_input.path_length;
@@ -67,107 +67,65 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Vec<Constr
     let left_bit = Trace(0, 0) - Trace(0, 1) * 2.into();
     let right_bit = Trace(4, 0) - Trace(4, 1) * 2.into();
 
-    vec![
-        Constraint { expr: Trace(0, 0) },
-        Constraint { expr: Trace(1, 0) },
-        Constraint { expr: Trace(2, 0) },
-        Constraint { expr: Trace(3, 0) },
-        Constraint { expr: Trace(4, 0) },
-        Constraint { expr: Trace(5, 0) },
-        Constraint { expr: Trace(6, 0) },
-        Constraint { expr: Trace(7, 0) },
-        Constraint {
-            expr: on_first_row(
-                (Constant(leaf.clone()) - Trace(0, 0)) * (Constant(leaf.clone()) - Trace(4, 0)),
-            ),
-        },
-        Constraint {
-            expr: on_last_row(Constant(root.clone()) - Trace(6, 0)),
-        },
-        Constraint {
-            expr: on_hash_end_rows(Trace(6, 0) - Trace(0, 1)) * (Trace(6, 0) - Trace(4, 1)),
-        },
-        Constraint {
-            expr: on_hash_start_rows(Trace(6, 0) - Constant(shift_point_x.clone())),
-        },
-        Constraint {
-            expr: on_hash_start_rows(Trace(7, 0) - Constant(shift_point_y.clone())),
-        },
-        Constraint {
-            expr: on_hash_loop_rows(left_bit.clone() * (left_bit.clone() - 1.into())),
-        },
-        Constraint {
-            expr: on_hash_loop_rows(
-                left_bit.clone() * (Trace(7, 0) - periodic_left_y.clone())
-                    - Trace(1, 1) * (Trace(6, 0) - periodic_left_x.clone()),
-            ),
-        },
-        Constraint {
-            expr: on_hash_loop_rows(
-                Trace(1, 1) * Trace(1, 1)
-                    - left_bit.clone() * (Trace(6, 0) + periodic_left_x.clone() + Trace(2, 1)),
-            ),
-        },
-        Constraint {
-            expr: on_hash_loop_rows(
-                left_bit.clone() * (Trace(7, 0) + Trace(3, 1))
-                    - Trace(1, 1) * (Trace(6, 0) - Trace(2, 1)),
-            ),
-        },
-        Constraint {
-            expr: on_hash_loop_rows(
-                (Constant(FieldElement::ONE) - left_bit.clone()) * (Trace(6, 0) - Trace(2, 1)),
-            ),
-        },
-        Constraint {
-            expr: on_hash_loop_rows(
-                (Constant(FieldElement::ONE) - left_bit.clone()) * (Trace(7, 0) - Trace(3, 1)),
-            ),
-        },
-        Constraint {
-            expr: on_fe_end_rows(Trace(0, 0)),
-        },
-        Constraint {
-            expr: on_no_hash_rows(Trace(0, 0)),
-        },
-        Constraint {
-            expr: on_hash_loop_rows(right_bit.clone() * (right_bit.clone() - 1.into())),
-        },
-        Constraint {
-            expr: on_hash_loop_rows(
-                right_bit.clone() * (Trace(3, 1) - periodic_right_y.clone())
-                    - Trace(5, 1) * (Trace(2, 1) - periodic_right_x.clone()),
-            ),
-        },
-        Constraint {
-            expr: on_hash_loop_rows(
-                Trace(5, 1) * Trace(5, 1)
-                    - right_bit.clone() * (Trace(2, 1) + periodic_right_x.clone() + Trace(6, 1)),
-            ),
-        },
-        Constraint {
-            expr: on_hash_loop_rows(
-                right_bit.clone() * (Trace(3, 1) + Trace(7, 1))
-                    - Trace(5, 1) * (Trace(2, 1) - Trace(6, 1)),
-            ),
-        },
-        Constraint {
-            expr: on_hash_loop_rows(
-                (Constant(FieldElement::ONE) - right_bit.clone()) * (Trace(2, 1) - Trace(6, 1)),
-            ),
-        },
-        Constraint {
-            expr: on_hash_loop_rows(
-                (Constant(FieldElement::ONE) - right_bit.clone()) * (Trace(3, 1) - Trace(7, 1)),
-            ),
-        },
-        Constraint {
-            expr: on_fe_end_rows(Trace(4, 0)),
-        },
-        Constraint {
-            expr: on_no_hash_rows(Trace(4, 0)),
-        },
-    ]
+    Constraints::new(vec![
+        Trace(0, 0),
+        Trace(1, 0),
+        Trace(2, 0),
+        Trace(3, 0),
+        Trace(4, 0),
+        Trace(5, 0),
+        Trace(6, 0),
+        Trace(7, 0),
+        on_first_row(
+            (Constant(leaf.clone()) - Trace(0, 0)) * (Constant(leaf.clone()) - Trace(4, 0)),
+        ),
+        on_last_row(Constant(root.clone()) - Trace(6, 0)),
+        on_hash_end_rows(Trace(6, 0) - Trace(0, 1)) * (Trace(6, 0) - Trace(4, 1)),
+        on_hash_start_rows(Trace(6, 0) - Constant(shift_point_x.clone())),
+        on_hash_start_rows(Trace(7, 0) - Constant(shift_point_y.clone())),
+        on_hash_loop_rows(left_bit.clone() * (left_bit.clone() - 1.into())),
+        on_hash_loop_rows(
+            left_bit.clone() * (Trace(7, 0) - periodic_left_y.clone())
+                - Trace(1, 1) * (Trace(6, 0) - periodic_left_x.clone()),
+        ),
+        on_hash_loop_rows(
+            Trace(1, 1) * Trace(1, 1)
+                - left_bit.clone() * (Trace(6, 0) + periodic_left_x.clone() + Trace(2, 1)),
+        ),
+        on_hash_loop_rows(
+            left_bit.clone() * (Trace(7, 0) + Trace(3, 1))
+                - Trace(1, 1) * (Trace(6, 0) - Trace(2, 1)),
+        ),
+        on_hash_loop_rows(
+            (Constant(FieldElement::ONE) - left_bit.clone()) * (Trace(6, 0) - Trace(2, 1)),
+        ),
+        on_hash_loop_rows(
+            (Constant(FieldElement::ONE) - left_bit.clone()) * (Trace(7, 0) - Trace(3, 1)),
+        ),
+        on_fe_end_rows(Trace(0, 0)),
+        on_no_hash_rows(Trace(0, 0)),
+        on_hash_loop_rows(right_bit.clone() * (right_bit.clone() - 1.into())),
+        on_hash_loop_rows(
+            right_bit.clone() * (Trace(3, 1) - periodic_right_y.clone())
+                - Trace(5, 1) * (Trace(2, 1) - periodic_right_x.clone()),
+        ),
+        on_hash_loop_rows(
+            Trace(5, 1) * Trace(5, 1)
+                - right_bit.clone() * (Trace(2, 1) + periodic_right_x.clone() + Trace(6, 1)),
+        ),
+        on_hash_loop_rows(
+            right_bit.clone() * (Trace(3, 1) + Trace(7, 1))
+                - Trace(5, 1) * (Trace(2, 1) - Trace(6, 1)),
+        ),
+        on_hash_loop_rows(
+            (Constant(FieldElement::ONE) - right_bit.clone()) * (Trace(2, 1) - Trace(6, 1)),
+        ),
+        on_hash_loop_rows(
+            (Constant(FieldElement::ONE) - right_bit.clone()) * (Trace(3, 1) - Trace(7, 1)),
+        ),
+        on_fe_end_rows(Trace(4, 0)),
+        on_no_hash_rows(Trace(4, 0)),
+    ])
 }
 
 #[cfg(test)]

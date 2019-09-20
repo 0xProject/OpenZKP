@@ -1,9 +1,5 @@
 use crate::{
-    channel::*,
-    constraint::{trace_degree, Constraint},
-    constraint_system::combine_constraints,
-    polynomial::DensePolynomial,
-    proof_of_work,
+    channel::*, constraints::Constraints, polynomial::DensePolynomial, proof_of_work,
     proof_params::ProofParams,
 };
 use hash::Hash;
@@ -18,7 +14,7 @@ use u256::U256;
 #[allow(single_use_lifetimes)]
 pub fn check_proof<Public>(
     proposed_proof: &[u8],
-    constraints: &[Constraint],
+    constraints: &Constraints,
     public: &Public,
     params: &ProofParams,
     trace_cols: usize,
@@ -39,7 +35,7 @@ where
     let low_degree_extension_root = Replayable::<Hash>::replay(&mut channel);
     let lde_commitment = Commitment::from_size_hash(eval_domain_size, &low_degree_extension_root)?;
     let mut constraint_coefficients: Vec<FieldElement> = Vec::with_capacity(2 * constraints.len());
-    for _ in constraints {
+    for _ in 0..constraints.len() {
         constraint_coefficients.push(channel.get_random());
         constraint_coefficients.push(channel.get_random());
     }
@@ -50,7 +46,7 @@ where
     // Get the oods information from the proof and random
     let oods_point: FieldElement = channel.get_random();
     let mut oods_values: Vec<FieldElement> = Vec::with_capacity(2 * trace_cols + 1);
-    let constraints_trace_degree = trace_degree(constraints);
+    let constraints_trace_degree = constraints.trace_degree();
     for _ in 0..(2 * trace_cols + constraints_trace_degree) {
         oods_values.push(Replayable::<FieldElement>::replay(&mut channel));
     }
@@ -260,7 +256,7 @@ where
 }
 
 fn oods_value_from_trace_values(
-    constraints: &[Constraint],
+    constraints: &Constraints,
     coefficients: &[FieldElement],
     trace_length: usize,
     trace_values: &[FieldElement],
@@ -271,7 +267,9 @@ fn oods_value_from_trace_values(
         assert!(j == 0 || j == 1);
         trace_values[2 * i + j].clone()
     };
-    combine_constraints(constraints, coefficients, trace_length).evaluate(oods_point, &trace)
+    constraints
+        .combine(coefficients, trace_length)
+        .evaluate(oods_point, &trace)
 }
 
 fn oods_value_from_constraint_values(
