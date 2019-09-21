@@ -2,7 +2,7 @@ use crate::{
     algebraic_dag::AlgebraicGraph,
     channel::{ProverChannel, RandomGenerator, Writable},
     check_proof,
-    constraint_system::ConstraintSystem,
+    constraint_system::{Provable, Verifiable},
     constraints::Constraints,
     polynomial::DensePolynomial,
     proof_of_work,
@@ -108,16 +108,16 @@ impl VectorCommitment for FriLeaves {
 #[allow(single_use_lifetimes)]
 // TODO: Simplify
 #[allow(clippy::cognitive_complexity)]
-pub fn stark_proof<Public: ConstraintSystem>(
-    public: &Public,
-    private: &Public::PrivateInput,
+pub fn stark_proof<Claim: Verifiable, Witness: Provable<Claim>>(
+    claim: &Claim,
+    witness: &Witness,
     params: &ProofParams,
 ) -> ProverChannel
 where
-    for<'a> &'a Public: Into<Vec<u8>>,
+    for<'a> &'a Claim: Into<Vec<u8>>,
 {
-    let trace = public.trace(private);
-    let constraints = public.constraints();
+    let trace = witness.trace(claim);
+    let constraints = claim.constraints();
 
     info!("Starting Stark proof.");
     info!("Proof parameters: {:?}", params);
@@ -132,10 +132,9 @@ where
     );
     info!("{} constraints", constraints.len(),);
 
-    // Initialize a proof channel with the public input.
-    info!("Initialize channel with public input.");
+    info!("Initialize channel with claim.");
     let mut proof = ProverChannel::new();
-    proof.initialize(&public.into());
+    proof.initialize(&claim.into());
 
     // 1. Trace commitment.
 
@@ -253,7 +252,7 @@ where
 
     // Verify proof
     info!("Verify proof.");
-    assert!(check_proof(proof.proof.as_slice(), public, params,).is_ok());
+    assert!(check_proof(proof.proof.as_slice(), claim, params).is_ok());
 
     // Q.E.D.
     // TODO: Return bytes, or a result structure
@@ -596,10 +595,7 @@ fn decommit_fri_layers_and_trees(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        fibonacci::{get_value, PrivateInput, PublicInput},
-        verifier::check_proof,
-    };
+    use crate::{fibonacci, verifier::check_proof};
     use macros_decl::{field_element, hex, u256h};
     use primefield::{fft::permute_index, geometric_series::geometric_series};
     use u256::U256;
@@ -609,17 +605,17 @@ mod tests {
         // All the constants for this tests are copied from files in
         // https://github.com/0xProject/evm-verifier/commit/9bf369139b0edc23ab7ab7e8db8164c5a05a83df.
         // Copied from solidity/contracts/fibonacci/fibonacci_private_input1.json
-        let private = PrivateInput {
+        let witness = fibonacci::Witness {
             secret: field_element!("83d36de9"),
         };
         // Copied from solidity/contracts/fibonacci/fibonacci_public_input1.json
-        let public = PublicInput {
+        let claim = fibonacci::Claim {
             index: 1000,
             value: field_element!(
                 "04d5f1f669b34fb7252d5a9d0d9786b2638c27eaa04e820b38b088057960cca1"
             ),
         };
-        let actual = stark_proof(&public, &private, &ProofParams {
+        let actual = stark_proof(&claim, &witness, &ProofParams {
             blowup:     16,
             pow_bits:   0,
             queries:    20,
@@ -650,12 +646,12 @@ mod tests {
     fn fib_test_1024_python_witness() {
         let index = 1000;
         let secret = field_element!("cafebabe");
-        let value = get_value(index, &secret);
+        let value = fibonacci::get_value(index, &secret);
 
-        let private = PrivateInput { secret };
-        let public = PublicInput { index, value };
+        let witness = fibonacci::Witness { secret };
+        let claim = fibonacci::Claim { index, value };
 
-        let actual = stark_proof(&public, &private, &ProofParams {
+        let actual = stark_proof(&claim, &witness, &ProofParams {
             blowup:     16,
             pow_bits:   12,
             queries:    20,
@@ -672,12 +668,12 @@ mod tests {
     fn fib_test_1024_changed_witness() {
         let index = 1000;
         let secret = field_element!("0f00dbabe0cafebabe");
-        let value = get_value(index, &secret);
+        let value = fibonacci::get_value(index, &secret);
 
-        let private = PrivateInput { secret };
-        let public = PublicInput { index, value };
+        let witness = fibonacci::Witness { secret };
+        let claim = fibonacci::Claim { index, value };
 
-        let actual = stark_proof(&public, &private, &ProofParams {
+        let actual = stark_proof(&claim, &witness, &ProofParams {
             blowup: 16, /* TODO - The blowup in the fib constraints is hardcoded to 16,
                          * we should set this back to 32 to get wider coverage when
                          * that's fixed */
@@ -686,7 +682,7 @@ mod tests {
             fri_layout: vec![3, 2],
         });
 
-        assert!(check_proof(actual.proof.as_slice(), &public, &ProofParams {
+        assert!(check_proof(actual.proof.as_slice(), &claim, &ProofParams {
             blowup: 16, /* TODO - The blowup in the fib constraints is hardcoded to 16,
                          * we should set this back to 32 to get wider coverage when
                          * that's fixed */
@@ -701,19 +697,19 @@ mod tests {
     fn fib_test_4096() {
         let index = 4000;
         let secret = field_element!("0f00dbabe0cafebabe");
-        let value = get_value(index, &secret);
+        let value = fibonacci::get_value(index, &secret);
 
-        let private = PrivateInput { secret };
-        let public = PublicInput { index, value };
+        let witness = fibonacci::Witness { secret };
+        let claim = fibonacci::Claim { index, value };
 
-        let actual = stark_proof(&public, &private, &ProofParams {
+        let actual = stark_proof(&claim, &witness, &ProofParams {
             blowup:     16,
             pow_bits:   12,
             queries:    20,
             fri_layout: vec![2, 1, 4, 2],
         });
 
-        assert!(check_proof(actual.proof.as_slice(), &public, &ProofParams {
+        assert!(check_proof(actual.proof.as_slice(), &claim, &ProofParams {
             blowup:     16,
             pow_bits:   12,
             queries:    20,
@@ -733,19 +729,19 @@ mod tests {
     fn fib_proof_test() {
         crate::tests::init();
 
-        let public = PublicInput {
+        let claim = fibonacci::Claim {
             index: 1000,
             value: FieldElement::from(u256h!(
                 "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
             )),
         };
-        let private = PrivateInput {
+        let witness = fibonacci::Witness {
             secret: FieldElement::from(u256h!(
                 "00000000000000000000000000000000000000000000000000000000cafebabe"
             )),
         };
 
-        let trace_len = public.trace_length();
+        let trace_len = claim.trace_length();
         assert_eq!(trace_len, 1024);
         let params = ProofParams {
             blowup:     16,
@@ -761,8 +757,8 @@ mod tests {
         let gen = FieldElement::GENERATOR;
 
         // Second check that the trace table function is working.
-        let trace = public.trace(&private);
-        assert_eq!(trace[(1000, 0)], public.value);
+        let trace = witness.trace(&claim);
+        assert_eq!(trace[(1000, 0)], claim.value);
 
         let TPn = trace.interpolate();
         // Checks that the trace table polynomial interpolation is working
@@ -801,11 +797,12 @@ mod tests {
             hex!("018dc61f748b1a6c440827876f30f63cb6c4c188000000000000000000000000")
         );
 
-        let mut public_input = [(public.index as u64).to_be_bytes()].concat();
-        public_input.extend_from_slice(&public.value.as_montgomery().to_bytes_be());
+        // TODO fix naming here!
+        let mut proof_seed = [(claim.index as u64).to_be_bytes()].concat();
+        proof_seed.extend_from_slice(&claim.value.as_montgomery().to_bytes_be());
 
         let mut proof = ProverChannel::new();
-        proof.initialize(&public_input.as_slice());
+        proof.initialize(&proof_seed.as_slice());
         // Checks that the channel is inited properly
         assert_eq!(
             proof.coin.digest,
@@ -818,7 +815,7 @@ mod tests {
             hex!("b7d80385fa0c8879473cdf987ea7970bb807aec78bb91af39a1504d965ad8e92")
         );
 
-        let constraints = public.constraints();
+        let constraints = claim.constraints();
         assert_eq!(constraints.len(), 4);
         let mut constraint_coefficients = Vec::with_capacity(2 * constraints.len());
         for _ in 0..constraints.len() {

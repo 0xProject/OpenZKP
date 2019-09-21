@@ -102,10 +102,7 @@ pub fn decommitment_size_upper_bound(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        fibonacci::{get_value, PrivateInput, PublicInput},
-        proofs::*,
-    };
+    use crate::{fibonacci, proofs::*};
     use macros_decl::field_element;
     use primefield::FieldElement;
     use u256::U256;
@@ -114,10 +111,10 @@ mod tests {
     fn size_estimate_test() {
         let index = 4000;
         let secret = field_element!("0f00dbabe0cafebabe");
-        let value = get_value(index, &secret);
+        let value = fibonacci::get_value(index, &secret);
 
-        let private = PrivateInput { secret };
-        let public = PublicInput { index, value };
+        let private = fibonacci::Witness { secret };
+        let public = fibonacci::Claim { index, value };
 
         let actual = stark_proof(&public, &private, &ProofParams {
             blowup:     16,
