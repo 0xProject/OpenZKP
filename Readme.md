@@ -1,11 +1,13 @@
-# OpenStark
+# OpenZKP
 
 [![Crates.io](https://img.shields.io/crates/l/openstark)](/License.md)
 [![](https://docs.rs/openstark/badge.svg)](https://docs.rs/openstark)
 [![CircleCI](https://img.shields.io/circleci/build/github/0xProject/starkcrypto)](https://circleci.com/gh/0xProject/starkcrypto)
 [![Codecov](https://img.shields.io/codecov/c/gh/0xproject/starkcrypto)](https://codecov.io/gh/0xProject/starkcrypto)
 
-A pure rust implementation of the STARK Zero-Knowledge Proof system.
+Pure Rust implementations of Zero-Knowledge Proof systems.
+
+---
 
 The current version has
 
@@ -19,11 +21,9 @@ That being said, it also has a number of limitations, it has
 * *no* high-level language,
 * *no* comprehensive security audit,
 * *no* perfect zero-knowledge,
-* *no* constraints offset larger than one,
-* *no* side-channel resistance, and
 * hard-coded field and hash function,
 
-See [state](#state) below for details.
+and some others, see [features and limitations](#features-and-limitations) below for details.
 
 ## Packages
 
@@ -89,7 +89,9 @@ pub fn main() {
 }
 ```
 
-## State
+## Features and Limitations
+
+### Features
 
 **A simple interface.** The public interface is simple and is considered stable. Future versions are expected to add functionality without breaking this interface.
 
@@ -99,15 +101,17 @@ pub fn main() {
 
 **Webassembly support.** The verifier can be used in a WebAssembly environment without the Rust `std` lib. The prover will work too, but has not been a priority.
 
+### Limitations
+
 **No high-level language.** Constraints are specified using their algebraic expressions. This requires complicated and careful design from the library user and is easy to do wrong, leading to insecure systems. A high level language would help make development simpler and safer and facilitate re-use of components.
 
 **No comprehensive security audit.** While development is done with the best security practices in mind, it is still very early stage and has not had the amount of expert peer review required for a production grade system.
 
-**No perfect zero-knowledge.** The current implementation provides succinct proofs but not perfect zero knowledge. While non-trivial, it is theoretically possible to learn something about the secret. We expect to add perfect zero-knowledge soon.
+**No perfect zero-knowledge.** The current implementation provides succinct proofs but not perfect zero knowledge. While non-trivial, it is theoretically possible to learn something about the secret. Achieving perfect zero-knowledge is possible and can be implemented.
 
-**No side-channel resistance.** The implementation favours performance over side-channel resistance. While this is common in zero-knowledge proof system, you should be aware .
+**No side-channel resistance.** The implementation favours performance over side-channel resistance. While this is common in zero-knowledge proof system, you should be aware that his might leak intermediate computations. Side-channel resistance can be implemented.
 
-**Hard-coded field and hash.** The current implementation uses a particular [prime field](/algebra/primefield) and a particular [hash function](/crypto/hash). These are inherited from Starkdex and are optimized for verification in the Ethereum Virtual Machine. In the future we may generalize this to support other use cases.
+**Hard-coded field and hash.** The current implementation uses a particular [prime field](/algebra/primefield) and a particular [hash function](/crypto/hash). These are optimized for verification in the Ethereum Virtual Machine. This can be generalized to other primitives optimized for other use cases.
 
 ## Contributing
 
