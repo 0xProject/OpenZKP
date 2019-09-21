@@ -1,5 +1,5 @@
 use crate::{
-    channel::*, constraint_system::ConstraintSystem, constraints::Constraints,
+    channel::*, constraint_system::Verifiable, constraints::Constraints,
     polynomial::DensePolynomial, proof_of_work, proof_params::ProofParams,
 };
 use hash::Hash;
@@ -12,13 +12,13 @@ use u256::U256;
 
 // False positive, for<'a> is required.
 #[allow(single_use_lifetimes)]
-pub fn check_proof<Public: ConstraintSystem>(
+pub fn check_proof<Claim: Verifiable>(
     proposed_proof: &[u8],
-    public: &Public,
+    public: &Claim,
     params: &ProofParams,
 ) -> Result<()>
 where
-    for<'a> &'a Public: Into<Vec<u8>>,
+    for<'a> &'a Claim: Into<Vec<u8>>,
 {
     let trace_len = public.trace_length();
     let constraints = public.constraints();
@@ -456,18 +456,18 @@ impl error::Error for Error {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{fibonacci::*, proofs::stark_proof};
+    use crate::{fibonacci, proofs::stark_proof};
     use macros_decl::u256h;
 
     #[test]
     fn verifier_fib_test() {
-        let public = PublicInput {
+        let public = fibonacci::Claim {
             index: 1000,
             value: FieldElement::from(u256h!(
                 "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
             )),
         };
-        let private = PrivateInput {
+        let private = fibonacci::Witness {
             secret: FieldElement::from(u256h!(
                 "00000000000000000000000000000000000000000000000000000000cafebabe"
             )),
