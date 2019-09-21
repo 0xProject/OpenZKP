@@ -1,12 +1,13 @@
 use crate::{
-    constraint_system::{Provable, Verifiable},
-    constraints::Constraints,
+    constraint_system::Verifiable, constraints::Constraints,
     rational_expression::RationalExpression,
 };
 use primefield::FieldElement;
 use std::{convert::TryInto, prelude::v1::*};
 use u256::U256;
 
+#[cfg(feature = "prover")]
+use crate::constraint_system::Provable;
 #[cfg(feature = "prover")]
 use crate::TraceTable;
 
@@ -82,9 +83,8 @@ impl From<&[u8]> for Claim {
         // TODO: Use TryFrom
         #[allow(clippy::cast_possible_truncation)]
         let index = index64 as usize;
-        let value = FieldElement::from_montgomery(U256::from_bytes_be(
-            (&claim[8..40]).try_into().unwrap(),
-        ));
+        let value =
+            FieldElement::from_montgomery(U256::from_bytes_be((&claim[8..40]).try_into().unwrap()));
         Self { index, value }
     }
 }

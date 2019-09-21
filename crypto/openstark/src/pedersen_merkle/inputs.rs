@@ -1,5 +1,7 @@
+#[cfg(feature = "prover")]
+use crate::constraint_system::Provable;
 use crate::{
-    constraint_system::{Provable, Verifiable},
+    constraint_system::Verifiable,
     constraints::Constraints,
     pedersen_merkle::{constraints::get_pedersen_merkle_constraints, trace_table::get_trace_table},
     trace_table::TraceTable,
