@@ -2,11 +2,7 @@
 use env_logger;
 use log::info;
 use macros_decl::field_element;
-use openstark::{
-    check_proof, decommitment_size_upper_bound,
-    fibonacci::{get_value, PrivateInput, PublicInput},
-    stark_proof, ProofParams,
-};
+use openstark::{check_proof, decommitment_size_upper_bound, fibonacci, stark_proof, ProofParams};
 use primefield::FieldElement;
 use std::{env, time::Instant};
 use u256::U256;
@@ -25,14 +21,14 @@ fn main() {
 
     let index = 1_000_000;
     let secret = field_element!("cafebabe");
-    let value = get_value(index, &secret);
+    let value = fibonacci::get_value(index, &secret);
 
-    let public = PublicInput { index, value };
-    let private = PrivateInput { secret };
+    let claim = fibonacci::Claim { index, value };
+    let witness = fibonacci::Witness { secret };
 
     let fri_layout = vec![3, 3, 3, 3, 2];
     let start = Instant::now();
-    let potential_proof = stark_proof(&public, &private, &ProofParams {
+    let potential_proof = stark_proof(&claim, &witness, &ProofParams {
         blowup:     16,
         pow_bits:   12,
         queries:    20,
@@ -47,7 +43,7 @@ fn main() {
         decommitment_size_upper_bound(20, 2, fri_layout.clone(), 20)
     );
 
-    let verified = check_proof(potential_proof.proof.as_slice(), &public, &ProofParams {
+    let verified = check_proof(potential_proof.proof.as_slice(), &claim, &ProofParams {
         blowup: 16,
         pow_bits: 12,
         queries: 20,

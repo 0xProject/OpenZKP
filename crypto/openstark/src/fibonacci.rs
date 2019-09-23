@@ -1,5 +1,5 @@
 use crate::{
-    constraint_system::ConstraintSystem, constraints::Constraints,
+    constraint_system::Verifiable, constraints::Constraints,
     rational_expression::RationalExpression,
 };
 use primefield::FieldElement;
@@ -7,24 +7,24 @@ use std::{convert::TryInto, prelude::v1::*};
 use u256::U256;
 
 #[cfg(feature = "prover")]
+use crate::constraint_system::Provable;
+#[cfg(feature = "prover")]
 use crate::TraceTable;
 
 #[derive(PartialEq, Clone)]
 #[cfg_attr(feature = "std", derive(Debug))]
-pub struct PublicInput {
+pub struct Claim {
     pub index: usize,
     pub value: FieldElement,
 }
 
 #[derive(PartialEq, Clone)]
 #[cfg_attr(feature = "std", derive(Debug))]
-pub struct PrivateInput {
+pub struct Witness {
     pub secret: FieldElement,
 }
 
-impl ConstraintSystem for PublicInput {
-    type PrivateInput = PrivateInput;
-
+impl Verifiable for Claim {
     fn constraints(&self) -> Constraints {
         use RationalExpression::*;
 
@@ -48,42 +48,43 @@ impl ConstraintSystem for PublicInput {
         self.index.next_power_of_two()
     }
 
-    #[cfg(feature = "prover")]
-    fn trace(&self, private_input: &PrivateInput) -> TraceTable {
-        let mut trace = TraceTable::new(self.trace_length(), 2);
-        trace[(0, 0)] = 1.into();
-        trace[(0, 1)] = private_input.secret.clone();
-        for i in 0..(self.trace_length() - 1) {
-            trace[(i + 1, 0)] = trace[(i, 1)].clone();
-            trace[(i + 1, 1)] = &trace[(i, 0)] + &trace[(i, 1)];
-        }
-        trace
-    }
-
     fn trace_columns(&self) -> usize {
         2
     }
 }
 
-impl From<&PublicInput> for Vec<u8> {
-    fn from(public_input: &PublicInput) -> Self {
-        let mut bytes = [public_input.index.to_be_bytes()].concat();
-        bytes.extend_from_slice(&public_input.value.as_montgomery().to_bytes_be());
+#[cfg(feature = "prover")]
+impl Provable<Claim> for Witness {
+    fn trace(&self, claim: &Claim) -> TraceTable {
+        let mut trace = TraceTable::new(claim.trace_length(), 2);
+        trace[(0, 0)] = 1.into();
+        trace[(0, 1)] = self.secret.clone();
+        for i in 0..(claim.trace_length() - 1) {
+            trace[(i + 1, 0)] = trace[(i, 1)].clone();
+            trace[(i + 1, 1)] = &trace[(i, 0)] + &trace[(i, 1)];
+        }
+        trace
+    }
+}
+
+impl From<&Claim> for Vec<u8> {
+    fn from(claim: &Claim) -> Self {
+        let mut bytes = [claim.index.to_be_bytes()].concat();
+        bytes.extend_from_slice(&claim.value.as_montgomery().to_bytes_be());
         bytes
     }
 }
 
 // Used in substrate-runtime
-impl From<&[u8]> for PublicInput {
-    fn from(public_input: &[u8]) -> Self {
-        assert!(public_input.len() >= 40);
-        let index64 = u64::from_be_bytes((&public_input[0..8]).try_into().unwrap());
+impl From<&[u8]> for Claim {
+    fn from(claim: &[u8]) -> Self {
+        assert!(claim.len() >= 40);
+        let index64 = u64::from_be_bytes((&claim[0..8]).try_into().unwrap());
         // TODO: Use TryFrom
         #[allow(clippy::cast_possible_truncation)]
         let index = index64 as usize;
-        let value = FieldElement::from_montgomery(U256::from_bytes_be(
-            (&public_input[8..40]).try_into().unwrap(),
-        ));
+        let value =
+            FieldElement::from_montgomery(U256::from_bytes_be((&claim[8..40]).try_into().unwrap()));
         Self { index, value }
     }
 }

@@ -1,7 +1,7 @@
 use crate::{
     constraints::Constraints,
     pedersen_merkle::{
-        inputs::PublicInput,
+        inputs::Claim,
         pedersen_points::SHIFT_POINT,
         periodic_columns::{
             LEFT_X_COEFFICIENTS, LEFT_Y_COEFFICIENTS, RIGHT_X_COEFFICIENTS, RIGHT_Y_COEFFICIENTS,
@@ -16,13 +16,13 @@ use std::{prelude::v1::*, vec};
 
 // TODO: Naming
 #[allow(clippy::module_name_repetitions)]
-pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Constraints {
+pub fn get_pedersen_merkle_constraints(claim: &Claim) -> Constraints {
     use RationalExpression::*;
 
-    let path_length = public_input.path_length;
+    let path_length = claim.path_length;
     let trace_length = path_length * 256;
-    let root = public_input.root.clone();
-    let leaf = public_input.leaf.clone();
+    let root = claim.root.clone();
+    let leaf = claim.leaf.clone();
     let field_element_bits = 252;
 
     let (shift_point_x, shift_point_y) = match SHIFT_POINT {
@@ -132,7 +132,7 @@ pub fn get_pedersen_merkle_constraints(public_input: &PublicInput) -> Constraint
 mod tests {
     use super::*;
     use crate::{
-        pedersen_merkle::inputs::{short_private_input, SHORT_PUBLIC_INPUT},
+        pedersen_merkle::inputs::{short_witness, SHORT_CLAIM},
         proof_params::ProofParams,
         proofs::stark_proof,
     };
@@ -141,10 +141,10 @@ mod tests {
     fn short_pedersen_merkle() {
         crate::tests::init();
 
-        let public_input = SHORT_PUBLIC_INPUT;
-        let private_input = short_private_input();
+        let claim = SHORT_CLAIM;
+        let witness = short_witness();
 
-        let proof = stark_proof(&public_input, &private_input, &ProofParams {
+        let proof = stark_proof(&claim, &witness, &ProofParams {
             blowup:     16,
             pow_bits:   0,
             queries:    13,
