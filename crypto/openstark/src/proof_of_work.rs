@@ -94,6 +94,10 @@ impl Challenge {
             "Solving {} bit proof of work multi-threaded.",
             self.difficulty
         );
+        // TODO: We can make this deterministic as follows : Shard on
+        // `nonce % num_threads`. Use an `AtomicU64` to track the current lowest
+        // nonce. Stop thread when local `nonce > current best`. When all threads
+        // are stopped we found the unique global minimum.
         // NOTE: Rayon does not support open ended ranges, so we need to use a closed
         // one.
         (0..u64::max_value())
