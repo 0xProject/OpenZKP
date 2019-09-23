@@ -1,2 +1,2 @@
-pub mod mimc_table_degree;
-pub mod mimc_table_memory;
+mod mimc_table_degree;
+mod mimc_table_memory;

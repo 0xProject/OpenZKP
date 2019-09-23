@@ -2,11 +2,10 @@
 use crate::TraceTable;
 use crate::{
     constraint_system::ConstraintSystem, constraints::Constraints, polynomial::DensePolynomial,
-    rational_expression::RationalExpression, verifier::check_proof,
+    rational_expression::RationalExpression,
 };
 use macros_decl::field_element;
 use primefield::{fft::ifft, FieldElement};
-use std::convert::TryInto;
 use u256::U256;
 
 // Note - this higher memory MiMC uses a fixed alpha = 3
@@ -30,7 +29,7 @@ const K_COEF: [FieldElement; 16] = [
     field_element!("06487BAA"),
     field_element!("0A2F1B45"),
 ];
-// Proves that 'after' is the ALPHA MiMC applied to 'before' after rounds
+// Proves that 'after' is the ALPHA MiMC applied to 'before' after 'rounds'
 // iterations of the cypher
 #[derive(Debug)]
 pub struct PublicInput {
@@ -106,7 +105,8 @@ impl ConstraintSystem for PublicInput {
     }
 }
 
-pub fn mimc(start: &FieldElement) -> FieldElement {
+#[allow(dead_code)]
+fn mimc(start: &FieldElement) -> FieldElement {
     let mut prev = start.clone();
     for i in 1..ROUNDS {
         prev = prev.pow(3) + &K_COEF[(i - 1) % 16];
@@ -117,7 +117,7 @@ pub fn mimc(start: &FieldElement) -> FieldElement {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{proof_params::ProofParams, proofs::stark_proof};
+    use crate::{proof_params::ProofParams, proofs::stark_proof, verifier::check_proof};
     use macros_decl::field_element;
 
     #[test]
@@ -126,7 +126,7 @@ mod tests {
             field_element!("00a74f2a70da4ea3723cabd2acc55d03f9ff6d0e7acef0fc63263b12c10dd837");
         let after = mimc(&before);
         let input = PublicInput { before, after };
-        let trace_table = (&input).trace(&());
+        let _ = (&input).trace(&());
         let params = ProofParams {
             blowup:     16,
             pow_bits:   12,
