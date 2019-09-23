@@ -52,16 +52,24 @@ pub struct LoggingAllocator {
     error:     usize,
     reject:    usize,
     allocated: AtomicUsize,
+    peak_allocated: AtomicUsize,
+    total_allocated: AtomicUsize,
+    num_allocations: AtomicUsize,
 }
 
 impl LoggingAllocator {
     pub const fn new() -> Self {
+        // TODO: impl Default
         Self {
             info:      1_000_000,
             warn:      10_000_000,
             error:     100_000_000,
             reject:    10_000_000_000,
             allocated: AtomicUsize::new(0),
+            peak_allocated: AtomicUsize::new(0),
+            total_allocated: AtomicUsize::new(0),
+            largest_allocated: AtomicUsize::new(0),
+            num_allocations: AtomicUsize::new(0),
         }
     }
 
@@ -106,7 +114,14 @@ unsafe impl GlobalAlloc for LoggingAllocator {
         }
         let result = System.alloc(layout);
         if !result.is_null() {
-            let _ = self.allocated.fetch_add(layout.size(), SeqCst);
+            // TODO: We are doing a lot of atomic operations here, what is
+            // the performance impact?
+            let allocated = self.allocated.fetch_add(layout.size(), SeqCst);
+            let _ = self.total_allocated.fetch_add(layout.size(), SeqCst);
+            let _ = self.num_allocations.fetch_add(1, SeqCst);
+            // TODO: Using `allocated` here again is not completely fool proof
+            max_cas_loop(&mut self.peak_allocated, allocated);
+            max_cas_loop(&mut self.largest_allocated, layout.size());
         }
         result
     }
@@ -115,6 +130,21 @@ unsafe impl GlobalAlloc for LoggingAllocator {
         System.dealloc(ptr, layout);
         let _ = self.allocated.fetch_sub(layout.size(), SeqCst);
     }
+}
+
+// TODO: https://doc.rust-lang.org/std/sync/atomic/struct.AtomicUsize.html#method.fetch_max
+// See also https://doc.rust-lang.org/src/core/sync/atomic.rs.html#1770-1783
+fn max_cas_loop(atom: &mut AtomicUsize, value: usize) -> usize {
+    const SET_ORDER: Ordering = Ordering::SeqCst;
+    const FETCH_ORDER: Ordering = Ordering::SeqCst;
+    let mut prev = atom.load(fetch_order);
+    while prev < value {
+        match self.compare_exchange_weak(prev, value, SET_ORDER, FETCH_ORDER) {
+            Ok(_) => return value,
+            Err(next_prev) => prev = next_prev
+        }
+    }
+    prev
 }
 
 #[cfg(feature = "enable")]
