@@ -13,11 +13,12 @@ use primefield::fft::ifft;
 
 // Note - this higher memory MiMC uses a fixed alpha = 3
 const ROUNDS: usize = 8192; // 2^13 to match Guild of Weavers
+// These round coefficents are the hex of those used by Guild of Weavers
 const K_COEF: [FieldElement; 16] = [
     field_element!("2A"), field_element!("2B"), field_element!("AA"), field_element!("08A1"), field_element!("402A"), field_element!("013107"), field_element!("0445AA"), field_element!("0C90DD"), field_element!("20002A"), field_element!("48FB53"), field_element!("9896AA"), field_element!("012959E9"),
     field_element!("0222C02A"), field_element!("03BD774F"), field_element!("06487BAA"), field_element!("0A2F1B45"),
 ];
-// Proves that after is the alpha MiMC on before after rounds
+// Proves that 'after' is the ALPHA MiMC applied to 'before' after rounds iterations of the cypher
 #[derive(Debug)]
 pub struct PublicInput {
     before: FieldElement,

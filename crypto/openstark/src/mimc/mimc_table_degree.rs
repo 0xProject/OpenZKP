@@ -9,14 +9,15 @@ use u256::U256;
 use crate::{verifier::check_proof, polynomial::DensePolynomial};
 use macros_decl::field_element;
 use std::convert::TryInto;
+use primefield::fft::ifft;
 
-const ALPHA: usize = 3;
+const ALPHA: usize = 4;
 const ROUNDS: usize = 8192; // 2^13 to match Guild of Weavers
 const K_COEF: [FieldElement; 16] = [
     field_element!("2A"), field_element!("2B"), field_element!("AA"), field_element!("08A1"), field_element!("402A"), field_element!("013107"), field_element!("0445AA"), field_element!("0C90DD"), field_element!("20002A"), field_element!("48FB53"), field_element!("9896AA"), field_element!("012959E9"),
     field_element!("0222C02A"), field_element!("03BD774F"), field_element!("06487BAA"), field_element!("0A2F1B45"),
 ];
-// Proves that after is the ALPHA MiMC on before after rounds
+// Proves that 'after' is the ALPHA MiMC applied to 'before' after rounds iterations of the cypher
 #[derive(Debug)]
 pub struct PublicInput {
     before: FieldElement,
@@ -52,7 +53,7 @@ impl ConstraintSystem for PublicInput {
                 Box::new(X.pow(trace_length/16)),
             )
         };
-        let k_coef = periodic(&K_COEF);
+        let k_coef = periodic(&ifft(&K_COEF.to_vec()));
 
         Constraints::new(vec![
             // Says the next row for each row is current x_0^alpha + k
