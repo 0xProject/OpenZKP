@@ -97,7 +97,8 @@ impl Challenge {
         // TODO: We can make this deterministic as follows : Shard on
         // `nonce % num_threads`. Use an `AtomicU64` to track the current lowest
         // nonce. Stop thread when local `nonce > current best`. When all threads
-        // are stopped we found the unique global minimum.
+        // are stopped we found the unique global minimum. We can amortize sync
+        // operations by only doing the check every N nonces.
         // NOTE: Rayon does not support open ended ranges, so we need to use a closed
         // one.
         (0..u64::max_value())
