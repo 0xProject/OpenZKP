@@ -3,6 +3,7 @@ import glob
 import re
 import os
 from datetime import date
+import json
 
 # pip3 install PyGithub
 from github import Github
@@ -20,11 +21,11 @@ print('Connected to', repo)
 labels = {
     'TODO': ['tracker', 'refactor'],
     'OPT': ['tracker', 'performance'],
-    'HACK': ['tracker', 'invalid']
+    'HACK': ['tracker', 'hack']
 }
 
 # GitHub users for emails
-# TODO: Don't hard code the users
+# HACK: Don't hard code the users
 users = {
     '<remco@0x.org>': 'recmo',
     '<paul@0x.org>': 'pvienhage',
@@ -40,9 +41,10 @@ labels = {k: [gh_labels[v] for v in v] for k, v in labels.items()}
 users = {k: gh.get_user(v) for k, v in users.items()}
 
 # Collect existing tracker issues
-open_issues = repo.get_issues()
-for issue in open_issues:
-    print(issue)
+open_issues = []
+for issue in repo.get_issues():
+    if gh_labels['tracker'] in issue.labels:
+        open_issues += [issue]
 print(open_issues)
 
 # Number of lines to give before and after the TODO comment.
@@ -96,6 +98,7 @@ def get_context(filename, start, end):
         return ''.join(lines[start:end])
 
 def submit_issue(issue):
+    issue['json'] = json.dumps(issue)
     issue['head'] = issue['issue'].split('\n')[0]
     issue['github-handle'] = users[issue['author-mail']].login
     issue['author-time-pretty'] = date.fromtimestamp(issue['author-time']).isoformat()
@@ -104,7 +107,7 @@ def submit_issue(issue):
     formatted = dict(
         title='{head}'.format(**issue),
         body='''
-*On {author-time-pretty} @{github-handle} wrote in [`{commit-hash-short}`](https://github.com/{repo}/commit/{commit-hash}):*
+*On {author-time-pretty} @{github-handle} wrote in [`{commit-hash-short}`](https://github.com/{repo}/commit/{commit-hash}) “{summary}”:*
 
 {issue}
 
@@ -112,15 +115,17 @@ def submit_issue(issue):
 {context}
 ```
 *From [`{filename}:{line-one}`](https://github.com/{repo}/blob/{branch-hash}/{filename}#L{line-one})*
+
+<!--{json}-->
 '''.strip().format(**issue),
         assignee=users[issue['author-mail']],
         labels=labels[issue['kind']]
     )
     # TODO: Check if issue already exists
     print('Creating issue...')
-    print(formatted)
-    gh_issue = repo.create_issue(**formatted)
-    print(gh_issue)
+    print(formatted['body'])
+    #gh_issue = repo.create_issue(**formatted)
+    #print(gh_issue)
 
 def issues_from_file(filename):
     with open(filename, 'r') as file:
@@ -165,6 +170,5 @@ def issues_from_glob(pattern):
 
 # Rust source code
 for issue in issues_from_glob('algebra/u256/**/gcd*.rs'):
-    print('ISSUE:', issue)
     submit_issue(issue)
-
+    pass
