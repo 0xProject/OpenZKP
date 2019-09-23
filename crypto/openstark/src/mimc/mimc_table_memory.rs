@@ -1,7 +1,9 @@
 #[cfg(feature = "prover")]
 use crate::TraceTable;
 use crate::{
-    constraint_system::ConstraintSystem, constraints::Constraints, polynomial::DensePolynomial,
+    constraint_system::{Provable, Verifiable},
+    constraints::Constraints,
+    polynomial::DensePolynomial,
     rational_expression::RationalExpression,
 };
 use macros_decl::field_element;
@@ -32,22 +34,20 @@ const K_COEF: [FieldElement; 16] = [
 // Proves that 'after' is the ALPHA MiMC applied to 'before' after 'rounds'
 // iterations of the cypher
 #[derive(Debug)]
-pub struct PublicInput {
+pub struct Claim {
     before: FieldElement,
     after:  FieldElement,
 }
 
-impl From<&PublicInput> for Vec<u8> {
-    fn from(input: &PublicInput) -> Self {
+impl From<&Claim> for Vec<u8> {
+    fn from(input: &Claim) -> Self {
         let mut ret = input.before.as_montgomery().to_bytes_be().to_vec();
         ret.extend_from_slice(&input.after.as_montgomery().to_bytes_be());
         ret
     }
 }
 
-impl ConstraintSystem for PublicInput {
-    type PrivateInput = ();
-
+impl Verifiable for Claim {
     fn constraints(&self) -> Constraints {
         use RationalExpression::*;
 
@@ -85,23 +85,25 @@ impl ConstraintSystem for PublicInput {
         ROUNDS
     }
 
+    fn trace_columns(&self) -> usize {
+        3
+    }
+}
+
+impl Provable<Claim> for () {
     #[cfg(feature = "prover")]
-    fn trace(&self, _private_input: &Self::PrivateInput) -> TraceTable {
+    fn trace(&self, claim: &Claim) -> TraceTable {
         let mut trace = TraceTable::new(ROUNDS, 3);
 
-        let mut prev = self.before.clone();
+        let mut prev = claim.before.clone();
         for i in 0..ROUNDS {
             trace[(i, 0)] = prev.clone();
             trace[(i, 1)] = (&trace[(i, 0)]).square();
             trace[(i, 2)] = &trace[(i, 0)] * &trace[(i, 1)];
             prev = &trace[(i, 2)] + &K_COEF[i % 16];
         }
-        assert_eq!(trace[(ROUNDS - 1, 0)], self.after);
+        assert_eq!(trace[(ROUNDS - 1, 0)], claim.after);
         trace
-    }
-
-    fn trace_columns(&self) -> usize {
-        3
     }
 }
 
@@ -125,8 +127,7 @@ mod tests {
         let before =
             field_element!("00a74f2a70da4ea3723cabd2acc55d03f9ff6d0e7acef0fc63263b12c10dd837");
         let after = mimc(&before);
-        let input = PublicInput { before, after };
-        let _ = (&input).trace(&());
+        let input = Claim { before, after };
         let params = ProofParams {
             blowup:     16,
             pow_bits:   12,
