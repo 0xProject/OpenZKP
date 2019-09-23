@@ -5,9 +5,9 @@
 [![CircleCI](https://img.shields.io/circleci/build/github/0xProject/starkcrypto)](https://circleci.com/gh/0xProject/starkcrypto)
 [![Codecov](https://img.shields.io/codecov/c/gh/0xproject/starkcrypto)](https://codecov.io/gh/0xProject/starkcrypto)
 
-Pure Rust implementations of Zero-Knowledge Proof systems.
+OpenZKP - pure Rust implementations of Zero-Knowledge Proof systems.
 
----
+## Overview
 
 The current version has
 
@@ -26,9 +26,6 @@ That being said, it also has a number of limitations, it has
 and some others, see [features and limitations](#features-and-limitations) below for details.
 
 ## Packages
-
-This repository is a workspace containing many small packages that could be used.
-The main package is  [`crypto/openstark`](/crypto/openstark) [![Crates.io](https://img.shields.io/crates/v/openstark)](https://crates.io/project/openstark/).
 
 | Package                                                        | Version                                                                                                             | Description                                                                                       |
 | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
@@ -52,6 +49,8 @@ The main package is  [`crypto/openstark`](/crypto/openstark) [![Crates.io](https
 
 
 ## Example
+
+Think of a secret number $n$ and start a sequence with $x_0 = 1$ and $x_1 = n$. Then proceed as a Fibonacci sequence: $x_i = x_{i-2} + x_{i-1}$. We want to proof someone we know $x_k$ without revealing $n$.
 
 ```rust
 use openstark::{Provable, Verifiable};
@@ -93,7 +92,7 @@ pub fn main() {
 
 ### Features
 
-**A simple interface.** The public interface is simple and is considered stable. Future versions are expected to add functionality without breaking this interface.
+**A simple interface.** The public interface is simple and is considered [semver-stable](https://github.com/rust-lang/rfcs/blob/master/text/1105-api-evolution.md). Future versions are expected to add functionality without breaking this interface.
 
 **Succinct proofs.** For a given security parameter, the proof size is close to minimal. Significant improvements here would require innovations in the way constraint systems are designed or in the underlying cryptography.
 
