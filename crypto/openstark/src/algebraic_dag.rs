@@ -144,6 +144,7 @@ impl std::ops::Index<Index> for AlgebraicGraph {
 impl AlgebraicGraph {
     pub(crate) fn new(cofactor: &FieldElement, coset_size: usize, trace_blowup: usize) -> Self {
         // Create seed out of parameters
+        assert!(coset_size.is_power_of_two());
         let mut seed = [0; 32];
         let mut keccak = Keccak::new_keccak256();
         keccak.update(&cofactor.as_montgomery().to_bytes_be());

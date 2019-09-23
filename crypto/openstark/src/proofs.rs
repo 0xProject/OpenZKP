@@ -252,7 +252,8 @@ where
 
     // Verify proof
     info!("Verify proof.");
-    assert!(check_proof(proof.proof.as_slice(), claim, params).is_ok());
+    // TODO - Bubble up errors so we can see where verification fails.
+    assert!(check_proof(proof.proof.as_slice(), claim, params,).is_ok());
 
     // Q.E.D.
     // TODO: Return bytes, or a result structure
@@ -306,7 +307,7 @@ fn get_constraint_polynomials(
     let coset_length = trace_length * constraints_trace_degree;
 
     info!("Compute offset trace table");
-    let trace_coset = extract_trace_coset(trace_lde, coset_length);
+    let trace_coset = extract_trace_coset(trace_lde, coset_length.next_power_of_two());
 
     info!("Combine rational expressions");
     let combined_constraints = constraints.combine(constraint_coefficients, trace_length);
@@ -363,12 +364,13 @@ fn get_constraint_polynomials(
     }
 
     // Convert to even and odd coefficient polynomials
-    let mut constraint_polynomials: Vec<MmapVec<FieldElement>> =
-        vec![
-            MmapVec::with_capacity(trace_coset.num_rows() / constraints_trace_degree);
-            constraints_trace_degree
-        ];
-    for chunk in values.chunks_exact(constraints_trace_degree) {
+    let mut constraint_polynomials: Vec<MmapVec<FieldElement>> = vec![
+        MmapVec::with_capacity(
+            trace_coset.num_rows() / constraints_trace_degree.next_power_of_two()
+        );
+        constraints_trace_degree
+    ];
+    for chunk in values.chunks_exact(constraints_trace_degree.next_power_of_two()) {
         for (i, coefficient) in chunk.iter().enumerate() {
             constraint_polynomials[i].push(coefficient.clone());
         }
