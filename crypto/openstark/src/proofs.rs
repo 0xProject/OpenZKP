@@ -254,7 +254,7 @@ where
     // Verify proof
     info!("Verify proof.");
     // TODO - Re allow
-    //assert!(check_proof(proof.proof.as_slice(), public, params,).is_ok());
+    // assert!(check_proof(proof.proof.as_slice(), public, params,).is_ok());
 
     // Q.E.D.
     // TODO: Return bytes, or a result structure

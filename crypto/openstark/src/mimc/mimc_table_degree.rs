@@ -1,23 +1,36 @@
 #[cfg(feature = "prover")]
 use crate::TraceTable;
 use crate::{
-    constraint_system::ConstraintSystem, constraints::Constraints,
-    rational_expression::RationalExpression,
+    constraint_system::ConstraintSystem, constraints::Constraints, polynomial::DensePolynomial,
+    rational_expression::RationalExpression, verifier::check_proof,
 };
-use primefield::FieldElement;
-use u256::U256;
-use crate::{verifier::check_proof, polynomial::DensePolynomial};
 use macros_decl::field_element;
+use primefield::{fft::ifft, FieldElement};
 use std::convert::TryInto;
-use primefield::fft::ifft;
+use u256::U256;
 
 const ALPHA: usize = 4;
 const ROUNDS: usize = 8192; // 2^13 to match Guild of Weavers
 const K_COEF: [FieldElement; 16] = [
-    field_element!("2A"), field_element!("2B"), field_element!("AA"), field_element!("08A1"), field_element!("402A"), field_element!("013107"), field_element!("0445AA"), field_element!("0C90DD"), field_element!("20002A"), field_element!("48FB53"), field_element!("9896AA"), field_element!("012959E9"),
-    field_element!("0222C02A"), field_element!("03BD774F"), field_element!("06487BAA"), field_element!("0A2F1B45"),
+    field_element!("2A"),
+    field_element!("2B"),
+    field_element!("AA"),
+    field_element!("08A1"),
+    field_element!("402A"),
+    field_element!("013107"),
+    field_element!("0445AA"),
+    field_element!("0C90DD"),
+    field_element!("20002A"),
+    field_element!("48FB53"),
+    field_element!("9896AA"),
+    field_element!("012959E9"),
+    field_element!("0222C02A"),
+    field_element!("03BD774F"),
+    field_element!("06487BAA"),
+    field_element!("0A2F1B45"),
 ];
-// Proves that 'after' is the ALPHA MiMC applied to 'before' after rounds iterations of the cypher
+// Proves that 'after' is the ALPHA MiMC applied to 'before' after rounds
+// iterations of the cypher
 #[derive(Debug)]
 pub struct PublicInput {
     before: FieldElement,
@@ -31,7 +44,6 @@ impl From<&PublicInput> for Vec<u8> {
         ret
     }
 }
-
 
 impl ConstraintSystem for PublicInput {
     type PrivateInput = ();
@@ -50,7 +62,7 @@ impl ConstraintSystem for PublicInput {
         let periodic = |coefficients| {
             Polynomial(
                 DensePolynomial::new(coefficients),
-                Box::new(X.pow(trace_length/16)),
+                Box::new(X.pow(trace_length / 16)),
             )
         };
         let k_coef = periodic(&ifft(&K_COEF.to_vec()));
@@ -78,7 +90,7 @@ impl ConstraintSystem for PublicInput {
             trace[(i, 0)] = prev.clone();
             prev = &prev.pow(ALPHA) + &K_COEF[i % 16];
         }
-        assert_eq!(trace[(ROUNDS-1, 0)], self.after);
+        assert_eq!(trace[(ROUNDS - 1, 0)], self.after);
         trace
     }
 
@@ -90,7 +102,7 @@ impl ConstraintSystem for PublicInput {
 pub fn mimc(start: &FieldElement) -> FieldElement {
     let mut prev = start.clone();
     for i in 1..ROUNDS {
-        prev = prev.pow(ALPHA) + &K_COEF[(i-1) % 16];
+        prev = prev.pow(ALPHA) + &K_COEF[(i - 1) % 16];
     }
     prev
 }
@@ -98,9 +110,8 @@ pub fn mimc(start: &FieldElement) -> FieldElement {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{proof_params::ProofParams, proofs::stark_proof};
     use macros_decl::field_element;
-    use crate::proofs::stark_proof;
-    use crate::proof_params::ProofParams;
 
     #[test]
     fn mimc_hash_degree_test() {
@@ -110,12 +121,15 @@ mod tests {
         let input = PublicInput { before, after };
         let trace_table = (&input).trace(&());
         let params = ProofParams {
-                        blowup:     16,
-                        pow_bits:   12,
-                        queries:    20,
-                        fri_layout: vec![3, 3, 2],
-                    };
+            blowup:     16,
+            pow_bits:   12,
+            queries:    20,
+            fri_layout: vec![3, 3, 2],
+        };
         let potential_proof = stark_proof(&input, &(), &params);
-        assert_eq!(check_proof(potential_proof.proof.as_slice(), &input, &params), Ok(()));
+        assert_eq!(
+            check_proof(potential_proof.proof.as_slice(), &input, &params),
+            Ok(())
+        );
     }
 }
