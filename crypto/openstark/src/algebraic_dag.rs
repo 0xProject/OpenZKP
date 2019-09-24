@@ -166,7 +166,6 @@ impl AlgebraicGraph {
     /// that they are algebraically identical.
     fn hash(&self, operation: &Operation) -> FieldElement {
         use Operation::*;
-        // TODO: Validate indices
         match operation {
             Trace(i, o) => {
                 // Value = hash(seed, i, o)
@@ -198,9 +197,7 @@ impl AlgebraicGraph {
                 let exponent = self.coset_size / s;
                 let mut t = self.seed.clone();
                 t /= &self.cofactor;
-                let mut t = t.pow(exponent);
-                t *= c;
-                t
+                c * t.pow(exponent)
             }
             // This would need to be the same as the replaced operation
             Lookup(_) => panic!("hash(Lookup) not implemented."),
@@ -562,8 +559,31 @@ impl AlgebraicGraph {
 
 #[cfg(test)]
 mod tests {
-    // use super::*;
-    // use RationalExpression as RE;
+    use super::*;
+    use macros_decl::field_element;
+
+    #[test]
+    fn test_hash_coset() {
+        fn coset_hash(cofactor: FieldElement, size: usize) -> FieldElement {
+            let mut dag = AlgebraicGraph::new(&FieldElement::GENERATOR, 1024, 2);
+            let index = dag.op(Operation::Coset(cofactor, size));
+            dag[index].hash.clone()
+        }
+
+        // hash(Coset(0, _)) = 0
+        assert_eq!(coset_hash(FieldElement::ZERO, 1), FieldElement::ZERO);
+        assert_eq!(coset_hash(FieldElement::ZERO, 2), FieldElement::ZERO);
+        assert_eq!(coset_hash(FieldElement::ZERO, 512), FieldElement::ZERO);
+        assert_eq!(coset_hash(FieldElement::ZERO, 1024), FieldElement::ZERO);
+
+        // hash(Coset(c, 1)) = c
+        assert_eq!(coset_hash(FieldElement::ZERO, 1), FieldElement::ZERO);
+        assert_eq!(coset_hash(FieldElement::ONE, 1), FieldElement::ONE);
+        assert_eq!(coset_hash(FieldElement::GENERATOR, 1), FieldElement::GENERATOR);
+        assert_eq!(coset_hash(field_element!("022550177068302c52659dbd983cf622984f1f2a7fb2277003a64c7ecf96edaf"), 1), field_element!("022550177068302c52659dbd983cf622984f1f2a7fb2277003a64c7ecf96edaf"));
+
+        // hash(Coset(c, coset_size)) = c * seed.
+    }
 
     // #[test]
     // fn test_expr() {
