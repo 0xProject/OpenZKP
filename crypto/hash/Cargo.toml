@@ -1,10 +1,10 @@
 [package]
 name = "hash"
 version = "0.1.0"
-description = ""
+description = "Hash primitive used in `openstark`"
 repository = "https://github.com/0xProject/starkcrypto/tree/master/crypto/hash"
-keywords = []
-categories = []
+keywords = ["hash", "no-std"]
+categories = ["cryptography", "algorithms", "no-std", "wasm"]
 authors = [
     "Remco Bloemen <remco@0x.org>",
     "Mason Liang <mason@0x.org>",

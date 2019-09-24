@@ -1,10 +1,10 @@
 [package]
 name = "openstark"
 version = "0.1.0"
-description = ""
+description = "Implementation of the STARK ZK-proof system"
 repository = "https://github.com/0xProject/starkcrypto/tree/master/crypto/openstark"
-keywords = []
-categories = []
+keywords = ["zkp", "stark", "no-std", "wasm"]
+categories = ["cryptography", "algorithms", "no-std", "wasm"]
 authors = [
     "Remco Bloemen <remco@0x.org>",
     "Mason Liang <mason@0x.org>",

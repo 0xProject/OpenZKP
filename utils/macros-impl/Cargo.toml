@@ -1,10 +1,10 @@
 [package]
 name = "macros-impl"
 version = "0.1.0"
-description = ""
+description = "Implementation crate for `proc_macro_hack`"
 repository = "https://github.com/0xProject/starkcrypto/tree/master/utils/macros-impl"
-keywords = []
-categories = []
+keywords = ["proc_macro_hack"]
+categories = ["rust-patterns"]
 authors = [
     "Remco Bloemen <remco@0x.org>",
     "Mason Liang <mason@0x.org>",

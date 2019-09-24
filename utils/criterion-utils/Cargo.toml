@@ -1,10 +1,10 @@
 [package]
 name = "criterion-utils"
 version = "0.1.0"
-description = ""
+description = "Criterion helpers to benchmark over size and number of processors"
 repository = "https://github.com/0xProject/starkcrypto/tree/master/utils/criterion-utils"
-keywords = []
-categories = []
+keywords = ["criterion", "benchmarking", "threads"]
+categories = ["rust-patterns"]
 authors = [
     "Remco Bloemen <remco@0x.org>",
     "Mason Liang <mason@0x.org>",

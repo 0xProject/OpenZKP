@@ -1,10 +1,10 @@
 [package]
 name = "macros-decl"
 version = "0.1.0"
-description = ""
+description = "Procedural macros"
 repository = "https://github.com/0xProject/starkcrypto/tree/master/utils/macros-decl"
-keywords = []
-categories = []
+keywords = ["proc_macro_hack"]
+categories = ["rust-patterns"]
 authors = [
     "Remco Bloemen <remco@0x.org>",
     "Mason Liang <mason@0x.org>",

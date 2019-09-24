@@ -1,10 +1,10 @@
 [package]
 name = "logging-allocator"
 version = "0.1.0"
-description = ""
+description = "Wrapper around the system allocator that logs large allocations"
 repository = "https://github.com/0xProject/starkcrypto/tree/master/utils/logging-allocator"
-keywords = []
-categories = []
+keywords = ["logging", "allocator", "no-std"]
+categories = ["algorithms", "rust-patterns", "memory-management", "no-std", "wasm"]
 authors = [
     "Remco Bloemen <remco@0x.org>",
     "Mason Liang <mason@0x.org>",

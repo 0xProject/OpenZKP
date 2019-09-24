@@ -1,10 +1,10 @@
 [package]
 name = "mmap-vec"
 version = "0.1.0"
-description = ""
+description = "Replacement for `Vec` that uses file-backed storage"
 repository = "https://github.com/0xProject/starkcrypto/tree/master/utils/mmap-vec"
-keywords = []
-categories = []
+keywords = ["mmap", "no-std"]
+categories = ["algorithms", "rust-patterns", "memory-management", "no-std"]
 authors = [
     "Remco Bloemen <remco@0x.org>",
     "Mason Liang <mason@0x.org>",

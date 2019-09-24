@@ -1,10 +1,10 @@
 [package]
 name = "elliptic-curve-crypto"
 version = "0.1.0"
-description = ""
+description = "Pedersen commitments and digital signatures"
 repository = "https://github.com/0xProject/starkcrypto/tree/master/crypto/elliptic-curve-crypto"
-keywords = []
-categories = []
+keywords = ["elliptic", "ecdsa", "pedersen", "no-std", "wasm"]
+categories = ["cryptography", "algorithms", "no-std", "wasm"]
 authors = [
     "Remco Bloemen <remco@0x.org>",
     "Mason Liang <mason@0x.org>",
