@@ -181,10 +181,10 @@ use quickcheck::{Arbitrary, Gen};
 impl Arbitrary for Affine {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         if u8::arbitrary(g) < 50 {
-            Affine::Zero
+            Self::Zero
         } else {
             // TODO: Make sure it is on the curve
-            Affine::Point {
+            Self::Point {
                 x: FieldElement::arbitrary(g),
                 y: FieldElement::arbitrary(g),
             }

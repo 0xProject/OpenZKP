@@ -1,10 +1,10 @@
+use crate::SizeBytes;
 use log::{error, info, warn};
 use std::{
     alloc::{GlobalAlloc, Layout, System},
     ptr::null_mut,
     sync::atomic::{AtomicUsize, Ordering::Relaxed},
 };
-use crate::SizeBytes;
 
 // TODO: Make it store a static ref to an inner allocator (defaults to System)
 #[cfg_attr(feature = "std", derive(Debug))]

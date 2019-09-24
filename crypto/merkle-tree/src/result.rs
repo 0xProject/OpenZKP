@@ -16,14 +16,15 @@ pub enum Error {
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use Error::*;
         match *self {
-            Error::TreeToLarge => write!(f, "Tree too large"),
-            Error::NumLeavesNotPowerOfTwo => write!(f, "Doesn't have a power of two of leaves"),
-            Error::IndexOutOfRange => write!(f, "Index out of range"),
-            Error::IndicesUnsortedOrDuplicate => write!(f, "Indices are unsorted or duplicate"),
-            Error::DuplicateLeafMismatch => write!(f, "Duplicate leaf mismatch"),
-            Error::NotEnoughHashes => write!(f, "Not enough hashes to verify proof"),
-            Error::RootHashMismatch => {
+            TreeToLarge => write!(f, "Tree too large"),
+            NumLeavesNotPowerOfTwo => write!(f, "Doesn't have a power of two of leaves"),
+            IndexOutOfRange => write!(f, "Index out of range"),
+            IndicesUnsortedOrDuplicate => write!(f, "Indices are unsorted or duplicate"),
+            DuplicateLeafMismatch => write!(f, "Duplicate leaf mismatch"),
+            NotEnoughHashes => write!(f, "Not enough hashes to verify proof"),
+            RootHashMismatch => {
                 write!(f, "Verification failed since root hashes don't match")
             }
         }
