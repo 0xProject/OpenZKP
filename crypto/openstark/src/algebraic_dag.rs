@@ -84,7 +84,6 @@ pub(crate) struct Node {
 /// Algebraic operations supported by the graph.
 #[derive(Clone, Debug, PartialEq)]
 enum Operation {
-    Constant(FieldElement),
     Coset(FieldElement, usize),
     Trace(usize, isize),
     Add(Index, Index),
@@ -169,7 +168,6 @@ impl AlgebraicGraph {
         use Operation::*;
         // TODO: Validate indices
         match operation {
-            Constant(value) => value.clone(),
             Trace(i, o) => {
                 // Value = hash(seed, i, o)
                 let mut result = [0; 32];
@@ -192,6 +190,7 @@ impl AlgebraicGraph {
             Exp(a, i) => self[*a].hash.pow(*i),
             Poly(p, a) => p.evaluate(&self[*a].hash),
             Coset(c, s) => {
+                // TODO: Make sure Coset(c, 1) = c and Coset(c, coset_size) = c * seed.
                 // Pretend that seed is a member of the evaluation domain and
                 // 'convert' it to the coset by applying the same operations as
                 // we would to convert the evaluation domain into the coset.
@@ -216,7 +215,6 @@ impl AlgebraicGraph {
         }
         match operation {
             Coset(_, s) => *s,
-            Constant(_) => 1,
             Trace(..) => self.coset_size,
             Add(a, b) | Mul(a, b) => lcm(self[*a].period, self[*b].period),
             Neg(a) | Inv(a) | Exp(a, _) | Poly(_, a) => self[*a].period,
@@ -255,7 +253,7 @@ impl AlgebraicGraph {
         use RationalExpression as RE;
         match expr {
             RE::X => self.op(Op::Coset(self.cofactor.clone(), self.coset_size)),
-            RE::Constant(a) => self.op(Op::Constant(a)),
+            RE::Constant(a) => self.op(Op::Coset(a, 1)),
             RE::Trace(i, j) => self.op(Op::Trace(i, j)),
             RE::Polynomial(p, a) => {
                 let a = self.expression(*a);
@@ -308,7 +306,7 @@ impl AlgebraicGraph {
                 }
                 Mul(a, b) => {
                     match (&self[*a].op, &self[*b].op) {
-                        (Constant(a), Coset(c, s)) | (Coset(c, s), Constant(a)) => Coset(a * c, *s),
+                        (Coset(a, 1), Coset(c, s)) | (Coset(c, s), Coset(a, 1)) => Coset(a * c, *s),
                         (Coset(c1, s1), Coset(c2, s2)) if s1 == s2 => Coset(c1 * c2, *s1 / 2),
                         _ => Mul(*a, *b),
                     }
@@ -357,9 +355,6 @@ impl AlgebraicGraph {
         for i in 0..self.nodes.len() {
             let node = &self.nodes[i];
             if node.period > treshold {
-                continue;
-            }
-            if let Constant(_) = node.op {
                 continue;
             }
             if let Coset(..) = node.op {
@@ -430,11 +425,6 @@ impl AlgebraicGraph {
                 op, values, note, ..
             } = &mut current[0];
             match op {
-                Constant(a) => {
-                    for i in 0..CHUNK_SIZE {
-                        values[i] = a.clone();
-                    }
-                }
                 Coset(c, s) => {
                     let root = FieldElement::root(*s).unwrap();
                     let mut acc = c.clone();
