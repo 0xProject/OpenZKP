@@ -194,11 +194,11 @@ def update_issue(github_issue, source_issue):
 
 def close_issue(github_issue):
     print('Closing issue', github_issue['github'].number)
-    # TODO: implement
-    pass
+    gh = github_issue['github']
+    gh.edit(state='closed')
 
 # Collect source issues
-source_issues = list(issues_from_glob('algebra/u256/**/*.rs'))
+source_issues = list(issues_from_glob('**/*.rs'))
 print('Found', len(source_issues), 'issues in source.')
 
 # Match source issues with open issues
