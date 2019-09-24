@@ -1,8 +1,15 @@
 [package]
 name = "elliptic-curve"
 version = "0.1.0"
+description = "A crypto-grade elliptic curve over `primefield`"
+repository = "https://github.com/0xProject/starkcrypto"
+keywords = ["cryptography", "elliptic", "algebra", "no-std", "wasm"]
+categories = ["algorithms", "cryptography", "no-std", "wasm", "science"]
 authors = ["Remco Bloemen <remco@0x.org>"]
 edition = "2018"
+readme = "Readme.md"
+license = "Apache-2.0"
+license-file = "../../License.md"
 
 [dependencies]
 macros-decl = { path = "../../utils/macros-decl", default-features = false }
@@ -43,3 +50,7 @@ test = [
 ]
 bench = ["criterion"]
 unsafe_ecdsa = []
+
+# Allow math in docs
+[package.metadata.docs.rs]
+rustdoc-args = ["--html-in-header", "../../.cargo/katex-header.html"]

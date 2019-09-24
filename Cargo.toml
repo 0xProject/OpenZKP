@@ -20,6 +20,3 @@ members = [
 opt-level = 3
 lto = true
 panic = 'unwind'
-
-[package.metadata.docs.rs]
-rustdoc-args = ["--html-in-header", ".cargo/katex-header.html"]
