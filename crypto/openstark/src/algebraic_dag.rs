@@ -142,8 +142,8 @@ impl std::ops::Index<Index> for AlgebraicGraph {
 
 impl AlgebraicGraph {
     pub(crate) fn new(cofactor: &FieldElement, coset_size: usize, trace_blowup: usize) -> Self {
-        // Create seed out of parameters
         assert!(coset_size.is_power_of_two());
+        // Create seed out of parameters
         let mut seed = [0; 32];
         let mut keccak = Keccak::new_keccak256();
         keccak.update(&cofactor.as_montgomery().to_bytes_be());
@@ -209,7 +209,8 @@ impl AlgebraicGraph {
 
     // Note that the hash check already covers cases where the result is
     // zero, one or a subexpression. So we don't need to match for `a - a = 0`,
-    // `0 * a = 0`, `a^1 = a`, `-(-a) = a` etc.
+    // `0 * a = 0`, `a^1 = a`, `-(-a) = a` etc. What remains is mostly coset
+    // propagation.
     fn simplify(&self, operation: Operation) -> Operation {
         use Operation::*;
         match operation {
@@ -243,10 +244,10 @@ impl AlgebraicGraph {
             Inv(a) => {
                 match &self[a].op {
                     Coset(a, 1) => Coset(a.inv().expect("Division by zero"), 1),
+                    Coset(a, 2) => Coset(a.inv().expect("Division by zero"), 2),
+                    // TODO: For larger sizes we need a way to represent a
+                    // reverse order Coset.
                     _ => Inv(a),
-                    // TODO: Inv(a) also preserve some of the coset nature,
-                    // but change the ordering in a way that Coset currently can not
-                    // represent. We could re-introduce Geometric for this.
                 }
             }
             Poly(p, a) => {
