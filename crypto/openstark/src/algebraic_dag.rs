@@ -207,6 +207,58 @@ impl AlgebraicGraph {
         }
     }
 
+    // Note that the hash check already covers cases where the result is
+    // zero, one or a subexpression. So we don't need to match for `a - a = 0`,
+    // `0 * a = 0`, `a^1 = a`, `-(-a) = a` etc.
+    fn simplify(&self, operation: Operation) -> Operation {
+        use Operation::*;
+        match operation {
+            Add(a, b) => {
+                match (&self[a].op, &self[b].op) {
+                    // `0 + a = a` is covered by the hash check
+                    (Coset(c1, s1), Coset(c2, s2)) if s1 == s2 => Coset(c1 + c2, *s1),
+                    _ => Add(a, b),
+                }
+            }
+            Neg(a) => {
+                match &self[a].op {
+                    Coset(b, o) => Coset(b.neg(), *o),
+                    _ => Neg(a),
+                }
+            }
+            Mul(a, b) => {
+                match (&self[a].op, &self[b].op) {
+                    (Coset(a, 1), Coset(b, s)) | (Coset(b, s), Coset(a, 1)) => Coset(a * b, *s),
+                    (Coset(c1, s1), Coset(c2, s2)) if s1 == s2 => Coset(c1 * c2, *s1 / 2),
+                    _ => Mul(a, b),
+                }
+            }
+            Exp(a, e) => {
+                match &self[a].op {
+                    Coset(b, 1) => Coset(b.pow(e), 1),
+                    Coset(b, o) if o % e == 0 => Coset(b.pow(e), o / e),
+                    _ => Exp(a, e),
+                }
+            }
+            Inv(a) => {
+                match &self[a].op {
+                    Coset(a, 1) => Coset(a.inv().expect("Division by zero"), 1),
+                    _ => Inv(a),
+                    // TODO: Inv(a) also preserve some of the coset nature,
+                    // but change the ordering in a way that Coset currently can not
+                    // represent. We could re-introduce Geometric for this.
+                }
+            }
+            Poly(p, a) => {
+                match &self[a].op {
+                    Coset(a, 1) => Coset(p.evaluate(a), 1),
+                    _ => Poly(p, a),
+                }
+            }
+            n => n,
+        }
+    }
+
     fn period(&self, operation: &Operation) -> usize {
         use Operation::*;
         fn lcm(a: usize, b: usize) -> usize {
@@ -232,6 +284,14 @@ impl AlgebraicGraph {
             // Return existing node index
             Index(index)
         } else {
+            // Recognize expressions evaluating to zero or one. Simplify other
+            // expressions.
+            let operation = match hash {
+                FieldElement::ZERO => Operation::Coset(FieldElement::ZERO, 1),
+                FieldElement::ONE => Operation::Coset(FieldElement::ONE, 1),
+                _ => self.simplify(operation)
+            };
+
             // Create new node
             let index = self.nodes.len();
             let period = self.period(&operation);
@@ -284,49 +344,6 @@ impl AlgebraicGraph {
         }
     }
 
-    // TODO: Run optimization passes automatically, maybe in Init?
-    pub(crate) fn optimize(&mut self) {
-        use Operation::*;
-        for i in 0..self.nodes.len() {
-            let op = match &self.nodes[i].op {
-                // TODO: We can also do the constant propagation here. We can even
-                // fold constant propagation in with lookup tables, as it is
-                // equivalent to a repeating pattern of size one.
-                Add(a, b) => {
-                    match (&self[*a].op, &self[*b].op) {
-                        (Coset(c1, s1), Coset(c2, s2)) if s1 == s2 => Coset(c1 + c2, *s1),
-                        _ => Add(*a, *b),
-                    }
-                }
-                Neg(a) => {
-                    match &self[*a].op {
-                        Coset(b, o) => Coset(b.neg(), *o),
-                        _ => Neg(*a),
-                    }
-                }
-                Mul(a, b) => {
-                    match (&self[*a].op, &self[*b].op) {
-                        (Coset(a, 1), Coset(c, s)) | (Coset(c, s), Coset(a, 1)) => Coset(a * c, *s),
-                        (Coset(c1, s1), Coset(c2, s2)) if s1 == s2 => Coset(c1 * c2, *s1 / 2),
-                        _ => Mul(*a, *b),
-                    }
-                }
-                Exp(a, e) => {
-                    match &self[*a].op {
-                        Coset(b, o) if o % *e == 0 => Coset(b.pow(*e), o / *e),
-                        _ => Exp(*a, *e),
-                    }
-                }
-                // TODO: Inv(a) also preserve some of the coset nature,
-                // but change the ordering in a way that Coset currently can not
-                // represent. We could re-introduce Geometric for this.
-                n => n.clone(),
-            };
-            self.nodes[i].period = self.period(&op);
-            self.nodes[i].op = op;
-        }
-    }
-
     fn make_lookup(&self, index: Index) -> Vec<FieldElement> {
         let node = &self[index];
         assert!(node.period <= 1024);
@@ -341,7 +358,6 @@ impl AlgebraicGraph {
         result
     }
 
-    // TODO: Call from `optimize`
     pub(crate) fn lookup_tables(&mut self) {
         use Operation::*;
         // OPT: Don't create a bunch of lookup tables just to throw them away
@@ -366,7 +382,6 @@ impl AlgebraicGraph {
     }
 
     /// Remove unnecessary nodes
-    // TODO: Call from `optimize`
     pub(crate) fn tree_shake(&mut self, tip: Index) -> Index {
         use Operation::*;
         fn recurse(nodes: &[Node], used: &mut [bool], i: usize) {
