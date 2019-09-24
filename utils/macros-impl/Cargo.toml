@@ -19,7 +19,7 @@ proc-macro = true
 [dependencies]
 macros-lib = { path = "../macros-lib" }
 
-proc-macro2 = "0.4"
+proc-macro2 = "1.0"
 proc-macro-hack = "0.5.8"
 
 [features]
