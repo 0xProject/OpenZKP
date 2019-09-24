@@ -183,9 +183,12 @@ def update_issue(github_issue, source_issue):
     # We update headline, body and labels
     gh = github_issue['github']
     r = render(source_issue)
-    if gh.title == r['title'] and gh.body == r['body'] and set([l.name for l in gh.labels]) == set(r['labels']):
+    if gh.title == r['title'] and github_issue['issue'] == source_issue['issue'] and  set([l.name for l in gh.labels]) == set(r['labels']):
         # Issue up to date
         return
+    # NOTE: We don't update if the body changed because this changes with each
+    # commit hash. It is a good check to add if the json structure or the
+    # render function is modified.
     print('Updating issue', github_issue['github'].number)
     gh.edit(**r)
 
