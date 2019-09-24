@@ -364,10 +364,8 @@ fn get_constraint_polynomials(
     }
 
     // Convert to even and odd coefficient polynomials
-    let mut constraint_polynomials: Vec<MmapVec<FieldElement>> = vec![
-        MmapVec::with_capacity(trace_length);
-        constraint_degree
-    ];
+    let mut constraint_polynomials: Vec<MmapVec<FieldElement>> =
+        vec![MmapVec::with_capacity(trace_length); constraint_degree];
     let (coefficients, zeros) = values.split_at(constraint_degree * trace_length);
     assert!(zeros.iter().all(|z| z == &FieldElement::ZERO));
     for chunk in coefficients.chunks_exact(constraint_degree) {
