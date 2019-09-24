@@ -196,11 +196,13 @@ impl AlgebraicGraph {
             }
             Exp(a, i) => self[*a].hash.pow(*i),
             Poly(p, a) => p.evaluate(&self[*a].hash),
+            // There is a difference between a constant (C) and a coset
+            // of size 1 (X^coset_size). This difference is only apparent when
+            // evaluating on a random X. But we are only interested in evaluating
+            // on our domain, so we will treat them equal. That is, all constants
+            // are replaced by a coset of size one. Consequently, constants will
+            // hash to C * (X / cofactor)^coset_size.
             Coset(c, s) => {
-                // TODO: Make sure Coset(c, 1) = c and Coset(c, coset_size) = c * seed.
-                // Pretend that seed is a member of the evaluation domain and
-                // 'convert' it to the coset by applying the same operations as
-                // we would to convert the evaluation domain into the coset.
                 assert_eq!(self.coset_size % s, 0);
                 let exponent = self.coset_size / s;
                 let mut t = self.seed.clone();
@@ -582,27 +584,35 @@ mod tests {
             dag[index].hash.clone()
         }
 
+    #[test]
+    fn test_hash_coset_zero() {
         // hash(Coset(0, _)) = 0
         assert_eq!(coset_hash(FieldElement::ZERO, 1), FieldElement::ZERO);
         assert_eq!(coset_hash(FieldElement::ZERO, 2), FieldElement::ZERO);
         assert_eq!(coset_hash(FieldElement::ZERO, 512), FieldElement::ZERO);
         assert_eq!(coset_hash(FieldElement::ZERO, 1024), FieldElement::ZERO);
+    }
 
-        // hash(Coset(c, 1)) = c
-        assert_eq!(coset_hash(FieldElement::ZERO, 1), FieldElement::ZERO);
-        assert_eq!(coset_hash(FieldElement::ONE, 1), FieldElement::ONE);
-        assert_eq!(coset_hash(FieldElement::GENERATOR, 1), FieldElement::GENERATOR);
-        assert_eq!(coset_hash(field_element!("022550177068302c52659dbd983cf622984f1f2a7fb2277003a64c7ecf96edaf"), 1), field_element!("022550177068302c52659dbd983cf622984f1f2a7fb2277003a64c7ecf96edaf"));
-
-        // hash(Coset(c, coset_size)) = c * seed.
+    #[test]
+    fn test_hash_coset_constant() {
+        // hash(Coset(c, 1)) = c * (seed / cofactor) ^ coset_size
+        fn test(c: FieldElement) {
+            let mut dag = AlgebraicGraph::new(&FieldElement::GENERATOR, 1024, 2);
+            let factor = (&dag.seed / &dag.cofactor).pow(dag.coset_size);
+            let index = dag.op(Op::Coset(c.clone(), 1));
+            dbg!(&c);
+            assert_eq!(dag[index].hash, c * factor);
+        }
+        test(FieldElement::ZERO);
+        test(FieldElement::ONE);
+        test(FieldElement::GENERATOR);
+        test(field_element!("022550177068302c52659dbd983cf622984f1f2a7fb2277003a64c7ecf96edaf"));
     }
 
     #[test]
     fn test_hash_x_is_seed() {
         let mut dag = AlgebraicGraph::new(&FieldElement::GENERATOR, 1024, 2);
         let index = dag.expression(RE::X);
-        dbg!(dag[index].hash.as_montgomery());
-        dbg!(dag.seed.as_montgomery());
         assert_eq!(dag[index].hash, dag.seed);
     }
 
