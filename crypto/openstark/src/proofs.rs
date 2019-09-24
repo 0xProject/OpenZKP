@@ -712,10 +712,10 @@ mod tests {
     // to the main implementation? Should we break up the implementation so we
     // can test the individual steps?
     #[test]
-    // TODO: Naming
+    // TODO: Refactor this code to be cleaner.
     #[allow(non_snake_case)]
-    // TODO - See if it's possible to do context cloning and break this into smaller tests
     #[allow(clippy::cognitive_complexity)]
+    #[allow(clippy::too_many_lines)]
     fn fib_proof_test() {
         crate::tests::init();
 
