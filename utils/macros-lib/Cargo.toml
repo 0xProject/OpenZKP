@@ -1,7 +1,17 @@
 [package]
 name = "macros-lib"
 version = "0.1.0"
-authors = ["Remco Bloemen <remco@0x.org>"]
+description = "Procedural macros library"
+repository = "https://github.com/0xProject/starkcrypto/tree/master/utils/macros-lib"
+keywords = ["macros", "rust-patterns"]
+categories = ["algorithms", "rust-patterns"]
+authors = [
+    "Remco Bloemen <remco@0x.org>",
+    "Mason Liang <mason@0x.org>",
+    "Paul Vienhage <paul@0x.org>"]
+readme = "Readme.md"
+license = "Apache-2.0"
+license-file = "../../License.md"
 edition = "2018"
 
 [dependencies]
