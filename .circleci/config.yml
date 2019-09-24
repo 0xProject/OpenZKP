@@ -347,9 +347,8 @@ jobs:
           name: Install python tools
           command: |
             # TODO: Have a prepared executor
-            sudo apt-get install python3
-            pip3 install PyGithub
-            pip3 install numpy
+            pip install PyGithub
+            pip install numpy
       - run:
           name: Update GitHub issues
           command: |
