@@ -340,6 +340,18 @@ jobs:
       - run:
           name: Stop
           command: circleci-agent step halt
+  update-issues:
+    executor: minimal
+    steps:
+      - run:
+          name: Install python tools
+          command: |
+            pip3 install PyGithub
+            pip3 install numpy
+      - run:
+          name: Update GitHub issues
+          command: |
+            python3 .circleci/issue_tracker.py
 
 workflows:
   version: 2
@@ -396,3 +408,9 @@ workflows:
             - tests
             - benchmarks
             - build-no-std
+  master:
+    jobs:
+      - update-issues
+          filters:
+            branches:
+              only: master
