@@ -193,7 +193,8 @@ impl AlgebraicGraph {
             Poly(p, a) => p.evaluate(&self[*a].hash),
             Coset(c, s) => {
                 // Pretend that seed is a member of the evaluation domain and
-                // convert it to the coset.
+                // 'convert' it to the coset by applying the same operations as
+                // we would to convert the evaluation domain into the coset.
                 assert_eq!(self.coset_size % s, 0);
                 let exponent = self.coset_size / s;
                 let mut t = self.seed.clone();
@@ -217,12 +218,8 @@ impl AlgebraicGraph {
             Coset(_, s) => *s,
             Constant(_) => 1,
             Trace(..) => self.coset_size,
-            Add(a, b) => lcm(self[*a].period, self[*b].period),
-            Neg(a) => self[*a].period,
-            Mul(a, b) => lcm(self[*a].period, self[*b].period),
-            Inv(a) => self[*a].period,
-            Exp(a, _) => self[*a].period,
-            Poly(_, a) => self[*a].period,
+            Add(a, b) | Mul(a, b) => lcm(self[*a].period, self[*b].period),
+            Neg(a) | Inv(a) | Exp(a, _) | Poly(_, a) => self[*a].period,
             Lookup(v) => v.0.len(),
         }
     }
@@ -297,10 +294,21 @@ impl AlgebraicGraph {
                 // TODO: We can also do the constant propagation here. We can even
                 // fold constant propagation in with lookup tables, as it is
                 // equivalent to a repeating pattern of size one.
+                Add(a, b) => {
+                    match (&self[*a].op, &self[*b].op) {
+                        (Coset(c1, s1), Coset(c2, s2)) if s1 == s2 => Coset(c1 + c2, *s1),
+                        _ => Add(*a, *b),
+                    }
+                }
+                Neg(a) => {
+                    match &self[*a].op {
+                        Coset(b, o) => Coset(b.neg(), *o),
+                        _ => Neg(*a),
+                    }
+                }
                 Mul(a, b) => {
                     match (&self[*a].op, &self[*b].op) {
-                        (Constant(a), Coset(c, s)) => Coset(a * c, *s),
-                        (Coset(c, s), Constant(a)) => Coset(a * c, *s),
+                        (Constant(a), Coset(c, s)) | (Coset(c, s), Constant(a)) => Coset(a * c, *s),
                         (Coset(c1, s1), Coset(c2, s2)) if s1 == s2 => Coset(c1 * c2, *s1 / 2),
                         _ => Mul(*a, *b),
                     }
@@ -311,7 +319,7 @@ impl AlgebraicGraph {
                         _ => Exp(*a, *e),
                     }
                 }
-                // TODO: Neg(a), Inv(a) also preserve some of the coset nature,
+                // TODO: Inv(a) also preserve some of the coset nature,
                 // but change the ordering in a way that Coset currently can not
                 // represent. We could re-introduce Geometric for this.
                 n => n.clone(),
@@ -369,18 +377,11 @@ impl AlgebraicGraph {
         fn recurse(nodes: &[Node], used: &mut [bool], i: usize) {
             used[i] = true;
             match &nodes[i].op {
-                Add(a, b) => {
+                Add(a, b) | Mul(a, b) => {
                     recurse(nodes, used, a.0);
                     recurse(nodes, used, b.0);
                 }
-                Neg(a) => recurse(nodes, used, a.0),
-                Mul(a, b) => {
-                    recurse(nodes, used, a.0);
-                    recurse(nodes, used, b.0);
-                }
-                Inv(a) => recurse(nodes, used, a.0),
-                Exp(a, _) => recurse(nodes, used, a.0),
-                Poly(_, a) => recurse(nodes, used, a.0),
+                Neg(a) | Inv(a) | Exp(a, _) | Poly(_, a) => recurse(nodes, used, a.0),
                 _ => {}
             }
         }
@@ -400,18 +401,11 @@ impl AlgebraicGraph {
         }
         for node in &mut self.nodes {
             match &mut node.op {
-                Add(a, b) => {
+                Add(a, b) | Mul(a, b) => {
                     *a = numbers[a.0];
                     *b = numbers[b.0];
                 }
-                Neg(a) => *a = numbers[a.0],
-                Mul(a, b) => {
-                    *a = numbers[a.0];
-                    *b = numbers[b.0];
-                }
-                Inv(a) => *a = numbers[a.0],
-                Exp(a, _) => *a = numbers[a.0],
-                Poly(_, a) => *a = numbers[a.0],
+                Neg(a) | Inv(a) | Exp(a, _) | Poly(_, a) => *a = numbers[a.0],
                 _ => {}
             }
         }

@@ -23,27 +23,27 @@ pub enum RationalExpression {
 
 impl RationalExpression {
     pub fn neg(&self) -> Self {
-        RationalExpression::Neg(Box::new(self.clone()))
+        Self::Neg(Box::new(self.clone()))
     }
 
     pub fn inv(&self) -> Self {
-        RationalExpression::Inv(Box::new(self.clone()))
+        Self::Inv(Box::new(self.clone()))
     }
 
     pub fn pow(&self, exponent: usize) -> Self {
-        RationalExpression::Exp(Box::new(self.clone()), exponent)
+        Self::Exp(Box::new(self.clone()), exponent)
     }
 }
 
 impl From<i32> for RationalExpression {
     fn from(value: i32) -> Self {
-        RationalExpression::Constant(value.into())
+        Self::Constant(value.into())
     }
 }
 
 impl From<&FieldElement> for RationalExpression {
     fn from(value: &FieldElement) -> Self {
-        RationalExpression::Constant(value.clone())
+        Self::Constant(value.clone())
     }
 }
 
@@ -51,7 +51,7 @@ impl Add for RationalExpression {
     type Output = Self;
 
     fn add(self, other: Self) -> Self {
-        RationalExpression::Add(Box::new(self), Box::new(other))
+        Self::Add(Box::new(self), Box::new(other))
     }
 }
 
@@ -69,7 +69,7 @@ impl Mul for RationalExpression {
     type Output = Self;
 
     fn mul(self, other: Self) -> Self {
-        RationalExpression::Mul(Box::new(self), Box::new(other))
+        Self::Mul(Box::new(self), Box::new(other))
     }
 }
 
