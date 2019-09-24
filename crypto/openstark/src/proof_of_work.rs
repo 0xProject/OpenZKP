@@ -1,11 +1,12 @@
 #[cfg(all(feature = "std", feature = "prover"))]
 use log::info;
 use macros_decl::hex;
-use std::convert::TryFrom;
+use std::{
+    convert::TryFrom,
+    sync::atomic::{AtomicU64, Ordering::Relaxed},
+};
 use tiny_keccak::Keccak;
 use u256::U256;
-use std::sync::atomic::AtomicU64;
-use std::sync::atomic::Ordering::Relaxed;
 
 #[cfg(all(feature = "std", feature = "prover"))]
 use rayon::prelude::*;
@@ -79,23 +80,22 @@ impl Challenge {
         let num_threads = rayon::current_num_threads();
         info!(
             "Solving {} bit proof of work with {} threads.",
-            self.difficulty,
-            num_threads
+            self.difficulty, num_threads
         );
         let first_nonce = AtomicU64::new(u64::max_value());
-        (0..num_threads as u64)
-            .into_par_iter()
-            .for_each(|offset| {
-                for nonce in (offset..).step_by(num_threads) {
-                    if self.verify(Response { nonce }) {
-                        let _ = fetch_min(&first_nonce, nonce);
-                    }
-                    if nonce >= first_nonce.load(Relaxed) {
-                        break;
-                    }
+        (0..num_threads as u64).into_par_iter().for_each(|offset| {
+            for nonce in (offset..).step_by(num_threads) {
+                if self.verify(Response { nonce }) {
+                    let _ = fetch_min(&first_nonce, nonce);
                 }
-            });
-        Response { nonce: first_nonce.into_inner() }
+                if nonce >= first_nonce.load(Relaxed) {
+                    break;
+                }
+            }
+        });
+        Response {
+            nonce: first_nonce.into_inner(),
+        }
     }
 }
 
@@ -122,7 +122,6 @@ fn fetch_min(atom: &AtomicU64, value: u64) -> u64 {
     }
     prev
 }
-
 
 #[cfg(test)]
 mod tests {
