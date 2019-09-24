@@ -1,7 +1,17 @@
 [package]
 name = "u256"
 version = "0.1.0"
-authors = ["Remco Bloemen <remco@0x.org>"]
+description = "Performant implementation of 256-bit unsigned integers"
+repository = "https://github.com/0xProject/starkcrypto/tree/master/algebra/u256"
+keywords = ["cryptography", "u256", "algebra", "no-std", "wasm"]
+categories = ["algorithms", "cryptography", "no-std", "wasm", "science"]
+authors = [
+    "Remco Bloemen <remco@0x.org>",
+    "Mason Liang <mason@0x.org>",
+    "Paul Vienhage <paul@0x.org>"]
+readme = "Readme.md"
+license = "Apache-2.0"
+license-file = "../../License.md"
 edition = "2018"
 
 [dependencies]
@@ -42,3 +52,7 @@ std = [
     "crunchy/std",
     "hex"
 ]
+
+# Allow math in docs
+[package.metadata.docs.rs]
+rustdoc-args = ["--html-in-header", "../../.cargo/katex-header.html"]

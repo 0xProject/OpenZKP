@@ -2,14 +2,17 @@
 name = "elliptic-curve"
 version = "0.1.0"
 description = "A crypto-grade elliptic curve over `primefield`"
-repository = "https://github.com/0xProject/starkcrypto"
+repository = "https://github.com/0xProject/starkcrypto/tree/master/algebra/elliptic-curve"
 keywords = ["cryptography", "elliptic", "algebra", "no-std", "wasm"]
 categories = ["algorithms", "cryptography", "no-std", "wasm", "science"]
-authors = ["Remco Bloemen <remco@0x.org>"]
-edition = "2018"
+authors = [
+    "Remco Bloemen <remco@0x.org>",
+    "Mason Liang <mason@0x.org>",
+    "Paul Vienhage <paul@0x.org>"]
 readme = "Readme.md"
 license = "Apache-2.0"
 license-file = "../../License.md"
+edition = "2018"
 
 [dependencies]
 macros-decl = { path = "../../utils/macros-decl", default-features = false }
