@@ -1,15 +1,13 @@
 #[cfg(all(feature = "std", feature = "prover"))]
 use log::info;
 use macros_decl::hex;
-use std::{
-    convert::TryFrom,
-    sync::atomic::{AtomicU64, Ordering::Relaxed},
-};
-use tiny_keccak::Keccak;
-use u256::U256;
-
 #[cfg(all(feature = "std", feature = "prover"))]
 use rayon::prelude::*;
+use std::convert::TryFrom;
+#[cfg(all(feature = "std", feature = "prover"))]
+use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
+use tiny_keccak::Keccak;
+use u256::U256;
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "std", derive(Debug))]
@@ -112,6 +110,7 @@ impl Response {
 // TODO: Use `fetch_min` instead
 // See https://doc.rust-lang.org/std/sync/atomic/struct.AtomicUsize.html#method.fetch_max
 // This is pending https://github.com/rust-lang/rust/issues/48655
+#[cfg(all(feature = "std", feature = "prover"))]
 fn fetch_min(atom: &AtomicU64, value: u64) -> u64 {
     let mut prev = atom.load(Relaxed);
     while prev > value {
