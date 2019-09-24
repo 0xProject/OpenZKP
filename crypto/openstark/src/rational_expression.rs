@@ -41,6 +41,12 @@ impl From<i32> for RationalExpression {
     }
 }
 
+impl From<usize> for RationalExpression {
+    fn from(value: usize) -> Self {
+        Self::Constant(value.into())
+    }
+}
+
 impl From<&FieldElement> for RationalExpression {
     fn from(value: &FieldElement) -> Self {
         Self::Constant(value.clone())

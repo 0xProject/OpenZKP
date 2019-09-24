@@ -76,6 +76,7 @@ pub use proofs::stark_proof;
 pub use trace_table::TraceTable;
 #[cfg(feature = "prover")]
 mod mimc;
+mod group_sig;
 
 #[cfg(test)]
 mod tests {
