@@ -10,13 +10,6 @@ use std::sync::atomic::Ordering::Relaxed;
 #[cfg(all(feature = "std", feature = "prover"))]
 use rayon::prelude::*;
 
-// Difficulty threshold after which a multi-threaded solver is used.
-// Note: tests should use a difficulty below this threshold.
-#[cfg(all(feature = "std", feature = "prover"))]
-// False positive, constant is used when `std` is set
-#[allow(dead_code)]
-const THREADED_THRESHOLD: usize = 16;
-
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub(crate) struct ChallengeSeed([u8; 32]);
@@ -67,14 +60,8 @@ impl Challenge {
 
 #[cfg(feature = "prover")]
 impl Challenge {
+    #[cfg(not(feature = "std"))]
     pub(crate) fn solve(&self) -> Response {
-        #[cfg(feature = "std")]
-        {
-            if self.difficulty > THREADED_THRESHOLD {
-                return self.solve_threaded();
-            }
-        }
-
         // We assume a nonce exists and will be found in reasonable time.
         info!(
             "Solving {} bit proof of work single-threaded.",
@@ -87,25 +74,21 @@ impl Challenge {
             .expect("No valid nonce found")
     }
 
-    // TODO: Make tests compatible with the proof of work values from this function
     #[cfg(feature = "std")]
-    // False positive, constant is used when `std` is set
-    #[allow(dead_code)]
-    fn solve_threaded(&self) -> Response {
-        info!(
-            "Solving {} bit proof of work multi-threaded.",
-            self.difficulty
-        );
-        // NOTE: Rayon does not support open ended ranges, so we need to use a closed
-        // one.
-        let first_nonce = AtomicU64::new(u64::max_value());
+    pub(crate) fn solve(&self) -> Response {
         let num_threads = rayon::current_num_threads();
+        info!(
+            "Solving {} bit proof of work with {} threads.",
+            self.difficulty,
+            num_threads
+        );
+        let first_nonce = AtomicU64::new(u64::max_value());
         (0..num_threads as u64)
             .into_par_iter()
             .for_each(|offset| {
-                for nonce in (offset..=u64::max_value()).step_by(num_threads) {
+                for nonce in (offset..).step_by(num_threads) {
                     if self.verify(Response { nonce }) {
-                        let _ = fetch_min(first_nonce, nonce);
+                        let _ = fetch_min(&first_nonce, nonce);
                     }
                     if nonce >= first_nonce.load(Relaxed) {
                         break;
@@ -126,29 +109,33 @@ impl Response {
     }
 }
 
-fn fetch_min()
+// TODO: Use `fetch_min` instead
+// See https://doc.rust-lang.org/std/sync/atomic/struct.AtomicUsize.html#method.fetch_max
+// This is pending https://github.com/rust-lang/rust/issues/48655
+fn fetch_min(atom: &AtomicU64, value: u64) -> u64 {
+    let mut prev = atom.load(Relaxed);
+    while prev > value {
+        match atom.compare_exchange_weak(prev, value, Relaxed, Relaxed) {
+            Ok(_) => return value,
+            Err(next_prev) => prev = next_prev,
+        }
+    }
+    prev
+}
+
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn threaded_proof_of_work_test() {
+    fn proof_of_work_test() {
         let challenge = ChallengeSeed::from_bytes(hex!(
             "0123456789abcded0123456789abcded0123456789abcded0123456789abcded"
         ))
         .with_difficulty(8);
         let response = challenge.solve();
-        assert!(challenge.verify(response));
-    }
-
-    #[test]
-    fn ver_threaded_proof_of_work_test() {
-        let challenge = ChallengeSeed::from_bytes(hex!(
-            "0123456789abcded0123456789abcded0123456789abcded0123456789abcded"
-        ))
-        .with_difficulty(8);
-        let response = challenge.solve_threaded();
+        assert_eq!(response.nonce, 138);
         assert!(challenge.verify(response));
     }
 }
