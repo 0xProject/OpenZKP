@@ -190,12 +190,7 @@ impl AlgebraicGraph {
             Add(a, b) => &self[*a].hash + &self[*b].hash,
             Neg(a) => -&self[*a].hash,
             Mul(a, b) => &self[*a].hash * &self[*b].hash,
-            Inv(a) => {
-                self[*a]
-                    .hash
-                    .inv()
-                    .expect("Division by zero")
-            }
+            Inv(a) => self[*a].hash.inv().expect("Division by zero"),
             Exp(a, i) => self[*a].hash.pow(*i),
             Poly(p, a) => p.evaluate(&self[*a].hash),
             // We pretend that X comes from Coset(self.cofactor, self.coset_size)
@@ -238,9 +233,10 @@ impl AlgebraicGraph {
             Mul(a, b) => {
                 match (&self[a].op, &self[b].op) {
                     (Constant(a), Constant(b)) => Constant(a * b),
-                    (Coset(a, 1), Coset(b, s)) | (Coset(b, s), Coset(a, 1)) |
-                    (Constant(a), Coset(b, s)) | (Coset(b, s), Constant(a))
-                    => Coset(a * b, *s),
+                    (Coset(a, 1), Coset(b, s))
+                    | (Coset(b, s), Coset(a, 1))
+                    | (Constant(a), Coset(b, s))
+                    | (Coset(b, s), Constant(a)) => Coset(a * b, *s),
                     (Coset(c1, s1), Coset(c2, s2)) if s1 == s2 => Coset(c1 * c2, *s1 / 2),
                     _ => Mul(a, b),
                 }
@@ -308,7 +304,7 @@ impl AlgebraicGraph {
             let operation = match hash {
                 FieldElement::ZERO => Operation::Constant(FieldElement::ZERO),
                 FieldElement::ONE => Operation::Constant(FieldElement::ONE),
-                _ => self.simplify(operation)
+                _ => self.simplify(operation),
             };
 
             // Create new node
@@ -582,8 +578,8 @@ impl AlgebraicGraph {
 mod tests {
     use super::*;
     use macros_decl::field_element;
-    use RationalExpression as RE;
     use Operation as Op;
+    use RationalExpression as RE;
 
     fn coset_hash(cofactor: FieldElement, size: usize) -> FieldElement {
         let mut dag = AlgebraicGraph::new(&FieldElement::GENERATOR, 1024, 2);
@@ -613,7 +609,9 @@ mod tests {
         test(FieldElement::ZERO);
         test(FieldElement::ONE);
         test(FieldElement::GENERATOR);
-        test(field_element!("022550177068302c52659dbd983cf622984f1f2a7fb2277003a64c7ecf96edaf"));
+        test(field_element!(
+            "022550177068302c52659dbd983cf622984f1f2a7fb2277003a64c7ecf96edaf"
+        ));
     }
 
     #[test]
