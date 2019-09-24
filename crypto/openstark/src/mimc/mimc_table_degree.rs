@@ -116,7 +116,6 @@ mod tests {
     use macros_decl::field_element;
 
     #[test]
-    #[ignore]
     fn mimc_hash_degree_test() {
         let before =
             field_element!("00a74f2a70da4ea3723cabd2acc55d03f9ff6d0e7acef0fc63263b12c10dd837");

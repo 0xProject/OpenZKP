@@ -303,11 +303,13 @@ fn get_constraint_polynomials(
     // smaller.
     const CHUNK_SIZE: usize = 65536;
 
-    let constraints_trace_degree = constraints.trace_degree();
-    let coset_length = trace_length * constraints_trace_degree;
+    // We need to evaluate on a power of two degree
+    let constraint_degree = constraints.trace_degree();
+    let eval_degree = constraint_degree.next_power_of_two();
+    let coset_size = trace_length * eval_degree;
 
     info!("Compute offset trace table");
-    let trace_coset = extract_trace_coset(trace_lde, coset_length.next_power_of_two());
+    let trace_coset = extract_trace_coset(trace_lde, coset_size);
 
     info!("Combine rational expressions");
     let combined_constraints = constraints.combine(constraint_coefficients, trace_length);
@@ -323,7 +325,7 @@ fn get_constraint_polynomials(
     let mut dag = AlgebraicGraph::new(
         &FieldElement::GENERATOR,
         trace_coset.num_rows(),
-        constraints_trace_degree,
+        eval_degree,
     );
     let result = dag.expression(combined_constraints);
     dag.optimize();
@@ -334,10 +336,8 @@ fn get_constraint_polynomials(
 
     // Evaluate on the coset trace table
     info!("Evaluate on the coset trace table");
-    let mut result: MmapVec<FieldElement> = MmapVec::with_capacity(trace_coset.num_rows());
-    for _ in 0..trace_coset.num_rows() {
-        result.push(FieldElement::ZERO);
-    }
+    let mut result: MmapVec<FieldElement> = MmapVec::with_capacity(coset_size);
+    result.resize(coset_size, FieldElement::ZERO);
     let values = &mut result;
     values
         .par_chunks_mut(CHUNK_SIZE)
@@ -364,13 +364,11 @@ fn get_constraint_polynomials(
     }
 
     // Convert to even and odd coefficient polynomials
-    let mut constraint_polynomials: Vec<MmapVec<FieldElement>> = vec![
-        MmapVec::with_capacity(
-            trace_coset.num_rows() / constraints_trace_degree.next_power_of_two()
-        );
-        constraints_trace_degree
-    ];
-    for chunk in values.chunks_exact(constraints_trace_degree.next_power_of_two()) {
+    let mut constraint_polynomials: Vec<MmapVec<FieldElement>> =
+        vec![MmapVec::with_capacity(trace_length); constraint_degree];
+    let (coefficients, zeros) = values.split_at(constraint_degree * trace_length);
+    assert!(zeros.iter().all(|z| z == &FieldElement::ZERO));
+    for chunk in coefficients.chunks_exact(constraint_degree) {
         for (i, coefficient) in chunk.iter().enumerate() {
             constraint_polynomials[i].push(coefficient.clone());
         }
