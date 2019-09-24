@@ -297,10 +297,21 @@ impl AlgebraicGraph {
                 // TODO: We can also do the constant propagation here. We can even
                 // fold constant propagation in with lookup tables, as it is
                 // equivalent to a repeating pattern of size one.
+                Add(a, b) => {
+                    match (&self[*a].op, &self[*b].op) {
+                        (Coset(c1, s1), Coset(c2, s2)) if s1 == s2 => Coset(c1 + c2, *s1),
+                        _ => Add(*a, *b),
+                    }
+                }
+                Neg(a) => {
+                    match &self[*a].op {
+                        Coset(b, o) => Coset(b.neg(), *o),
+                        _ => Neg(*a),
+                    }
+                }
                 Mul(a, b) => {
                     match (&self[*a].op, &self[*b].op) {
-                        (Constant(a), Coset(c, s)) => Coset(a * c, *s),
-                        (Coset(c, s), Constant(a)) => Coset(a * c, *s),
+                        (Constant(a), Coset(c, s)) | (Coset(c, s), Constant(a)) => Coset(a * c, *s),
                         (Coset(c1, s1), Coset(c2, s2)) if s1 == s2 => Coset(c1 * c2, *s1 / 2),
                         _ => Mul(*a, *b),
                     }
@@ -311,7 +322,7 @@ impl AlgebraicGraph {
                         _ => Exp(*a, *e),
                     }
                 }
-                // TODO: Neg(a), Inv(a) also preserve some of the coset nature,
+                // TODO: Inv(a) also preserve some of the coset nature,
                 // but change the ordering in a way that Coset currently can not
                 // represent. We could re-introduce Geometric for this.
                 n => n.clone(),
