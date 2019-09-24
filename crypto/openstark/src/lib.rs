@@ -74,6 +74,8 @@ mod trace_table;
 pub use proofs::stark_proof;
 #[cfg(feature = "prover")]
 pub use trace_table::TraceTable;
+#[cfg(feature = "prover")]
+mod mimc;
 
 #[cfg(test)]
 mod tests {
