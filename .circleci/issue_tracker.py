@@ -12,6 +12,11 @@ from github import Github
 # pip3 install numpy
 import numpy as np
 
+# Only actually change things on master
+# TODO: Make this a command line or env option
+DRY_RUN = os.environ['CIRCLE_BRANCH'] != 'master'
+print('DRY_RUN =', DRY_RUN)
+
 # Git current commit id
 commit_hash = None
 with os.popen('git rev-parse HEAD') as process:
@@ -175,9 +180,9 @@ def create_issue(source_issue):
     print('Creating issue...')
     r = render(source_issue)
     r['labels'] = [repo_labels[l] for l in r['labels']]
-    print(r['title'])
-    gh_issue = repo.create_issue(**r)
-    print('Created issue', gh_issue.number)
+    if not DRY_RUN:
+        gh_issue = repo.create_issue(**r)
+        print('Created issue', gh_issue.number)
 
 def update_issue(github_issue, source_issue):
     # We update headline, body and labels
@@ -190,12 +195,14 @@ def update_issue(github_issue, source_issue):
     # commit hash. It is a good check to add if the json structure or the
     # render function is modified.
     print('Updating issue', github_issue['github'].number)
-    gh.edit(**r)
+    if not DRY_RUN:
+        gh.edit(**r)
 
 def close_issue(github_issue):
     print('Closing issue', github_issue['github'].number)
     gh = github_issue['github']
-    gh.edit(state='closed')
+    if not DRY_RUN:
+        gh.edit(state='closed')
 
 # Collect source issues
 source_issues = list(issues_from_glob('**/*.rs'))

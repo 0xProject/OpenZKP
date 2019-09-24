@@ -351,6 +351,7 @@ jobs:
       - run:
           name: Update GitHub issues
           command: |
+            # This will dry run except on master
             python3 .circleci/issue_tracker.py
 
 workflows:
@@ -398,6 +399,7 @@ workflows:
           filters:
             branches:
               only: master
+      - update-issues
       # `accept` is a phony job which requires every check for a commit.
       # This allows us to set a single 'required status check' in GitHub.
       - accept:
@@ -408,9 +410,4 @@ workflows:
             - tests
             - benchmarks
             - build-no-std
-  master:
-    jobs:
-      - update-issues
-          filters:
-            branches:
-              only: master
+            - update-issues
