@@ -12,6 +12,8 @@ use u256::U256;
 
 // False positive, for<'a> is required.
 #[allow(single_use_lifetimes)]
+// TODO: Refactor into smaller function
+#[allow(clippy::too_many_lines)]
 pub fn check_proof<Claim: Verifiable>(
     proposed_proof: &[u8],
     public: &Claim,
@@ -396,47 +398,48 @@ pub enum Error {
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use Error::*;
         match *self {
-            Error::RootUnavailable => {
+            RootUnavailable => {
                 write!(f, "The prime field doesn't have a root of this order")
             }
-            Error::InvalidPoW => write!(f, "The suggested proof of work failed to verify"),
-            Error::InvalidLDECommitment => write!(f, "The LDE merkle proof is incorrect"),
-            Error::InvalidConstraintCommitment => {
+            InvalidPoW => write!(f, "The suggested proof of work failed to verify"),
+            InvalidLDECommitment => write!(f, "The LDE merkle proof is incorrect"),
+            InvalidConstraintCommitment => {
                 write!(f, "The constraint merkle proof is incorrect")
             }
-            Error::InvalidFriCommitment => write!(f, "A FRI layer commitment is incorrect"),
-            Error::HashMapFailure => {
+            InvalidFriCommitment => write!(f, "A FRI layer commitment is incorrect"),
+            HashMapFailure => {
                 write!(
                     f,
                     "Verifier attempted to look up an empty entry in the hash map"
                 )
             }
-            Error::ProofTooLong => write!(f, "The proof length doesn't match the specification"),
-            Error::OodsCalculationFailure => {
+            ProofTooLong => write!(f, "The proof length doesn't match the specification"),
+            OodsCalculationFailure => {
                 write!(
                     f,
                     "The calculated odds value doesn't match the committed one"
                 )
             }
-            Error::FriCalculationFailure => {
+            FriCalculationFailure => {
                 write!(
                     f,
                     "The final FRI calculation suggests the committed polynomial isn't low degree"
                 )
             }
-            Error::OodsMismatch => {
+            OodsMismatch => {
                 write!(f, "Calculated oods value doesn't match the committed one")
             }
             // This is a wrapper, so defer to the underlying types' implementation of `fmt`.
-            Error::Merkle(ref e) => std::fmt::Display::fmt(e, f),
+            Merkle(ref e) => std::fmt::Display::fmt(e, f),
         }
     }
 }
 
 impl From<MerkleError> for Error {
     fn from(err: MerkleError) -> Self {
-        Error::Merkle(err)
+        Self::Merkle(err)
     }
 }
 
@@ -444,7 +447,7 @@ impl From<MerkleError> for Error {
 impl error::Error for Error {
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match *self {
-            Error::Merkle(ref e) => Some(e),
+            Self::Merkle(ref e) => Some(e),
             _ => None,
         }
     }

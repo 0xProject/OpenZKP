@@ -28,7 +28,7 @@ pub enum ParseError {
 
 impl From<core::num::ParseIntError> for ParseError {
     fn from(error: core::num::ParseIntError) -> Self {
-        ParseError::InnerError(error)
+        Self::InnerError(error)
     }
 }
 
