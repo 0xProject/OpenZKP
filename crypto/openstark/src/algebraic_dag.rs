@@ -84,6 +84,7 @@ pub(crate) struct Node {
 /// Algebraic operations supported by the graph.
 #[derive(Clone, Debug, PartialEq)]
 enum Operation {
+    Constant(FieldElement),
     Coset(FieldElement, usize),
     Trace(usize, isize),
     Add(Index, Index),
@@ -177,6 +178,7 @@ impl AlgebraicGraph {
     fn hash(&self, operation: &Operation) -> FieldElement {
         use Operation::*;
         match operation {
+            Constant(a) => a.clone(),
             Trace(i, o) => {
                 // Value = hash(seed, i, o)
                 let mut keccak = Keccak::new_keccak256();
@@ -196,18 +198,12 @@ impl AlgebraicGraph {
             }
             Exp(a, i) => self[*a].hash.pow(*i),
             Poly(p, a) => p.evaluate(&self[*a].hash),
-            // There is a difference between a constant (C) and a coset
-            // of size 1 (X^coset_size). This difference is only apparent when
-            // evaluating on a random X. But we are only interested in evaluating
-            // on our domain, so we will treat them equal. That is, all constants
-            // are replaced by a coset of size one. Consequently, constants will
-            // hash to C * (X / cofactor)^coset_size.
+            // We pretend that X comes from Coset(self.cofactor, self.coset_size)
+            // and do the algebraic manipulations to transform it into the
+            // target coset.
             Coset(c, s) => {
                 assert_eq!(self.coset_size % s, 0);
-                let exponent = self.coset_size / s;
-                let mut t = self.seed.clone();
-                t /= &self.cofactor;
-                c * t.pow(exponent)
+                c * (&self.seed / &self.cofactor).pow(self.coset_size / s)
             }
             // This would need to be the same as the replaced operation
             Lookup(_) => panic!("hash(Lookup) not implemented."),
@@ -216,42 +212,53 @@ impl AlgebraicGraph {
 
     // Note that the hash check already covers cases where the result is
     // zero, one or a subexpression. So we don't need to match for `a - a = 0`,
-    // `0 * a = 0`, `a^1 = a`, `-(-a) = a` etc. What remains is mostly coset
-    // propagation.
+    // `0 * a = 0`, `a^1 = a`, `-(-a) = a` etc. What remains is mostly
+    // constant and coset propagation.
+    // NOTE: for evaluation purposes Coset(c, 1) == Constant(c), but this
+    // is not covered by the hash, and can not be easily incorprated while
+    // maintaining the above identities.
     fn simplify(&self, operation: Operation) -> Operation {
         use Operation::*;
         match operation {
             Add(a, b) => {
                 match (&self[a].op, &self[b].op) {
                     // `0 + a = a` is covered by the hash check
+                    (Constant(a), Constant(b)) => Constant(a + b),
                     (Coset(c1, s1), Coset(c2, s2)) if s1 == s2 => Coset(c1 + c2, *s1),
                     _ => Add(a, b),
                 }
             }
             Neg(a) => {
                 match &self[a].op {
+                    Constant(a) => Constant(a.neg()),
                     Coset(b, o) => Coset(b.neg(), *o),
                     _ => Neg(a),
                 }
             }
             Mul(a, b) => {
                 match (&self[a].op, &self[b].op) {
-                    (Coset(a, 1), Coset(b, s)) | (Coset(b, s), Coset(a, 1)) => Coset(a * b, *s),
+                    (Constant(a), Constant(b)) => Constant(a * b),
+                    (Coset(a, 1), Coset(b, s)) | (Coset(b, s), Coset(a, 1)) |
+                    (Constant(a), Coset(b, s)) | (Coset(b, s), Constant(a))
+                    => Coset(a * b, *s),
                     (Coset(c1, s1), Coset(c2, s2)) if s1 == s2 => Coset(c1 * c2, *s1 / 2),
                     _ => Mul(a, b),
                 }
             }
             Exp(a, e) => {
                 match &self[a].op {
-                    Coset(b, 1) => Coset(b.pow(e), 1),
+                    Constant(a) => Constant(a.pow(e)),
                     Coset(b, o) if o % e == 0 => Coset(b.pow(e), o / e),
-                    // TODO: Coset(a, 2)^6 = Coset(a^6, 1)
-                    // TODO: Coset(a, 4)^6 = Coset(a^2, 2)^3
+                    // TODO: Complex situations that break hash
+                    //  * Coset(a, 1)^6 = Coset(a^6, 1)
+                    //  * Coset(a, 2)^6 = Coset(a^6, 1)
+                    //  * Coset(a, 4)^6 = Coset(a^2, 2)^3
                     _ => Exp(a, e),
                 }
             }
             Inv(a) => {
                 match &self[a].op {
+                    Constant(a) => Constant(a.inv().expect("Division by zero")),
                     Coset(a, 1) => Coset(a.inv().expect("Division by zero"), 1),
                     Coset(a, 2) => Coset(a.inv().expect("Division by zero"), 2),
                     // TODO: For larger sizes we need a way to represent a
@@ -261,6 +268,7 @@ impl AlgebraicGraph {
             }
             Poly(p, a) => {
                 match &self[a].op {
+                    Constant(a) => Constant(p.evaluate(a)),
                     Coset(a, 1) => Coset(p.evaluate(a), 1),
                     _ => Poly(p, a),
                 }
@@ -276,6 +284,7 @@ impl AlgebraicGraph {
             std::cmp::max(a, b)
         }
         match operation {
+            Constant(_) => 1,
             Coset(_, s) => *s,
             Trace(..) => self.coset_size,
             Add(a, b) | Mul(a, b) => lcm(self[*a].period, self[*b].period),
@@ -297,8 +306,8 @@ impl AlgebraicGraph {
             // Recognize expressions evaluating to zero or one. Simplify other
             // expressions.
             let operation = match hash {
-                FieldElement::ZERO => Operation::Coset(FieldElement::ZERO, 1),
-                FieldElement::ONE => Operation::Coset(FieldElement::ONE, 1),
+                FieldElement::ZERO => Operation::Constant(FieldElement::ZERO),
+                FieldElement::ONE => Operation::Constant(FieldElement::ONE),
                 _ => self.simplify(operation)
             };
 
@@ -323,7 +332,7 @@ impl AlgebraicGraph {
         use RationalExpression as RE;
         match expr {
             RE::X => self.op(Op::Coset(self.cofactor.clone(), self.coset_size)),
-            RE::Constant(a) => self.op(Op::Coset(a, 1)),
+            RE::Constant(a) => self.op(Op::Constant(a)),
             RE::Trace(i, j) => self.op(Op::Trace(i, j)),
             RE::Polynomial(p, a) => {
                 let a = self.expression(*a);
@@ -372,12 +381,7 @@ impl AlgebraicGraph {
         use Operation::*;
         // OPT: Don't create a bunch of lookup tables just to throw them away
         // later. Analyze which nodes will be needed.
-        // TODO: Better heuristics.
-        // TODO: Make sure the target does not depend on `Trace(..)`.
-        // HACK: Don't create lookups for things large than a quarter of the
-        // trace length. This prevents lookups being created for expressions
-        // involving `Trace(..)` in very small proofs.
-        let treshold = min(LOOKUP_SIZE, self.coset_size / 4);
+        let treshold = min(LOOKUP_SIZE, self.coset_size / 2);
         for i in 0..self.nodes.len() {
             let node = &self.nodes[i];
             if node.period > treshold {
@@ -450,6 +454,11 @@ impl AlgebraicGraph {
                 op, values, note, ..
             } = &mut current[0];
             match op {
+                Constant(a) => {
+                    for i in 0..CHUNK_SIZE {
+                        values[i] = a.clone();
+                    }
+                }
                 Coset(c, s) => {
                     let root = FieldElement::root(*s).unwrap();
                     let mut acc = c.clone();
@@ -576,13 +585,11 @@ mod tests {
     use RationalExpression as RE;
     use Operation as Op;
 
-    #[test]
-    fn test_hash_coset() {
-        fn coset_hash(cofactor: FieldElement, size: usize) -> FieldElement {
-            let mut dag = AlgebraicGraph::new(&FieldElement::GENERATOR, 1024, 2);
-            let index = dag.op(Op::Coset(cofactor, size));
-            dag[index].hash.clone()
-        }
+    fn coset_hash(cofactor: FieldElement, size: usize) -> FieldElement {
+        let mut dag = AlgebraicGraph::new(&FieldElement::GENERATOR, 1024, 2);
+        let index = dag.op(Op::Coset(cofactor, size));
+        dag[index].hash.clone()
+    }
 
     #[test]
     fn test_hash_coset_zero() {
@@ -615,33 +622,4 @@ mod tests {
         let index = dag.expression(RE::X);
         assert_eq!(dag[index].hash, dag.seed);
     }
-
-    // #[test]
-    // fn test_expr() {
-    //     let expr = RE::Constant(5.into()) + RE::X.pow(5);
-    //     let mut dag = AlgebraicGraph::from_expression(expr.clone());
-    //     let trace_table = TraceTable::new(0, 0);
-    //     let x =
-    // field_element!("
-    // 022550177068302c52659dbd983cf622984f1f2a7fb2277003a64c7ecf96edaf");
-
-    //     let y1 = dag.eval(&trace_table, (0, 0), &x);
-    //     let y2 = expr.eval(&trace_table, (0, 0), &x);
-    //     assert_eq!(y1, y2);
-    // }
-
-    // #[test]
-    // fn test_poly() {
-    //     let p = DensePolynomial::from_vec(vec![1.into(), 2.into(), 5.into(),
-    // 7.into()]);     let expr = RE::Poly(p, Box::new(RE::X.pow(5)));
-    //     let mut dag = AlgebraicGraph::from_expression(expr.clone());
-    //     let trace_table = TraceTable::new(0, 0);
-    //     let x =
-    // field_element!("
-    // 022550177068302c52659dbd983cf622984f1f2a7fb2277003a64c7ecf96edaf");
-
-    //     let y1 = dag.eval(&trace_table, (0, 0), &x);
-    //     let y2 = expr.eval(&trace_table, (0, 0), &x);
-    //     assert_eq!(y1, y2);
-    // }
 }
