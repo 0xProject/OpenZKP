@@ -193,7 +193,8 @@ impl AlgebraicGraph {
             Poly(p, a) => p.evaluate(&self[*a].hash),
             Coset(c, s) => {
                 // Pretend that seed is a member of the evaluation domain and
-                // convert it to the coset.
+                // 'convert' it to the coset by applying the same operations as
+                // we would to convert the evaluation domain into the coset.
                 assert_eq!(self.coset_size % s, 0);
                 let exponent = self.coset_size / s;
                 let mut t = self.seed.clone();
@@ -217,12 +218,8 @@ impl AlgebraicGraph {
             Coset(_, s) => *s,
             Constant(_) => 1,
             Trace(..) => self.coset_size,
-            Add(a, b) => lcm(self[*a].period, self[*b].period),
-            Neg(a) => self[*a].period,
-            Mul(a, b) => lcm(self[*a].period, self[*b].period),
-            Inv(a) => self[*a].period,
-            Exp(a, _) => self[*a].period,
-            Poly(_, a) => self[*a].period,
+            Add(a, b) | Mul(a, b) => lcm(self[*a].period, self[*b].period),
+            Neg(a) | Inv(a) | Exp(a, _) | Poly(_, a) => self[*a].period,
             Lookup(v) => v.0.len(),
         }
     }
@@ -380,18 +377,11 @@ impl AlgebraicGraph {
         fn recurse(nodes: &[Node], used: &mut [bool], i: usize) {
             used[i] = true;
             match &nodes[i].op {
-                Add(a, b) => {
+                Add(a, b) | Mul(a, b) => {
                     recurse(nodes, used, a.0);
                     recurse(nodes, used, b.0);
                 }
-                Neg(a) => recurse(nodes, used, a.0),
-                Mul(a, b) => {
-                    recurse(nodes, used, a.0);
-                    recurse(nodes, used, b.0);
-                }
-                Inv(a) => recurse(nodes, used, a.0),
-                Exp(a, _) => recurse(nodes, used, a.0),
-                Poly(_, a) => recurse(nodes, used, a.0),
+                Neg(a) | Inv(a) | Exp(a, _) | Poly(_, a) => recurse(nodes, used, a.0),
                 _ => {}
             }
         }
@@ -411,18 +401,11 @@ impl AlgebraicGraph {
         }
         for node in &mut self.nodes {
             match &mut node.op {
-                Add(a, b) => {
+                Add(a, b) | Mul(a, b) => {
                     *a = numbers[a.0];
                     *b = numbers[b.0];
                 }
-                Neg(a) => *a = numbers[a.0],
-                Mul(a, b) => {
-                    *a = numbers[a.0];
-                    *b = numbers[b.0];
-                }
-                Inv(a) => *a = numbers[a.0],
-                Exp(a, _) => *a = numbers[a.0],
-                Poly(_, a) => *a = numbers[a.0],
+                Neg(a) | Inv(a) | Exp(a, _) | Poly(_, a) => *a = numbers[a.0],
                 _ => {}
             }
         }
