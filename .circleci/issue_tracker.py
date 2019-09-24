@@ -45,6 +45,8 @@ users = {
     '<remco@0x.org>': 'recmo',
     '<paul@0x.org>': 'pvienhage',
     '<mason@0x.org>': 'z2trillion',
+    '<z2trillion@users.noreply.github.com>': 'z2trillion',
+    '<pevienhage@gmail.com>': 'pvienhage',
 }
 
 # Translation from labels to PyGitHub `Label`s
