@@ -10,4 +10,3 @@
 Semver: https://github.com/rust-lang/rfcs/blob/master/text/1105-api-evolution.md
 
 https://semver.org/
-
