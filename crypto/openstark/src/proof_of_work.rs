@@ -4,6 +4,8 @@ use macros_decl::hex;
 use std::convert::TryFrom;
 use tiny_keccak::Keccak;
 use u256::U256;
+use std::sync::atomic::AtomicU64;
+use std::sync::atomic::Ordering::Relaxed;
 
 #[cfg(all(feature = "std", feature = "prover"))]
 use rayon::prelude::*;
@@ -96,11 +98,21 @@ impl Challenge {
         );
         // NOTE: Rayon does not support open ended ranges, so we need to use a closed
         // one.
-        (0..u64::max_value())
+        let first_nonce = AtomicU64::new(u64::max_value());
+        let num_threads = rayon::current_num_threads();
+        (0..num_threads as u64)
             .into_par_iter()
-            .map(|nonce| Response { nonce })
-            .find_any(|&response| self.verify(response))
-            .expect("No valid nonce found")
+            .for_each(|offset| {
+                for nonce in (offset..=u64::max_value()).step_by(num_threads) {
+                    if self.verify(Response { nonce }) {
+                        let _ = fetch_min(first_nonce, nonce);
+                    }
+                    if nonce >= first_nonce.load(Relaxed) {
+                        break;
+                    }
+                }
+            });
+        Response { nonce: first_nonce.into_inner() }
     }
 }
 
@@ -113,6 +125,8 @@ impl Response {
         self.nonce
     }
 }
+
+fn fetch_min()
 
 #[cfg(test)]
 mod tests {
