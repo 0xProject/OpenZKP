@@ -4,9 +4,19 @@ import re
 import os
 from datetime import date
 import json
+import sys
 
 # pip3 install PyGithub
 from github import Github
+
+# pip3 install numpy
+import numpy as np
+
+# Git current commit id
+commit_hash = None
+with os.popen('git rev-parse HEAD') as process:
+    commit_hash = process.read().strip()
+print('Commit hash:', commit_hash)
 
 # Connect to the GitHub repo
 gh = Github(os.environ['GITHUB_SECRET'])
@@ -32,27 +42,28 @@ users = {
     '<mason@0x.org>': 'z2trillion',
 }
 
-# Translate labels to PyGitHub `Label`s
-gh_labels = repo.get_labels()
-gh_labels = {l.name: l for l in gh_labels}
-labels = {k: [gh_labels[v] for v in v] for k, v in labels.items()}
+# Translation from labels to PyGitHub `Label`s
+repo_labels = {l.name: l for l in repo.get_labels()}
 
 # Translate users ot PyGitHub `User`s
 users = {k: gh.get_user(v) for k, v in users.items()}
 
 # Collect existing tracker issues
 open_issues = []
-for issue in repo.get_issues():
-    if gh_labels['tracker'] in issue.labels:
+issue_body_json = re.compile('^<!--({.*})-->$', re.MULTILINE)
+for gh_issue in repo.get_issues():
+    if repo_labels['tracker'] in gh_issue.labels:
+        issue = json.loads(issue_body_json.search(gh_issue.body).group(1))
+        issue['github'] = gh_issue
         open_issues += [issue]
-print(open_issues)
+print('Found', len(open_issues), 'tracked issues on GitHub.')
 
 # Number of lines to give before and after the TODO comment.
 CONTEXT_LINES = 5
 
 # Rust like todos. For *.{rs}
-rust_todo = re.compile('//\W*(TODO|HACK|OPT)\W*(.*)$')
-rust_continuation = re.compile('//\W*(?!(TODO|HACK|OPT))(.*)$')
+rust_todo = re.compile(r'//\W*(TODO|HACK|OPT)\W*(.*)$')
+rust_continuation = re.compile(r'//\W*(?!(TODO|HACK|OPT))(.*)$')
 
 # Bash like todos. For *.{sh, yml, toml, py, Dockerfile, editorconfig, gitignore}
 # TODO: `# TODO: {message}`
@@ -62,12 +73,6 @@ rust_continuation = re.compile('//\W*(?!(TODO|HACK|OPT))(.*)$')
 
 # Markdown todo lists.
 # TODO: `* [] {message}`
-
-# Git current commit id
-commit_hash = None
-with os.popen('git rev-parse HEAD') as process:
-    commit_hash = process.read().strip()
-print('Commit hash:', commit_hash)
 
 def git_blame(filename, line):
     # Git line numbers start at one
@@ -97,36 +102,6 @@ def get_context(filename, start, end):
         end = min(end, len(lines))
         return ''.join(lines[start:end])
 
-def submit_issue(issue):
-    issue['json'] = json.dumps(issue)
-    issue['head'] = issue['issue'].split('\n')[0]
-    issue['github-handle'] = users[issue['author-mail']].login
-    issue['author-time-pretty'] = date.fromtimestamp(issue['author-time']).isoformat()
-    issue['commit-hash-short'] = issue['commit-hash'][0:7]
-    issue['line-one'] = issue['line'] + 1
-    formatted = dict(
-        title='{head}'.format(**issue),
-        body='''
-*On {author-time-pretty} @{github-handle} wrote in [`{commit-hash-short}`](https://github.com/{repo}/commit/{commit-hash}) “{summary}”:*
-
-{issue}
-
-```rust
-{context}
-```
-*From [`{filename}:{line-one}`](https://github.com/{repo}/blob/{branch-hash}/{filename}#L{line-one})*
-
-<!--{json}-->
-'''.strip().format(**issue),
-        assignee=users[issue['author-mail']],
-        labels=labels[issue['kind']]
-    )
-    # TODO: Check if issue already exists
-    print('Creating issue...')
-    print(formatted['body'])
-    #gh_issue = repo.create_issue(**formatted)
-    #print(gh_issue)
-
 def issues_from_file(filename):
     with open(filename, 'r') as file:
         line_number = 0
@@ -154,6 +129,7 @@ def issues_from_file(filename):
                 result['line_end'] = line_number
                 result['kind'] = kind
                 result['issue'] = issue
+                result['head'] = issue.split('\n')[0]
                 result['context'] = context
                 result['repo'] = repo.full_name
                 result['branch-hash'] = commit_hash
@@ -168,7 +144,112 @@ def issues_from_glob(pattern):
         for issue in issues_from_file(filename):
             yield issue
 
-# Rust source code
-for issue in issues_from_glob('algebra/u256/**/gcd*.rs'):
-    submit_issue(issue)
+def render(issue):
+    issue = issue.copy()
+    issue.pop('open-issue-index', None)
+    issue['json'] = json.dumps(issue)
+    issue['github-handle'] = users[issue['author-mail']].login
+    issue['author-time-pretty'] = date.fromtimestamp(
+        issue['author-time']).isoformat()
+    issue['commit-hash-short'] = issue['commit-hash'][0:7]
+    issue['line-one'] = issue['line'] + 1
+    return dict(
+        title='{head}'.format(**issue),
+        body='''
+*On {author-time-pretty} @{github-handle} wrote in [`{commit-hash-short}`](https://github.com/{repo}/commit/{commit-hash}) “{summary}”:*
+
+{issue}
+
+```rust
+{context}
+```
+*From [`{filename}:{line-one}`](https://github.com/{repo}/blob/{branch-hash}/{filename}#L{line-one})*
+
+<!--{json}-->
+'''.strip().format(**issue),
+        assignee=users[issue['author-mail']],
+        labels=labels[issue['kind']]
+    )
+
+def create_issue(source_issue):
+    print('Creating issue...')
+    r = render(source_issue)
+    r['labels'] = [repo_labels[l] for l in r['labels']]
+    print(r['title'])
+    gh_issue = repo.create_issue(**r)
+    print('Created issue', gh_issue.number)
+
+def update_issue(github_issue, source_issue):
+    # We update headline, body and labels
+    gh = github_issue['github']
+    r = render(source_issue)
+    if gh.title == r['title'] and gh.body == r['body'] and set([l.name for l in gh.labels]) == set(r['labels']):
+        # Issue up to date
+        return
+    print('Updating issue', github_issue['github'].number)
+    gh.edit(**r)
+
+def close_issue(github_issue):
+    print('Closing issue', github_issue['github'].number)
+    # TODO: implement
     pass
+
+# Collect source issues
+source_issues = list(issues_from_glob('algebra/u256/**/*.rs'))
+print('Found', len(source_issues), 'issues in source.')
+
+# Match source issues with open issues
+print('Issue closeness matrix')
+closeness = np.zeros((len(open_issues), len(source_issues)))
+for i in range(len(open_issues)):
+    open_issue = open_issues[i]
+    for j in range(len(source_issues)):
+        source_issue = source_issues[j]
+        score = 0
+        if open_issue['head'] == source_issue['head']:
+            # Three point if the head matches
+            score += 3
+        if open_issue['filename'] == source_issue['filename'] and open_issue['line'] == source_issue['line']:
+            # Three points if location matches
+            score += 3
+        if open_issue['commit-hash'] == source_issue['commit-hash']:
+            # Two points if commit-hash matches
+            score += 2
+        closeness[i, j] = score
+        sys.stdout.write(str(score) + ' ')
+        sys.stdout.flush()
+    sys.stdout.write('\n')
+
+# Greedy match up pairs by highest scores first
+min_score = 2.5
+if len(source_issues) > 0 and len(open_issues) > 0:
+    while True:
+        # Pick a highest score
+        (i, j) = np.unravel_index(np.argmax(closeness), closeness.shape)
+
+        # If the score is less than the minimum required we are done
+        if closeness[i, j] <= min_score:
+            break
+
+        # Remove pair from matrix
+        closeness[i, :] = 0.
+        closeness[:, j] = 0.
+
+        # Pair up issues
+        open_issues[i]['source-issue-index'] = j
+        source_issues[j]['open-issue-index'] = i
+
+# Process issues
+for issue in open_issues:
+    if 'source-issue-index' in issue:
+        # TODO: Update github issue
+        update_issue(issue, source_issues[issue['source-issue-index']])
+    else:
+        # Close issue
+        close_issue(issue)
+for issue in source_issues:
+    if 'open-issue-index' in issue:
+        # already handles above
+        pass
+    else:
+        create_issue(issue)
