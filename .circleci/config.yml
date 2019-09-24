@@ -340,6 +340,27 @@ jobs:
       - run:
           name: Stop
           command: circleci-agent step halt
+  update-issues:
+    executor: minimal
+    steps:
+      - run:
+          name: Install python tools
+          command: |
+            # TODO: Have a prepared executor
+            sudo apt-get install python3 python3-pip
+            pip3 install PyGithub
+            pip3 install numpy
+      - checkout
+      - run:
+          name: Update GitHub issues
+          command: |
+            # This will dry run except on master
+            if [ "$CIRCLE_BRANCH" == "master" ]
+            then
+              DRY_RUN=false python3 .circleci/issue_tracker.py
+            else
+              DRY_RUN=true python3 .circleci/issue_tracker.py
+            fi
 
 workflows:
   version: 2
@@ -386,6 +407,7 @@ workflows:
           filters:
             branches:
               only: master
+      - update-issues
       # `accept` is a phony job which requires every check for a commit.
       # This allows us to set a single 'required status check' in GitHub.
       - accept:
@@ -396,3 +418,4 @@ workflows:
             - tests
             - benchmarks
             - build-no-std
+            - update-issues
