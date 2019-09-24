@@ -400,14 +400,10 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use Error::*;
         match *self {
-            RootUnavailable => {
-                write!(f, "The prime field doesn't have a root of this order")
-            }
+            RootUnavailable => write!(f, "The prime field doesn't have a root of this order"),
             InvalidPoW => write!(f, "The suggested proof of work failed to verify"),
             InvalidLDECommitment => write!(f, "The LDE merkle proof is incorrect"),
-            InvalidConstraintCommitment => {
-                write!(f, "The constraint merkle proof is incorrect")
-            }
+            InvalidConstraintCommitment => write!(f, "The constraint merkle proof is incorrect"),
             InvalidFriCommitment => write!(f, "A FRI layer commitment is incorrect"),
             HashMapFailure => {
                 write!(
@@ -428,9 +424,7 @@ impl fmt::Display for Error {
                     "The final FRI calculation suggests the committed polynomial isn't low degree"
                 )
             }
-            OodsMismatch => {
-                write!(f, "Calculated oods value doesn't match the committed one")
-            }
+            OodsMismatch => write!(f, "Calculated oods value doesn't match the committed one"),
             // This is a wrapper, so defer to the underlying types' implementation of `fmt`.
             Merkle(ref e) => std::fmt::Display::fmt(e, f),
         }
