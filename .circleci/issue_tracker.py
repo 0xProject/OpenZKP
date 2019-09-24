@@ -14,7 +14,7 @@ import numpy as np
 
 # Only actually change things on master
 # TODO: Make this a command line or env option
-DRY_RUN = os.environ['CIRCLE_BRANCH'] != 'master'
+DRY_RUN = os.environ['DRY_RUN'] != 'false'
 print('DRY_RUN =', DRY_RUN)
 
 # Git current commit id

@@ -355,7 +355,12 @@ jobs:
           name: Update GitHub issues
           command: |
             # This will dry run except on master
-            python3 .circleci/issue_tracker.py
+            if [ "$CIRCLE_BRANCH" == "master" ]
+            then
+              DRY_RUN=false python3 .circleci/issue_tracker.py
+            else
+              DRY_RUN=true python3 .circleci/issue_tracker.py
+            fi
 
 workflows:
   version: 2
