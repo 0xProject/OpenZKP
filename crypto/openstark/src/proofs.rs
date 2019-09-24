@@ -252,7 +252,8 @@ where
 
     // Verify proof
     info!("Verify proof.");
-    assert!(check_proof(proof.proof.as_slice(), claim, params).is_ok());
+    // TODO - Bubble up errors so we can see where verification fails.
+    assert!(check_proof(proof.proof.as_slice(), claim, params,).is_ok());
 
     // Q.E.D.
     // TODO: Return bytes, or a result structure
@@ -302,30 +303,22 @@ fn get_constraint_polynomials(
     // smaller.
     const CHUNK_SIZE: usize = 65536;
 
-    let constraints_trace_degree = constraints.trace_degree();
-    let coset_length = trace_length * constraints_trace_degree;
+    // We need to evaluate on a power of two degree
+    let constraint_degree = constraints.trace_degree();
+    let eval_degree = constraint_degree.next_power_of_two();
+    let coset_size = trace_length * eval_degree;
 
     info!("Compute offset trace table");
-    let trace_coset = extract_trace_coset(trace_lde, coset_length);
+    let trace_coset = extract_trace_coset(trace_lde, coset_size);
 
     info!("Combine rational expressions");
     let combined_constraints = constraints.combine(constraint_coefficients, trace_length);
-    info!("Combined constraint expression: {:?}", combined_constraints);
-    let combined_constraints = combined_constraints.simplify();
-    // OPT: Some sub-expressions have much lower degree, we can evaluate them on a
-    // smaller domain and combine the results in coefficient form.
-    info!(
-        "Simplified constraint expression: {:?}",
-        combined_constraints
-    );
-
     let mut dag = AlgebraicGraph::new(
         &FieldElement::GENERATOR,
         trace_coset.num_rows(),
-        constraints_trace_degree,
+        eval_degree,
     );
     let result = dag.expression(combined_constraints);
-    dag.optimize();
     dag.lookup_tables();
     // TODO: Track and use result reference.
     let _ = dag.tree_shake(result);
@@ -333,10 +326,8 @@ fn get_constraint_polynomials(
 
     // Evaluate on the coset trace table
     info!("Evaluate on the coset trace table");
-    let mut result: MmapVec<FieldElement> = MmapVec::with_capacity(trace_coset.num_rows());
-    for _ in 0..trace_coset.num_rows() {
-        result.push(FieldElement::ZERO);
-    }
+    let mut result: MmapVec<FieldElement> = MmapVec::with_capacity(coset_size);
+    result.resize(coset_size, FieldElement::ZERO);
     let values = &mut result;
     values
         .par_chunks_mut(CHUNK_SIZE)
@@ -364,11 +355,10 @@ fn get_constraint_polynomials(
 
     // Convert to even and odd coefficient polynomials
     let mut constraint_polynomials: Vec<MmapVec<FieldElement>> =
-        vec![
-            MmapVec::with_capacity(trace_coset.num_rows() / constraints_trace_degree);
-            constraints_trace_degree
-        ];
-    for chunk in values.chunks_exact(constraints_trace_degree) {
+        vec![MmapVec::with_capacity(trace_length); constraint_degree];
+    let (coefficients, zeros) = values.split_at(constraint_degree * trace_length);
+    assert!(zeros.iter().all(|z| z == &FieldElement::ZERO));
+    for chunk in coefficients.chunks_exact(constraint_degree) {
         for (i, coefficient) in chunk.iter().enumerate() {
             constraint_polynomials[i].push(coefficient.clone());
         }
@@ -722,10 +712,10 @@ mod tests {
     // to the main implementation? Should we break up the implementation so we
     // can test the individual steps?
     #[test]
-    // TODO: Naming
+    // TODO: Refactor this code to be cleaner.
     #[allow(non_snake_case)]
-    // TODO - See if it's possible to do context cloning and break this into smaller tests
     #[allow(clippy::cognitive_complexity)]
+    #[allow(clippy::too_many_lines)]
     fn fib_proof_test() {
         crate::tests::init();
 

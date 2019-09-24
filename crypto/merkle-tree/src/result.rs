@@ -24,9 +24,7 @@ impl fmt::Display for Error {
             IndicesUnsortedOrDuplicate => write!(f, "Indices are unsorted or duplicate"),
             DuplicateLeafMismatch => write!(f, "Duplicate leaf mismatch"),
             NotEnoughHashes => write!(f, "Not enough hashes to verify proof"),
-            RootHashMismatch => {
-                write!(f, "Verification failed since root hashes don't match")
-            }
+            RootHashMismatch => write!(f, "Verification failed since root hashes don't match"),
         }
     }
 }
