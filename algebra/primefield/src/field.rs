@@ -35,6 +35,9 @@ impl FieldElement {
     }
 
     pub const fn from_montgomery(n: U256) -> Self {
+        // TODO: Uncomment assertion when support in `const fn` is enabled.
+        // See https://github.com/rust-lang/rust/issues/57563
+        // debug_assert!(n < Self::MODULUS);
         Self(n)
     }
 

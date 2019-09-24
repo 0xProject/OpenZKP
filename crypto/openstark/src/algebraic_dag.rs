@@ -140,20 +140,30 @@ impl std::ops::Index<Index> for AlgebraicGraph {
     }
 }
 
+fn from_entropy(keccak: Keccak) -> FieldElement {
+    let mut result = [0; 32];
+    keccak.finalize(&mut result);
+    result[0] &= 0xF;
+    let mut u256 = U256::from_bytes_be(&result);
+    if u256 >= FieldElement::MODULUS {
+        u256 -= FieldElement::MODULUS;
+    }
+    assert!(u256 < FieldElement::MODULUS);
+    FieldElement::from_montgomery(u256)
+}
+
 impl AlgebraicGraph {
     pub(crate) fn new(cofactor: &FieldElement, coset_size: usize, trace_blowup: usize) -> Self {
         assert!(coset_size.is_power_of_two());
         // Create seed out of parameters
-        let mut seed = [0; 32];
         let mut keccak = Keccak::new_keccak256();
         keccak.update(&cofactor.as_montgomery().to_bytes_be());
         keccak.update(&coset_size.to_be_bytes());
-        keccak.finalize(&mut seed);
         Self {
             cofactor: cofactor.clone(),
             coset_size,
             trace_blowup,
-            seed: FieldElement::from_montgomery(U256::from_bytes_be(&seed)),
+            seed: from_entropy(keccak),
             nodes: vec![],
             row: 0,
         }
@@ -169,13 +179,11 @@ impl AlgebraicGraph {
         match operation {
             Trace(i, o) => {
                 // Value = hash(seed, i, o)
-                let mut result = [0; 32];
                 let mut keccak = Keccak::new_keccak256();
                 keccak.update(&self.seed.as_montgomery().to_bytes_be());
                 keccak.update(&i.to_be_bytes());
                 keccak.update(&o.to_be_bytes());
-                keccak.finalize(&mut result);
-                FieldElement::from_montgomery(U256::from_bytes_be(&result))
+                from_entropy(keccak)
             }
             Add(a, b) => &self[*a].hash + &self[*b].hash,
             Neg(a) => -&self[*a].hash,
@@ -184,7 +192,7 @@ impl AlgebraicGraph {
                 self[*a]
                     .hash
                     .inv()
-                    .expect("Division by zero while evaluating RationalExpression.")
+                    .expect("Division by zero")
             }
             Exp(a, i) => self[*a].hash.pow(*i),
             Poly(p, a) => p.evaluate(&self[*a].hash),
@@ -235,6 +243,8 @@ impl AlgebraicGraph {
                 match &self[a].op {
                     Coset(b, 1) => Coset(b.pow(e), 1),
                     Coset(b, o) if o % e == 0 => Coset(b.pow(e), o / e),
+                    // TODO: Coset(a, 2)^6 = Coset(a^6, 1)
+                    // TODO: Coset(a, 4)^6 = Coset(a^2, 2)^3
                     _ => Exp(a, e),
                 }
             }
@@ -561,12 +571,14 @@ impl AlgebraicGraph {
 mod tests {
     use super::*;
     use macros_decl::field_element;
+    use RationalExpression as RE;
+    use Operation as Op;
 
     #[test]
     fn test_hash_coset() {
         fn coset_hash(cofactor: FieldElement, size: usize) -> FieldElement {
             let mut dag = AlgebraicGraph::new(&FieldElement::GENERATOR, 1024, 2);
-            let index = dag.op(Operation::Coset(cofactor, size));
+            let index = dag.op(Op::Coset(cofactor, size));
             dag[index].hash.clone()
         }
 
@@ -583,6 +595,15 @@ mod tests {
         assert_eq!(coset_hash(field_element!("022550177068302c52659dbd983cf622984f1f2a7fb2277003a64c7ecf96edaf"), 1), field_element!("022550177068302c52659dbd983cf622984f1f2a7fb2277003a64c7ecf96edaf"));
 
         // hash(Coset(c, coset_size)) = c * seed.
+    }
+
+    #[test]
+    fn test_hash_x_is_seed() {
+        let mut dag = AlgebraicGraph::new(&FieldElement::GENERATOR, 1024, 2);
+        let index = dag.expression(RE::X);
+        dbg!(dag[index].hash.as_montgomery());
+        dbg!(dag.seed.as_montgomery());
+        assert_eq!(dag[index].hash, dag.seed);
     }
 
     // #[test]
