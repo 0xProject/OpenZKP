@@ -277,9 +277,6 @@ fn oods_value_from_constraint_values(
     constraint_values: &[FieldElement],
     oods_point: &FieldElement,
 ) -> FieldElement {
-    // TODO - Check if this is 100% unreachable, if so remove if not error.
-    assert!(constraint_values.len().is_power_of_two());
-
     let mut result = FieldElement::ZERO;
     let mut power = FieldElement::ONE;
     for value in constraint_values {
