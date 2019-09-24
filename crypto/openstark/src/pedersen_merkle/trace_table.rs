@@ -1,6 +1,6 @@
 use crate::{
     pedersen_merkle::{
-        inputs::{PrivateInput, PublicInput},
+        inputs::{Claim, Witness},
         pedersen_points::{PEDERSEN_POINTS, SHIFT_POINT},
     },
     TraceTable,
@@ -12,22 +12,22 @@ use u256::U256;
 
 // TODO: Naming
 #[allow(clippy::module_name_repetitions)]
-pub fn get_trace_table(public_input: &PublicInput, private_input: &PrivateInput) -> TraceTable {
+pub fn get_trace_table(claim: &Claim, witness: &Witness) -> TraceTable {
     let num_columns = 8;
-    let mut trace = TraceTable::new(public_input.path_length * 256, num_columns);
+    let mut trace = TraceTable::new(claim.path_length * 256, num_columns);
 
     let mut row: Row = Row::default();
     row.right.point = Affine::Point {
-        x: public_input.leaf.clone(),
+        x: claim.leaf.clone(),
         y: FieldElement::ZERO,
     };
 
-    for path_index in 0..public_input.path_length {
+    for path_index in 0..claim.path_length {
         for bit_index in 0..256 {
             if bit_index % 256 == 0 {
-                let other_hash = U256::from(&private_input.path[path_index]);
+                let other_hash = U256::from(&witness.path[path_index]);
                 let (x, _) = get_coordinates(&row.right.point);
-                if private_input.directions[path_index] {
+                if witness.directions[path_index] {
                     row = initialize_hash(other_hash, U256::from(x));
                 } else {
                     row = initialize_hash(U256::from(x), other_hash);
@@ -129,11 +129,11 @@ fn get_coordinates(p: &Affine) -> (&FieldElement, &FieldElement) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::pedersen_merkle::inputs::{short_private_input, SHORT_PUBLIC_INPUT};
+    use crate::pedersen_merkle::inputs::{short_witness, SHORT_CLAIM};
 
     #[test]
     fn short_inputs_consistent() {
-        let trace = get_trace_table(&SHORT_PUBLIC_INPUT, &short_private_input());
-        assert_eq!(trace[(trace.num_rows() - 1, 6)], SHORT_PUBLIC_INPUT.root);
+        let trace = get_trace_table(&SHORT_CLAIM, &short_witness());
+        assert_eq!(trace[(trace.num_rows() - 1, 6)], SHORT_CLAIM.root);
     }
 }

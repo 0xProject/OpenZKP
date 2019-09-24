@@ -23,27 +23,27 @@ pub enum RationalExpression {
 
 impl RationalExpression {
     pub fn neg(&self) -> Self {
-        RationalExpression::Neg(Box::new(self.clone()))
+        Self::Neg(Box::new(self.clone()))
     }
 
     pub fn inv(&self) -> Self {
-        RationalExpression::Inv(Box::new(self.clone()))
+        Self::Inv(Box::new(self.clone()))
     }
 
     pub fn pow(&self, exponent: usize) -> Self {
-        RationalExpression::Exp(Box::new(self.clone()), exponent)
+        Self::Exp(Box::new(self.clone()), exponent)
     }
 }
 
 impl From<i32> for RationalExpression {
     fn from(value: i32) -> Self {
-        RationalExpression::Constant(value.into())
+        Self::Constant(value.into())
     }
 }
 
 impl From<&FieldElement> for RationalExpression {
     fn from(value: &FieldElement) -> Self {
-        RationalExpression::Constant(value.clone())
+        Self::Constant(value.clone())
     }
 }
 
@@ -51,7 +51,7 @@ impl Add for RationalExpression {
     type Output = Self;
 
     fn add(self, other: Self) -> Self {
-        RationalExpression::Add(Box::new(self), Box::new(other))
+        Self::Add(Box::new(self), Box::new(other))
     }
 }
 
@@ -69,7 +69,7 @@ impl Mul for RationalExpression {
     type Output = Self;
 
     fn mul(self, other: Self) -> Self {
-        RationalExpression::Mul(Box::new(self), Box::new(other))
+        Self::Mul(Box::new(self), Box::new(other))
     }
 }
 
@@ -141,68 +141,6 @@ impl RationalExpression {
                 let (n, d) = a.degree_impl(x_degree, trace_degree);
                 (e * n, e * d)
             }
-        }
-    }
-
-    /// Simplify the expression
-    ///
-    /// Does constant propagation and simplifies expressions like `0 + a`,
-    /// `0 * a`, `1 * a`, `-(-a)`, `1/(1/a)`, `a^0` and `a^1`.
-    // TODO: Move to AlgebraicDag
-    // Repeated arms are more readable here
-    #[allow(clippy::match_same_arms)]
-    pub fn simplify(self) -> Self {
-        use RationalExpression::*;
-        match self {
-            Add(a, b) => {
-                let a = a.simplify();
-                let b = b.simplify();
-                match (a, b) {
-                    (a, Constant(FieldElement::ZERO)) => a,
-                    (Constant(FieldElement::ZERO), b) => b,
-                    (Constant(a), Constant(b)) => Constant(a + b),
-                    (a, b) => a + b,
-                }
-            }
-            Mul(a, b) => {
-                let a = a.simplify();
-                let b = b.simplify();
-                match (a, b) {
-                    (_, Constant(FieldElement::ZERO)) => Constant(FieldElement::ZERO),
-                    (Constant(FieldElement::ZERO), _) => Constant(FieldElement::ZERO),
-                    (a, Constant(FieldElement::ONE)) => a,
-                    (Constant(FieldElement::ONE), b) => b,
-                    (Constant(a), Constant(b)) => Constant(a * b),
-                    (a, b) => a * b,
-                }
-            }
-            Neg(a) => {
-                let a = a.simplify();
-                match a {
-                    // TODO: impl std::ops::Neg for FieldElement
-                    Constant(a) => Constant(FieldElement::ZERO - a),
-                    Neg(a) => *a,
-                    a => a.neg(),
-                }
-            }
-            Inv(a) => {
-                let a = a.simplify();
-                match a {
-                    Constant(a) => Constant(a.inv().expect("Division by zero.")),
-                    Inv(a) => *a,
-                    a => a.inv(),
-                }
-            }
-            Exp(a, e) => {
-                let a = a.simplify();
-                match (a, e) {
-                    (_, 0) => Constant(FieldElement::ONE),
-                    (a, 1) => a,
-                    (Constant(a), e) => Constant(a.pow(e)),
-                    (a, e) => a.pow(e),
-                }
-            }
-            e => e,
         }
     }
 

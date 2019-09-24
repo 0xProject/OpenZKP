@@ -1,4 +1,4 @@
-// HACK: This sequence needs to be repeated in each project.
+// This sequence needs to be repeated in each project as a workaround.
 //       See https://github.com/rust-lang/cargo/issues/5034
 // For clippy lints see: https://rust-lang.github.io/rust-clippy/master
 // For rustc lints see: https://doc.rust-lang.org/rustc/lints/index.html
@@ -8,7 +8,7 @@
     // Enable sets of warnings
     clippy::all,
     clippy::pedantic,
-    // TODO: clippy::cargo,
+    // clippy::cargo,
     rust_2018_idioms,
     future_incompatible,
     unused,
@@ -25,7 +25,7 @@
     explicit_outlives_requirements,
     keyword_idents,
     macro_use_extern_crate,
-    // TODO: missing_docs,
+    // missing_docs,
     missing_doc_code_examples,
     private_doc_tests,
     single_use_lifetimes,
@@ -38,8 +38,8 @@
 #![cfg_attr(feature = "std", warn(missing_debug_implementations,))]
 
 mod channel;
-mod constraint;
-mod constraint_system;
+pub mod constraint_system;
+mod constraints;
 pub mod fibonacci;
 mod polynomial;
 mod proof_of_work;
@@ -74,6 +74,8 @@ mod trace_table;
 pub use proofs::stark_proof;
 #[cfg(feature = "prover")]
 pub use trace_table::TraceTable;
+#[cfg(feature = "prover")]
+mod mimc;
 
 #[cfg(test)]
 mod tests {

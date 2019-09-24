@@ -1,10 +1,6 @@
 use crate::{
-    channel::*,
-    constraint::{trace_degree, Constraint},
-    constraint_system::combine_constraints,
-    polynomial::DensePolynomial,
-    proof_of_work,
-    proof_params::ProofParams,
+    channel::*, constraint_system::Verifiable, constraints::Constraints,
+    polynomial::DensePolynomial, proof_of_work, proof_params::ProofParams,
 };
 use hash::Hash;
 use merkle_tree::{Commitment, Error as MerkleError, Proof};
@@ -16,17 +12,20 @@ use u256::U256;
 
 // False positive, for<'a> is required.
 #[allow(single_use_lifetimes)]
-pub fn check_proof<Public>(
+// TODO: Refactor into smaller function
+#[allow(clippy::too_many_lines)]
+pub fn check_proof<Claim: Verifiable>(
     proposed_proof: &[u8],
-    constraints: &[Constraint],
-    public: &Public,
+    public: &Claim,
     params: &ProofParams,
-    trace_cols: usize,
-    trace_len: usize,
 ) -> Result<()>
 where
-    for<'a> &'a Public: Into<Vec<u8>>,
+    for<'a> &'a Claim: Into<Vec<u8>>,
 {
+    let trace_len = public.trace_length();
+    let constraints = public.constraints();
+    let trace_cols = public.trace_columns();
+
     let eval_domain_size = trace_len * params.blowup;
     let eval_x = root_series(eval_domain_size).collect::<Vec<_>>();
 
@@ -39,7 +38,7 @@ where
     let low_degree_extension_root = Replayable::<Hash>::replay(&mut channel);
     let lde_commitment = Commitment::from_size_hash(eval_domain_size, &low_degree_extension_root)?;
     let mut constraint_coefficients: Vec<FieldElement> = Vec::with_capacity(2 * constraints.len());
-    for _ in constraints {
+    for _ in 0..constraints.len() {
         constraint_coefficients.push(channel.get_random());
         constraint_coefficients.push(channel.get_random());
     }
@@ -50,7 +49,7 @@ where
     // Get the oods information from the proof and random
     let oods_point: FieldElement = channel.get_random();
     let mut oods_values: Vec<FieldElement> = Vec::with_capacity(2 * trace_cols + 1);
-    let constraints_trace_degree = trace_degree(constraints);
+    let constraints_trace_degree = constraints.trace_degree();
     for _ in 0..(2 * trace_cols + constraints_trace_degree) {
         oods_values.push(Replayable::<FieldElement>::replay(&mut channel));
     }
@@ -260,7 +259,7 @@ where
 }
 
 fn oods_value_from_trace_values(
-    constraints: &[Constraint],
+    constraints: &Constraints,
     coefficients: &[FieldElement],
     trace_length: usize,
     trace_values: &[FieldElement],
@@ -271,16 +270,15 @@ fn oods_value_from_trace_values(
         assert!(j == 0 || j == 1);
         trace_values[2 * i + j].clone()
     };
-    combine_constraints(constraints, coefficients, trace_length).evaluate(oods_point, &trace)
+    constraints
+        .combine(coefficients, trace_length)
+        .evaluate(oods_point, &trace)
 }
 
 fn oods_value_from_constraint_values(
     constraint_values: &[FieldElement],
     oods_point: &FieldElement,
 ) -> FieldElement {
-    // TODO - Check if this is 100% unreachable, if so remove if not error.
-    assert!(constraint_values.len().is_power_of_two());
-
     let mut result = FieldElement::ZERO;
     let mut power = FieldElement::ONE;
     for value in constraint_values {
@@ -400,47 +398,42 @@ pub enum Error {
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use Error::*;
         match *self {
-            Error::RootUnavailable => {
-                write!(f, "The prime field doesn't have a root of this order")
-            }
-            Error::InvalidPoW => write!(f, "The suggested proof of work failed to verify"),
-            Error::InvalidLDECommitment => write!(f, "The LDE merkle proof is incorrect"),
-            Error::InvalidConstraintCommitment => {
-                write!(f, "The constraint merkle proof is incorrect")
-            }
-            Error::InvalidFriCommitment => write!(f, "A FRI layer commitment is incorrect"),
-            Error::HashMapFailure => {
+            RootUnavailable => write!(f, "The prime field doesn't have a root of this order"),
+            InvalidPoW => write!(f, "The suggested proof of work failed to verify"),
+            InvalidLDECommitment => write!(f, "The LDE merkle proof is incorrect"),
+            InvalidConstraintCommitment => write!(f, "The constraint merkle proof is incorrect"),
+            InvalidFriCommitment => write!(f, "A FRI layer commitment is incorrect"),
+            HashMapFailure => {
                 write!(
                     f,
                     "Verifier attempted to look up an empty entry in the hash map"
                 )
             }
-            Error::ProofTooLong => write!(f, "The proof length doesn't match the specification"),
-            Error::OodsCalculationFailure => {
+            ProofTooLong => write!(f, "The proof length doesn't match the specification"),
+            OodsCalculationFailure => {
                 write!(
                     f,
                     "The calculated odds value doesn't match the committed one"
                 )
             }
-            Error::FriCalculationFailure => {
+            FriCalculationFailure => {
                 write!(
                     f,
                     "The final FRI calculation suggests the committed polynomial isn't low degree"
                 )
             }
-            Error::OodsMismatch => {
-                write!(f, "Calculated oods value doesn't match the committed one")
-            }
+            OodsMismatch => write!(f, "Calculated oods value doesn't match the committed one"),
             // This is a wrapper, so defer to the underlying types' implementation of `fmt`.
-            Error::Merkle(ref e) => std::fmt::Display::fmt(e, f),
+            Merkle(ref e) => std::fmt::Display::fmt(e, f),
         }
     }
 }
 
 impl From<MerkleError> for Error {
     fn from(err: MerkleError) -> Self {
-        Error::Merkle(err)
+        Self::Merkle(err)
     }
 }
 
@@ -448,7 +441,7 @@ impl From<MerkleError> for Error {
 impl error::Error for Error {
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match *self {
-            Error::Merkle(ref e) => Some(e),
+            Self::Merkle(ref e) => Some(e),
             _ => None,
         }
     }
@@ -457,48 +450,35 @@ impl error::Error for Error {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{fibonacci::*, proofs::stark_proof};
+    use crate::{fibonacci, proofs::stark_proof};
     use macros_decl::u256h;
 
     #[test]
     fn verifier_fib_test() {
-        let public = PublicInput {
+        let public = fibonacci::Claim {
             index: 1000,
             value: FieldElement::from(u256h!(
                 "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
             )),
         };
-        let private = PrivateInput {
+        let private = fibonacci::Witness {
             secret: FieldElement::from(u256h!(
                 "00000000000000000000000000000000000000000000000000000000cafebabe"
             )),
         };
-        let constraints = &get_fibonacci_constraints(&public);
-        let actual = stark_proof(
-            &get_trace_table(1024, &private),
-            &constraints,
-            &public,
-            &ProofParams {
-                blowup:     16,
-                pow_bits:   12,
-                queries:    20,
-                fri_layout: vec![3, 2],
-            },
-        );
+        let actual = stark_proof(&public, &private, &ProofParams {
+            blowup:     16,
+            pow_bits:   12,
+            queries:    20,
+            fri_layout: vec![3, 2],
+        });
 
-        assert!(check_proof(
-            actual.proof.as_slice(),
-            &constraints,
-            &public,
-            &ProofParams {
-                blowup:     16,
-                pow_bits:   12,
-                queries:    20,
-                fri_layout: vec![3, 2],
-            },
-            2,
-            1024
-        )
+        assert!(check_proof(actual.proof.as_slice(), &public, &ProofParams {
+            blowup:     16,
+            pow_bits:   12,
+            queries:    20,
+            fri_layout: vec![3, 2],
+        },)
         .is_ok());
     }
 }

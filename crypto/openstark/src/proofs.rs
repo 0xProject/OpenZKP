@@ -2,8 +2,8 @@ use crate::{
     algebraic_dag::AlgebraicGraph,
     channel::{ProverChannel, RandomGenerator, Writable},
     check_proof,
-    constraint::{trace_degree, Constraint},
-    constraint_system::combine_constraints,
+    constraint_system::{Provable, Verifiable},
+    constraints::Constraints,
     polynomial::DensePolynomial,
     proof_of_work,
     proof_params::ProofParams,
@@ -108,15 +108,17 @@ impl VectorCommitment for FriLeaves {
 #[allow(single_use_lifetimes)]
 // TODO: Simplify
 #[allow(clippy::cognitive_complexity)]
-pub fn stark_proof<Public>(
-    trace: &TraceTable,
-    constraints: &[Constraint],
-    public: &Public,
+pub fn stark_proof<Claim: Verifiable, Witness: Provable<Claim>>(
+    claim: &Claim,
+    witness: &Witness,
     params: &ProofParams,
 ) -> ProverChannel
 where
-    for<'a> &'a Public: Into<Vec<u8>>,
+    for<'a> &'a Claim: Into<Vec<u8>>,
 {
+    let trace = witness.trace(claim);
+    let constraints = claim.constraints();
+
     info!("Starting Stark proof.");
     info!("Proof parameters: {:?}", params);
     // TODO: Use a proper size human formating function
@@ -130,10 +132,9 @@ where
     );
     info!("{} constraints", constraints.len(),);
 
-    // Initialize a proof channel with the public input.
-    info!("Initialize channel with public input.");
+    info!("Initialize channel with claim.");
     let mut proof = ProverChannel::new();
-    proof.initialize(&public.into());
+    proof.initialize(&claim.into());
 
     // 1. Trace commitment.
 
@@ -165,7 +166,7 @@ where
     // Read constraint coefficients from the channel.
     info!("Read constraint coefficients from the channel.");
     let mut constraint_coefficients = Vec::with_capacity(2 * constraints.len());
-    for _ in constraints {
+    for _ in 0..constraints.len() {
         constraint_coefficients.push(proof.get_random());
         constraint_coefficients.push(proof.get_random());
     }
@@ -173,7 +174,7 @@ where
     info!("Compute constraint polynomials.");
     let constraint_polynomials = get_constraint_polynomials(
         &tree.leaves(),
-        constraints,
+        &constraints,
         &constraint_coefficients,
         trace.num_rows(),
     );
@@ -251,15 +252,8 @@ where
 
     // Verify proof
     info!("Verify proof.");
-    assert!(check_proof(
-        proof.proof.as_slice(),
-        constraints,
-        public,
-        params,
-        trace.num_columns(),
-        trace.num_rows()
-    )
-    .is_ok());
+    // TODO - Bubble up errors so we can see where verification fails.
+    assert!(check_proof(proof.proof.as_slice(), claim, params,).is_ok());
 
     // Q.E.D.
     // TODO: Return bytes, or a result structure
@@ -299,7 +293,7 @@ fn get_indices(num: usize, bits: u32, proof: &mut ProverChannel) -> Vec<usize> {
 
 fn get_constraint_polynomials(
     trace_lde: &PolyLDE,
-    constraints: &[Constraint],
+    constraints: &Constraints,
     constraint_coefficients: &[FieldElement],
     trace_length: usize,
 ) -> Vec<DensePolynomial> {
@@ -309,24 +303,22 @@ fn get_constraint_polynomials(
     // smaller.
     const CHUNK_SIZE: usize = 65536;
 
-    let constraints_trace_degree = trace_degree(constraints);
-    let coset_length = trace_length * constraints_trace_degree;
+    // We need to evaluate on a power of two degree
+    let constraint_degree = constraints.trace_degree();
+    let eval_degree = constraint_degree.next_power_of_two();
+    let coset_size = trace_length * eval_degree;
 
     info!("Compute offset trace table");
-    let trace_coset = extract_trace_coset(trace_lde, coset_length);
+    let trace_coset = extract_trace_coset(trace_lde, coset_size);
 
     info!("Combine rational expressions");
-    let expr = combine_constraints(constraints, constraint_coefficients, trace_length);
-    info!("Combined constraint expression: {:?}", expr);
-    let expr = expr.simplify();
-
+    let combined_constraints = constraints.combine(constraint_coefficients, trace_length);
     let mut dag = AlgebraicGraph::new(
         &FieldElement::GENERATOR,
         trace_coset.num_rows(),
-        constraints_trace_degree,
+        eval_degree,
     );
-    let result = dag.expression(expr);
-    dag.optimize();
+    let result = dag.expression(combined_constraints);
     dag.lookup_tables();
     // TODO: Track and use result reference.
     let _ = dag.tree_shake(result);
@@ -334,10 +326,8 @@ fn get_constraint_polynomials(
 
     // Evaluate on the coset trace table
     info!("Evaluate on the coset trace table");
-    let mut result: MmapVec<FieldElement> = MmapVec::with_capacity(trace_coset.num_rows());
-    for _ in 0..trace_coset.num_rows() {
-        result.push(FieldElement::ZERO);
-    }
+    let mut result: MmapVec<FieldElement> = MmapVec::with_capacity(coset_size);
+    result.resize(coset_size, FieldElement::ZERO);
     let values = &mut result;
     values
         .par_chunks_mut(CHUNK_SIZE)
@@ -365,11 +355,10 @@ fn get_constraint_polynomials(
 
     // Convert to even and odd coefficient polynomials
     let mut constraint_polynomials: Vec<MmapVec<FieldElement>> =
-        vec![
-            MmapVec::with_capacity(trace_coset.num_rows() / constraints_trace_degree);
-            constraints_trace_degree
-        ];
-    for chunk in values.chunks_exact(constraints_trace_degree) {
+        vec![MmapVec::with_capacity(trace_length); constraint_degree];
+    let (coefficients, zeros) = values.split_at(constraint_degree * trace_length);
+    assert!(zeros.iter().all(|z| z == &FieldElement::ZERO));
+    for chunk in coefficients.chunks_exact(constraint_degree) {
         for (i, coefficient) in chunk.iter().enumerate() {
             constraint_polynomials[i].push(coefficient.clone());
         }
@@ -596,7 +585,7 @@ fn decommit_fri_layers_and_trees(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fibonacci::{get_fibonacci_constraints, get_trace_table, PrivateInput, PublicInput};
+    use crate::{fibonacci, verifier::check_proof};
     use macros_decl::{field_element, hex, u256h};
     use primefield::{fft::permute_index, geometric_series::geometric_series};
     use u256::U256;
@@ -606,21 +595,17 @@ mod tests {
         // All the constants for this tests are copied from files in
         // https://github.com/0xProject/evm-verifier/commit/9bf369139b0edc23ab7ab7e8db8164c5a05a83df.
         // Copied from solidity/contracts/fibonacci/fibonacci_private_input1.json
-        let private = PrivateInput {
+        let witness = fibonacci::Witness {
             secret: field_element!("83d36de9"),
         };
-        let tt = get_trace_table(1024, &private);
-        let public = PublicInput {
-            index: 1000,
-            value: tt[(1000, 0)].clone(),
-        };
         // Copied from solidity/contracts/fibonacci/fibonacci_public_input1.json
-        assert_eq!(
-            tt[(1000, 0)],
-            field_element!("04d5f1f669b34fb7252d5a9d0d9786b2638c27eaa04e820b38b088057960cca1")
-        );
-        let constraints = &get_fibonacci_constraints(&public);
-        let actual = stark_proof(&tt, &constraints, &public, &ProofParams {
+        let claim = fibonacci::Claim {
+            index: 1000,
+            value: field_element!(
+                "04d5f1f669b34fb7252d5a9d0d9786b2638c27eaa04e820b38b088057960cca1"
+            ),
+        };
+        let actual = stark_proof(&claim, &witness, &ProofParams {
             blowup:     16,
             pow_bits:   0,
             queries:    20,
@@ -649,105 +634,77 @@ mod tests {
 
     #[test]
     fn fib_test_1024_python_witness() {
-        let private = PrivateInput {
-            secret: FieldElement::from(u256h!(
-                "00000000000000000000000000000000000000000000000000000000cafebabe"
-            )),
-        };
-        let tt = get_trace_table(1024, &private);
-        let public = PublicInput {
-            index: 1000,
-            value: tt[(1000, 0)].clone(),
-        };
-        let constraints = &get_fibonacci_constraints(&public);
-        let expected = hex!("fcf1924f84656e5068ab9cbd44ae084b235bb990eefc0fd0183c77d5645e830e");
+        let index = 1000;
+        let secret = field_element!("cafebabe");
+        let value = fibonacci::get_value(index, &secret);
 
-        let actual = stark_proof(&tt, &constraints, &public, &ProofParams {
+        let witness = fibonacci::Witness { secret };
+        let claim = fibonacci::Claim { index, value };
+
+        let actual = stark_proof(&claim, &witness, &ProofParams {
             blowup:     16,
             pow_bits:   12,
             queries:    20,
             fri_layout: vec![3, 2],
         });
-        assert_eq!(actual.coin.digest, expected);
+
+        assert_eq!(
+            actual.coin.digest,
+            hex!("fcf1924f84656e5068ab9cbd44ae084b235bb990eefc0fd0183c77d5645e830e")
+        );
     }
 
     #[test]
     fn fib_test_1024_changed_witness() {
-        let private = PrivateInput {
-            secret: FieldElement::from(u256h!(
-                "00000000000000000000000000000000000000000000000f00dbabe0cafebabe"
-            )),
-        };
-        let tt = get_trace_table(1024, &private);
-        let public = PublicInput {
-            index: 1000,
-            value: tt[(1000, 0)].clone(),
-        };
-        let actual = stark_proof(
-            &get_trace_table(1024, &private),
-            &get_fibonacci_constraints(&public),
-            &public,
-            &ProofParams {
-                blowup: 16, /* TODO - The blowup in the fib constraints is hardcoded to 16,
-                             * we should set this back to 32 to get wider coverage when
-                             * that's fixed */
-                pow_bits:   12,
-                queries:    20,
-                fri_layout: vec![3, 2],
-            },
-        );
+        let index = 1000;
+        let secret = field_element!("0f00dbabe0cafebabe");
+        let value = fibonacci::get_value(index, &secret);
 
-        assert!(check_proof(
-            actual.proof.as_slice(),
-            &get_fibonacci_constraints(&public),
-            &public,
-            &ProofParams {
-                blowup: 16, /* TODO - The blowup in the fib constraints is hardcoded to 16,
-                             * we should set this back to 32 to get wider coverage when
-                             * that's fixed */
-                pow_bits:   12,
-                queries:    20,
-                fri_layout: vec![3, 2],
-            },
-            2,
-            1024
-        )
+        let witness = fibonacci::Witness { secret };
+        let claim = fibonacci::Claim { index, value };
+
+        let actual = stark_proof(&claim, &witness, &ProofParams {
+            blowup: 16, /* TODO - The blowup in the fib constraints is hardcoded to 16,
+                         * we should set this back to 32 to get wider coverage when
+                         * that's fixed */
+            pow_bits:   12,
+            queries:    20,
+            fri_layout: vec![3, 2],
+        });
+
+        assert!(check_proof(actual.proof.as_slice(), &claim, &ProofParams {
+            blowup: 16, /* TODO - The blowup in the fib constraints is hardcoded to 16,
+                         * we should set this back to 32 to get wider coverage when
+                         * that's fixed */
+            pow_bits:   12,
+            queries:    20,
+            fri_layout: vec![3, 2],
+        },)
         .is_ok());
     }
 
     #[test]
     fn fib_test_4096() {
-        let private = PrivateInput {
-            secret: FieldElement::from(u256h!(
-                "00000000000000000000000000000000000000000000000f00dbabe0cafebabe"
-            )),
-        };
-        let tt = get_trace_table(4096, &private);
-        let public = PublicInput {
-            index: 4000,
-            value: tt[(4000, 0)].clone(),
-        };
-        let constraints = get_fibonacci_constraints(&public);
-        let actual = stark_proof(&tt, &constraints, &public, &ProofParams {
+        let index = 4000;
+        let secret = field_element!("0f00dbabe0cafebabe");
+        let value = fibonacci::get_value(index, &secret);
+
+        let witness = fibonacci::Witness { secret };
+        let claim = fibonacci::Claim { index, value };
+
+        let actual = stark_proof(&claim, &witness, &ProofParams {
             blowup:     16,
             pow_bits:   12,
             queries:    20,
             fri_layout: vec![2, 1, 4, 2],
         });
 
-        assert!(check_proof(
-            actual.proof.as_slice(),
-            &constraints,
-            &public,
-            &ProofParams {
-                blowup:     16,
-                pow_bits:   12,
-                queries:    20,
-                fri_layout: vec![2, 1, 4, 2],
-            },
-            2,
-            4096
-        )
+        assert!(check_proof(actual.proof.as_slice(), &claim, &ProofParams {
+            blowup:     16,
+            pow_bits:   12,
+            queries:    20,
+            fri_layout: vec![2, 1, 4, 2],
+        },)
         .is_ok());
     }
 
@@ -755,27 +712,27 @@ mod tests {
     // to the main implementation? Should we break up the implementation so we
     // can test the individual steps?
     #[test]
-    // TODO: Naming
+    // TODO: Refactor this code to be cleaner.
     #[allow(non_snake_case)]
-    // TODO - See if it's possible to do context cloning and break this into smaller tests
     #[allow(clippy::cognitive_complexity)]
+    #[allow(clippy::too_many_lines)]
     fn fib_proof_test() {
         crate::tests::init();
 
-        let public = PublicInput {
+        let claim = fibonacci::Claim {
             index: 1000,
             value: FieldElement::from(u256h!(
                 "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
             )),
         };
-        let private = PrivateInput {
+        let witness = fibonacci::Witness {
             secret: FieldElement::from(u256h!(
                 "00000000000000000000000000000000000000000000000000000000cafebabe"
             )),
         };
 
-        let trace_len = 1024;
-        let constraints = get_fibonacci_constraints(&public);
+        let trace_len = claim.trace_length();
+        assert_eq!(trace_len, 1024);
         let params = ProofParams {
             blowup:     16,
             pow_bits:   12,
@@ -783,18 +740,15 @@ mod tests {
             fri_layout: vec![3, 2],
         };
 
-        let omega = FieldElement::from(u256h!(
-            "0393a32b34832dbad650df250f673d7c5edd09f076fc314a3e5a42f0606082e1"
-        ));
-        let g = FieldElement::from(u256h!(
-            "0659d83946a03edd72406af6711825f5653d9e35dc125289a206c054ec89c4f1"
-        ));
+        let omega =
+            field_element!("0393a32b34832dbad650df250f673d7c5edd09f076fc314a3e5a42f0606082e1");
+        let g = field_element!("0659d83946a03edd72406af6711825f5653d9e35dc125289a206c054ec89c4f1");
         let eval_domain_size = trace_len * params.blowup;
-        let gen = FieldElement::from(U256::from(3_u64));
+        let gen = FieldElement::GENERATOR;
 
         // Second check that the trace table function is working.
-        let trace = get_trace_table(1024, &private);
-        assert_eq!(trace[(1000, 0)], public.value);
+        let trace = witness.trace(&claim);
+        assert_eq!(trace[(1000, 0)], claim.value);
 
         let TPn = trace.interpolate();
         // Checks that the trace table polynomial interpolation is working
@@ -833,11 +787,12 @@ mod tests {
             hex!("018dc61f748b1a6c440827876f30f63cb6c4c188000000000000000000000000")
         );
 
-        let mut public_input = [(public.index as u64).to_be_bytes()].concat();
-        public_input.extend_from_slice(&public.value.as_montgomery().to_bytes_be());
+        // TODO fix naming here!
+        let mut proof_seed = [(claim.index as u64).to_be_bytes()].concat();
+        proof_seed.extend_from_slice(&claim.value.as_montgomery().to_bytes_be());
 
         let mut proof = ProverChannel::new();
-        proof.initialize(&public_input.as_slice());
+        proof.initialize(&proof_seed.as_slice());
         // Checks that the channel is inited properly
         assert_eq!(
             proof.coin.digest,
@@ -850,8 +805,10 @@ mod tests {
             hex!("b7d80385fa0c8879473cdf987ea7970bb807aec78bb91af39a1504d965ad8e92")
         );
 
+        let constraints = claim.constraints();
+        assert_eq!(constraints.len(), 4);
         let mut constraint_coefficients = Vec::with_capacity(2 * constraints.len());
-        for _ in &constraints {
+        for _ in 0..constraints.len() {
             constraint_coefficients.push(proof.get_random());
             constraint_coefficients.push(proof.get_random());
         }
