@@ -8,7 +8,7 @@
     // Enable sets of warnings
     clippy::all,
     clippy::pedantic,
-    // TODO: clippy::cargo,
+    // clippy::cargo,
     rust_2018_idioms,
     future_incompatible,
     unused,
@@ -25,7 +25,7 @@
     explicit_outlives_requirements,
     keyword_idents,
     macro_use_extern_crate,
-    // TODO: missing_docs,
+    // missing_docs,
     missing_doc_code_examples,
     private_doc_tests,
     single_use_lifetimes,
