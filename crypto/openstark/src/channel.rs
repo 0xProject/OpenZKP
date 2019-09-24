@@ -143,7 +143,6 @@ impl RandomGenerator<FieldElement> for PublicCoin {
             let number: U256 = self.get_random();
             let seed = number & MASK;
             if seed < FieldElement::MODULUS {
-                // TODO: Avoid accessing FieldElement members directly
                 break FieldElement::from_montgomery(seed);
             }
         }

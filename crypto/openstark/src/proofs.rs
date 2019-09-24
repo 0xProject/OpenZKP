@@ -313,22 +313,12 @@ fn get_constraint_polynomials(
 
     info!("Combine rational expressions");
     let combined_constraints = constraints.combine(constraint_coefficients, trace_length);
-    info!("Combined constraint expression: {:?}", combined_constraints);
-    let combined_constraints = combined_constraints.simplify();
-    // OPT: Some sub-expressions have much lower degree, we can evaluate them on a
-    // smaller domain and combine the results in coefficient form.
-    info!(
-        "Simplified constraint expression: {:?}",
-        combined_constraints
-    );
-
     let mut dag = AlgebraicGraph::new(
         &FieldElement::GENERATOR,
         trace_coset.num_rows(),
         eval_degree,
     );
     let result = dag.expression(combined_constraints);
-    dag.optimize();
     dag.lookup_tables();
     // TODO: Track and use result reference.
     let _ = dag.tree_shake(result);
@@ -722,10 +712,10 @@ mod tests {
     // to the main implementation? Should we break up the implementation so we
     // can test the individual steps?
     #[test]
-    // TODO: Naming
+    // TODO: Refactor this code to be cleaner.
     #[allow(non_snake_case)]
-    // TODO - See if it's possible to do context cloning and break this into smaller tests
     #[allow(clippy::cognitive_complexity)]
+    #[allow(clippy::too_many_lines)]
     fn fib_proof_test() {
         crate::tests::init();
 
