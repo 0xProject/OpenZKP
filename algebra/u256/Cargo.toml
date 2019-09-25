@@ -1,7 +1,16 @@
 [package]
 name = "u256"
 version = "0.1.0"
-authors = ["Remco Bloemen <remco@0x.org>"]
+description = "Performant implementation of 256-bit unsigned integers"
+repository = "https://github.com/0xProject/starkcrypto/tree/master/algebra/u256"
+keywords = ["cryptography", "u256", "algebra", "no-std", "wasm"]
+categories = ["algorithms", "cryptography", "no-std", "wasm", "science"]
+authors = [
+    "Remco Bloemen <remco@0x.org>",
+    "Mason Liang <mason@0x.org>",
+    "Paul Vienhage <paul@0x.org>"]
+readme = "Readme.md"
+license = "Apache-2.0"
 edition = "2018"
 
 [dependencies]
@@ -11,12 +20,12 @@ no-std-compat = { version = "0.1.0", features = [ "alloc" ] }
 itertools = { version = "0.8.0", default_features = false }
 crunchy = { version = "0.2.2", default_features = false }
 hex = { version = "", optional = true }
-quickcheck = { version = "0.8", optional = true }
+quickcheck = { version = "0.9", optional = true }
 
 # HACK: Criterion is really a dev-dependency, but it's important that it's
 # optional, or it will enable the `std` flag on various dependencies. Cargo
 # does not allow dev-dependencies to be optional.
-criterion = { version = "0.2.0", optional = true }
+criterion = { version = "0.3.0", optional = true }
 quickcheck_macros = {version = "0.8", optional = true }
 
 [[bench]]
@@ -42,3 +51,7 @@ std = [
     "crunchy/std",
     "hex"
 ]
+
+# Allow math in docs
+[package.metadata.docs.rs]
+rustdoc-args = ["--html-in-header", "../../.cargo/katex-header.html"]

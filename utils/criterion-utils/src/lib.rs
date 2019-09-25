@@ -8,7 +8,7 @@
     // Enable sets of warnings
     clippy::all,
     clippy::pedantic,
-    // clippy::cargo,
+    clippy::cargo,
     rust_2018_idioms,
     future_incompatible,
     unused,
@@ -70,7 +70,7 @@ lazy_static! {
 /// ```
 pub fn log_size_bench<F>(crit: &mut Criterion, id: &str, sizes: &'static [usize], mut f: F)
 where
-    F: FnMut(&mut Bencher, usize) + 'static,
+    F: FnMut(&mut Bencher<'_>, usize) + 'static,
 {
     let _ = crit.bench(
         id,
@@ -88,7 +88,7 @@ where
 /// The `size` argument is for througput computations.
 pub fn log_thread_bench<F>(crit: &mut Criterion, id: &str, size: usize, mut f: F)
 where
-    F: FnMut(&mut Bencher) + 'static + Send,
+    F: FnMut(&mut Bencher<'_>) + 'static + Send,
 {
     let _ = crit.bench(
         id,

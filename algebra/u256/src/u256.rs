@@ -852,6 +852,8 @@ impl Mul<&U256> for u128 {
 #[cfg(any(test, feature = "quickcheck"))]
 use quickcheck::{Arbitrary, Gen};
 
+// TODO: Generate a quasi-random sequence.
+// See http://extremelearning.com.au/unreasonable-effectiveness-of-quasirandom-sequences/
 #[cfg(any(test, feature = "quickcheck"))]
 impl Arbitrary for U256 {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
