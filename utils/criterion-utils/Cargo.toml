@@ -14,7 +14,7 @@ license = "Apache-2.0"
 edition = "2018"
 
 [dependencies]
-criterion = "0.2.0"
+criterion = "0.3.0"
 num_cpus = "1.10.1"
 rayon = "1.0.3"
 lazy_static = "1.4.0"
