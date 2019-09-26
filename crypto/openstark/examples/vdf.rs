@@ -1,12 +1,17 @@
-#[cfg(feature = "prover")]
-use crate::TraceTable;
-use crate::{
+#![warn(clippy::all)]
+use env_logger;
+use log::info;
+use openstark::{check_proof, stark_proof, ProofParams};
+use primefield::FieldElement;
+use std::{time::Instant};
+
+use openstark::TraceTable;
+use openstark::{
     constraint_system::{Provable, Verifiable},
     constraints::Constraints,
     rational_expression::RationalExpression,
 };
 use macros_decl::field_element;
-use primefield::{FieldElement};
 use u256::U256;
 
 #[derive(Debug)]
@@ -17,7 +22,7 @@ pub struct Claim {
     pub c1_end: FieldElement,
 }
 
-pub const R : FieldElement = field_element!("064d86ee99c06ccb55648b536b29a7ae9cecc50c6aac5519dc71da89f5cce6dc");
+pub const R : FieldElement = field_element!("03");
 
 impl From<&Claim> for Vec<u8> {
     fn from(input: &Claim) -> Self {
@@ -43,11 +48,11 @@ impl Verifiable for Claim {
 
         Constraints::new(vec![
             // Square (Trace(0,0), Trace(1, 0)) and check that it equals (Trace(2,0), Trace(3,0))
-            (Exp(Trace(0,0).into(), 2) + Constant(R)*Exp(Trace(1,0).into(), 2)  -Trace(2, 0)) * reevery_row(),
+            (Trace(0,0)*Trace(0,0) + Constant(R)*Trace(1,0)*Trace(1,0)  - Trace(2, 0)) * reevery_row(),
             (Constant(2.into())*Trace(0,0)*Trace(1,0)  - Trace(3, 0)) * reevery_row(),
             // Multiply the square by the single and the square and enforce it on the next row
             (Trace(0,0)*Trace(2,0) + Constant(R)*Trace(1,0)*Trace(3,0) - Trace(0, 1)) * reevery_row(),
-            (Trace(0,0)*Trace(2,0) + Trace(1,0)*Trace(3,0) - Trace(0, 2)) * reevery_row(),
+            (Trace(0,0)*Trace(2,0) + Trace(1,0)*Trace(3,0) - Trace(1, 1)) * reevery_row(),
             // Boundary Constraints
             (Trace(1, 0) - (&self.c0_start).into()) * on_row(0),
             (Trace(0, 0) - (&self.c1_start).into()) * on_row(0),
@@ -86,6 +91,31 @@ impl Provable<Claim> for () {
     }
 }
 
+fn main() {
+    env_logger::init();
+    info!("Starting Fibonacci benchmark...");
+
+    let c0_start =
+        field_element!("00a74f2a70da4ea3723cabd2acc55d03f9ff6d0e7acef0fc63263b12c10dd837");
+    let c1_start =
+        field_element!("02ba0d3dfeb1ee83889c5ad8534ba15723a42b306e2f44d5eee10bfa939ae756");
+    let c0_end =
+        field_element!("00f96d03d6da1feaa7462bebd3d691bee9f74d237b5a7180d9274e6d4d8d43d9");
+    let c1_end =
+        field_element!("008bbb2c325988ae685e5256b067da1e9f9bbb183bb25f0da1f1dbdb61eb5e76");
+    let input = Claim { c0_start, c1_start, c0_end, c1_end};
+    let params = ProofParams::suggested(20);
+    let start = Instant::now();
+    let potential_proof = stark_proof(&input, &(), &params);
+    let duration = start.elapsed();
+    println!("{:?}", potential_proof.coin.digest);
+    println!("Time elapsed in proof function is: {:?}", duration);
+    println!("The proof length is {}", potential_proof.proof.len());
+
+    let verified = check_proof(potential_proof.proof.as_slice(), &input, &params);
+    println!("Checking the proof resulted in: {:?}", verified);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -100,11 +130,11 @@ mod tests {
         let c1_start =
             field_element!("02ba0d3dfeb1ee83889c5ad8534ba15723a42b306e2f44d5eee10bfa939ae756");
         let c0_end =
-            field_element!("02c190f26be11bc330401087c92214777ca6e2d25183303d0b0ec4feb7277f64");
+            field_element!("00f96d03d6da1feaa7462bebd3d691bee9f74d237b5a7180d9274e6d4d8d43d9");
         let c1_end =
-            field_element!("05e1e4162ab76832cc21610cc20c25b998ecbf53d0825b9ccd7f80037c532856");
+            field_element!("008bbb2c325988ae685e5256b067da1e9f9bbb183bb25f0da1f1dbdb61eb5e76");
         let input = Claim { c0_start, c1_start, c0_end, c1_end};
-        let params = ProofParams::suggested(1048576);
+        let params = ProofParams::suggested(20);
         let potential_proof = stark_proof(&input, &(), &params);
         assert_eq!(
             check_proof(potential_proof.proof.as_slice(), &input, &params),
