@@ -27,6 +27,10 @@ impl Constraints {
         self.0.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     pub fn combine(
         &self,
         constraint_coefficients: &[FieldElement],
