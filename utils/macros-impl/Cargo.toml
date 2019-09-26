@@ -1,7 +1,16 @@
 [package]
 name = "macros-impl"
 version = "0.1.0"
-authors = ["Remco Bloemen <remco@0x.org>"]
+description = "Implementation crate for `proc_macro_hack`"
+repository = "https://github.com/0xProject/starkcrypto/tree/master/utils/macros-impl"
+keywords = ["proc_macro_hack"]
+categories = ["rust-patterns"]
+authors = [
+    "Remco Bloemen <remco@0x.org>",
+    "Mason Liang <mason@0x.org>",
+    "Paul Vienhage <paul@0x.org>"]
+readme = "Readme.md"
+license = "Apache-2.0"
 edition = "2018"
 
 [lib]
@@ -10,7 +19,7 @@ proc-macro = true
 [dependencies]
 macros-lib = { path = "../macros-lib" }
 
-proc-macro2 = "0.4"
+proc-macro2 = "1.0"
 proc-macro-hack = "0.5.8"
 
 [features]
