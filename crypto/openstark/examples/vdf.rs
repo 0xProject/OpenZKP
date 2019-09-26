@@ -3,26 +3,26 @@ use env_logger;
 use log::info;
 use openstark::{check_proof, stark_proof, ProofParams};
 use primefield::FieldElement;
-use std::{time::Instant};
+use std::time::Instant;
 
-use openstark::TraceTable;
+use macros_decl::field_element;
 use openstark::{
     constraint_system::{Provable, Verifiable},
     constraints::Constraints,
     rational_expression::RationalExpression,
+    TraceTable,
 };
-use macros_decl::field_element;
 use u256::U256;
 
 #[derive(Debug)]
 pub struct Claim {
     pub c0_start: FieldElement,
     pub c1_start: FieldElement,
-    pub c0_end: FieldElement,
-    pub c1_end: FieldElement,
+    pub c0_end:   FieldElement,
+    pub c1_end:   FieldElement,
 }
 
-pub const R : FieldElement = field_element!("03");
+pub const R: FieldElement = field_element!("03");
 
 impl From<&Claim> for Vec<u8> {
     fn from(input: &Claim) -> Self {
@@ -48,21 +48,21 @@ impl Verifiable for Claim {
 
         Constraints::new(vec![
             // Square (Trace(0,0), Trace(1, 0)) and check that it equals (Trace(2,0), Trace(3,0))
-            (Trace(0,0)*Trace(0,0) + Constant(R)*Trace(1,0)*Trace(1,0)  - Trace(2, 0)) * reevery_row(),
-            (Constant(2.into())*Trace(0,0)*Trace(1,0)  - Trace(3, 0)) * reevery_row(),
+            (Trace(0, 0) * Trace(0, 0) + Constant(R) * Trace(1, 0) * Trace(1, 0) - Trace(2, 0)) * reevery_row(),
+            (Constant(2.into()) * Trace(0, 0) * Trace(1, 0) - Trace(3, 0)) * reevery_row(),
             // Multiply the square by the single and the square and enforce it on the next row
-            (Trace(0,0)*Trace(2,0) + Constant(R)*Trace(1,0)*Trace(3,0) - Trace(0, 1)) * reevery_row(),
-            (Trace(0,0)*Trace(2,0) + Trace(1,0)*Trace(3,0) - Trace(1, 1)) * reevery_row(),
+            (Trace(0, 0) * Trace(2, 0) + Constant(R) * Trace(1, 0) * Trace(3, 0) - Trace(0, 1))*reevery_row(),
+            (Trace(0, 0) * Trace(2, 0) + Trace(1, 0) * Trace(3, 0) - Trace(1, 1))*reevery_row(),
             // Boundary Constraints
-            (Trace(1, 0) - (&self.c0_start).into()) * on_row(0),
-            (Trace(0, 0) - (&self.c1_start).into()) * on_row(0),
+            (Trace(0, 0) - (&self.c0_start).into()) * on_row(0),
+            (Trace(1, 0) - (&self.c1_start).into()) * on_row(0),
             (Trace(0, 0) - (&self.c0_end).into()) * on_row(trace_length - 1),
             (Trace(1, 0) - (&self.c1_end).into()) * on_row(trace_length - 1),
         ])
     }
 
     fn trace_length(&self) -> usize {
-        1048576
+        1_048_576
     }
 
     fn trace_columns(&self) -> usize {
@@ -73,20 +73,20 @@ impl Verifiable for Claim {
 impl Provable<Claim> for () {
     #[cfg(feature = "prover")]
     fn trace(&self, claim: &Claim) -> TraceTable {
-        let mut trace = TraceTable::new(1048576, 4);
+        let mut trace = TraceTable::new(1_048_576, 4);
 
         let mut prev_c0 = claim.c0_start.clone();
         let mut prev_c1 = claim.c1_start.clone();
-        for i in 0..1048576 {
+        for i in 0..1_048_576 {
             trace[(i, 0)] = prev_c0.clone();
             trace[(i, 1)] = prev_c1.clone();
-            trace[(i, 2)] = (&trace[(i, 0)]).square() + &R*(&trace[(i, 1)].square());
-            trace[(i, 3)] = FieldElement::from(2)*&trace[(i, 0)]*&trace[(i, 1)];
-            prev_c0 = &trace[(i, 0)]*&trace[(i, 2)] + &R*&trace[(i, 1)]*&trace[(i, 3)];
-            prev_c1 = &trace[(i, 0)]*&trace[(i, 2)] + &trace[(i, 1)]*&trace[(i, 3)]
+            trace[(i, 2)] = (&trace[(i, 0)]).square() + &R * (&trace[(i, 1)].square());
+            trace[(i, 3)] = FieldElement::from(2) * &trace[(i, 0)] * &trace[(i, 1)];
+            prev_c0 = &trace[(i, 0)] * &trace[(i, 2)] + &R * &trace[(i, 1)] * &trace[(i, 3)];
+            prev_c1 = &trace[(i, 0)] * &trace[(i, 2)] + &trace[(i, 1)] * &trace[(i, 3)];
         }
-        assert_eq!(trace[(1048576 - 1, 0)], claim.c0_end);
-        assert_eq!(trace[(1048576 - 1, 1)], claim.c1_end);
+        assert_eq!(trace[(1_048_576 - 1, 0)], claim.c0_end);
+        assert_eq!(trace[(1_048_576 - 1, 1)], claim.c1_end);
         trace
     }
 }
@@ -99,11 +99,14 @@ fn main() {
         field_element!("00a74f2a70da4ea3723cabd2acc55d03f9ff6d0e7acef0fc63263b12c10dd837");
     let c1_start =
         field_element!("02ba0d3dfeb1ee83889c5ad8534ba15723a42b306e2f44d5eee10bfa939ae756");
-    let c0_end =
-        field_element!("00f96d03d6da1feaa7462bebd3d691bee9f74d237b5a7180d9274e6d4d8d43d9");
-    let c1_end =
-        field_element!("008bbb2c325988ae685e5256b067da1e9f9bbb183bb25f0da1f1dbdb61eb5e76");
-    let input = Claim { c0_start, c1_start, c0_end, c1_end};
+    let c0_end = field_element!("00f96d03d6da1feaa7462bebd3d691bee9f74d237b5a7180d9274e6d4d8d43d9");
+    let c1_end = field_element!("008bbb2c325988ae685e5256b067da1e9f9bbb183bb25f0da1f1dbdb61eb5e76");
+    let input = Claim {
+        c0_start,
+        c1_start,
+        c0_end,
+        c1_end,
+    };
     let params = ProofParams::suggested(20);
     let start = Instant::now();
     let potential_proof = stark_proof(&input, &(), &params);
@@ -133,7 +136,12 @@ mod tests {
             field_element!("00f96d03d6da1feaa7462bebd3d691bee9f74d237b5a7180d9274e6d4d8d43d9");
         let c1_end =
             field_element!("008bbb2c325988ae685e5256b067da1e9f9bbb183bb25f0da1f1dbdb61eb5e76");
-        let input = Claim { c0_start, c1_start, c0_end, c1_end};
+        let input = Claim {
+            c0_start,
+            c1_start,
+            c0_end,
+            c1_end,
+        };
         let params = ProofParams::suggested(20);
         let potential_proof = stark_proof(&input, &(), &params);
         assert_eq!(
