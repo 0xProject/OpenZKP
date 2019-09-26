@@ -15,6 +15,14 @@ version: 2.1
 
 # TODO: Sync `TODO` and other comments.
 
+# TODO: Minimal version testing.
+#       https://doc.rust-lang.org/cargo/reference/unstable.html#minimal-versions
+
+# TODO: Configure Quickcheck to use more rounds and require passing tests.
+#       Using QUICKCHECK_TESTS, QUICKCHECK_MAX_TESTS, & QUICKCHECK_MIN_TESTS_PASSED
+#       https://github.com/BurntSushi/quickcheck#more-thorough-checking
+
+
 # OPT: Create docker images tailored for each job
 executors:
   minimal:

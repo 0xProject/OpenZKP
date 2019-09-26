@@ -150,68 +150,6 @@ impl RationalExpression {
         }
     }
 
-    /// Simplify the expression
-    ///
-    /// Does constant propagation and simplifies expressions like `0 + a`,
-    /// `0 * a`, `1 * a`, `-(-a)`, `1/(1/a)`, `a^0` and `a^1`.
-    // TODO: Move to AlgebraicDag
-    // Repeated arms are more readable here
-    #[allow(clippy::match_same_arms)]
-    pub fn simplify(self) -> Self {
-        use RationalExpression::*;
-        match self {
-            Add(a, b) => {
-                let a = a.simplify();
-                let b = b.simplify();
-                match (a, b) {
-                    (a, Constant(FieldElement::ZERO)) => a,
-                    (Constant(FieldElement::ZERO), b) => b,
-                    (Constant(a), Constant(b)) => Constant(a + b),
-                    (a, b) => a + b,
-                }
-            }
-            Mul(a, b) => {
-                let a = a.simplify();
-                let b = b.simplify();
-                match (a, b) {
-                    (_, Constant(FieldElement::ZERO)) => Constant(FieldElement::ZERO),
-                    (Constant(FieldElement::ZERO), _) => Constant(FieldElement::ZERO),
-                    (a, Constant(FieldElement::ONE)) => a,
-                    (Constant(FieldElement::ONE), b) => b,
-                    (Constant(a), Constant(b)) => Constant(a * b),
-                    (a, b) => a * b,
-                }
-            }
-            Neg(a) => {
-                let a = a.simplify();
-                match a {
-                    // TODO: impl std::ops::Neg for FieldElement
-                    Constant(a) => Constant(FieldElement::ZERO - a),
-                    Neg(a) => *a,
-                    a => a.neg(),
-                }
-            }
-            Inv(a) => {
-                let a = a.simplify();
-                match a {
-                    Constant(a) => Constant(a.inv().expect("Division by zero.")),
-                    Inv(a) => *a,
-                    a => a.inv(),
-                }
-            }
-            Exp(a, e) => {
-                let a = a.simplify();
-                match (a, e) {
-                    (_, 0) => Constant(FieldElement::ONE),
-                    (a, 1) => a,
-                    (Constant(a), e) => Constant(a.pow(e)),
-                    (a, e) => a.pow(e),
-                }
-            }
-            e => e,
-        }
-    }
-
     pub fn evaluate(
         &self,
         x: &FieldElement,

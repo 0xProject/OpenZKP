@@ -141,20 +141,30 @@ impl std::ops::Index<Index> for AlgebraicGraph {
     }
 }
 
+fn from_entropy(keccak: Keccak) -> FieldElement {
+    let mut result = [0; 32];
+    keccak.finalize(&mut result);
+    result[0] &= 0xF;
+    let mut u256 = U256::from_bytes_be(&result);
+    if u256 >= FieldElement::MODULUS {
+        u256 -= FieldElement::MODULUS;
+    }
+    assert!(u256 < FieldElement::MODULUS);
+    FieldElement::from_montgomery(u256)
+}
+
 impl AlgebraicGraph {
     pub(crate) fn new(cofactor: &FieldElement, coset_size: usize, trace_blowup: usize) -> Self {
-        // Create seed out of parameters
         assert!(coset_size.is_power_of_two());
-        let mut seed = [0; 32];
+        // Create seed out of parameters
         let mut keccak = Keccak::new_keccak256();
         keccak.update(&cofactor.as_montgomery().to_bytes_be());
         keccak.update(&coset_size.to_be_bytes());
-        keccak.finalize(&mut seed);
         Self {
             cofactor: cofactor.clone(),
             coset_size,
             trace_blowup,
-            seed: FieldElement::from_montgomery(U256::from_bytes_be(&seed)),
+            seed: from_entropy(keccak),
             nodes: vec![],
             row: 0,
         }
@@ -167,44 +177,99 @@ impl AlgebraicGraph {
     /// that they are algebraically identical.
     fn hash(&self, operation: &Operation) -> FieldElement {
         use Operation::*;
-        // TODO: Validate indices
         match operation {
-            Constant(value) => value.clone(),
+            Constant(a) => a.clone(),
             Trace(i, o) => {
                 // Value = hash(seed, i, o)
-                let mut result = [0; 32];
                 let mut keccak = Keccak::new_keccak256();
                 keccak.update(&self.seed.as_montgomery().to_bytes_be());
                 keccak.update(&i.to_be_bytes());
                 keccak.update(&o.to_be_bytes());
-                keccak.finalize(&mut result);
-                FieldElement::from_montgomery(U256::from_bytes_be(&result))
+                from_entropy(keccak)
             }
             Add(a, b) => &self[*a].hash + &self[*b].hash,
             Neg(a) => -&self[*a].hash,
             Mul(a, b) => &self[*a].hash * &self[*b].hash,
-            Inv(a) => {
-                self[*a]
-                    .hash
-                    .inv()
-                    .expect("Division by zero while evaluating RationalExpression.")
-            }
+            Inv(a) => self[*a].hash.inv().expect("Division by zero"),
             Exp(a, i) => self[*a].hash.pow(*i),
             Poly(p, a) => p.evaluate(&self[*a].hash),
+            // We pretend that X comes from Coset(self.cofactor, self.coset_size)
+            // and do the algebraic manipulations to transform it into the
+            // target coset.
             Coset(c, s) => {
-                // Pretend that seed is a member of the evaluation domain and
-                // 'convert' it to the coset by applying the same operations as
-                // we would to convert the evaluation domain into the coset.
                 assert_eq!(self.coset_size % s, 0);
-                let exponent = self.coset_size / s;
-                let mut t = self.seed.clone();
-                t /= &self.cofactor;
-                let mut t = t.pow(exponent);
-                t *= c;
-                t
+                c * (&self.seed / &self.cofactor).pow(self.coset_size / s)
             }
             // This would need to be the same as the replaced operation
             Lookup(_) => panic!("hash(Lookup) not implemented."),
+        }
+    }
+
+    // Note that the hash check already covers cases where the result is
+    // zero, one or a subexpression. So we don't need to match for `a - a = 0`,
+    // `0 * a = 0`, `a^1 = a`, `-(-a) = a` etc. What remains is mostly
+    // constant and coset propagation.
+    // NOTE: for evaluation purposes Coset(c, 1) == Constant(c), but this
+    // is not covered by the hash, and can not be easily incorprated while
+    // maintaining the above identities.
+    fn simplify(&self, operation: Operation) -> Operation {
+        use Operation::*;
+        match operation {
+            Add(a, b) => {
+                match (&self[a].op, &self[b].op) {
+                    // `0 + a = a` is covered by the hash check
+                    (Constant(a), Constant(b)) => Constant(a + b),
+                    (Coset(c1, s1), Coset(c2, s2)) if s1 == s2 => Coset(c1 + c2, *s1),
+                    _ => Add(a, b),
+                }
+            }
+            Neg(a) => {
+                match &self[a].op {
+                    Constant(a) => Constant(a.neg()),
+                    Coset(b, o) => Coset(b.neg(), *o),
+                    _ => Neg(a),
+                }
+            }
+            Mul(a, b) => {
+                match (&self[a].op, &self[b].op) {
+                    (Constant(a), Constant(b)) => Constant(a * b),
+                    (Coset(a, 1), Coset(b, s))
+                    | (Coset(b, s), Coset(a, 1))
+                    | (Constant(a), Coset(b, s))
+                    | (Coset(b, s), Constant(a)) => Coset(a * b, *s),
+                    (Coset(c1, s1), Coset(c2, s2)) if s1 == s2 => Coset(c1 * c2, *s1 / 2),
+                    _ => Mul(a, b),
+                }
+            }
+            Exp(a, e) => {
+                match &self[a].op {
+                    Constant(a) => Constant(a.pow(e)),
+                    Coset(b, o) if o % e == 0 => Coset(b.pow(e), o / e),
+                    // TODO: Complex situations that break hash
+                    //  * Coset(a, 1)^6 = Coset(a^6, 1)
+                    //  * Coset(a, 2)^6 = Coset(a^6, 1)
+                    //  * Coset(a, 4)^6 = Coset(a^2, 2)^3
+                    _ => Exp(a, e),
+                }
+            }
+            Inv(a) => {
+                match &self[a].op {
+                    Constant(a) => Constant(a.inv().expect("Division by zero")),
+                    Coset(a, 1) => Coset(a.inv().expect("Division by zero"), 1),
+                    Coset(a, 2) => Coset(a.inv().expect("Division by zero"), 2),
+                    // TODO: For larger sizes we need a way to represent a
+                    // reverse order Coset.
+                    _ => Inv(a),
+                }
+            }
+            Poly(p, a) => {
+                match &self[a].op {
+                    Constant(a) => Constant(p.evaluate(a)),
+                    Coset(a, 1) => Coset(p.evaluate(a), 1),
+                    _ => Poly(p, a),
+                }
+            }
+            n => n,
         }
     }
 
@@ -215,8 +280,8 @@ impl AlgebraicGraph {
             std::cmp::max(a, b)
         }
         match operation {
-            Coset(_, s) => *s,
             Constant(_) => 1,
+            Coset(_, s) => *s,
             Trace(..) => self.coset_size,
             Add(a, b) | Mul(a, b) => lcm(self[*a].period, self[*b].period),
             Neg(a) | Inv(a) | Exp(a, _) | Poly(_, a) => self[*a].period,
@@ -234,6 +299,14 @@ impl AlgebraicGraph {
             // Return existing node index
             Index(index)
         } else {
+            // Recognize expressions evaluating to zero or one. Simplify other
+            // expressions.
+            let operation = match hash {
+                FieldElement::ZERO => Operation::Constant(FieldElement::ZERO),
+                FieldElement::ONE => Operation::Constant(FieldElement::ONE),
+                _ => self.simplify(operation),
+            };
+
             // Create new node
             let index = self.nodes.len();
             let period = self.period(&operation);
@@ -286,49 +359,6 @@ impl AlgebraicGraph {
         }
     }
 
-    // TODO: Run optimization passes automatically, maybe in Init?
-    pub(crate) fn optimize(&mut self) {
-        use Operation::*;
-        for i in 0..self.nodes.len() {
-            let op = match &self.nodes[i].op {
-                // TODO: We can also do the constant propagation here. We can even
-                // fold constant propagation in with lookup tables, as it is
-                // equivalent to a repeating pattern of size one.
-                Add(a, b) => {
-                    match (&self[*a].op, &self[*b].op) {
-                        (Coset(c1, s1), Coset(c2, s2)) if s1 == s2 => Coset(c1 + c2, *s1),
-                        _ => Add(*a, *b),
-                    }
-                }
-                Neg(a) => {
-                    match &self[*a].op {
-                        Coset(b, o) => Coset(b.neg(), *o),
-                        _ => Neg(*a),
-                    }
-                }
-                Mul(a, b) => {
-                    match (&self[*a].op, &self[*b].op) {
-                        (Constant(a), Coset(c, s)) | (Coset(c, s), Constant(a)) => Coset(a * c, *s),
-                        (Coset(c1, s1), Coset(c2, s2)) if s1 == s2 => Coset(c1 * c2, *s1 / 2),
-                        _ => Mul(*a, *b),
-                    }
-                }
-                Exp(a, e) => {
-                    match &self[*a].op {
-                        Coset(b, o) if o % *e == 0 => Coset(b.pow(*e), o / *e),
-                        _ => Exp(*a, *e),
-                    }
-                }
-                // TODO: Inv(a) also preserve some of the coset nature,
-                // but change the ordering in a way that Coset currently can not
-                // represent. We could re-introduce Geometric for this.
-                n => n.clone(),
-            };
-            self.nodes[i].period = self.period(&op);
-            self.nodes[i].op = op;
-        }
-    }
-
     fn make_lookup(&self, index: Index) -> Vec<FieldElement> {
         let node = &self[index];
         assert!(node.period <= 1024);
@@ -343,23 +373,14 @@ impl AlgebraicGraph {
         result
     }
 
-    // TODO: Call from `optimize`
     pub(crate) fn lookup_tables(&mut self) {
         use Operation::*;
         // OPT: Don't create a bunch of lookup tables just to throw them away
         // later. Analyze which nodes will be needed.
-        // TODO: Better heuristics.
-        // TODO: Make sure the target does not depend on `Trace(..)`.
-        // HACK: Don't create lookups for things large than a quarter of the
-        // trace length. This prevents lookups being created for expressions
-        // involving `Trace(..)` in very small proofs.
-        let treshold = min(LOOKUP_SIZE, self.coset_size / 4);
+        let treshold = min(LOOKUP_SIZE, self.coset_size / 2);
         for i in 0..self.nodes.len() {
             let node = &self.nodes[i];
             if node.period > treshold {
-                continue;
-            }
-            if let Constant(_) = node.op {
                 continue;
             }
             if let Coset(..) = node.op {
@@ -371,7 +392,6 @@ impl AlgebraicGraph {
     }
 
     /// Remove unnecessary nodes
-    // TODO: Call from `optimize`
     pub(crate) fn tree_shake(&mut self, tip: Index) -> Index {
         use Operation::*;
         fn recurse(nodes: &[Node], used: &mut [bool], i: usize) {
@@ -556,35 +576,48 @@ impl AlgebraicGraph {
 
 #[cfg(test)]
 mod tests {
-    // use super::*;
-    // use RationalExpression as RE;
+    use super::*;
+    use macros_decl::field_element;
+    use Operation as Op;
+    use RationalExpression as RE;
 
-    // #[test]
-    // fn test_expr() {
-    //     let expr = RE::Constant(5.into()) + RE::X.pow(5);
-    //     let mut dag = AlgebraicGraph::from_expression(expr.clone());
-    //     let trace_table = TraceTable::new(0, 0);
-    //     let x =
-    // field_element!("
-    // 022550177068302c52659dbd983cf622984f1f2a7fb2277003a64c7ecf96edaf");
+    fn coset_hash(cofactor: FieldElement, size: usize) -> FieldElement {
+        let mut dag = AlgebraicGraph::new(&FieldElement::GENERATOR, 1024, 2);
+        let index = dag.op(Op::Coset(cofactor, size));
+        dag[index].hash.clone()
+    }
 
-    //     let y1 = dag.eval(&trace_table, (0, 0), &x);
-    //     let y2 = expr.eval(&trace_table, (0, 0), &x);
-    //     assert_eq!(y1, y2);
-    // }
+    #[test]
+    fn test_hash_coset_zero() {
+        // hash(Coset(0, _)) = 0
+        assert_eq!(coset_hash(FieldElement::ZERO, 1), FieldElement::ZERO);
+        assert_eq!(coset_hash(FieldElement::ZERO, 2), FieldElement::ZERO);
+        assert_eq!(coset_hash(FieldElement::ZERO, 512), FieldElement::ZERO);
+        assert_eq!(coset_hash(FieldElement::ZERO, 1024), FieldElement::ZERO);
+    }
 
-    // #[test]
-    // fn test_poly() {
-    //     let p = DensePolynomial::from_vec(vec![1.into(), 2.into(), 5.into(),
-    // 7.into()]);     let expr = RE::Poly(p, Box::new(RE::X.pow(5)));
-    //     let mut dag = AlgebraicGraph::from_expression(expr.clone());
-    //     let trace_table = TraceTable::new(0, 0);
-    //     let x =
-    // field_element!("
-    // 022550177068302c52659dbd983cf622984f1f2a7fb2277003a64c7ecf96edaf");
+    #[test]
+    fn test_hash_coset_constant() {
+        // hash(Coset(c, 1)) = c * (seed / cofactor) ^ coset_size
+        fn test(c: FieldElement) {
+            let mut dag = AlgebraicGraph::new(&FieldElement::GENERATOR, 1024, 2);
+            let factor = (&dag.seed / &dag.cofactor).pow(dag.coset_size);
+            let index = dag.op(Op::Coset(c.clone(), 1));
+            dbg!(&c);
+            assert_eq!(dag[index].hash, c * factor);
+        }
+        test(FieldElement::ZERO);
+        test(FieldElement::ONE);
+        test(FieldElement::GENERATOR);
+        test(field_element!(
+            "022550177068302c52659dbd983cf622984f1f2a7fb2277003a64c7ecf96edaf"
+        ));
+    }
 
-    //     let y1 = dag.eval(&trace_table, (0, 0), &x);
-    //     let y2 = expr.eval(&trace_table, (0, 0), &x);
-    //     assert_eq!(y1, y2);
-    // }
+    #[test]
+    fn test_hash_x_is_seed() {
+        let mut dag = AlgebraicGraph::new(&FieldElement::GENERATOR, 1024, 2);
+        let index = dag.expression(RE::X);
+        assert_eq!(dag[index].hash, dag.seed);
+    }
 }

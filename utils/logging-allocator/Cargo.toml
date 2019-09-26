@@ -1,7 +1,16 @@
 [package]
 name = "logging-allocator"
 version = "0.1.0"
-authors = ["Remco Bloemen <remco@0x.org>"]
+description = "Wrapper around the system allocator that logs large allocations"
+repository = "https://github.com/0xProject/starkcrypto/tree/master/utils/logging-allocator"
+keywords = ["logging", "allocator", "no-std"]
+categories = ["algorithms", "rust-patterns", "memory-management", "no-std", "wasm"]
+authors = [
+    "Remco Bloemen <remco@0x.org>",
+    "Mason Liang <mason@0x.org>",
+    "Paul Vienhage <paul@0x.org>"]
+readme = "Readme.md"
+license = "Apache-2.0"
 edition = "2018"
 
 [dependencies]

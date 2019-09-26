@@ -1,7 +1,16 @@
 [package]
 name = "mmap-vec"
 version = "0.1.0"
-authors = ["Remco Bloemen <remco@0x.org>"]
+description = "Replacement for `Vec` that uses file-backed storage"
+repository = "https://github.com/0xProject/starkcrypto/tree/master/utils/mmap-vec"
+keywords = ["mmap", "no-std"]
+categories = ["algorithms", "rust-patterns", "memory-management", "no-std"]
+authors = [
+    "Remco Bloemen <remco@0x.org>",
+    "Mason Liang <mason@0x.org>",
+    "Paul Vienhage <paul@0x.org>"]
+readme = "Readme.md"
+license = "Apache-2.0"
 edition = "2018"
 
 [dependencies]

@@ -10,7 +10,7 @@ edition = "2018"
 [dependencies]
 
 [dev-dependencies]
-criterion = "0.2.10"
+criterion = "0.3"
 macros-decl = { path = "../../macros-decl" }
 primefield = { path = "..", version = "0.1.0" }
 u256 = { path = "../../u256", version = "0.1.0" }

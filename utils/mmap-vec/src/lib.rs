@@ -8,7 +8,7 @@
     // Enable sets of warnings
     clippy::all,
     clippy::pedantic,
-    // clippy::cargo,
+    clippy::cargo,
     rust_2018_idioms,
     future_incompatible,
     unused,
