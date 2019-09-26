@@ -39,12 +39,12 @@
 
 mod channel;
 pub mod constraint_system;
-mod constraints;
+pub mod constraints;
 pub mod fibonacci;
 mod polynomial;
 mod proof_of_work;
-mod proof_params;
-mod rational_expression;
+pub mod proof_params;
+pub mod rational_expression;
 mod verifier;
 
 pub use channel::{ProverChannel, VerifierChannel};
@@ -67,7 +67,7 @@ pub mod pedersen_merkle;
 #[cfg(feature = "prover")]
 mod proofs;
 #[cfg(feature = "prover")]
-mod trace_table;
+pub mod trace_table;
 
 // Exports for prover
 #[cfg(feature = "prover")]
