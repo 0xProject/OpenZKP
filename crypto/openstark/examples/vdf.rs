@@ -35,6 +35,7 @@ impl From<&Claim> for Vec<u8> {
 }
 
 impl Verifiable for Claim {
+    #[allow(clippy::possible_missing_comma)]
     fn constraints(&self) -> Constraints {
         use RationalExpression::*;
 
@@ -48,11 +49,13 @@ impl Verifiable for Claim {
 
         Constraints::new(vec![
             // Square (Trace(0,0), Trace(1, 0)) and check that it equals (Trace(2,0), Trace(3,0))
-            (Trace(0, 0) * Trace(0, 0) + Constant(R) * Trace(1, 0) * Trace(1, 0) - Trace(2, 0)) * reevery_row(),
+            (Trace(0, 0) * Trace(0, 0) + Constant(R) * Trace(1, 0) * Trace(1, 0) - Trace(2, 0))
+                * reevery_row(),
             (Constant(2.into()) * Trace(0, 0) * Trace(1, 0) - Trace(3, 0)) * reevery_row(),
             // Multiply the square by the single and the square and enforce it on the next row
-            (Trace(0, 0) * Trace(2, 0) + Constant(R) * Trace(1, 0) * Trace(3, 0) - Trace(0, 1))*reevery_row(),
-            (Trace(0, 0) * Trace(2, 0) + Trace(1, 0) * Trace(3, 0) - Trace(1, 1))*reevery_row(),
+            (Trace(0, 0) * Trace(2, 0) + Constant(R) * Trace(1, 0) * Trace(3, 0) - Trace(0, 1))
+                * reevery_row(),
+            (Trace(0, 0) * Trace(2, 0) + Trace(1, 0) * Trace(3, 0) - Trace(1, 1)) * reevery_row(),
             // Boundary Constraints
             (Trace(0, 0) - (&self.c0_start).into()) * on_row(0),
             (Trace(1, 0) - (&self.c1_start).into()) * on_row(0),
@@ -119,6 +122,7 @@ fn main() {
     println!("Checking the proof resulted in: {:?}", verified);
 }
 
+// TODO - Find a way to test from example files
 #[cfg(test)]
 mod tests {
     use super::*;
