@@ -34,7 +34,7 @@ const A : FieldElement = FieldElement::ONE;
 // Provide this function with the input point and the output location 
 // and it produces a constraint for point doubling first on the x output and one one the y
 // In default usage each input should be trace type.
-fn point_double(input_x: RationalExpression, input_y: RationalExpression, output_x: RationalExpression, output_y: RationalExpression) -> [RationalExpression; 2] {
+pub fn point_double(input_x: RationalExpression, input_y: RationalExpression, output_x: RationalExpression, output_y: RationalExpression) -> [RationalExpression; 2] {
     let two = Constant(2.into());
     let three = Constant(3.into());
     let four = Constant(4.into());
@@ -42,43 +42,44 @@ fn point_double(input_x: RationalExpression, input_y: RationalExpression, output
     
     // These constraints take the lambda = (3x_old^2 + a)/ 2(y_old) and multiply through to clear divisions.
     // This is a multiplied through form of x_new = lambda^2 - 2x_old, which is asserted to be output_x
-    let lambda_numerator : RationalExpression = three*Exp(input_x.clone().into(), 2) + Constant(A.into());
-    let new_x = Exp(lambda_numerator.clone().into(), 2) - eight*Exp(input_y.clone().into(), 2)*input_x.clone() - four*Exp(input_y.clone().into(), 2)*output_x.clone();
+    let lambda_numb : RationalExpression = three*Exp(input_x.clone().into(), 2) + Constant(A.into());
+    let lambda_denom : RationalExpression = two.clone()*input_y.clone();
+    let new_x = Exp(lambda_numb.clone().into(), 2) - Exp(lambda_denom.clone().into(), 2)*(two*input_x.clone()+output_x.clone());
     // This is a multipled through form of y_new = lambda*(x_old - x_new) - y_old, which is asserted to be output y.
-    let new_y = lambda_numerator*(input_x - output_x) - two.clone()*Exp(input_y.clone().into(), 2) - two*input_y*output_y;
+    let new_y = lambda_numb*(input_x - output_x.clone()) - lambda_denom.clone()*(input_y.clone() + output_y);
     [new_x, new_y]
 }
 
 // Provide this function the two points P and Q to add plus the asserted output location
 // It provides constraints that express that Out = P + Q
-fn point_add(x_p: RationalExpression, y_p: RationalExpression, x_q: RationalExpression, y_q: RationalExpression, x_out: RationalExpression, y_out: RationalExpression) -> [RationalExpression; 2] {
+pub fn point_add(x_p: RationalExpression, y_p: RationalExpression, x_q: RationalExpression, y_q: RationalExpression, x_out: RationalExpression, y_out: RationalExpression) -> [RationalExpression; 2] {
     // These constraints take the lambda = (y_q - y_p)/ (x_q - x_p) and multiply through to clear divisions.
     let lambda_numerator = y_q.clone() - y_p.clone();
     let lambda_denominator = x_q.clone() - x_p.clone();
-    let new_x = Exp(lambda_numerator.clone().into(), 2) - lambda_denominator.clone()*(x_p.clone() - x_q.clone() - x_out.clone());
+    let new_x = Exp(lambda_numerator.clone().into(), 2) - Exp(lambda_denominator.clone().into(), 2)*(x_p.clone() + x_q.clone() + x_out.clone());
     let new_y = lambda_numerator*(x_p - x_out) - lambda_denominator*(y_p + y_out);
     [new_x, new_y]
 }
 
 // Full conditional bool check that location is a if test and b if !test [secured by the check that test = 1 or 0]
-fn conditional(a: RationalExpression, b: RationalExpression, location: RationalExpression, test: RationalExpression) -> [RationalExpression; 2] {
-    [one_or_zero(test.clone()), simple_conditional(a, b, location, test)]
+pub fn conditional(a: RationalExpression, b: RationalExpression, location: RationalExpression, test: RationalExpression) -> [RationalExpression; 2] {
+    [one_or_zero(test.clone()), simple_conditional(a, b, test) - location]
 }
 
 // Tests if a rational expression is not one or zero
-fn one_or_zero(test: RationalExpression) -> RationalExpression {
+pub fn one_or_zero(test: RationalExpression) -> RationalExpression {
     test.clone()*(Constant(FieldElement::ONE) - test.clone())
 }
 
-// Non secured conditional check.
-fn simple_conditional(a: RationalExpression, b: RationalExpression, location: RationalExpression, test: RationalExpression) -> RationalExpression {
-    a*test.clone() + (Constant(FieldElement::ONE) - test.clone())*b - location.clone()
+// Non secured conditional check, note each input should be it's own valid constraint [ie zero when right]
+pub fn simple_conditional(a: RationalExpression, b: RationalExpression, test: RationalExpression) -> RationalExpression {
+    a*test.clone() + (Constant(FieldElement::ONE) - test.clone())*b 
 }
 
 // This function takes in a target and a claimed bit decomposition vector and returns constraints which check that
 // (1) the decomp is all ones and zeros and (2) that the target equals the sum of increasing powers of two of the decomp.
 // Note given the size limit of field elements we expect that decomp is len < 256
-fn bit_decomp_test(target: RationalExpression, decomp: Vec<RationalExpression>) -> [RationalExpression; 2] {
+pub fn bit_decomp_test(target: RationalExpression, decomp: Vec<RationalExpression>) -> [RationalExpression; 2] {
     let mut power = FieldElement::ONE;
     let mut consistency = Constant(FieldElement::ZERO);
     let mut sum = Constant(FieldElement::ZERO);
@@ -98,23 +99,25 @@ pub fn scalar_mult(trace: &mut TraceTable, point: (FieldElement, FieldElement), 
     let mut q;
     if neg {
         q = (SHIFT_POINT.0, -&SHIFT_POINT.1);
+        println!("neg point: {:?}", &q);
     } else {
+        println!("pos point: {:?}", &SHIFT_POINT);
         q = SHIFT_POINT.clone();
     }
 
     for i in 0..256 {
-        if scalar.bit(i) {
-            trace[(start + i, offset)] = FieldElement::ONE;
-            q = add(&q.0, &q.1, &n.0, &n.1);
-        } else {
-            trace[(start + i, offset)] = FieldElement::ZERO;
-        }
-        n = double(&n.0, &n.1);
-        
         trace[(start+i, offset + 1)] = n.0.clone();
         trace[(start+i, offset + 2)] = n.1.clone();
         trace[(start+i, offset + 3)] = q.0.clone();
         trace[(start+i, offset + 4)] = q.1.clone();
+        
+        if scalar.bit(i) {
+            trace[(start + i, offset)] = FieldElement::ONE;
+            q = add(&n.0, &n.1, &q.0, &q.1);
+        } else {
+            trace[(start + i, offset)] = FieldElement::ZERO;
+        }
+        n = double(&n.0, &n.1);
     }
 }
 

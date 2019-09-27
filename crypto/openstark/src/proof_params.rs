@@ -37,8 +37,7 @@ pub struct ProofParams {
 }
 
 impl ProofParams {
-    #[allow(dead_code)]
-    fn suggested(domain_size_log: usize) -> Self {
+    pub fn suggested(domain_size_log: usize) -> Self {
         let num_threes = (domain_size_log - 8) / 3;
         let mut fri_layout = vec![3; num_threes];
         if num_threes * 3 == (domain_size_log - 8) {

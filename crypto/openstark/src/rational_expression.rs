@@ -129,9 +129,7 @@ impl RationalExpression {
             Add(a, b) => {
                 let (an, ad) = a.degree_impl(x_degree, trace_degree);
                 let (bn, bd) = b.degree_impl(x_degree, trace_degree);
-                assert!(ad == 0); // TODO: Can we handle this better?
-                assert!(bd == 0);
-                (std::cmp::max(an, bn), 0)
+                (std::cmp::max(an + bd, bn + ad), ad + bd)
             }
             Neg(a) => a.degree_impl(x_degree, trace_degree),
             Mul(a, b) => {
