@@ -65,7 +65,8 @@ use u256::U256;
 ///
 /// $$
 /// C(z) = \sum_i (\alpha_i + \beta_i \cdot z^{d_i}) \cdot C_i(z, T_0(z),
-/// T_0(\omega \cdot z), T_1(z), \dots) $$
+/// T_0(\omega \cdot z), T_1(z), \dots)
+/// $$
 ///
 /// Using the disclosed values of $A_i(z^{\mathrm{d}})$ compute $C(z)$.
 ///
@@ -95,7 +96,8 @@ use u256::U256;
 ///
 /// $$
 /// P(x_j) = \sum_i \left(\alpha_i \cdot T_i'(x_j) + \beta_i \cdot T_i''(x_j)
-/// \right) + \sum_i \gamma_i \cdot A_i'(x_j) $$
+/// \right) + \sum_i \gamma_i \cdot A_i'(x_j)
+/// $$
 ///
 /// ### Step 7: Verify FRI proof
 ///
@@ -118,16 +120,26 @@ pub fn check_proof<Claim: Verifiable>(
 where
     for<'a> &'a Claim: Into<Vec<u8>>,
 {
-    let trace_len = public.trace_length();
     let constraints = public.constraints();
-    let trace_cols = public.trace_columns();
+    verify(
+        &public.into(),
+        proposed_proof, &constraints, params, 
+    (public.trace_length(), public.trace_columns()))
+}
 
+pub fn verify(
+    channel_seed: &[u8],
+    proposed_proof: &[u8],
+    constraints: &Constraints,
+    params: &ProofParams,
+    (trace_len, trace_cols): (usize, usize)
+) -> Result<()>
+{
     let eval_domain_size = trace_len * params.blowup;
     let eval_x = root_series(eval_domain_size).collect::<Vec<_>>();
 
     let mut channel = VerifierChannel::new(proposed_proof.to_vec());
-    let bytes: Vec<u8> = public.into();
-    channel.initialize(&bytes);
+    channel.initialize(channel_seed);
 
     // Get the low degree root commitment, and constraint root commitment
     // TODO: Make it work as channel.read()
