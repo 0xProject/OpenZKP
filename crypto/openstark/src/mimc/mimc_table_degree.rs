@@ -61,7 +61,7 @@ impl Verifiable for Claim {
         };
         let k_coef = periodic(&ifft(&K_COEF.to_vec()));
 
-        Constraints::from_expressions((trace_length, 1), vec![
+        Constraints::from_expressions((trace_length, 1), self.into(), vec![
             // Says the next row for each row is current x_0^alpha + k
             (Trace(0, 1) - (Exp(Box::new(Trace(0, 0)), ALPHA) + k_coef.clone())) * reevery_row(),
             // Says the first x_0 is the before

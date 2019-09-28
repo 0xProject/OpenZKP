@@ -21,6 +21,7 @@ impl fmt::Display for Error {
 #[derive(Clone)]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct Constraints {
+    channel_seed:   Vec<u8>,
     trace_nrows:    usize,
     trace_ncolumns: usize,
     expressions:    Vec<RationalExpression>,
@@ -29,15 +30,21 @@ pub struct Constraints {
 impl Constraints {
     pub fn from_expressions(
         (trace_nrows, trace_ncolumns): (usize, usize),
+        channel_seed: Vec<u8>,
         expressions: Vec<RationalExpression>,
     ) -> Result<Self, Error> {
         let _ = FieldElement::root(trace_nrows).ok_or(Error::InvalidTraceLength)?;
         // TODO: Validate expressions
         Ok(Self {
+            channel_seed,
             trace_nrows,
             trace_ncolumns,
             expressions,
         })
+    }
+
+    pub fn channel_seed(&self) -> &[u8] {
+        &self.channel_seed
     }
 
     pub fn trace_nrows(&self) -> usize {

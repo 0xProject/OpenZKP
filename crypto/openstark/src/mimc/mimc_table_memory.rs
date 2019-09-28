@@ -62,7 +62,7 @@ impl Verifiable for Claim {
         };
         let k_coef = periodic(&ifft(&K_COEF.to_vec()));
 
-        Constraints::from_expressions((trace_length, 3), vec![
+        Constraints::from_expressions((trace_length, 3),self.into(), vec![
             // Says x_1 = x_0^2
             (Trace(0, 0) * Trace(0, 0) - Trace(1, 0)) * reevery_row(),
             // Says x_2 = x_1*x_0
