@@ -10,7 +10,7 @@ use std::error;
 use std::{collections::BTreeMap, convert::TryInto, fmt, prelude::v1::*};
 use u256::U256;
 
-#[doc(include = "verifier.md")]
+#[cfg_attr(nightly, doc(include = "verifier.md"))]
 // False positive, for<'a> is required.
 #[allow(single_use_lifetimes)]
 // TODO: Refactor into smaller function
