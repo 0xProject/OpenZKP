@@ -43,7 +43,7 @@ fn proof_check(crit: &mut Criterion) {
     let proof = proof(&constraints, &trace);
 
     crit.bench_function("Checking a fib proof of len 1024", move |bench| {
-        bench.iter(|| black_box(verify(proof.proof.as_slice(), &constraints)))
+        bench.iter(|| black_box(verify(&constraints, proof.proof.as_slice())))
     });
 }
 
