@@ -142,6 +142,7 @@ impl Constraints {
             .expect("no constraints")
     }
 
+    // TODO: Better explanation with literature references.
     pub fn security_bits(&self) -> usize {
         // Our conservative formula is (1/2^blowup_log)^(queries/2)*(1/2^pow_bits)
         // So the bit security should be blowup_log*(queries/2) + pow_bits
