@@ -37,16 +37,6 @@
 )]
 #![cfg_attr(feature = "std", warn(missing_debug_implementations,))]
 
-// Use external docs
-// Currently only supported on nightly.
-// TODO: Remove nightly flag when the feature is stabilized
-// See: https://github.com/rust-lang/rust/issues/44732
-#![cfg_attr(nightly, feature(external_doc))]
-#![cfg_attr(nightly, doc(include = "../Readme.md"))]
-
-/// Docs need to be build on nightly with the following flag
-/// `--html-in-header $(pwd)/.cargo/katex-header.html`
-
 mod channel;
 pub mod constraint_system;
 pub mod constraints;
