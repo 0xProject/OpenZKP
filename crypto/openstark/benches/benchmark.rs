@@ -21,9 +21,7 @@ fn proof_make(crit: &mut Criterion) {
     let trace = claim.trace(&witness);
 
     crit.bench_function("Making an abstracted Fibonacci proof", move |bench| {
-        bench.iter(|| {
-            black_box(proof(&constraints, &trace))
-        })
+        bench.iter(|| black_box(proof(&constraints, &trace)))
     });
 }
 
@@ -45,9 +43,7 @@ fn proof_check(crit: &mut Criterion) {
     let proof = proof(&constraints, &trace);
 
     crit.bench_function("Checking a fib proof of len 1024", move |bench| {
-        bench.iter(|| {
-            black_box(verify(proof.proof.as_slice(), &constraints))
-        })
+        bench.iter(|| black_box(verify(proof.proof.as_slice(), &constraints)))
     });
 }
 
