@@ -791,7 +791,10 @@ fn decommit_fri_layers_and_trees(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{fibonacci, verify, Provable, Verifiable};
+    use crate::{
+        traits::tests::{Claim, Witness},
+        verify, Provable, Verifiable,
+    };
     use macros_decl::{field_element, hex, u256h};
     use primefield::{fft::permute_index, geometric_series::geometric_series};
     use u256::U256;
@@ -801,11 +804,11 @@ mod tests {
         // All the constants for this tests are copied from files in
         // https://github.com/0xProject/evm-verifier/commit/9bf369139b0edc23ab7ab7e8db8164c5a05a83df.
         // Copied from solidity/contracts/fibonacci/fibonacci_private_input1.json
-        let witness = fibonacci::Witness {
+        let witness = Witness {
             secret: field_element!("83d36de9"),
         };
         // Copied from solidity/contracts/fibonacci/fibonacci_public_input1.json
-        let claim = fibonacci::Claim {
+        let claim = Claim {
             index: 1000,
             value: field_element!(
                 "04d5f1f669b34fb7252d5a9d0d9786b2638c27eaa04e820b38b088057960cca1"
@@ -842,12 +845,14 @@ mod tests {
 
     #[test]
     fn fib_test_1024_python_witness() {
-        let witness = fibonacci::Witness {
+        let witness = Witness {
             secret: field_element!("cafebabe"),
         };
-        let claim = fibonacci::Claim {
+        let claim = Claim {
             index: 1000,
-            value:field_element!("0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"),
+            value: field_element!(
+                "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
+            ),
         };
 
         let mut constraints = claim.constraints();
@@ -866,12 +871,16 @@ mod tests {
 
     #[test]
     fn fib_test_1024_changed_witness() {
-        let witness = fibonacci::Witness {
-            secret: field_element!("00b4e8fc548bbc1ad9abd5c460840c0865121923590de2f18e9dbeda48a4bb93"),
+        let witness = Witness {
+            secret: field_element!(
+                "00b4e8fc548bbc1ad9abd5c460840c0865121923590de2f18e9dbeda48a4bb93"
+            ),
         };
-        let claim = fibonacci::Claim {
+        let claim = Claim {
             index: 1000,
-            value:field_element!("016f6acc9f52c6dffb063135e7af6756613f4b838734b40cf178d2160099713d"),
+            value: field_element!(
+                "016f6acc9f52c6dffb063135e7af6756613f4b838734b40cf178d2160099713d"
+            ),
         };
 
         let mut constraints = claim.constraints();
@@ -888,12 +897,14 @@ mod tests {
 
     #[test]
     fn fib_test_4096() {
-        let witness = fibonacci::Witness {
+        let witness = Witness {
             secret: field_element!("0f00dbabe0cafebabe"),
         };
-        let claim = fibonacci::Claim {
+        let claim = Claim {
             index: 4000,
-            value:field_element!("0576d0c2cc9a060990e96752034a391f0b9036aaa32a3aab28796f7845450e18"),
+            value: field_element!(
+                "0576d0c2cc9a060990e96752034a391f0b9036aaa32a3aab28796f7845450e18"
+            ),
         };
 
         let mut constraints = claim.constraints();
@@ -918,13 +929,13 @@ mod tests {
     fn fib_proof_test() {
         crate::tests::init();
 
-        let claim = fibonacci::Claim {
+        let claim = Claim {
             index: 1000,
             value: FieldElement::from(u256h!(
                 "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
             )),
         };
-        let witness = fibonacci::Witness {
+        let witness = Witness {
             secret: FieldElement::from(u256h!(
                 "00000000000000000000000000000000000000000000000000000000cafebabe"
             )),

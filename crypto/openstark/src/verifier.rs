@@ -531,18 +531,22 @@ impl error::Error for Error {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{fibonacci, proof, Provable, Verifiable};
+    use crate::{
+        proof,
+        traits::tests::{Claim, Witness},
+        Provable, Verifiable,
+    };
     use macros_decl::u256h;
 
     #[test]
     fn verifier_fib_test() {
-        let public = fibonacci::Claim {
+        let public = Claim {
             index: 1000,
             value: FieldElement::from(u256h!(
                 "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
             )),
         };
-        let private = fibonacci::Witness {
+        let private = Witness {
             secret: FieldElement::from(u256h!(
                 "00000000000000000000000000000000000000000000000000000000cafebabe"
             )),

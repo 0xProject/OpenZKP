@@ -55,9 +55,6 @@ mod prover;
 #[cfg(feature = "prover")]
 mod trace_table;
 
-#[cfg(test)]
-mod fibonacci;
-
 // TODO: Move example constraint systems out of the lib
 mod mimc;
 #[cfg(feature = "prover")]
@@ -86,7 +83,6 @@ pub use trace_table::TraceTable;
 #[cfg(feature = "prover")]
 pub use traits::Provable;
 #[cfg(feature = "prover")]
-
 #[cfg(test)]
 mod tests {
     use env_logger;

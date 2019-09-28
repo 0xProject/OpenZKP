@@ -203,19 +203,25 @@ impl Constraints {
 
 #[cfg(test)]
 mod tests {
-    use crate::{fibonacci, proof, Provable, Verifiable};
+    use crate::{
+        proof,
+        traits::tests::{Claim, Witness},
+        Provable, Verifiable,
+    };
     use macros_decl::field_element;
     use primefield::FieldElement;
     use u256::U256;
 
     #[test]
     fn size_estimate_test() {
-        let private = fibonacci::Witness {
+        let private = Witness {
             secret: field_element!("0f00dbabe0cafebabe"),
         };
-        let public = fibonacci::Claim {
+        let public = Claim {
             index: 4000,
-            value:field_element!("0576d0c2cc9a060990e96752034a391f0b9036aaa32a3aab28796f7845450e18"),
+            value: field_element!(
+                "0576d0c2cc9a060990e96752034a391f0b9036aaa32a3aab28796f7845450e18"
+            ),
         };
 
         let mut constraints = public.constraints();

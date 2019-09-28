@@ -2,7 +2,7 @@
 use env_logger;
 use log::info;
 use macros_decl::field_element;
-use openstark::{RationalExpression, proof, Provable, Verifiable, TraceTable, Constraints};
+use openstark::{proof, Constraints, Provable, RationalExpression, TraceTable, Verifiable};
 use primefield::FieldElement;
 use std::time::Instant;
 use u256::U256;
