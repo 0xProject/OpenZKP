@@ -17,6 +17,7 @@ impl fmt::Display for Error {
     }
 }
 
+// TODO: Merge with ProofParams
 #[derive(Clone)]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct Constraints {

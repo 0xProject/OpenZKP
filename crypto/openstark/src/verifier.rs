@@ -1,6 +1,6 @@
 use crate::{
-    channel::*, constraint_system::Verifiable, constraints::Constraints,
-    polynomial::DensePolynomial, proof_of_work, proof_params::ProofParams,
+    channel::*, constraints::Constraints, polynomial::DensePolynomial, proof_of_work,
+    proof_params::ProofParams,
 };
 use hash::Hash;
 use merkle_tree::{Commitment, Error as MerkleError, Proof};
@@ -9,20 +9,6 @@ use primefield::{fft, geometric_series::root_series, FieldElement};
 use std::error;
 use std::{collections::BTreeMap, convert::TryInto, fmt, prelude::v1::*};
 use u256::U256;
-
-// False positive, for<'a> is required.
-#[allow(single_use_lifetimes)]
-pub fn check_proof<Claim: Verifiable>(
-    proposed_proof: &[u8],
-    public: &Claim,
-    params: &ProofParams,
-) -> Result<()>
-where
-    for<'a> &'a Claim: Into<Vec<u8>>,
-{
-    let constraints = public.constraints();
-    verify(&public.into(), proposed_proof, &constraints, params)
-}
 
 // False positives on the Latex math.
 #[allow(clippy::doc_markdown)]
@@ -553,7 +539,7 @@ impl error::Error for Error {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{fibonacci, stark_proof};
+    use crate::{fibonacci, proof, Provable, Verifiable};
     use macros_decl::u256h;
 
     #[test]
@@ -569,19 +555,24 @@ mod tests {
                 "00000000000000000000000000000000000000000000000000000000cafebabe"
             )),
         };
-        let actual = stark_proof(&public, &private, &ProofParams {
+        let seed = Vec::from(&public);
+        let constraints = public.constraints();
+        let trace = public.trace(&private);
+        let actual = proof(&seed, &constraints, &trace, &ProofParams {
             blowup:     16,
             pow_bits:   12,
             queries:    20,
             fri_layout: vec![3, 2],
         });
 
-        assert!(check_proof(actual.proof.as_slice(), &public, &ProofParams {
-            blowup:     16,
-            pow_bits:   12,
-            queries:    20,
-            fri_layout: vec![3, 2],
-        },)
-        .is_ok());
+        assert!(
+            verify(&seed, actual.proof.as_slice(), &constraints, &ProofParams {
+                blowup:     16,
+                pow_bits:   12,
+                queries:    20,
+                fri_layout: vec![3, 2],
+            },)
+            .is_ok()
+        );
     }
 }

@@ -102,7 +102,7 @@ pub fn decommitment_size_upper_bound(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{fibonacci, stark_proof};
+    use crate::{fibonacci, proof, Provable, Verifiable};
     use macros_decl::field_element;
     use primefield::FieldElement;
     use u256::U256;
@@ -115,13 +115,19 @@ mod tests {
 
         let private = fibonacci::Witness { secret };
         let public = fibonacci::Claim { index, value };
+        let seed: Vec<u8> = Vec::from(&public);
 
-        let actual = stark_proof(&public, &private, &ProofParams {
-            blowup:     16,
-            pow_bits:   12,
-            queries:    20,
-            fri_layout: vec![2, 1, 4, 2],
-        });
+        let actual = proof(
+            &seed,
+            &public.constraints(),
+            &public.trace(&private),
+            &ProofParams {
+                blowup:     16,
+                pow_bits:   12,
+                queries:    20,
+                fri_layout: vec![2, 1, 4, 2],
+            },
+        );
         assert!(actual.proof.len() < decommitment_size_upper_bound(12, 2, vec![2, 1, 4, 2], 20));
     }
 }
