@@ -82,7 +82,7 @@ pub use prover::prove;
 pub use trace_table::TraceTable;
 #[cfg(feature = "prover")]
 pub use traits::Provable;
-#[cfg(feature = "prover")]
+
 #[cfg(test)]
 mod tests {
     use env_logger;
