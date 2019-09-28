@@ -478,8 +478,7 @@ pub fn proof(
     // Verify proof
     info!("Verify proof.");
     // TODO - Bubble up errors so we can see where verification fails.
-    assert!(verify(channel_seed, proof.proof.as_slice(), constraints, params,
-        (trace.num_rows(), trace.num_columns())
+    assert!(verify(channel_seed, proof.proof.as_slice(), constraints, params
     ).is_ok());
 
     // Q.E.D.

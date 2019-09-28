@@ -123,8 +123,7 @@ where
     let constraints = public.constraints();
     verify(
         &public.into(),
-        proposed_proof, &constraints, params, 
-    (constraints.trace_nrows(), constraints.trace_ncolumns()))
+        proposed_proof, &constraints, params)
 }
 
 pub fn verify(
@@ -132,10 +131,11 @@ pub fn verify(
     proposed_proof: &[u8],
     constraints: &Constraints,
     params: &ProofParams,
-    (trace_len, trace_cols): (usize, usize)
 ) -> Result<()>
 {
-    let eval_domain_size = trace_len * params.blowup;
+    let trace_length = constraints.trace_nrows();
+    let trace_cols = constraints.trace_ncolumns();
+    let eval_domain_size = trace_length * params.blowup;
     let eval_x = root_series(eval_domain_size).collect::<Vec<_>>();
 
     let mut channel = VerifierChannel::new(proposed_proof.to_vec());
