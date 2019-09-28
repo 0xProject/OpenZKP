@@ -88,3 +88,8 @@ prover = [
     "std", # TODO: Make prove run in no-std wasm.
     "merkle-tree/prover",
 ]
+
+# Allow math in docs
+[package.metadata.docs.rs]
+rustdoc-args = ["--html-in-header", "../../.cargo/katex-header.html"]
+
