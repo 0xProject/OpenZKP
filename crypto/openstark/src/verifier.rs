@@ -10,6 +10,20 @@ use std::error;
 use std::{collections::BTreeMap, convert::TryInto, fmt, prelude::v1::*};
 use u256::U256;
 
+// False positive, for<'a> is required.
+#[allow(single_use_lifetimes)]
+pub fn check_proof<Claim: Verifiable>(
+    proposed_proof: &[u8],
+    public: &Claim,
+    params: &ProofParams,
+) -> Result<()>
+where
+    for<'a> &'a Claim: Into<Vec<u8>>,
+{
+    let constraints = public.constraints();
+    verify(&public.into(), proposed_proof, &constraints, params)
+}
+
 // False positives on the Latex math.
 #[allow(clippy::doc_markdown)]
 /// # Stark verify
@@ -65,7 +79,8 @@ use u256::U256;
 ///
 /// $$
 /// C(z) = \sum_i (\alpha_i + \beta_i \cdot z^{d_i}) \cdot C_i(z, T_0(z),
-/// T_0(\omega \cdot z), T_1(z), \dots) $$
+/// T_0(\omega \cdot z), T_1(z), \dots)
+/// $$
 ///
 /// Using the disclosed values of $A_i(z^{\mathrm{d}})$ compute $C(z)$.
 ///
@@ -95,7 +110,8 @@ use u256::U256;
 ///
 /// $$
 /// P(x_j) = \sum_i \left(\alpha_i \cdot T_i'(x_j) + \beta_i \cdot T_i''(x_j)
-/// \right) + \sum_i \gamma_i \cdot A_i'(x_j) $$
+/// \right) + \sum_i \gamma_i \cdot A_i'(x_j)
+/// $$
 ///
 /// ### Step 7: Verify FRI proof
 ///
@@ -106,28 +122,21 @@ use u256::U256;
 /// * Evaluate the final layer
 ///
 /// <!-- TODO: ellaborate FRI verification -->
-// False positive, for<'a> is required.
-#[allow(single_use_lifetimes)]
 // TODO: Refactor into smaller function
 #[allow(clippy::too_many_lines)]
-pub fn check_proof<Claim: Verifiable>(
+pub fn verify(
+    channel_seed: &[u8],
     proposed_proof: &[u8],
-    public: &Claim,
+    constraints: &Constraints,
     params: &ProofParams,
-) -> Result<()>
-where
-    for<'a> &'a Claim: Into<Vec<u8>>,
-{
-    let trace_len = public.trace_length();
-    let constraints = public.constraints();
-    let trace_cols = public.trace_columns();
-
-    let eval_domain_size = trace_len * params.blowup;
+) -> Result<()> {
+    let trace_length = constraints.trace_nrows();
+    let trace_cols = constraints.trace_ncolumns();
+    let eval_domain_size = trace_length * params.blowup;
     let eval_x = root_series(eval_domain_size).collect::<Vec<_>>();
 
     let mut channel = VerifierChannel::new(proposed_proof.to_vec());
-    let bytes: Vec<u8> = public.into();
-    channel.initialize(&bytes);
+    channel.initialize(channel_seed);
 
     // Get the low degree root commitment, and constraint root commitment
     // TODO: Make it work as channel.read()
@@ -145,7 +154,7 @@ where
     // Get the oods information from the proof and random
     let oods_point: FieldElement = channel.get_random();
     let mut oods_values: Vec<FieldElement> = Vec::with_capacity(2 * trace_cols + 1);
-    let constraints_trace_degree = constraints.trace_degree();
+    let constraints_trace_degree = constraints.degree();
     for _ in 0..(2 * trace_cols + constraints_trace_degree) {
         oods_values.push(Replayable::<FieldElement>::replay(&mut channel));
     }
@@ -344,7 +353,6 @@ where
     if oods_value_from_trace_values(
         &constraints,
         &constraint_coefficients,
-        trace_len,
         &trace_values,
         &oods_point,
     ) != oods_value_from_constraint_values(&constraint_values, &oods_point)
@@ -357,7 +365,6 @@ where
 fn oods_value_from_trace_values(
     constraints: &Constraints,
     coefficients: &[FieldElement],
-    trace_length: usize,
     trace_values: &[FieldElement],
     oods_point: &FieldElement,
 ) -> FieldElement {
@@ -367,7 +374,7 @@ fn oods_value_from_trace_values(
         trace_values[2 * i + j].clone()
     };
     constraints
-        .combine(coefficients, trace_length)
+        .combine(coefficients)
         .evaluate(oods_point, &trace)
 }
 
@@ -546,7 +553,7 @@ impl error::Error for Error {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{fibonacci, proofs::stark_proof};
+    use crate::{fibonacci, stark_proof};
     use macros_decl::u256h;
 
     #[test]

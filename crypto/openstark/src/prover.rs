@@ -1,13 +1,12 @@
 use crate::{
     algebraic_dag::AlgebraicGraph,
     channel::{ProverChannel, RandomGenerator, Writable},
-    check_proof,
     constraint_system::{Provable, Verifiable},
     constraints::Constraints,
     polynomial::DensePolynomial,
     proof_of_work,
     proof_params::ProofParams,
-    TraceTable,
+    verify, TraceTable,
 };
 use hash::{Hash, Hashable, MaskedKeccak};
 use itertools::Itertools;
@@ -102,6 +101,21 @@ impl VectorCommitment for FriLeaves {
             hasher.hash()
         }
     }
+}
+
+// False positive: `for<'a>` annotation is required.
+#[allow(single_use_lifetimes)]
+pub fn stark_proof<Claim: Verifiable, Witness: Provable<Claim>>(
+    claim: &Claim,
+    witness: &Witness,
+    params: &ProofParams,
+) -> ProverChannel
+where
+    for<'a> &'a Claim: Into<Vec<u8>>,
+{
+    let trace = witness.trace(claim);
+    let constraints = claim.constraints();
+    proof(&claim.into(), &constraints, &trace, params)
 }
 
 // False positives on the Latex math.
@@ -312,20 +326,21 @@ impl VectorCommitment for FriLeaves {
 ///
 /// with merkle proofs to that layer. This process is repeated for all FRI layer
 /// commitments.
-// False positive: `for<'a>` annotation is required.
-#[allow(single_use_lifetimes)]
 // TODO: Simplify
 #[allow(clippy::cognitive_complexity)]
-pub fn stark_proof<Claim: Verifiable, Witness: Provable<Claim>>(
-    claim: &Claim,
-    witness: &Witness,
-    params: &ProofParams,
-) -> ProverChannel
-where
-    for<'a> &'a Claim: Into<Vec<u8>>,
-{
-    let trace = witness.trace(claim);
-    let constraints = claim.constraints();
+pub fn proof(
+    channel_seed: &[u8],
+    constraints: &Constraints,
+    trace: &TraceTable,
+    parameters: &ProofParams,
+) -> ProverChannel {
+    let params = parameters;
+
+    // TODO: Verify input
+    //  * Constraint trace length matches trace table length
+    //  * Fri layout is less than trace length * blowup
+    //  * Trace(_, _) items in constraint are valid.
+    //  * Trace table satisfies constraints (expensive check, should be optional)
 
     info!("Starting Stark proof.");
     info!("Proof parameters: {:?}", params);
@@ -342,7 +357,7 @@ where
 
     info!("Initialize channel with claim.");
     let mut proof = ProverChannel::new();
-    proof.initialize(&claim.into());
+    proof.initialize(channel_seed);
 
     // 1. Trace commitment.
 
@@ -461,7 +476,7 @@ where
     // Verify proof
     info!("Verify proof.");
     // TODO - Bubble up errors so we can see where verification fails.
-    assert!(check_proof(proof.proof.as_slice(), claim, params,).is_ok());
+    assert!(verify(channel_seed, proof.proof.as_slice(), constraints, params).is_ok());
 
     // Q.E.D.
     // TODO: Return bytes, or a result structure
@@ -512,7 +527,7 @@ fn get_constraint_polynomials(
     const CHUNK_SIZE: usize = 65536;
 
     // We need to evaluate on a power of two degree
-    let constraint_degree = constraints.trace_degree();
+    let constraint_degree = constraints.degree();
     let eval_degree = constraint_degree.next_power_of_two();
     let coset_size = trace_length * eval_degree;
 
@@ -520,7 +535,7 @@ fn get_constraint_polynomials(
     let trace_coset = extract_trace_coset(trace_lde, coset_size);
 
     info!("Combine rational expressions");
-    let combined_constraints = constraints.combine(constraint_coefficients, trace_length);
+    let combined_constraints = constraints.combine(constraint_coefficients);
     let mut dag = AlgebraicGraph::new(
         &FieldElement::GENERATOR,
         trace_coset.num_rows(),
@@ -938,8 +953,9 @@ mod tests {
                 "00000000000000000000000000000000000000000000000000000000cafebabe"
             )),
         };
+        let constraints = claim.constraints();
 
-        let trace_len = claim.trace_length();
+        let trace_len = constraints.trace_nrows();
         assert_eq!(trace_len, 1024);
         let params = ProofParams {
             blowup:     16,

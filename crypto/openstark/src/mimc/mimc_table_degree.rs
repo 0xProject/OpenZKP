@@ -50,7 +50,7 @@ impl Verifiable for Claim {
     fn constraints(&self) -> Constraints {
         use RationalExpression::*;
 
-        let trace_length = self.trace_length();
+        let trace_length = ROUNDS;
         let trace_generator = FieldElement::root(trace_length).unwrap();
 
         // Constraint repetitions
@@ -66,7 +66,7 @@ impl Verifiable for Claim {
         };
         let k_coef = periodic(&ifft(&K_COEF.to_vec()));
 
-        Constraints::new(vec![
+        Constraints::from_expressions((trace_length, 1), vec![
             // Says the next row for each row is current x_0^alpha + k
             (Trace(0, 1) - (Exp(Box::new(Trace(0, 0)), ALPHA) + k_coef.clone())) * reevery_row(),
             // Says the first x_0 is the before
@@ -74,14 +74,7 @@ impl Verifiable for Claim {
             // Says the the x_0 on row ROUNDS
             (Trace(0, 0) - (&self.after).into()) * on_row(trace_length - 1),
         ])
-    }
-
-    fn trace_length(&self) -> usize {
-        ROUNDS
-    }
-
-    fn trace_columns(&self) -> usize {
-        1
+        .unwrap()
     }
 }
 
@@ -112,7 +105,7 @@ fn mimc(start: &FieldElement) -> FieldElement {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{proof_params::ProofParams, proofs::stark_proof, verifier::check_proof};
+    use crate::{proof_params::ProofParams, stark_proof, verifier::check_proof};
     use macros_decl::field_element;
 
     #[test]

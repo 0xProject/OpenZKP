@@ -28,7 +28,7 @@ impl Verifiable for Claim {
     fn constraints(&self) -> Constraints {
         use RationalExpression::*;
 
-        let trace_length = self.trace_length();
+        let trace_length = self.index.next_power_of_two();
         let trace_generator = FieldElement::root(trace_length).unwrap();
 
         // Constraint repetitions
@@ -36,30 +36,24 @@ impl Verifiable for Claim {
         let on_row = |index| (X - g.pow(index)).inv();
         let reevery_row = || (X - g.pow(trace_length - 1)) / (X.pow(trace_length) - 1.into());
 
-        Constraints::new(vec![
+        Constraints::from_expressions((trace_length, 2), vec![
             (Trace(0, 1) - Trace(1, 0)) * reevery_row(),
             (Trace(1, 1) - Trace(0, 0) - Trace(1, 0)) * reevery_row(),
             (Trace(0, 0) - 1.into()) * on_row(0),
             (Trace(0, 0) - (&self.value).into()) * on_row(self.index),
         ])
-    }
-
-    fn trace_length(&self) -> usize {
-        self.index.next_power_of_two()
-    }
-
-    fn trace_columns(&self) -> usize {
-        2
+        .unwrap()
     }
 }
 
 #[cfg(feature = "prover")]
 impl Provable<Claim> for Witness {
     fn trace(&self, claim: &Claim) -> TraceTable {
-        let mut trace = TraceTable::new(claim.trace_length(), 2);
+        let trace_length = claim.index.next_power_of_two();
+        let mut trace = TraceTable::new(trace_length, 2);
         trace[(0, 0)] = 1.into();
         trace[(0, 1)] = self.secret.clone();
-        for i in 0..(claim.trace_length() - 1) {
+        for i in 0..(trace_length - 1) {
             trace[(i + 1, 0)] = trace[(i, 1)].clone();
             trace[(i + 1, 1)] = &trace[(i, 0)] + &trace[(i, 1)];
         }

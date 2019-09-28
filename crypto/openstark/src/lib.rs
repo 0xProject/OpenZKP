@@ -37,6 +37,8 @@
 )]
 #![cfg_attr(feature = "std", warn(missing_debug_implementations,))]
 
+// TODO: Unpub all mods and re-export instead.
+// TODO: Move example constraint systems out of the lib
 mod channel;
 pub mod constraint_system;
 pub mod constraints;
@@ -47,17 +49,14 @@ pub mod proof_params;
 pub mod rational_expression;
 mod verifier;
 
-pub use channel::{ProverChannel, VerifierChannel};
-pub use proof_params::{decommitment_size_upper_bound, ProofParams};
-pub use verifier::check_proof;
-
 // In no std mode, substitute no_std_compat
 #[cfg(not(feature = "std"))]
 #[cfg_attr(feature = "std", macro_use)]
 extern crate no_std_compat as std;
 
 // Prover functionality is only available if the feature is set. Currently
-// requires std. TODO: Make it work without std.
+// requires std.
+// TODO: Make it work without std.
 //
 // Optional prover functionality. Note that prover requires std.
 #[cfg(feature = "prover")]
@@ -65,13 +64,27 @@ mod algebraic_dag;
 #[cfg(feature = "prover")]
 pub mod pedersen_merkle;
 #[cfg(feature = "prover")]
-mod proofs;
+mod prover;
 #[cfg(feature = "prover")]
 pub mod trace_table;
 
+// TODO: Have unconditional Debug trait on all types
+
+// Exports for verifier
+#[deprecated]
+pub use channel::{ProverChannel, VerifierChannel};
+pub use constraints::{Constraints, Error as ConstraintError};
+pub use proof_params::{decommitment_size_upper_bound, ProofParams};
+#[deprecated]
+pub use verifier::check_proof;
+pub use verifier::verify;
+
 // Exports for prover
 #[cfg(feature = "prover")]
-pub use proofs::stark_proof;
+pub use prover::proof;
+#[cfg(feature = "prover")]
+#[deprecated]
+pub use prover::stark_proof;
 #[cfg(feature = "prover")]
 pub use trace_table::TraceTable;
 #[cfg(feature = "prover")]

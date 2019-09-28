@@ -39,7 +39,7 @@ impl Verifiable for Claim {
     fn constraints(&self) -> Constraints {
         use RationalExpression::*;
 
-        let trace_length = self.trace_length();
+        let trace_length = 1_048_576;
         let trace_generator = FieldElement::root(trace_length).unwrap();
 
         // Constraint repetitions
@@ -47,7 +47,7 @@ impl Verifiable for Claim {
         let on_row = |index| (X - g.pow(index)).inv();
         let reevery_row = || (X - g.pow(trace_length - 1)) / (X.pow(trace_length) - 1.into());
 
-        Constraints::new(vec![
+        Constraints::from_expressions((trace_length, 4), vec![
             // Square (Trace(0,0), Trace(1, 0)) and check that it equals (Trace(2,0), Trace(3,0))
             (Trace(0, 0) * Trace(0, 0) + Constant(R) * Trace(1, 0) * Trace(1, 0) - Trace(2, 0))
                 * reevery_row(),
@@ -62,14 +62,7 @@ impl Verifiable for Claim {
             (Trace(0, 0) - (&self.c0_end).into()) * on_row(trace_length - 1),
             (Trace(1, 0) - (&self.c1_end).into()) * on_row(trace_length - 1),
         ])
-    }
-
-    fn trace_length(&self) -> usize {
-        1_048_576
-    }
-
-    fn trace_columns(&self) -> usize {
-        4
+        .unwrap()
     }
 }
 
