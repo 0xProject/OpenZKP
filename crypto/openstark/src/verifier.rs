@@ -97,11 +97,11 @@ use u256::U256;
 ///
 /// ### Step 7: Verify FRI proof
 ///
-/// Draw coeffient
-/// Reduce layer $n$ times
-/// Read and verify decommitments
-/// Repeat
-/// Evaluate the final layer
+/// * Draw coeffient
+/// * Reduce layer $n$ times
+/// * Read and verify decommitments
+/// * Repeat
+/// * Evaluate the final layer
 ///
 /// <!-- TODO: ellaborate FRI verification -->
 // False positive, for<'a> is required.
