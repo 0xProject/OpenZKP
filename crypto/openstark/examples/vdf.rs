@@ -2,7 +2,7 @@
 use env_logger;
 use log::info;
 use macros_decl::field_element;
-use openstark::{proof, verify, Constraints, Provable, RationalExpression, TraceTable, Verifiable};
+use openstark::{prove, verify, Constraints, Provable, RationalExpression, TraceTable, Verifiable};
 use primefield::FieldElement;
 use std::time::Instant;
 use u256::U256;
@@ -99,7 +99,7 @@ fn main() {
     let start = Instant::now();
     let constraints = input.constraints();
     let trace = input.trace(());
-    let potential_proof = proof(&constraints, &trace);
+    let potential_proof = prove(&constraints, &trace);
     let duration = start.elapsed();
     println!("{:?}", potential_proof.coin.digest);
     println!("Time elapsed in proof function is: {:?}", duration);
@@ -109,35 +109,27 @@ fn main() {
     println!("Checking the proof resulted in: {:?}", verified);
 }
 
-// TODO - Find a way to test from example files
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{proof_params::ProofParams, proofs::stark_proof, verifier::check_proof};
-    use macros_decl::field_element;
 
-    #[ignore]
     #[test]
     fn matter_vfd_test() {
-        let c0_start =
-            field_element!("00a74f2a70da4ea3723cabd2acc55d03f9ff6d0e7acef0fc63263b12c10dd837");
-        let c1_start =
-            field_element!("02ba0d3dfeb1ee83889c5ad8534ba15723a42b306e2f44d5eee10bfa939ae756");
-        let c0_end =
-            field_element!("00f96d03d6da1feaa7462bebd3d691bee9f74d237b5a7180d9274e6d4d8d43d9");
-        let c1_end =
-            field_element!("008bbb2c325988ae685e5256b067da1e9f9bbb183bb25f0da1f1dbdb61eb5e76");
-        let input = Claim {
-            c0_start,
-            c1_start,
-            c0_end,
-            c1_end,
+        let claim = Claim {
+            c0_start: field_element!(
+                "00a74f2a70da4ea3723cabd2acc55d03f9ff6d0e7acef0fc63263b12c10dd837"
+            ),
+            c1_start: field_element!(
+                "02ba0d3dfeb1ee83889c5ad8534ba15723a42b306e2f44d5eee10bfa939ae756"
+            ),
+            c0_end:   field_element!(
+                "00f96d03d6da1feaa7462bebd3d691bee9f74d237b5a7180d9274e6d4d8d43d9"
+            ),
+            c1_end:   field_element!(
+                "008bbb2c325988ae685e5256b067da1e9f9bbb183bb25f0da1f1dbdb61eb5e76"
+            ),
         };
-        let params = ProofParams::suggested(20);
-        let potential_proof = stark_proof(&input, &(), &params);
-        assert_eq!(
-            check_proof(potential_proof.proof.as_slice(), &input, &params),
-            Ok(())
-        );
+        let proof = claim.prove(());
+        assert_eq!(claim.verify(&proof), Ok(()));
     }
 }

@@ -2,7 +2,7 @@
 use env_logger;
 use log::info;
 use macros_decl::field_element;
-use openstark::{proof, Constraints, Provable, RationalExpression, TraceTable, Verifiable};
+use openstark::{prove, Constraints, Provable, RationalExpression, TraceTable, Verifiable};
 use primefield::FieldElement;
 use std::time::Instant;
 use u256::U256;
@@ -79,7 +79,7 @@ fn main() {
     info!("Constructing proof...");
     let constraints = claim.constraints();
     let trace = claim.trace(&witness);
-    let potential_proof = proof(&constraints, &trace);
+    let potential_proof = prove(&constraints, &trace);
 
     // Measure time
     let duration = start.elapsed();

@@ -6,7 +6,7 @@ use openstark::{
         constraints::get_pedersen_merkle_constraints,
         inputs::{Claim, Witness},
     },
-    proof, Provable,
+    prove, Provable,
 };
 use primefield::FieldElement;
 use std::time::Instant;
@@ -41,7 +41,7 @@ fn main() {
     let trace = claim.trace(&witness);
 
     info!("Constructing proof...");
-    let proof = proof(&constraints, &trace);
+    let proof = prove(&constraints, &trace);
 
     info!("Spot checking proof...");
     assert_eq!(
