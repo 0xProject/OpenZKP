@@ -28,14 +28,6 @@ impl Verifiable for Claim {
     fn constraints(&self) -> Constraints {
         get_pedersen_merkle_constraints(self)
     }
-
-    fn trace_length(&self) -> usize {
-        256 * self.path_length
-    }
-
-    fn trace_columns(&self) -> usize {
-        8
-    }
 }
 
 #[cfg(feature = "prover")]

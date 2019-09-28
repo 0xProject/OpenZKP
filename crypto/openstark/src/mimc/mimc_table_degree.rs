@@ -50,7 +50,7 @@ impl Verifiable for Claim {
     fn constraints(&self) -> Constraints {
         use RationalExpression::*;
 
-        let trace_length = self.trace_length();
+        let trace_length = ROUNDS;
         let trace_generator = FieldElement::root(trace_length).unwrap();
 
         // Constraint repetitions
@@ -76,14 +76,6 @@ impl Verifiable for Claim {
             // Says the the x_0 on row ROUNDS
             (Trace(0, 0) - (&self.after).into()) * on_row(trace_length - 1),
         ]).unwrap()
-    }
-
-    fn trace_length(&self) -> usize {
-        ROUNDS
-    }
-
-    fn trace_columns(&self) -> usize {
-        1
     }
 }
 

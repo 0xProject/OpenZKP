@@ -42,6 +42,14 @@ impl Constraints {
         &self.generator
     }
 
+    pub fn trace_length(&self) -> usize {
+        self.trace_length
+    }
+
+    pub fn num_columns(&self) -> usize {
+        self.num_columns
+    }
+
     pub fn trace_degree(&self) -> usize {
         self.expressions
             .iter()

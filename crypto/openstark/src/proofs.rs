@@ -957,8 +957,9 @@ mod tests {
                 "00000000000000000000000000000000000000000000000000000000cafebabe"
             )),
         };
+        let constraints = claim.constraints();
 
-        let trace_len = claim.trace_length();
+        let trace_len = constraints.trace_length();
         assert_eq!(trace_len, 1024);
         let params = ProofParams {
             blowup:     16,

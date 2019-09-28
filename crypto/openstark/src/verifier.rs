@@ -124,7 +124,7 @@ where
     verify(
         &public.into(),
         proposed_proof, &constraints, params, 
-    (public.trace_length(), public.trace_columns()))
+    (constraints.trace_length(), constraints.num_columns()))
 }
 
 pub fn verify(
