@@ -10,6 +10,8 @@ use std::error;
 use std::{collections::BTreeMap, convert::TryInto, fmt, prelude::v1::*};
 use u256::U256;
 
+// False positives on the Latex math.
+#[allow(clippy::doc_markdown)]
 /// # Stark verify
 ///
 /// ## Input

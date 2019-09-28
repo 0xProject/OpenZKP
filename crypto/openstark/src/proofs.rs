@@ -104,6 +104,8 @@ impl VectorCommitment for FriLeaves {
     }
 }
 
+// False positives on the Latex math.
+#[allow(clippy::doc_markdown)]
 /// # Produce a Stark proof.
 ///
 /// ## Input
