@@ -69,7 +69,14 @@ mod proofs;
 #[cfg(feature = "prover")]
 pub mod trace_table;
 
+// Exports for verifier
+pub use constraints::Error as ConstraintError;
+pub use constraints::Constraints;
+pub use verifier::verify;
+
 // Exports for prover
+#[cfg(feature = "prover")]
+pub use proofs::proof;
 #[cfg(feature = "prover")]
 pub use proofs::stark_proof;
 #[cfg(feature = "prover")]

@@ -5,15 +5,45 @@ use std::prelude::v1::*;
 
 #[derive(Clone)]
 #[cfg_attr(feature = "std", derive(Debug))]
-pub struct Constraints(Vec<RationalExpression>);
+pub enum Error {
+    InvalidTraceLength,
+}
+
+#[derive(Clone)]
+#[cfg_attr(feature = "std", derive(Debug))]
+pub struct Constraints {
+    trace_length: usize,
+    num_columns: usize,
+    generator: FieldElement,
+    expressions: Vec<RationalExpression>,
+}
 
 impl Constraints {
-    pub fn new(constraints: Vec<RationalExpression>) -> Self {
-        Self(constraints)
+    pub fn from_expressions((trace_length, num_columns): (usize, usize), expressions: Vec<RationalExpression>) -> Result<Self, Error> {
+        // TODO: Validate expressions
+        Ok(Self {
+            trace_length,
+            num_columns,
+            generator: FieldElement::root(trace_length).ok_or(Error::InvalidTraceLength)?,
+            expressions
+        })
+    }
+
+    pub fn for_size(trace_length: usize, num_columns: usize) -> Result<Self, Error> {
+        Ok(Self {
+            trace_length,
+            num_columns,
+            generator: FieldElement::root(trace_length).ok_or(Error::InvalidTraceLength)?,
+            expressions: Vec::new()
+        })
+    }
+
+    pub fn generator(&self) -> &FieldElement {
+        &self.generator
     }
 
     pub fn trace_degree(&self) -> usize {
-        self.0
+        self.expressions
             .iter()
             .map(|c| {
                 let (numerator_degree, denominator_degree) = c.trace_degree();
@@ -23,23 +53,19 @@ impl Constraints {
             .expect("constraints is empty")
     }
 
-    pub fn len(&self) -> usize {
-        self.0.len()
+    pub(crate) fn len(&self) -> usize {
+        self.expressions.len()
     }
 
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
-
-    pub fn combine(
+    pub(crate) fn combine(
         &self,
         constraint_coefficients: &[FieldElement],
         trace_length: usize,
     ) -> RationalExpression {
-        assert_eq!(2 * self.0.len(), constraint_coefficients.len());
+        assert_eq!(2 * self.len(), constraint_coefficients.len());
         let target_degree = self.trace_degree() * trace_length - 1;
 
-        self.0
+        self.expressions
             .iter()
             .zip(constraint_coefficients.iter().tuples())
             .map(
