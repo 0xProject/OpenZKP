@@ -313,7 +313,6 @@ impl VectorCommitment for FriLeaves {
 // TODO: Simplify
 #[allow(clippy::cognitive_complexity)]
 pub fn proof(
-    channel_seed: &[u8],
     constraints: &Constraints,
     trace: &TraceTable,
     parameters: &ProofParams,
@@ -341,7 +340,7 @@ pub fn proof(
 
     info!("Initialize channel with claim.");
     let mut proof = ProverChannel::new();
-    proof.initialize(channel_seed);
+    proof.initialize(constraints.channel_seed());
 
     // 1. Trace commitment.
 
@@ -460,7 +459,7 @@ pub fn proof(
     // Verify proof
     info!("Verify proof.");
     // TODO - Bubble up errors so we can see where verification fails.
-    assert!(verify(channel_seed, proof.proof.as_slice(), constraints, params).is_ok());
+    assert!(verify(proof.proof.as_slice(), constraints, params).is_ok());
 
     // Q.E.D.
     // TODO: Return bytes, or a result structure
@@ -812,10 +811,9 @@ mod tests {
                 "04d5f1f669b34fb7252d5a9d0d9786b2638c27eaa04e820b38b088057960cca1"
             ),
         };
-        let seed = Vec::from(&claim);
         let constraints = claim.constraints();
         let trace = claim.trace(&witness);
-        let actual = proof(&seed, &constraints, &trace, &ProofParams {
+        let actual = proof(&constraints, &trace, &ProofParams {
             blowup:     16,
             pow_bits:   0,
             queries:    20,
@@ -851,10 +849,9 @@ mod tests {
         let witness = fibonacci::Witness { secret };
         let claim = fibonacci::Claim { index, value };
 
-        let seed = Vec::from(&claim);
         let constraints = claim.constraints();
         let trace = claim.trace(&witness);
-        let actual = proof(&seed, &constraints, &trace, &ProofParams {
+        let actual = proof(&constraints, &trace, &ProofParams {
             blowup:     16,
             pow_bits:   12,
             queries:    20,
@@ -876,10 +873,9 @@ mod tests {
         let witness = fibonacci::Witness { secret };
         let claim = fibonacci::Claim { index, value };
 
-        let seed = Vec::from(&claim);
         let constraints = claim.constraints();
         let trace = claim.trace(&witness);
-        let actual = proof(&seed, &constraints, &trace, &ProofParams {
+        let actual = proof(&constraints, &trace, &ProofParams {
             blowup: 16, /* TODO - The blowup in the fib constraints is hardcoded to 16,
                          * we should set this back to 32 to get wider coverage when
                          * that's fixed */
@@ -888,17 +884,15 @@ mod tests {
             fri_layout: vec![3, 2],
         });
 
-        assert!(
-            verify(&seed, actual.proof.as_slice(), &constraints, &ProofParams {
-                blowup: 16, /* TODO - The blowup in the fib constraints is hardcoded to 16,
-                             * we should set this back to 32 to get wider coverage when
-                             * that's fixed */
-                pow_bits:   12,
-                queries:    20,
-                fri_layout: vec![3, 2],
-            },)
-            .is_ok()
-        );
+        assert!(verify(actual.proof.as_slice(), &constraints, &ProofParams {
+            blowup: 16, /* TODO - The blowup in the fib constraints is hardcoded to 16,
+                         * we should set this back to 32 to get wider coverage when
+                         * that's fixed */
+            pow_bits:   12,
+            queries:    20,
+            fri_layout: vec![3, 2],
+        },)
+        .is_ok());
     }
 
     #[test]
@@ -910,25 +904,22 @@ mod tests {
         let witness = fibonacci::Witness { secret };
         let claim = fibonacci::Claim { index, value };
 
-        let seed = Vec::from(&claim);
         let constraints = claim.constraints();
         let trace = claim.trace(&witness);
-        let actual = proof(&seed, &constraints, &trace, &ProofParams {
+        let actual = proof(&constraints, &trace, &ProofParams {
             blowup:     16,
             pow_bits:   12,
             queries:    20,
             fri_layout: vec![2, 1, 4, 2],
         });
 
-        assert!(
-            verify(&seed, actual.proof.as_slice(), &constraints, &ProofParams {
-                blowup:     16,
-                pow_bits:   12,
-                queries:    20,
-                fri_layout: vec![2, 1, 4, 2],
-            },)
-            .is_ok()
-        );
+        assert!(verify(actual.proof.as_slice(), &constraints, &ProofParams {
+            blowup:     16,
+            pow_bits:   12,
+            queries:    20,
+            fri_layout: vec![2, 1, 4, 2],
+        },)
+        .is_ok());
     }
 
     // TODO: What are we actually testing here? Should we add these as debug_assert

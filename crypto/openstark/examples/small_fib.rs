@@ -27,10 +27,9 @@ fn main() {
     let start = Instant::now();
 
     info!("Constructing proof...");
-    let seed = Vec::from(&claim);
     let constraints = claim.constraints();
     let trace = claim.trace(&witness);
-    let potential_proof = proof(&seed, &constraints, &trace, &ProofParams {
+    let potential_proof = proof(&constraints, &trace, &ProofParams {
         blowup:     16,
         pow_bits:   12,
         queries:    20,

@@ -33,13 +33,11 @@ fn main() {
     let constraints = &get_pedersen_merkle_constraints(&claim);
     info!("Constructed {:?} constraints", constraints);
 
-    let seed = Vec::from(&claim);
-
     info!("Constructing trace...");
     let trace = claim.trace(&witness);
 
     info!("Constructing proof...");
-    let proof = proof(&seed, &constraints, &trace, &ProofParams {
+    let proof = proof(&constraints, &trace, &ProofParams {
         blowup:     16,
         pow_bits:   28,
         queries:    13,

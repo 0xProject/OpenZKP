@@ -115,10 +115,8 @@ mod tests {
 
         let private = fibonacci::Witness { secret };
         let public = fibonacci::Claim { index, value };
-        let seed: Vec<u8> = Vec::from(&public);
 
         let actual = proof(
-            &seed,
             &public.constraints(),
             &public.trace(&private),
             &ProofParams {

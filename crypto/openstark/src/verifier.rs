@@ -111,7 +111,6 @@ use u256::U256;
 // TODO: Refactor into smaller function
 #[allow(clippy::too_many_lines)]
 pub fn verify(
-    channel_seed: &[u8],
     proposed_proof: &[u8],
     constraints: &Constraints,
     params: &ProofParams,
@@ -122,7 +121,7 @@ pub fn verify(
     let eval_x = root_series(eval_domain_size).collect::<Vec<_>>();
 
     let mut channel = VerifierChannel::new(proposed_proof.to_vec());
-    channel.initialize(channel_seed);
+    channel.initialize(constraints.channel_seed());
 
     // Get the low degree root commitment, and constraint root commitment
     // TODO: Make it work as channel.read()
@@ -555,24 +554,21 @@ mod tests {
                 "00000000000000000000000000000000000000000000000000000000cafebabe"
             )),
         };
-        let seed = Vec::from(&public);
         let constraints = public.constraints();
         let trace = public.trace(&private);
-        let actual = proof(&seed, &constraints, &trace, &ProofParams {
+        let actual = proof(&constraints, &trace, &ProofParams {
             blowup:     16,
             pow_bits:   12,
             queries:    20,
             fri_layout: vec![3, 2],
         });
 
-        assert!(
-            verify(&seed, actual.proof.as_slice(), &constraints, &ProofParams {
-                blowup:     16,
-                pow_bits:   12,
-                queries:    20,
-                fri_layout: vec![3, 2],
-            },)
-            .is_ok()
-        );
+        assert!(verify(actual.proof.as_slice(), &constraints, &ProofParams {
+            blowup:     16,
+            pow_bits:   12,
+            queries:    20,
+            fri_layout: vec![3, 2],
+        },)
+        .is_ok());
     }
 }

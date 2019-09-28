@@ -103,21 +103,15 @@ fn main() {
     };
     let params = ProofParams::suggested(20);
     let start = Instant::now();
-    let seed = Vec::from(&input);
     let constraints = input.constraints();
     let trace = input.trace(());
-    let potential_proof = proof(&seed, &constraints, &trace, &params);
+    let potential_proof = proof(&constraints, &trace, &params);
     let duration = start.elapsed();
     println!("{:?}", potential_proof.coin.digest);
     println!("Time elapsed in proof function is: {:?}", duration);
     println!("The proof length is {}", potential_proof.proof.len());
 
-    let verified = verify(
-        &seed,
-        potential_proof.proof.as_slice(),
-        &constraints,
-        &params,
-    );
+    let verified = verify(potential_proof.proof.as_slice(), &constraints, &params);
     println!("Checking the proof resulted in: {:?}", verified);
 }
 

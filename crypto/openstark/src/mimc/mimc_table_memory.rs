@@ -62,7 +62,7 @@ impl Verifiable for Claim {
         };
         let k_coef = periodic(&ifft(&K_COEF.to_vec()));
 
-        Constraints::from_expressions((trace_length, 3),self.into(), vec![
+        Constraints::from_expressions((trace_length, 3), self.into(), vec![
             // Says x_1 = x_0^2
             (Trace(0, 0) * Trace(0, 0) - Trace(1, 0)) * reevery_row(),
             // Says x_2 = x_1*x_0
@@ -122,17 +122,11 @@ mod tests {
             queries:    20,
             fri_layout: vec![3, 3, 2],
         };
-        let seed = Vec::from(&input);
         let constraints = input.constraints();
         let trace = input.trace(());
-        let potential_proof = proof(&seed, &constraints, &trace, &params);
+        let potential_proof = proof(&constraints, &trace, &params);
         assert_eq!(
-            verify(
-                &seed,
-                potential_proof.proof.as_slice(),
-                &constraints,
-                &params
-            ),
+            verify(potential_proof.proof.as_slice(), &constraints, &params),
             Ok(())
         );
     }

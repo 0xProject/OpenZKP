@@ -144,10 +144,9 @@ mod tests {
         let claim = SHORT_CLAIM;
         let witness = short_witness();
 
-        let seed = Vec::from(&claim);
         let constraints = claim.constraints();
         let trace = claim.trace(&witness);
-        let proof = proof(&seed, &constraints, &trace, &ProofParams {
+        let proof = proof(&constraints, &trace, &ProofParams {
             blowup:     16,
             pow_bits:   0,
             queries:    13,

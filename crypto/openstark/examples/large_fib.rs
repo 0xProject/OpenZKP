@@ -30,10 +30,9 @@ fn main() {
 
     let fri_layout = vec![3, 3, 3, 3, 2];
     let start = Instant::now();
-    let seed = Vec::from(&claim);
     let constraints = claim.constraints();
     let trace = claim.trace(&witness);
-    let potential_proof = proof(&seed, &constraints, &trace, &ProofParams {
+    let potential_proof = proof(&constraints, &trace, &ProofParams {
         blowup:     16,
         pow_bits:   12,
         queries:    20,
@@ -49,7 +48,6 @@ fn main() {
     );
 
     let verified = verify(
-        &seed,
         potential_proof.proof.as_slice(),
         &constraints,
         &ProofParams {
