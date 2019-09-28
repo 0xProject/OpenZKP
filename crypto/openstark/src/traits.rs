@@ -1,27 +1,27 @@
 use crate::Constraints;
+use crate::{verify, VerifierError};
 #[cfg(feature = "prover")]
-use crate::TraceTable;
+use crate::{proof, TraceTable};
 
 pub trait Verifiable {
     fn constraints(&self) -> Constraints;
 
-    // fn verify(&self, proof) -> Result<(), VerifierError> {
-    //
-    // }
+    fn verify(&self, proof: &[u8]) -> Result<(), VerifierError> {
+        let constraints = self.constraints();
+        verify(&constraints, proof)
+    }
 }
 
 #[cfg(feature = "prover")]
 pub trait Provable<T>: Verifiable {
     fn trace(&self, witness: T) -> TraceTable;
 
-    // fn prove(&self, witness: &T) -> Result<Proof, ProverError> {
-    //     let seed = Vec::from(self);
-    //     let constraints = self.constraints();
-    //     let trace = self.trace(witness);
-    //     let domain_size = constraints.trace_nrows().trailing_zeros();
-    //     let params = ProofParams::suggested(domain_size);
-    //     proof(&seed, &constraints, &trace, &params)
-    // }
+    // TODO: Result<Proof, ProverError>
+    fn prove(&self, witness: T) -> Vec<u8> {
+        let constraints = self.constraints();
+        let trace = self.trace(witness);
+        proof(&constraints, &trace).proof
+    }
 }
 
 #[cfg(test)]

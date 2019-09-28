@@ -73,7 +73,7 @@ pub use channel::{ProverChannel, VerifierChannel};
 pub use constraints::{Constraints, Error as ConstraintError};
 pub use rational_expression::RationalExpression;
 pub use traits::Verifiable;
-pub use verifier::verify;
+pub use verifier::{verify, Error as VerifierError};
 
 // Exports for prover
 #[cfg(feature = "prover")]
