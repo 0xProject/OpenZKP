@@ -124,7 +124,7 @@ where
     verify(
         &public.into(),
         proposed_proof, &constraints, params, 
-    (constraints.trace_length(), constraints.num_columns()))
+    (constraints.trace_nrows(), constraints.trace_ncolumns()))
 }
 
 pub fn verify(
@@ -157,7 +157,7 @@ pub fn verify(
     // Get the oods information from the proof and random
     let oods_point: FieldElement = channel.get_random();
     let mut oods_values: Vec<FieldElement> = Vec::with_capacity(2 * trace_cols + 1);
-    let constraints_trace_degree = constraints.trace_degree();
+    let constraints_trace_degree = constraints.degree();
     for _ in 0..(2 * trace_cols + constraints_trace_degree) {
         oods_values.push(Replayable::<FieldElement>::replay(&mut channel));
     }
@@ -356,7 +356,6 @@ pub fn verify(
     if oods_value_from_trace_values(
         &constraints,
         &constraint_coefficients,
-        trace_len,
         &trace_values,
         &oods_point,
     ) != oods_value_from_constraint_values(&constraint_values, &oods_point)
@@ -369,7 +368,6 @@ pub fn verify(
 fn oods_value_from_trace_values(
     constraints: &Constraints,
     coefficients: &[FieldElement],
-    trace_length: usize,
     trace_values: &[FieldElement],
     oods_point: &FieldElement,
 ) -> FieldElement {
@@ -379,7 +377,7 @@ fn oods_value_from_trace_values(
         trace_values[2 * i + j].clone()
     };
     constraints
-        .combine(coefficients, trace_length)
+        .combine(coefficients)
         .evaluate(oods_point, &trace)
 }
 

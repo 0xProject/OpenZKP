@@ -531,7 +531,7 @@ fn get_constraint_polynomials(
     const CHUNK_SIZE: usize = 65536;
 
     // We need to evaluate on a power of two degree
-    let constraint_degree = constraints.trace_degree();
+    let constraint_degree = constraints.degree();
     let eval_degree = constraint_degree.next_power_of_two();
     let coset_size = trace_length * eval_degree;
 
@@ -539,7 +539,7 @@ fn get_constraint_polynomials(
     let trace_coset = extract_trace_coset(trace_lde, coset_size);
 
     info!("Combine rational expressions");
-    let combined_constraints = constraints.combine(constraint_coefficients, trace_length);
+    let combined_constraints = constraints.combine(constraint_coefficients);
     let mut dag = AlgebraicGraph::new(
         &FieldElement::GENERATOR,
         trace_coset.num_rows(),
@@ -959,7 +959,7 @@ mod tests {
         };
         let constraints = claim.constraints();
 
-        let trace_len = constraints.trace_length();
+        let trace_len = constraints.trace_nrows();
         assert_eq!(trace_len, 1024);
         let params = ProofParams {
             blowup:     16,
