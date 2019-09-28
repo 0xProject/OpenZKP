@@ -2,11 +2,20 @@ use crate::rational_expression::RationalExpression;
 use itertools::Itertools;
 use primefield::FieldElement;
 use std::prelude::v1::*;
+use std::fmt;
 
-#[derive(Clone)]
-#[cfg_attr(feature = "std", derive(Debug))]
+#[derive(Clone, Debug)]
 pub enum Error {
     InvalidTraceLength,
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use Error::*;
+        match *self {
+            InvalidTraceLength => write!(f, "Invalid trace length (must be power of two)")
+        }
+    }
 }
 
 #[derive(Clone)]

@@ -68,6 +68,8 @@ mod prover;
 #[cfg(feature = "prover")]
 pub mod trace_table;
 
+// TODO: Have unconditional Debug trait on all types
+
 // Exports for verifier
 #[deprecated]
 pub use channel::{ProverChannel, VerifierChannel};
