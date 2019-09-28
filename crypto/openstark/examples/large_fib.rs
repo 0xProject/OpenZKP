@@ -2,10 +2,58 @@
 use env_logger;
 use log::info;
 use macros_decl::field_element;
-use openstark::{fibonacci, proof, verify, Provable, Verifiable};
+use openstark::{Constraints, TraceTable, RationalExpression, proof, verify, Provable, Verifiable};
 use primefield::FieldElement;
 use std::{env, time::Instant};
 use u256::U256;
+
+struct Claim {
+    index: usize,
+    value: FieldElement,
+}
+
+struct Witness {
+    secret: FieldElement,
+}
+
+impl Verifiable for Claim {
+    fn constraints(&self) -> Constraints {
+        use RationalExpression::*;
+
+        // Seed
+        let mut seed = self.index.to_be_bytes().to_vec();
+        seed.extend_from_slice(&self.value.as_montgomery().to_bytes_be());
+
+        // Constraint repetitions
+        let trace_length = self.index.next_power_of_two();
+        let trace_generator = FieldElement::root(trace_length).unwrap();
+        let g = Constant(trace_generator);
+        let on_row = |index| (X - g.pow(index)).inv();
+        let reevery_row = || (X - g.pow(trace_length - 1)) / (X.pow(trace_length) - 1.into());
+
+        Constraints::from_expressions((trace_length, 2), b"".to_vec(), vec![
+            (Trace(0, 1) - Trace(1, 0)) * reevery_row(),
+            (Trace(1, 1) - Trace(0, 0) - Trace(1, 0)) * reevery_row(),
+            (Trace(0, 0) - 1.into()) * on_row(0),
+            (Trace(0, 0) - (&self.value).into()) * on_row(self.index),
+        ])
+        .unwrap()
+    }
+}
+
+impl Provable<&Witness> for Claim {
+    fn trace(&self, witness: &Witness) -> TraceTable {
+        let trace_length = self.index.next_power_of_two();
+        let mut trace = TraceTable::new(trace_length, 2);
+        trace[(0, 0)] = 1.into();
+        trace[(0, 1)] = witness.secret.clone();
+        for i in 0..(trace_length - 1) {
+            trace[(i + 1, 0)] = trace[(i, 1)].clone();
+            trace[(i + 1, 1)] = &trace[(i, 0)] + &trace[(i, 1)];
+        }
+        trace
+    }
+}
 
 fn main() {
     env_logger::init();
@@ -19,26 +67,27 @@ fn main() {
     }
     info!("Starting Fibonacci benchmark...");
 
-    let index = 1_000_000;
-    let secret = field_element!("cafebabe");
-    let value = fibonacci::get_value(index, &secret);
-
-    let claim = fibonacci::Claim { index, value };
-    let witness = fibonacci::Witness { secret };
+    let claim = Claim {
+        index: 1_000_000,
+        value: field_element!("cafebabe"),
+    };
+    let witness = Witness {
+        secret: field_element!("deadbeef"),
+    };
 
     let start = Instant::now();
     let constraints = claim.constraints();
     let trace = claim.trace(&witness);
-    let potential_proof = proof(&constraints, &trace);
+    let proof = proof(&constraints, &trace);
     let duration = start.elapsed();
-    println!("{:?}", potential_proof.coin.digest);
+    println!("{:?}", proof.coin.digest);
     println!("Time elapsed in proof function is: {:?}", duration);
-    println!("The proof length is {}", potential_proof.proof.len());
+    println!("The proof length is {}", proof.proof.len());
     println!(
         "The estimated size bound is: {}",
         constraints.max_proof_size()
     );
 
-    let verified = verify(&constraints, potential_proof.proof.as_slice());
+    let verified = verify(&constraints, proof.proof.as_slice());
     println!("Checking the proof resulted in: {:?}", verified);
 }

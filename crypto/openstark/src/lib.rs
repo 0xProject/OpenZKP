@@ -55,8 +55,10 @@ mod prover;
 #[cfg(feature = "prover")]
 mod trace_table;
 
+#[cfg(test)]
+mod fibonacci;
+
 // TODO: Move example constraint systems out of the lib
-pub mod fibonacci;
 mod mimc;
 #[cfg(feature = "prover")]
 pub mod pedersen_merkle;

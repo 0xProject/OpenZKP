@@ -842,12 +842,13 @@ mod tests {
 
     #[test]
     fn fib_test_1024_python_witness() {
-        let index = 1000;
-        let secret = field_element!("cafebabe");
-        let value = fibonacci::get_value(index, &secret);
-
-        let witness = fibonacci::Witness { secret };
-        let claim = fibonacci::Claim { index, value };
+        let witness = fibonacci::Witness {
+            secret: field_element!("cafebabe"),
+        };
+        let claim = fibonacci::Claim {
+            index: 1000,
+            value:field_element!("0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"),
+        };
 
         let mut constraints = claim.constraints();
         let trace = claim.trace(&witness);
@@ -865,12 +866,13 @@ mod tests {
 
     #[test]
     fn fib_test_1024_changed_witness() {
-        let index = 1000;
-        let secret = field_element!("0f00dbabe0cafebabe");
-        let value = fibonacci::get_value(index, &secret);
-
-        let witness = fibonacci::Witness { secret };
-        let claim = fibonacci::Claim { index, value };
+        let witness = fibonacci::Witness {
+            secret: field_element!("00b4e8fc548bbc1ad9abd5c460840c0865121923590de2f18e9dbeda48a4bb93"),
+        };
+        let claim = fibonacci::Claim {
+            index: 1000,
+            value:field_element!("016f6acc9f52c6dffb063135e7af6756613f4b838734b40cf178d2160099713d"),
+        };
 
         let mut constraints = claim.constraints();
         constraints.blowup = 16; // TODO - The blowup in the fib constraints is hardcoded to 16,
@@ -886,12 +888,13 @@ mod tests {
 
     #[test]
     fn fib_test_4096() {
-        let index = 4000;
-        let secret = field_element!("0f00dbabe0cafebabe");
-        let value = fibonacci::get_value(index, &secret);
-
-        let witness = fibonacci::Witness { secret };
-        let claim = fibonacci::Claim { index, value };
+        let witness = fibonacci::Witness {
+            secret: field_element!("0f00dbabe0cafebabe"),
+        };
+        let claim = fibonacci::Claim {
+            index: 4000,
+            value:field_element!("0576d0c2cc9a060990e96752034a391f0b9036aaa32a3aab28796f7845450e18"),
+        };
 
         let mut constraints = claim.constraints();
         constraints.blowup = 16;

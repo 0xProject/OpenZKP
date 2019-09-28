@@ -2,23 +2,73 @@
 use env_logger;
 use log::info;
 use macros_decl::field_element;
-use openstark::{fibonacci, proof, Provable, Verifiable};
+use openstark::{RationalExpression, proof, Provable, Verifiable, TraceTable, Constraints};
 use primefield::FieldElement;
 use std::time::Instant;
 use u256::U256;
+
+#[derive(Clone, Debug)]
+struct Claim {
+    index: usize,
+    value: FieldElement,
+}
+
+#[derive(Clone, Debug)]
+struct Witness {
+    secret: FieldElement,
+}
+
+impl Verifiable for Claim {
+    fn constraints(&self) -> Constraints {
+        use RationalExpression::*;
+
+        // Seed
+        let mut seed = self.index.to_be_bytes().to_vec();
+        seed.extend_from_slice(&self.value.as_montgomery().to_bytes_be());
+
+        // Constraint repetitions
+        let trace_length = self.index.next_power_of_two();
+        let trace_generator = FieldElement::root(trace_length).unwrap();
+        let g = Constant(trace_generator);
+        let on_row = |index| (X - g.pow(index)).inv();
+        let reevery_row = || (X - g.pow(trace_length - 1)) / (X.pow(trace_length) - 1.into());
+
+        Constraints::from_expressions((trace_length, 2), b"seed".to_vec(), vec![
+            (Trace(0, 1) - Trace(1, 0)) * reevery_row(),
+            (Trace(1, 1) - Trace(0, 0) - Trace(1, 0)) * reevery_row(),
+            (Trace(0, 0) - 1.into()) * on_row(0),
+            (Trace(0, 0) - (&self.value).into()) * on_row(self.index),
+        ])
+        .unwrap()
+    }
+}
+
+impl Provable<&Witness> for Claim {
+    fn trace(&self, witness: &Witness) -> TraceTable {
+        let trace_length = self.index.next_power_of_two();
+        let mut trace = TraceTable::new(trace_length, 2);
+        trace[(0, 0)] = 1.into();
+        trace[(0, 1)] = witness.secret.clone();
+        for i in 0..(trace_length - 1) {
+            trace[(i + 1, 0)] = trace[(i, 1)].clone();
+            trace[(i + 1, 1)] = &trace[(i, 0)] + &trace[(i, 1)];
+        }
+        trace
+    }
+}
 
 fn main() {
     env_logger::init();
 
     info!("Constructing claim");
-    let claim = fibonacci::Claim {
+    let claim = Claim {
         index: 1000,
         value: field_element!("0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"),
     };
     info!("Claim: {:?}", claim);
 
     info!("Constructing witness");
-    let witness = fibonacci::Witness {
+    let witness = Witness {
         secret: field_element!("cafebabe"),
     };
     info!("Witness: {:?}", witness);
