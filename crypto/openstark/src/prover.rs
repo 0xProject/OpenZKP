@@ -102,10 +102,9 @@ impl VectorCommitment for FriLeaves {
         }
     }
 }
+
 // False positive: `for<'a>` annotation is required.
 #[allow(single_use_lifetimes)]
-// TODO: Simplify
-#[allow(clippy::cognitive_complexity)]
 pub fn stark_proof<Claim: Verifiable, Witness: Provable<Claim>>(
     claim: &Claim,
     witness: &Witness,

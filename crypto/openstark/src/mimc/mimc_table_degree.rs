@@ -105,7 +105,7 @@ fn mimc(start: &FieldElement) -> FieldElement {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{proof_params::ProofParams, proofs::stark_proof, verifier::check_proof};
+    use crate::{proof_params::ProofParams, stark_proof, verifier::check_proof};
     use macros_decl::field_element;
 
     #[test]

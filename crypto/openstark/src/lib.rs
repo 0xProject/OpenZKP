@@ -65,7 +65,7 @@ mod algebraic_dag;
 #[cfg(feature = "prover")]
 pub mod pedersen_merkle;
 #[cfg(feature = "prover")]
-mod proofs;
+mod prover;
 #[cfg(feature = "prover")]
 pub mod trace_table;
 
@@ -75,9 +75,10 @@ pub use verifier::verify;
 
 // Exports for prover
 #[cfg(feature = "prover")]
-pub use proofs::proof;
+pub use prover::proof;
 #[cfg(feature = "prover")]
-pub use proofs::stark_proof;
+#[deprecated]
+pub use prover::stark_proof;
 #[cfg(feature = "prover")]
 pub use trace_table::TraceTable;
 #[cfg(feature = "prover")]

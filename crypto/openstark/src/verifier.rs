@@ -553,7 +553,7 @@ impl error::Error for Error {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{fibonacci, proofs::stark_proof};
+    use crate::{fibonacci, stark_proof};
     use macros_decl::u256h;
 
     #[test]

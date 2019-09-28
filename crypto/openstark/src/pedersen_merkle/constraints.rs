@@ -135,7 +135,7 @@ mod tests {
     use crate::{
         pedersen_merkle::inputs::{short_witness, SHORT_CLAIM},
         proof_params::ProofParams,
-        proofs::stark_proof,
+        stark_proof,
     };
 
     #[test]
