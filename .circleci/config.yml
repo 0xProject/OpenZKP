@@ -143,6 +143,7 @@ jobs:
           name: Build tests with coverage
           command: |
             # Build with coverage settings from Dockerfile
+            # TODO: Build and run tests from all targets
             CARGO_INCREMENTAL=0 RUSTFLAGS="$COVFLAGS" cargo +$NIGHTLY build $PACKAGES --tests --all-features
       - save-sccache-cache
       - run:
