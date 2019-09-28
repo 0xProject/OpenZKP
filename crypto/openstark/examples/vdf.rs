@@ -105,7 +105,7 @@ fn main() {
     println!("Time elapsed in proof function is: {:?}", duration);
     println!("The proof length is {}", potential_proof.proof.len());
 
-    let verified = verify(potential_proof.proof.as_slice(), &constraints);
+    let verified = verify(&constraints, potential_proof.proof.as_slice());
     println!("Checking the proof resulted in: {:?}", verified);
 }
 

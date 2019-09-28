@@ -107,13 +107,13 @@ use u256::U256;
 /// <!-- TODO: ellaborate FRI verification -->
 // TODO: Refactor into smaller function
 #[allow(clippy::too_many_lines)]
-pub fn verify(proposed_proof: &[u8], constraints: &Constraints) -> Result<()> {
+pub fn verify(constraints: &Constraints, proof: &[u8]) -> Result<()> {
     let trace_length = constraints.trace_nrows();
     let trace_cols = constraints.trace_ncolumns();
     let eval_domain_size = trace_length * constraints.blowup;
     let eval_x = root_series(eval_domain_size).collect::<Vec<_>>();
 
-    let mut channel = VerifierChannel::new(proposed_proof.to_vec());
+    let mut channel = VerifierChannel::new(proof.to_vec());
     channel.initialize(constraints.channel_seed());
 
     // Get the low degree root commitment, and constraint root commitment
@@ -551,6 +551,6 @@ mod tests {
         let trace = public.trace(&private);
         let actual = proof(&constraints, &trace);
 
-        assert!(verify(actual.proof.as_slice(), &constraints).is_ok());
+        assert!(verify(&constraints, actual.proof.as_slice()).is_ok());
     }
 }

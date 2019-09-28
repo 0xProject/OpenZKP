@@ -458,7 +458,7 @@ pub fn proof(constraints: &Constraints, trace: &TraceTable) -> ProverChannel {
     // Verify proof
     info!("Verify proof.");
     // TODO - Bubble up errors so we can see where verification fails.
-    assert!(verify(proof.proof.as_slice(), constraints).is_ok());
+    assert!(verify(constraints, proof.proof.as_slice()).is_ok());
 
     // Q.E.D.
     // TODO: Return bytes, or a result structure
@@ -881,7 +881,7 @@ mod tests {
         constraints.fri_layout = vec![3, 2];
         let trace = claim.trace(&witness);
         let actual = proof(&constraints, &trace);
-        assert!(verify(actual.proof.as_slice(), &constraints).is_ok());
+        assert!(verify(&constraints, actual.proof.as_slice()).is_ok());
     }
 
     #[test]
@@ -901,7 +901,7 @@ mod tests {
         let trace = claim.trace(&witness);
         let actual = proof(&constraints, &trace);
 
-        assert!(verify(actual.proof.as_slice(), &constraints).is_ok());
+        assert!(verify(&constraints, actual.proof.as_slice()).is_ok());
     }
 
     // TODO: What are we actually testing here? Should we add these as debug_assert

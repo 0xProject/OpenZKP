@@ -39,6 +39,6 @@ fn main() {
         constraints.max_proof_size()
     );
 
-    let verified = verify(potential_proof.proof.as_slice(), &constraints);
+    let verified = verify(&constraints, potential_proof.proof.as_slice());
     println!("Checking the proof resulted in: {:?}", verified);
 }

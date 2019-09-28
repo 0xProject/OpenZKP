@@ -113,7 +113,7 @@ mod tests {
         let trace = input.trace(());
         let potential_proof = proof(&constraints, &trace);
         assert_eq!(
-            verify(potential_proof.proof.as_slice(), &constraints),
+            verify(&constraints, potential_proof.proof.as_slice()),
             Ok(())
         );
     }
