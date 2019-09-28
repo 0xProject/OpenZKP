@@ -203,7 +203,6 @@ impl Constraints {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::{fibonacci, proof, Provable, Verifiable};
     use macros_decl::field_element;
     use primefield::FieldElement;
