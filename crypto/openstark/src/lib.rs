@@ -55,10 +55,6 @@ mod prover;
 #[cfg(feature = "prover")]
 mod trace_table;
 
-// TODO: Move example constraint systems out of the lib
-#[cfg(feature = "prover")]
-pub mod pedersen_merkle;
-
 // TODO: Have unconditional Debug trait on all types
 
 // In no std mode, substitute no_std_compat

@@ -1,16 +1,12 @@
-use crate::{
-    constraints::Constraints,
-    pedersen_merkle::{
-        inputs::Claim,
-        pedersen_points::SHIFT_POINT,
-        periodic_columns::{
-            LEFT_X_COEFFICIENTS, LEFT_Y_COEFFICIENTS, RIGHT_X_COEFFICIENTS, RIGHT_Y_COEFFICIENTS,
-        },
+use super::{
+    inputs::Claim,
+    pedersen_points::SHIFT_POINT,
+    periodic_columns::{
+        LEFT_X_COEFFICIENTS, LEFT_Y_COEFFICIENTS, RIGHT_X_COEFFICIENTS, RIGHT_Y_COEFFICIENTS,
     },
-    polynomial::DensePolynomial,
-    rational_expression::RationalExpression,
 };
 use elliptic_curve::Affine;
+use openstark::{Constraints, DensePolynomial, RationalExpression};
 use primefield::FieldElement;
 use std::{prelude::v1::*, vec};
 
@@ -131,16 +127,14 @@ pub fn get_pedersen_merkle_constraints(claim: &Claim) -> Constraints {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::{
-        pedersen_merkle::inputs::{short_witness, SHORT_CLAIM},
-        prove, Provable, Verifiable,
+    use super::{
+        super::inputs::{short_witness, SHORT_CLAIM},
+        *,
     };
+    use openstark::{prove, Provable, Verifiable};
 
     #[test]
     fn short_pedersen_merkle() {
-        crate::tests::init();
-
         let claim = SHORT_CLAIM;
         let witness = short_witness();
 

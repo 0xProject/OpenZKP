@@ -1037,9 +1037,9 @@ pub(crate) const RIGHT_Y_COEFFICIENTS: [FieldElement; 256] = [
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::{pedersen_merkle::pedersen_points::PEDERSEN_POINTS, polynomial::DensePolynomial};
+    use super::{super::pedersen_points::PEDERSEN_POINTS, *};
     use elliptic_curve::Affine;
+    use openstark::DensePolynomial;
     use primefield::geometric_series::root_series;
 
     #[test]
