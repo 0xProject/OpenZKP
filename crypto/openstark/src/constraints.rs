@@ -12,19 +12,22 @@ pub enum Error {
 #[derive(Clone)]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct Constraints {
-    trace_nrows: usize,
+    trace_nrows:    usize,
     trace_ncolumns: usize,
-    expressions: Vec<RationalExpression>,
+    expressions:    Vec<RationalExpression>,
 }
 
 impl Constraints {
-    pub fn from_expressions((trace_nrows, trace_ncolumns): (usize, usize), expressions: Vec<RationalExpression>) -> Result<Self, Error> {
+    pub fn from_expressions(
+        (trace_nrows, trace_ncolumns): (usize, usize),
+        expressions: Vec<RationalExpression>,
+    ) -> Result<Self, Error> {
         let _ = FieldElement::root(trace_nrows).ok_or(Error::InvalidTraceLength)?;
         // TODO: Validate expressions
         Ok(Self {
             trace_nrows,
             trace_ncolumns,
-            expressions
+            expressions,
         })
     }
 
@@ -38,6 +41,10 @@ impl Constraints {
 
     pub fn len(&self) -> usize {
         self.expressions.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.expressions().is_empty()
     }
 
     pub fn expressions(&self) -> &[RationalExpression] {
@@ -55,10 +62,7 @@ impl Constraints {
             .expect("no constraints")
     }
 
-    pub(crate) fn combine(
-        &self,
-        constraint_coefficients: &[FieldElement],
-    ) -> RationalExpression {
+    pub(crate) fn combine(&self, constraint_coefficients: &[FieldElement]) -> RationalExpression {
         use RationalExpression::*;
         assert_eq!(2 * self.len(), constraint_coefficients.len());
         let target_degree = self.degree() * self.trace_nrows() - 1;
@@ -71,8 +75,7 @@ impl Constraints {
                     let (num, den) = constraint.degree(self.trace_nrows() - 1);
                     let adjustment_degree = target_degree + den - num;
                     let adjustment = Constant(coefficient_low.clone())
-                        + Constant(coefficient_high.clone())
-                            * X.pow(adjustment_degree);
+                        + Constant(coefficient_high.clone()) * X.pow(adjustment_degree);
                     adjustment * constraint.clone()
                 },
             )

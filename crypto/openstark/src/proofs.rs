@@ -1,5 +1,4 @@
 use crate::{
-    verify,
     algebraic_dag::AlgebraicGraph,
     channel::{ProverChannel, RandomGenerator, Writable},
     constraint_system::{Provable, Verifiable},
@@ -7,7 +6,7 @@ use crate::{
     polynomial::DensePolynomial,
     proof_of_work,
     proof_params::ProofParams,
-    TraceTable,
+    verify, TraceTable,
 };
 use hash::{Hash, Hashable, MaskedKeccak};
 use itertools::Itertools;
@@ -478,8 +477,7 @@ pub fn proof(
     // Verify proof
     info!("Verify proof.");
     // TODO - Bubble up errors so we can see where verification fails.
-    assert!(verify(channel_seed, proof.proof.as_slice(), constraints, params
-    ).is_ok());
+    assert!(verify(channel_seed, proof.proof.as_slice(), constraints, params).is_ok());
 
     // Q.E.D.
     // TODO: Return bytes, or a result structure

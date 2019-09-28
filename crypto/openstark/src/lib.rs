@@ -70,8 +70,7 @@ mod proofs;
 pub mod trace_table;
 
 // Exports for verifier
-pub use constraints::Error as ConstraintError;
-pub use constraints::Constraints;
+pub use constraints::{Constraints, Error as ConstraintError};
 pub use verifier::verify;
 
 // Exports for prover

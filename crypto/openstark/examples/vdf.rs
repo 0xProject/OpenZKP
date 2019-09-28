@@ -47,9 +47,7 @@ impl Verifiable for Claim {
         let on_row = |index| (X - g.pow(index)).inv();
         let reevery_row = || (X - g.pow(trace_length - 1)) / (X.pow(trace_length) - 1.into());
 
-        Constraints::from_expressions(
-            (trace_length, 4),
-            vec![
+        Constraints::from_expressions((trace_length, 4), vec![
             // Square (Trace(0,0), Trace(1, 0)) and check that it equals (Trace(2,0), Trace(3,0))
             (Trace(0, 0) * Trace(0, 0) + Constant(R) * Trace(1, 0) * Trace(1, 0) - Trace(2, 0))
                 * reevery_row(),
@@ -63,7 +61,8 @@ impl Verifiable for Claim {
             (Trace(1, 0) - (&self.c1_start).into()) * on_row(0),
             (Trace(0, 0) - (&self.c0_end).into()) * on_row(trace_length - 1),
             (Trace(1, 0) - (&self.c1_end).into()) * on_row(trace_length - 1),
-        ]).unwrap()
+        ])
+        .unwrap()
     }
 }
 

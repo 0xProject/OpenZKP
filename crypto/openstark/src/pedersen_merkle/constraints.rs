@@ -67,9 +67,7 @@ pub fn get_pedersen_merkle_constraints(claim: &Claim) -> Constraints {
     let left_bit = Trace(0, 0) - Trace(0, 1) * 2.into();
     let right_bit = Trace(4, 0) - Trace(4, 1) * 2.into();
 
-    Constraints::from_expressions(
-        (trace_length, 8),
-        vec![
+    Constraints::from_expressions((trace_length, 8), vec![
         Trace(0, 0),
         Trace(1, 0),
         Trace(2, 0),
@@ -127,7 +125,8 @@ pub fn get_pedersen_merkle_constraints(claim: &Claim) -> Constraints {
         ),
         on_fe_end_rows(Trace(4, 0)),
         on_no_hash_rows(Trace(4, 0)),
-    ]).unwrap()
+    ])
+    .unwrap()
 }
 
 #[cfg(test)]

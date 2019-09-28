@@ -10,6 +10,20 @@ use std::error;
 use std::{collections::BTreeMap, convert::TryInto, fmt, prelude::v1::*};
 use u256::U256;
 
+// False positive, for<'a> is required.
+#[allow(single_use_lifetimes)]
+pub fn check_proof<Claim: Verifiable>(
+    proposed_proof: &[u8],
+    public: &Claim,
+    params: &ProofParams,
+) -> Result<()>
+where
+    for<'a> &'a Claim: Into<Vec<u8>>,
+{
+    let constraints = public.constraints();
+    verify(&public.into(), proposed_proof, &constraints, params)
+}
+
 // False positives on the Latex math.
 #[allow(clippy::doc_markdown)]
 /// # Stark verify
@@ -108,31 +122,14 @@ use u256::U256;
 /// * Evaluate the final layer
 ///
 /// <!-- TODO: ellaborate FRI verification -->
-// False positive, for<'a> is required.
-#[allow(single_use_lifetimes)]
 // TODO: Refactor into smaller function
 #[allow(clippy::too_many_lines)]
-pub fn check_proof<Claim: Verifiable>(
-    proposed_proof: &[u8],
-    public: &Claim,
-    params: &ProofParams,
-) -> Result<()>
-where
-    for<'a> &'a Claim: Into<Vec<u8>>,
-{
-    let constraints = public.constraints();
-    verify(
-        &public.into(),
-        proposed_proof, &constraints, params)
-}
-
 pub fn verify(
     channel_seed: &[u8],
     proposed_proof: &[u8],
     constraints: &Constraints,
     params: &ProofParams,
-) -> Result<()>
-{
+) -> Result<()> {
     let trace_length = constraints.trace_nrows();
     let trace_cols = constraints.trace_ncolumns();
     let eval_domain_size = trace_length * params.blowup;
