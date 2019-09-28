@@ -1,7 +1,7 @@
 #![warn(clippy::all)]
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use macros_decl::u256h;
-use openstark::{fibonacci, proof, verify, ProofParams, Provable, Verifiable};
+use openstark::{fibonacci, proof, verify, Provable, Verifiable};
 use primefield::FieldElement;
 use u256::U256;
 
@@ -17,19 +17,11 @@ fn proof_make(crit: &mut Criterion) {
             "00000000000000000000000000000000000000000000000000000000cafebabe"
         )),
     };
-    let seed = Vec::from(&claim);
     let constraints = claim.constraints();
     let trace = claim.trace(&witness);
 
     crit.bench_function("Making an abstracted Fibonacci proof", move |bench| {
-        bench.iter(|| {
-            black_box(proof(&seed, &constraints, &trace, &ProofParams {
-                blowup:     16,
-                pow_bits:   12,
-                queries:    20,
-                fri_layout: vec![3, 2, 1],
-            }))
-        })
+        bench.iter(|| black_box(proof(&constraints, &trace)))
     });
 }
 
@@ -46,30 +38,12 @@ fn proof_check(crit: &mut Criterion) {
         )),
     };
 
-    let seed = Vec::from(&claim);
     let constraints = claim.constraints();
     let trace = claim.trace(&witness);
-    let proof = proof(&seed, &constraints, &trace, &ProofParams {
-        blowup:     16,
-        pow_bits:   12,
-        queries:    20,
-        fri_layout: vec![3, 2, 1],
-    });
+    let proof = proof(&constraints, &trace);
 
     crit.bench_function("Checking a fib proof of len 1024", move |bench| {
-        bench.iter(|| {
-            black_box(verify(
-                &seed,
-                proof.proof.as_slice(),
-                &constraints,
-                &ProofParams {
-                    blowup:     16,
-                    pow_bits:   12,
-                    queries:    20,
-                    fri_layout: vec![3, 2, 1],
-                },
-            ))
-        })
+        bench.iter(|| black_box(verify(&constraints, proof.proof.as_slice())))
     });
 }
 

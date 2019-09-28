@@ -3,9 +3,7 @@ use crate::{
     channel::{ProverChannel, RandomGenerator, Writable},
     constraints::Constraints,
     polynomial::DensePolynomial,
-    proof_of_work,
-    proof_params::ProofParams,
-    verify, TraceTable,
+    proof_of_work, verify, TraceTable,
 };
 use hash::{Hash, Hashable, MaskedKeccak};
 use itertools::Itertools;
@@ -312,14 +310,9 @@ impl VectorCommitment for FriLeaves {
 /// commitments.
 // TODO: Simplify
 #[allow(clippy::cognitive_complexity)]
-pub fn proof(
-    channel_seed: &[u8],
-    constraints: &Constraints,
-    trace: &TraceTable,
-    parameters: &ProofParams,
-) -> ProverChannel {
-    let params = parameters;
-
+// TODO: Split up
+#[allow(clippy::too_many_lines)]
+pub fn proof(constraints: &Constraints, trace: &TraceTable) -> ProverChannel {
     // TODO: Verify input
     //  * Constraint trace length matches trace table length
     //  * Fri layout is less than trace length * blowup
@@ -327,7 +320,7 @@ pub fn proof(
     //  * Trace table satisfies constraints (expensive check, should be optional)
 
     info!("Starting Stark proof.");
-    info!("Proof parameters: {:?}", params);
+    info!("Proof constraints: {:?}", constraints);
     // TODO: Use a proper size human formating function
     #[allow(clippy::cast_precision_loss)]
     let size_mb = (trace.num_rows() * trace.num_columns() * 32) as f64 / 1_000_000_f64;
@@ -341,7 +334,7 @@ pub fn proof(
 
     info!("Initialize channel with claim.");
     let mut proof = ProverChannel::new();
-    proof.initialize(channel_seed);
+    proof.initialize(constraints.channel_seed());
 
     // 1. Trace commitment.
 
@@ -358,7 +351,7 @@ pub fn proof(
     let trace_lde = PolyLDE(
         trace_polynomials
             .par_iter()
-            .map(|p| p.low_degree_extension(params.blowup))
+            .map(|p| p.low_degree_extension(constraints.blowup))
             .collect::<Vec<_>>(),
     );
 
@@ -399,7 +392,7 @@ pub fn proof(
     let constraint_lde = PolyLDE(
         constraint_polynomials
             .par_iter()
-            .map(|p| p.low_degree_extension(params.blowup))
+            .map(|p| p.low_degree_extension(constraints.blowup))
             .collect::<Vec<_>>(),
     );
     // Construct a merkle tree over the LDE combined constraints
@@ -415,13 +408,18 @@ pub fn proof(
 
     // 4. FRI layers with trees
     info!("FRI layers with trees.");
-    let first_fri_layer = oods_polynomial.low_degree_extension(params.blowup);
-    let fri_trees = perform_fri_layering(first_fri_layer, &mut proof, &params);
+    let first_fri_layer = oods_polynomial.low_degree_extension(constraints.blowup);
+    let fri_trees = perform_fri_layering(
+        first_fri_layer,
+        &mut proof,
+        &constraints.fri_layout,
+        constraints.blowup,
+    );
 
     // 5. Proof of work
     info!("Proof of work.");
     let pow_seed: proof_of_work::ChallengeSeed = proof.get_random();
-    let pow_challenge = pow_seed.with_difficulty(params.pow_bits);
+    let pow_challenge = pow_seed.with_difficulty(constraints.pow_bits);
     let pow_response = pow_challenge.solve();
     debug_assert!(pow_challenge.verify(pow_response));
     proof.write(pow_response);
@@ -431,9 +429,9 @@ pub fn proof(
 
     // Fetch query indices from channel.
     info!("Fetch query indices from channel.");
-    let eval_domain_size = trace.num_rows() * params.blowup;
+    let eval_domain_size = trace.num_rows() * constraints.blowup;
     let query_indices = get_indices(
-        params.queries,
+        constraints.num_queries,
         64 - eval_domain_size.leading_zeros() - 1,
         &mut proof,
     );
@@ -460,7 +458,7 @@ pub fn proof(
     // Verify proof
     info!("Verify proof.");
     // TODO - Bubble up errors so we can see where verification fails.
-    assert!(verify(channel_seed, proof.proof.as_slice(), constraints, params).is_ok());
+    assert!(verify(constraints, proof.proof.as_slice()).is_ok());
 
     // Q.E.D.
     // TODO: Return bytes, or a result structure
@@ -641,9 +639,10 @@ fn oods_combine(
 fn perform_fri_layering(
     first_layer: MmapVec<FieldElement>,
     proof: &mut ProverChannel,
-    params: &ProofParams,
+    fri_layout: &[usize],
+    blowup: usize,
 ) -> Vec<FriTree> {
-    let mut fri_trees: Vec<FriTree> = Vec::with_capacity(params.fri_layout.len());
+    let mut fri_trees: Vec<FriTree> = Vec::with_capacity(fri_layout.len());
 
     // Compute 1/x for the fri layer. We only compute the even coordinates.
     // OPT: Can these be efficiently computed on the fly?
@@ -661,7 +660,7 @@ fn perform_fri_layering(
     };
 
     let mut next_layer = first_layer;
-    for &n_reductions in &params.fri_layout {
+    for &n_reductions in fri_layout {
         // Allocate next and swap ownership
         let mut layer = MmapVec::with_capacity(next_layer.len() / (1 << n_reductions));
         std::mem::swap(&mut layer, &mut next_layer);
@@ -748,7 +747,7 @@ fn perform_fri_layering(
     }
 
     // Write the final layer coefficients
-    let n_coefficients = next_layer.len() / params.blowup;
+    let n_coefficients = next_layer.len() / blowup;
     let points = &mut next_layer[0..n_coefficients];
     permute(points);
     ifft_permuted(points);
@@ -812,15 +811,14 @@ mod tests {
                 "04d5f1f669b34fb7252d5a9d0d9786b2638c27eaa04e820b38b088057960cca1"
             ),
         };
-        let seed = Vec::from(&claim);
-        let constraints = claim.constraints();
+        let mut constraints = claim.constraints();
+        constraints.blowup = 16;
+        constraints.pow_bits = 0;
+        constraints.num_queries = 20;
+        constraints.fri_layout = vec![3, 2];
+
         let trace = claim.trace(&witness);
-        let actual = proof(&seed, &constraints, &trace, &ProofParams {
-            blowup:     16,
-            pow_bits:   0,
-            queries:    20,
-            fri_layout: vec![3, 2],
-        });
+        let actual = proof(&constraints, &trace);
 
         // Commitment hashes from
         // solidity/test/fibonacci/proof/fibonacci_proof_annotations.txt
@@ -851,15 +849,13 @@ mod tests {
         let witness = fibonacci::Witness { secret };
         let claim = fibonacci::Claim { index, value };
 
-        let seed = Vec::from(&claim);
-        let constraints = claim.constraints();
+        let mut constraints = claim.constraints();
         let trace = claim.trace(&witness);
-        let actual = proof(&seed, &constraints, &trace, &ProofParams {
-            blowup:     16,
-            pow_bits:   12,
-            queries:    20,
-            fri_layout: vec![3, 2],
-        });
+        constraints.blowup = 16;
+        constraints.pow_bits = 12;
+        constraints.num_queries = 20;
+        constraints.fri_layout = vec![3, 2];
+        let actual = proof(&constraints, &trace);
 
         assert_eq!(
             actual.coin.digest,
@@ -876,29 +872,16 @@ mod tests {
         let witness = fibonacci::Witness { secret };
         let claim = fibonacci::Claim { index, value };
 
-        let seed = Vec::from(&claim);
-        let constraints = claim.constraints();
+        let mut constraints = claim.constraints();
+        constraints.blowup = 16; // TODO - The blowup in the fib constraints is hardcoded to 16,
+                                 // we should set this back to 32 to get wider coverage when
+                                 // that's fixed
+        constraints.pow_bits = 12;
+        constraints.num_queries = 20;
+        constraints.fri_layout = vec![3, 2];
         let trace = claim.trace(&witness);
-        let actual = proof(&seed, &constraints, &trace, &ProofParams {
-            blowup: 16, /* TODO - The blowup in the fib constraints is hardcoded to 16,
-                         * we should set this back to 32 to get wider coverage when
-                         * that's fixed */
-            pow_bits:   12,
-            queries:    20,
-            fri_layout: vec![3, 2],
-        });
-
-        assert!(
-            verify(&seed, actual.proof.as_slice(), &constraints, &ProofParams {
-                blowup: 16, /* TODO - The blowup in the fib constraints is hardcoded to 16,
-                             * we should set this back to 32 to get wider coverage when
-                             * that's fixed */
-                pow_bits:   12,
-                queries:    20,
-                fri_layout: vec![3, 2],
-            },)
-            .is_ok()
-        );
+        let actual = proof(&constraints, &trace);
+        assert!(verify(&constraints, actual.proof.as_slice()).is_ok());
     }
 
     #[test]
@@ -910,25 +893,15 @@ mod tests {
         let witness = fibonacci::Witness { secret };
         let claim = fibonacci::Claim { index, value };
 
-        let seed = Vec::from(&claim);
-        let constraints = claim.constraints();
+        let mut constraints = claim.constraints();
+        constraints.blowup = 16;
+        constraints.pow_bits = 12;
+        constraints.num_queries = 20;
+        constraints.fri_layout = vec![2, 1, 4, 2];
         let trace = claim.trace(&witness);
-        let actual = proof(&seed, &constraints, &trace, &ProofParams {
-            blowup:     16,
-            pow_bits:   12,
-            queries:    20,
-            fri_layout: vec![2, 1, 4, 2],
-        });
+        let actual = proof(&constraints, &trace);
 
-        assert!(
-            verify(&seed, actual.proof.as_slice(), &constraints, &ProofParams {
-                blowup:     16,
-                pow_bits:   12,
-                queries:    20,
-                fri_layout: vec![2, 1, 4, 2],
-            },)
-            .is_ok()
-        );
+        assert!(verify(&constraints, actual.proof.as_slice()).is_ok());
     }
 
     // TODO: What are we actually testing here? Should we add these as debug_assert
@@ -953,21 +926,19 @@ mod tests {
                 "00000000000000000000000000000000000000000000000000000000cafebabe"
             )),
         };
-        let constraints = claim.constraints();
+        let mut constraints = claim.constraints();
+        constraints.blowup = 16;
+        constraints.pow_bits = 12;
+        constraints.num_queries = 20;
+        constraints.fri_layout = vec![3, 2];
 
         let trace_len = constraints.trace_nrows();
         assert_eq!(trace_len, 1024);
-        let params = ProofParams {
-            blowup:     16,
-            pow_bits:   12,
-            queries:    20,
-            fri_layout: vec![3, 2],
-        };
 
         let omega =
             field_element!("0393a32b34832dbad650df250f673d7c5edd09f076fc314a3e5a42f0606082e1");
         let g = field_element!("0659d83946a03edd72406af6711825f5653d9e35dc125289a206c054ec89c4f1");
-        let eval_domain_size = trace_len * params.blowup;
+        let eval_domain_size = trace_len * constraints.blowup;
         let gen = FieldElement::GENERATOR;
 
         // Second check that the trace table function is working.
@@ -980,7 +951,7 @@ mod tests {
 
         let LDEn = PolyLDE(
             TPn.par_iter()
-                .map(|p| p.low_degree_extension(params.blowup))
+                .map(|p| p.low_degree_extension(constraints.blowup))
                 .collect::<Vec<_>>(),
         );
 
@@ -1029,7 +1000,12 @@ mod tests {
             hex!("b7d80385fa0c8879473cdf987ea7970bb807aec78bb91af39a1504d965ad8e92")
         );
 
-        let constraints = claim.constraints();
+        let mut constraints = claim.constraints();
+        constraints.blowup = 16;
+        constraints.pow_bits = 12;
+        constraints.num_queries = 20;
+        constraints.fri_layout = vec![3, 2];
+
         assert_eq!(constraints.len(), 4);
         let mut constraint_coefficients = Vec::with_capacity(2 * constraints.len());
         for _ in 0..constraints.len() {
@@ -1048,7 +1024,7 @@ mod tests {
         let CC = PolyLDE(
             constraint_polynomials
                 .par_iter()
-                .map(|p| p.low_degree_extension(params.blowup))
+                .map(|p| p.low_degree_extension(constraints.blowup))
                 .collect::<Vec<_>>(),
         );
         // Checks that our constraints are properly calculated on the domain
@@ -1081,8 +1057,12 @@ mod tests {
             field_element!("03c6b730c58b55f44bbf3cb7ea82b2e6a0a8b23558e908b5466dfe42e821ee96")
         );
 
-        let fri_trees =
-            perform_fri_layering(CO.low_degree_extension(params.blowup), &mut proof, &params);
+        let fri_trees = perform_fri_layering(
+            CO.low_degree_extension(constraints.blowup),
+            &mut proof,
+            &constraints.fri_layout,
+            constraints.blowup,
+        );
 
         // Checks that the first fri merkle tree root is right
         assert_eq!(
@@ -1101,7 +1081,7 @@ mod tests {
         );
 
         let pow_seed: proof_of_work::ChallengeSeed = proof.get_random();
-        let pow_challenge = pow_seed.with_difficulty(params.pow_bits);
+        let pow_challenge = pow_seed.with_difficulty(constraints.pow_bits);
         let pow_response = pow_challenge.solve();
         debug_assert!(pow_challenge.verify(pow_response));
         // Checks that the pow function is working [may also fail if the previous steps
@@ -1110,7 +1090,7 @@ mod tests {
         proof.write(pow_response);
 
         let query_indices = get_indices(
-            params.queries,
+            constraints.num_queries,
             64 - eval_domain_size.leading_zeros() - 1,
             &mut proof,
         );

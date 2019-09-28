@@ -44,9 +44,8 @@ pub mod constraints;
 pub mod fibonacci;
 mod polynomial;
 mod proof_of_work;
-pub mod proof_params;
-pub mod rational_expression;
-pub mod traits;
+mod rational_expression;
+mod traits;
 mod verifier;
 
 // In no std mode, substitute no_std_compat
@@ -74,7 +73,6 @@ pub mod trace_table;
 #[deprecated]
 pub use channel::{ProverChannel, VerifierChannel};
 pub use constraints::{Constraints, Error as ConstraintError};
-pub use proof_params::{decommitment_size_upper_bound, ProofParams};
 pub use rational_expression::RationalExpression;
 pub use traits::Verifiable;
 pub use verifier::verify;

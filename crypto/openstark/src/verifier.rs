@@ -1,7 +1,4 @@
-use crate::{
-    channel::*, constraints::Constraints, polynomial::DensePolynomial, proof_of_work,
-    proof_params::ProofParams,
-};
+use crate::{channel::*, constraints::Constraints, polynomial::DensePolynomial, proof_of_work};
 use hash::Hash;
 use merkle_tree::{Commitment, Error as MerkleError, Proof};
 use primefield::{fft, geometric_series::root_series, FieldElement};
@@ -110,19 +107,14 @@ use u256::U256;
 /// <!-- TODO: ellaborate FRI verification -->
 // TODO: Refactor into smaller function
 #[allow(clippy::too_many_lines)]
-pub fn verify(
-    channel_seed: &[u8],
-    proposed_proof: &[u8],
-    constraints: &Constraints,
-    params: &ProofParams,
-) -> Result<()> {
+pub fn verify(constraints: &Constraints, proof: &[u8]) -> Result<()> {
     let trace_length = constraints.trace_nrows();
     let trace_cols = constraints.trace_ncolumns();
-    let eval_domain_size = trace_length * params.blowup;
+    let eval_domain_size = trace_length * constraints.blowup;
     let eval_x = root_series(eval_domain_size).collect::<Vec<_>>();
 
-    let mut channel = VerifierChannel::new(proposed_proof.to_vec());
-    channel.initialize(channel_seed);
+    let mut channel = VerifierChannel::new(proof.to_vec());
+    channel.initialize(constraints.channel_seed());
 
     // Get the low degree root commitment, and constraint root commitment
     // TODO: Make it work as channel.read()
@@ -149,16 +141,16 @@ pub fn verify(
         oods_coefficients.push(channel.get_random());
     }
 
-    let mut fri_commitments: Vec<Commitment> = Vec::with_capacity(params.fri_layout.len() + 1);
-    let mut eval_points: Vec<FieldElement> = Vec::with_capacity(params.fri_layout.len() + 1);
-    let mut fri_size = eval_domain_size >> params.fri_layout[0];
+    let mut fri_commitments: Vec<Commitment> = Vec::with_capacity(constraints.fri_layout.len() + 1);
+    let mut eval_points: Vec<FieldElement> = Vec::with_capacity(constraints.fri_layout.len() + 1);
+    let mut fri_size = eval_domain_size >> constraints.fri_layout[0];
     // Get first fri root:
     fri_commitments.push(Commitment::from_size_hash(
         fri_size,
         &Replayable::<Hash>::replay(&mut channel),
     )?);
     // Get fri roots and eval points from the channel random
-    for &x in params.fri_layout.iter().skip(1) {
+    for &x in constraints.fri_layout.iter().skip(1) {
         fri_size >>= x;
         // TODO: When is x equal to zero?
         let eval_point = if x == 0 {
@@ -175,11 +167,11 @@ pub fn verify(
     // Gets the last layer and the polynomial coefficients
     eval_points.push(channel.get_random());
     let last_layer_coefficient: Vec<FieldElement> =
-        Replayable::<FieldElement>::replay_many(&mut channel, fri_size / params.blowup);
+        Replayable::<FieldElement>::replay_many(&mut channel, fri_size / constraints.blowup);
 
     // Gets the proof of work from the proof.
     let pow_seed: proof_of_work::ChallengeSeed = channel.get_random();
-    let pow_challenge = pow_seed.with_difficulty(params.pow_bits);
+    let pow_challenge = pow_seed.with_difficulty(constraints.pow_bits);
     let pow_response = Replayable::<proof_of_work::Response>::replay(&mut channel);
     if !pow_challenge.verify(pow_response) {
         return Err(Error::InvalidPoW);
@@ -187,7 +179,7 @@ pub fn verify(
 
     // Gets queries from channel
     let queries = get_indices(
-        params.queries,
+        constraints.num_queries,
         eval_domain_size.trailing_zeros(),
         &mut channel,
     );
@@ -226,7 +218,7 @@ pub fn verify(
         return Err(Error::InvalidConstraintCommitment);
     }
 
-    let coset_sizes = params
+    let coset_sizes = constraints
         .fri_layout
         .iter()
         .map(|k| 1_usize << k)
@@ -267,7 +259,7 @@ pub fn verify(
                             oods_values.as_slice(),
                             oods_coefficients.as_slice(),
                             eval_domain_size,
-                            params.blowup,
+                            constraints.blowup,
                         )?);
                     }
                 } else {
@@ -297,7 +289,7 @@ pub fn verify(
         let merkle_proof = Proof::from_hashes(commitment, &fri_indices, &merkle_hashes)?;
         fri_folds = layer_folds;
 
-        for _ in 0..params.fri_layout[k] {
+        for _ in 0..constraints.fri_layout[k] {
             step *= 2;
         }
         len /= coset_sizes[k];
@@ -308,7 +300,7 @@ pub fn verify(
         };
 
         previous_indices = fri_indices.clone();
-        if k + 1 < params.fri_layout.len() {
+        if k + 1 < constraints.fri_layout.len() {
             fri_indices = fri_indices
                 .iter()
                 .map(|ind| ind / coset_sizes[k + 1])
@@ -555,24 +547,10 @@ mod tests {
                 "00000000000000000000000000000000000000000000000000000000cafebabe"
             )),
         };
-        let seed = Vec::from(&public);
         let constraints = public.constraints();
         let trace = public.trace(&private);
-        let actual = proof(&seed, &constraints, &trace, &ProofParams {
-            blowup:     16,
-            pow_bits:   12,
-            queries:    20,
-            fri_layout: vec![3, 2],
-        });
+        let actual = proof(&constraints, &trace);
 
-        assert!(
-            verify(&seed, actual.proof.as_slice(), &constraints, &ProofParams {
-                blowup:     16,
-                pow_bits:   12,
-                queries:    20,
-                fri_layout: vec![3, 2],
-            },)
-            .is_ok()
-        );
+        assert!(verify(&constraints, actual.proof.as_slice()).is_ok());
     }
 }

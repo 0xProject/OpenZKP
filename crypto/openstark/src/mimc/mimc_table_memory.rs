@@ -62,7 +62,7 @@ impl Verifiable for Claim {
         };
         let k_coef = periodic(&ifft(&K_COEF.to_vec()));
 
-        Constraints::from_expressions((trace_length, 3), vec![
+        Constraints::from_expressions((trace_length, 3), self.into(), vec![
             // Says x_1 = x_0^2
             (Trace(0, 0) * Trace(0, 0) - Trace(1, 0)) * reevery_row(),
             // Says x_2 = x_1*x_0
@@ -107,7 +107,7 @@ fn mimc(start: &FieldElement) -> FieldElement {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{proof, proof_params::ProofParams, verify};
+    use crate::{proof, verify};
     use macros_decl::field_element;
 
     #[test]
@@ -116,23 +116,11 @@ mod tests {
             field_element!("00a74f2a70da4ea3723cabd2acc55d03f9ff6d0e7acef0fc63263b12c10dd837");
         let after = mimc(&before);
         let input = Claim { before, after };
-        let params = ProofParams {
-            blowup:     16,
-            pow_bits:   12,
-            queries:    20,
-            fri_layout: vec![3, 3, 2],
-        };
-        let seed = Vec::from(&input);
         let constraints = input.constraints();
         let trace = input.trace(());
-        let potential_proof = proof(&seed, &constraints, &trace, &params);
+        let potential_proof = proof(&constraints, &trace);
         assert_eq!(
-            verify(
-                &seed,
-                potential_proof.proof.as_slice(),
-                &constraints,
-                &params
-            ),
+            verify(&constraints, potential_proof.proof.as_slice()),
             Ok(())
         );
     }

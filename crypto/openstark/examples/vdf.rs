@@ -1,15 +1,10 @@
 #![warn(clippy::all)]
 use env_logger;
 use log::info;
-use openstark::{proof, verify, ProofParams};
+use macros_decl::field_element;
+use openstark::{proof, verify, Constraints, Provable, RationalExpression, TraceTable, Verifiable};
 use primefield::FieldElement;
 use std::time::Instant;
-
-use macros_decl::field_element;
-use openstark::{
-    constraints::Constraints, rational_expression::RationalExpression, Provable, TraceTable,
-    Verifiable,
-};
 use u256::U256;
 
 #[derive(Debug)]
@@ -45,7 +40,7 @@ impl Verifiable for Claim {
         let on_row = |index| (X - g.pow(index)).inv();
         let reevery_row = || (X - g.pow(trace_length - 1)) / (X.pow(trace_length) - 1.into());
 
-        Constraints::from_expressions((trace_length, 4), vec![
+        Constraints::from_expressions((trace_length, 4), self.into(), vec![
             // Square (Trace(0,0), Trace(1, 0)) and check that it equals (Trace(2,0), Trace(3,0))
             (Trace(0, 0) * Trace(0, 0) + Constant(R) * Trace(1, 0) * Trace(1, 0) - Trace(2, 0))
                 * reevery_row(),
@@ -101,23 +96,16 @@ fn main() {
         c0_end,
         c1_end,
     };
-    let params = ProofParams::suggested(20);
     let start = Instant::now();
-    let seed = Vec::from(&input);
     let constraints = input.constraints();
     let trace = input.trace(());
-    let potential_proof = proof(&seed, &constraints, &trace, &params);
+    let potential_proof = proof(&constraints, &trace);
     let duration = start.elapsed();
     println!("{:?}", potential_proof.coin.digest);
     println!("Time elapsed in proof function is: {:?}", duration);
     println!("The proof length is {}", potential_proof.proof.len());
 
-    let verified = verify(
-        &seed,
-        potential_proof.proof.as_slice(),
-        &constraints,
-        &params,
-    );
+    let verified = verify(&constraints, potential_proof.proof.as_slice());
     println!("Checking the proof resulted in: {:?}", verified);
 }
 
