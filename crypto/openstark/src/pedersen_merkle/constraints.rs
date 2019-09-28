@@ -134,8 +134,7 @@ mod tests {
     use super::*;
     use crate::{
         pedersen_merkle::inputs::{short_witness, SHORT_CLAIM},
-        proof_params::ProofParams,
-        stark_proof,
+        proof, ProofParams, Provable, Verifiable,
     };
 
     #[test]
@@ -145,7 +144,10 @@ mod tests {
         let claim = SHORT_CLAIM;
         let witness = short_witness();
 
-        let proof = stark_proof(&claim, &witness, &ProofParams {
+        let seed = Vec::from(&claim);
+        let constraints = claim.constraints();
+        let trace = claim.trace(&witness);
+        let proof = proof(&seed, &constraints, &trace, &ProofParams {
             blowup:     16,
             pow_bits:   0,
             queries:    13,

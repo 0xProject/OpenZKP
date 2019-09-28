@@ -1,10 +1,8 @@
 #[cfg(feature = "prover")]
-use crate::constraint_system::Provable;
+use crate::Provable;
 use crate::{
-    constraint_system::Verifiable,
-    constraints::Constraints,
     pedersen_merkle::{constraints::get_pedersen_merkle_constraints, trace_table::get_trace_table},
-    trace_table::TraceTable,
+    Constraints, TraceTable, Verifiable,
 };
 use primefield::FieldElement;
 use std::{prelude::v1::*, vec};
@@ -31,9 +29,9 @@ impl Verifiable for Claim {
 }
 
 #[cfg(feature = "prover")]
-impl Provable<Claim> for Witness {
-    fn trace(&self, claim: &Claim) -> TraceTable {
-        get_trace_table(claim, self)
+impl Provable<&Witness> for Claim {
+    fn trace(&self, witness: &Witness) -> TraceTable {
+        get_trace_table(self, witness)
     }
 }
 

@@ -2,7 +2,7 @@
 use env_logger;
 use log::info;
 use macros_decl::field_element;
-use openstark::{fibonacci, stark_proof, ProofParams};
+use openstark::{fibonacci, proof, ProofParams, Provable, Verifiable};
 use primefield::FieldElement;
 use std::time::Instant;
 use u256::U256;
@@ -27,7 +27,10 @@ fn main() {
     let start = Instant::now();
 
     info!("Constructing proof...");
-    let potential_proof = stark_proof(&claim, &witness, &ProofParams {
+    let seed = Vec::from(&claim);
+    let constraints = claim.constraints();
+    let trace = claim.trace(&witness);
+    let potential_proof = proof(&seed, &constraints, &trace, &ProofParams {
         blowup:     16,
         pow_bits:   12,
         queries:    20,

@@ -1,13 +1,10 @@
-use crate::{
-    constraint_system::Verifiable, constraints::Constraints,
-    rational_expression::RationalExpression,
-};
+use crate::{rational_expression::RationalExpression, Constraints, Verifiable};
 use primefield::FieldElement;
 use std::{convert::TryInto, prelude::v1::*};
 use u256::U256;
 
 #[cfg(feature = "prover")]
-use crate::constraint_system::Provable;
+use crate::Provable;
 #[cfg(feature = "prover")]
 use crate::TraceTable;
 
@@ -47,12 +44,12 @@ impl Verifiable for Claim {
 }
 
 #[cfg(feature = "prover")]
-impl Provable<Claim> for Witness {
-    fn trace(&self, claim: &Claim) -> TraceTable {
-        let trace_length = claim.index.next_power_of_two();
+impl Provable<&Witness> for Claim {
+    fn trace(&self, witness: &Witness) -> TraceTable {
+        let trace_length = self.index.next_power_of_two();
         let mut trace = TraceTable::new(trace_length, 2);
         trace[(0, 0)] = 1.into();
-        trace[(0, 1)] = self.secret.clone();
+        trace[(0, 1)] = witness.secret.clone();
         for i in 0..(trace_length - 1) {
             trace[(i + 1, 0)] = trace[(i, 1)].clone();
             trace[(i + 1, 1)] = &trace[(i, 0)] + &trace[(i, 1)];

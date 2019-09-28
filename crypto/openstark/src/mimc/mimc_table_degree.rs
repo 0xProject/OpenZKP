@@ -1,11 +1,6 @@
 #[cfg(feature = "prover")]
 use crate::TraceTable;
-use crate::{
-    constraint_system::{Provable, Verifiable},
-    constraints::Constraints,
-    polynomial::DensePolynomial,
-    rational_expression::RationalExpression,
-};
+use crate::{polynomial::DensePolynomial, Constraints, Provable, RationalExpression, Verifiable};
 use macros_decl::field_element;
 use primefield::{fft::ifft, FieldElement};
 use u256::U256;
@@ -78,17 +73,17 @@ impl Verifiable for Claim {
     }
 }
 
-impl Provable<Claim> for () {
+impl Provable<()> for Claim {
     #[cfg(feature = "prover")]
-    fn trace(&self, claim: &Claim) -> TraceTable {
+    fn trace(&self, _witness: ()) -> TraceTable {
         let mut trace = TraceTable::new(ROUNDS, 1);
 
-        let mut prev = claim.before.clone();
+        let mut prev = self.before.clone();
         for i in 0..ROUNDS {
             trace[(i, 0)] = prev.clone();
             prev = &prev.pow(ALPHA) + &K_COEF[i % 16];
         }
-        assert_eq!(trace[(ROUNDS - 1, 0)], claim.after);
+        assert_eq!(trace[(ROUNDS - 1, 0)], self.after);
         trace
     }
 }
@@ -105,7 +100,7 @@ fn mimc(start: &FieldElement) -> FieldElement {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{proof_params::ProofParams, stark_proof, verifier::check_proof};
+    use crate::{proof, proof_params::ProofParams, verify};
     use macros_decl::field_element;
 
     #[test]
@@ -120,9 +115,17 @@ mod tests {
             queries:    20,
             fri_layout: vec![3, 3, 2],
         };
-        let potential_proof = stark_proof(&input, &(), &params);
+        let seed = Vec::from(&input);
+        let constraints = input.constraints();
+        let trace = input.trace(());
+        let potential_proof = proof(&seed, &constraints, &trace, &params);
         assert_eq!(
-            check_proof(potential_proof.proof.as_slice(), &input, &params),
+            verify(
+                &seed,
+                potential_proof.proof.as_slice(),
+                &constraints,
+                &params
+            ),
             Ok(())
         );
     }

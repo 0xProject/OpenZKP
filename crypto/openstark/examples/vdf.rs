@@ -1,16 +1,14 @@
 #![warn(clippy::all)]
 use env_logger;
 use log::info;
-use openstark::{check_proof, stark_proof, ProofParams};
+use openstark::{proof, verify, ProofParams};
 use primefield::FieldElement;
 use std::time::Instant;
 
 use macros_decl::field_element;
 use openstark::{
-    constraint_system::{Provable, Verifiable},
-    constraints::Constraints,
-    rational_expression::RationalExpression,
-    TraceTable,
+    constraints::Constraints, rational_expression::RationalExpression, Provable, TraceTable,
+    Verifiable,
 };
 use u256::U256;
 
@@ -66,13 +64,13 @@ impl Verifiable for Claim {
     }
 }
 
-impl Provable<Claim> for () {
+impl Provable<()> for Claim {
     #[cfg(feature = "prover")]
-    fn trace(&self, claim: &Claim) -> TraceTable {
+    fn trace(&self, _witness: ()) -> TraceTable {
         let mut trace = TraceTable::new(1_048_576, 4);
 
-        let mut prev_c0 = claim.c0_start.clone();
-        let mut prev_c1 = claim.c1_start.clone();
+        let mut prev_c0 = self.c0_start.clone();
+        let mut prev_c1 = self.c1_start.clone();
         for i in 0..1_048_576 {
             trace[(i, 0)] = prev_c0.clone();
             trace[(i, 1)] = prev_c1.clone();
@@ -81,8 +79,8 @@ impl Provable<Claim> for () {
             prev_c0 = &trace[(i, 0)] * &trace[(i, 2)] + &R * &trace[(i, 1)] * &trace[(i, 3)];
             prev_c1 = &trace[(i, 0)] * &trace[(i, 2)] + &trace[(i, 1)] * &trace[(i, 3)];
         }
-        assert_eq!(trace[(1_048_576 - 1, 0)], claim.c0_end);
-        assert_eq!(trace[(1_048_576 - 1, 1)], claim.c1_end);
+        assert_eq!(trace[(1_048_576 - 1, 0)], self.c0_end);
+        assert_eq!(trace[(1_048_576 - 1, 1)], self.c1_end);
         trace
     }
 }
@@ -105,13 +103,21 @@ fn main() {
     };
     let params = ProofParams::suggested(20);
     let start = Instant::now();
-    let potential_proof = stark_proof(&input, &(), &params);
+    let seed = Vec::from(&input);
+    let constraints = input.constraints();
+    let trace = input.trace(());
+    let potential_proof = proof(&seed, &constraints, &trace, &params);
     let duration = start.elapsed();
     println!("{:?}", potential_proof.coin.digest);
     println!("Time elapsed in proof function is: {:?}", duration);
     println!("The proof length is {}", potential_proof.proof.len());
 
-    let verified = check_proof(potential_proof.proof.as_slice(), &input, &params);
+    let verified = verify(
+        &seed,
+        potential_proof.proof.as_slice(),
+        &constraints,
+        &params,
+    );
     println!("Checking the proof resulted in: {:?}", verified);
 }
 

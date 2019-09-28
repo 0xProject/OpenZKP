@@ -1,7 +1,6 @@
 use crate::{
     algebraic_dag::AlgebraicGraph,
     channel::{ProverChannel, RandomGenerator, Writable},
-    constraint_system::{Provable, Verifiable},
     constraints::Constraints,
     polynomial::DensePolynomial,
     proof_of_work,
@@ -101,21 +100,6 @@ impl VectorCommitment for FriLeaves {
             hasher.hash()
         }
     }
-}
-
-// False positive: `for<'a>` annotation is required.
-#[allow(single_use_lifetimes)]
-pub fn stark_proof<Claim: Verifiable, Witness: Provable<Claim>>(
-    claim: &Claim,
-    witness: &Witness,
-    params: &ProofParams,
-) -> ProverChannel
-where
-    for<'a> &'a Claim: Into<Vec<u8>>,
-{
-    let trace = witness.trace(claim);
-    let constraints = claim.constraints();
-    proof(&claim.into(), &constraints, &trace, params)
 }
 
 // False positives on the Latex math.
@@ -808,7 +792,7 @@ fn decommit_fri_layers_and_trees(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{fibonacci, verifier::check_proof};
+    use crate::{fibonacci, verify, Provable, Verifiable};
     use macros_decl::{field_element, hex, u256h};
     use primefield::{fft::permute_index, geometric_series::geometric_series};
     use u256::U256;
@@ -828,7 +812,10 @@ mod tests {
                 "04d5f1f669b34fb7252d5a9d0d9786b2638c27eaa04e820b38b088057960cca1"
             ),
         };
-        let actual = stark_proof(&claim, &witness, &ProofParams {
+        let seed = Vec::from(&claim);
+        let constraints = claim.constraints();
+        let trace = claim.trace(&witness);
+        let actual = proof(&seed, &constraints, &trace, &ProofParams {
             blowup:     16,
             pow_bits:   0,
             queries:    20,
@@ -864,7 +851,10 @@ mod tests {
         let witness = fibonacci::Witness { secret };
         let claim = fibonacci::Claim { index, value };
 
-        let actual = stark_proof(&claim, &witness, &ProofParams {
+        let seed = Vec::from(&claim);
+        let constraints = claim.constraints();
+        let trace = claim.trace(&witness);
+        let actual = proof(&seed, &constraints, &trace, &ProofParams {
             blowup:     16,
             pow_bits:   12,
             queries:    20,
@@ -886,7 +876,10 @@ mod tests {
         let witness = fibonacci::Witness { secret };
         let claim = fibonacci::Claim { index, value };
 
-        let actual = stark_proof(&claim, &witness, &ProofParams {
+        let seed = Vec::from(&claim);
+        let constraints = claim.constraints();
+        let trace = claim.trace(&witness);
+        let actual = proof(&seed, &constraints, &trace, &ProofParams {
             blowup: 16, /* TODO - The blowup in the fib constraints is hardcoded to 16,
                          * we should set this back to 32 to get wider coverage when
                          * that's fixed */
@@ -895,15 +888,17 @@ mod tests {
             fri_layout: vec![3, 2],
         });
 
-        assert!(check_proof(actual.proof.as_slice(), &claim, &ProofParams {
-            blowup: 16, /* TODO - The blowup in the fib constraints is hardcoded to 16,
-                         * we should set this back to 32 to get wider coverage when
-                         * that's fixed */
-            pow_bits:   12,
-            queries:    20,
-            fri_layout: vec![3, 2],
-        },)
-        .is_ok());
+        assert!(
+            verify(&seed, actual.proof.as_slice(), &constraints, &ProofParams {
+                blowup: 16, /* TODO - The blowup in the fib constraints is hardcoded to 16,
+                             * we should set this back to 32 to get wider coverage when
+                             * that's fixed */
+                pow_bits:   12,
+                queries:    20,
+                fri_layout: vec![3, 2],
+            },)
+            .is_ok()
+        );
     }
 
     #[test]
@@ -915,20 +910,25 @@ mod tests {
         let witness = fibonacci::Witness { secret };
         let claim = fibonacci::Claim { index, value };
 
-        let actual = stark_proof(&claim, &witness, &ProofParams {
+        let seed = Vec::from(&claim);
+        let constraints = claim.constraints();
+        let trace = claim.trace(&witness);
+        let actual = proof(&seed, &constraints, &trace, &ProofParams {
             blowup:     16,
             pow_bits:   12,
             queries:    20,
             fri_layout: vec![2, 1, 4, 2],
         });
 
-        assert!(check_proof(actual.proof.as_slice(), &claim, &ProofParams {
-            blowup:     16,
-            pow_bits:   12,
-            queries:    20,
-            fri_layout: vec![2, 1, 4, 2],
-        },)
-        .is_ok());
+        assert!(
+            verify(&seed, actual.proof.as_slice(), &constraints, &ProofParams {
+                blowup:     16,
+                pow_bits:   12,
+                queries:    20,
+                fri_layout: vec![2, 1, 4, 2],
+            },)
+            .is_ok()
+        );
     }
 
     // TODO: What are we actually testing here? Should we add these as debug_assert
@@ -971,7 +971,7 @@ mod tests {
         let gen = FieldElement::GENERATOR;
 
         // Second check that the trace table function is working.
-        let trace = witness.trace(&claim);
+        let trace = claim.trace(&witness);
         assert_eq!(trace[(1000, 0)], claim.value);
 
         let TPn = trace.interpolate();
