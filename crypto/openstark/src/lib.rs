@@ -37,6 +37,8 @@
 )]
 #![cfg_attr(feature = "std", warn(missing_debug_implementations,))]
 
+#![feature(external_doc)]
+
 mod channel;
 pub mod constraint_system;
 pub mod constraints;

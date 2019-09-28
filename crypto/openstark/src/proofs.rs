@@ -104,6 +104,7 @@ impl VectorCommitment for FriLeaves {
     }
 }
 
+#[doc(include = "proof.md")]
 // False positive: `for<'a>` annotation is required.
 #[allow(single_use_lifetimes)]
 // TODO: Simplify
