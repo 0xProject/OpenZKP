@@ -134,7 +134,7 @@ mod tests {
     use super::*;
     use crate::{
         pedersen_merkle::inputs::{short_witness, SHORT_CLAIM},
-        proof, ProofParams, Provable, Verifiable,
+        proof, Provable, Verifiable,
     };
 
     #[test]
@@ -144,14 +144,14 @@ mod tests {
         let claim = SHORT_CLAIM;
         let witness = short_witness();
 
-        let constraints = claim.constraints();
+        let mut constraints = claim.constraints();
+        constraints.blowup = 16;
+        constraints.pow_bits = 0;
+        constraints.num_queries = 13;
+        constraints.fri_layout = vec![3, 2];
+
         let trace = claim.trace(&witness);
-        let proof = proof(&constraints, &trace, &ProofParams {
-            blowup:     16,
-            pow_bits:   0,
-            queries:    13,
-            fri_layout: vec![3, 2],
-        });
+        let proof = proof(&constraints, &trace);
 
         assert_eq!(
             hex::encode(proof.proof[0..32].to_vec()),

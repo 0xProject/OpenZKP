@@ -2,7 +2,7 @@
 use env_logger;
 use log::info;
 use macros_decl::field_element;
-use openstark::{fibonacci, proof, ProofParams, Provable, Verifiable};
+use openstark::{fibonacci, proof, Provable, Verifiable};
 use primefield::FieldElement;
 use std::time::Instant;
 use u256::U256;
@@ -29,12 +29,7 @@ fn main() {
     info!("Constructing proof...");
     let constraints = claim.constraints();
     let trace = claim.trace(&witness);
-    let potential_proof = proof(&constraints, &trace, &ProofParams {
-        blowup:     16,
-        pow_bits:   12,
-        queries:    20,
-        fri_layout: vec![3, 2],
-    });
+    let potential_proof = proof(&constraints, &trace);
 
     // Measure time
     let duration = start.elapsed();

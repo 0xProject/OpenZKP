@@ -6,7 +6,7 @@ use openstark::{
         constraints::get_pedersen_merkle_constraints,
         inputs::{Claim, Witness},
     },
-    proof, ProofParams, Provable,
+    proof, Provable,
 };
 use primefield::FieldElement;
 use std::time::Instant;
@@ -30,19 +30,18 @@ fn main() {
     let witness = starkware_witness();
 
     info!("Constructing constraint system...");
-    let constraints = &get_pedersen_merkle_constraints(&claim);
+    let mut constraints = get_pedersen_merkle_constraints(&claim);
+    constraints.blowup = 16;
+    constraints.pow_bits = 28;
+    constraints.num_queries = 13;
+    constraints.fri_layout = vec![3, 3, 3, 3, 2];
     info!("Constructed {:?} constraints", constraints);
 
     info!("Constructing trace...");
     let trace = claim.trace(&witness);
 
     info!("Constructing proof...");
-    let proof = proof(&constraints, &trace, &ProofParams {
-        blowup:     16,
-        pow_bits:   28,
-        queries:    13,
-        fri_layout: vec![3, 3, 3, 3, 2],
-    });
+    let proof = proof(&constraints, &trace);
 
     info!("Spot checking proof...");
     assert_eq!(

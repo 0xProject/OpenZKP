@@ -1,15 +1,10 @@
 #![warn(clippy::all)]
 use env_logger;
 use log::info;
-use openstark::{proof, verify, ProofParams};
+use macros_decl::field_element;
+use openstark::{proof, verify, Constraints, Provable, RationalExpression, TraceTable, Verifiable};
 use primefield::FieldElement;
 use std::time::Instant;
-
-use macros_decl::field_element;
-use openstark::{
-    constraints::Constraints, rational_expression::RationalExpression, Provable, TraceTable,
-    Verifiable,
-};
 use u256::U256;
 
 #[derive(Debug)]
@@ -101,17 +96,16 @@ fn main() {
         c0_end,
         c1_end,
     };
-    let params = ProofParams::suggested(20);
     let start = Instant::now();
     let constraints = input.constraints();
     let trace = input.trace(());
-    let potential_proof = proof(&constraints, &trace, &params);
+    let potential_proof = proof(&constraints, &trace);
     let duration = start.elapsed();
     println!("{:?}", potential_proof.coin.digest);
     println!("Time elapsed in proof function is: {:?}", duration);
     println!("The proof length is {}", potential_proof.proof.len());
 
-    let verified = verify(potential_proof.proof.as_slice(), &constraints, &params);
+    let verified = verify(potential_proof.proof.as_slice(), &constraints);
     println!("Checking the proof resulted in: {:?}", verified);
 }
 

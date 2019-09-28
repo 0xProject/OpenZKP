@@ -100,7 +100,7 @@ fn mimc(start: &FieldElement) -> FieldElement {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{proof, proof_params::ProofParams, verify};
+    use crate::{proof, verify};
     use macros_decl::field_element;
 
     #[test]
@@ -109,17 +109,11 @@ mod tests {
             field_element!("00a74f2a70da4ea3723cabd2acc55d03f9ff6d0e7acef0fc63263b12c10dd837");
         let after = mimc(&before);
         let input = Claim { before, after };
-        let params = ProofParams {
-            blowup:     16,
-            pow_bits:   12,
-            queries:    20,
-            fri_layout: vec![3, 3, 2],
-        };
         let constraints = input.constraints();
         let trace = input.trace(());
-        let potential_proof = proof(&constraints, &trace, &params);
+        let potential_proof = proof(&constraints, &trace);
         assert_eq!(
-            verify(potential_proof.proof.as_slice(), &constraints, &params),
+            verify(potential_proof.proof.as_slice(), &constraints),
             Ok(())
         );
     }
