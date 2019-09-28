@@ -45,6 +45,7 @@ mod proof_of_work;
 mod rational_expression;
 mod traits;
 mod verifier;
+mod proof;
 
 // Optional prover functionality. Note that prover requires std.
 // TODO: Make it work without std.
@@ -65,6 +66,7 @@ extern crate no_std_compat as std;
 // Exports for verifier
 #[deprecated]
 pub use channel::{ProverChannel, VerifierChannel};
+pub use proof::Proof;
 pub use constraints::{Constraints, Error as ConstraintError};
 pub use polynomial::DensePolynomial;
 pub use rational_expression::RationalExpression;
@@ -73,7 +75,7 @@ pub use verifier::{verify, Error as VerifierError};
 
 // Exports for prover
 #[cfg(feature = "prover")]
-pub use prover::prove;
+pub use prover::{prove, Error as ProverError};
 #[cfg(feature = "prover")]
 pub use trace_table::TraceTable;
 #[cfg(feature = "prover")]

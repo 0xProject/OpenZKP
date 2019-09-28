@@ -92,10 +92,10 @@ fn main() {
     };
 
     let start = Instant::now();
-    let proof = claim.prove(());
+    let proof = claim.prove(()).expect("Proof failed.");
     let duration = start.elapsed();
     println!("Time elapsed in proof function is: {:?}", duration);
-    println!("The proof length is {}", proof.len());
+    println!("The proof length is {}", proof.as_bytes().len());
 
     let verified = claim.verify(&proof);
     println!("Checking the proof resulted in: {:?}", verified);

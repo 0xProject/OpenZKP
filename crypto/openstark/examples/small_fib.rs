@@ -83,6 +83,5 @@ fn main() {
 
     // Measure time
     let duration = start.elapsed();
-    info!("{:?}", potential_proof.coin.digest);
     info!("Time elapsed in proof function is: {:?}", duration);
 }

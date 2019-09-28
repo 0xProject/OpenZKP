@@ -78,16 +78,15 @@ fn main() {
     let start = Instant::now();
     let constraints = claim.constraints();
     let trace = claim.trace(&witness);
-    let proof = prove(&constraints, &trace);
+    let proof = prove(&constraints, &trace).expect("Proof failed");
     let duration = start.elapsed();
-    println!("{:?}", proof.coin.digest);
     println!("Time elapsed in proof function is: {:?}", duration);
-    println!("The proof length is {}", proof.proof.len());
+    println!("The proof length is {}", proof.as_bytes().len());
     println!(
         "The estimated size bound is: {}",
         constraints.max_proof_size()
     );
 
-    let verified = verify(&constraints, proof.proof.as_slice());
+    let verified = verify(&constraints, &proof).expect("Verification failed");
     println!("Checking the proof resulted in: {:?}", verified);
 }
