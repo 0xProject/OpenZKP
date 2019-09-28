@@ -204,7 +204,7 @@ impl Constraints {
 #[cfg(test)]
 mod tests {
     use crate::{
-        proof,
+        prove,
         traits::tests::{Claim, Witness},
         Provable, Verifiable,
     };
@@ -230,7 +230,7 @@ mod tests {
         constraints.num_queries = 20;
         constraints.fri_layout = vec![2, 1, 4, 2];
 
-        let actual = proof(&constraints, &public.trace(&private));
+        let actual = prove(&constraints, &public.trace(&private));
         assert!(actual.proof.len() <= constraints.max_proof_size());
     }
 }

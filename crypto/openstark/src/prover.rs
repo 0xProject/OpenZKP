@@ -312,7 +312,7 @@ impl VectorCommitment for FriLeaves {
 #[allow(clippy::cognitive_complexity)]
 // TODO: Split up
 #[allow(clippy::too_many_lines)]
-pub fn proof(constraints: &Constraints, trace: &TraceTable) -> ProverChannel {
+pub fn prove(constraints: &Constraints, trace: &TraceTable) -> ProverChannel {
     // TODO: Verify input
     //  * Constraint trace length matches trace table length
     //  * Fri layout is less than trace length * blowup
@@ -821,7 +821,7 @@ mod tests {
         constraints.fri_layout = vec![3, 2];
 
         let trace = claim.trace(&witness);
-        let actual = proof(&constraints, &trace);
+        let actual = prove(&constraints, &trace);
 
         // Commitment hashes from
         // solidity/test/fibonacci/proof/fibonacci_proof_annotations.txt
@@ -861,7 +861,7 @@ mod tests {
         constraints.pow_bits = 12;
         constraints.num_queries = 20;
         constraints.fri_layout = vec![3, 2];
-        let actual = proof(&constraints, &trace);
+        let actual = prove(&constraints, &trace);
 
         assert_eq!(
             actual.coin.digest,
@@ -891,7 +891,7 @@ mod tests {
         constraints.num_queries = 20;
         constraints.fri_layout = vec![3, 2];
         let trace = claim.trace(&witness);
-        let actual = proof(&constraints, &trace);
+        let actual = prove(&constraints, &trace);
         assert!(verify(&constraints, actual.proof.as_slice()).is_ok());
     }
 
@@ -913,7 +913,7 @@ mod tests {
         constraints.num_queries = 20;
         constraints.fri_layout = vec![2, 1, 4, 2];
         let trace = claim.trace(&witness);
-        let actual = proof(&constraints, &trace);
+        let actual = prove(&constraints, &trace);
 
         assert!(verify(&constraints, actual.proof.as_slice()).is_ok());
     }

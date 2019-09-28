@@ -532,7 +532,7 @@ impl error::Error for Error {
 mod tests {
     use super::*;
     use crate::{
-        proof,
+        prove,
         traits::tests::{Claim, Witness},
         Provable, Verifiable,
     };
@@ -553,7 +553,7 @@ mod tests {
         };
         let constraints = public.constraints();
         let trace = public.trace(&private);
-        let actual = proof(&constraints, &trace);
+        let actual = prove(&constraints, &trace);
 
         assert!(verify(&constraints, actual.proof.as_slice()).is_ok());
     }

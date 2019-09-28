@@ -47,6 +47,10 @@ impl DensePolynomial {
         self.0.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
     pub fn coefficients(&self) -> &[FieldElement] {
         &self.0
     }

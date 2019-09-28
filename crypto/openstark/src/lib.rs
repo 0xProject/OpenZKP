@@ -56,7 +56,6 @@ mod prover;
 mod trace_table;
 
 // TODO: Move example constraint systems out of the lib
-mod mimc;
 #[cfg(feature = "prover")]
 pub mod pedersen_merkle;
 
@@ -71,13 +70,14 @@ extern crate no_std_compat as std;
 #[deprecated]
 pub use channel::{ProverChannel, VerifierChannel};
 pub use constraints::{Constraints, Error as ConstraintError};
+pub use polynomial::DensePolynomial;
 pub use rational_expression::RationalExpression;
 pub use traits::Verifiable;
 pub use verifier::{verify, Error as VerifierError};
 
 // Exports for prover
 #[cfg(feature = "prover")]
-pub use prover::proof;
+pub use prover::prove;
 #[cfg(feature = "prover")]
 pub use trace_table::TraceTable;
 #[cfg(feature = "prover")]
