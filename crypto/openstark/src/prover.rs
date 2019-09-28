@@ -312,7 +312,7 @@ impl VectorCommitment for FriLeaves {
 #[allow(clippy::cognitive_complexity)]
 // TODO: Split up
 #[allow(clippy::too_many_lines)]
-pub fn proof(constraints: &Constraints, trace: &TraceTable) -> ProverChannel {
+pub fn prove(constraints: &Constraints, trace: &TraceTable) -> ProverChannel {
     // TODO: Verify input
     //  * Constraint trace length matches trace table length
     //  * Fri layout is less than trace length * blowup
@@ -791,7 +791,10 @@ fn decommit_fri_layers_and_trees(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{fibonacci, verify, Provable, Verifiable};
+    use crate::{
+        traits::tests::{Claim, Witness},
+        verify, Provable, Verifiable,
+    };
     use macros_decl::{field_element, hex, u256h};
     use primefield::{fft::permute_index, geometric_series::geometric_series};
     use u256::U256;
@@ -801,11 +804,11 @@ mod tests {
         // All the constants for this tests are copied from files in
         // https://github.com/0xProject/evm-verifier/commit/9bf369139b0edc23ab7ab7e8db8164c5a05a83df.
         // Copied from solidity/contracts/fibonacci/fibonacci_private_input1.json
-        let witness = fibonacci::Witness {
+        let witness = Witness {
             secret: field_element!("83d36de9"),
         };
         // Copied from solidity/contracts/fibonacci/fibonacci_public_input1.json
-        let claim = fibonacci::Claim {
+        let claim = Claim {
             index: 1000,
             value: field_element!(
                 "04d5f1f669b34fb7252d5a9d0d9786b2638c27eaa04e820b38b088057960cca1"
@@ -818,7 +821,7 @@ mod tests {
         constraints.fri_layout = vec![3, 2];
 
         let trace = claim.trace(&witness);
-        let actual = proof(&constraints, &trace);
+        let actual = prove(&constraints, &trace);
 
         // Commitment hashes from
         // solidity/test/fibonacci/proof/fibonacci_proof_annotations.txt
@@ -842,12 +845,15 @@ mod tests {
 
     #[test]
     fn fib_test_1024_python_witness() {
-        let index = 1000;
-        let secret = field_element!("cafebabe");
-        let value = fibonacci::get_value(index, &secret);
-
-        let witness = fibonacci::Witness { secret };
-        let claim = fibonacci::Claim { index, value };
+        let witness = Witness {
+            secret: field_element!("cafebabe"),
+        };
+        let claim = Claim {
+            index: 1000,
+            value: field_element!(
+                "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
+            ),
+        };
 
         let mut constraints = claim.constraints();
         let trace = claim.trace(&witness);
@@ -855,7 +861,7 @@ mod tests {
         constraints.pow_bits = 12;
         constraints.num_queries = 20;
         constraints.fri_layout = vec![3, 2];
-        let actual = proof(&constraints, &trace);
+        let actual = prove(&constraints, &trace);
 
         assert_eq!(
             actual.coin.digest,
@@ -865,12 +871,17 @@ mod tests {
 
     #[test]
     fn fib_test_1024_changed_witness() {
-        let index = 1000;
-        let secret = field_element!("0f00dbabe0cafebabe");
-        let value = fibonacci::get_value(index, &secret);
-
-        let witness = fibonacci::Witness { secret };
-        let claim = fibonacci::Claim { index, value };
+        let witness = Witness {
+            secret: field_element!(
+                "00b4e8fc548bbc1ad9abd5c460840c0865121923590de2f18e9dbeda48a4bb93"
+            ),
+        };
+        let claim = Claim {
+            index: 1000,
+            value: field_element!(
+                "016f6acc9f52c6dffb063135e7af6756613f4b838734b40cf178d2160099713d"
+            ),
+        };
 
         let mut constraints = claim.constraints();
         constraints.blowup = 16; // TODO - The blowup in the fib constraints is hardcoded to 16,
@@ -880,18 +891,21 @@ mod tests {
         constraints.num_queries = 20;
         constraints.fri_layout = vec![3, 2];
         let trace = claim.trace(&witness);
-        let actual = proof(&constraints, &trace);
+        let actual = prove(&constraints, &trace);
         assert!(verify(&constraints, actual.proof.as_slice()).is_ok());
     }
 
     #[test]
     fn fib_test_4096() {
-        let index = 4000;
-        let secret = field_element!("0f00dbabe0cafebabe");
-        let value = fibonacci::get_value(index, &secret);
-
-        let witness = fibonacci::Witness { secret };
-        let claim = fibonacci::Claim { index, value };
+        let witness = Witness {
+            secret: field_element!("0f00dbabe0cafebabe"),
+        };
+        let claim = Claim {
+            index: 4000,
+            value: field_element!(
+                "0576d0c2cc9a060990e96752034a391f0b9036aaa32a3aab28796f7845450e18"
+            ),
+        };
 
         let mut constraints = claim.constraints();
         constraints.blowup = 16;
@@ -899,7 +913,7 @@ mod tests {
         constraints.num_queries = 20;
         constraints.fri_layout = vec![2, 1, 4, 2];
         let trace = claim.trace(&witness);
-        let actual = proof(&constraints, &trace);
+        let actual = prove(&constraints, &trace);
 
         assert!(verify(&constraints, actual.proof.as_slice()).is_ok());
     }
@@ -915,13 +929,13 @@ mod tests {
     fn fib_proof_test() {
         crate::tests::init();
 
-        let claim = fibonacci::Claim {
+        let claim = Claim {
             index: 1000,
             value: FieldElement::from(u256h!(
                 "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
             )),
         };
-        let witness = fibonacci::Witness {
+        let witness = Witness {
             secret: FieldElement::from(u256h!(
                 "00000000000000000000000000000000000000000000000000000000cafebabe"
             )),

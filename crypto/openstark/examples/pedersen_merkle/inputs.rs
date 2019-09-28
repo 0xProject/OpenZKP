@@ -1,9 +1,5 @@
-#[cfg(feature = "prover")]
-use crate::Provable;
-use crate::{
-    pedersen_merkle::{constraints::get_pedersen_merkle_constraints, trace_table::get_trace_table},
-    Constraints, TraceTable, Verifiable,
-};
+use super::{constraints::get_pedersen_merkle_constraints, trace_table::get_trace_table};
+use openstark::{Constraints, Provable, TraceTable, Verifiable};
 use primefield::FieldElement;
 use std::{prelude::v1::*, vec};
 
@@ -80,28 +76,10 @@ pub fn short_witness() -> Witness {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::channel::{ProverChannel, RandomGenerator, Writable};
-    use hash::Hash;
     use macros_decl::hex;
-    use u256::U256;
 
     #[test]
-    fn claim_writable_matches_starkware() {
-        // Test that our implementation of Writable for Claim matches StarkWare's
-        // by checking that the first random element we generate for the proof (the
-        // first constraint coefficient) matches the the one in
-        // pedersen_merkle_proof_annotations.txt.
-        let mut proof = ProverChannel::new();
-        proof.initialize(&Vec::from(&SHORT_CLAIM));
-
-        // This is /pedersen merkle/STARK/Original/Commit on Trace
-        proof.write(&Hash::new(hex!(
-            "b00a4c7f03959e01df2504fb73d2b238a8ab08b2000000000000000000000000"
-        )));
-
-        let first_random: FieldElement = proof.get_random();
-        let first_constraint_coefficient =
-            field_element!("0458928c6aa01a8aa95f4ece0cd405277e9966231ee2defa4d817eeb8391cb36");
-        assert_eq!(first_random, first_constraint_coefficient);
+    fn claim_writable_correct() {
+        assert_eq!(Vec::from(&SHORT_CLAIM), hex!("0000000000000004062b7c2734c31d5b73119a5bfdb460c0411af12fafd42af8ca041fea5ec464d00000000000000000000000000000000000000000000000000000000000000000").to_vec());
     }
 }

@@ -7,6 +7,66 @@ use std::error;
 use std::{collections::BTreeMap, convert::TryInto, fmt, prelude::v1::*};
 use u256::U256;
 
+type Result<T> = std::result::Result<T, Error>;
+
+// TODO - We could parametrize root unavailable with the size asked for and fri
+// error with which layer failed.
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub enum Error {
+    RootUnavailable,
+    InvalidPoW,
+    InvalidLDECommitment,
+    InvalidConstraintCommitment,
+    InvalidFriCommitment,
+    HashMapFailure,
+    ProofTooLong,
+    OodsCalculationFailure,
+    OodsMismatch,
+    FriCalculationFailure,
+    Merkle(MerkleError),
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use Error::*;
+        match *self {
+            RootUnavailable => write!(f, "The prime field doesn't have a root of this order"),
+            InvalidPoW => write!(f, "The suggested proof of work failed to verify"),
+            InvalidLDECommitment => write!(f, "The LDE merkle proof is incorrect"),
+            InvalidConstraintCommitment => write!(f, "The constraint merkle proof is incorrect"),
+            InvalidFriCommitment => write!(f, "A FRI layer commitment is incorrect"),
+            HashMapFailure => {
+                write!(
+                    f,
+                    "Verifier attempted to look up an empty entry in the hash map"
+                )
+            }
+            ProofTooLong => write!(f, "The proof length doesn't match the specification"),
+            OodsCalculationFailure => {
+                write!(
+                    f,
+                    "The calculated odds value doesn't match the committed one"
+                )
+            }
+            FriCalculationFailure => {
+                write!(
+                    f,
+                    "The final FRI calculation suggests the committed polynomial isn't low degree"
+                )
+            }
+            OodsMismatch => write!(f, "Calculated oods value doesn't match the committed one"),
+            // This is a wrapper, so defer to the underlying types' implementation of `fmt`.
+            Merkle(ref e) => std::fmt::Display::fmt(e, f),
+        }
+    }
+}
+
+impl From<MerkleError> for Error {
+    fn from(err: MerkleError) -> Self {
+        Self::Merkle(err)
+    }
+}
+
 // False positives on the Latex math.
 #[allow(clippy::doc_markdown)]
 /// # Stark verify
@@ -458,66 +518,6 @@ fn out_of_domain_element(
     Ok(r)
 }
 
-type Result<T> = std::result::Result<T, Error>;
-
-// TODO - We could parametrize root unavailable with the size asked for and fri
-// error with which layer failed.
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub enum Error {
-    RootUnavailable,
-    InvalidPoW,
-    InvalidLDECommitment,
-    InvalidConstraintCommitment,
-    InvalidFriCommitment,
-    HashMapFailure,
-    ProofTooLong,
-    OodsCalculationFailure,
-    OodsMismatch,
-    FriCalculationFailure,
-    Merkle(MerkleError),
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use Error::*;
-        match *self {
-            RootUnavailable => write!(f, "The prime field doesn't have a root of this order"),
-            InvalidPoW => write!(f, "The suggested proof of work failed to verify"),
-            InvalidLDECommitment => write!(f, "The LDE merkle proof is incorrect"),
-            InvalidConstraintCommitment => write!(f, "The constraint merkle proof is incorrect"),
-            InvalidFriCommitment => write!(f, "A FRI layer commitment is incorrect"),
-            HashMapFailure => {
-                write!(
-                    f,
-                    "Verifier attempted to look up an empty entry in the hash map"
-                )
-            }
-            ProofTooLong => write!(f, "The proof length doesn't match the specification"),
-            OodsCalculationFailure => {
-                write!(
-                    f,
-                    "The calculated odds value doesn't match the committed one"
-                )
-            }
-            FriCalculationFailure => {
-                write!(
-                    f,
-                    "The final FRI calculation suggests the committed polynomial isn't low degree"
-                )
-            }
-            OodsMismatch => write!(f, "Calculated oods value doesn't match the committed one"),
-            // This is a wrapper, so defer to the underlying types' implementation of `fmt`.
-            Merkle(ref e) => std::fmt::Display::fmt(e, f),
-        }
-    }
-}
-
-impl From<MerkleError> for Error {
-    fn from(err: MerkleError) -> Self {
-        Self::Merkle(err)
-    }
-}
-
 #[cfg(feature = "std")]
 impl error::Error for Error {
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
@@ -531,25 +531,29 @@ impl error::Error for Error {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{fibonacci, proof, Provable, Verifiable};
+    use crate::{
+        prove,
+        traits::tests::{Claim, Witness},
+        Provable, Verifiable,
+    };
     use macros_decl::u256h;
 
     #[test]
     fn verifier_fib_test() {
-        let public = fibonacci::Claim {
+        let public = Claim {
             index: 1000,
             value: FieldElement::from(u256h!(
                 "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
             )),
         };
-        let private = fibonacci::Witness {
+        let private = Witness {
             secret: FieldElement::from(u256h!(
                 "00000000000000000000000000000000000000000000000000000000cafebabe"
             )),
         };
         let constraints = public.constraints();
         let trace = public.trace(&private);
-        let actual = proof(&constraints, &trace);
+        let actual = prove(&constraints, &trace);
 
         assert!(verify(&constraints, actual.proof.as_slice()).is_ok());
     }

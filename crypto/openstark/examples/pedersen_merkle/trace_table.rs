@@ -1,11 +1,9 @@
-use crate::{
-    pedersen_merkle::{
-        inputs::{Claim, Witness},
-        pedersen_points::{PEDERSEN_POINTS, SHIFT_POINT},
-    },
-    TraceTable,
+use super::{
+    inputs::{Claim, Witness},
+    pedersen_points::{PEDERSEN_POINTS, SHIFT_POINT},
 };
 use elliptic_curve::Affine;
+use openstark::TraceTable;
 use primefield::FieldElement;
 use std::prelude::v1::*;
 use u256::U256;
@@ -128,8 +126,10 @@ fn get_coordinates(p: &Affine) -> (&FieldElement, &FieldElement) {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::pedersen_merkle::inputs::{short_witness, SHORT_CLAIM};
+    use super::{
+        super::inputs::{short_witness, SHORT_CLAIM},
+        *,
+    };
 
     #[test]
     fn short_inputs_consistent() {

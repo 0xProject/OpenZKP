@@ -203,19 +203,26 @@ impl Constraints {
 
 #[cfg(test)]
 mod tests {
-    use crate::{fibonacci, proof, Provable, Verifiable};
+    use crate::{
+        prove,
+        traits::tests::{Claim, Witness},
+        Provable, Verifiable,
+    };
     use macros_decl::field_element;
     use primefield::FieldElement;
     use u256::U256;
 
     #[test]
     fn size_estimate_test() {
-        let index = 4000;
-        let secret = field_element!("0f00dbabe0cafebabe");
-        let value = fibonacci::get_value(index, &secret);
-
-        let private = fibonacci::Witness { secret };
-        let public = fibonacci::Claim { index, value };
+        let private = Witness {
+            secret: field_element!("0f00dbabe0cafebabe"),
+        };
+        let public = Claim {
+            index: 4000,
+            value: field_element!(
+                "0576d0c2cc9a060990e96752034a391f0b9036aaa32a3aab28796f7845450e18"
+            ),
+        };
 
         let mut constraints = public.constraints();
         constraints.blowup = 16;
@@ -223,7 +230,7 @@ mod tests {
         constraints.num_queries = 20;
         constraints.fri_layout = vec![2, 1, 4, 2];
 
-        let actual = proof(&constraints, &public.trace(&private));
+        let actual = prove(&constraints, &public.trace(&private));
         assert!(actual.proof.len() <= constraints.max_proof_size());
     }
 }

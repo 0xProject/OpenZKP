@@ -38,54 +38,46 @@
 #![cfg_attr(feature = "std", warn(missing_debug_implementations,))]
 
 // TODO: Unpub all mods and re-export instead.
-// TODO: Move example constraint systems out of the lib
 mod channel;
-pub mod constraints;
-pub mod fibonacci;
+mod constraints;
 mod polynomial;
 mod proof_of_work;
 mod rational_expression;
 mod traits;
 mod verifier;
 
+// Optional prover functionality. Note that prover requires std.
+// TODO: Make it work without std.
+#[cfg(feature = "prover")]
+mod algebraic_dag;
+#[cfg(feature = "prover")]
+mod prover;
+#[cfg(feature = "prover")]
+mod trace_table;
+
+// TODO: Have unconditional Debug trait on all types
+
 // In no std mode, substitute no_std_compat
 #[cfg(not(feature = "std"))]
 #[cfg_attr(feature = "std", macro_use)]
 extern crate no_std_compat as std;
 
-// Prover functionality is only available if the feature is set. Currently
-// requires std.
-// TODO: Make it work without std.
-//
-// Optional prover functionality. Note that prover requires std.
-#[cfg(feature = "prover")]
-mod algebraic_dag;
-#[cfg(feature = "prover")]
-pub mod pedersen_merkle;
-#[cfg(feature = "prover")]
-mod prover;
-#[cfg(feature = "prover")]
-pub mod trace_table;
-
-// TODO: Have unconditional Debug trait on all types
-
 // Exports for verifier
 #[deprecated]
 pub use channel::{ProverChannel, VerifierChannel};
 pub use constraints::{Constraints, Error as ConstraintError};
+pub use polynomial::DensePolynomial;
 pub use rational_expression::RationalExpression;
 pub use traits::Verifiable;
-pub use verifier::verify;
+pub use verifier::{verify, Error as VerifierError};
 
 // Exports for prover
 #[cfg(feature = "prover")]
-pub use prover::proof;
+pub use prover::prove;
 #[cfg(feature = "prover")]
 pub use trace_table::TraceTable;
 #[cfg(feature = "prover")]
 pub use traits::Provable;
-#[cfg(feature = "prover")]
-mod mimc;
 
 #[cfg(test)]
 mod tests {

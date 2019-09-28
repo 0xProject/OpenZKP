@@ -1,5 +1,6 @@
 [alias]
-t = "test --all-features"
+# TODO: --all-targets fails for benches
+t = "test --all-features --tests --lib --bins --examples"
 b = "build --all-features --all-targets"
 lint = "clippy --all-features --all-targets -- -D warnings"
 nostd = "check --lib --bins --no-default-features --target=thumbv7m-none-eabi"

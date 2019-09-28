@@ -1,16 +1,19 @@
+mod constraints;
+mod inputs;
+mod pedersen_points;
+mod periodic_columns;
+mod trace_table;
+
 use env_logger;
 use log::info;
 use macros_decl::{field_element, hex};
-use openstark::{
-    pedersen_merkle::{
-        constraints::get_pedersen_merkle_constraints,
-        inputs::{Claim, Witness},
-    },
-    proof, Provable,
-};
+use openstark::{prove, Provable};
 use primefield::FieldElement;
 use std::time::Instant;
 use u256::U256;
+
+use constraints::get_pedersen_merkle_constraints;
+use inputs::{Claim, Witness};
 
 // Need to import to active the logging allocator
 #[allow(unused_imports)]
@@ -41,7 +44,7 @@ fn main() {
     let trace = claim.trace(&witness);
 
     info!("Constructing proof...");
-    let proof = proof(&constraints, &trace);
+    let proof = prove(&constraints, &trace);
 
     info!("Spot checking proof...");
     assert_eq!(
