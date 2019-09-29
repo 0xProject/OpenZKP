@@ -3,12 +3,12 @@ use crate::{
     channel::{ProverChannel, RandomGenerator, Writable},
     constraints::Constraints,
     polynomial::DensePolynomial,
-    proof_of_work, verify, TraceTable,
+    proof_of_work, verify, Proof, TraceTable, VerifierError,
 };
 use hash::{Hash, Hashable, MaskedKeccak};
 use itertools::Itertools;
 use log::info;
-use merkle_tree::{Tree, VectorCommitment};
+use merkle_tree::{Error as MerkleError, Tree, VectorCommitment};
 use mmap_vec::MmapVec;
 use primefield::{
     fft::{ifft_permuted, permute, permute_index},
@@ -16,8 +16,40 @@ use primefield::{
     FieldElement,
 };
 use rayon::prelude::*;
-use std::{prelude::v1::*, vec};
+use std::{fmt, prelude::v1::*, vec};
 use u256::U256;
+
+type Result<T> = std::result::Result<T, Error>;
+
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub enum Error {
+    RootUnavailable,
+    MerkleFailed(MerkleError),
+    VerificationFailed(VerifierError),
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use Error::*;
+        match *self {
+            RootUnavailable => write!(f, "The prime field doesn't have a root of this order"),
+            MerkleFailed(ref e) => std::fmt::Display::fmt(e, f),
+            VerificationFailed(ref e) => std::fmt::Display::fmt(e, f),
+        }
+    }
+}
+
+impl From<MerkleError> for Error {
+    fn from(err: MerkleError) -> Self {
+        Self::MerkleFailed(err)
+    }
+}
+
+impl From<VerifierError> for Error {
+    fn from(err: VerifierError) -> Self {
+        Self::VerificationFailed(err)
+    }
+}
 
 #[derive(Clone, Debug)]
 struct PolyLDE(Vec<MmapVec<FieldElement>>);
@@ -312,7 +344,7 @@ impl VectorCommitment for FriLeaves {
 #[allow(clippy::cognitive_complexity)]
 // TODO: Split up
 #[allow(clippy::too_many_lines)]
-pub fn prove(constraints: &Constraints, trace: &TraceTable) -> ProverChannel {
+pub fn prove(constraints: &Constraints, trace: &TraceTable) -> Result<Proof> {
     // TODO: Verify input
     //  * Constraint trace length matches trace table length
     //  * Fri layout is less than trace length * blowup
@@ -358,7 +390,7 @@ pub fn prove(constraints: &Constraints, trace: &TraceTable) -> ProverChannel {
     // Construct a merkle tree over the LDE trace
     // and write the root to the channel.
     info!("Construct a merkle tree over the LDE trace and write the root to the channel.");
-    let (commitment, tree) = trace_lde.commit().unwrap();
+    let (commitment, tree) = trace_lde.commit()?;
     proof.write(&commitment);
 
     // 2. Constraint commitment
@@ -398,7 +430,7 @@ pub fn prove(constraints: &Constraints, trace: &TraceTable) -> ProverChannel {
     // Construct a merkle tree over the LDE combined constraints
     // and write the root to the channel.
     info!("Compute the merkle tree over the LDE constraint polynomials.");
-    let (commitment, c_tree) = constraint_lde.commit().unwrap();
+    let (commitment, c_tree) = constraint_lde.commit()?;
     proof.write(&commitment);
 
     // 3. Out of domain sampling
@@ -414,7 +446,7 @@ pub fn prove(constraints: &Constraints, trace: &TraceTable) -> ProverChannel {
         &mut proof,
         &constraints.fri_layout,
         constraints.blowup,
-    );
+    )?;
 
     // 5. Proof of work
     info!("Proof of work.");
@@ -442,27 +474,25 @@ pub fn prove(constraints: &Constraints, trace: &TraceTable) -> ProverChannel {
     for &index in &query_indices {
         proof.write(tree.leaf(index));
     }
-    proof.write(&tree.open(&query_indices).unwrap());
+    proof.write(&tree.open(&query_indices)?);
 
     // Decommit the constraint values
     info!("Decommit the constraint values.");
     for &index in &query_indices {
         proof.write(c_tree.leaf(index));
     }
-    proof.write(&c_tree.open(&query_indices).unwrap());
+    proof.write(&c_tree.open(&query_indices)?);
 
     // Decommit the FRI layer values
     info!("Decommit the FRI layer values.");
-    decommit_fri_layers_and_trees(fri_trees.as_slice(), query_indices.as_slice(), &mut proof);
+    decommit_fri_layers_and_trees(fri_trees.as_slice(), query_indices.as_slice(), &mut proof)?;
 
     // Verify proof
     info!("Verify proof.");
-    // TODO - Bubble up errors so we can see where verification fails.
-    assert!(verify(constraints, proof.proof.as_slice()).is_ok());
-
-    // Q.E.D.
-    // TODO: Return bytes, or a result structure
-    proof
+    // TODO: Rename channel / transcript object
+    let proof = Proof::from_bytes(proof.proof);
+    verify(constraints, &proof)?;
+    Ok(proof)
 }
 
 fn extract_trace_coset(trace_lde: &PolyLDE, size: usize) -> TraceTable {
@@ -641,14 +671,17 @@ fn perform_fri_layering(
     proof: &mut ProverChannel,
     fri_layout: &[usize],
     blowup: usize,
-) -> Vec<FriTree> {
+) -> Result<Vec<FriTree>> {
     let mut fri_trees: Vec<FriTree> = Vec::with_capacity(fri_layout.len());
 
     // Compute 1/x for the fri layer. We only compute the even coordinates.
     // OPT: Can these be efficiently computed on the fly?
     let x_inv = {
         let n = first_layer.len();
-        let root_inv = FieldElement::root(n).unwrap().inv().unwrap();
+        let root_inv = FieldElement::root(n)
+            .ok_or(Error::RootUnavailable)?
+            .inv()
+            .unwrap();
         let mut x_inv = MmapVec::with_capacity(n / 2);
         let mut accumulator = FieldElement::ONE;
         for _ in 0..n / 2 {
@@ -669,7 +702,7 @@ fn perform_fri_layering(
         // FRI layout values are small.
         #[allow(clippy::cast_possible_truncation)]
         let coset_size = 2_usize.pow(n_reductions as u32);
-        let tree = FriTree::from_leaves(FriLeaves { coset_size, layer }).unwrap();
+        let tree = FriTree::from_leaves(FriLeaves { coset_size, layer })?;
         fri_trees.push(tree);
         let tree = fri_trees.last().unwrap();
         let layer = &tree.leaves().layer;
@@ -754,14 +787,14 @@ fn perform_fri_layering(
     permute(points);
     proof.write(&*points);
 
-    fri_trees
+    Ok(fri_trees)
 }
 
 fn decommit_fri_layers_and_trees(
     fri_trees: &[FriTree],
     query_indices: &[usize],
     proof: &mut ProverChannel,
-) {
+) -> Result<()> {
     let mut previous_indices: Vec<usize> = query_indices.to_vec();
 
     for tree in fri_trees {
@@ -783,9 +816,10 @@ fn decommit_fri_layers_and_trees(
                 };
             }
         }
-        proof.write(&tree.open(&new_indices).unwrap());
+        proof.write(&tree.open(&new_indices)?);
         previous_indices = new_indices;
     }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -797,6 +831,7 @@ mod tests {
     };
     use macros_decl::{field_element, hex, u256h};
     use primefield::{fft::permute_index, geometric_series::geometric_series};
+    use tiny_keccak::sha3_256;
     use u256::U256;
 
     #[test]
@@ -821,24 +856,24 @@ mod tests {
         constraints.fri_layout = vec![3, 2];
 
         let trace = claim.trace(&witness);
-        let actual = prove(&constraints, &trace);
+        let actual = prove(&constraints, &trace).unwrap();
 
         // Commitment hashes from
         // solidity/test/fibonacci/proof/fibonacci_proof_annotations.txt
         assert_eq!(
-            actual.proof[0..32],
+            actual.as_bytes()[0..32],
             hex!("4ef92de4d2d3594d35f0123ed8187d60542188f5000000000000000000000000")
         );
         assert_eq!(
-            actual.proof[32..64],
+            actual.as_bytes()[32..64],
             hex!("f2f6338add62aac3311361aa5d4cf2da2ae04fb6000000000000000000000000")
         );
         assert_eq!(
-            actual.proof[224..256],
+            actual.as_bytes()[224..256],
             hex!("e793b5a749cf7d10eb2d43faf4ab472f3ed20c1e000000000000000000000000")
         );
         assert_eq!(
-            actual.proof[256..288],
+            actual.as_bytes()[256..288],
             hex!("2333baba2fa0573e00bca54c2b5508f540a37781000000000000000000000000")
         );
     }
@@ -861,12 +896,11 @@ mod tests {
         constraints.pow_bits = 12;
         constraints.num_queries = 20;
         constraints.fri_layout = vec![3, 2];
-        let actual = prove(&constraints, &trace);
-
+        let proof = prove(&constraints, &trace).unwrap();
         assert_eq!(
-            actual.coin.digest,
-            hex!("fcf1924f84656e5068ab9cbd44ae084b235bb990eefc0fd0183c77d5645e830e")
-        );
+            sha3_256(proof.as_bytes()),
+            hex!("4e8896267a9649230ebb1ffbdc5c6e6a088a80a06073565e36437a5738745107")
+        )
     }
 
     #[test]
@@ -891,8 +925,8 @@ mod tests {
         constraints.num_queries = 20;
         constraints.fri_layout = vec![3, 2];
         let trace = claim.trace(&witness);
-        let actual = prove(&constraints, &trace);
-        assert!(verify(&constraints, actual.proof.as_slice()).is_ok());
+        let actual = prove(&constraints, &trace).unwrap();
+        verify(&constraints, &actual).unwrap();
     }
 
     #[test]
@@ -913,9 +947,8 @@ mod tests {
         constraints.num_queries = 20;
         constraints.fri_layout = vec![2, 1, 4, 2];
         let trace = claim.trace(&witness);
-        let actual = prove(&constraints, &trace);
-
-        assert!(verify(&constraints, actual.proof.as_slice()).is_ok());
+        let actual = prove(&constraints, &trace).unwrap();
+        verify(&constraints, &actual).unwrap();
     }
 
     // TODO: What are we actually testing here? Should we add these as debug_assert
@@ -1076,7 +1109,8 @@ mod tests {
             &mut proof,
             &constraints.fri_layout,
             constraints.blowup,
-        );
+        )
+        .unwrap();
 
         // Checks that the first fri merkle tree root is right
         assert_eq!(
@@ -1135,7 +1169,8 @@ mod tests {
             "f2d3e6593dc23fa32655040ad5023739e15fff1d645bb809467cfccb676d6343"
         );
 
-        decommit_fri_layers_and_trees(fri_trees.as_slice(), query_indices.as_slice(), &mut proof);
+        decommit_fri_layers_and_trees(fri_trees.as_slice(), query_indices.as_slice(), &mut proof)
+            .unwrap();
         // Checks that our fri decommitment is successful
         assert_eq!(
             hex::encode(proof.coin.digest),

@@ -41,6 +41,7 @@
 mod channel;
 mod constraints;
 mod polynomial;
+mod proof;
 mod proof_of_work;
 mod rational_expression;
 mod traits;
@@ -67,13 +68,14 @@ extern crate no_std_compat as std;
 pub use channel::{ProverChannel, VerifierChannel};
 pub use constraints::{Constraints, Error as ConstraintError};
 pub use polynomial::DensePolynomial;
+pub use proof::Proof;
 pub use rational_expression::RationalExpression;
 pub use traits::Verifiable;
 pub use verifier::{verify, Error as VerifierError};
 
 // Exports for prover
 #[cfg(feature = "prover")]
-pub use prover::prove;
+pub use prover::{prove, Error as ProverError};
 #[cfg(feature = "prover")]
 pub use trace_table::TraceTable;
 #[cfg(feature = "prover")]

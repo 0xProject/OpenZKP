@@ -2,7 +2,7 @@
 use env_logger;
 use log::info;
 use macros_decl::field_element;
-use openstark::{prove, Constraints, Provable, RationalExpression, TraceTable, Verifiable};
+use openstark::{Constraints, Provable, RationalExpression, TraceTable, Verifiable};
 use primefield::FieldElement;
 use std::time::Instant;
 use u256::U256;
@@ -33,7 +33,7 @@ impl Verifiable for Claim {
         let on_row = |index| (X - g.pow(index)).inv();
         let reevery_row = || (X - g.pow(trace_length - 1)) / (X.pow(trace_length) - 1.into());
 
-        Constraints::from_expressions((trace_length, 2), b"seed".to_vec(), vec![
+        Constraints::from_expressions((trace_length, 2), seed, vec![
             (Trace(0, 1) - Trace(1, 0)) * reevery_row(),
             (Trace(1, 1) - Trace(0, 0) - Trace(1, 0)) * reevery_row(),
             (Trace(0, 0) - 1.into()) * on_row(0),
@@ -77,12 +77,9 @@ fn main() {
     let start = Instant::now();
 
     info!("Constructing proof...");
-    let constraints = claim.constraints();
-    let trace = claim.trace(&witness);
-    let potential_proof = prove(&constraints, &trace);
+    let _proof = claim.prove(&witness).unwrap();
 
     // Measure time
     let duration = start.elapsed();
-    info!("{:?}", potential_proof.coin.digest);
     info!("Time elapsed in proof function is: {:?}", duration);
 }

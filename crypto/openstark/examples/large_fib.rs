@@ -31,7 +31,7 @@ impl Verifiable for Claim {
         let on_row = |index| (X - g.pow(index)).inv();
         let reevery_row = || (X - g.pow(trace_length - 1)) / (X.pow(trace_length) - 1.into());
 
-        Constraints::from_expressions((trace_length, 2), b"".to_vec(), vec![
+        Constraints::from_expressions((trace_length, 2), seed, vec![
             (Trace(0, 1) - Trace(1, 0)) * reevery_row(),
             (Trace(1, 1) - Trace(0, 0) - Trace(1, 0)) * reevery_row(),
             (Trace(0, 0) - 1.into()) * on_row(0),
@@ -78,16 +78,14 @@ fn main() {
     let start = Instant::now();
     let constraints = claim.constraints();
     let trace = claim.trace(&witness);
-    let proof = prove(&constraints, &trace);
+    let proof = prove(&constraints, &trace).expect("Proof failed");
     let duration = start.elapsed();
-    println!("{:?}", proof.coin.digest);
     println!("Time elapsed in proof function is: {:?}", duration);
-    println!("The proof length is {}", proof.proof.len());
+    println!("The proof length is {}", proof.as_bytes().len());
     println!(
         "The estimated size bound is: {}",
         constraints.max_proof_size()
     );
 
-    let verified = verify(&constraints, proof.proof.as_slice());
-    println!("Checking the proof resulted in: {:?}", verified);
+    verify(&constraints, &proof).expect("Verification failed");
 }

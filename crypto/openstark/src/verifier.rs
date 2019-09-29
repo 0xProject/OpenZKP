@@ -1,6 +1,8 @@
-use crate::{channel::*, constraints::Constraints, polynomial::DensePolynomial, proof_of_work};
+use crate::{
+    channel::*, constraints::Constraints, polynomial::DensePolynomial, proof_of_work, Proof,
+};
 use hash::Hash;
-use merkle_tree::{Commitment, Error as MerkleError, Proof};
+use merkle_tree::{Commitment, Error as MerkleError, Proof as MerkleProof};
 use primefield::{fft, geometric_series::root_series, FieldElement};
 #[cfg(feature = "std")]
 use std::error;
@@ -167,7 +169,8 @@ impl From<MerkleError> for Error {
 /// <!-- TODO: ellaborate FRI verification -->
 // TODO: Refactor into smaller function
 #[allow(clippy::too_many_lines)]
-pub fn verify(constraints: &Constraints, proof: &[u8]) -> Result<()> {
+pub fn verify(constraints: &Constraints, proof: &Proof) -> Result<()> {
+    let proof = proof.as_bytes();
     let trace_length = constraints.trace_nrows();
     let trace_cols = constraints.trace_ncolumns();
     let eval_domain_size = trace_length * constraints.blowup;
@@ -254,7 +257,7 @@ pub fn verify(constraints: &Constraints, proof: &[u8]) -> Result<()> {
         .collect();
     let lde_proof_length = lde_commitment.proof_size(&queries)?;
     let lde_hashes = Replayable::<Hash>::replay_many(&mut channel, lde_proof_length);
-    let lde_proof = Proof::from_hashes(&lde_commitment, &queries, &lde_hashes)?;
+    let lde_proof = MerkleProof::from_hashes(&lde_commitment, &queries, &lde_hashes)?;
     // Note - we could express this a merkle error instead but this adds specificity
     if lde_proof.verify(&lde_values).is_err() {
         return Err(Error::InvalidLDECommitment);
@@ -272,7 +275,7 @@ pub fn verify(constraints: &Constraints, proof: &[u8]) -> Result<()> {
     let constraint_hashes: Vec<Hash> =
         Replayable::<Hash>::replay_many(&mut channel, constraint_proof_length);
     let constraint_proof =
-        Proof::from_hashes(&constraint_commitment, &queries, &constraint_hashes)?;
+        MerkleProof::from_hashes(&constraint_commitment, &queries, &constraint_hashes)?;
     // Note - we could express this a merkle error instead but this adds specificity
     if constraint_proof.verify(&constraint_values).is_err() {
         return Err(Error::InvalidConstraintCommitment);
@@ -346,7 +349,7 @@ pub fn verify(constraints: &Constraints, proof: &[u8]) -> Result<()> {
 
         let merkle_proof_length = commitment.proof_size(&fri_indices)?;
         let merkle_hashes = Replayable::<Hash>::replay_many(&mut channel, merkle_proof_length);
-        let merkle_proof = Proof::from_hashes(commitment, &fri_indices, &merkle_hashes)?;
+        let merkle_proof = MerkleProof::from_hashes(commitment, &fri_indices, &merkle_hashes)?;
         fri_folds = layer_folds;
 
         for _ in 0..constraints.fri_layout[k] {
@@ -553,8 +556,8 @@ mod tests {
         };
         let constraints = public.constraints();
         let trace = public.trace(&private);
-        let actual = prove(&constraints, &trace);
+        let actual = prove(&constraints, &trace).unwrap();
 
-        assert!(verify(&constraints, actual.proof.as_slice()).is_ok());
+        assert!(verify(&constraints, &actual).is_ok());
     }
 }

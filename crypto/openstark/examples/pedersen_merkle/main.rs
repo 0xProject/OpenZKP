@@ -44,37 +44,37 @@ fn main() {
     let trace = claim.trace(&witness);
 
     info!("Constructing proof...");
-    let proof = prove(&constraints, &trace);
+    let proof = prove(&constraints, &trace).unwrap();
 
     info!("Spot checking proof...");
     assert_eq!(
-        proof.proof[0..32],
+        proof.as_bytes()[0..32],
         hex!("b00a4c7f03959e01df2504fb73d2b238a8ab08b2000000000000000000000000")
     );
     assert_eq!(
-        proof.proof[32..64],
+        proof.as_bytes()[32..64],
         hex!("2e821fe1f3062acdbd3a4bd0be2293f4264abc7b000000000000000000000000")
     );
 
     // FRI commitments
     assert_eq!(
-        proof.proof[640..672],
+        proof.as_bytes()[640..672],
         hex!("b5ae7a8389c7de33f08f79c7dca057e5db5c0d65000000000000000000000000")
     );
     assert_eq!(
-        proof.proof[672..704],
+        proof.as_bytes()[672..704],
         hex!("83f4858900e1519c1b788333f55b54762485e5d6000000000000000000000000")
     );
     assert_eq!(
-        proof.proof[704..736],
+        proof.as_bytes()[704..736],
         hex!("be090ca452f0affe901588d522960b7b92d8882c000000000000000000000000")
     );
     assert_eq!(
-        proof.proof[736..768],
+        proof.as_bytes()[736..768],
         hex!("3cc9adaad436cfab60978d57f13d5f22e6a8791f000000000000000000000000")
     );
     assert_eq!(
-        proof.proof[768..800],
+        proof.as_bytes()[768..800],
         hex!("8af79c56d74b9252c3c542fc2b56d4692c608c98000000000000000000000000")
     );
 
