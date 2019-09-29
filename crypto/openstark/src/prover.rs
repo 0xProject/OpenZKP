@@ -831,8 +831,8 @@ mod tests {
     };
     use macros_decl::{field_element, hex, u256h};
     use primefield::{fft::permute_index, geometric_series::geometric_series};
-    use u256::U256;
     use tiny_keccak::sha3_256;
+    use u256::U256;
 
     #[test]
     fn starkware_fibonacci() {
@@ -897,7 +897,10 @@ mod tests {
         constraints.num_queries = 20;
         constraints.fri_layout = vec![3, 2];
         let proof = prove(&constraints, &trace).unwrap();
-        assert_eq!(sha3_256(proof.as_bytes()), hex!("4e8896267a9649230ebb1ffbdc5c6e6a088a80a06073565e36437a5738745107"))
+        assert_eq!(
+            sha3_256(proof.as_bytes()),
+            hex!("4e8896267a9649230ebb1ffbdc5c6e6a088a80a06073565e36437a5738745107")
+        )
     }
 
     #[test]
