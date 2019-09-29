@@ -897,15 +897,7 @@ mod tests {
         constraints.num_queries = 20;
         constraints.fri_layout = vec![3, 2];
         let proof = prove(&constraints, &trace).unwrap();
-
-        dbg!(proof.as_bytes().len());
-        dbg!(sha3_256(proof.as_bytes()));
-
-        // TODO: Hash prove bytes instead
-        // assert_eq!(
-        //     actual.coin.digest,
-        //     hex!("fcf1924f84656e5068ab9cbd44ae084b235bb990eefc0fd0183c77d5645e830e")
-        // );
+        assert_eq!(sha3_256(proof.as_bytes()), hex!("4e8896267a9649230ebb1ffbdc5c6e6a088a80a06073565e36437a5738745107"))
     }
 
     #[test]
