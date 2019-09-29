@@ -1,5 +1,5 @@
 #[cfg(feature = "prover")]
-use crate::{prove, TraceTable, ProverError};
+use crate::{prove, ProverError, TraceTable};
 use crate::{verify, Constraints, Proof, VerifierError};
 
 pub trait Verifiable {
