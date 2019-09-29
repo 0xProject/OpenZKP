@@ -87,6 +87,5 @@ fn main() {
         constraints.max_proof_size()
     );
 
-    let verified = verify(&constraints, &proof).expect("Verification failed");
-    println!("Checking the proof resulted in: {:?}", verified);
+    verify(&constraints, &proof).expect("Verification failed");
 }

@@ -41,11 +41,11 @@
 mod channel;
 mod constraints;
 mod polynomial;
+mod proof;
 mod proof_of_work;
 mod rational_expression;
 mod traits;
 mod verifier;
-mod proof;
 
 // Optional prover functionality. Note that prover requires std.
 // TODO: Make it work without std.
@@ -66,9 +66,9 @@ extern crate no_std_compat as std;
 // Exports for verifier
 #[deprecated]
 pub use channel::{ProverChannel, VerifierChannel};
-pub use proof::Proof;
 pub use constraints::{Constraints, Error as ConstraintError};
 pub use polynomial::DensePolynomial;
+pub use proof::Proof;
 pub use rational_expression::RationalExpression;
 pub use traits::Verifiable;
 pub use verifier::{verify, Error as VerifierError};

@@ -1,4 +1,6 @@
-use crate::{channel::*, constraints::Constraints, polynomial::DensePolynomial, Proof, proof_of_work};
+use crate::{
+    channel::*, constraints::Constraints, polynomial::DensePolynomial, proof_of_work, Proof,
+};
 use hash::Hash;
 use merkle_tree::{Commitment, Error as MerkleError, Proof as MerkleProof};
 use primefield::{fft, geometric_series::root_series, FieldElement};

@@ -3,12 +3,12 @@ use crate::{
     channel::{ProverChannel, RandomGenerator, Writable},
     constraints::Constraints,
     polynomial::DensePolynomial,
-    proof_of_work, verify, TraceTable, VerifierError, Proof
+    proof_of_work, verify, Proof, TraceTable, VerifierError,
 };
 use hash::{Hash, Hashable, MaskedKeccak};
 use itertools::Itertools;
 use log::info;
-use merkle_tree::{Tree, VectorCommitment, Error as MerkleError};
+use merkle_tree::{Error as MerkleError, Tree, VectorCommitment};
 use mmap_vec::MmapVec;
 use primefield::{
     fft::{ifft_permuted, permute, permute_index},
@@ -16,16 +16,15 @@ use primefield::{
     FieldElement,
 };
 use rayon::prelude::*;
-use std::{prelude::v1::*, vec};
+use std::{fmt, prelude::v1::*, vec};
 use u256::U256;
-use std::fmt;
 
 type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum Error {
     RootUnavailable,
-    MerkleError(MerkleError),
+    MerkleFailed(MerkleError),
     VerificationFailed(VerifierError),
 }
 
@@ -34,7 +33,7 @@ impl fmt::Display for Error {
         use Error::*;
         match *self {
             RootUnavailable => write!(f, "The prime field doesn't have a root of this order"),
-            MerkleError(ref e) => std::fmt::Display::fmt(e, f),
+            MerkleFailed(ref e) => std::fmt::Display::fmt(e, f),
             VerificationFailed(ref e) => std::fmt::Display::fmt(e, f),
         }
     }
@@ -42,7 +41,7 @@ impl fmt::Display for Error {
 
 impl From<MerkleError> for Error {
     fn from(err: MerkleError) -> Self {
-        Self::MerkleError(err)
+        Self::MerkleFailed(err)
     }
 }
 
@@ -51,7 +50,6 @@ impl From<VerifierError> for Error {
         Self::VerificationFailed(err)
     }
 }
-
 
 #[derive(Clone, Debug)]
 struct PolyLDE(Vec<MmapVec<FieldElement>>);
@@ -489,7 +487,6 @@ pub fn prove(constraints: &Constraints, trace: &TraceTable) -> Result<Proof> {
     info!("Decommit the FRI layer values.");
     decommit_fri_layers_and_trees(fri_trees.as_slice(), query_indices.as_slice(), &mut proof)?;
 
-
     // Verify proof
     info!("Verify proof.");
     // TODO: Rename channel / transcript object
@@ -681,7 +678,10 @@ fn perform_fri_layering(
     // OPT: Can these be efficiently computed on the fly?
     let x_inv = {
         let n = first_layer.len();
-        let root_inv = FieldElement::root(n).ok_or(Error::RootUnavailable)?.inv().unwrap();
+        let root_inv = FieldElement::root(n)
+            .ok_or(Error::RootUnavailable)?
+            .inv()
+            .unwrap();
         let mut x_inv = MmapVec::with_capacity(n / 2);
         let mut accumulator = FieldElement::ONE;
         for _ in 0..n / 2 {
@@ -832,6 +832,7 @@ mod tests {
     use macros_decl::{field_element, hex, u256h};
     use primefield::{fft::permute_index, geometric_series::geometric_series};
     use u256::U256;
+    use tiny_keccak::sha3_256;
 
     #[test]
     fn starkware_fibonacci() {
@@ -895,7 +896,10 @@ mod tests {
         constraints.pow_bits = 12;
         constraints.num_queries = 20;
         constraints.fri_layout = vec![3, 2];
-        let actual = prove(&constraints, &trace).unwrap();
+        let proof = prove(&constraints, &trace).unwrap();
+
+        dbg!(proof.as_bytes().len());
+        dbg!(sha3_256(proof.as_bytes()));
 
         // TODO: Hash prove bytes instead
         // assert_eq!(
@@ -1110,7 +1114,8 @@ mod tests {
             &mut proof,
             &constraints.fri_layout,
             constraints.blowup,
-        ).unwrap();
+        )
+        .unwrap();
 
         // Checks that the first fri merkle tree root is right
         assert_eq!(
@@ -1169,7 +1174,8 @@ mod tests {
             "f2d3e6593dc23fa32655040ad5023739e15fff1d645bb809467cfccb676d6343"
         );
 
-        decommit_fri_layers_and_trees(fri_trees.as_slice(), query_indices.as_slice(), &mut proof).unwrap();
+        decommit_fri_layers_and_trees(fri_trees.as_slice(), query_indices.as_slice(), &mut proof)
+            .unwrap();
         // Checks that our fri decommitment is successful
         assert_eq!(
             hex::encode(proof.coin.digest),

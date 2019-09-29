@@ -1,6 +1,6 @@
 #[cfg(feature = "prover")]
 use crate::{prove, TraceTable};
-use crate::{verify, Constraints, VerifierError, Proof, ProverError};
+use crate::{verify, Constraints, Proof, ProverError, VerifierError};
 
 pub trait Verifiable {
     fn constraints(&self) -> Constraints;

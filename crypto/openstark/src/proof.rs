@@ -1,5 +1,6 @@
-use std::{prelude::v1::*};
+use std::prelude::v1::*;
 
+#[derive(Clone, Debug, PartialEq)]
 pub struct Proof(Vec<u8>);
 
 impl Proof {

@@ -91,10 +91,10 @@ fn bench_verify(crit: &mut Criterion) {
 
     let constraints = claim.constraints();
     let trace = claim.trace(&witness);
-    let proof = prove(&constraints, &trace);
+    let proof = prove(&constraints, &trace).unwrap();
 
     crit.bench_function("Checking a fib proof of len 1024", move |bench| {
-        bench.iter(|| black_box(verify(&constraints, proof.proof.as_slice())))
+        bench.iter(|| black_box(verify(&constraints, &proof)))
     });
 }
 
