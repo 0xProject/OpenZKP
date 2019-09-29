@@ -34,22 +34,17 @@ pub struct Claim {
     after:  FieldElement,
 }
 
-impl From<&Claim> for Vec<u8> {
-    fn from(input: &Claim) -> Self {
-        let mut ret = input.before.as_montgomery().to_bytes_be().to_vec();
-        ret.extend_from_slice(&input.after.as_montgomery().to_bytes_be());
-        ret
-    }
-}
-
 impl Verifiable for Claim {
     fn constraints(&self) -> Constraints {
         use RationalExpression::*;
 
-        let trace_length = ROUNDS;
-        let trace_generator = FieldElement::root(trace_length).unwrap();
+        // Seed
+        let mut seed = self.before.as_montgomery().to_bytes_be().to_vec();
+        seed.extend_from_slice(&self.after.as_montgomery().to_bytes_be());
 
         // Constraint repetitions
+        let trace_length = ROUNDS;
+        let trace_generator = FieldElement::root(trace_length).unwrap();
         let g = Constant(trace_generator);
         let on_row = |index| (X - g.pow(index)).inv();
         let reevery_row = || (X - g.pow(trace_length - 1)) / (X.pow(trace_length) - 1.into());
@@ -62,7 +57,7 @@ impl Verifiable for Claim {
         };
         let k_coef = periodic(&ifft(&K_COEF.to_vec()));
 
-        Constraints::from_expressions((trace_length, 3), self.into(), vec![
+        Constraints::from_expressions((trace_length, 3), seed, vec![
             // Says x_1 = x_0^2
             (Trace(0, 0) * Trace(0, 0) - Trace(1, 0)) * reevery_row(),
             // Says x_2 = x_1*x_0
@@ -79,7 +74,6 @@ impl Verifiable for Claim {
 }
 
 impl Provable<()> for Claim {
-    #[cfg(feature = "prover")]
     fn trace(&self, _witness: ()) -> TraceTable {
         let mut trace = TraceTable::new(ROUNDS, 3);
 
