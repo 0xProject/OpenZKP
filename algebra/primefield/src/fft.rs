@@ -56,6 +56,17 @@ pub fn fft_permuted(x: &mut [FieldElement]) {
     fft_permuted_root(&root, x);
 }
 
+/// Out-of-place permuted FFT with a cofactor.
+pub fn fft_cofactor_permuted_out(cofactor: &FieldElement, x: &[FieldElement], out: &mut [FieldElement]) {
+    // TODO: Use geometric_series
+    let mut c = FieldElement::ONE;
+    for (x, out) in x.iter().zip(out.iter_mut()) {
+        *out = x * &c;
+        c *= cofactor;
+    }
+    fft_permuted(out);
+}
+
 /// In-place permuted FFT with a cofactor.
 pub fn fft_cofactor_permuted(cofactor: &FieldElement, x: &mut [FieldElement]) {
     // TODO: Use geometric_series
@@ -66,6 +77,7 @@ pub fn fft_cofactor_permuted(cofactor: &FieldElement, x: &mut [FieldElement]) {
     }
     fft_permuted(x);
 }
+
 
 /// In-place permuted inverse FFT with cofactor.
 pub fn ifft_permuted(x: &mut [FieldElement]) {

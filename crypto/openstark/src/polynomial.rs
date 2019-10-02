@@ -2,7 +2,7 @@
 #![allow(clippy::module_name_repetitions)]
 use mmap_vec::MmapVec;
 #[cfg(feature = "std")]
-use primefield::fft::{fft_cofactor_permuted, permute_index};
+use primefield::fft::{fft_cofactor_permuted_out, permute_index};
 use primefield::FieldElement;
 #[cfg(feature = "std")]
 use rayon::prelude::*;
@@ -94,8 +94,7 @@ impl DensePolynomial {
             .enumerate()
             .for_each(|(i, slice)| {
                 let cofactor = &SHIFT_FACTOR * generator.pow(permute_index(blowup, i));
-                slice.clone_from_slice(&self.coefficients());
-                fft_cofactor_permuted(&cofactor, slice);
+                fft_cofactor_permuted_out(&cofactor, &self.coefficients(), slice);
             });
         info!("LDE extension done");
         result
