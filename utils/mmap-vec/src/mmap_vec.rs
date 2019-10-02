@@ -44,6 +44,13 @@ impl<T: Clone> MmapVec<T> {
         }
     }
 
+    // TODO: This is unsafe
+    pub fn zero_initialized(len: usize) -> Self {
+        let mut result = Self::with_capacity(len);
+        result.length = len;
+        result
+    }
+
     pub fn is_empty(&self) -> bool {
         self.length == 0
     }

@@ -84,14 +84,7 @@ impl DensePolynomial {
         let generator =
             FieldElement::root(length).expect("No generator for extended_domain_length.");
         info!("Allocating LDE result vector");
-        let mut result: MmapVec<FieldElement> = MmapVec::with_capacity(length);
-
-        // Initialize to coefficients
-        info!("Initializing to coefficients");
-        // TODO: Avoid initialization and FFT from coefficients.
-        for _i in 0..blowup {
-            result.extend_from_slice(&self.coefficients());
-        }
+        let mut result: MmapVec<FieldElement> = MmapVec::zero_initialized(length);
 
         // Compute cosets in parallel
         info!("Compute cosets in parallel");
@@ -101,6 +94,7 @@ impl DensePolynomial {
             .enumerate()
             .for_each(|(i, slice)| {
                 let cofactor = &SHIFT_FACTOR * generator.pow(permute_index(blowup, i));
+                slice.clone_from_slice(&self.coefficients());
                 fft_cofactor_permuted(&cofactor, slice);
             });
         info!("LDE extension done");
