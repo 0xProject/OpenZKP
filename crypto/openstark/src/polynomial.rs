@@ -7,6 +7,7 @@ use primefield::FieldElement;
 #[cfg(feature = "std")]
 use rayon::prelude::*;
 use std::prelude::v1::*;
+use log::info;
 
 #[derive(PartialEq, Clone)]
 pub struct DensePolynomial(MmapVec<FieldElement>);
@@ -76,27 +77,33 @@ impl DensePolynomial {
 
     #[cfg(feature = "std")]
     pub fn low_degree_extension(&self, blowup: usize) -> MmapVec<FieldElement> {
+        info!("Starting LDE extension");
         // TODO: shift polynomial by FieldElement::GENERATOR outside of this function.
         const SHIFT_FACTOR: FieldElement = FieldElement::GENERATOR;
         let length = self.len() * blowup;
         let generator =
             FieldElement::root(length).expect("No generator for extended_domain_length.");
+        info!("Allocating LDE result vector");
         let mut result: MmapVec<FieldElement> = MmapVec::with_capacity(length);
 
-        // Initialize to zero
-        // TODO: Avoid initialization
-        result.resize(length, FieldElement::ZERO);
+        // Initialize to coefficients
+        info!("Initializing to coefficients");
+        // TODO: Avoid initialization and FFT from coefficients.
+        for _i in 0..blowup {
+            result.extend_from_slice(&self.coefficients());
+        }
 
         // Compute cosets in parallel
+        info!("Compute cosets in parallel");
         result
             .as_mut_slice()
             .par_chunks_mut(self.len())
             .enumerate()
             .for_each(|(i, slice)| {
                 let cofactor = &SHIFT_FACTOR * generator.pow(permute_index(blowup, i));
-                slice.clone_from_slice(&self.coefficients());
                 fft_cofactor_permuted(&cofactor, slice);
             });
+        info!("LDE extension done");
         result
     }
 
