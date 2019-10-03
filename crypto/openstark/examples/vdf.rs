@@ -32,17 +32,17 @@ impl Verifiable for Claim {
         let trace_generator = FieldElement::root(trace_length).unwrap();
         let g = Constant(trace_generator);
         let on_row = |index| (X - g.pow(index)).inv();
-        let reevery_row = || (X - g.pow(trace_length - 1)) / (X.pow(trace_length) - 1.into());
+        let every_row = || (X - g.pow(trace_length - 1)) / (X.pow(trace_length) - 1.into());
 
         Constraints::from_expressions((trace_length, 4), seed, vec![
             // Square (Trace(0,0), Trace(1, 0)) and check that it equals (Trace(2,0), Trace(3,0))
             ((Trace(0, 0) * Trace(0, 0) + Constant(R) * Trace(1, 0) * Trace(1, 0) - Trace(2, 0))
-                * reevery_row()),
-            (Constant(2.into()) * Trace(0, 0) * Trace(1, 0) - Trace(3, 0)) * reevery_row(),
+                * every_row()),
+            (Constant(2.into()) * Trace(0, 0) * Trace(1, 0) - Trace(3, 0)) * every_row(),
             // Multiply the square by the single and the square and enforce it on the next row
             ((Trace(0, 0) * Trace(2, 0) + Constant(R) * Trace(1, 0) * Trace(3, 0) - Trace(0, 1))
-                * reevery_row()),
-            (Trace(0, 0) * Trace(2, 0) + Trace(1, 0) * Trace(3, 0) - Trace(1, 1)) * reevery_row(),
+                * every_row()),
+            (Trace(0, 0) * Trace(2, 0) + Trace(1, 0) * Trace(3, 0) - Trace(1, 1)) * every_row(),
             // Boundary Constraints
             (Trace(0, 0) - (&self.c0_start).into()) * on_row(0),
             (Trace(1, 0) - (&self.c1_start).into()) * on_row(0),
