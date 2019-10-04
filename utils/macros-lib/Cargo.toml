@@ -1,0 +1,24 @@
+[package]
+name = "macros-lib"
+version = "0.1.0"
+description = "Library of procedural macros implemented using `proc_macro2`"
+repository = "https://github.com/0xProject/starkcrypto/tree/master/utils/macros-lib"
+keywords = ["macros", "rust-patterns"]
+categories = ["rust-patterns"]
+authors = [
+    "Remco Bloemen <remco@0x.org>",
+    "Mason Liang <mason@0x.org>",
+    "Paul Vienhage <paul@0x.org>"]
+readme = "Readme.md"
+license = "Apache-2.0"
+edition = "2018"
+
+[dependencies]
+proc-macro2 = "1.0"
+syn = { version = "1.0", features = ["full"] }
+quote = "1.0"
+hex = "0.4.0"
+
+[features]
+default = ["std"]
+std = []

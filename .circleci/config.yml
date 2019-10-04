@@ -15,6 +15,14 @@ version: 2.1
 
 # TODO: Sync `TODO` and other comments.
 
+# TODO: Minimal version testing.
+#       https://doc.rust-lang.org/cargo/reference/unstable.html#minimal-versions
+
+# TODO: Configure Quickcheck to use more rounds and require passing tests.
+#       Using QUICKCHECK_TESTS, QUICKCHECK_MAX_TESTS, & QUICKCHECK_MIN_TESTS_PASSED
+#       https://github.com/BurntSushi/quickcheck#more-thorough-checking
+
+
 # OPT: Create docker images tailored for each job
 executors:
   minimal:
@@ -28,7 +36,7 @@ executors:
       # Necessary for `docker manifest` subcommand
       DOCKER_CLI_EXPERIMENTAL: enabled
       # Bump the tag version whenever changes are made.
-      IMAGE: &build_image "0xchain/rust-build-env:6"
+      IMAGE: &build_image "0xchain/rust-build-env:8"
   docker-rust:
     docker:
       - image: *build_image
@@ -36,8 +44,15 @@ executors:
       # See also environment variables declared in rust-build-env.Dockerfile
       RUST_BACKTRACE: "1"
       SCCACHE_CACHE_SIZE: 1G
-      NO_STD_PACKAGES: macros_decl u256 primefield ecc starkdex stark substrate-runtime
-
+      NO_STD_PACKAGES: |
+        utils/macros-decl
+        algebra/u256
+        algebra/primefield
+        algebra/elliptic-curve
+        crypto/hash
+        crypto/merkle-tree
+        crypto/elliptic-curve-crypto
+        crypto/openstark
 commands:
   stop-if-image-exists:
     steps:
@@ -128,6 +143,7 @@ jobs:
           name: Build tests with coverage
           command: |
             # Build with coverage settings from Dockerfile
+            # TODO: Build and run tests from all targets
             CARGO_INCREMENTAL=0 RUSTFLAGS="$COVFLAGS" cargo +$NIGHTLY build $PACKAGES --tests --all-features
       - save-sccache-cache
       - run:
@@ -274,59 +290,6 @@ jobs:
             done
       - save-sccache-cache
       - codechecks
-  build-wasm-runtime:
-    executor: docker-rust
-    steps:
-      - checkout
-      - enable-sccache
-      - run:
-          name: Build wasm substrate runtime
-          command: |
-            pushd substrate-runtime-wasm
-            cargo +$NIGHTLY build --release
-            cp target/wasm32-unknown-unknown/release/substrate_node_runtime_wasm.wasm ./target/runtime.wasm
-      - save-sccache-cache
-      - run:
-          name: Optimize for size
-          command: |
-            pushd substrate-runtime-wasm/target
-            ls -l runtime.wasm
-            wasm-gc runtime.wasm
-            # OPT: Run wasm-opt -O3 runtime.wasm -o runtime.wasm
-            ls -l runtime.wasm
-      - run:
-          name: List top 50 space consumers
-          command: |
-            pushd substrate-runtime-wasm/target
-            twiggy top -n 50 runtime.wasm
-      - persist_to_workspace:
-          root: substrate-runtime-wasm/target
-          paths:
-            - runtime.wasm
-      - store_artifacts:
-          path: substrate-runtime-wasm/runtime.wasm
-          destination: runtime.wasm
-      - codechecks
-  build-node:
-    executor: docker-rust
-    resource_class: xlarge
-    steps:
-      - checkout
-      - attach_workspace:
-          at: /tmp/workspace
-      - enable-sccache
-      - run:
-          name: Build node executable
-          command: |
-            pushd substrate-node
-            cp /tmp/workspace/runtime.wasm ./assets/runtime.wasm
-            cargo build --release
-            git checkout --force ./assets/runtime.wasm
-      - save-sccache-cache
-      - store_artifacts:
-          path: target/release/substrate-node
-          destination: substrate-node
-      - codechecks
   clippy:
     executor: docker-rust
     steps:
@@ -340,12 +303,73 @@ jobs:
             # TODO: Clippy different feature sets (std, test, bench, ...)
       - save-sccache-cache
       - codechecks
+  analysis:
+    executor: docker-rust
+    steps:
+      - checkout
+      - run:
+          name: Check lints.rs copies
+          command: |
+            # Make sure all lib.rs and main.rs files start with the same prefix
+            correct=$(cat ./lints.rs)
+            lines=$(wc -l < ./lints.rs)
+            files=$(find . \( -name target -prune \) -o \( -name lib.rs -o -name main.rs \) -print)
+            for file in $files; do
+                start=$(head -n $lines $file)
+                if [ "$start" != "$correct" ]; then
+                    echo "Incorrect lints in $file:"
+                    echo "$start" | diff -wb -U3 --minimal --color - ./lints.rs || true
+                    echo ""
+                fi
+            done
+      - run:
+          name: Check for vulnerabilities in workspace
+          command: |
+            cargo generate-lockfile
+            cargo audit
+      # TODO: This step fails
+      # - run:
+      #     name: Check for use of unsafe in workspace
+      #     command: |
+      #       workspace=$(toml2json < ./Cargo.toml  | jq '.workspace.members[]' -r)
+      #       for member in $workspace; do
+      #         pushd $member
+      #         cargo geiger --all-features --all-targets
+      #         popd
+      #       done
+      - codechecks
+      # TODO: Fix
+      # - run:
+      #     name: Check for outdated dependencies
+      #     command: |
+      #       cargo outdated
   accept:
     executor: minimal
     steps:
       - run:
           name: Stop
           command: circleci-agent step halt
+  update-issues:
+    executor: minimal
+    steps:
+      - run:
+          name: Install python tools
+          command: |
+            # TODO: Have a prepared executor
+            sudo apt-get install python3 python3-pip
+            pip3 install PyGithub
+            pip3 install numpy
+      - checkout
+      - run:
+          name: Update GitHub issues
+          command: |
+            # This will dry run except on master
+            if [ "$CIRCLE_BRANCH" == "master" ]
+            then
+              DRY_RUN=false python3 .circleci/issue_tracker.py
+            else
+              DRY_RUN=true python3 .circleci/issue_tracker.py
+            fi
 
 workflows:
   version: 2
@@ -377,14 +401,10 @@ workflows:
       - build-no-std:
           requires:
             - build-docker
-      - build-wasm-runtime:
-          requires:
-            - build-docker
-      - build-node:
-          requires:
-            - build-docker
-            - build-wasm-runtime
       - clippy:
+          requires:
+            - build-docker
+      - analysis:
           requires:
             - build-docker
       - benchmark-ec2:
@@ -396,13 +416,15 @@ workflows:
           filters:
             branches:
               only: master
+      - update-issues
       # `accept` is a phony job which requires every check for a commit.
       # This allows us to set a single 'required status check' in GitHub.
       - accept:
           requires:
             - rustformat
             - clippy
+            - analysis
             - tests
             - benchmarks
             - build-no-std
-            - build-node
+            - update-issues

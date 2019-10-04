@@ -1,0 +1,24 @@
+[package]
+name = "criterion-utils"
+version = "0.1.0"
+description = "Criterion helpers to benchmark over size and number of processors"
+repository = "https://github.com/0xProject/starkcrypto/tree/master/utils/criterion-utils"
+keywords = ["criterion", "benchmarking", "threads"]
+categories = ["rust-patterns"]
+authors = [
+    "Remco Bloemen <remco@0x.org>",
+    "Mason Liang <mason@0x.org>",
+    "Paul Vienhage <paul@0x.org>"]
+readme = "Readme.md"
+license = "Apache-2.0"
+edition = "2018"
+
+[dependencies]
+criterion = "0.3.0"
+num_cpus = "1.10.1"
+rayon = "1.0.3"
+lazy_static = "1.4.0"
+
+[features]
+default = ["std"]
+std = []

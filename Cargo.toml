@@ -1,26 +1,22 @@
 [workspace]
 members = [
-    "macros_lib",
-    "macros_impl",
-    "macros_decl",
-    "criterion-utils",
-    "u256",
-    "primefield",
-    "ecc",
-    "starkdex",
-    "stark",
-    "substrate-node",
-    "substrate-runtime",
+    "utils/macros-lib",
+    "utils/macros-impl",
+    "utils/macros-decl",
+    "utils/criterion-utils",
+    "utils/error-utils",
+    "utils/logging-allocator",
+    "utils/mmap-vec",
+    "algebra/u256",
+    "algebra/primefield",
+    "algebra/elliptic-curve",
+    "crypto/hash",
+    "crypto/merkle-tree",
+    "crypto/elliptic-curve-crypto",
+    "crypto/openstark",
 ]
 
-# Don't forget to run `cargo clean` to force a rebuild of all dependencies!
 [profile.release]
 opt-level = 3
 lto = true
 panic = 'unwind'
-
-# HACK: Patch replace substrate's dependency on hex-literal with a local clone
-# that sets #[no_std].
-# TODO: Remove pending merger of https://github.com/RustCrypto/utils/pull/30
-[replace]
-"hex-literal:0.1.4" = { path = "./hex-literal" }

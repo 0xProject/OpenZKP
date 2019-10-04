@@ -1,0 +1,39 @@
+[package]
+name = "primefield-benchmarks"
+version = "0.1.0"
+authors = ["Remco Bloemen <remco@0x.org>"]
+edition = "2018"
+
+# This package is separate from the main workspace
+[workspace]
+
+[dependencies]
+
+[dev-dependencies]
+criterion = "0.3"
+macros-decl = { path = "../../macros-decl" }
+primefield = { path = "..", version = "0.1.0" }
+u256 = { path = "../../u256", version = "0.1.0" }
+ecc = { path = "../../ecc", version = "0.1.0", features = ["unsafe_ecdsa"] }
+secp256k1-bindings = { package = "secp256k1", version = "0.12.2" }
+secp256k1-native = { package = "libsecp256k1", version = "0.2.2" }
+ed25519-dalek = "0.9.1"
+curve25519-dalek = { git = "https://github.com/Recmo/curve25519-dalek" }
+curve25519-donna = { package = "elliptic", version= "0.5.0" }
+matter = { path = "./matter" }
+rug = { version = "1.3.0", default-features = false, features = ["integer"] }
+# TODO: zcash = { package = "pairing", version = "0.14.2" }
+sha2 = "0.8.0"
+# HACK: Make Rand compile
+# See https://github.com/dalek-cryptography/ed25519-dalek/issues/56
+# See https://github.com/rust-random/rand/issues/645
+rand = "0.6"
+
+[[bench]]
+name = "benchmark"
+harness = false
+
+# The benchmarks are build using the release profile from the workspace
+# cargo configuration. To modify compiler flags, you need to edit the
+# [profile.release] section in ../Cargo.toml.
+# Don't forget to run `cargo clean` to force a rebuild!

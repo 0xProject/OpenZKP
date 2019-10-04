@@ -1,0 +1,19 @@
+[package]
+name = "error-utils"
+version = "0.1.0"
+description = "Assertion like macros for returning `Result::Err`"
+repository = "https://github.com/0xProject/starkcrypto/tree/master/utils/error-utils"
+keywords = ["no-std"]
+categories = ["rust-patterns", "no-std"]
+authors = [
+    "Remco Bloemen <remco@0x.org>",
+    "Mason Liang <mason@0x.org>",
+    "Paul Vienhage <paul@0x.org>"]
+readme = "Readme.md"
+license = "Apache-2.0"
+edition = "2018"
+
+
+[features]
+default = [ "std" ]
+std = []
