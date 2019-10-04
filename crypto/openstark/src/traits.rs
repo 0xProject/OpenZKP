@@ -96,7 +96,7 @@ pub(crate) mod tests {
             let trace_length = (self.index + 1).next_power_of_two();
             let trace_generator = FieldElement::root(trace_length).unwrap();
             let g = Constant(trace_generator);
-            let on_row = |index| (X - g.pow(index)).inv(); // this is both
+            let on_row = |index| (X - g.pow(index)).inv();
             let every_row = || (X - g.pow(trace_length - 1)) / (X.pow(trace_length) - 1.into());
 
             // Constraints
