@@ -81,7 +81,7 @@ impl DensePolynomial {
         let length = self.len() * blowup;
         let generator =
             FieldElement::root(length).expect("No generator for extended_domain_length.");
-        
+
         // FieldElement is safe to initialize zero (which maps to zero)
         #[allow(unsafe_code)]
         let mut result: MmapVec<FieldElement> = unsafe { MmapVec::zero_initialized(length) };

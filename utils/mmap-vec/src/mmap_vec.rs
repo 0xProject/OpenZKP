@@ -5,7 +5,7 @@ use memmap::{MmapMut, MmapOptions};
 use std::{
     cmp::max,
     marker::PhantomData,
-    mem::{size_of},
+    mem::size_of,
     ops::{Deref, DerefMut},
     prelude::v1::*,
     slice,
