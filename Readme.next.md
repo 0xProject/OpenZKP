@@ -72,11 +72,11 @@ impl Verifiable for Claim {
         let trace_length = self.index.next_power_of_two();
         let g = Constant(FieldElement::root(trace_length).unwrap());
         let on_row = |index| (X - g.pow(index)).inv();
-        let reevery_row = || (X - g.pow(trace_length - 1)) / (X.pow(trace_length) - 1.into());
+        let every_row = || (X - g.pow(trace_length - 1)) / (X.pow(trace_length) - 1.into());
 
         Constraints::from_expressions((trace_length, 2), seed, vec![
-            (Trace(0, 1) - Trace(1, 0)) * reevery_row(),
-            (Trace(1, 1) - Trace(0, 0) - Trace(1, 0)) * reevery_row(),
+            (Trace(0, 1) - Trace(1, 0)) * every_row(),
+            (Trace(1, 1) - Trace(0, 0) - Trace(1, 0)) * every_row(),
             (Trace(0, 0) - 1.into()) * on_row(0),
             (Trace(0, 0) - (&self.value).into()) * on_row(self.index),
         ])

@@ -46,7 +46,7 @@ impl Verifiable for Claim {
         let trace_generator = FieldElement::root(trace_length).unwrap();
         let g = Constant(trace_generator);
         let on_row = |index| (X - g.pow(index)).inv();
-        let reevery_row = || (X - g.pow(trace_length - 1)) / (X.pow(trace_length) - 1.into());
+        let every_row = || (X - g.pow(trace_length - 1)) / (X.pow(trace_length) - 1.into());
 
         let periodic = |coefficients| {
             Polynomial(
@@ -58,7 +58,7 @@ impl Verifiable for Claim {
 
         Constraints::from_expressions((trace_length, 1), seed, vec![
             // Says the next row for each row is current x_0^alpha + k
-            (Trace(0, 1) - (Exp(Box::new(Trace(0, 0)), ALPHA) + k_coef.clone())) * reevery_row(),
+            (Trace(0, 1) - (Exp(Box::new(Trace(0, 0)), ALPHA) + k_coef.clone())) * every_row(),
             // Says the first x_0 is the before
             (Trace(0, 0) - (&self.before).into()) * on_row(0),
             // Says the the x_0 on row ROUNDS
