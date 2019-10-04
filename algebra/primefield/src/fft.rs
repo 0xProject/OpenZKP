@@ -5,6 +5,9 @@ use std::prelude::v1::*;
 
 // OPT: Implement parallel strategies: https://inf.ethz.ch/personal/markusp/teaching/263-2300-ETH-spring12/slides/class19.pdf
 
+// TODO: Implement "A modified split-radix FFT with fewer arithmetic operations"
+// See http://www.fftw.org/newsplit.pdf
+
 // TODO: Create a dedicated type for permuted vectors
 
 /// Permute index for an FFT of `size`
@@ -136,7 +139,24 @@ fn fft_permuted_root(root: &FieldElement, coefficients: &mut [FieldElement]) {
     }
 }
 
-fn recursive_radix_2(root: &FieldElement, x: &mut [FieldElement]) {}
+fn recursive_split_radix(x: &mut [FieldElement]) {
+    assert!(x.len().is_power_of_two());
+    match x.len() {
+        0 => {}
+        1 => {}
+        2 => {
+            radix_2(&mut x[0], &mut x[1]);
+        }
+        4 => {
+            let omega = FieldElement::root(4).expect("Root not found");
+            radix_4(&omega, &mut x[0], &mut x[1], &mut x[2], &mut x[3])
+        }
+        n => {
+
+        }
+    }
+
+}
 
 /// Transforms (x0, x1) to (x0 + x1, x0 - x1)
 fn radix_2(x0: &mut FieldElement, x1: &mut FieldElement) {
