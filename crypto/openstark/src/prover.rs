@@ -439,8 +439,9 @@ pub fn prove(constraints: &Constraints, trace: &TraceTable) -> Result<Proof> {
     info!("Oods poly degree: {}", oods_polynomial.degree());
 
     // 4. FRI layers with trees
-    info!("FRI layers with trees.");
+    info!("LDE extension of final polynomial.");
     let first_fri_layer = oods_polynomial.low_degree_extension(constraints.blowup);
+    info!("Fri layers.");
     let fri_trees = perform_fri_layering(
         first_fri_layer,
         &mut proof,

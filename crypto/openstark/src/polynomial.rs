@@ -2,7 +2,7 @@
 #![allow(clippy::module_name_repetitions)]
 use mmap_vec::MmapVec;
 #[cfg(feature = "std")]
-use primefield::fft::{fft_cofactor_permuted, permute_index};
+use primefield::fft::{fft_cofactor_permuted_out, permute_index};
 use primefield::FieldElement;
 #[cfg(feature = "std")]
 use rayon::prelude::*;
@@ -81,11 +81,10 @@ impl DensePolynomial {
         let length = self.len() * blowup;
         let generator =
             FieldElement::root(length).expect("No generator for extended_domain_length.");
-        let mut result: MmapVec<FieldElement> = MmapVec::with_capacity(length);
 
-        // Initialize to zero
-        // TODO: Avoid initialization
-        result.resize(length, FieldElement::ZERO);
+        // FieldElement is safe to initialize zero (which maps to zero)
+        #[allow(unsafe_code)]
+        let mut result: MmapVec<FieldElement> = unsafe { MmapVec::zero_initialized(length) };
 
         // Compute cosets in parallel
         result
@@ -94,8 +93,7 @@ impl DensePolynomial {
             .enumerate()
             .for_each(|(i, slice)| {
                 let cofactor = &SHIFT_FACTOR * generator.pow(permute_index(blowup, i));
-                slice.clone_from_slice(&self.coefficients());
-                fft_cofactor_permuted(&cofactor, slice);
+                fft_cofactor_permuted_out(&cofactor, &self.coefficients(), slice);
             });
         result
     }

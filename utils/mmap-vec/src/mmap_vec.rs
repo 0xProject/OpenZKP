@@ -44,6 +44,14 @@ impl<T: Clone> MmapVec<T> {
         }
     }
 
+    // TODO: Maybe we should do something like a Zeroed trait?
+    // See https://github.com/rust-lang/rfcs/issues/2626
+    pub unsafe fn zero_initialized(len: usize) -> Self {
+        let mut result = Self::with_capacity(len);
+        result.length = len;
+        result
+    }
+
     pub fn is_empty(&self) -> bool {
         self.length == 0
     }
