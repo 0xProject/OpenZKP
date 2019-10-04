@@ -1,100 +1,142 @@
-# Crypto support library for StarkDEX
+# OpenZKP
 
+[![Crates.io](https://img.shields.io/crates/l/openstark)](/License.md)
+[![](https://docs.rs/openstark/badge.svg)](https://docs.rs/openstark)
 [![CircleCI](https://img.shields.io/circleci/build/github/0xProject/starkcrypto)](https://circleci.com/gh/0xProject/starkcrypto)
 [![Codecov](https://img.shields.io/codecov/c/gh/0xproject/starkcrypto)](https://codecov.io/gh/0xProject/starkcrypto)
-<!-- TODO: License, Docs, Chat -->
 
-**Warning.** Side-channel resistance is currently not implemented. This library
-is optimized for performance and does not use slower side-channel resistant
-algorithms. Please evaluate the risks before using with sensitive data.
+OpenZKP - pure Rust implementations of Zero-Knowledge Proof systems.
 
-**Note.** Code coverage in Rust is still very early days. The above number is
-likely inaccurate. Please view the coverage report for details.
+## Overview
 
-## Testing
+The current version has
+
+* 🌞 a simple interface (see the [example](#example) below),
+* 🗜️ succinct proofs,
+* 🏎️ decent performance, and
+* 🌐 webassembly support.
+
+That being said, it also has a number of limitations, it has
+
+* *no* high-level language,
+* *no* comprehensive security audit,
+* *no* perfect zero-knowledge,
+* hard-coded field and hash function,
+
+and some others, see [features and limitations](#features-and-limitations) below for details.
+
+## Packages
+
+| Package                                                        | Version                                                                                                             | Description                                                                                       |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `utils/`                                                       |                                                                                                                     |                                                                                                   |
+| [`criterion-utils`](/utils/criterion-utils)                    | [![Crates.io](https://img.shields.io/crates/v/criterion-utils?label=)](https://crates.io//)                         | Criterion helpers to benchmark over size and number of processors.                                |
+| [`error-utils`](/utils/error-utils)                            | [![Crates.io](https://img.shields.io/crates/v/criterion-utils?label=)](https://crates.io//)                         | Assertion like macros for returning `Result::Err`.                                                |
+| [`logging-allocator`](/utils/logging-allocator)                | [![Crates.io](https://img.shields.io/crates/v/criterion-utils?label=)](https://crates.io//)                         | Wrapper around the system allocator that logs large allocations.                                  |
+| [`mmap-vec`](/utils/mmap-vec)                                  | [![Crates.io](https://img.shields.io/crates/v/criterion-utils?label=)](https://crates.io//)                         | Replacement for `Vec` that uses file-backed storage.                                              |
+| [`macros-lib`](/utils/macros-lib)                              | ![Unpublished](https://img.shields.io/badge/-unpublished-lightgrey)                                                 | Library of procedural macros implemented using `proc_macro2`                                      |
+| [`macros-impl`](/utils/macros-impl)                            | ![Unpublished](https://img.shields.io/badge/-unpublished-lightgrey)                                                 | Implementation crate for `proc_macro_hack`                                                        |
+| [`macros-decl`](/utils/macros-decl)                            | ![Unpublished](https://img.shields.io/badge/-unpublished-lightgrey)                                                 | Procedural macros.                                                                                |
+| `algebra/`                                                     |                                                                                                                     |                                                                                                   |
+| [`u256`](/algebra/u256)                                        | ![Unpublished](https://img.shields.io/badge/-unpublished-lightgrey)                                                 | Implementation of 256-bit unsigned integers.                                                      |
+| [`primefield`](/algebra/primefield)                            | ![Unpublished](https://img.shields.io/badge/-unpublished-lightgrey)                                                 | A 251-bit prime field suitable for FFTs.                                                                            |
+| [`elliptic-curve`](/algebra/elliptic-curve)                    | ![Unpublished](https://img.shields.io/badge/-unpublished-lightgrey)                                                 | A crypto-grade elliptic curve over the `primefield`.                                              |
+| `crypto/`                                                      |                                                                                                                     |                                                                                                   |
+| [`elliptic-curve-crypto`](/crypto/elliptic-curve-crypto)       | ![Unpublished](https://img.shields.io/badge/-unpublished-lightgrey)                                                 | Pedersen commitments and digital signatures.                                                      |
+| [`hash`](/crypto/hash)                                         | ![Unpublished](https://img.shields.io/badge/-unpublished-lightgrey)                                                 | Hash primitive used in `openstark`.                                                               |
+| [`merkle-tree`](/crypto/merkle-tree)                           | [![Crates.io](https://img.shields.io/crates/v/criterion-utils?label=)](https://crates.io//)                         | Merkle tree based vector commitment.                                                              |
+| [`openstark`](/crypto/openstark)                               | [![Crates.io](https://img.shields.io/crates/v/criterion-utils?label=)](https://crates.io//)                         | Implementation of the STARK ZK-proof system.                                                      |
+
+
+## Example
+
+Think of a secret number $n$ and start a sequence with $x_0 = 1$ and $x_1 = n$. Then proceed as a Fibonacci sequence: $x_i = x_{i-2} + x_{i-1}$. We want to proof someone we know $x_k$ without revealing $n$.
+
+```rust
+use openstark::{Provable, Verifiable, TraceTable, FieldElement, Constraints};
+
+struct Claim {
+    index: usize,
+    value: FieldElement,
+}
+
+impl Verifiable for Claim {
+    fn constraints(&self) -> Constraints {
+        use RationalExpression::*;
+
+        // Seed
+        let mut seed = self.index.to_be_bytes().to_vec();
+        seed.extend_from_slice(&self.value.as_montgomery().to_bytes_be());
+
+        // Constraint repetitions
+        let trace_length = self.index.next_power_of_two();
+        let g = Constant(FieldElement::root(trace_length).unwrap());
+        let on_row = |index| (X - g.pow(index)).inv();
+        let every_row = || (X - g.pow(trace_length - 1)) / (X.pow(trace_length) - 1.into());
+
+        Constraints::from_expressions((trace_length, 2), seed, vec![
+            (Trace(0, 1) - Trace(1, 0)) * every_row(),
+            (Trace(1, 1) - Trace(0, 0) - Trace(1, 0)) * every_row(),
+            (Trace(0, 0) - 1.into()) * on_row(0),
+            (Trace(0, 0) - (&self.value).into()) * on_row(self.index),
+        ])
+        .unwrap()
+    }
+}
+
+impl Provable<FieldElement> for Claim {
+    fn trace(&self, witness: &Witness) -> TraceTable {
+        let trace_length = self.index.next_power_of_two();
+        let mut trace = TraceTable::new(trace_length, 2);
+        trace[(0, 0)] = 1.into();
+        trace[(0, 1)] = witness;
+        for i in 0..(trace_length - 1) {
+            trace[(i + 1, 0)] = trace[(i, 1)].clone();
+            trace[(i + 1, 1)] = &trace[(i, 0)] + &trace[(i, 1)];
+        }
+        trace
+    }
+}
+
+pub fn main() {
+    let claim = Claim {
+        index: 5000,
+        value: field_element!("1337"),
+    };
+    let secret = field_element!("42");
+    let proof = claim.proof(&secret).unwrap();
+    claim.verify(proof).unwrap();
+}
+```
+
+## Features and Limitations
+
+### Features
+
+**A simple interface.** The public interface is simple and is considered [semver-stable](https://github.com/rust-lang/rfcs/blob/master/text/1105-api-evolution.md). Future versions are expected to add functionality without breaking this interface.
+
+**Succinct proofs.** For a given security parameter, the proof size is close to minimal. Significant improvements here would require innovations in the way constraint systems are designed or in the underlying cryptography.
+
+**Decent performance.** All steps of the proof are using asymptotically optimal algorithms and all of the major steps are multi-threaded. There are no hard memory requirements. We can expect a good amount of performance improvements by fine-tuning, but we don't expect orders of magnitude improvements.
+
+**Webassembly support.** The verifier can be used in a WebAssembly environment without the Rust `std` lib. The prover will work too, but has not been a priority.
+
+### Limitations
+
+**No high-level language.** Constraints are specified using their algebraic expressions. This requires complicated and careful design from the library user and is easy to do wrong, leading to insecure systems. A high level language would help make development simpler and safer and facilitate re-use of components.
+
+**No comprehensive security audit.** While development is done with the best security practices in mind, it is still very early stage and has not had the amount of expert peer review required for a production grade system.
+
+**No perfect zero-knowledge.** The current implementation provides succinct proofs but not perfect zero knowledge. While non-trivial, it is theoretically possible to learn something about the secret. Achieving perfect zero-knowledge is possible and can be implemented.
+
+**No side-channel resistance.** The implementation favours performance over side-channel resistance. While this is common in zero-knowledge proof system, you should be aware that his might leak intermediate computations. Side-channel resistance can be implemented.
+
+**Hard-coded field and hash.** The current implementation uses a particular [prime field](/algebra/primefield) and a particular [hash function](/crypto/hash). These are optimized for verification in the Ethereum Virtual Machine. This can be generalized to other primitives optimized for other use cases.
+
+## Contributing
+
+See our [Contributing guideline](/Contributing.md) and [Code of conduct](/Code_of_conduct.md).
 
 See CircleCI documentation on how to [run tests locally][cci-local].
 
 [cci-local]: https://circleci.com/docs/2.0/local-cli/
-
-## Benchmark
-
-Checkout master branch:
-
-```sh
-cargo bench --bench benchmark -- --save-baseline master
-```
-
-```sh
-cargo bench --bench benchmark -- --baseline master
-open target/criterion/report/index.html
-```
-
-Benchmarking using Mac OS' instrumentation. For this we need the `cargo-instruments` plugin for Cargo.
-
-```sh
-cargo install cargo-instruments
-```
-
-You can then run tests under profiling. It is recommended to filter for a specific test.
-
-```sh
-cargo instruments --release --bench benchmark --open [test name]
-```
-## Goals
-
--   Perfomance optimized for Native and WebAssembly
--   Generality
--   Later: Constant-time operations.
--   Prefer `const fn` over procedural macros.
-
-For optimization, there are a few different scenarios:
-
-Note: The modulus is always assumed to be 256bit or less.
-
--   Programmer time known fields. The programmer can supply hand tuned optimized
-    implementations of various algorithms. Ideally well performing defaults are
-    provided.
--   Compiler time known fields.
-    The compiler can compute constants, for example for Montgomery
-    representation. The field parameters should be inlined.
--   Statically runtime known fields.
-    Modulus is not known during compilation (but it's size is). Element
-    membership of a particular field is known at compile time. The field
-    parameters should statically allocated and the pointers inlined.
--   Dynamically runtime known fields.
-    Modulus is not known during compilation (but its size is). Element
-    membership of a particular field is not known at compile time. The field
-    element should carry a pointer to the field parameters.
-
-## References and benchmarks
-
--   A sophisticated rust implementation of Curve25519.
-    https://github.com/dalek-cryptography/curve25519-dalek
-    -   Implementation using AVX512
-        https://medium.com/@hdevalence/even-faster-edwards-curves-with-ifma-8b1e576a00e9
-        https://doc-internal.dalek.rs/develop/curve25519_dalek/backend/vector/ifma/index.html
--   A rust library for constant time algorithms.
-    https://github.com/dalek-cryptography/subtle
--   Probably the most tuned curve out there.
-    https://github.com/bitcoin-core/secp256k1
-    -   Rust bindings: https://crates.io/crates/secp256k1
-    -   Rust port: https://crates.io/crates/libsecp256k1
-    -   A fork of secp256k1 favouring performance over constant-timeness.
-        https://github.com/llamasoft/secp256k1_fast_unsafe
--   ZCash implementation of Sappling:
-    https://github.com/zkcrypto/bellman
-    -   https://crates.io/crates/pairing
-    -   Fork by Matter Labs.
-        -   https://crates.io/crates/ff_ce
-        -   https://crates.io/crates/pairing_ce
-        -   https://crates.io/crates/bellman_ce
--   Fast implementation of zksnark in java
-    https://github.com/scipr-lab/dizk
-
-## References
-
--   Handbook of Applied Cryptography
-    http://cacr.uwaterloo.ca/hac/
--   Guide to Elliptic Curve Cryptography
-    https://cdn.preterhuman.net/texts/cryptography/Hankerson,%20Menezes,%20Vanstone.%20Guide%20to%20elliptic%20curve%20cryptography%20(Springer,%202004)(ISBN%20038795273X)(332s)_CsCr_.pdf
