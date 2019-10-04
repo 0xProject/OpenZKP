@@ -40,7 +40,9 @@ pub(crate) mod tests {
         pub(crate) initial_value: FieldElement,
     }
 
-    /// Helper struct for
+    /// Defines a constraint system for the recurrance relation $a_{n+2} =
+    /// a_{n+1} + a_n$, where the claim is that I know a value for $a_1$ such
+    /// that $a_{index} = value$.
     #[derive(Clone, PartialEq, Debug)]
     pub(crate) struct Recurrance {
         pub(crate) index:         usize,
