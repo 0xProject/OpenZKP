@@ -31,30 +31,34 @@ pub(crate) mod tests {
 
     #[derive(Clone, PartialEq, Debug)]
     pub(crate) struct Claim {
-        pub(crate) index: usize,
-        pub(crate) value: FieldElement,
+        index: usize,
+        value: FieldElement,
     }
 
     #[derive(Clone, PartialEq, Debug)]
     pub(crate) struct Witness {
-        pub(crate) secret: FieldElement,
+        secret: FieldElement,
     }
 
     #[derive(Clone, PartialEq, Debug)]
-    pub struct Recurrance {
-        index:         usize,
-        initial_value: FieldElement,
+    pub(crate) struct Recurrance {
+        pub(crate) index:         usize,
+        pub(crate) initial_value: FieldElement,
     }
 
     impl Recurrance {
-        pub(crate) fn claim(&self) -> Claim {
+        pub(crate) fn index_value(&self) -> FieldElement {
             let mut state = (FieldElement::ONE, self.initial_value.clone());
             for _ in 0..self.index {
                 state = (state.1.clone(), state.0 + state.1);
             }
+            state.0
+        }
+
+        pub(crate) fn claim(&self) -> Claim {
             Claim {
                 index: self.index,
-                value: state.0,
+                value: self.index_value(),
             }
         }
 

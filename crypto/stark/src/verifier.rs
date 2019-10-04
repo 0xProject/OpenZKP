@@ -536,10 +536,9 @@ mod tests {
     use super::*;
     use crate::{
         prove,
-        traits::tests::{Recurrance, Claim, Witness},
+        traits::tests::{Recurrance},
         Provable, Verifiable,
     };
-    use zkp_macros_decl::u256h;
     use quickcheck_macros::quickcheck;
 
     #[quickcheck]

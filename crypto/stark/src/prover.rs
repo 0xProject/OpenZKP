@@ -827,7 +827,7 @@ fn decommit_fri_layers_and_trees(
 mod tests {
     use super::*;
     use crate::{
-        traits::tests::{Claim, Witness},
+        traits::tests::{Recurrance},
         verify, Provable, Verifiable,
     };
     use tiny_keccak::sha3_256;
@@ -840,16 +840,12 @@ mod tests {
         // All the constants for this tests are copied from files in
         // https://github.com/0xProject/evm-verifier/commit/9bf369139b0edc23ab7ab7e8db8164c5a05a83df.
         // Copied from solidity/contracts/fibonacci/fibonacci_private_input1.json
-        let witness = Witness {
-            secret: field_element!("83d36de9"),
+        let recurrance = Recurrance {
+            index:         1000,
+            initial_value: field_element!("83d36de9"),
         };
-        // Copied from solidity/contracts/fibonacci/fibonacci_public_input1.json
-        let claim = Claim {
-            index: 1000,
-            value: field_element!(
-                "04d5f1f669b34fb7252d5a9d0d9786b2638c27eaa04e820b38b088057960cca1"
-            ),
-        };
+        let witness = recurrance.witness();
+        let claim = recurrance.claim();
         let mut constraints = claim.constraints();
         constraints.blowup = 16;
         constraints.pow_bits = 0;
@@ -881,15 +877,12 @@ mod tests {
 
     #[test]
     fn fib_test_1024_python_witness() {
-        let witness = Witness {
-            secret: field_element!("cafebabe"),
+        let recurrance = Recurrance {
+            index:         1000,
+            initial_value: field_element!("cafebabe"),
         };
-        let claim = Claim {
-            index: 1000,
-            value: field_element!(
-                "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
-            ),
-        };
+        let witness = recurrance.witness();
+        let claim = recurrance.claim();
 
         let mut constraints = claim.constraints();
         let trace = claim.trace(&witness);
@@ -905,42 +898,13 @@ mod tests {
     }
 
     #[test]
-    fn fib_test_1024_changed_witness() {
-        let witness = Witness {
-            secret: field_element!(
-                "00b4e8fc548bbc1ad9abd5c460840c0865121923590de2f18e9dbeda48a4bb93"
-            ),
-        };
-        let claim = Claim {
-            index: 1000,
-            value: field_element!(
-                "016f6acc9f52c6dffb063135e7af6756613f4b838734b40cf178d2160099713d"
-            ),
-        };
-
-        let mut constraints = claim.constraints();
-        constraints.blowup = 16; // TODO - The blowup in the fib constraints is hardcoded to 16,
-                                 // we should set this back to 32 to get wider coverage when
-                                 // that's fixed
-        constraints.pow_bits = 12;
-        constraints.num_queries = 20;
-        constraints.fri_layout = vec![3, 2];
-        let trace = claim.trace(&witness);
-        let actual = prove(&constraints, &trace).unwrap();
-        verify(&constraints, &actual).unwrap();
-    }
-
-    #[test]
     fn fib_test_4096() {
-        let witness = Witness {
-            secret: field_element!("0f00dbabe0cafebabe"),
+        let recurrance = Recurrance {
+            index:         4000,
+            initial_value: field_element!("cafebabe"),
         };
-        let claim = Claim {
-            index: 4000,
-            value: field_element!(
-                "0576d0c2cc9a060990e96752034a391f0b9036aaa32a3aab28796f7845450e18"
-            ),
-        };
+        let witness = recurrance.witness();
+        let claim = recurrance.claim();
 
         let mut constraints = claim.constraints();
         constraints.blowup = 16;
@@ -962,18 +926,13 @@ mod tests {
     #[allow(clippy::too_many_lines)]
     fn fib_proof_test() {
         crate::tests::init();
+        let recurrance = Recurrance {
+            index:         1000,
+            initial_value: field_element!("cafebabe"),
+        };
 
-        let claim = Claim {
-            index: 1000,
-            value: FieldElement::from(u256h!(
-                "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
-            )),
-        };
-        let witness = Witness {
-            secret: FieldElement::from(u256h!(
-                "00000000000000000000000000000000000000000000000000000000cafebabe"
-            )),
-        };
+        let claim = recurrance.claim();
+        let witness = recurrance.witness();
         let mut constraints = claim.constraints();
         constraints.blowup = 16;
         constraints.pow_bits = 12;
@@ -991,7 +950,10 @@ mod tests {
 
         // Second check that the trace table function is working.
         let trace = claim.trace(&witness);
-        assert_eq!(trace[(1000, 0)], claim.value);
+        assert_eq!(
+            trace[(1000, 0)],
+            field_element!("0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f")
+        );
 
         let TPn = trace.interpolate();
         // Checks that the trace table polynomial interpolation is working
@@ -1031,8 +993,8 @@ mod tests {
         );
 
         // TODO fix naming here!
-        let mut proof_seed = [(claim.index as u64).to_be_bytes()].concat();
-        proof_seed.extend_from_slice(&claim.value.as_montgomery().to_bytes_be());
+        let mut proof_seed = [(recurrance.index as u64).to_be_bytes()].concat();
+        proof_seed.extend_from_slice(&recurrance.index_value().as_montgomery().to_bytes_be());
 
         let mut proof = ProverChannel::new();
         proof.initialize(&proof_seed.as_slice());
