@@ -675,7 +675,6 @@ fn perform_fri_layering(
 ) -> Result<Vec<FriTree>> {
     let mut fri_trees: Vec<FriTree> = Vec::with_capacity(fri_layout.len());
 
-    info!("Computing x_inv");
     // Compute 1/x for the fri layer. We only compute the even coordinates.
     // OPT: Can these be efficiently computed on the fly?
     let x_inv = {
@@ -696,14 +695,12 @@ fn perform_fri_layering(
 
     let mut next_layer = first_layer;
     for &n_reductions in fri_layout {
-        info!("Allocating next round");
         // Allocate next and swap ownership
         let mut layer = MmapVec::with_capacity(next_layer.len() / (1 << n_reductions));
         std::mem::swap(&mut layer, &mut next_layer);
 
         // Create tree from layer
         // FRI layout values are small.
-        info!("Computing FRI tree for previous round");
         #[allow(clippy::cast_possible_truncation)]
         let coset_size = 2_usize.pow(n_reductions as u32);
         let tree = FriTree::from_leaves(FriLeaves { coset_size, layer })?;
@@ -720,7 +717,6 @@ fn perform_fri_layering(
         // OPT: Parallelization
         // OPT: The structure in x_inv should allow faster methods,
         // like in a radix-4 and radix-8 fft.
-        info!("Computing next layer");
         let layer = layer.iter();
         match n_reductions {
             1 => {
@@ -783,7 +779,6 @@ fn perform_fri_layering(
             _ => unimplemented!(),
         };
     }
-    info!("Write last layer coefficients");
 
     // Write the final layer coefficients
     let n_coefficients = next_layer.len() / blowup;

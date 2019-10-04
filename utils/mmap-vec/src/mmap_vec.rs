@@ -5,7 +5,7 @@ use memmap::{MmapMut, MmapOptions};
 use std::{
     cmp::max,
     marker::PhantomData,
-    mem::size_of,
+    mem::{size_of},
     ops::{Deref, DerefMut},
     prelude::v1::*,
     slice,
@@ -44,8 +44,9 @@ impl<T: Clone> MmapVec<T> {
         }
     }
 
-    // TODO: This is unsafe
-    pub fn zero_initialized(len: usize) -> Self {
+    // TODO: Maybe we should do something like a Zeroed trait?
+    // See https://github.com/rust-lang/rfcs/issues/2626
+    pub unsafe fn zero_initialized(len: usize) -> Self {
         let mut result = Self::with_capacity(len);
         result.length = len;
         result

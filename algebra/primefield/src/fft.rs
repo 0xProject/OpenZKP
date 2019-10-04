@@ -57,7 +57,11 @@ pub fn fft_permuted(x: &mut [FieldElement]) {
 }
 
 /// Out-of-place permuted FFT with a cofactor.
-pub fn fft_cofactor_permuted_out(cofactor: &FieldElement, x: &[FieldElement], out: &mut [FieldElement]) {
+pub fn fft_cofactor_permuted_out(
+    cofactor: &FieldElement,
+    x: &[FieldElement],
+    out: &mut [FieldElement],
+) {
     // TODO: Use geometric_series
     let mut c = FieldElement::ONE;
     for (x, out) in x.iter().zip(out.iter_mut()) {
@@ -78,7 +82,6 @@ pub fn fft_cofactor_permuted(cofactor: &FieldElement, x: &mut [FieldElement]) {
     fft_permuted(x);
 }
 
-
 /// In-place permuted inverse FFT with cofactor.
 pub fn ifft_permuted(x: &mut [FieldElement]) {
     // OPT: make inv_root function.
@@ -94,6 +97,17 @@ pub fn ifft_permuted(x: &mut [FieldElement]) {
         *e *= &inverse_length;
     }
 }
+
+// TODO: Cache-oblivious FFT
+// See https://www.csd.uwo.ca/~moreno/CS433-CS9624/Resources/Implementing_FFTs_in_Practice.pdf
+// My `sysctl hw` cache sizes: 32kiB, 256kiB, 8MiB, or 1k, 8k, 256k
+// FieldElements.
+
+// TODO: https://cnx.org/contents/4kChocHM@6/Efficient-FFT-Algorithm-and-Programming-Tricks
+
+// TODO: Radix-4 and/or Split-radix FFT
+// See https://en.wikipedia.org/wiki/Split-radix_FFT_algorithm
+// See http://www.fftw.org/newsplit.pdf
 
 fn fft_permuted_root(root: &FieldElement, coefficients: &mut [FieldElement]) {
     let n_elements = coefficients.len();
