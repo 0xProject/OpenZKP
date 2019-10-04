@@ -27,6 +27,7 @@ pub(crate) mod tests {
     use super::*;
     use crate::RationalExpression;
     use zkp_primefield::FieldElement;
+    use quickcheck::{Arbitrary, Gen};
 
     #[derive(Clone, PartialEq, Debug)]
     pub(crate) struct Claim {
@@ -39,6 +40,40 @@ pub(crate) mod tests {
         pub(crate) secret: FieldElement,
     }
 
+    #[derive(Clone, PartialEq, Debug)]
+    pub struct Recurrance {
+        index:         usize,
+        initial_value: FieldElement,
+    }
+
+    impl Recurrance {
+        pub(crate) fn claim(&self) -> Claim {
+            let mut state = (FieldElement::ONE, self.initial_value.clone());
+            for _ in 0..self.index {
+                state = (state.1.clone(), state.0 + state.1);
+            }
+            Claim {
+                index: self.index,
+                value: state.0,
+            }
+        }
+
+        pub(crate) fn witness(&self) -> Witness {
+            Witness {
+                secret: self.initial_value.clone(),
+            }
+        }
+    }
+
+    impl Arbitrary for Recurrance {
+        fn arbitrary<G: Gen>(g: &mut G) -> Self {
+            Recurrance {
+                index:         1 + usize::arbitrary(g),
+                initial_value: FieldElement::arbitrary(g),
+            }
+        }
+    }
+
     impl Verifiable for Claim {
         fn constraints(&self) -> Constraints {
             use RationalExpression::*;
@@ -48,10 +83,10 @@ pub(crate) mod tests {
             seed.extend_from_slice(&self.value.as_montgomery().to_bytes_be());
 
             // Constraint repetitions
-            let trace_length = self.index.next_power_of_two();
+            let trace_length = (self.index + 1).next_power_of_two();
             let trace_generator = FieldElement::root(trace_length).unwrap();
             let g = Constant(trace_generator);
-            let on_row = |index| (X - g.pow(index)).inv();
+            let on_row = |index| (X - g.pow(index)).inv(); // this is both
             let every_row = || (X - g.pow(trace_length - 1)) / (X.pow(trace_length) - 1.into());
 
             // Constraints
@@ -67,13 +102,13 @@ pub(crate) mod tests {
 
     impl Provable<&Witness> for Claim {
         fn trace(&self, witness: &Witness) -> TraceTable {
-            let trace_length = self.index.next_power_of_two();
+            let trace_length = (self.index + 1).next_power_of_two();
             let mut trace = TraceTable::new(trace_length, 2);
             trace[(0, 0)] = 1.into();
             trace[(0, 1)] = witness.secret.clone();
-            for i in 0..(trace_length - 1) {
-                trace[(i + 1, 0)] = trace[(i, 1)].clone();
-                trace[(i + 1, 1)] = &trace[(i, 0)] + &trace[(i, 1)];
+            for i in 1..trace_length {
+                trace[(i, 0)] = trace[(i - 1, 1)].clone();
+                trace[(i, 1)] = &trace[(i - 1, 0)] + &trace[(i - 1, 1)];
             }
             trace
         }
