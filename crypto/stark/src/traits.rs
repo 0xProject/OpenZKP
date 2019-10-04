@@ -40,6 +40,13 @@ pub(crate) mod tests {
         pub(crate) initial_value: FieldElement,
     }
 
+    /// Helper struct for
+    #[derive(Clone, PartialEq, Debug)]
+    pub(crate) struct Recurrance {
+        pub(crate) index:         usize,
+        pub(crate) initial_value: FieldElement,
+    }
+
     #[derive(Clone, PartialEq, Debug)]
     pub(crate) struct Claim {
         index: usize,
