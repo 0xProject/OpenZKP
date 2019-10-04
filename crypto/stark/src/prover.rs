@@ -992,12 +992,8 @@ mod tests {
             hex!("018dc61f748b1a6c440827876f30f63cb6c4c188000000000000000000000000")
         );
 
-        // TODO fix naming here!
-        let mut proof_seed = [(recurrance.index as u64).to_be_bytes()].concat();
-        proof_seed.extend_from_slice(&recurrance.index_value().as_montgomery().to_bytes_be());
-
         let mut proof = ProverChannel::new();
-        proof.initialize(&proof_seed.as_slice());
+        proof.initialize(&claim.seed());
         // Checks that the channel is inited properly
         assert_eq!(
             proof.coin.digest,
