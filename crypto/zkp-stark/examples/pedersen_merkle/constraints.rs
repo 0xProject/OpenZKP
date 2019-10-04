@@ -6,7 +6,7 @@ use super::{
     },
 };
 use elliptic_curve::Affine;
-use openstark::{Constraints, DensePolynomial, RationalExpression};
+use zkp_stark::{Constraints, DensePolynomial, RationalExpression};
 use primefield::FieldElement;
 use std::{prelude::v1::*, vec};
 
@@ -131,7 +131,7 @@ mod tests {
         super::inputs::{short_witness, SHORT_CLAIM},
         *,
     };
-    use openstark::{prove, Provable, Verifiable};
+    use zkp_stark::{prove, Provable, Verifiable};
 
     #[test]
     fn short_pedersen_merkle() {

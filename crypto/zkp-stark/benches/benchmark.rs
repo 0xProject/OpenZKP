@@ -1,7 +1,7 @@
 #![warn(clippy::all)]
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use macros_decl::u256h;
-use openstark::{prove, verify, Constraints, Provable, RationalExpression, TraceTable, Verifiable};
+use zkp_stark::{prove, verify, Constraints, Provable, RationalExpression, TraceTable, Verifiable};
 use primefield::FieldElement;
 use u256::U256;
 

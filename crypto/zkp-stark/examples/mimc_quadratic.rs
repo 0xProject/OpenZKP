@@ -1,5 +1,5 @@
 use macros_decl::field_element;
-use openstark::{
+use zkp_stark::{
     Constraints, DensePolynomial, Provable, RationalExpression, TraceTable, Verifiable,
 };
 use primefield::{fft::ifft, FieldElement};

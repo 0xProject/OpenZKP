@@ -1,7 +1,7 @@
 # OpenZKP
 
-[![Crates.io](https://img.shields.io/crates/l/openstark)](/License.md)
-[![](https://docs.rs/openstark/badge.svg)](https://docs.rs/openstark)
+[![Crates.io](https://img.shields.io/crates/l/zkp-stark)](/License.md)
+[![](https://docs.rs/zkp-stark/badge.svg)](https://docs.rs/zkp-stark)
 [![CircleCI](https://img.shields.io/circleci/build/github/0xProject/starkcrypto)](https://circleci.com/gh/0xProject/starkcrypto)
 [![Codecov](https://img.shields.io/codecov/c/gh/0xproject/starkcrypto)](https://codecov.io/gh/0xProject/starkcrypto)
 
@@ -43,9 +43,9 @@ and some others, see [features and limitations](#features-and-limitations) below
 | [`elliptic-curve`](/algebra/elliptic-curve)                    | ![Unpublished](https://img.shields.io/badge/-unpublished-lightgrey)                                                 | A crypto-grade elliptic curve over the `primefield`.                                              |
 | `crypto/`                                                      |                                                                                                                     |                                                                                                   |
 | [`elliptic-curve-crypto`](/crypto/elliptic-curve-crypto)       | ![Unpublished](https://img.shields.io/badge/-unpublished-lightgrey)                                                 | Pedersen commitments and digital signatures.                                                      |
-| [`hash`](/crypto/hash)                                         | ![Unpublished](https://img.shields.io/badge/-unpublished-lightgrey)                                                 | Hash primitive used in `openstark`.                                                               |
+| [`hash`](/crypto/hash)                                         | ![Unpublished](https://img.shields.io/badge/-unpublished-lightgrey)                                                 | Hash primitive used in `zkp-stark`.                                                               |
 | [`merkle-tree`](/crypto/merkle-tree)                           | [![Crates.io](https://img.shields.io/crates/v/criterion-utils?label=)](https://crates.io//)                         | Merkle tree based vector commitment.                                                              |
-| [`openstark`](/crypto/openstark)                               | [![Crates.io](https://img.shields.io/crates/v/criterion-utils?label=)](https://crates.io//)                         | Implementation of the STARK ZK-proof system.                                                      |
+| [`zkp-stark`](/crypto/zkp-stark)                               | [![Crates.io](https://img.shields.io/crates/v/criterion-utils?label=)](https://crates.io//)                         | Implementation of the STARK ZK-proof system.                                                      |
 
 
 ## Example
@@ -53,7 +53,7 @@ and some others, see [features and limitations](#features-and-limitations) below
 Think of a secret number $n$ and start a sequence with $x_0 = 1$ and $x_1 = n$. Then proceed as a Fibonacci sequence: $x_i = x_{i-2} + x_{i-1}$. We want to proof someone we know $x_k$ without revealing $n$.
 
 ```rust
-use openstark::{Provable, Verifiable, TraceTable, FieldElement, Constraints};
+use zkp-stark::{Provable, Verifiable, TraceTable, FieldElement, Constraints};
 
 struct Claim {
     index: usize,

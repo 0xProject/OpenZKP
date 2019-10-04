@@ -3,7 +3,7 @@ use super::{
     pedersen_points::{PEDERSEN_POINTS, SHIFT_POINT},
 };
 use elliptic_curve::Affine;
-use openstark::TraceTable;
+use zkp_stark::TraceTable;
 use primefield::FieldElement;
 use std::prelude::v1::*;
 use u256::U256;

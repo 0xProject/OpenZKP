@@ -1,8 +1,8 @@
 [package]
-name = "openstark"
+name = "zkp-stark"
 version = "0.1.0"
 description = "Implementation of the STARK ZK-proof system"
-repository = "https://github.com/0xProject/starkcrypto/tree/master/crypto/openstark"
+repository = "https://github.com/0xProject/starkcrypto/tree/master/crypto/zkp_stark"
 keywords = ["zkp", "stark", "no-std", "wasm"]
 categories = ["cryptography", "algorithms", "no-std", "wasm"]
 authors = [
@@ -14,13 +14,13 @@ license = "Apache-2.0"
 edition = "2018"
 
 [dependencies]
-macros-decl = { path = "../../utils/macros-decl", default-features = false }
-mmap-vec = { path = "../../utils/mmap-vec", default-features = false }
-logging-allocator = { path = "../../utils/logging-allocator", optional = true }
-u256 = { path = "../../algebra/u256", default-features = false }
-primefield = { path = "../../algebra/primefield", default-features = false }
-hash = { path = "../../crypto/hash", default-features = false }
-merkle-tree = { path = "../../crypto/merkle-tree", default-features = false }
+macros-decl = { version = "0.1.0", path = "../../utils/macros-decl", default-features = false }
+mmap-vec = { version = "0.1.0", path = "../../utils/mmap-vec", default-features = false }
+logging-allocator = { version = "0.1.0", path = "../../utils/logging-allocator", optional = true }
+u256 = { version = "0.1.0", path = "../../algebra/u256", default-features = false }
+primefield = { version = "0.1.0", path = "../../algebra/primefield", default-features = false }
+hash = { version = "0.1.0", path = "../../crypto/hash", default-features = false }
+merkle-tree = { version = "0.1.0", path = "../../crypto/merkle-tree", default-features = false }
 
 no-std-compat = { version = "0.1.0", features = [ "alloc" ] }
 itertools = { version = "0.8.0", default_features = false }
@@ -31,14 +31,14 @@ quickcheck = { version = "0.9", optional = true }
 # TODO: Switch to slog
 log = { version = "0.4.8", default_features = false }
 env_logger = { version = "0.6.2", optional = true }
-elliptic-curve = { path = "../../algebra/elliptic-curve", default-features = false, optional = true }
-elliptic-curve-crypto = { path = "../../crypto/elliptic-curve-crypto", default-features = false, optional = true }
+elliptic-curve = { version = "0.1.0", path = "../../algebra/elliptic-curve", default-features = false, optional = true }
+elliptic-curve-crypto = { version = "0.1.0", path = "../../crypto/elliptic-curve-crypto", default-features = false, optional = true }
 
 # HACK: Criterion is really a dev-dependency, but it's important that it's
 # optional, or it will enable the `std` flag on various dependencies. Cargo
 # does not allow dev-dependencies to be optional.
 criterion = { version = "0.3.0", optional = true }
-criterion-utils = { path = "../../utils/criterion-utils", optional = true }
+criterion-utils = { version = "0.1.0", path = "../../utils/criterion-utils", optional = true }
 quickcheck_macros = { version = "0.8", optional = true }
 hex = { version = "0.4.0", optional = true }
 

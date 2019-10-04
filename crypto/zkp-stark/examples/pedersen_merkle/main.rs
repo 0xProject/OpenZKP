@@ -7,7 +7,7 @@ mod trace_table;
 use env_logger;
 use log::info;
 use macros_decl::{field_element, hex};
-use openstark::{prove, Provable};
+use zkp_stark::{prove, Provable};
 use primefield::FieldElement;
 use std::time::Instant;
 use u256::U256;

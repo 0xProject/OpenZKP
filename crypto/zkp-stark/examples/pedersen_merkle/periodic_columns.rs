@@ -1039,7 +1039,7 @@ pub(crate) const RIGHT_Y_COEFFICIENTS: [FieldElement; 256] = [
 mod tests {
     use super::{super::pedersen_points::PEDERSEN_POINTS, *};
     use elliptic_curve::Affine;
-    use openstark::DensePolynomial;
+    use zkp_stark::DensePolynomial;
     use primefield::geometric_series::root_series;
 
     #[test]

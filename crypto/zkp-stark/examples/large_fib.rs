@@ -2,18 +2,16 @@
 use env_logger;
 use log::info;
 use macros_decl::field_element;
-use openstark::{Constraints, Provable, RationalExpression, TraceTable, Verifiable};
+use zkp_stark::{prove, verify, Constraints, Provable, RationalExpression, TraceTable, Verifiable};
 use primefield::FieldElement;
-use std::time::Instant;
+use std::{env, time::Instant};
 use u256::U256;
 
-#[derive(Clone, Debug)]
 struct Claim {
     index: usize,
     value: FieldElement,
 }
 
-#[derive(Clone, Debug)]
 struct Witness {
     secret: FieldElement,
 }
@@ -60,26 +58,34 @@ impl Provable<&Witness> for Claim {
 fn main() {
     env_logger::init();
 
-    info!("Constructing claim");
+    let args: Vec<String> = env::args().collect();
+    if args.len() > 1 {
+        rayon::ThreadPoolBuilder::new()
+            .num_threads(args[1].parse::<usize>().expect("Invalid number supplied"))
+            .build_global()
+            .expect("Error building Rayon thread pool.");
+    }
+    info!("Starting Fibonacci benchmark...");
+
     let claim = Claim {
-        index: 1000,
-        value: field_element!("0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"),
+        index: 1_000_000,
+        value: field_element!("cafebabe"),
     };
-    info!("Claim: {:?}", claim);
-
-    info!("Constructing witness");
     let witness = Witness {
-        secret: field_element!("cafebabe"),
+        secret: field_element!("deadbeef"),
     };
-    info!("Witness: {:?}", witness);
 
-    // Start timer
     let start = Instant::now();
-
-    info!("Constructing proof...");
-    let _proof = claim.prove(&witness).unwrap();
-
-    // Measure time
+    let constraints = claim.constraints();
+    let trace = claim.trace(&witness);
+    let proof = prove(&constraints, &trace).expect("Proof failed");
     let duration = start.elapsed();
-    info!("Time elapsed in proof function is: {:?}", duration);
+    println!("Time elapsed in proof function is: {:?}", duration);
+    println!("The proof length is {}", proof.as_bytes().len());
+    println!(
+        "The estimated size bound is: {}",
+        constraints.max_proof_size()
+    );
+
+    verify(&constraints, &proof).expect("Verification failed");
 }

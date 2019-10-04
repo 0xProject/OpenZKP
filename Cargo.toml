@@ -13,7 +13,7 @@ members = [
     "crypto/hash",
     "crypto/merkle-tree",
     "crypto/elliptic-curve-crypto",
-    "crypto/openstark",
+    "crypto/zkp-stark",
 ]
 
 [profile.release]

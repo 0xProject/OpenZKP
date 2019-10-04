@@ -1,7 +1,7 @@
 [package]
 name = "hash"
 version = "0.1.0"
-description = "Hash primitive used in `openstark`"
+description = "Hash primitive used in `zkp-stark`"
 repository = "https://github.com/0xProject/starkcrypto/tree/master/crypto/hash"
 keywords = ["hash", "no-std"]
 categories = ["cryptography", "algorithms", "no-std", "wasm"]

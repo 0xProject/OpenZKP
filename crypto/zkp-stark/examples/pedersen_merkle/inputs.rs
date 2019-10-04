@@ -1,5 +1,5 @@
 use super::{constraints::get_pedersen_merkle_constraints, trace_table::get_trace_table};
-use openstark::{Constraints, Provable, TraceTable, Verifiable};
+use zkp_stark::{Constraints, Provable, TraceTable, Verifiable};
 use primefield::FieldElement;
 use std::{prelude::v1::*, vec};
 
