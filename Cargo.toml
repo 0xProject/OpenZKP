@@ -13,10 +13,14 @@ members = [
     "crypto/hash",
     "crypto/merkle-tree",
     "crypto/elliptic-curve-crypto",
-    "crypto/zkp-stark",
+    "crypto/stark",
 ]
+
+# TODO: Not all of the workspace would need to be published.
+# See https://github.com/rust-lang/rfcs/pull/2224
 
 [profile.release]
 opt-level = 3
 lto = true
 panic = 'unwind'
+

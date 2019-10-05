@@ -1,5 +1,5 @@
 [package]
-name = "primefield"
+name = "zkp-primefield"
 version = "0.1.0"
 description = "A 251-bit prime field suitable for FFTs."
 repository = "https://github.com/0xProject/starkcrypto/tree/master/algebra/prime-field"
@@ -15,8 +15,8 @@ edition = "2018"
 
 
 [dependencies]
-macros-decl = { path = "../../utils/macros-decl",  default_features = false }
-u256 =  { path = "../u256", default_features = false }
+zkp-macros-decl = { path = "../../utils/macros-decl",  default_features = false }
+zkp-u256 =  { path = "../u256", default_features = false }
 
 no-std-compat = { version = "0.1.0", features = [ "alloc" ] }
 hex = { version = "", optional = true }
@@ -28,7 +28,7 @@ quickcheck = { version = "0.9", optional = true}
 # optional, or it will enable the `std` flag on various dependencies. Cargo
 # does not allow dev-dependencies to be optional.
 criterion = { version = "0.3.0", optional = true }
-criterion-utils = { path = "../../utils/criterion-utils", optional = true }
+zkp-criterion-utils = { path = "../../utils/criterion-utils", optional = true }
 quickcheck_macros = { version = "0.8", optional = true }
 
 [[bench]]
@@ -40,16 +40,16 @@ required-features = ["bench"]
 default = [ "std" ]
 bench = [
     "criterion",
-    "criterion-utils",
+    "zkp-criterion-utils",
 ]
 test = [
     "quickcheck",
     "quickcheck_macros",
-    "u256/test"
+    "zkp-u256/test"
 ]
 std = [
-    "macros-decl/std",
-    "u256/std",
+    "zkp-macros-decl/std",
+    "zkp-u256/std",
     "no-std-compat/std",
     "itertools/use_std",
     "crunchy/std",

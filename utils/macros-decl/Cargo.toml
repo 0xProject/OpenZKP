@@ -1,5 +1,5 @@
 [package]
-name = "macros-decl"
+name = "zkp-macros-decl"
 version = "0.1.0"
 description = "Procedural macros"
 repository = "https://github.com/0xProject/starkcrypto/tree/master/utils/macros-decl"
@@ -14,7 +14,7 @@ license = "Apache-2.0"
 edition = "2018"
 
 [dependencies]
-macros-impl = { path = "../macros-impl" }
+zkp-macros-impl = { path = "../macros-impl" }
 
 proc-macro-hack = "0.5"
 

@@ -1,5 +1,5 @@
 [package]
-name = "macros-impl"
+name = "zkp-macros-impl"
 version = "0.1.0"
 description = "Implementation crate for `proc_macro_hack`"
 repository = "https://github.com/0xProject/starkcrypto/tree/master/utils/macros-impl"
@@ -17,7 +17,7 @@ edition = "2018"
 proc-macro = true
 
 [dependencies]
-macros-lib = { path = "../macros-lib" }
+zkp-macros-lib = { path = "../macros-lib" }
 
 proc-macro2 = "1.0"
 proc-macro-hack = "0.5.8"

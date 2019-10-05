@@ -14,13 +14,13 @@ license = "Apache-2.0"
 edition = "2018"
 
 [dependencies]
-macros-decl = { version = "0.1.0", path = "../../utils/macros-decl", default-features = false }
-mmap-vec = { version = "0.1.0", path = "../../utils/mmap-vec", default-features = false }
-logging-allocator = { version = "0.1.0", path = "../../utils/logging-allocator", optional = true }
-u256 = { version = "0.1.0", path = "../../algebra/u256", default-features = false }
-primefield = { version = "0.1.0", path = "../../algebra/primefield", default-features = false }
-hash = { version = "0.1.0", path = "../../crypto/hash", default-features = false }
-merkle-tree = { version = "0.1.0", path = "../../crypto/merkle-tree", default-features = false }
+zkp-macros-decl = { version = "0.1.0", path = "../../utils/macros-decl", default-features = false }
+zkp-mmap-vec = { version = "0.1.0", path = "../../utils/mmap-vec", default-features = false }
+zkp-logging-allocator = { version = "0.1.0", path = "../../utils/logging-allocator", optional = true }
+zkp-u256 = { version = "0.1.0", path = "../../algebra/u256", default-features = false }
+zkp-primefield = { version = "0.1.0", path = "../../algebra/primefield", default-features = false }
+zkp-hash = { version = "0.1.0", path = "../../crypto/hash", default-features = false }
+zkp-merkle-tree = { version = "0.1.0", path = "../../crypto/merkle-tree", default-features = false }
 
 no-std-compat = { version = "0.1.0", features = [ "alloc" ] }
 itertools = { version = "0.8.0", default_features = false }
@@ -31,14 +31,14 @@ quickcheck = { version = "0.9", optional = true }
 # TODO: Switch to slog
 log = { version = "0.4.8", default_features = false }
 env_logger = { version = "0.6.2", optional = true }
-elliptic-curve = { version = "0.1.0", path = "../../algebra/elliptic-curve", default-features = false, optional = true }
-elliptic-curve-crypto = { version = "0.1.0", path = "../../crypto/elliptic-curve-crypto", default-features = false, optional = true }
+zkp-elliptic-curve = { version = "0.1.0", path = "../../algebra/elliptic-curve", default-features = false, optional = true }
+zkp-elliptic-curve-crypto = { version = "0.1.0", path = "../../crypto/elliptic-curve-crypto", default-features = false, optional = true }
 
 # HACK: Criterion is really a dev-dependency, but it's important that it's
 # optional, or it will enable the `std` flag on various dependencies. Cargo
 # does not allow dev-dependencies to be optional.
 criterion = { version = "0.3.0", optional = true }
-criterion-utils = { version = "0.1.0", path = "../../utils/criterion-utils", optional = true }
+zkp-criterion-utils = { version = "0.1.0", path = "../../utils/criterion-utils", optional = true }
 quickcheck_macros = { version = "0.8", optional = true }
 hex = { version = "0.4.0", optional = true }
 
@@ -50,14 +50,14 @@ required-features = ["bench"]
 [features]
 default = [ "std", "prover", "examples" ]
 std = [
-    "macros-decl/std",
-    "mmap-vec/std",
-    "u256/std",
-    "primefield/std",
-    "elliptic-curve/std",
-    "elliptic-curve-crypto/std",
-    "hash/std",
-    "merkle-tree/std",
+    "zkp-macros-decl/std",
+    "zkp-mmap-vec/std",
+    "zkp-u256/std",
+    "zkp-primefield/std",
+    "zkp-elliptic-curve/std",
+    "zkp-elliptic-curve-crypto/std",
+    "zkp-hash/std",
+    "zkp-merkle-tree/std",
     "no-std-compat/std",
     "itertools/use_std",
     "log/std",
@@ -65,10 +65,10 @@ std = [
     "hex",
 ]
 test = [
-    "u256/test",
-    "primefield/test",
-    "elliptic-curve/test",
-    "elliptic-curve-crypto/test",
+    "zkp-u256/test",
+    "zkp-primefield/test",
+    "zkp-elliptic-curve/test",
+    "zkp-elliptic-curve-crypto/test",
     "quickcheck",
     "quickcheck_macros",
     "hex",
@@ -76,17 +76,17 @@ test = [
 ]
 bench = [
     "criterion",
-    "criterion-utils",
+    "zkp-criterion-utils",
 ]
 examples = [
-    "logging-allocator",
+    "zkp-logging-allocator",
     "env_logger",
-    "elliptic-curve",
-    "elliptic-curve-crypto",
+    "zkp-elliptic-curve",
+    "zkp-elliptic-curve-crypto",
 ]
 prover = [
     "std", # TODO: Make prove run in no-std wasm.
-    "merkle-tree/prover",
+    "zkp-merkle-tree/prover",
 ]
 
 # Allow math in docs
