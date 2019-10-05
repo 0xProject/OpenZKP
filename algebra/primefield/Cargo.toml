@@ -39,6 +39,7 @@ required-features = ["bench"]
 [features]
 default = [ "std" ]
 bench = [
+    "test",
     "criterion",
     "criterion-utils",
 ]

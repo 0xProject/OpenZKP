@@ -2,6 +2,7 @@
 #![allow(clippy::module_name_repetitions)]
 use crate::FieldElement;
 use std::prelude::v1::*;
+use crate::geometric_series::root_series;
 
 // OPT: Implement parallel strategies: https://inf.ethz.ch/personal/markusp/teaching/263-2300-ETH-spring12/slides/class19.pdf
 
@@ -139,23 +140,53 @@ fn fft_permuted_root(root: &FieldElement, coefficients: &mut [FieldElement]) {
     }
 }
 
-fn recursive_split_radix(x: &mut [FieldElement]) {
-    assert!(x.len().is_power_of_two());
-    match x.len() {
-        0 => {}
-        1 => {}
-        2 => {
-            radix_2(&mut x[0], &mut x[1]);
-        }
-        4 => {
-            let omega = FieldElement::root(4).expect("Root not found");
-            radix_4(&omega, &mut x[0], &mut x[1], &mut x[2], &mut x[3])
-        }
-        n => {
+fn fft2(values: &[FieldElement]) -> Vec<FieldElement> {
+    let mut result = values.to_vec();
+    dif_ntt(result.len(), 0, 1, &mut result);
+    permute(&mut result);
+    result
+}
 
+fn dif_ntt(length: usize, offset: usize, stride: usize, values: &mut [FieldElement])
+{
+    match length {
+        0 | 1 => {}
+        2 => {
+            let mut x0 = values[offset].clone();
+            let mut x1 = values[offset + stride].clone();
+            radix_2(&mut x0, &mut x1);
+            values[offset] = x0;
+            values[offset + stride] = x1;
+        }
+        length => {
+            assert!(length.is_power_of_two());
+
+            // Cooley-Tukey recursion with outer size two
+            let outer = 2;
+            let inner = length / outer;
+            assert_eq!(length % outer, 0);
+
+            // Inner FFTs
+            for i in 0..outer {
+                dif_ntt(inner, offset + i * stride, outer * stride, values);
+            }
+
+            // Twiddle factors
+            let omega = FieldElement::root(length).unwrap();
+            for i in 0..inner {
+                let twiddle = omega.pow(i);
+                for j in 0..outer {
+                    let twiddle = twiddle.pow(j);
+                    values[offset + (i * outer + j) * stride] *= twiddle;
+                }
+            }
+
+            // Outer FFTs
+            for i in 0..inner {
+                dif_ntt(outer, offset + i * outer * stride, stride, values);
+            }
         }
     }
-
 }
 
 /// Transforms (x0, x1) to (x0 + x1, x0 - x1)
@@ -255,11 +286,25 @@ mod tests {
     }
 
     #[test]
+    fn fft_one_element_test2() {
+        let v = vec![FieldElement::from_hex_str("435767")];
+        assert_eq!(fft2(&v), v);
+    }
+
+    #[test]
     fn fft_two_element_test() {
         let a = FieldElement::from_hex_str("435767");
         let b = FieldElement::from_hex_str("123430");
         let v = vec![a.clone(), b.clone()];
         assert_eq!(fft(&v), vec![&a + &b, &a - &b]);
+    }
+
+    #[test]
+    fn fft_two_element_test2() {
+        let a = FieldElement::from_hex_str("435767");
+        let b = FieldElement::from_hex_str("123430");
+        let v = vec![a.clone(), b.clone()];
+        assert_eq!(fft2(&v), vec![&a + &b, &a - &b]);
     }
 
     #[test]
@@ -272,6 +317,18 @@ mod tests {
         ];
         assert_eq!(fft(&v), reference_fft(&v));
     }
+
+    #[test]
+    fn fft_four_element_test_2() {
+        let v = vec![
+            FieldElement::from_hex_str("4357670"),
+            FieldElement::from_hex_str("1353542"),
+            FieldElement::from_hex_str("3123423"),
+            FieldElement::from_hex_str("9986432"),
+        ];
+        assert_eq!(fft2(&v), reference_fft(&v));
+    }
+
 
     #[test]
     fn fft_eight_element_test() {
@@ -287,6 +344,22 @@ mod tests {
         ];
         let expected = reference_fft(&v);
         assert_eq!(fft(&v), expected);
+    }
+
+    #[test]
+    fn fft_eight_element_test2() {
+        let v = vec![
+            FieldElement::from_hex_str("4357670"),
+            FieldElement::from_hex_str("1353542"),
+            FieldElement::from_hex_str("3123423"),
+            FieldElement::from_hex_str("9986432"),
+            FieldElement::from_hex_str("43576702"),
+            FieldElement::from_hex_str("23452346"),
+            FieldElement::from_hex_str("31234230"),
+            FieldElement::from_hex_str("99864321"),
+        ];
+        let expected = reference_fft(&v);
+        assert_eq!(fft2(&v), expected);
     }
 
     #[test]
