@@ -1,8 +1,8 @@
 use crate::{Commitment, Error, Index, Node, Proof, Result, VectorCommitment};
-use error_utils::require;
-use hash::{Hash, Hashable};
-use mmap_vec::MmapVec;
 use std::collections::VecDeque;
+use zkp_error_utils::require;
+use zkp_hash::{Hash, Hashable};
+use zkp_mmap_vec::MmapVec;
 
 #[cfg(feature = "std")]
 use rayon::prelude::*;
@@ -190,9 +190,9 @@ impl<Container: VectorCommitment> Tree<Container> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use macros_decl::hex;
     use quickcheck_macros::quickcheck;
-    use u256::U256;
+    use zkp_macros_decl::hex;
+    use zkp_u256::U256;
 
     #[test]
     fn test_explicit_values() {

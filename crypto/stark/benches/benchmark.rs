@@ -1,9 +1,9 @@
 #![warn(clippy::all)]
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use macros_decl::u256h;
+use zkp_macros_decl::u256h;
+use zkp_primefield::FieldElement;
 use zkp_stark::{prove, verify, Constraints, Provable, RationalExpression, TraceTable, Verifiable};
-use primefield::FieldElement;
-use u256::U256;
+use zkp_u256::U256;
 
 #[derive(Clone, PartialEq, Debug)]
 pub(crate) struct Claim {

@@ -5,10 +5,10 @@ use super::{
         LEFT_X_COEFFICIENTS, LEFT_Y_COEFFICIENTS, RIGHT_X_COEFFICIENTS, RIGHT_Y_COEFFICIENTS,
     },
 };
-use elliptic_curve::Affine;
-use zkp_stark::{Constraints, DensePolynomial, RationalExpression};
-use primefield::FieldElement;
 use std::{prelude::v1::*, vec};
+use zkp_elliptic_curve::Affine;
+use zkp_primefield::FieldElement;
+use zkp_stark::{Constraints, DensePolynomial, RationalExpression};
 
 // TODO: Naming
 #[allow(clippy::module_name_repetitions)]

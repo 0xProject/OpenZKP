@@ -37,11 +37,13 @@
 )]
 #![cfg_attr(feature = "std", warn(missing_debug_implementations,))]
 
-use elliptic_curve::{base_mul, double_base_mul, window_table_affine, Affine, GENERATOR, ORDER};
 use lazy_static::*;
 use std::prelude::v1::*;
 use tiny_keccak::sha3_256;
-use u256::U256;
+use zkp_elliptic_curve::{
+    base_mul, double_base_mul, window_table_affine, Affine, GENERATOR, ORDER,
+};
+use zkp_u256::U256;
 
 #[cfg(not(feature = "std"))]
 extern crate no_std_compat as std;
@@ -119,9 +121,9 @@ pub fn verify(msg_hash: &U256, r: &U256, w: &U256, public_key: &Affine) -> bool 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use macros_decl::u256h;
-    use primefield::FieldElement;
     use quickcheck_macros::quickcheck;
+    use zkp_macros_decl::u256h;
+    use zkp_primefield::FieldElement;
 
     #[test]
     fn test_pubkey() {

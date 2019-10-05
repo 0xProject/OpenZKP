@@ -1,7 +1,7 @@
 use super::{constraints::get_pedersen_merkle_constraints, trace_table::get_trace_table};
-use zkp_stark::{Constraints, Provable, TraceTable, Verifiable};
-use primefield::FieldElement;
 use std::{prelude::v1::*, vec};
+use zkp_primefield::FieldElement;
+use zkp_stark::{Constraints, Provable, TraceTable, Verifiable};
 
 #[derive(PartialEq, Clone)]
 #[cfg_attr(feature = "std", derive(Debug))]
@@ -42,10 +42,10 @@ impl From<&Claim> for Vec<u8> {
 }
 
 #[cfg(test)]
-use macros_decl::field_element;
+use zkp_macros_decl::field_element;
 
 #[cfg(test)]
-use u256::U256;
+use zkp_u256::U256;
 
 #[cfg(test)]
 pub const SHORT_CLAIM: Claim = Claim {
@@ -76,7 +76,7 @@ pub fn short_witness() -> Witness {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use macros_decl::hex;
+    use zkp_macros_decl::hex;
 
     #[test]
     fn claim_writable_correct() {

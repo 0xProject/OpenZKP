@@ -1,11 +1,11 @@
 #![warn(clippy::all)]
 use env_logger;
 use log::info;
-use macros_decl::field_element;
-use zkp_stark::{Constraints, Provable, RationalExpression, TraceTable, Verifiable};
-use primefield::FieldElement;
 use std::time::Instant;
-use u256::U256;
+use zkp_macros_decl::field_element;
+use zkp_primefield::FieldElement;
+use zkp_stark::{Constraints, Provable, RationalExpression, TraceTable, Verifiable};
+use zkp_u256::U256;
 
 const R: FieldElement = field_element!("03");
 

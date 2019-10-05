@@ -1,6 +1,6 @@
-use macros_decl::field_element;
-use primefield::FieldElement;
-use u256::U256;
+use zkp_macros_decl::field_element;
+use zkp_primefield::FieldElement;
+use zkp_u256::U256;
 
 pub(crate) const LEFT_X_COEFFICIENTS: [FieldElement; 256] = [
     field_element!("00a74f2a70da4ea3723cabd2acc55d03f9ff6d0e7acef0fc63263b12c10dd837"),
@@ -1038,9 +1038,9 @@ pub(crate) const RIGHT_Y_COEFFICIENTS: [FieldElement; 256] = [
 #[cfg(test)]
 mod tests {
     use super::{super::pedersen_points::PEDERSEN_POINTS, *};
-    use elliptic_curve::Affine;
+    use zkp_elliptic_curve::Affine;
+    use zkp_primefield::geometric_series::root_series;
     use zkp_stark::DensePolynomial;
-    use primefield::geometric_series::root_series;
 
     #[test]
     fn left_coefficients_match() {

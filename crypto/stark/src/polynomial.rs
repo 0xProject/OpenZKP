@@ -1,12 +1,12 @@
 // TODO: Naming?
 #![allow(clippy::module_name_repetitions)]
-use mmap_vec::MmapVec;
-#[cfg(feature = "std")]
-use primefield::fft::{fft_cofactor_permuted_out, permute_index};
-use primefield::FieldElement;
 #[cfg(feature = "std")]
 use rayon::prelude::*;
 use std::prelude::v1::*;
+use zkp_mmap_vec::MmapVec;
+#[cfg(feature = "std")]
+use zkp_primefield::fft::{fft_cofactor_permuted_out, permute_index};
+use zkp_primefield::FieldElement;
 
 #[derive(PartialEq, Clone)]
 pub struct DensePolynomial(MmapVec<FieldElement>);

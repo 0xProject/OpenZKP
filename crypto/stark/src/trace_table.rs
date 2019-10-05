@@ -1,13 +1,13 @@
 use crate::polynomial::DensePolynomial;
-use mmap_vec::MmapVec;
-use primefield::{
-    fft::{ifft_permuted, permute},
-    FieldElement,
-};
 use rayon::prelude::*;
 use std::{
     ops::{Index, IndexMut},
     prelude::v1::*,
+};
+use zkp_mmap_vec::MmapVec;
+use zkp_primefield::{
+    fft::{ifft_permuted, permute},
+    FieldElement,
 };
 
 #[cfg_attr(feature = "std", derive(Debug))]

@@ -1,9 +1,9 @@
-use macros_decl::field_element;
+use zkp_macros_decl::field_element;
+use zkp_primefield::{fft::ifft, FieldElement};
 use zkp_stark::{
     Constraints, DensePolynomial, Provable, RationalExpression, TraceTable, Verifiable,
 };
-use primefield::{fft::ifft, FieldElement};
-use u256::U256;
+use zkp_u256::U256;
 
 const ALPHA: usize = 3;
 const ROUNDS: usize = 8192; // 2^13 to match Guild of Weavers

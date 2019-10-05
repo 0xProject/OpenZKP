@@ -1,10 +1,10 @@
 use crate::{
     polynomial::DensePolynomial, rational_expression::RationalExpression, trace_table::TraceTable,
 };
-use primefield::{invert_batch_src_dst, FieldElement};
 use std::{cmp::min, ops::Neg, prelude::v1::*};
 use tiny_keccak::Keccak;
-use u256::U256;
+use zkp_primefield::{invert_batch_src_dst, FieldElement};
+use zkp_u256::U256;
 
 /// Number of values to calculate at once.
 ///
@@ -577,7 +577,7 @@ impl AlgebraicGraph {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use macros_decl::field_element;
+    use zkp_macros_decl::field_element;
     use Operation as Op;
     use RationalExpression as RE;
 

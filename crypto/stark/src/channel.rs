@@ -1,13 +1,13 @@
 // TODO: Naming?
 #![allow(clippy::module_name_repetitions)]
 use crate::proof_of_work;
-use hash::Hash;
-use macros_decl::u256h;
-use merkle_tree;
-use primefield::FieldElement;
 use std::prelude::v1::*;
 use tiny_keccak::Keccak;
-use u256::U256;
+use zkp_hash::Hash;
+use zkp_macros_decl::u256h;
+use zkp_merkle_tree;
+use zkp_primefield::FieldElement;
+use zkp_u256::U256;
 
 pub(crate) trait RandomGenerator<T> {
     fn get_random(&mut self) -> T;
@@ -216,14 +216,14 @@ impl Writable<&Hash> for ProverChannel {
     }
 }
 
-impl Writable<&merkle_tree::Commitment> for ProverChannel {
-    fn write(&mut self, data: &merkle_tree::Commitment) {
+impl Writable<&zkp_merkle_tree::Commitment> for ProverChannel {
+    fn write(&mut self, data: &zkp_merkle_tree::Commitment) {
         self.write(data.hash())
     }
 }
 
-impl Writable<&merkle_tree::Proof> for ProverChannel {
-    fn write(&mut self, data: &merkle_tree::Proof) {
+impl Writable<&zkp_merkle_tree::Proof> for ProverChannel {
+    fn write(&mut self, data: &zkp_merkle_tree::Proof) {
         for hash in data.hashes() {
             self.write(hash)
         }
@@ -316,7 +316,7 @@ impl Replayable<FieldElement> for VerifierChannel {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use macros_decl::{hex, u256h};
+    use zkp_macros_decl::{hex, u256h};
 
     // Note - This test depends on the specific ordering of the subtests because of
     // the nature of the channel

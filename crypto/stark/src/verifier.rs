@@ -1,13 +1,13 @@
 use crate::{
     channel::*, constraints::Constraints, polynomial::DensePolynomial, proof_of_work, Proof,
 };
-use hash::Hash;
-use merkle_tree::{Commitment, Error as MerkleError, Proof as MerkleProof};
-use primefield::{fft, geometric_series::root_series, FieldElement};
 #[cfg(feature = "std")]
 use std::error;
 use std::{collections::BTreeMap, convert::TryInto, fmt, prelude::v1::*};
-use u256::U256;
+use zkp_hash::Hash;
+use zkp_merkle_tree::{Commitment, Error as MerkleError, Proof as MerkleProof};
+use zkp_primefield::{fft, geometric_series::root_series, FieldElement};
+use zkp_u256::U256;
 
 type Result<T> = std::result::Result<T, Error>;
 
@@ -539,7 +539,7 @@ mod tests {
         traits::tests::{Claim, Witness},
         Provable, Verifiable,
     };
-    use macros_decl::u256h;
+    use zkp_macros_decl::u256h;
 
     #[test]
     fn verifier_fib_test() {

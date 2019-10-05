@@ -1,7 +1,7 @@
 use crate::rational_expression::RationalExpression;
 use itertools::Itertools;
-use primefield::FieldElement;
 use std::{fmt, prelude::v1::*};
+use zkp_primefield::FieldElement;
 
 #[derive(Clone, Debug)]
 pub enum Error {
@@ -208,9 +208,9 @@ mod tests {
         traits::tests::{Claim, Witness},
         Provable, Verifiable,
     };
-    use macros_decl::field_element;
-    use primefield::FieldElement;
-    use u256::U256;
+    use zkp_macros_decl::field_element;
+    use zkp_primefield::FieldElement;
+    use zkp_u256::U256;
 
     #[test]
     fn size_estimate_test() {

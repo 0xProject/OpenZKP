@@ -5,19 +5,19 @@ use crate::{
     polynomial::DensePolynomial,
     proof_of_work, verify, Proof, TraceTable, VerifierError,
 };
-use hash::{Hash, Hashable, MaskedKeccak};
 use itertools::Itertools;
 use log::info;
-use merkle_tree::{Error as MerkleError, Tree, VectorCommitment};
-use mmap_vec::MmapVec;
-use primefield::{
+use rayon::prelude::*;
+use std::{fmt, prelude::v1::*, vec};
+use zkp_hash::{Hash, Hashable, MaskedKeccak};
+use zkp_merkle_tree::{Error as MerkleError, Tree, VectorCommitment};
+use zkp_mmap_vec::MmapVec;
+use zkp_primefield::{
     fft::{ifft_permuted, permute, permute_index},
     geometric_series::geometric_series,
     FieldElement,
 };
-use rayon::prelude::*;
-use std::{fmt, prelude::v1::*, vec};
-use u256::U256;
+use zkp_u256::U256;
 
 type Result<T> = std::result::Result<T, Error>;
 
@@ -830,10 +830,10 @@ mod tests {
         traits::tests::{Claim, Witness},
         verify, Provable, Verifiable,
     };
-    use macros_decl::{field_element, hex, u256h};
-    use primefield::{fft::permute_index, geometric_series::geometric_series};
     use tiny_keccak::sha3_256;
-    use u256::U256;
+    use zkp_macros_decl::{field_element, hex, u256h};
+    use zkp_primefield::{fft::permute_index, geometric_series::geometric_series};
+    use zkp_u256::U256;
 
     #[test]
     fn starkware_fibonacci() {

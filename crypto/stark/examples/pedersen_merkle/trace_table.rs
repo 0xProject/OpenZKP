@@ -2,11 +2,11 @@ use super::{
     inputs::{Claim, Witness},
     pedersen_points::{PEDERSEN_POINTS, SHIFT_POINT},
 };
-use elliptic_curve::Affine;
-use zkp_stark::TraceTable;
-use primefield::FieldElement;
 use std::prelude::v1::*;
-use u256::U256;
+use zkp_elliptic_curve::Affine;
+use zkp_primefield::FieldElement;
+use zkp_stark::TraceTable;
+use zkp_u256::U256;
 
 // TODO: Naming
 #[allow(clippy::module_name_repetitions)]

@@ -1,7 +1,7 @@
-use elliptic_curve::Affine;
-use macros_decl::field_element;
-use primefield::FieldElement;
-use u256::U256;
+use zkp_elliptic_curve::Affine;
+use zkp_macros_decl::field_element;
+use zkp_primefield::FieldElement;
+use zkp_u256::U256;
 
 pub(crate) const SHIFT_POINT: Affine = Affine::Point {
     x: field_element!("049ee3eba8c1600700ee1b87eb599f16716b0b1022947733551fde4050ca6804"),

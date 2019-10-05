@@ -26,7 +26,7 @@ pub trait Provable<T>: Verifiable {
 pub(crate) mod tests {
     use super::*;
     use crate::RationalExpression;
-    use primefield::FieldElement;
+    use zkp_primefield::FieldElement;
 
     #[derive(Clone, PartialEq, Debug)]
     pub(crate) struct Claim {

@@ -1,10 +1,10 @@
 use crate::polynomial::DensePolynomial;
-use primefield::FieldElement;
 use std::{
     iter::Sum,
     ops::{Add, Div, Mul, Sub},
     prelude::v1::*,
 };
+use zkp_primefield::FieldElement;
 
 // TODO: Rename to algebraic expression
 #[derive(Clone)]

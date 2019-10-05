@@ -48,9 +48,9 @@ pub use curve::Affine;
 pub use jacobian::Jacobian;
 pub use wnaf::{base_mul, double_base_mul, double_mul, mul, window_table_affine};
 
-use macros_decl::u256h;
-use primefield::FieldElement;
-use u256::U256;
+use zkp_macros_decl::u256h;
+use zkp_primefield::FieldElement;
+use zkp_u256::U256;
 
 // Curve parameters
 

@@ -1,13 +1,13 @@
 #[cfg(all(feature = "std", feature = "prover"))]
 use log::info;
-use macros_decl::hex;
 #[cfg(all(feature = "std", feature = "prover"))]
 use rayon::prelude::*;
 use std::convert::TryFrom;
 #[cfg(all(feature = "std", feature = "prover"))]
 use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
 use tiny_keccak::Keccak;
-use u256::U256;
+use zkp_macros_decl::hex;
+use zkp_u256::U256;
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "std", derive(Debug))]

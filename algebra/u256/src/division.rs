@@ -173,8 +173,8 @@ pub(crate) fn divrem_nbym(numerator: &mut [u64], divisor: &mut [u64]) {
 mod tests {
     use super::*;
     use crate::u256::U256;
-    use macros_decl::u256h;
     use quickcheck_macros::quickcheck;
+    use zkp_macros_decl::u256h;
 
     const HALF: u64 = 1_u64 << 63;
     const FULL: u64 = u64::max_value();

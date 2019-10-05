@@ -6,18 +6,18 @@ mod trace_table;
 
 use env_logger;
 use log::info;
-use macros_decl::{field_element, hex};
-use zkp_stark::{prove, Provable};
-use primefield::FieldElement;
 use std::time::Instant;
-use u256::U256;
+use zkp_macros_decl::{field_element, hex};
+use zkp_primefield::FieldElement;
+use zkp_stark::{prove, Provable};
+use zkp_u256::U256;
 
 use constraints::get_pedersen_merkle_constraints;
 use inputs::{Claim, Witness};
 
 // Need to import to active the logging allocator
 #[allow(unused_imports)]
-use logging_allocator;
+use zkp_logging_allocator;
 
 fn main() {
     env_logger::init();

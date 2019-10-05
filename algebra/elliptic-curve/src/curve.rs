@@ -1,10 +1,10 @@
 use crate::BETA;
-use primefield::FieldElement;
 use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
     prelude::v1::*,
 };
-use u256::{commutative_binop, noncommutative_binop, U256};
+use zkp_primefield::FieldElement;
+use zkp_u256::{commutative_binop, noncommutative_binop, U256};
 
 #[derive(PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "std", derive(Debug))]
@@ -200,9 +200,9 @@ impl Arbitrary for Affine {
 mod tests {
     use super::*;
     use crate::ORDER;
-    use macros_decl::u256h;
     use quickcheck_macros::quickcheck;
-    use u256::U256;
+    use zkp_macros_decl::u256h;
+    use zkp_u256::U256;
 
     #[test]
     fn test_add() {

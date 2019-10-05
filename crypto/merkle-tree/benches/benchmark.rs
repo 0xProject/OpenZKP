@@ -1,8 +1,8 @@
 #![warn(clippy::all)]
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use criterion_utils::{log_size_bench, log_thread_bench};
-use merkle_tree::Tree;
-use u256::U256;
+use zkp_merkle_tree::Tree;
+use zkp_u256::U256;
 
 const SIZES: [usize; 6] = [64, 256, 1024, 4096, 16384, 65536];
 
