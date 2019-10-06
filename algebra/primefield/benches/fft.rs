@@ -2,7 +2,7 @@
 use criterion::{black_box, criterion_group, Criterion};
 use criterion_utils::{log_size_bench, log_thread_bench};
 use macros_decl::field_element;
-use primefield::{fft::fft_cofactor_permuted, FieldElement};
+use primefield::{fft::fft_cofactor_permuted,fft::fft2_permuted,  FieldElement};
 use u256::U256;
 
 const SIZES: [usize; 6] = [64, 256, 1024, 4096, 16384, 65536];
@@ -15,7 +15,8 @@ fn fft_size(crit: &mut Criterion) {
         let mut copy = leaves.clone();
         bench.iter(|| {
             copy.clone_from_slice(&leaves);
-            fft_cofactor_permuted(black_box(&cofactor), black_box(&mut copy))
+//            fft_cofactor_permuted(black_box(&cofactor), black_box(&mut copy))
+            fft2_permuted(black_box(&mut copy))
         })
     });
 }

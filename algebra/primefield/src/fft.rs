@@ -3,6 +3,8 @@
 use crate::FieldElement;
 use std::prelude::v1::*;
 use crate::geometric_series::root_series;
+use macros_decl::field_element;
+use u256::U256;
 
 // OPT: Implement parallel strategies: https://inf.ethz.ch/personal/markusp/teaching/263-2300-ETH-spring12/slides/class19.pdf
 
@@ -106,6 +108,7 @@ pub fn ifft_permuted(x: &mut [FieldElement]) {
 
 // TODO: Cache-oblivious FFT
 // See https://www.csd.uwo.ca/~moreno/CS433-CS9624/Resources/Implementing_FFTs_in_Practice.pdf
+// See https://cs.uwaterloo.ca/~imunro/cs840/Notes16/frigo.pdf
 // My `sysctl hw` cache sizes: 32kiB, 256kiB, 8MiB, or 1k, 8k, 256k
 // FieldElements.
 
@@ -130,10 +133,8 @@ fn fft_permuted_root(root: &FieldElement, coefficients: &mut [FieldElement]) {
             debug_assert!(block < n_blocks);
             let block_start = 2 * permute_index(n_blocks, block) * block_size;
             for i in block_start..block_start + block_size {
-                let j = i + block_size;
-                let (left, right) = coefficients.split_at_mut(j);
-                right[0] *= &twiddle_factor;
-                radix_2(&mut left[i], &mut right[0]);
+                coefficients[i + block_size] *= &twiddle_factor;
+                radix_2(i, block_size, coefficients);
             }
             twiddle_factor *= &twiddle_factor_update;
         }
@@ -147,41 +148,46 @@ fn fft2(values: &[FieldElement]) -> Vec<FieldElement> {
     result
 }
 
+pub fn fft2_permuted(values: &[FieldElement]) -> Vec<FieldElement> {
+    let mut result = values.to_vec();
+    dif_ntt(result.len(), 0, 1, &mut result);
+    result
+}
+
+// See https://github.com/awelkie/RustFFT
+
+// Depth-first
 fn dif_ntt(length: usize, offset: usize, stride: usize, values: &mut [FieldElement])
 {
+    println!("Length: {:?}", length);
+    assert!(length.is_power_of_two());
     match length {
         0 | 1 => {}
-        2 => {
-            let mut x0 = values[offset].clone();
-            let mut x1 = values[offset + stride].clone();
-            radix_2(&mut x0, &mut x1);
-            values[offset] = x0;
-            values[offset + stride] = x1;
-        }
+        2 => { radix_2(offset, stride, values) }
+        // 4 => { radix_4(offset, stride, values) }
+        // 8 => { radix_8(offset, stride, values) }
         length => {
-            assert!(length.is_power_of_two());
-
             // Cooley-Tukey recursion with outer size two
-            let outer = 2;
-            let inner = length / outer;
-            assert_eq!(length % outer, 0);
 
-            // Inner FFTs
+            // Transform into a matrix of size (inner, outer)
+            let (inner, outer) = (length / 2, 2);
+            assert_eq!(outer * inner, length);
+            println!("{:?}", (inner, outer));
+
+            // Inner FFTs over columns
             for i in 0..outer {
                 dif_ntt(inner, offset + i * stride, outer * stride, values);
             }
 
             // Twiddle factors
             let omega = FieldElement::root(length).unwrap();
-            for i in 0..inner {
-                let twiddle = omega.pow(i);
+            for i in 0..inner {ß
                 for j in 0..outer {
-                    let twiddle = twiddle.pow(j);
-                    values[offset + (i * outer + j) * stride] *= twiddle;
+                    values[offset + (i * outer + j) * stride] *= omega.pow(i * j);
                 }
             }
 
-            // Outer FFTs
+            // Outer FFTs over rows
             for i in 0..inner {
                 dif_ntt(outer, offset + i * outer * stride, stride, values);
             }
@@ -190,31 +196,41 @@ fn dif_ntt(length: usize, offset: usize, stride: usize, values: &mut [FieldEleme
 }
 
 /// Transforms (x0, x1) to (x0 + x1, x0 - x1)
-fn radix_2(x0: &mut FieldElement, x1: &mut FieldElement) {
+#[inline(always)]
+fn radix_2(offset: usize, stride: usize, values: &mut [FieldElement]) {
     // OPT: Inplace +- operation like in gcd::mat_mul.
-    let t = x0.clone();
-    *x0 += &*x1;
+
+    let (left, right) = values.split_at_mut(offset + stride);
+    let t = left[offset].clone();
+    left[offset] += &right[0];
     // OPT: sub_from_assign
-    *x1 -= t;
-    x1.neg_assign();
+    right[0] -= t;
+    right[0].neg_assign();
 }
 
 // See https://math.stackexchange.com/questions/1626897/whats-the-formulation-of-n-point-radix-n-for-ntt/1627247
-// TODO: use
-#[allow(dead_code)]
-fn radix_4(
-    omega: &FieldElement,
-    x0: &mut FieldElement,
-    x1: &mut FieldElement,
-    x2: &mut FieldElement,
-    x3: &mut FieldElement,
-) {
-    radix_2(x0, x2);
-    radix_2(x1, x3);
-    *x3 *= omega;
-    radix_2(x0, x1);
-    radix_2(x2, x3);
+#[inline(always)]
+fn radix_4(offset: usize, stride: usize, values: &mut [FieldElement]) {
+    const OMEGA: FieldElement = field_element!("0625023929a2995b533120664329f8c7c5268e56ac8320da2a616626f41337e3");
+    radix_2(0, 2, values);
+    radix_2(1, 2, values);
+    values[offset + 3 * stride] *= OMEGA;
+    radix_2(0, 1, values);
+    radix_2(2, 1, values);
 }
+
+#[inline(always)]
+fn radix_8(offset: usize, stride: usize, values: &mut [FieldElement]) {
+    const OMEGA: FieldElement = field_element!("0625023929a2995b533120664329f8c7c5268e56ac8320da2a616626f41337e3");
+    radix_4(0, 2, values);
+    radix_4(1, 2, values);
+    values[offset + 3 * stride] *= OMEGA;
+    radix_2(0, 1, values);
+    radix_2(2, 1, values);
+    radix_2(2, 1, values);
+    radix_2(2, 1, values);
+}
+
 
 // Quickcheck needs pass by value
 #[allow(clippy::needless_pass_by_value)]
@@ -264,18 +280,16 @@ mod tests {
 
     #[test]
     fn test_radix_2() {
-        let mut x0 =
-            field_element!("0234287dcbaffe7f969c748655fca9e58fa8120b6d56eb0c1080d17957ebe47b");
-        let mut x1 =
-            field_element!("06c81c707ecc44b5f60297ec08d2d585513c1ba022dd93af66a1dbacb162a3f3");
-        radix_2(&mut x0, &mut x1);
+        let mut x = [
+            field_element!("0234287dcbaffe7f969c748655fca9e58fa8120b6d56eb0c1080d17957ebe47b"),
+            field_element!("06c81c707ecc44b5f60297ec08d2d585513c1ba022dd93af66a1dbacb162a3f3"),
+        ];
+        radix_2(0, 1, &mut x);
         assert_eq!(
-            x0,
-            field_element!("00fc44ee4a7c43248c9f0c725ecf7f6ae0e42dab90347ebb7722ad26094e886d")
-        );
-        assert_eq!(
-            x1,
+            x, [
+            field_element!("00fc44ee4a7c43248c9f0c725ecf7f6ae0e42dab90347ebb7722ad26094e886d"),
             field_element!("036c0c0d4ce3b9daa099dc9a4d29d4603e6bf66b4a79575ca9def5cca6894089")
+            ]
         );
     }
 
@@ -349,14 +363,14 @@ mod tests {
     #[test]
     fn fft_eight_element_test2() {
         let v = vec![
-            FieldElement::from_hex_str("4357670"),
-            FieldElement::from_hex_str("1353542"),
-            FieldElement::from_hex_str("3123423"),
-            FieldElement::from_hex_str("9986432"),
-            FieldElement::from_hex_str("43576702"),
-            FieldElement::from_hex_str("23452346"),
-            FieldElement::from_hex_str("31234230"),
-            FieldElement::from_hex_str("99864321"),
+            FieldElement::from_hex_str("0"),
+            FieldElement::from_hex_str("1"),
+            FieldElement::from_hex_str("0"),
+            FieldElement::from_hex_str("0"),
+            FieldElement::from_hex_str("0"),
+            FieldElement::from_hex_str("0"),
+            FieldElement::from_hex_str("0"),
+            FieldElement::from_hex_str("0"),
         ];
         let expected = reference_fft(&v);
         assert_eq!(fft2(&v), expected);
