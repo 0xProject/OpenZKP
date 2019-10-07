@@ -90,7 +90,5 @@ prover = [
 ]
 
 # Allow math in docs
-# BLOCK https://github.com/rust-lang/rust/issues/16300
-# BLOCK https://github.com/rust-lang/docs.rs/issues/302
 [package.metadata.docs.rs]
 rustdoc-args = ["--html-in-header", ".cargo/katex-header.html"]
