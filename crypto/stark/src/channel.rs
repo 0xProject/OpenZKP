@@ -73,6 +73,7 @@ impl From<Vec<u8>> for ProverChannel {
     }
 }
 
+#[cfg(feature = "prover")]
 impl ProverChannel {
     pub(crate) fn new() -> Self {
         Self {
