@@ -1,6 +1,6 @@
 #![warn(clippy::all)]
 use criterion::{black_box, criterion_group, Criterion};
-use criterion_utils::{log_size_bench, log_thread_bench};
+use zkp_criterion_utils::{log_size_bench, log_thread_bench};
 use zkp_macros_decl::field_element;
 use zkp_primefield::{fft::fft_cofactor_permuted, FieldElement};
 use zkp_u256::U256;
