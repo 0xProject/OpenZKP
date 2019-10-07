@@ -30,7 +30,7 @@ pub(crate) trait Replayable<T> {
 #[cfg_attr(feature = "std", derive(Debug))]
 pub(crate) struct PublicCoin {
     pub(crate) digest: [u8; 32],
-    counter:    u64,
+    counter:           u64,
 }
 
 #[derive(PartialEq, Eq, Clone, Default)]
@@ -43,9 +43,9 @@ pub(crate) struct ProverChannel {
 #[derive(PartialEq, Eq, Clone, Default)]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub(crate) struct VerifierChannel {
-    pub(crate) coin:    PublicCoin,
-    pub(crate) proof:   Vec<u8>,
-    proof_index: usize,
+    pub(crate) coin:  PublicCoin,
+    pub(crate) proof: Vec<u8>,
+    proof_index:      usize,
 }
 
 impl PublicCoin {
