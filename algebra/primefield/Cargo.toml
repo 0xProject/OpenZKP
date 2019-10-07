@@ -1,8 +1,8 @@
 [package]
 name = "zkp-primefield"
-version = "0.1.0"
+version = "0.1.1"
 description = "A 251-bit prime field suitable for FFTs."
-repository = "https://github.com/0xProject/starkcrypto/tree/master/algebra/prime-field"
+repository = "https://github.com/0xProject/starkcrypto/tree/master/algebra/primefield"
 keywords = ["cryptography", "finite", "algebra", "no-std", "wasm"]
 categories = ["algorithms", "cryptography", "no-std", "wasm", "science"]
 authors = [

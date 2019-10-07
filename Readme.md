@@ -27,40 +27,37 @@ and some others, see [features and limitations](#features-and-limitations) below
 
 ## Packages
 
-| Package                                                        | Version                                                                                                             | Description                                                                                       |
-| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `utils/`                                                       |                                                                                                                     |                                                                                                   |
-| [`criterion-utils`](/utils/criterion-utils)                    | [![Crates.io](https://img.shields.io/crates/v/criterion-utils?label=)](https://crates.io//)                         | Criterion helpers to benchmark over size and number of processors.                                |
-| [`error-utils`](/utils/error-utils)                            | [![Crates.io](https://img.shields.io/crates/v/criterion-utils?label=)](https://crates.io//)                         | Assertion like macros for returning `Result::Err`.                                                |
-| [`logging-allocator`](/utils/logging-allocator)                | [![Crates.io](https://img.shields.io/crates/v/criterion-utils?label=)](https://crates.io//)                         | Wrapper around the system allocator that logs large allocations.                                  |
-| [`mmap-vec`](/utils/mmap-vec)                                  | [![Crates.io](https://img.shields.io/crates/v/criterion-utils?label=)](https://crates.io//)                         | Substitute for `Vec` that uses file-backed storage.                                              |
-| [`macros-lib`](/utils/macros-lib)                              | ![Unpublished](https://img.shields.io/badge/-unpublished-lightgrey)                                                 | Library of procedural macros implemented using `proc_macro2`                                      |
-| [`macros-impl`](/utils/macros-impl)                            | ![Unpublished](https://img.shields.io/badge/-unpublished-lightgrey)                                                 | Implementation crate for `proc_macro_hack`                                                        |
-| [`macros-decl`](/utils/macros-decl)                            | ![Unpublished](https://img.shields.io/badge/-unpublished-lightgrey)                                                 | Procedural macros.                                                                                |
-| `algebra/`                                                     |                                                                                                                     |                                                                                                   |
-| [`u256`](/algebra/u256)                                        | ![Unpublished](https://img.shields.io/badge/-unpublished-lightgrey)                                                 | Implementation of 256-bit unsigned integers.                                                      |
-| [`primefield`](/algebra/primefield)                            | ![Unpublished](https://img.shields.io/badge/-unpublished-lightgrey)                                                 | A 251-bit prime field suitable for FFTs.                                                                            |
-| [`elliptic-curve`](/algebra/elliptic-curve)                    | ![Unpublished](https://img.shields.io/badge/-unpublished-lightgrey)                                                 | An elliptic curve over the `primefield`.                                              |
-| `crypto/`                                                      |                                                                                                                     |                                                                                                   |
-| [`elliptic-curve-crypto`](/crypto/elliptic-curve-crypto)       | ![Unpublished](https://img.shields.io/badge/-unpublished-lightgrey)                                                 | Pedersen commitments and digital signatures.                                                      |
-| [`hash`](/crypto/hash)                                         | ![Unpublished](https://img.shields.io/badge/-unpublished-lightgrey)                                                 | Hash primitive used in `zkp-stark`.                                                               |
-| [`merkle-tree`](/crypto/merkle-tree)                           | [![Crates.io](https://img.shields.io/crates/v/criterion-utils?label=)](https://crates.io//)                         | Merkle tree based vector commitment.                                                              |
-| [`zkp-stark`](/crypto/zkp-stark)                               | [![Crates.io](https://img.shields.io/crates/v/criterion-utils?label=)](https://crates.io//)                         | Implementation of the STARK ZK-proof system.                                                      |
-
+| Package                                                        | Version                                                                                                                              | Description                                                                                       |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
+| `utils/`                                                       |                                                                                                                                      |                                                                                                   |
+| [`criterion-utils`](/utils/criterion-utils)                    | [![Crates.io](https://img.shields.io/crates/v/zkp-criterion-utils?label=)](https://crates.io/crates/zkp-criterion-utils)             | Criterion helpers to benchmark over size and number of processors.                                |
+| [`error-utils`](/utils/error-utils)                            | [![Crates.io](https://img.shields.io/crates/v/zkp-error-utils?label=)](https://crates.io/crates/zkp-error-utils)                     | Assertion like macros for returning `Result::Err`.                                                |
+| [`logging-allocator`](/utils/logging-allocator)                | [![Crates.io](https://img.shields.io/crates/v/zkp-logging-allocator?label=)](https://crates.io/crates/zkp-logging-allocator)         | Wrapper around the system allocator that logs large allocations.                                  |
+| [`mmap-vec`](/utils/mmap-vec)                                  | [![Crates.io](https://img.shields.io/crates/v/zkp-mmap-vec?label=)](https://crates.io/crates/zkp-mmap-vec)                           | Substitute for `Vec` that uses file-backed storage.                                               |
+| [`macros-lib`](/utils/macros-lib)                              | [![Crates.io](https://img.shields.io/crates/v/zkp-macros-lib?label=)](https://crates.io/crates/zkp-macros-lib)                       | Library of procedural macros implemented using `proc_macro2`                                      |
+| [`macros-impl`](/utils/macros-impl)                            | [![Crates.io](https://img.shields.io/crates/v/zkp-macros-impl?label=)](https://crates.io/crates/zkp-macros-impl)                     | Implementation crate for `proc_macro_hack`                                                        |
+| [`macros-decl`](/utils/macros-decl)                            | [![Crates.io](https://img.shields.io/crates/v/zkp-macros-decl?label=)](https://crates.io/crates/zkp-macros-decl)                     | Procedural macros.                                                                                |
+| `algebra/`                                                     |                                                                                                                                      |                                                                                                   |
+| [`u256`](/algebra/u256)                                        | [![Crates.io](https://img.shields.io/crates/v/zkp-u256?label=)](https://crates.io/crates/zkp-u256)                                   | Implementation of 256-bit unsigned integers.                                                      |
+| [`primefield`](/algebra/primefield)                            | [![Crates.io](https://img.shields.io/crates/v/zkp-primefield?label=)](https://crates.io/crates/zkp-primefield)                       | A 251-bit prime field suitable for FFTs.                                                          |
+| [`elliptic-curve`](/algebra/elliptic-curve)                    | [![Crates.io](https://img.shields.io/crates/v/zkp-elliptic-curve?label=)](https://crates.io/crates/zkp-elliptic-curve)               | An elliptic curve over the `primefield`.                                                          |
+| `crypto/`                                                      |                                                                                                                                      |                                                                                                   |
+| [`elliptic-curve-crypto`](/crypto/elliptic-curve-crypto)       | [![Crates.io](https://img.shields.io/crates/v/zkp-elliptic-curve-crypto?label=)](https://crates.io/crates/zkp-elliptic-curve-crypto) | Pedersen commitments and digital signatures.                                                      |
+| [`hash`](/crypto/hash)                                         | [![Crates.io](https://img.shields.io/crates/v/zkp-hash?label=)](https://crates.io/crates/zkp-hash)                                   | Hash primitive used in `zkp-stark`.                                                               |
+| [`merkle-tree`](/crypto/merkle-tree)                           | [![Crates.io](https://img.shields.io/crates/v/zkp-merkle-tree?label=)](https://crates.io/crates/zkp-merkle-tree)                     | Merkle tree based vector commitment.                                                              |
+| [`stark`](/crypto/stark)                                       | [![Crates.io](https://img.shields.io/crates/v/zkp-stark?label=)](https://crates.io/crates/zkp-stark)                                 | Implementation of the STARK ZK-proof system.                                                      |
 
 ## Example
 
-Think of a secret number $n$ and start a sequence with $x_0 = 1$ and $x_1 = n$. Then proceed as a Fibonacci sequence: $x_i = x_{i-2} + x_{i-1}$. We want to proof someone we know $x_k$ without revealing $n$.
-
 ```rust
-use zkp-stark::{Provable, Verifiable, TraceTable, FieldElement, Constraints};
+use zkp_stark::{*, primefield::*};
 
-struct Claim {
+struct FibonacciClaim {
     index: usize,
     value: FieldElement,
 }
 
-impl Verifiable for Claim {
+impl Verifiable for FibonacciClaim {
     fn constraints(&self) -> Constraints {
         use RationalExpression::*;
 
@@ -74,7 +71,7 @@ impl Verifiable for Claim {
         let on_row = |index| (X - g.pow(index)).inv();
         let every_row = || (X - g.pow(trace_length - 1)) / (X.pow(trace_length) - 1.into());
 
-        Constraints::from_expressions((trace_length, 2), seed, vec![
+        let mut c = Constraints::from_expressions((trace_length, 2), seed, vec![
             (Trace(0, 1) - Trace(1, 0)) * every_row(),
             (Trace(1, 1) - Trace(0, 0) - Trace(1, 0)) * every_row(),
             (Trace(0, 0) - 1.into()) * on_row(0),
@@ -84,12 +81,12 @@ impl Verifiable for Claim {
     }
 }
 
-impl Provable<FieldElement> for Claim {
-    fn trace(&self, witness: &Witness) -> TraceTable {
+impl Provable<&FieldElement> for FibonacciClaim {
+    fn trace(&self, witness: &FieldElement) -> TraceTable {
         let trace_length = self.index.next_power_of_two();
         let mut trace = TraceTable::new(trace_length, 2);
         trace[(0, 0)] = 1.into();
-        trace[(0, 1)] = witness;
+        trace[(0, 1)] = witness.clone();
         for i in 0..(trace_length - 1) {
             trace[(i + 1, 0)] = trace[(i, 1)].clone();
             trace[(i + 1, 1)] = &trace[(i, 0)] + &trace[(i, 1)];
@@ -99,13 +96,13 @@ impl Provable<FieldElement> for Claim {
 }
 
 pub fn main() {
-    let claim = Claim {
+    let claim = FibonacciClaim {
         index: 5000,
-        value: field_element!("1337"),
+        value: FieldElement::from_hex_str("069673d708ad3174714a2c27ffdb56f9b3bfb38c1ea062e070c3ace63e9e26eb"),
     };
-    let secret = field_element!("42");
-    let proof = claim.proof(&secret).unwrap();
-    claim.verify(proof).unwrap();
+    let secret = FieldElement::from(42);
+    let proof = claim.prove(&secret).unwrap();
+    claim.verify(&proof).unwrap();
 }
 ```
 
