@@ -2,8 +2,8 @@
 
 [![Crates.io](https://img.shields.io/crates/l/zkp-stark)](/License.md)
 [![](https://docs.rs/zkp-stark/badge.svg)](https://docs.rs/zkp-stark)
-[![CircleCI](https://img.shields.io/circleci/build/github/0xProject/starkcrypto)](https://circleci.com/gh/0xProject/starkcrypto)
-[![Codecov](https://img.shields.io/codecov/c/gh/0xproject/starkcrypto)](https://codecov.io/gh/0xProject/starkcrypto)
+[![CircleCI](https://img.shields.io/circleci/build/github/0xProject/OpenZKP)](https://circleci.com/gh/0xProject/OpenZKP)
+[![Codecov](https://img.shields.io/codecov/c/gh/0xproject/OpenZKP)](https://codecov.io/gh/0xProject/OpenZKP)
 
 OpenZKP - pure Rust implementations of Zero-Knowledge Proof systems.
 
@@ -33,7 +33,7 @@ and some others, see [features and limitations](#features-and-limitations) below
 | [`criterion-utils`](/utils/criterion-utils)                    | [![Crates.io](https://img.shields.io/crates/v/criterion-utils?label=)](https://crates.io//)                         | Criterion helpers to benchmark over size and number of processors.                                |
 | [`error-utils`](/utils/error-utils)                            | [![Crates.io](https://img.shields.io/crates/v/criterion-utils?label=)](https://crates.io//)                         | Assertion like macros for returning `Result::Err`.                                                |
 | [`logging-allocator`](/utils/logging-allocator)                | [![Crates.io](https://img.shields.io/crates/v/criterion-utils?label=)](https://crates.io//)                         | Wrapper around the system allocator that logs large allocations.                                  |
-| [`mmap-vec`](/utils/mmap-vec)                                  | [![Crates.io](https://img.shields.io/crates/v/criterion-utils?label=)](https://crates.io//)                         | Replacement for `Vec` that uses file-backed storage.                                              |
+| [`mmap-vec`](/utils/mmap-vec)                                  | [![Crates.io](https://img.shields.io/crates/v/criterion-utils?label=)](https://crates.io//)                         | Substitute for `Vec` that uses file-backed storage.                                              |
 | [`macros-lib`](/utils/macros-lib)                              | ![Unpublished](https://img.shields.io/badge/-unpublished-lightgrey)                                                 | Library of procedural macros implemented using `proc_macro2`                                      |
 | [`macros-impl`](/utils/macros-impl)                            | ![Unpublished](https://img.shields.io/badge/-unpublished-lightgrey)                                                 | Implementation crate for `proc_macro_hack`                                                        |
 | [`macros-decl`](/utils/macros-decl)                            | ![Unpublished](https://img.shields.io/badge/-unpublished-lightgrey)                                                 | Procedural macros.                                                                                |
