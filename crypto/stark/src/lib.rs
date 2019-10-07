@@ -62,7 +62,7 @@ mod trace_table;
 #[cfg_attr(feature = "std", macro_use)]
 extern crate no_std_compat as std;
 
-// Re-exports for convenience
+// Re-exports dependencies that are part of the public interface
 pub use zkp_primefield as primefield;
 
 // Exports for verifier
