@@ -1,6 +1,6 @@
 [package]
 name = "zkp-stark"
-version = "0.1.1"
+version = "0.1.2"
 description = "Implementation of the STARK ZK-proof system"
 repository = "https://github.com/0xProject/starkcrypto/tree/master/crypto/stark"
 keywords = ["zkp", "stark", "no-std", "wasm"]
@@ -17,8 +17,8 @@ edition = "2018"
 zkp-macros-decl = { version = "0.1.0", path = "../../utils/macros-decl", default-features = false }
 zkp-mmap-vec = { version = "0.1.0", path = "../../utils/mmap-vec", default-features = false }
 zkp-logging-allocator = { version = "0.1.0", path = "../../utils/logging-allocator", optional = true }
-zkp-u256 = { version = "0.1.0", path = "../../algebra/u256", default-features = false }
-zkp-primefield = { version = "0.1.0", path = "../../algebra/primefield", default-features = false }
+zkp-u256 = { version = "0.1.1", path = "../../algebra/u256", default-features = false }
+zkp-primefield = { version = "0.1.1", path = "../../algebra/primefield", default-features = false }
 zkp-hash = { version = "0.1.0", path = "../../crypto/hash", default-features = false }
 zkp-merkle-tree = { version = "0.1.0", path = "../../crypto/merkle-tree", default-features = false }
 
