@@ -52,7 +52,7 @@ and some others, see [features and limitations](#features-and-limitations) below
 Think of a secret number $n$ and start a sequence with $x_0 = 1$ and $x_1 = n$. Then proceed as a Fibonacci sequence: $x_i = x_{i-2} + x_{i-1}$. We want to proof someone we know $x_k$ without revealing $n$.
 
 ```rust
-use zkp-stark::{Provable, Verifiable, TraceTable, FieldElement, Constraints};
+use zkp_stark::{*, primefield::*};
 
 struct Claim {
     index: usize,
@@ -73,7 +73,7 @@ impl Verifiable for Claim {
         let on_row = |index| (X - g.pow(index)).inv();
         let every_row = || (X - g.pow(trace_length - 1)) / (X.pow(trace_length) - 1.into());
 
-        Constraints::from_expressions((trace_length, 2), seed, vec![
+        let mut c = Constraints::from_expressions((trace_length, 2), seed, vec![
             (Trace(0, 1) - Trace(1, 0)) * every_row(),
             (Trace(1, 1) - Trace(0, 0) - Trace(1, 0)) * every_row(),
             (Trace(0, 0) - 1.into()) * on_row(0),
@@ -83,12 +83,12 @@ impl Verifiable for Claim {
     }
 }
 
-impl Provable<FieldElement> for Claim {
-    fn trace(&self, witness: &Witness) -> TraceTable {
+impl Provable<&FieldElement> for Claim {
+    fn trace(&self, witness: &FieldElement) -> TraceTable {
         let trace_length = self.index.next_power_of_two();
         let mut trace = TraceTable::new(trace_length, 2);
         trace[(0, 0)] = 1.into();
-        trace[(0, 1)] = witness;
+        trace[(0, 1)] = witness.clone();
         for i in 0..(trace_length - 1) {
             trace[(i + 1, 0)] = trace[(i, 1)].clone();
             trace[(i + 1, 1)] = &trace[(i, 0)] + &trace[(i, 1)];
@@ -100,11 +100,11 @@ impl Provable<FieldElement> for Claim {
 pub fn main() {
     let claim = Claim {
         index: 5000,
-        value: field_element!("1337"),
+        value: FieldElement::from_hex_str("069673d708ad3174714a2c27ffdb56f9b3bfb38c1ea062e070c3ace63e9e26eb"),
     };
-    let secret = field_element!("42");
-    let proof = claim.proof(&secret).unwrap();
-    claim.verify(proof).unwrap();
+    let secret = FieldElement::from(42);
+    let proof = claim.prove(&secret).unwrap();
+    claim.verify(&proof).unwrap();
 }
 ```
 
