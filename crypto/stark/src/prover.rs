@@ -207,14 +207,14 @@ impl VectorCommitment for FriLeaves {
 /// A_{\mathrm{d}}(x^{\mathrm{d}})
 /// $$
 ///
-/// where $\deg A_i \leq \text{trace\_length}$.
+/// where $\deg A_i \leq \text{trace\\_length}$.
 ///
 /// For a linear constraint system this does nothing and we have $A_0 = C$, for
 /// a quadratic constraint system $A_0$ and $A_1$ contain all the odd and even
 /// coefficients of $C$ respectively.
 ///
 /// A merkle tree is constructed over the LDE values of the $A$ polynomials and
-/// commited to the channel.
+/// committed to the channel.
 ///
 /// $$
 /// \text{Leaf}_i = (A_0(x_i), A_1(x_i), \dots )

@@ -42,3 +42,7 @@ test = [
     "quickcheck",
     "quickcheck_macros",
 ]
+
+# Allow math in docs
+[package.metadata.docs.rs]
+rustdoc-args = ["--html-in-header", ".cargo/katex-header.html"]

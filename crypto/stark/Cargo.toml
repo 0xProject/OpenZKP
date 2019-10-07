@@ -1,6 +1,6 @@
 [package]
 name = "zkp-stark"
-version = "0.1.0"
+version = "0.1.1"
 description = "Implementation of the STARK ZK-proof system"
 repository = "https://github.com/0xProject/starkcrypto/tree/master/crypto/zkp_stark"
 keywords = ["zkp", "stark", "no-std", "wasm"]
@@ -91,5 +91,4 @@ prover = [
 
 # Allow math in docs
 [package.metadata.docs.rs]
-rustdoc-args = ["--html-in-header", "../../.cargo/katex-header.html"]
-
+rustdoc-args = ["--html-in-header", ".cargo/katex-header.html"]
