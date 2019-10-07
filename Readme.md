@@ -49,17 +49,15 @@ and some others, see [features and limitations](#features-and-limitations) below
 
 ## Example
 
-Think of a secret number $n$ and start a sequence with $x_0 = 1$ and $x_1 = n$. Then proceed as a Fibonacci sequence: $x_i = x_{i-2} + x_{i-1}$. We want to proof someone we know $x_k$ without revealing $n$.
-
 ```rust
 use zkp_stark::{*, primefield::*};
 
-struct Claim {
+struct FibonacciClaim {
     index: usize,
     value: FieldElement,
 }
 
-impl Verifiable for Claim {
+impl Verifiable for FibonacciClaim {
     fn constraints(&self) -> Constraints {
         use RationalExpression::*;
 
@@ -83,7 +81,7 @@ impl Verifiable for Claim {
     }
 }
 
-impl Provable<&FieldElement> for Claim {
+impl Provable<&FieldElement> for FibonacciClaim {
     fn trace(&self, witness: &FieldElement) -> TraceTable {
         let trace_length = self.index.next_power_of_two();
         let mut trace = TraceTable::new(trace_length, 2);
@@ -98,7 +96,7 @@ impl Provable<&FieldElement> for Claim {
 }
 
 pub fn main() {
-    let claim = Claim {
+    let claim = FibonacciClaim {
         index: 5000,
         value: FieldElement::from_hex_str("069673d708ad3174714a2c27ffdb56f9b3bfb38c1ea062e070c3ace63e9e26eb"),
     };
