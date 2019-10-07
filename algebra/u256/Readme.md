@@ -1,8 +1,11 @@
-# Crypto support library for StarkDEX
+# Unsigned 256-bit integers
 
-[![CircleCI](https://img.shields.io/circleci/build/github/0xProject/starkcrypto)](https://circleci.com/gh/0xProject/starkcrypto)
-[![Codecov](https://img.shields.io/codecov/c/gh/0xproject/starkcrypto)](https://codecov.io/gh/0xProject/starkcrypto)
-<!-- TODO: License, Docs, Chat -->
+[![Crates.io](https://img.shields.io/crates/l/zkp-u256)](/License.md)
+[![](https://docs.rs/zkp-u256/badge.svg)](https://docs.rs/zkp-stark)
+[![CircleCI](https://img.shields.io/circleci/build/github/0xProject/OpenZKP)](https://circleci.com/gh/0xProject/OpenZKP)
+[![Codecov](https://img.shields.io/codecov/c/gh/0xproject/OpenZKP)](https://codecov.io/gh/0xProject/OpenZKP)
+
+Implementation of 256-bit unsigned integers.
 
 **Warning.** Side-channel resistance is currently not implemented. This library
 is optimized for performance and does not use slower side-channel resistant
@@ -41,6 +44,7 @@ You can then run tests under profiling. It is recommended to filter for a specif
 ```sh
 cargo instruments --release --bench benchmark --open [test name]
 ```
+
 ## Goals
 
 -   Perfomance optimized for Native and WebAssembly
