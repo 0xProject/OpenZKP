@@ -8,6 +8,7 @@ use std::time::Instant;
 
 const Q : FieldElement = field_element!("0B");
 const B : U256 = u256h!("0D");
+const B_usize : usize = 13;
 const K_COEF: [FieldElement; 128] = [
     field_element!("00ed021e66d670608d65fa55597c3da99e143e17bc34a01dd32b352a028ec839"),
     field_element!("05c8707c12896aed50aed74ccab0e11eb2bdf909946e6b6e81c0d2828b476496"),
@@ -170,13 +171,20 @@ impl Verifiable for Claim {
         };
         let k_coef = periodic(&ifft(&K_COEF.to_vec()));
 
-        Constraints::from_expressions((trace_length, 1), seed, vec![
+        // TODO - Standardize to either take or not take input.
+        let on_hash_loop_rows = |a: RationalExpression| {
+            a * (X.pow(128) - trace_generator.pow(128 * (trace_length - 1)))
+                / (X.pow(trace_length) - 1.into())
+        };
+
+        Constraints::from_expressions((trace_length, 2), seed, vec![
+            on_hash_loop_rows(Exp(Trace(0,0).into(), 3) + Constant(3.into()) * Constant(Q) * Trace(0, 0) * Exp(Trace(1, 0).into(), 3) + k_coef - Trace(0, 1)),
+            (Constant(3.into())*Exp(Trace(0, 0).into(), 3*B_usize) + Constant(Q.clone())*Exp(Trace(0, 1).into(), 3*B_usize) - Trace(1, 1))*every_row(),
             // Boundary constraints
             (Trace(0, 0) - Constant(self.before_x.clone()))*on_row(0),
             Trace(1, 0)*on_row(0),
-            (Trace(1, 0) - Constant(self.before_y.clone()))*on_row(128),
-            (Trace(0, 0) - Trace(0, 1))*on_row(127),
-            (Trace(1, 0) - Constant(self.after.clone()))*on_row(255),
+            (Trace(0, 0) - Constant(self.before_y.clone()))*on_row(128),
+            (Trace(0, 0) - Constant(self.after.clone()))*on_row(255),
         ])
         .unwrap()
     }
@@ -198,6 +206,7 @@ impl Provable<()> for Claim {
         }
         left = self.before_y.clone();
         
+        // Note - Doesn't carry forward x, preforms another step.
         for i in 0..128 {
             trace[(i+128, 0)] = left.clone();
             trace[(i+128, 1)] = right.clone();
