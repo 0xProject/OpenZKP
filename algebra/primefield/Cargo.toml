@@ -28,7 +28,7 @@ quickcheck = { version = "0.9", optional = true}
 # optional, or it will enable the `std` flag on various dependencies. Cargo
 # does not allow dev-dependencies to be optional.
 criterion = { version = "0.3.0", optional = true }
-zkp-criterion-utils = { path = "../../utils/criterion-utils", optional = true }
+zkp-criterion-utils = { version = "0.1.0", path = "../../utils/criterion-utils", optional = true }
 quickcheck_macros = { version = "0.8", optional = true }
 
 [[bench]]
