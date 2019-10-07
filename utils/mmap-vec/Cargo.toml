@@ -1,5 +1,5 @@
 [package]
-name = "mmap-vec"
+name = "zkp-mmap-vec"
 version = "0.1.0"
 description = "Replacement for `Vec` that uses file-backed storage"
 repository = "https://github.com/0xProject/starkcrypto/tree/master/utils/mmap-vec"

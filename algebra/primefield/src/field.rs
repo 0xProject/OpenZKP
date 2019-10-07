@@ -1,10 +1,10 @@
 use crate::{montgomery::*, square_root::square_root};
-use macros_decl::u256h;
 use std::{
     ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign},
     prelude::v1::*,
 };
-use u256::{commutative_binop, noncommutative_binop, U256};
+use zkp_macros_decl::u256h;
+use zkp_u256::{commutative_binop, noncommutative_binop, U256};
 // TODO: Implement Serde
 #[cfg(feature = "std")]
 use std::fmt;
@@ -345,8 +345,8 @@ macro_rules! field_h {
 mod tests {
     use super::*;
     use itertools::repeat_n;
-    use macros_decl::field_element;
     use quickcheck_macros::quickcheck;
+    use zkp_macros_decl::field_element;
 
     #[test]
     fn test_literal() {

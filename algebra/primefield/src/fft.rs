@@ -140,9 +140,9 @@ fn fft_permuted_root(root: &FieldElement, coefficients: &mut [FieldElement]) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use macros_decl::u256h;
     use quickcheck_macros::quickcheck;
-    use u256::U256;
+    use zkp_macros_decl::u256h;
+    use zkp_u256::U256;
 
     // O(n^2) reference implementation evaluating
     //     x_i' = Sum_j x_j * omega_n^(ij)

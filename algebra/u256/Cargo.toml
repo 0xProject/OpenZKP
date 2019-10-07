@@ -1,5 +1,5 @@
 [package]
-name = "u256"
+name = "zkp-u256"
 version = "0.1.0"
 description = "Performant implementation of 256-bit unsigned integers"
 repository = "https://github.com/0xProject/starkcrypto/tree/master/algebra/u256"
@@ -14,12 +14,12 @@ license = "Apache-2.0"
 edition = "2018"
 
 [dependencies]
-macros-decl = { path = "../../utils/macros-decl", default_features = false }
+zkp-macros-decl = { version = "0.1.0", path = "../../utils/macros-decl", default_features = false }
 
 no-std-compat = { version = "0.1.0", features = [ "alloc" ] }
 itertools = { version = "0.8.0", default_features = false }
 crunchy = { version = "0.2.2", default_features = false }
-hex = { version = "", optional = true }
+hex = { version = "0.4.0", optional = true }
 quickcheck = { version = "0.9", optional = true }
 
 # HACK: Criterion is really a dev-dependency, but it's important that it's
@@ -45,7 +45,7 @@ test = [
     "quickcheck_macros"
 ]
 std = [
-    "macros-decl/std",
+    "zkp-macros-decl/std",
     "no-std-compat/std",
     "itertools/use_std",
     "crunchy/std",

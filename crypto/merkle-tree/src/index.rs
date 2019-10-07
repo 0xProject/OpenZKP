@@ -1,6 +1,6 @@
 use crate::{Error, Result};
-use error_utils::require;
 use std::{convert::TryFrom, ops::RangeInclusive};
+use zkp_error_utils::require;
 
 #[cfg(feature = "std")]
 use std::fmt;

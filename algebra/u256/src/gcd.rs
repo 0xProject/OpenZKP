@@ -478,8 +478,8 @@ pub(crate) fn inv_mod(modulus: &U256, num: &U256) -> Option<U256> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use macros_decl::u256h;
     use quickcheck_macros::quickcheck;
+    use zkp_macros_decl::u256h;
 
     #[test]
     fn test_lehmer_small() {

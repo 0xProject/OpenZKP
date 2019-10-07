@@ -1,8 +1,8 @@
 use crate::{Commitment, Error, Index, Node, Result};
-use error_utils::require;
-use hash::{Hash, Hashable};
 use itertools::Itertools;
 use std::{collections::VecDeque, prelude::v1::*};
+use zkp_error_utils::require;
+use zkp_hash::{Hash, Hashable};
 
 // Note: we can merge and split proofs. Based on indices we can
 // compute which values are redundant.
