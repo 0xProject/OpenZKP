@@ -2,7 +2,7 @@
 name = "zkp-stark"
 version = "0.1.1"
 description = "Implementation of the STARK ZK-proof system"
-repository = "https://github.com/0xProject/starkcrypto/tree/master/crypto/zkp_stark"
+repository = "https://github.com/0xProject/starkcrypto/tree/master/crypto/stark"
 keywords = ["zkp", "stark", "no-std", "wasm"]
 categories = ["cryptography", "algorithms", "no-std", "wasm"]
 authors = [
