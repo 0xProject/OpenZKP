@@ -17,7 +17,7 @@ edition = "2018"
 proc-macro = true
 
 [dependencies]
-zkp-macros-lib = { path = "../macros-lib" }
+zkp-macros-lib = { version="0.1.0", path = "../macros-lib" }
 
 proc-macro2 = "1.0"
 proc-macro-hack = "0.5.8"
