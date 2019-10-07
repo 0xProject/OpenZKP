@@ -52,7 +52,7 @@ executors:
         crypto/hash
         crypto/merkle-tree
         crypto/elliptic-curve-crypto
-        crypto/zkp-stark
+        crypto/stark
 commands:
   stop-if-image-exists:
     steps:
