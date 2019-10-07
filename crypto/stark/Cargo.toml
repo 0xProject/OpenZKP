@@ -12,7 +12,6 @@ authors = [
 readme = "Readme.md"
 license = "Apache-2.0"
 edition = "2018"
-include = [ ".cargo/katex-header.html" ]
 
 [dependencies]
 zkp-macros-decl = { version = "0.1.0", path = "../../utils/macros-decl", default-features = false }
@@ -92,5 +91,6 @@ prover = [
 
 # Allow math in docs
 # BLOCK https://github.com/rust-lang/rust/issues/16300
+# BLOCK https://github.com/rust-lang/docs.rs/issues/302
 [package.metadata.docs.rs]
-rustdoc-args = ["--html-in-header", "../../.cargo/katex-header.html"]
+rustdoc-args = ["--html-in-header", ".cargo/katex-header.html"]
