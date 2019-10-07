@@ -28,24 +28,24 @@ pub(crate) trait Replayable<T> {
 // TODO: Limit to crate
 #[derive(PartialEq, Eq, Clone, Default)]
 #[cfg_attr(feature = "std", derive(Debug))]
-pub struct PublicCoin {
-    pub digest: [u8; 32],
-    counter:    u64,
+pub(crate) struct PublicCoin {
+    pub(crate) digest: [u8; 32],
+    counter:           u64,
 }
 
 #[derive(PartialEq, Eq, Clone, Default)]
 #[cfg_attr(feature = "std", derive(Debug))]
-pub struct ProverChannel {
-    pub coin:  PublicCoin,
-    pub proof: Vec<u8>,
+pub(crate) struct ProverChannel {
+    pub(crate) coin:  PublicCoin,
+    pub(crate) proof: Vec<u8>,
 }
 
 #[derive(PartialEq, Eq, Clone, Default)]
 #[cfg_attr(feature = "std", derive(Debug))]
-pub struct VerifierChannel {
-    pub coin:    PublicCoin,
-    pub proof:   Vec<u8>,
-    proof_index: usize,
+pub(crate) struct VerifierChannel {
+    pub(crate) coin:  PublicCoin,
+    pub(crate) proof: Vec<u8>,
+    proof_index:      usize,
 }
 
 impl PublicCoin {
@@ -73,21 +73,22 @@ impl From<Vec<u8>> for ProverChannel {
     }
 }
 
+#[cfg(feature = "prover")]
 impl ProverChannel {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             coin:  PublicCoin::new(),
             proof: Vec::new(),
         }
     }
 
-    pub fn initialize(&mut self, seed: &[u8]) {
+    pub(crate) fn initialize(&mut self, seed: &[u8]) {
         self.coin.seed(seed);
     }
 }
 
 impl VerifierChannel {
-    pub fn new(proof: Vec<u8>) -> Self {
+    pub(crate) fn new(proof: Vec<u8>) -> Self {
         Self {
             coin: PublicCoin::new(),
             proof,
@@ -95,15 +96,11 @@ impl VerifierChannel {
         }
     }
 
-    pub fn initialize(&mut self, seed: &[u8]) {
+    pub(crate) fn initialize(&mut self, seed: &[u8]) {
         self.coin.seed(seed);
     }
 
-    pub fn read_without_replay(&self, length: usize) -> &[u8] {
-        &self.proof[self.proof_index..(self.proof_index + length)]
-    }
-
-    pub fn at_end(self) -> bool {
+    pub(crate) fn at_end(self) -> bool {
         self.proof_index == self.proof.len()
     }
 }

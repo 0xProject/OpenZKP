@@ -37,7 +37,6 @@
 )]
 #![cfg_attr(feature = "std", warn(missing_debug_implementations,))]
 
-// TODO: Unpub all mods and re-export instead.
 mod channel;
 mod constraints;
 mod polynomial;
@@ -63,9 +62,10 @@ mod trace_table;
 #[cfg_attr(feature = "std", macro_use)]
 extern crate no_std_compat as std;
 
+// Re-exports dependencies that are part of the public interface
+pub use zkp_primefield as primefield;
+
 // Exports for verifier
-#[deprecated]
-pub use channel::{ProverChannel, VerifierChannel};
 pub use constraints::{Constraints, Error as ConstraintError};
 pub use polynomial::DensePolynomial;
 pub use proof::Proof;

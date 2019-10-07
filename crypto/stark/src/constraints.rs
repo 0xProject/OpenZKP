@@ -95,13 +95,14 @@ impl Constraints {
         // TODO: Hash expressions into channel seed
         // TODO - Examine if we want to up these security params further.
         // 15*4 + 30 queries = 90
+        // TODO: Sensible default for pow_bits. For small proofs it should be small.
         Ok(Self {
             channel_seed,
             trace_nrows,
             trace_ncolumns,
             expressions,
             blowup: 16,
-            pow_bits: if cfg!(test) { 12 } else { 30 },
+            pow_bits: if cfg!(test) { 12 } else { 20 },
             num_queries: 30,
             fri_layout: Self::default_fri_layout(trace_nrows),
         })
