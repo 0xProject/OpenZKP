@@ -142,9 +142,8 @@ const K_COEF: [FieldElement; 128] = [
 
 #[derive(Debug)]
 pub struct Claim {
-    before_x: FieldElement,
-    before_y: FieldElement,
-    after:  FieldElement,
+    element: FieldElement,
+    root:  FieldElement,
 }
 
 impl Verifiable for Claim {
@@ -152,16 +151,14 @@ impl Verifiable for Claim {
         use RationalExpression::*;
 
         // Seed
-        let mut seed = self.before_x.as_montgomery().to_bytes_be().to_vec();
-        seed.extend_from_slice(&self.before_y.as_montgomery().to_bytes_be());
-        seed.extend_from_slice(&self.after.as_montgomery().to_bytes_be());
+        let mut seed = self.element.as_montgomery().to_bytes_be().to_vec();
+        seed.extend_from_slice(&self.root.as_montgomery().to_bytes_be());
 
         // Constraint repetitions
-        let trace_length = 256;
+        let trace_length = 256*1024;
         let trace_generator = FieldElement::root(trace_length).unwrap();
         let g = Constant(trace_generator.clone());
         let on_row = |index| (X - g.pow(index)).inv();
-        let every_row = || (X - g.pow(trace_length - 1)) / (X.pow(trace_length) - 1.into());
 
         let periodic = |coefficients| {
             Polynomial(
@@ -171,83 +168,104 @@ impl Verifiable for Claim {
         };
         let k_coef = periodic(&ifft(&K_COEF.to_vec()));
 
-        let on_loop_rows = |len: usize| {
-            (X.pow(len) - Constant(trace_generator.pow(len * (trace_length - 1))))
+        //Provide the loop length
+        let on_loop_rows = |length: usize| {
+            (X.pow(trace_length/length) - Constant(trace_generator.pow((trace_length/length) * (trace_length - 1))))
                 / (X.pow(trace_length) - 1.into())
         };
 
+        //Provide the loop length
+        let on_loop_start_rows = |length: usize| Constant(1.into()) / (X.pow(trace_length/length) - 1.into());
+
         Constraints::from_expressions((trace_length, 2), seed, vec![
-            ((Exp(Trace(0,0).into(), 3) + Constant(3.into()) *  Constant(Q.clone()) * Trace(0, 0)  * Exp(Trace(1, 0).into(), 2) + k_coef) - Trace(0, 1))*on_loop_rows(128),
-            (Constant(3.into())*Exp(Trace(0, 0).into(), 2*B_USIZE) + Constant(Q.clone())*Exp(Trace(1, 0).into(), 3*B_USIZE) - Trace(1, 1))*every_row(),
+            ((Exp(Trace(0,0).into(), 3) + Constant(3.into()) * Constant(Q.clone()) * Trace(0, 0)  * Exp(Trace(1, 0).into(), 2) + k_coef) - Trace(0, 1))*on_loop_rows(128),
+            (Constant(3.into())*Exp(Trace(0, 0).into(), 2*B_USIZE) + Constant(Q.clone())*Exp(Trace(1, 0).into(), 3*B_USIZE) - Trace(1, 1))*on_loop_rows(256),
             // Boundary constraints
-            (Trace(0, 0) - Constant(self.before_x.clone()))*on_row(0),
-            Trace(1, 0)*on_row(0),
-            (Trace(0, 0) - Constant(self.before_y.clone()))*on_row(128),
-            (Trace(0, 0) - Constant(self.after.clone()))*on_row(255),
+            (Trace(0, 0) - Constant(self.element.clone()))*on_row(0),
+            Trace(1, 0)*on_loop_start_rows(256),
+            (Trace(0, 0) - Constant(self.root.clone()))*on_row(trace_length-1),
         ])
         .unwrap()
     }
 }
 
-impl Provable<()> for Claim {
-    fn trace(&self, _witness: ()) -> TraceTable {
-        let mut trace = TraceTable::new(256, 2);
+#[derive(Debug)]
+pub struct Witness {
+    path: Vec<FieldElement>,
+}
 
-        let mut left = self.before_x.clone();
-        let mut right = FieldElement::ZERO;
-        for i in 0..128 {
-            trace[(i, 0)] = left.clone();
-            trace[(i, 1)] = right.clone();
-            let new_left = (left.clone()).pow(U256::from(3)) + FieldElement::from(3) * &Q * &left * (&right.pow(2)) + &K_COEF[i];
-            let new_right = FieldElement::from(3)*(&left.pow(U256::from(2)*&B)) + &Q*(&right.pow(U256::from(3)*&B));
-            left = new_left;
-            right = new_right;
-        }
-        left = self.before_y.clone();
-        
-        // Note - Doesn't carry forward x, preforms another step.
-        for i in 0..128 {
-            trace[(i+128, 0)] = left.clone();
-            trace[(i+128, 1)] = right.clone();
-            let new_left = (left.clone()).pow(U256::from(3)) + FieldElement::from(3) * &Q * &left * (&right.pow(2)) + &K_COEF[i];
-            let new_right = FieldElement::from(3)*(&left.pow(U256::from(2)*&B)) + &Q*(&right.pow(U256::from(3)*&B));
-            left = new_left;
-            right = new_right;
+impl Provable<Witness> for Claim {
+    fn trace(&self, witness: Witness) -> TraceTable {
+        let mut trace = TraceTable::new(256*witness.path.len(), 2);
+
+        let mut left = self.element.clone();
+        let mut execution_increment = 0;
+        for node in witness.path.iter() {
+            let (_, after) = mimc_half_loop(&left, &FieldElement::ZERO, &mut trace, execution_increment);
+            execution_increment += 128;
+            left = mimc_half_loop(&node, &after, &mut trace, execution_increment).0;
+            execution_increment += 128;
         }
 
-        assert_eq!(trace[(255, 0)], self.after);
+        assert_eq!(trace[(256*witness.path.len()-1, 0)], self.root);
         trace
     }
 }
 
-fn mimc(x: &FieldElement, y: &FieldElement) -> FieldElement {
+fn mimc_half_loop(x: &FieldElement, y: &FieldElement, trace: &mut TraceTable, execution_increment: usize) -> (FieldElement, FieldElement) {
     let mut left = x.clone();
-    let mut right = FieldElement::ZERO;
-    for i in 0..128 {
-        let new_left = (left.clone()).pow(U256::from(3)) + FieldElement::from(3) * &Q * &left * (&right.pow(2)) + &K_COEF[i];
-        let new_right = FieldElement::from(3)*(&left.pow(U256::from(2)*&B)) + &Q*(&right.pow(U256::from(3)*&B));
-        left = new_left;
-        right = new_right;
-    }
-    left = y.clone();
-    
-    for i in 0..127 {
-        let new_left = (left.clone()).pow(U256::from(3)) + FieldElement::from(3) * &Q * &left * (&right.pow(2)) + &K_COEF[i];
-        let new_right = FieldElement::from(3)*(&left.pow(U256::from(2)*&B)) + &Q*(&right.pow(U256::from(3)*&B));
-        left = new_left;
-        right = new_right;
-    }
+    let mut right = y.clone();
 
-    left
+    for i in 0..128 {
+        trace[(i+execution_increment, 0)] = left.clone();
+        trace[(i+execution_increment, 1)] = right.clone();
+        let new_left = (left.clone()).pow(U256::from(3)) + FieldElement::from(3) * &Q * &left * (&right.pow(2)) + &K_COEF[i];
+        let new_right = FieldElement::from(3)*(&left.pow(U256::from(2)*&B)) + &Q*(&right.pow(U256::from(3)*&B));
+        left = new_left;
+        right = new_right;
+    }
+    (left, right)
+}
+
+// Calculates the leftmost path in the tree [for simplicity we don't include left/right transitions]
+fn mimc_path(x: &FieldElement, path: &[FieldElement]) -> FieldElement {
+    let mut left = x.clone();
+    let mut last = FieldElement::ZERO;
+    for j in 0..path.len() {
+        let mut right = FieldElement::ZERO;
+        for i in 0..128 {
+            let new_left = (left.clone()).pow(U256::from(3)) + FieldElement::from(3) * &Q * &left * (&right.pow(2)) + &K_COEF[i];
+            let new_right = FieldElement::from(3)*(&left.pow(U256::from(2)*&B)) + &Q*(&right.pow(U256::from(3)*&B));
+            left = new_left;
+            right = new_right;
+        }
+        left = path[j].clone();
+        
+        for i in 0..128 {
+            let new_left = (left.clone()).pow(U256::from(3)) + FieldElement::from(3) * &Q * &left * (&right.pow(2)) + &K_COEF[i];
+            let new_right = FieldElement::from(3)*(&left.pow(U256::from(2)*&B)) + &Q*(&right.pow(U256::from(3)*&B));
+            // TODO - Wired problem with ordering
+            if i == 127 && j == path.len() - 1 {
+                last = left;
+            }
+            left = new_left;
+            right = new_right;
+        }
+    }
+    last
 }
 
 fn main() {
-    let before_x = field_element!("00a74f2a70da4ea3723cabd2acc55d03f9ff6d0e7acef0fc63263b12c10dd837");
-    let before_y = field_element!("00b74f2a70da4ea3723cabd2acc55d03f9ff6d0e7acef0fc63263b12c10dd837");
-    let after = mimc(&before_x, &before_y);
+    let element = field_element!("00a74f2a70da4ea3723cabd2acc55d03f9ff6d0e7acef0fc63263b12c10dd837");
+    let mut path = K_COEF.to_vec();
+    for _ in 0..7 {
+        path.extend_from_slice(&K_COEF);
+    }
+    let root = mimc_path(&element, &path);
     let start = Instant::now();
-    let claim = Claim { before_x, before_y, after };
-    let proof = claim.prove(()).unwrap();
+    let claim = Claim {element, root};
+    let witness = Witness{path: path.to_vec()};
+    let proof = claim.prove(witness).unwrap();
     let duration = start.elapsed();
     println!("Time elapsed in proof function is: {:?}", duration);
     println!("The proof length is {}", proof.as_bytes().len());
