@@ -47,12 +47,14 @@ pub(crate) mod tests {
     pub(crate) struct Recurrance {
         pub(crate) index:         usize,
         pub(crate) initial_value: FieldElement,
+        pub(crate) exponent:      usize,
     }
 
     #[derive(Clone, PartialEq, Debug)]
     pub(crate) struct Claim {
-        index: usize,
-        value: FieldElement,
+        index:    usize,
+        value:    FieldElement,
+        exponent: usize,
     }
 
     #[derive(Clone, PartialEq, Debug)]
@@ -63,8 +65,9 @@ pub(crate) mod tests {
     impl Recurrance {
         pub(crate) fn claim(&self) -> Claim {
             Claim {
-                index: self.index,
-                value: self.index_value(),
+                index:    self.index,
+                exponent: self.exponent,
+                value:    self.index_value(),
             }
         }
 
@@ -77,7 +80,7 @@ pub(crate) mod tests {
         fn index_value(&self) -> FieldElement {
             let mut state = (FieldElement::ONE, self.initial_value.clone());
             for _ in 0..self.index {
-                state = (state.1.clone(), state.0 + state.1);
+                state = (state.1.pow(self.exponent), state.0 + state.1);
             }
             state.0
         }
@@ -87,6 +90,10 @@ pub(crate) mod tests {
         pub(crate) fn seed(&self) -> Vec<u8> {
             let mut seed = self.index.to_be_bytes().to_vec();
             seed.extend_from_slice(&self.value.as_montgomery().to_bytes_be());
+            // For backwards compatibility, don't include exponent in seed when it's 1.
+            if self.exponent != 1 {
+                seed.extend_from_slice(&self.exponent.to_be_bytes());
+            }
             seed
         }
     }
@@ -97,6 +104,7 @@ pub(crate) mod tests {
                 // TODO: handle 1 row trace tables.
                 index:         1 + usize::arbitrary(g),
                 initial_value: FieldElement::arbitrary(g),
+                exponent:      1 + usize::arbitrary(g) % 16,
             }
         }
     }
@@ -114,7 +122,7 @@ pub(crate) mod tests {
 
             // Constraints
             Constraints::from_expressions((trace_length, 2), self.seed(), vec![
-                (Trace(0, 1) - Trace(1, 0)) * every_row(),
+                (Trace(0, 1) - Trace(1, 0).pow(self.exponent)) * every_row(),
                 (Trace(1, 1) - Trace(0, 0) - Trace(1, 0)) * every_row(),
                 (Trace(0, 0) - 1.into()) * on_row(0),
                 (Trace(0, 0) - (&self.value).into()) * on_row(self.index),
@@ -130,7 +138,7 @@ pub(crate) mod tests {
             trace[(0, 0)] = 1.into();
             trace[(0, 1)] = witness.secret.clone();
             for i in 1..trace_length {
-                trace[(i, 0)] = trace[(i - 1, 1)].clone();
+                trace[(i, 0)] = trace[(i - 1, 1)].pow(self.exponent);
                 trace[(i, 1)] = &trace[(i - 1, 0)] + &trace[(i - 1, 1)];
             }
             trace

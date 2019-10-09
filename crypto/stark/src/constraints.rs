@@ -214,6 +214,7 @@ mod tests {
         let recurrance = Recurrance {
             index:         4000,
             initial_value: field_element!("0f00dbabe0cafebabe"),
+            exponent:      1,
         };
         let private = recurrance.witness();
         let public = recurrance.claim();
