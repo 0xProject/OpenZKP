@@ -397,7 +397,7 @@ pub fn prove(constraints: &Constraints, trace: &TraceTable) -> Result<Proof> {
 
     // Read constraint coefficients from the channel.
     info!("Read constraint coefficients from the channel.");
-    let mut constraint_coefficients = Vec::with_capacity(2 * constraints.len());
+    let mut constraint_coefficients = Vec::with_capacity(constraints.trace_arguments().len());
     for _ in 0..constraints.len() {
         constraint_coefficients.push(proof.get_random());
         constraint_coefficients.push(proof.get_random());
@@ -435,7 +435,12 @@ pub fn prove(constraints: &Constraints, trace: &TraceTable) -> Result<Proof> {
 
     // 3. Out of domain sampling
     info!("Divide out OODS point and combine polynomials.");
-    let oods_polynomial = oods_combine(&mut proof, &trace_polynomials, &constraint_polynomials);
+    let oods_polynomial = oods_combine(
+        &mut proof,
+        &trace_polynomials,
+        &constraints.trace_arguments(),
+        &constraint_polynomials,
+    );
     info!("Oods poly degree: {}", oods_polynomial.degree());
 
     // 4. FRI layers with trees
@@ -608,49 +613,41 @@ fn get_constraint_polynomials(
 fn oods_combine(
     proof: &mut ProverChannel,
     trace_polynomials: &[DensePolynomial],
+    trace_arguments: &[(usize, isize)],
     constraint_polynomials: &[DensePolynomial],
 ) -> DensePolynomial {
     // Fetch the oods sampling point
     let trace_length = trace_polynomials[0].len();
     let oods_point: FieldElement = proof.get_random();
     let g = FieldElement::root(trace_length).expect("No root for trace polynomial length.");
-    let oods_point_g = &oods_point * &g;
-    let oods_point_pow = oods_point.pow(constraint_polynomials.len());
 
     // Write point evaluations to proof
     // OPT: Parallelization
-    for trace_polynomial in trace_polynomials {
-        proof.write(&trace_polynomial.evaluate(&oods_point));
-        proof.write(&trace_polynomial.evaluate(&oods_point_g));
+    for (column, offset) in trace_arguments {
+        proof.write(&trace_polynomials[*column].evaluate(&(&oods_point * &g.pow(*offset))));
     }
+
+    let oods_point_pow = oods_point.pow(constraint_polynomials.len());
     for constraint_polynomial in constraint_polynomials {
         proof.write(&constraint_polynomial.evaluate(&oods_point_pow));
     }
 
     // Read coefficients
-    let n_coefficients = 2 * trace_polynomials.len() + constraint_polynomials.len();
+    let n_coefficients = trace_arguments.len() + constraint_polynomials.len();
     let mut oods_coefficients: Vec<FieldElement> = Vec::with_capacity(n_coefficients);
     for _ in 0..n_coefficients {
         oods_coefficients.push(proof.get_random());
     }
     let (trace_coefficients, constraint_coefficients) =
-        oods_coefficients.split_at(2 * trace_polynomials.len());
+        oods_coefficients.split_at(trace_arguments.len());
 
     // Divide out points and linear sum the polynomials
     // OPT: Parallelization
     let mut combined_polynomial = DensePolynomial::zeros(trace_length);
-    for (trace_polynomial, (coefficient_0, coefficient_1)) in trace_polynomials
-        .iter()
-        .zip(trace_coefficients.iter().tuples())
-    {
-        trace_polynomial.divide_out_point_into(
-            &oods_point,
-            coefficient_0,
-            &mut combined_polynomial,
-        );
-        trace_polynomial.divide_out_point_into(
-            &oods_point_g,
-            coefficient_1,
+    for ((column, offset), coefficient) in trace_arguments.iter().zip(trace_coefficients) {
+        trace_polynomials[*column].divide_out_point_into(
+            &(&oods_point * &g.pow(*offset)),
+            coefficient,
             &mut combined_polynomial,
         );
     }
@@ -1049,7 +1046,8 @@ mod tests {
         );
         proof.write(&commitment);
 
-        let CO = oods_combine(&mut proof, &TPn, &constraint_polynomials);
+        let trace_arguments = constraints.trace_arguments();
+        let CO = oods_combine(&mut proof, &TPn, &trace_arguments, &constraint_polynomials);
         // Checks that our get out of domain function call has written the right values
         // to the proof
         assert_eq!(
