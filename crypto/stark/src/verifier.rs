@@ -483,7 +483,6 @@ fn fri_single_fold(
     (poly_at_x + poly_at_neg_x) + eval_point / x * (poly_at_x - poly_at_neg_x)
 }
 
-// TODO - Make sure this is general
 #[allow(clippy::too_many_arguments)]
 fn out_of_domain_element(
     poly_points_u: &[U256],
