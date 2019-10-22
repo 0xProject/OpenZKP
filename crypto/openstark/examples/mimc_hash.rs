@@ -3,12 +3,12 @@ use openstark::{
     Constraints, DensePolynomial, Provable, RationalExpression, TraceTable, Verifiable,
 };
 use primefield::{fft::ifft, FieldElement};
-use u256::U256;
 use std::time::Instant;
+use u256::U256;
 
-const Q : FieldElement = field_element!("0B");
-const B : U256 = u256h!("03"); // Needs to be non_quadratic residue
-const B_USIZE : usize = 3;
+const Q: FieldElement = field_element!("0B");
+const B: U256 = u256h!("03"); // Needs to be non_quadratic residue
+const B_USIZE: usize = 3;
 const K_COEF: [FieldElement; 128] = [
     field_element!("00ed021e66d670608d65fa55597c3da99e143e17bc34a01dd32b352a028ec839"),
     field_element!("05c8707c12896aed50aed74ccab0e11eb2bdf909946e6b6e81c0d2828b476496"),
@@ -144,7 +144,7 @@ const K_COEF: [FieldElement; 128] = [
 pub struct Claim {
     before_x: FieldElement,
     before_y: FieldElement,
-    after:  FieldElement,
+    after:    FieldElement,
 }
 
 impl Verifiable for Claim {
@@ -177,13 +177,13 @@ impl Verifiable for Claim {
         };
 
         Constraints::from_expressions((trace_length, 2), seed, vec![
-            ((Exp(Trace(0,0).into(), 3) + Constant(3.into()) *  Constant(Q.clone()) * Trace(0, 0)  * Exp(Trace(1, 0).into(), 2) + k_coef) - Trace(0, 1))*on_loop_rows(128),
-            (Constant(3.into())*Exp(Trace(0, 0).into(), 2*B_USIZE) + Constant(Q.clone())*Exp(Trace(1, 0).into(), 3*B_USIZE) - Trace(1, 1))*every_row(),
+            ((Exp(Trace(0, 0).into(), 3) + Constant(3.into()) * Constant(Q.clone()) * Trace(0, 0) * Exp(Trace(1, 0).into(), 2) + k_coef) - Trace(0, 1)) * on_loop_rows(128),
+            (Constant(3.into()) * Exp(Trace(0, 0).into(), 2 * B_USIZE) + Constant(Q.clone()) * Exp(Trace(1, 0).into(), 3 * B_USIZE) - Trace(1, 1)) * every_row(),
             // Boundary constraints
-            (Trace(0, 0) - Constant(self.before_x.clone()))*on_row(0),
-            Trace(1, 0)*on_row(0),
-            (Trace(0, 0) - Constant(self.before_y.clone()))*on_row(128),
-            (Trace(0, 0) - Constant(self.after.clone()))*on_row(255),
+            (Trace(0, 0) - Constant(self.before_x.clone())) * on_row(0),
+            Trace(1, 0) * on_row(0),
+            (Trace(0, 0) - Constant(self.before_y.clone())) * on_row(128),
+            (Trace(0, 0) - Constant(self.after.clone())) * on_row(255),
         ])
         .unwrap()
     }
@@ -198,19 +198,25 @@ impl Provable<()> for Claim {
         for i in 0..128 {
             trace[(i, 0)] = left.clone();
             trace[(i, 1)] = right.clone();
-            let new_left = (left.clone()).pow(U256::from(3)) + FieldElement::from(3) * &Q * &left * (&right.pow(2)) + &K_COEF[i];
-            let new_right = FieldElement::from(3)*(&left.pow(U256::from(2)*&B)) + &Q*(&right.pow(U256::from(3)*&B));
+            let new_left = (left.clone()).pow(U256::from(3))
+                + FieldElement::from(3) * &Q * &left * (&right.pow(2))
+                + &K_COEF[i];
+            let new_right = FieldElement::from(3) * (&left.pow(U256::from(2) * &B))
+                + &Q * (&right.pow(U256::from(3) * &B));
             left = new_left;
             right = new_right;
         }
         left = self.before_y.clone();
-        
+
         // Note - Doesn't carry forward x, preforms another step.
         for i in 0..128 {
-            trace[(i+128, 0)] = left.clone();
-            trace[(i+128, 1)] = right.clone();
-            let new_left = (left.clone()).pow(U256::from(3)) + FieldElement::from(3) * &Q * &left * (&right.pow(2)) + &K_COEF[i];
-            let new_right = FieldElement::from(3)*(&left.pow(U256::from(2)*&B)) + &Q*(&right.pow(U256::from(3)*&B));
+            trace[(i + 128, 0)] = left.clone();
+            trace[(i + 128, 1)] = right.clone();
+            let new_left = (left.clone()).pow(U256::from(3))
+                + FieldElement::from(3) * &Q * &left * (&right.pow(2))
+                + &K_COEF[i];
+            let new_right = FieldElement::from(3) * (&left.pow(U256::from(2) * &B))
+                + &Q * (&right.pow(U256::from(3) * &B));
             left = new_left;
             right = new_right;
         }
@@ -224,16 +230,22 @@ fn mimc(x: &FieldElement, y: &FieldElement) -> FieldElement {
     let mut left = x.clone();
     let mut right = FieldElement::ZERO;
     for i in 0..128 {
-        let new_left = (left.clone()).pow(U256::from(3)) + FieldElement::from(3) * &Q * &left * (&right.pow(2)) + &K_COEF[i];
-        let new_right = FieldElement::from(3)*(&left.pow(U256::from(2)*&B)) + &Q*(&right.pow(U256::from(3)*&B));
+        let new_left = (left.clone()).pow(U256::from(3))
+            + FieldElement::from(3) * &Q * &left * (&right.pow(2))
+            + &K_COEF[i];
+        let new_right = FieldElement::from(3) * (&left.pow(U256::from(2) * &B))
+            + &Q * (&right.pow(U256::from(3) * &B));
         left = new_left;
         right = new_right;
     }
     left = y.clone();
-    
+
     for i in 0..127 {
-        let new_left = (left.clone()).pow(U256::from(3)) + FieldElement::from(3) * &Q * &left * (&right.pow(2)) + &K_COEF[i];
-        let new_right = FieldElement::from(3)*(&left.pow(U256::from(2)*&B)) + &Q*(&right.pow(U256::from(3)*&B));
+        let new_left = (left.clone()).pow(U256::from(3))
+            + FieldElement::from(3) * &Q * &left * (&right.pow(2))
+            + &K_COEF[i];
+        let new_right = FieldElement::from(3) * (&left.pow(U256::from(2) * &B))
+            + &Q * (&right.pow(U256::from(3) * &B));
         left = new_left;
         right = new_right;
     }
@@ -242,11 +254,17 @@ fn mimc(x: &FieldElement, y: &FieldElement) -> FieldElement {
 }
 
 fn main() {
-    let before_x = field_element!("00a74f2a70da4ea3723cabd2acc55d03f9ff6d0e7acef0fc63263b12c10dd837");
-    let before_y = field_element!("00b74f2a70da4ea3723cabd2acc55d03f9ff6d0e7acef0fc63263b12c10dd837");
+    let before_x =
+        field_element!("00a74f2a70da4ea3723cabd2acc55d03f9ff6d0e7acef0fc63263b12c10dd837");
+    let before_y =
+        field_element!("00b74f2a70da4ea3723cabd2acc55d03f9ff6d0e7acef0fc63263b12c10dd837");
     let after = mimc(&before_x, &before_y);
     let start = Instant::now();
-    let claim = Claim { before_x, before_y, after };
+    let claim = Claim {
+        before_x,
+        before_y,
+        after,
+    };
     let proof = claim.prove(()).unwrap();
     let duration = start.elapsed();
     println!("Time elapsed in proof function is: {:?}", duration);

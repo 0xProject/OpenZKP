@@ -3,8 +3,8 @@ use openstark::{
     Constraints, DensePolynomial, Provable, RationalExpression, TraceTable, Verifiable,
 };
 use primefield::{fft::ifft, FieldElement};
-use u256::U256;
 use std::time::Instant;
+use u256::U256;
 
 // Note - this higher memory MiMC uses a fixed alpha = 3
 const ROUNDS: usize = 8192; // 2^13 to match Guild of Weavers
