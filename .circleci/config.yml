@@ -135,7 +135,7 @@ jobs:
     # Requires non-incremental build.
     executor: docker-rust
     environment:
-      GRCOVFLAGS: -s . --llvm --branch --ignore-not-existing --ignore-dir "/*"
+      GRCOVFLAGS: -s . --llvm --branch --ignore-not-existing --ignore "/*"
     steps:
       - checkout
       - enable-sccache
@@ -191,7 +191,7 @@ jobs:
             # Exclude benchmarks that compare against external crates (pulls in a lot of deps)
             # HACK: We add 'bench' as a feature so dev-dependencies can be included as optional
             # regular dependencies behind a feature flag. This solves problems with feature
-            # unification. 
+            # unification.
             # HACK: We can not specify --features=bench in a workspace environment, instead
             # we enable all features (which makes sense from a test coverage perspective).
             # TODO: We don't need an optimized build here, re-using debug build would be ok.
