@@ -7,8 +7,6 @@ use u256::U256;
 use std::time::Instant;
 
 const Q : FieldElement = field_element!("0B");
-const B : U256 = u256h!("03"); // Needs to be non_quadratic residue
-const B_USIZE : usize = 3;
 const K_COEF: [FieldElement; 128] = [
     field_element!("00ed021e66d670608d65fa55597c3da99e143e17bc34a01dd32b352a028ec839"),
     field_element!("05c8707c12896aed50aed74ccab0e11eb2bdf909946e6b6e81c0d2828b476496"),
@@ -184,7 +182,7 @@ impl Verifiable for Claim {
 
         Constraints::from_expressions((trace_length, 2), seed, vec![
             ((Exp(Trace(0,0).into(), 3) + Constant(3.into()) * Constant(Q.clone()) * Trace(0, 0)  * Exp(Trace(1, 0).into(), 2) + k_coef) - Trace(0, 1))*on_loop_rows(128),
-            (Constant(3.into())*Exp(Trace(0, 0).into(), 2*B_USIZE) + Constant(Q.clone())*Exp(Trace(1, 0).into(), 3*B_USIZE) - Trace(1, 1))*on_loop_rows(256),
+            (Constant(3.into())*Exp(Trace(0, 0).into(), 2) + Constant(Q.clone())*Exp(Trace(1, 0).into(), 3) - Trace(1, 1))*on_loop_rows(256),
             // Boundary constraints
             // TODO - Replace this awkward switch with a long range 'OR' constraint
             // If start left is one then the first hash is hash(node, element), so 'element' is in row 128
@@ -234,7 +232,7 @@ fn mimc_loop(x: &FieldElement, y: &FieldElement, trace: &mut TraceTable, executi
         trace[(i+execution_increment, 0)] = left.clone();
         trace[(i+execution_increment, 1)] = right.clone();
         let new_left = (left.clone()).pow(U256::from(3)) + FieldElement::from(3) * &Q * &left * (&right.pow(2)) + &K_COEF[i];
-        let new_right = FieldElement::from(3)*(&left.pow(U256::from(2)*&B)) + &Q*(&right.pow(U256::from(3)*&B));
+        let new_right = FieldElement::from(3)*(&left.pow(U256::from(2))) + &Q*(&right.pow(U256::from(3)));
         left = new_left;
         right = new_right;
     }
@@ -250,7 +248,7 @@ fn mimc_loop(x: &FieldElement, y: &FieldElement, trace: &mut TraceTable, executi
         }
 
         let new_left = (left.clone()).pow(U256::from(3)) + FieldElement::from(3) * &Q * &left * (&right.pow(2)) + &K_COEF[i];
-        let new_right = FieldElement::from(3)*(&left.pow(U256::from(2)*&B)) + &Q*(&right.pow(U256::from(3)*&B));
+        let new_right = FieldElement::from(3)*(&left.pow(U256::from(2))) + &Q*(&right.pow(U256::from(3)));
         left = new_left;
         right = new_right;
     }
@@ -276,7 +274,7 @@ fn mimc_hash(x: &FieldElement, y: &FieldElement) -> FieldElement {
     let mut right = FieldElement::ZERO;
     for i in 0..128 {
         let new_left = (left.clone()).pow(U256::from(3)) + FieldElement::from(3) * &Q * &left * (&right.pow(2)) + &K_COEF[i];
-        let new_right = FieldElement::from(3)*(&left.pow(U256::from(2)*&B)) + &Q*(&right.pow(U256::from(3)*&B));
+        let new_right = FieldElement::from(3)*(&left.pow(U256::from(2))) + &Q*(&right.pow(U256::from(3)));
         left = new_left;
         right = new_right;
     }
@@ -284,7 +282,7 @@ fn mimc_hash(x: &FieldElement, y: &FieldElement) -> FieldElement {
     
     for i in 0..127 {
         let new_left = (left.clone()).pow(U256::from(3)) + FieldElement::from(3) * &Q * &left * (&right.pow(2)) + &K_COEF[i];
-        let new_right = FieldElement::from(3)*(&left.pow(U256::from(2)*&B)) + &Q*(&right.pow(U256::from(3)*&B));
+        let new_right = FieldElement::from(3)*(&left.pow(U256::from(2))) + &Q*(&right.pow(U256::from(3)));
         left = new_left;
         right = new_right;
     }
