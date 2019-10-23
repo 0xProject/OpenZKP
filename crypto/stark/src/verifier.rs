@@ -533,7 +533,7 @@ impl error::Error for Error {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{prove, traits::tests::Recurrance, Provable, Verifiable};
+    use crate::{prove, traits::tests::Recurrance, traits::tests::Recurrance2, Provable, Verifiable};
     use quickcheck_macros::quickcheck;
 
     #[quickcheck]
@@ -546,5 +546,40 @@ mod tests {
         let trace = public.trace(&private);
 
         verify(&constraints, &prove(&constraints, &trace).unwrap()).is_ok()
+    }
+
+    #[quickcheck]
+    fn verify_recurrance2(r: Recurrance2) -> bool {
+        let public = r.claim();
+        let private = r.witness();
+
+        let constraints = public.constraints();
+        let trace = public.trace(&private);
+
+        verify(&constraints, &prove(&constraints, &trace).unwrap()).is_ok()
+    }
+
+    #[test]
+    fn mason() {
+        let initial_values = vec![FieldElement::ONE, FieldElement::NEGATIVE_ONE];
+        let exponents = vec![1, 2];
+        let coefficients = vec![FieldElement::GENERATOR, FieldElement::ONE];
+
+        let r = Recurrance2 {
+            index:          100,
+            initial_values,
+            exponents,
+            coefficients,
+        };
+
+        let public = r.claim();
+        let private = r.witness();
+
+        let constraints = public.constraints();
+        let trace = public.trace(&private);
+
+        assert_eq!(trace[(r.index - 1, 0)], public.value);
+
+        verify(&constraints, &prove(&constraints, &trace).unwrap()).is_ok();
     }
 }

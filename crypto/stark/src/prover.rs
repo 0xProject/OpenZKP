@@ -616,6 +616,8 @@ fn oods_combine(
     trace_arguments: &[(usize, isize)],
     constraint_polynomials: &[DensePolynomial],
 ) -> DensePolynomial {
+    dbg!(trace_arguments);
+
     // Fetch the oods sampling point
     let trace_length = trace_polynomials[0].len();
     let oods_point: FieldElement = proof.get_random();

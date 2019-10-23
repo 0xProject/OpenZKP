@@ -28,6 +28,7 @@ pub(crate) mod tests {
     use crate::RationalExpression;
     use primefield::FieldElement;
     use quickcheck::{Arbitrary, Gen};
+    use std::convert::TryInto;
 
     /// Defines a constraint system for the recurrance relation $a_{n+2} =
     /// a_{n+1} + a_n$, where the claim is that I know a value for $a_1$ such
@@ -131,6 +132,153 @@ pub(crate) mod tests {
                 trace[(i, 1)] = &trace[(i - 1, 0)] + &trace[(i - 1, 1)];
             }
             trace
+        }
+    }
+
+    #[derive(Clone, PartialEq, Debug)]
+    pub(crate) struct Recurrance2 {
+        pub(crate) index:          usize,
+        pub(crate) initial_values: Vec<FieldElement>,
+        pub(crate) coefficients:   Vec<FieldElement>,
+        pub(crate) exponents:      Vec<usize>,
+    }
+
+    #[derive(Clone, PartialEq, Debug)]
+    pub(crate) struct Claim2 {
+        pub(crate) index:        usize,
+        pub(crate) coefficients: Vec<FieldElement>,
+        pub(crate) exponents:    Vec<usize>,
+        pub(crate) value:        FieldElement,
+    }
+
+    #[derive(Clone, PartialEq, Debug)]
+    pub(crate) struct Witness2 {
+        initial_values: Vec<FieldElement>,
+    }
+
+    impl Recurrance2 {
+        pub(crate) fn claim(&self) -> Claim2 {
+            Claim2 {
+                coefficients: self.coefficients.clone(),
+                exponents:    self.exponents.clone(),
+                index:        self.index,
+                value:        self.index_value(),
+            }
+        }
+
+        pub(crate) fn witness(&self) -> Witness2 {
+            Witness2 {
+                initial_values: self.initial_values.clone(),
+            }
+        }
+
+        fn index_value(&self) -> FieldElement {
+            let mut values = vec![FieldElement::ZERO; self.index];
+            for (i, initial_value) in self.initial_values.iter().enumerate() {
+                values[i] = initial_value.clone();
+            }
+            let order = self.initial_values.len();
+            for i in order..self.index {
+                let mut next_value = FieldElement::ZERO;
+                for ((value, coefficient), &exponent) in values[i - order..]
+                    .iter()
+                    .zip(&self.coefficients)
+                    .zip(&self.exponents)
+                {
+                    next_value += coefficient * value.pow(exponent);
+                }
+                values[i] = next_value;
+            }
+            values[self.index - 1].clone()
+        }
+    }
+
+    impl Claim2 {
+        fn seed(&self) -> Vec<u8> {
+            let mut seed = self.index.to_be_bytes().to_vec();
+            for coefficient in &self.coefficients {
+                seed.extend_from_slice(&coefficient.as_montgomery().to_bytes_be());
+            }
+            for exponent in &self.exponents {
+                seed.extend_from_slice(&exponent.to_be_bytes());
+            }
+            seed.extend_from_slice(&self.index.to_be_bytes());
+            seed.extend_from_slice(&self.value.as_montgomery().to_bytes_be());
+            seed
+        }
+
+        fn trace_length(&self) -> usize {
+            (self.index + 1).next_power_of_two()
+        }
+    }
+
+    impl Arbitrary for Recurrance2 {
+        fn arbitrary<G: Gen>(g: &mut G) -> Self {
+            let initial_values = vec![FieldElement::arbitrary(g)];
+            let exponents = vec![2];
+            let coefficients = vec![FieldElement::arbitrary(g)];
+
+            Recurrance2 {
+                index:          100,
+                initial_values,
+                exponents,
+                coefficients,
+            }
+        }
+    }
+
+    impl Verifiable for Claim2 {
+        fn constraints(&self) -> Constraints {
+            use RationalExpression::*;
+
+            let trace_length = self.trace_length();
+            let trace_generator = Constant(
+                FieldElement::root(trace_length).expect("trace length is not power of two"),
+            );
+
+            let on_row = |index| (X - trace_generator.pow(index)).inv();
+
+            let mut constraints: Vec<RationalExpression> =
+                vec![(Trace(0, 0) - (&self.value).into()) * on_row(self.index - 1)];
+
+            let mut recurrance_constraint = Constant(FieldElement::ZERO);
+            for (i, (coefficient, exponent)) in
+                self.coefficients.iter().zip(&self.exponents).enumerate()
+            {
+                dbg!(i);
+                recurrance_constraint = recurrance_constraint
+                    + Trace(0, i.try_into().unwrap()).pow(*exponent) * coefficient.into();
+            }
+            recurrance_constraint =
+                recurrance_constraint - Trace(0, self.coefficients.len().try_into().unwrap());
+            let every_row_except_last =
+                (X - trace_generator.pow(trace_length - 1)) / (X.pow(trace_length) - 1.into());
+            constraints.push(recurrance_constraint * every_row_except_last);
+
+            Constraints::from_expressions((trace_length, 1), self.seed(), constraints).unwrap()
+        }
+    }
+
+    impl Provable<&Witness2> for Claim2 {
+        fn trace(&self, witness: &Witness2) -> TraceTable {
+            let mut trace_table = TraceTable::new(self.trace_length(), 1);
+
+            for (i, initial_value) in witness.initial_values.iter().enumerate() {
+                trace_table[(i, 0)] = initial_value.clone();
+            }
+            let order = witness.initial_values.len();
+            dbg!(order);
+            dbg!(self.trace_length());
+            for i in order..self.trace_length() {
+                let mut next_value = FieldElement::ZERO;
+                for (j, (coefficient, &exponent)) in
+                    self.coefficients.iter().zip(&self.exponents).enumerate()
+                {
+                    next_value += coefficient * trace_table[(i - order + j, 0)].pow(exponent);
+                }
+                trace_table[(i, 0)] = next_value;
+            }
+            trace_table
         }
     }
 }
