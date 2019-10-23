@@ -195,7 +195,7 @@ pub fn verify(constraints: &Constraints, proof: &Proof) -> Result<()> {
     // Get the oods information from the proof and random
     let oods_point: FieldElement = channel.get_random();
     let mut oods_values: Vec<FieldElement> = Vec::with_capacity(2 * trace_cols + 1);
-    let constraints_trace_degree = constraints.degree();
+    let constraints_trace_degree = constraints.degree().next_power_of_two();
     for _ in 0..(2 * trace_cols + constraints_trace_degree) {
         oods_values.push(Replayable::<FieldElement>::replay(&mut channel));
     }
