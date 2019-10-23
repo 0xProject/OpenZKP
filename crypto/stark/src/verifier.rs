@@ -542,6 +542,7 @@ mod tests {
     use quickcheck_macros::quickcheck;
 
     #[quickcheck]
+    #[allow(clippy::needless_pass_by_value)] // Cleaner than adding lifetime annotations.
     fn verify_recurrance(r: Recurrance) -> bool {
         let public = r.claim();
         let private = r.witness();

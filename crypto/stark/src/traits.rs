@@ -29,6 +29,8 @@ pub(crate) mod tests {
     use zkp_primefield::FieldElement;
     use quickcheck::{Arbitrary, Gen};
 
+    // False positives on the Latex math.
+    #[allow(clippy::doc_markdown)]
     /// Defines a constraint system for the recurrance relation $a_{n+2} =
     /// a_{n+1} + a_n$, where the claim is that I know a value for $a_1$ such
     /// that $a_{index} = value$.
@@ -82,7 +84,7 @@ pub(crate) mod tests {
 
     impl Arbitrary for Recurrance {
         fn arbitrary<G: Gen>(g: &mut G) -> Self {
-            Recurrance {
+            Self {
                 // TODO: handle 1 row trace tables.
                 index:         1 + usize::arbitrary(g),
                 initial_value: FieldElement::arbitrary(g),
