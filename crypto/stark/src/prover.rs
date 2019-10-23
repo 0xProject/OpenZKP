@@ -591,10 +591,10 @@ fn get_constraint_polynomials(
 
     // Convert to even and odd coefficient polynomials
     let mut constraint_polynomials: Vec<MmapVec<FieldElement>> =
-        vec![MmapVec::with_capacity(trace_length); constraint_degree];
-    let (coefficients, zeros) = values.split_at(constraint_degree * trace_length);
+        vec![MmapVec::with_capacity(trace_length); eval_degree];
+    let (coefficients, zeros) = values.split_at(eval_degree * trace_length);
     assert!(zeros.iter().all(|z| z == &FieldElement::ZERO));
-    for chunk in coefficients.chunks_exact(constraint_degree) {
+    for chunk in coefficients.chunks_exact(eval_degree) {
         for (i, coefficient) in chunk.iter().enumerate() {
             constraint_polynomials[i].push(coefficient.clone());
         }
@@ -840,6 +840,7 @@ mod tests {
         let recurrance = Recurrance {
             index:         1000,
             initial_value: field_element!("83d36de9"),
+            exponent:      1,
         };
         let witness = recurrance.witness();
         let claim = recurrance.claim();
@@ -877,6 +878,7 @@ mod tests {
         let recurrance = Recurrance {
             index:         1000,
             initial_value: field_element!("cafebabe"),
+            exponent:      1,
         };
         let witness = recurrance.witness();
         let claim = recurrance.claim();
@@ -899,6 +901,7 @@ mod tests {
         let recurrance = Recurrance {
             index:         4000,
             initial_value: field_element!("cafebabe"),
+            exponent:      1,
         };
         let witness = recurrance.witness();
         let claim = recurrance.claim();
@@ -926,6 +929,7 @@ mod tests {
         let recurrance = Recurrance {
             index:         1000,
             initial_value: field_element!("cafebabe"),
+            exponent:      1,
         };
 
         let claim = recurrance.claim();

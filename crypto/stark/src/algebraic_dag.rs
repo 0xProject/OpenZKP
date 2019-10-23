@@ -603,7 +603,6 @@ mod tests {
             let mut dag = AlgebraicGraph::new(&FieldElement::GENERATOR, 1024, 2);
             let factor = (&dag.seed / &dag.cofactor).pow(dag.coset_size);
             let index = dag.op(Op::Coset(c.clone(), 1));
-            dbg!(&c);
             assert_eq!(dag[index].hash, c * factor);
         }
         test(FieldElement::ZERO);
