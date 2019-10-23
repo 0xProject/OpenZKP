@@ -219,7 +219,7 @@ pub(crate) mod tests {
             let coefficients = vec![FieldElement::arbitrary(g)];
 
             Recurrance2 {
-                index:          100,
+                index: 100,
                 initial_values,
                 exponents,
                 coefficients,
@@ -245,15 +245,17 @@ pub(crate) mod tests {
             for (i, (coefficient, exponent)) in
                 self.coefficients.iter().zip(&self.exponents).enumerate()
             {
-                dbg!(i);
                 recurrance_constraint = recurrance_constraint
                     + Trace(0, i.try_into().unwrap()).pow(*exponent) * coefficient.into();
             }
             recurrance_constraint =
                 recurrance_constraint - Trace(0, self.coefficients.len().try_into().unwrap());
-            let every_row_except_last =
-                (X - trace_generator.pow(trace_length - 1)) / (X.pow(trace_length) - 1.into());
-            constraints.push(recurrance_constraint * every_row_except_last);
+            recurrance_constraint = recurrance_constraint / (X.pow(trace_length) - 1.into());
+            for i in 0..self.coefficients.len() {
+                recurrance_constraint =
+                    recurrance_constraint * (X - trace_generator.pow(i + 1).inv());
+            }
+            constraints.push(recurrance_constraint);
 
             Constraints::from_expressions((trace_length, 1), self.seed(), constraints).unwrap()
         }
