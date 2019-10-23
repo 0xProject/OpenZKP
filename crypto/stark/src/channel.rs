@@ -242,7 +242,6 @@ impl Writable<&[FieldElement]> for ProverChannel {
 
 impl Writable<&FieldElement> for ProverChannel {
     fn write(&mut self, data: &FieldElement) {
-        // TODO: Avoid accessing FieldElement members directly
         self.write(&data.as_montgomery().to_bytes_be()[..]);
     }
 }
