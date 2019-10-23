@@ -204,26 +204,19 @@ impl Constraints {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        prove,
-        traits::tests::{Claim, Witness},
-        Provable, Verifiable,
-    };
+    use crate::{prove, traits::tests::Recurrance, Provable, Verifiable};
     use zkp_macros_decl::field_element;
     use zkp_primefield::FieldElement;
     use zkp_u256::U256;
 
     #[test]
     fn size_estimate_test() {
-        let private = Witness {
-            secret: field_element!("0f00dbabe0cafebabe"),
+        let recurrance = Recurrance {
+            index:         4000,
+            initial_value: field_element!("0f00dbabe0cafebabe"),
         };
-        let public = Claim {
-            index: 4000,
-            value: field_element!(
-                "0576d0c2cc9a060990e96752034a391f0b9036aaa32a3aab28796f7845450e18"
-            ),
-        };
+        let private = recurrance.witness();
+        let public = recurrance.claim();
 
         let mut constraints = public.constraints();
         constraints.blowup = 16;

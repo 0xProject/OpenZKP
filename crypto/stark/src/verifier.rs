@@ -534,30 +534,18 @@ impl error::Error for Error {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        prove,
-        traits::tests::{Claim, Witness},
-        Provable, Verifiable,
-    };
-    use zkp_macros_decl::u256h;
+    use crate::{prove, traits::tests::Recurrance, Provable, Verifiable};
+    use quickcheck_macros::quickcheck;
 
-    #[test]
-    fn verifier_fib_test() {
-        let public = Claim {
-            index: 1000,
-            value: FieldElement::from(u256h!(
-                "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
-            )),
-        };
-        let private = Witness {
-            secret: FieldElement::from(u256h!(
-                "00000000000000000000000000000000000000000000000000000000cafebabe"
-            )),
-        };
+    #[quickcheck]
+    #[allow(clippy::needless_pass_by_value)] // Cleaner than adding lifetime annotations.
+    fn verify_recurrance(r: Recurrance) -> bool {
+        let public = r.claim();
+        let private = r.witness();
+
         let constraints = public.constraints();
         let trace = public.trace(&private);
-        let actual = prove(&constraints, &trace).unwrap();
 
-        assert!(verify(&constraints, &actual).is_ok());
+        verify(&constraints, &prove(&constraints, &trace).unwrap()).is_ok()
     }
 }
