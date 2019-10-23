@@ -26,8 +26,8 @@ pub trait Provable<T>: Verifiable {
 pub(crate) mod tests {
     use super::*;
     use crate::RationalExpression;
-    use zkp_primefield::FieldElement;
     use quickcheck::{Arbitrary, Gen};
+    use zkp_primefield::FieldElement;
 
     // False positives on the Latex math.
     #[allow(clippy::doc_markdown)]

@@ -826,10 +826,7 @@ fn decommit_fri_layers_and_trees(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        traits::tests::{Recurrance},
-        verify, Provable, Verifiable,
-    };
+    use crate::{traits::tests::Recurrance, verify, Provable, Verifiable};
     use tiny_keccak::sha3_256;
     use zkp_macros_decl::{field_element, hex, u256h};
     use zkp_primefield::{fft::permute_index, geometric_series::geometric_series};

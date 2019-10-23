@@ -534,11 +534,7 @@ impl error::Error for Error {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        prove,
-        traits::tests::{Recurrance},
-        Provable, Verifiable,
-    };
+    use crate::{prove, traits::tests::Recurrance, Provable, Verifiable};
     use quickcheck_macros::quickcheck;
 
     #[quickcheck]
