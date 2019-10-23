@@ -32,17 +32,8 @@ pub(crate) mod tests {
     // False positives on the Latex math.
     #[allow(clippy::doc_markdown)]
     /// Defines a constraint system for the recurrance relation $a_{n+2} =
-    /// a_{n+1} + a_n$, where the claim is that I know a value for $a_1$ such
-    /// that $a_{index} = value$.
-    #[derive(Clone, PartialEq, Debug)]
-    pub(crate) struct Recurrance {
-        pub(crate) index:         usize,
-        pub(crate) initial_value: FieldElement,
-    }
-
-    /// Defines a constraint system for the recurrance relation $a_{n+2} =
-    /// a_{n+1} + a_n$, where the claim is that I know a value for $a_1$ such
-    /// that $a_{index} = value$.
+    /// a_{n+1}.pow(exponent) + a_n$, where the claim is that I know a value for
+    /// $a_1$ such that $a_{index} = value$.
     #[derive(Clone, PartialEq, Debug)]
     pub(crate) struct Recurrance {
         pub(crate) index:         usize,
