@@ -588,12 +588,8 @@ mod tests {
     #[test]
     fn mason() {
         let initial_values = vec![FieldElement::ONE, FieldElement::NEGATIVE_ONE];
-        let exponents = vec![1, 1];
+        let exponents = vec![5, 2];
         let coefficients = vec![FieldElement::GENERATOR, FieldElement::ONE];
-
-        // let initial_values = vec![FieldElement::NEGATIVE_ONE];
-        // let exponents = vec![1];
-        // let coefficients = vec![FieldElement::GENERATOR];
 
         let r = Recurrance2 {
             index: 100,

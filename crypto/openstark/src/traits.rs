@@ -214,12 +214,13 @@ pub(crate) mod tests {
 
     impl Arbitrary for Recurrance2 {
         fn arbitrary<G: Gen>(g: &mut G) -> Self {
-            let initial_values = vec![FieldElement::arbitrary(g)];
-            let exponents = vec![2];
-            let coefficients = vec![FieldElement::arbitrary(g)];
+            let order = 1 + usize::arbitrary(g) % 12;
+            let initial_values = (0..order).map(|_| FieldElement::arbitrary(g)).collect();
+            let exponents = (0..order).map(|_| usize::arbitrary(g) % 16).collect();
+            let coefficients = (0..order).map(|_| FieldElement::arbitrary(g)).collect();
 
             Recurrance2 {
-                index: 100,
+                index: order + usize::arbitrary(g) % 1000,
                 initial_values,
                 exponents,
                 coefficients,
