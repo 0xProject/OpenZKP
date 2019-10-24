@@ -54,7 +54,7 @@ pub(crate) fn check_specific_constraint(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{prove, traits::tests::Recurrance, Provable, Verifiable};
+    use crate::{traits::tests::Recurrance, Provable, Verifiable};
     use zkp_macros_decl::field_element;
     use zkp_u256::U256;
 
