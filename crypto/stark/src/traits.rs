@@ -1,6 +1,7 @@
 #[cfg(feature = "prover")]
 use crate::{prove, ProverError, TraceTable};
 use crate::{verify, Constraints, Proof, VerifierError};
+use crate::constraint_check::check_constraints;
 
 pub trait Verifiable {
     fn constraints(&self) -> Constraints;
@@ -19,6 +20,12 @@ pub trait Provable<T>: Verifiable {
         let constraints = self.constraints();
         let trace = self.trace(witness);
         prove(&constraints, &trace)
+    }
+
+    fn check(&self, witness: T) -> Result<(), (usize, usize)> {
+        let constraints = self.constraints();
+        let trace = self.trace(witness);
+        check_constraints(&constraints, &trace)
     }
 }
 
@@ -115,7 +122,7 @@ pub(crate) mod tests {
             Constraints::from_expressions((trace_length, 2), self.seed(), vec![
                 (Trace(0, 1) - Trace(1, 0).pow(self.exponent)) * every_row(),
                 (Trace(1, 1) - Trace(0, 0) - Trace(1, 0)) * every_row(),
-                (Trace(0, 0) - 1.into()) * on_row(0),
+                (Trace(0, 0) - 1.into()) * on_row(trace_length),
                 (Trace(0, 0) - (&self.value).into()) * on_row(self.index),
             ])
             .unwrap()
