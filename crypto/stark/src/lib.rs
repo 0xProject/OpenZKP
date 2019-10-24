@@ -51,11 +51,11 @@ mod verifier;
 #[cfg(feature = "prover")]
 mod algebraic_dag;
 #[cfg(feature = "prover")]
+mod constraint_check;
+#[cfg(feature = "prover")]
 mod prover;
 #[cfg(feature = "prover")]
 mod trace_table;
-#[cfg(feature = "prover")]
-mod constraint_check;
 
 // TODO: Have unconditional Debug trait on all types
 
@@ -82,7 +82,6 @@ pub use prover::{prove, Error as ProverError};
 pub use trace_table::TraceTable;
 #[cfg(feature = "prover")]
 pub use traits::Provable;
-
 
 #[cfg(test)]
 mod tests {

@@ -1,7 +1,9 @@
+use crate::{
+    constraint_check::{check_constraints, check_specific_constraint},
+    verify, Constraints, Proof, VerifierError,
+};
 #[cfg(feature = "prover")]
 use crate::{prove, ProverError, TraceTable};
-use crate::{verify, Constraints, Proof, VerifierError};
-use crate::constraint_check::{check_constraints, check_specific_constraint};
 
 pub trait Verifiable {
     fn constraints(&self) -> Constraints;
@@ -28,7 +30,7 @@ pub trait Provable<T>: Verifiable {
         check_constraints(&constraints, &trace)
     }
 
-    fn check_specified(&self, witness: T, row: usize, which_constraint: usize) -> Result<(), ()>{
+    fn check_specified(&self, witness: T, row: usize, which_constraint: usize) -> Result<(), ()> {
         let constraints = self.constraints();
         let trace = self.trace(witness);
         if check_specific_constraint(&constraints, &trace, row, which_constraint) {

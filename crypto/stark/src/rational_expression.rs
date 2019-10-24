@@ -145,7 +145,8 @@ impl RationalExpression {
     }
 
     // Note - This function is incomplete in it's treatment of rational expressions
-    // and may not produce the right answer when used with nested expressions containing inverses
+    // and may not produce the right answer when used with nested expressions
+    // containing inverses
     pub fn check(
         &self,
         x: &FieldElement,
@@ -165,7 +166,7 @@ impl RationalExpression {
                 } else {
                     (FieldElement::ONE, false)
                 }
-            },
+            }
             Add(a, b) => {
                 let (res_a, a_ok) = a.check(x, trace);
                 let (res_b, b_ok) = b.check(x, trace);
@@ -174,26 +175,26 @@ impl RationalExpression {
                 } else {
                     (FieldElement::ONE, false)
                 }
-            },
+            }
             Neg(a) => {
                 let (res_a, a_ok) = a.check(x, trace);
                 // Note - this means a false should be either one or -one
-                (- &res_a, a_ok)
-            },
+                (-&res_a, a_ok)
+            }
             Mul(a, b) => {
                 let (res_a, a_ok) = a.check(x, trace);
                 let (res_b, b_ok) = b.check(x, trace);
 
                 if a_ok && b_ok {
-                    (res_a*res_b, true)
+                    (res_a * res_b, true)
                 } else if a_ok && !b_ok {
-                    if &res_a == &FieldElement::ZERO {
+                    if res_a == FieldElement::ZERO {
                         (FieldElement::ZERO, true)
                     } else {
                         (FieldElement::ONE, false)
                     }
                 } else if !a_ok && b_ok {
-                    if &res_b == &FieldElement::ZERO {
+                    if res_b == FieldElement::ZERO {
                         (FieldElement::ZERO, true)
                     } else {
                         (FieldElement::ONE, false)
@@ -201,24 +202,24 @@ impl RationalExpression {
                 } else {
                     (FieldElement::ONE, false)
                 }
-            },
+            }
             // TODO - This behavior is suspect
             Inv(a) => {
                 let (res_a, a_ok) = a.clone().check(x, trace);
                 if a_ok {
-                    if res_a != FieldElement::ZERO {
-                        (res_a, true)
-                    } else {
+                    if res_a == FieldElement::ZERO {
                         (FieldElement::ONE, false)
+                    } else {
+                        (res_a, true)
                     }
                 } else {
                     match *(a.clone()) {
                         Inv(b) => b.check(x, trace),
                         // TODO - Fully enumerate all checks
-                        _ => (FieldElement::ONE, false)
+                        _ => (FieldElement::ONE, false),
                     }
                 }
-            },
+            }
             Exp(a, e) => {
                 let (res_a, a_ok) = a.check(x, trace);
                 if a_ok {
@@ -226,7 +227,7 @@ impl RationalExpression {
                 } else {
                     (FieldElement::ONE, false)
                 }
-            },
+            }
         }
     }
 
