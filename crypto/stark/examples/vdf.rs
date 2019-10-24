@@ -90,6 +90,7 @@ fn main() {
             "008bbb2c325988ae685e5256b067da1e9f9bbb183bb25f0da1f1dbdb61eb5e76"
         ),
     };
+    assert_eq!(claim.check(()), Ok(()));
 
     let start = Instant::now();
     let proof = claim.prove(()).expect("Proof failed.");

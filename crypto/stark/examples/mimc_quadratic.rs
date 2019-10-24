@@ -101,6 +101,7 @@ fn main() {
     let before = field_element!("00a74f2a70da4ea3723cabd2acc55d03f9ff6d0e7acef0fc63263b12c10dd837");
     let after = mimc(&before);
     let claim = Claim { before, after };
+    assert_eq!(claim.check(()), Ok(()));
     let proof = claim.prove(()).unwrap();
     claim.verify(&proof).unwrap();
 }
