@@ -11,7 +11,7 @@ OpenZKP - pure Rust implementations of Zero-Knowledge Proof systems.
 
 Project current implements
 
-* 🐺 the Stark protocol (see it's [readme](/crypto/starks/Readme/md) for details)
+* 🐺 the Stark protocol (see its [readme](/crypto/starks/Readme/md) for details)
 
 and has
 
