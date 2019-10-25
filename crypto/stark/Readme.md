@@ -5,12 +5,12 @@
 [![CircleCI](https://img.shields.io/circleci/build/github/0xProject/OpenZKP)](https://circleci.com/gh/0xProject/OpenZKP)
 [![Codecov](https://img.shields.io/codecov/c/gh/0xproject/OpenZKP)](https://codecov.io/gh/0xProject/OpenZKP)
 
-Implementation of STARK zero-knowledge-proofs.
+OpenZKP implementation of STARK zero-knowledge-proofs.
 
-The particular Stark protocol variant implemented is (an approximation of) the
-one used in Starkdex developed by Starkware. In particular this Stark protocol
-has the optimizations described in the "StarkDEX deep dive" part III
-(see [references](#references)).
+STARKs are a family of protocols developed by Eli Ben-Sasson, Michael Riabzev, Lior Goldberg, et al.
+and further refined  by Starkware Ltd. The particular Stark protocol variant implemented is (an
+approximation of) the one used in Starkdex alpha. In particular this Stark protocol has the
+optimizations described in the "StarkDEX deep dive" part III (see [references](#references)).
 
 ## Example
 
