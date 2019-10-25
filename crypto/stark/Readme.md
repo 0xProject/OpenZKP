@@ -7,7 +7,10 @@
 
 Implementation of STARK zero-knowledge-proofs.
 
-The particular Stark protocol variant implemented is (an approximation of) the one used in Starkdex developed by Starkware. In particular this Stark protocol has the optimizations described in the "StarkDEX deep dive" part III (see [references](#references)).
+The particular Stark protocol variant implemented is (an approximation of) the
+one used in Starkdex developed by Starkware. In particular this Stark protocol
+has the optimizations described in the "StarkDEX deep dive" part III
+(see [references](#references)).
 
 ## Example
 
@@ -117,7 +120,8 @@ In the `/examples` folder there are further examples:
 * Starkware's [stark math](https://medium.com/starkware/tagged/stark-math) and
   [starkdex](https://medium.com/starkware/tagged/starkdex-specs) series.
 * Starkware's Starkdex [verifier contracts](https://ropsten.etherscan.io/address/0xdc3422c75a04e64c30b4cedac699239d48bfba35#code).
-* More sources on 
+* Resource overviews by [Starkware](https://starkware.co/resources/) and
+  [Matter Labs](https://github.com/matter-labs/awesome-zero-knowledge-proofs#starks)
 
 ## Related projects
 

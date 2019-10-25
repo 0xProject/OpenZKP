@@ -49,7 +49,7 @@ and some others, see [features and limitations](#features-and-limitations) below
 | [`elliptic-curve-crypto`](/crypto/elliptic-curve-crypto)       | [![Crates.io](https://img.shields.io/crates/v/zkp-elliptic-curve-crypto?label=)](https://crates.io/crates/zkp-elliptic-curve-crypto) | Pedersen commitments and digital signatures.                                                      |
 | [`hash`](/crypto/hash)                                         | [![Crates.io](https://img.shields.io/crates/v/zkp-hash?label=)](https://crates.io/crates/zkp-hash)                                   | Hash primitive used in `zkp-stark`.                                                               |
 | [`merkle-tree`](/crypto/merkle-tree)                           | [![Crates.io](https://img.shields.io/crates/v/zkp-merkle-tree?label=)](https://crates.io/crates/zkp-merkle-tree)                     | Merkle tree based vector commitment.                                                              |
-| [`stark`](/crypto/stark)                                       | [![Crates.io](https://img.shields.io/crates/v/zkp-stark?label=)](https://crates.io/crates/zkp-stark)                                 | Implementation of STARK ZK-proofs.                                                      |
+| [`stark`](/crypto/stark)                                       | [![Crates.io](https://img.shields.io/crates/v/zkp-stark?label=)](https://crates.io/crates/zkp-stark)                                 | STARK protocol implementation                                                                     |
 
 ## Example
 
