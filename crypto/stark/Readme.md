@@ -8,9 +8,9 @@
 OpenZKP implementation of STARK zero-knowledge-proofs.
 
 STARKs are a family of protocols developed by Eli Ben-Sasson, Michael Riabzev, Lior Goldberg, et al.
-and further refined  by Starkware Ltd. The particular Stark protocol variant implemented is (an
-approximation of) the one used in Starkdex alpha. In particular this Stark protocol has the
-optimizations described in the "StarkDEX deep dive" part III (see [references](#references)).
+and Starkware Ltd. The particular Stark protocol variant implemented is (an approximation of) the
+one used in Starkdex alpha. This Stark protocol has the optimizations described in the "StarkDEX deep dive"
+part III (see [references](#references)).
 
 ## Example
 
