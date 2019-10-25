@@ -7,6 +7,11 @@
 
 Implementation of STARK zero-knowledge-proofs.
 
+The particular Stark protocol variant implemented is (an approximation of) the
+one used in Starkdex developed by Starkware. In particular this Stark protocol
+has the optimizations described in the "StarkDEX deep dive" part III
+(see [references](#references)).
+
 ## Example
 
 ```rust
@@ -66,6 +71,17 @@ pub fn main() {
 }
 ```
 
+In the `/examples` folder there are further examples:
+
+* `small_fib` and `large_fib`.
+* `mimc_cubic` by Guild of Weavers
+  ([source](https://github.com/GuildOfWeavers/genSTARK/tree/master/examples/mimc)).
+* `mimc_quadratic` by Guild of Weavers
+  ([source](https://github.com/GuildOfWeavers/genSTARK/tree/master/examples/mimc)).
+* `vdf` by Matter Labs
+  ([source](https://github.com/matter-labs/hodor/blob/master/src/experiments/vdf.rs)).
+* `pedersen_merkle` by Starkware.
+
 ## Features and Limitations
 
 ### Features
@@ -89,3 +105,28 @@ pub fn main() {
 **No side-channel resistance.** The implementation favours performance over side-channel resistance. While this is common in zero-knowledge proof system, you should be aware that his might leak intermediate computations. Side-channel resistance can be implemented.
 
 **Hard-coded field and hash.** The current implementation uses a particular [prime field](/algebra/primefield) and a particular [hash function](/crypto/hash). These are optimized for verification in the Ethereum Virtual Machine. This can be generalized to other primitives optimized for other use cases.
+
+## References
+
+* Eli Ben-Sasson, Iddo Bentov, Ynon Horesh, Michael Riabzev (2018).
+  "Fast Reed-Solomon Interactive Oracle Proofs of Proximity".
+  [eccc.weizmann.ac.il](https://eccc.weizmann.ac.il/report/2017/134/)
+* Eli Ben-Sasson and Iddo Bentov and Yinon Horesh and Michael Riabzev (2018).
+  "Scalable, transparent, and post-quantum secure computational integrity".
+  [eprint.iacr.org](https://eprint.iacr.org/2018/046)
+* Eli Ben-Sasson, Lior Goldberg, Swastik Kopparty, Shubhangi Saraf (2019).
+  "DEEP-FRI: Sampling outside the box improves soundness".
+  [arxiv.org](https://arxiv.org/abs/1903.12243)
+* Starkware's [stark math](https://medium.com/starkware/tagged/stark-math) and
+  [starkdex](https://medium.com/starkware/tagged/starkdex-specs) series.
+* Starkware's Starkdex [verifier contracts](https://ropsten.etherscan.io/address/0xdc3422c75a04e64c30b4cedac699239d48bfba35#code).
+* Resource overviews by [Starkware](https://starkware.co/resources/) and
+  [Matter Labs](https://github.com/matter-labs/awesome-zero-knowledge-proofs#starks)
+
+## Related projects
+
+* [Hodor](https://github.com/matter-labs/hodor) by Matter Labs.
+* [genSTARK](https://github.com/GuildOfWeavers/genSTARK) by Guild of Weavers.
+* [libSTARK](https://github.com/elibensasson/libSTARK) by Ben-Sasson et al.
+* [stark](https://github.com/computablelabs/starks) by Computable Labs.
+* [mimc_stark](https://github.com/ethereum/research/tree/master/mimc_stark) by Vitalik Buterin.

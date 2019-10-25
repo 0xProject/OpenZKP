@@ -9,7 +9,11 @@ OpenZKP - pure Rust implementations of Zero-Knowledge Proof systems.
 
 ## Overview
 
-The current version has
+Project current implements
+
+* 🐺 the Stark protocol (see it's [readme](/crypto/starks/Readme/md) for details)
+
+and has
 
 * 🌞 a simple interface (see the [example](#example) below),
 * 🗜️ succinct proofs,
@@ -45,9 +49,11 @@ and some others, see [features and limitations](#features-and-limitations) below
 | [`elliptic-curve-crypto`](/crypto/elliptic-curve-crypto)       | [![Crates.io](https://img.shields.io/crates/v/zkp-elliptic-curve-crypto?label=)](https://crates.io/crates/zkp-elliptic-curve-crypto) | Pedersen commitments and digital signatures.                                                      |
 | [`hash`](/crypto/hash)                                         | [![Crates.io](https://img.shields.io/crates/v/zkp-hash?label=)](https://crates.io/crates/zkp-hash)                                   | Hash primitive used in `zkp-stark`.                                                               |
 | [`merkle-tree`](/crypto/merkle-tree)                           | [![Crates.io](https://img.shields.io/crates/v/zkp-merkle-tree?label=)](https://crates.io/crates/zkp-merkle-tree)                     | Merkle tree based vector commitment.                                                              |
-| [`stark`](/crypto/stark)                                       | [![Crates.io](https://img.shields.io/crates/v/zkp-stark?label=)](https://crates.io/crates/zkp-stark)                                 | Implementation of the STARK ZK-proof system.                                                      |
+| [`stark`](/crypto/stark)                                       | [![Crates.io](https://img.shields.io/crates/v/zkp-stark?label=)](https://crates.io/crates/zkp-stark)                                 | STARK protocol implementation                                                                     |
 
 ## Example
+
+Example from the [`stark`](/crypto/stark) package:
 
 ```rust
 use zkp_stark::{*, primefield::*};
@@ -137,3 +143,17 @@ See our [Contributing guideline](/Contributing.md) and [Code of conduct](/Code_o
 See CircleCI documentation on how to [run tests locally][cci-local].
 
 [cci-local]: https://circleci.com/docs/2.0/local-cli/
+
+## References
+
+Resource overviews on Zero Knowledge Proof protoocols:
+
+* The excelent [zkp.science](https://zkp.science/).
+* The [overview](https://github.com/matter-labs/awesome-zero-knowledge-proofs) by Matter Labs
+
+Resources on numeric and cryptographic algorithm implementation:
+
+*  Alfred J. Menezes, Paul C. van Oorschot and Scott A. Vanstone (2001).
+  "Handbook of Applied Cryptography". Available [online](http://cacr.uwaterloo.ca/hac/)
+* Donald Knuth (1968-).
+  "The art of computer programming". In particular part II: Seminumerical algorithms.
