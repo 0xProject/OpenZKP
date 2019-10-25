@@ -260,22 +260,15 @@ impl RationalExpression {
     fn trace_arguments_impl(&self, s: &mut BTreeSet<(usize, isize)>) {
         use RationalExpression::*;
         match self {
-            X | Constant(_) => (),
             &Trace(i, j) => {
                 let _ = s.insert((i, j));
             }
-            Polynomial(_, a) => a.trace_arguments_impl(s),
-            Add(a, b) => {
+            X | Constant(_) => (),
+            Polynomial(_, a) | Exp(a, _) | Neg(a) | Inv(a) => a.trace_arguments_impl(s),
+            Add(a, b) | Mul(a, b) => {
                 a.trace_arguments_impl(s);
                 b.trace_arguments_impl(s);
             }
-            Neg(a) => a.trace_arguments_impl(s),
-            Mul(a, b) => {
-                a.trace_arguments_impl(s);
-                b.trace_arguments_impl(s);
-            }
-            Inv(a) => a.trace_arguments_impl(s),
-            Exp(a, _) => a.trace_arguments_impl(s),
         }
     }
 }
