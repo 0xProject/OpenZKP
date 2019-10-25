@@ -239,7 +239,7 @@ pub(crate) mod tests {
             let exponents = (0..order).map(|_| usize::arbitrary(g) % 16).collect();
             let coefficients = (0..order).map(|_| FieldElement::arbitrary(g)).collect();
 
-            Recurrance2 {
+            Self {
                 index: order + usize::arbitrary(g) % 1000,
                 initial_values,
                 exponents,
