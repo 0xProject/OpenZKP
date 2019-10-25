@@ -3,7 +3,7 @@ use crate::{
 };
 #[cfg(feature = "std")]
 use std::error;
-use std::{collections::BTreeMap, convert::TryInto, fmt, prelude::v1::*};
+use std::{collections::BTreeMap, fmt, prelude::v1::*};
 use zkp_hash::Hash;
 use zkp_merkle_tree::{Commitment, Error as MerkleError, Proof as MerkleProof};
 use zkp_primefield::{fft, geometric_series::root_series, FieldElement};

@@ -641,9 +641,8 @@ fn oods_combine(
             &mut combined_polynomial,
         );
     }
-    for (constraint_polynomial, coefficient) in constraint_polynomials
-        .iter()
-        .zip(&constraint_coefficients)
+    for (constraint_polynomial, coefficient) in
+        constraint_polynomials.iter().zip(&constraint_coefficients)
     {
         constraint_polynomial.divide_out_point_into(
             &oods_point_pow,

@@ -204,7 +204,7 @@ impl Constraints {
     pub fn trace_arguments(&self) -> Vec<(usize, isize)> {
         self.expressions
             .iter()
-            .map(|constraint| constraint.trace_arguments())
+            .map(RationalExpression::trace_arguments)
             .fold(BTreeSet::new(), |x, y| &x | &y)
             .into_iter()
             .collect()

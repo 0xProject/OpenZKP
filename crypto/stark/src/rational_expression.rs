@@ -260,8 +260,7 @@ impl RationalExpression {
     fn trace_arguments_impl(&self, s: &mut BTreeSet<(usize, isize)>) {
         use RationalExpression::*;
         match self {
-            X => (),
-            Constant(_) => (),
+            X | Constant(_) => (),
             &Trace(i, j) => {
                 let _ = s.insert((i, j));
             }
