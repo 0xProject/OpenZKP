@@ -1,5 +1,6 @@
 use crate::polynomial::DensePolynomial;
 use std::{
+    collections::BTreeSet,
     iter::Sum,
     ops::{Add, Div, Mul, Sub},
     prelude::v1::*,
@@ -247,6 +248,27 @@ impl RationalExpression {
             Mul(a, b) => a.evaluate(x, trace) * b.evaluate(x, trace),
             Inv(a) => a.evaluate(x, trace).inv().expect("divided by zero"),
             Exp(a, e) => a.evaluate(x, trace).pow(*e),
+        }
+    }
+
+    pub fn trace_arguments(&self) -> BTreeSet<(usize, isize)> {
+        let mut arguments = BTreeSet::new();
+        self.trace_arguments_impl(&mut arguments);
+        arguments
+    }
+
+    fn trace_arguments_impl(&self, s: &mut BTreeSet<(usize, isize)>) {
+        use RationalExpression::*;
+        match self {
+            &Trace(i, j) => {
+                let _ = s.insert((i, j));
+            }
+            X | Constant(_) => (),
+            Polynomial(_, a) | Exp(a, _) | Neg(a) | Inv(a) => a.trace_arguments_impl(s),
+            Add(a, b) | Mul(a, b) => {
+                a.trace_arguments_impl(s);
+                b.trace_arguments_impl(s);
+            }
         }
     }
 }

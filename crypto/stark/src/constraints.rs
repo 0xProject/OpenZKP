@@ -1,6 +1,6 @@
 use crate::rational_expression::RationalExpression;
 use itertools::Itertools;
-use std::{fmt, prelude::v1::*};
+use std::{collections::BTreeSet, fmt, prelude::v1::*};
 use zkp_primefield::FieldElement;
 
 #[derive(Clone, Debug)]
@@ -199,6 +199,15 @@ impl Constraints {
                 },
             )
             .sum()
+    }
+
+    pub fn trace_arguments(&self) -> Vec<(usize, isize)> {
+        self.expressions
+            .iter()
+            .map(RationalExpression::trace_arguments)
+            .fold(BTreeSet::new(), |x, y| &x | &y)
+            .into_iter()
+            .collect()
     }
 }
 
