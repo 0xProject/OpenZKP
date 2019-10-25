@@ -290,8 +290,6 @@ pub(crate) mod tests {
                 trace_table[(i, 0)] = initial_value.clone();
             }
             let order = witness.initial_values.len();
-            dbg!(order);
-            dbg!(self.trace_length());
             for i in order..self.trace_length() {
                 let mut next_value = FieldElement::ZERO;
                 for (j, (coefficient, &exponent)) in

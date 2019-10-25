@@ -516,10 +516,6 @@ fn out_of_domain_element(
     let g = omega.pow(blowup);
     let mut r = FieldElement::ZERO;
 
-    dbg!(poly_points.len());
-    dbg!(oods_coefficients.len());
-    dbg!(trace_arguments.len());
-
     for ((coefficient, value), (i, j)) in oods_coefficients
         .iter()
         .zip(oods_values)
@@ -528,12 +524,6 @@ fn out_of_domain_element(
         r += coefficient * (&poly_points[*i] - value) / (&x_transform - g.pow(*j) * oods_point);
     }
 
-    // for x in 0..poly_points.len() {
-    //     r += &oods_coefficients[2 * x] * (&poly_points[x] - &oods_values[2 * x])
-    //         / (&x_transform - oods_point);
-    //     r += &oods_coefficients[2 * x + 1] * (&poly_points[x] - &oods_values[2 *
-    // x + 1])         / (&x_transform - &g * oods_point);
-    // }
     for (i, constraint_oods_value) in constraint_oods_values.iter().enumerate() {
         r += &oods_coefficients[trace_arguments.len() + i]
             * (constraint_oods_value - &oods_values[trace_arguments.len() + i])

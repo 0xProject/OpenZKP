@@ -397,11 +397,7 @@ pub fn prove(constraints: &Constraints, trace: &TraceTable) -> Result<Proof> {
 
     // Read constraint coefficients from the channel.
     info!("Read constraint coefficients from the channel.");
-    let mut constraint_coefficients = Vec::with_capacity(constraints.trace_arguments().len());
-    for _ in 0..constraints.len() {
-        constraint_coefficients.push(proof.get_random());
-        constraint_coefficients.push(proof.get_random());
-    }
+    let constraint_coefficients = get_coefficients(&mut proof, 2 * constraints.len());
 
     info!("Compute constraint polynomials.");
     let constraint_polynomials = get_constraint_polynomials(
@@ -616,8 +612,6 @@ fn oods_combine(
     trace_arguments: &[(usize, isize)],
     constraint_polynomials: &[DensePolynomial],
 ) -> DensePolynomial {
-    dbg!(trace_arguments);
-
     // Fetch the oods sampling point
     let trace_length = trace_polynomials[0].len();
     let oods_point: FieldElement = proof.get_random();
@@ -634,19 +628,13 @@ fn oods_combine(
         proof.write(&constraint_polynomial.evaluate(&oods_point_pow));
     }
 
-    // Read coefficients
-    let n_coefficients = trace_arguments.len() + constraint_polynomials.len();
-    let mut oods_coefficients: Vec<FieldElement> = Vec::with_capacity(n_coefficients);
-    for _ in 0..n_coefficients {
-        oods_coefficients.push(proof.get_random());
-    }
-    let (trace_coefficients, constraint_coefficients) =
-        oods_coefficients.split_at(trace_arguments.len());
-
     // Divide out points and linear sum the polynomials
     // OPT: Parallelization
+    let trace_coefficients = get_coefficients(proof, trace_arguments.len());
+    let constraint_coefficients = get_coefficients(proof, constraint_polynomials.len());
+
     let mut combined_polynomial = DensePolynomial::zeros(trace_length);
-    for ((column, offset), coefficient) in trace_arguments.iter().zip(trace_coefficients) {
+    for ((column, offset), coefficient) in trace_arguments.iter().zip(&trace_coefficients) {
         trace_polynomials[*column].divide_out_point_into(
             &(&oods_point * &g.pow(*offset)),
             coefficient,
@@ -655,7 +643,7 @@ fn oods_combine(
     }
     for (constraint_polynomial, coefficient) in constraint_polynomials
         .iter()
-        .zip(constraint_coefficients.iter())
+        .zip(&constraint_coefficients)
     {
         constraint_polynomial.divide_out_point_into(
             &oods_point_pow,
@@ -664,6 +652,11 @@ fn oods_combine(
         );
     }
     combined_polynomial
+}
+
+// TODO: remove this and refactor ProverChannel.
+fn get_coefficients(proof: &mut ProverChannel, n: usize) -> Vec<FieldElement> {
+    (0..n).map(|_| proof.get_random()).collect()
 }
 
 fn perform_fri_layering(
