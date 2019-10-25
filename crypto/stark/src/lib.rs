@@ -51,6 +51,8 @@ mod verifier;
 #[cfg(feature = "prover")]
 mod algebraic_dag;
 #[cfg(feature = "prover")]
+mod constraint_check;
+#[cfg(feature = "prover")]
 mod prover;
 #[cfg(feature = "prover")]
 mod trace_table;
