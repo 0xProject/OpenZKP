@@ -2,6 +2,35 @@ use crate::{constraints::*, trace_table::*};
 use std::convert::TryInto;
 use zkp_primefield::FieldElement;
 
+#[allow(clippy::doc_markdown)]
+/// # Check a set of constraints on a trace table
+///
+/// ## Input
+///
+/// A `ConstraintSystem` which captures the claim that is made.
+/// A `TraceTable` which is the witness to this claim.
+///
+/// ## Output
+///
+/// A Result which indicated the constraint and row which failed
+///
+/// ## Constraint Checking
+///
+/// The function iterates through the rows of the table and the rational
+/// expression constraints and runs a check function on the rational expression
+/// which checks that it is well defined. This will return the evaluated value
+/// and true if the expression either contains no division by zero or each
+/// division by zero is multiplied by a zero [which we set as the proper
+/// evaluation of the statement]. It is not a 100% accurate check and may have
+/// false negatives when complex nested inverted constraints are used, best
+/// practice in using it is to simplify all fractions in the constraint
+/// expression. Moreover this system of checking is not guaranteed to work for
+/// every expression that could be committed too. The best test that a
+/// constraint system holds is to try to run a complete proof. The performance
+/// of this function also depends heavily on the size of the system so for the
+/// best experience using it to check constraints while developing it is best to
+/// limit the trace table to the smallest meeting your needs.
+
 pub(crate) fn check_constraints(
     constraints: &Constraints,
     table: &TraceTable,
