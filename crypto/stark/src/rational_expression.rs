@@ -1,5 +1,6 @@
 use crate::polynomial::DensePolynomial;
 use std::{
+    collections::BTreeSet,
     iter::Sum,
     ops::{Add, Div, Mul, Sub},
     prelude::v1::*,
@@ -144,6 +145,93 @@ impl RationalExpression {
         }
     }
 
+    // Note - This function is incomplete in it's treatment of rational expressions
+    // and may not produce the right answer when used with nested expressions
+    // containing inverses
+    pub fn check(
+        &self,
+        x: &FieldElement,
+        trace: &dyn Fn(usize, isize) -> FieldElement,
+    ) -> (FieldElement, bool) {
+        use RationalExpression::*;
+
+        match self {
+            X => (x.clone(), true),
+            Constant(c) => (c.clone(), true),
+            &Trace(i, j) => (trace(i, j), true),
+
+            Polynomial(p, a) => {
+                let (res, is_ok) = a.check(x, trace);
+                if is_ok {
+                    (p.evaluate(&res), true)
+                } else {
+                    (FieldElement::ONE, false)
+                }
+            }
+            Add(a, b) => {
+                let (res_a, a_ok) = a.check(x, trace);
+                let (res_b, b_ok) = b.check(x, trace);
+                if a_ok && b_ok {
+                    (res_a + res_b, true)
+                } else {
+                    (FieldElement::ONE, false)
+                }
+            }
+            Neg(a) => {
+                let (res_a, a_ok) = a.check(x, trace);
+                // Note - this means a false should be either one or -one
+                (-&res_a, a_ok)
+            }
+            Mul(a, b) => {
+                let (res_a, a_ok) = a.check(x, trace);
+                let (res_b, b_ok) = b.check(x, trace);
+
+                if a_ok && b_ok {
+                    (res_a * res_b, true)
+                } else if a_ok && !b_ok {
+                    if res_a == FieldElement::ZERO {
+                        (FieldElement::ZERO, true)
+                    } else {
+                        (FieldElement::ONE, false)
+                    }
+                } else if !a_ok && b_ok {
+                    if res_b == FieldElement::ZERO {
+                        (FieldElement::ZERO, true)
+                    } else {
+                        (FieldElement::ONE, false)
+                    }
+                } else {
+                    (FieldElement::ONE, false)
+                }
+            }
+            // TODO - This behavior is suspect
+            Inv(a) => {
+                let (res_a, a_ok) = a.clone().check(x, trace);
+                if a_ok {
+                    if res_a == FieldElement::ZERO {
+                        (FieldElement::ONE, false)
+                    } else {
+                        (res_a, true)
+                    }
+                } else {
+                    match *(a.clone()) {
+                        Inv(b) => b.check(x, trace),
+                        // TODO - Fully enumerate all checks
+                        _ => (FieldElement::ONE, false),
+                    }
+                }
+            }
+            Exp(a, e) => {
+                let (res_a, a_ok) = a.check(x, trace);
+                if a_ok {
+                    (res_a.pow(*e), true)
+                } else {
+                    (FieldElement::ONE, false)
+                }
+            }
+        }
+    }
+
     pub fn evaluate(
         &self,
         x: &FieldElement,
@@ -160,6 +248,27 @@ impl RationalExpression {
             Mul(a, b) => a.evaluate(x, trace) * b.evaluate(x, trace),
             Inv(a) => a.evaluate(x, trace).inv().expect("divided by zero"),
             Exp(a, e) => a.evaluate(x, trace).pow(*e),
+        }
+    }
+
+    pub fn trace_arguments(&self) -> BTreeSet<(usize, isize)> {
+        let mut arguments = BTreeSet::new();
+        self.trace_arguments_impl(&mut arguments);
+        arguments
+    }
+
+    fn trace_arguments_impl(&self, s: &mut BTreeSet<(usize, isize)>) {
+        use RationalExpression::*;
+        match self {
+            &Trace(i, j) => {
+                let _ = s.insert((i, j));
+            }
+            X | Constant(_) => (),
+            Polynomial(_, a) | Exp(a, _) | Neg(a) | Inv(a) => a.trace_arguments_impl(s),
+            Add(a, b) | Mul(a, b) => {
+                a.trace_arguments_impl(s);
+                b.trace_arguments_impl(s);
+            }
         }
     }
 }

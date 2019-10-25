@@ -73,6 +73,8 @@ fn main() {
     };
     info!("Witness: {:?}", witness);
 
+    assert_eq!(claim.check(&witness), Ok(()));
+
     // Start timer
     let start = Instant::now();
 

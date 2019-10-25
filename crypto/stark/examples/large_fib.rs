@@ -78,6 +78,7 @@ fn main() {
     let start = Instant::now();
     let constraints = claim.constraints();
     let trace = claim.trace(&witness);
+    // assert_eq!(claim.check(&witness), Ok(()));
     let proof = prove(&constraints, &trace).expect("Proof failed");
     let duration = start.elapsed();
     println!("Time elapsed in proof function is: {:?}", duration);
