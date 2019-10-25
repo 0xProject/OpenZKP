@@ -9,7 +9,11 @@ OpenZKP - pure Rust implementations of Zero-Knowledge Proof systems.
 
 ## Overview
 
-The current version has
+Project current implements
+
+* 🐺 the Stark protocol (see it's [readme](/crypto/starks/Readme/md) for details)
+
+and has
 
 * 🌞 a simple interface (see the [example](#example) below),
 * 🗜️ succinct proofs,
@@ -142,6 +146,14 @@ See CircleCI documentation on how to [run tests locally][cci-local].
 
 ## References
 
-* https://github.com/matter-labs/awesome-zero-knowledge-proofs#starks
-* https://zkp.science/
+Resource overviews on Zero Knowledge Proof protoocols:
 
+* The excelent [zkp.science](https://zkp.science/).
+* The [overview](https://github.com/matter-labs/awesome-zero-knowledge-proofs) by Matter Labs
+
+Resources on numeric and cryptographic algorithm implementation:
+
+*  Alfred J. Menezes, Paul C. van Oorschot and Scott A. Vanstone (2001).
+  "Handbook of Applied Cryptography". Available [online](http://cacr.uwaterloo.ca/hac/)
+* Donald Knuth (1968-).
+  "The art of computer programming". In particular part II: Seminumerical algorithms.
