@@ -37,7 +37,7 @@ pub(crate) fn check_constraints(
 ) -> Result<(), (usize, usize)> {
     let trace_generator = FieldElement::root(table.num_rows()).unwrap();
     let mut current_root = FieldElement::ONE;
-    let len  = table.num_rows();
+    let len = table.num_rows();
 
     for row in 0..len {
         // Note - Still in col row form
