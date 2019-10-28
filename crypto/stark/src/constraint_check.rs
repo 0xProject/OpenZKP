@@ -79,9 +79,17 @@ pub(crate) fn check_specific_constraint(
     }
 
     let trace = |i: usize, j: isize| {
-        let j: usize = j.try_into().unwrap();
-        assert!(j == 0 || j == 1);
-        table[((j + row) % table.num_rows(), i)].clone()
+        if j.is_positive() {
+            let j: usize = j.try_into().unwrap();
+            table[((j + row) % len, i)].clone()
+        } else {
+            let j: usize = j.abs().try_into().unwrap();
+            if row < j {
+                table[(len + row - j, i)].clone()
+            } else {
+                table[(row - j, i)].clone()
+            }
+        }
     };
 
     constraints.expressions()[which_constraint]
