@@ -77,6 +77,7 @@ pub(crate) fn check_specific_constraint(
     } else {
         x = trace_generator.pow(row - 1)
     }
+    let len = table.num_rows();
 
     let trace = |i: usize, j: isize| {
         if j.is_positive() {
