@@ -48,6 +48,9 @@ pub use field::FieldElement;
 // TODO: Make member functions of FieldElement?
 pub use field::{invert_batch, invert_batch_src_dst};
 
+// Re-exports dependencies that are part of the public interface
+pub use zkp_u256 as u256;
+
 // Std/no-std imports
 #[cfg(not(feature = "std"))]
 extern crate no_std_compat as std;

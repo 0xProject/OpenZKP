@@ -1,5 +1,5 @@
 [package]
-name = "macros-lib"
+name = "zkp-macros-lib"
 version = "0.1.0"
 description = "Library of procedural macros implemented using `proc_macro2`"
 repository = "https://github.com/0xProject/starkcrypto/tree/master/utils/macros-lib"

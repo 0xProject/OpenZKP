@@ -1,6 +1,6 @@
 use crate::{Commitment, Result, Tree};
-use hash::{Hash, Hashable};
 use std::prelude::v1::*;
+use zkp_hash::{Hash, Hashable};
 
 #[cfg(feature = "mmap")]
 use crate::mmap_vec::MmapVec;

@@ -1,3 +1,12 @@
+# OpenZKP Prime Field
+
+[![Crates.io](https://img.shields.io/crates/l/zkp-primefield)](/License.md)
+[![](https://docs.rs/zkp-primefield/badge.svg)](https://docs.rs/zkp-stark)
+[![CircleCI](https://img.shields.io/circleci/build/github/0xProject/OpenZKP)](https://circleci.com/gh/0xProject/OpenZKP)
+[![Codecov](https://img.shields.io/codecov/c/gh/0xproject/OpenZKP)](https://codecov.io/gh/0xProject/OpenZKP)
+
+A 251-bit prime field suitable for FFTs.
+
 ## Goals
 
 -   Perfomance optimized for Native and WebAssembly

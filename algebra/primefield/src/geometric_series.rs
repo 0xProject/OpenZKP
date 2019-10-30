@@ -66,8 +66,8 @@ pub fn root_series(order: usize) -> GeometricSeries {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use macros_decl::field_element;
-    use u256::U256;
+    use zkp_macros_decl::field_element;
+    use zkp_u256::U256;
 
     #[test]
     fn geometric_series_test() {
