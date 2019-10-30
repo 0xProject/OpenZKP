@@ -77,6 +77,27 @@ fn signature_verification_constraints() -> Vec<RationalExpression> {
     ]
 }
 
+fn state_transition_constraints() -> Vec<RationalExpression> {
+    use RationalExpression::*;
+
+    let trace_length = 10;
+    let path_length = 256;
+    let trace_generator = Constant(FieldElement::ZERO);
+
+    let state_transition__merkle_update__side_bit_extraction__bit_0 = Trace(6, 5) - (Trace(6, 7) + Trace(6, 7));
+    let state_transition__merkle_update__prev_authentication__hashes__ec_subset_sum__bit = Trace(3, 0) - (Trace(3, 1) + Trace(3, 1));
+    let state_transition__merkle_update__prev_authentication__hashes__ec_subset_sum__bit_neg = Constant(1.into()) - state_transition__merkle_update__prev_authentication__hashes__ec_subset_sum__bit.clone();
+    let state_transition__merkle_update__side_bit_extraction__bit_1 = Trace(6, 7) - (Trace(6, 9) + Trace(6, 9));
+    let state_transition__merkle_update__new_authentication__hashes__ec_subset_sum__bit = Trace(7, 0) - (Trace(7, 1) + Trace(7, 1));
+    let state_transition__merkle_update__new_authentication__hashes__ec_subset_sum__bit_neg = Constant(1.into()) - state_transition__merkle_update__new_authentication__hashes__ec_subset_sum__bit.clone();
+    let state_transition__merkle_update__prev_authentication__sibling_0 = state_transition__merkle_update__side_bit_extraction__bit_0.clone() * Trace(3, 0) + (Constant(1.into()) - state_transition__merkle_update__side_bit_extraction__bit_0.clone()) * Trace(3, 6);
+    let state_transition__merkle_update__new_authentication__sibling_0 = state_transition__merkle_update__side_bit_extraction__bit_0.clone() * Trace(7, 0) + (Constant(1.into()) - state_transition__merkle_update__side_bit_extraction__bit_0.clone()) * Trace(7, 6);
+    let state_transition__merkle_update__prev_authentication__leaf_0 = (Constant(1.into()) - state_transition__merkle_update__side_bit_extraction__bit_0.clone()) * Trace(3, 0) + state_transition__merkle_update__side_bit_extraction__bit_0.clone() * Trace(3, 6);
+    let state_transition__merkle_update__new_authentication__leaf_0 = (Constant(1.into()) - state_transition__merkle_update__side_bit_extraction__bit_0.clone()) * Trace(7, 0) + state_transition__merkle_update__side_bit_extraction__bit_0.clone() * Trace(7, 6);
+
+    vec![]
+}
+
 fn constraints() -> Vec<RationalExpression> {
     use RationalExpression::*;
 
