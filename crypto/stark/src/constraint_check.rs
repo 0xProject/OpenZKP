@@ -37,13 +37,22 @@ pub(crate) fn check_constraints(
 ) -> Result<(), (usize, usize)> {
     let trace_generator = FieldElement::root(table.num_rows()).unwrap();
     let mut current_root = FieldElement::ONE;
+    let len = table.num_rows();
 
-    for row in 0..table.num_rows() {
+    for row in 0..len {
         // Note - Still in col row form
         let trace = |i: usize, j: isize| {
-            let j: usize = j.try_into().unwrap();
-            assert!(j == 0 || j == 1);
-            table[((j + row) % table.num_rows(), i)].clone()
+            if j.is_positive() {
+                let j: usize = j.try_into().unwrap();
+                table[((j + row) % len, i)].clone()
+            } else {
+                let j: usize = j.abs().try_into().unwrap();
+                if row < j {
+                    table[(len + row - j, i)].clone()
+                } else {
+                    table[(row - j, i)].clone()
+                }
+            }
         };
         for (which, expression) in constraints.expressions().iter().enumerate() {
             if !expression.check(&current_root, &trace).1 {
@@ -68,11 +77,20 @@ pub(crate) fn check_specific_constraint(
     } else {
         x = trace_generator.pow(row - 1)
     }
+    let len = table.num_rows();
 
     let trace = |i: usize, j: isize| {
-        let j: usize = j.try_into().unwrap();
-        assert!(j == 0 || j == 1);
-        table[((j + row) % table.num_rows(), i)].clone()
+        if j.is_positive() {
+            let j: usize = j.try_into().unwrap();
+            table[((j + row) % len, i)].clone()
+        } else {
+            let j: usize = j.abs().try_into().unwrap();
+            if row < j {
+                table[(len + row - j, i)].clone()
+            } else {
+                table[(row - j, i)].clone()
+            }
+        }
     };
 
     constraints.expressions()[which_constraint]
