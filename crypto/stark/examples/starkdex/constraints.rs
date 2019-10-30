@@ -131,11 +131,11 @@ fn constraints() -> Vec<RationalExpression> {
     (state_transition__merkle_update__prev_authentication__sibling_0 - state_transition__merkle_update__new_authentication__sibling_0) * (X.pow(trace_length / 16384) - trace_generator.pow(31 * trace_length / 32)) / (X.pow(trace_length / 512) - Constant(1.into())), // state_transition/merkle_update/same_siblings
     (state_transition__merkle_update__prev_authentication__leaf_0 - Trace(8, 2)) / (X.pow(trace_length / 16384) - Constant(1.into())), // state_transition/merkle_set_prev_leaf
     (state_transition__merkle_update__new_authentication__leaf_0 - Trace(8, 4)) / (X.pow(trace_length / 16384) - Constant(1.into())), // state_transition/merkle_set_new_leaf
-    (is_modification * (Trace(9, 6) * boundary_base - boundary_key)) / (X.pow(trace_length / 65536) - Constant(1.into())), // modification_boundary_key
-    (is_modification * (Trace(9, 0) * boundary_base - boundary_token)) / (X.pow(trace_length / 65536) - Constant(1.into())), // modification_boundary_token
-    (is_modification * (Trace(8, 5) * boundary_base - boundary_amount0)) / (X.pow(trace_length / 65536) - Constant(1.into())), // modification_boundary_amount0
-    (is_modification * (Trace(8, 7) * boundary_base - boundary_amount1)) / (X.pow(trace_length / 65536) - Constant(1.into())), // modification_boundary_amount1
-    (is_modification * (Trace(6, 5) * boundary_base - boundary_vault_id)) / (X.pow(trace_length / 65536) - Constant(1.into())), // modification_boundary_vault_id
+    (is_modification.clone() * (Trace(9, 6) * boundary_base.clone() - boundary_key)) / (X.pow(trace_length / 65536) - Constant(1.into())), // modification_boundary_key
+    (is_modification.clone() * (Trace(9, 0) * boundary_base.clone() - boundary_token.clone() )) / (X.pow(trace_length / 65536) - Constant(1.into())), // modification_boundary_token.clone()
+    (is_modification.clone() * (Trace(8, 5) * boundary_base.clone() - boundary_amount0)) / (X.pow(trace_length / 65536) - Constant(1.into())), // modification_boundary_amount0
+    (is_modification.clone() * (Trace(8, 7) * boundary_base.clone() - boundary_amount1)) / (X.pow(trace_length / 65536) - Constant(1.into())), // modification_boundary_amount1
+    (is_modification.clone() * (Trace(6, 5) * boundary_base.clone() - boundary_vault_id)) / (X.pow(trace_length / 65536) - Constant(1.into())), // modification_boundary_vault_id
     (amounts_range_check__bit_0 * amounts_range_check__bit_0 - amounts_range_check__bit_0) * (X.pow(trace_length / 8192) - trace_generator.pow(63 * trace_length / 64)) / (X.pow(trace_length / 128) - Constant(1.into())), // amounts_range_check/bit
     (Trace(9, 4)) / (X.pow(trace_length / 8192) - trace_generator.pow(63 * trace_length / 64)), // amounts_range_check/zero
     (is_settlement.clone() * (Trace(8, 5) - Trace(8, 7) - (Trace(8, 1) - Trace(8, 9)))) / (X.pow(trace_length / 65536) - Constant(1.into())), // total_token_a_not_changed
@@ -204,6 +204,6 @@ fn constraints() -> Vec<RationalExpression> {
     (column0_row_expr0 - initial_root) / (X - Constant(1.into())), // initial_root
     (column4_row_expr1 - final_root) / (X - trace_generator.pow(65536 * (trace_length / 65536 - 1))), // final_root
     (column4_row_expr0 - column0_row_expr2) * (X - trace_generator.pow(65536 * (trace_length / 65536 - 1) + 49152)) / (X.pow(trace_length / 16384) - Constant(1.into())), // copy_merkle_roots
-    (is_modification * (column4_row_expr0 - column4_row_expr1)) / (X.pow(trace_length / 65536) - Constant(1.into())), // copy_merkle_roots_modification
+    (is_modification.clone() * (column4_row_expr0 - column4_row_expr1)) / (X.pow(trace_length / 65536) - Constant(1.into())), // copy_merkle_roots_modification
     ]
 }
