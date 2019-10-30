@@ -133,7 +133,7 @@ vec![
 ((Constant(1.into()) - Trace(8, 3)) * Trace(9, 6) - Trace(8, 5)) / (X.pow(trace_length / 16384) - Constant(1.into())), // handle_empty_vault/consistency_key_stage1
 ((Constant(1.into()) - Trace(8, 3)) * Trace(9, 0) - Trace(8, 9)) / (X.pow(trace_length / 16384) - Constant(1.into())), // handle_empty_vault/consistency_token_stage1
 (column0_row_expr0 - initial_root) / (X - Constant(1.into())), // initial_root
-(column4_row_exprConstant(1.into()) - final_root) / (X - trace_generator.pow(65536 * (trace_length / 65536 - 1))), // final_root
+(column4_row_expr1 - final_root) / (X - trace_generator.pow(65536 * (trace_length / 65536 - 1))), // final_root
 (column4_row_expr0 - column0_row_expr2) * (X - trace_generator.pow(65536 * (trace_length / 65536 - 1) + 49152)) / (X.pow(trace_length / 16384) - Constant(1.into())), // copy_merkle_roots
 (is_modification * (column4_row_expr0 - column4_row_expr1)) / (X.pow(trace_length / 65536) - Constant(1.into())), // copy_merkle_roots_modification
 ]

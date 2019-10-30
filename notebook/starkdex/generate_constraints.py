@@ -14,15 +14,18 @@ denominator_pattern = re.compile(
 
 
 def translate(line):
-    return (re.sub(trace_table_pattern, r"Trace(\1, \2)", line)
-            .replace("point^", "X^")
-            .replace("point -", "X -")
-            .replace("^", ".pow")
-            .replace("powtrace_length", "pow(trace_length)")
-            .replace(") - 1", ") - Constant(1.into())")
-            .replace("1 - ", "Constant(1.into()) - ")
-            .replace("X - 1", "X - Constant(1.into())")
-            .replace("t - 1", "t - Constant(1.into())"))
+    return (
+        re.sub(trace_table_pattern, r"Trace(\1, \2)", line)
+        .replace("point^", "X^")
+        .replace("point -", "X -")
+        .replace("^", ".pow")
+        .replace("powtrace_length", "pow(trace_length)")
+        .replace(") - 1", ") - Constant(1.into())")
+        .replace("1 - ", "Constant(1.into()) - ")
+        .replace("X - 1", "X - Constant(1.into())")
+        .replace("t - 1", "t - Constant(1.into())")
+        .replace("column4_row_exprConstant(1.into())", "column4_row_expr1")
+    )
 
 
 def get_intermediate_values(line):
