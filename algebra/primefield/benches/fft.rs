@@ -2,10 +2,47 @@
 use criterion::{black_box, criterion_group, Criterion};
 use zkp_criterion_utils::{log_size_bench, log_thread_bench};
 use zkp_macros_decl::field_element;
-use zkp_primefield::{fft::fft_cofactor_permuted, FieldElement};
+use zkp_primefield::{fft::fft_cofactor_permuted, fft::fft2_permuted, FieldElement, fft};
 use zkp_u256::U256;
 
 const SIZES: [usize; 6] = [64, 256, 1024, 4096, 16384, 65536];
+
+fn fft_butterfly_radix_2_simple(crit: &mut Criterion) {
+    let mut a = FieldElement::from(123);
+    let mut b = FieldElement::from(3432);
+    crit.bench_function("FFT butterfly/radix 2 simple", move |bench| {
+        bench.iter(|| {
+            fft::radix_2_simple(&mut a, &mut b);
+        })
+    });  
+}
+
+fn fft_butterfly_radix_2(crit: &mut Criterion) {
+    let mut values: Vec<_> = (0..2).map(FieldElement::from).collect();
+    crit.bench_function("FFT butterfly/radix 2", move |bench| {
+        bench.iter(|| {
+            fft::radix_2(0, 1, black_box(&mut values));
+        })
+    });  
+}
+
+fn fft_butterfly_radix_4(crit: &mut Criterion) {
+    let mut values: Vec<_> = (0..4).map(FieldElement::from).collect();
+    crit.bench_function("FFT butterfly/radix 4", move |bench| {
+        bench.iter(|| {
+            fft::radix_4(0, 1, black_box(&mut values));
+        })
+    });
+}
+
+fn fft_butterfly_radix_8(crit: &mut Criterion) {
+    let mut values: Vec<_> = (0..8).map(FieldElement::from).collect();
+    crit.bench_function("FFT butterfly/radix 8", move |bench| {
+        bench.iter(|| {
+            fft::radix_8(0, 1, black_box(&mut values));
+        })
+    });
+}
 
 fn fft_size(crit: &mut Criterion) {
     log_size_bench(crit, "FFT size", &SIZES, move |bench, size| {
@@ -35,4 +72,11 @@ fn fft_threads(crit: &mut Criterion) {
     });
 }
 
-criterion_group!(fft, fft_size, fft_threads);
+criterion_group!(fft,
+    fft_butterfly_radix_2_simple,
+    fft_butterfly_radix_2,
+    fft_butterfly_radix_4,
+    fft_butterfly_radix_8,
+    fft_size,
+    fft_threads
+);

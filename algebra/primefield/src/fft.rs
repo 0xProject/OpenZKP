@@ -197,8 +197,22 @@ fn dif_ntt(length: usize, offset: usize, stride: usize, values: &mut [FieldEleme
 
 /// Transforms (x0, x1) to (x0 + x1, x0 - x1)
 #[inline(always)]
-fn radix_2(offset: usize, stride: usize, values: &mut [FieldElement]) {
+pub fn radix_2_simple(x0: &mut FieldElement, x1: &mut FieldElement) {
     // OPT: Inplace +- operation like in gcd::mat_mul.
+    // OPT: Use Dev's combined REDC
+
+    let t = x0.clone();
+    *x0 += &*x1;
+    // OPT: sub_from_assign
+    *x1 -= t;
+    x1.neg_assign();
+}
+
+/// Transforms (x0, x1) to (x0 + x1, x0 - x1)
+#[inline(always)]
+pub fn radix_2(offset: usize, stride: usize, values: &mut [FieldElement]) {
+    // OPT: Inplace +- operation like in gcd::mat_mul.
+    // OPT: Use Dev's combined REDC
 
     let (left, right) = values.split_at_mut(offset + stride);
     let t = left[offset].clone();
@@ -210,7 +224,7 @@ fn radix_2(offset: usize, stride: usize, values: &mut [FieldElement]) {
 
 // See https://math.stackexchange.com/questions/1626897/whats-the-formulation-of-n-point-radix-n-for-ntt/1627247
 #[inline(always)]
-fn radix_4(offset: usize, stride: usize, values: &mut [FieldElement]) {
+pub fn radix_4(offset: usize, stride: usize, values: &mut [FieldElement]) {
     const OMEGA: FieldElement = field_element!("0625023929a2995b533120664329f8c7c5268e56ac8320da2a616626f41337e3");
     radix_2(0, 2, values);
     radix_2(1, 2, values);
@@ -220,7 +234,7 @@ fn radix_4(offset: usize, stride: usize, values: &mut [FieldElement]) {
 }
 
 #[inline(always)]
-fn radix_8(offset: usize, stride: usize, values: &mut [FieldElement]) {
+pub fn radix_8(offset: usize, stride: usize, values: &mut [FieldElement]) {
     const OMEGA: FieldElement = field_element!("0625023929a2995b533120664329f8c7c5268e56ac8320da2a616626f41337e3");
     radix_4(0, 2, values);
     radix_4(1, 2, values);
@@ -230,7 +244,6 @@ fn radix_8(offset: usize, stride: usize, values: &mut [FieldElement]) {
     radix_2(2, 1, values);
     radix_2(2, 1, values);
 }
-
 
 // Quickcheck needs pass by value
 #[allow(clippy::needless_pass_by_value)]
