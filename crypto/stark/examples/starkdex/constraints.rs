@@ -19,9 +19,6 @@ fn signature_verification_constraints() -> Vec<RationalExpression> {
     let path_length = 256;
     let trace_generator = Constant(FieldElement::ZERO);
 
-    let ecdsa_points__x = Polynomial(DensePolynomial::new(&[FieldElement::ZERO]), Box::new(X.pow(20)));
-    let ecdsa_points__y = Polynomial(DensePolynomial::new(&[FieldElement::ZERO]), Box::new(X.pow(20)));
-
     let sig_config = SignatureConfig {
         shift_point: Point {
             x: Constant(FieldElement::ONE),
@@ -31,49 +28,66 @@ fn signature_verification_constraints() -> Vec<RationalExpression> {
         beta: Constant(FieldElement::ONE),
     };
 
-    let sig_verify__doubling_key__x_squared = Trace(9, 0) * Trace(9, 0);
-    let sig_verify__exponentiate_generator__bit = Trace(9, 0) - (Trace(9, 8) + Trace(9, 8));
-    let sig_verify__exponentiate_generator__bit_neg = Constant(1.into()) - sig_verify__exponentiate_generator__bit.clone();
-    let sig_verify__exponentiate_key__bit = Trace(9, 4) - (Trace(9, 8) + Trace(9, 8));
-    let sig_verify__exponentiate_key__bit_neg = Constant(1.into()) - sig_verify__exponentiate_key__bit.clone();
+    let doubling_key__x_squared = Trace(9, 0) * Trace(9, 0);
+
+    let exponentiate_key__bit = Trace(9, 4) - (Trace(9, 8) + Trace(9, 8));
+    let exponentiate_key__bit_neg = Constant(1.into()) - exponentiate_key__bit.clone();
+
+    fn exponentiate_generator_constraints() -> Vec<RationalExpression> {
+        use RationalExpression::*;
+
+        let trace_length = 10;
+        let path_length = 256;
+        let trace_generator = Constant(FieldElement::ZERO);
+
+        let ecdsa_points__x = Polynomial(DensePolynomial::new(&[FieldElement::ZERO]), Box::new(X.pow(20)));
+        let ecdsa_points__y = Polynomial(DensePolynomial::new(&[FieldElement::ZERO]), Box::new(X.pow(20)));
+
+        let exponentiate_generator__bit = Trace(9, 0) - (Trace(9, 8) + Trace(9, 8));
+        let exponentiate_generator__bit_neg = Constant(1.into()) - exponentiate_generator__bit.clone();
+
+        vec![
+        (exponentiate_generator__bit.clone() * (exponentiate_generator__bit.clone() - Constant(1.into()))) * (X.pow(trace_length / 32768) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 128) - Constant(1.into())), // exponentiate_generator/booleanity_test
+        (Trace(9, 0)) / (X.pow(trace_length / 32768) - trace_generator.pow(251 * trace_length / 256)), // exponentiate_generator/bit_extraction_end
+        (Trace(9, 0)) / (X.pow(trace_length / 32768) - trace_generator.pow(255 * trace_length / 256)), // exponentiate_generator/zeros_tail
+        (exponentiate_generator__bit.clone() * (Trace(9, 6) - ecdsa_points__y) - Trace(9, 0) * (Trace(9, 8) - ecdsa_points__x.clone())) * (X.pow(trace_length / 32768) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 128) - Constant(1.into())), // exponentiate_generator/add_points/slope
+        (Trace(9, 0) * Trace(9, 0) - exponentiate_generator__bit.clone() * (Trace(9, 8) + ecdsa_points__x.clone() + Trace(9, 6))) * (X.pow(trace_length / 32768) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 128) - Constant(1.into())), // exponentiate_generator/add_points/x
+        (exponentiate_generator__bit.clone() * (Trace(9, 6) + Trace(9, 4)) - Trace(9, 0) * (Trace(9, 8) - Trace(9, 6))) * (X.pow(trace_length / 32768) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 128) - Constant(1.into())), // exponentiate_generator/add_points/y
+        (Trace(9, 4) * (Trace(9, 8) - ecdsa_points__x.clone()) - Constant(1.into())) * (X.pow(trace_length / 32768) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 128) - Constant(1.into())), // exponentiate_generator/add_points/x_diff_inv
+        (exponentiate_generator__bit_neg.clone() * (Trace(9, 6) - Trace(9, 8))) * (X.pow(trace_length / 32768) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 128) - Constant(1.into())), // exponentiate_generator/copy_point/x
+        (exponentiate_generator__bit_neg.clone() * (Trace(9, 4) - Trace(9, 6))) * (X.pow(trace_length / 32768) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 128) - Constant(1.into())), // exponentiate_generator/copy_point/y
+        ]
+    }
+
 
     vec![
-    (sig_verify__doubling_key__x_squared.clone() + sig_verify__doubling_key__x_squared.clone() + sig_verify__doubling_key__x_squared.clone() + sig_config.alpha.clone() - (Trace(9, 2) + Trace(9, 2)) * Trace(9, 6)) * (X.pow(trace_length / 16384) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 64) - Constant(1.into())), // sig_verify/doubling_key/slope
-    (Trace(9, 6) * Trace(9, 6) - (Trace(9, 0) + Trace(9, 0) + Trace(9, 4))) * (X.pow(trace_length / 16384) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 64) - Constant(1.into())), // sig_verify/doubling_key/x
-    (Trace(9, 2) + Trace(9, 6) - Trace(9, 6) * (Trace(9, 0) - Trace(9, 4))) * (X.pow(trace_length / 16384) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 64) - Constant(1.into())), // sig_verify/doubling_key/y
-    (sig_verify__exponentiate_generator__bit.clone() * (sig_verify__exponentiate_generator__bit.clone() - Constant(1.into()))) * (X.pow(trace_length / 32768) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 128) - Constant(1.into())), // sig_verify/exponentiate_generator/booleanity_test
-    (Trace(9, 0)) / (X.pow(trace_length / 32768) - trace_generator.pow(251 * trace_length / 256)), // sig_verify/exponentiate_generator/bit_extraction_end
-    (Trace(9, 0)) / (X.pow(trace_length / 32768) - trace_generator.pow(255 * trace_length / 256)), // sig_verify/exponentiate_generator/zeros_tail
-    (sig_verify__exponentiate_generator__bit.clone() * (Trace(9, 6) - ecdsa_points__y) - Trace(9, 0) * (Trace(9, 8) - ecdsa_points__x.clone())) * (X.pow(trace_length / 32768) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 128) - Constant(1.into())), // sig_verify/exponentiate_generator/add_points/slope
-    (Trace(9, 0) * Trace(9, 0) - sig_verify__exponentiate_generator__bit.clone() * (Trace(9, 8) + ecdsa_points__x.clone() + Trace(9, 6))) * (X.pow(trace_length / 32768) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 128) - Constant(1.into())), // sig_verify/exponentiate_generator/add_points/x
-    (sig_verify__exponentiate_generator__bit.clone() * (Trace(9, 6) + Trace(9, 4)) - Trace(9, 0) * (Trace(9, 8) - Trace(9, 6))) * (X.pow(trace_length / 32768) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 128) - Constant(1.into())), // sig_verify/exponentiate_generator/add_points/y
-    (Trace(9, 4) * (Trace(9, 8) - ecdsa_points__x.clone()) - Constant(1.into())) * (X.pow(trace_length / 32768) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 128) - Constant(1.into())), // sig_verify/exponentiate_generator/add_points/x_diff_inv
-    (sig_verify__exponentiate_generator__bit_neg.clone() * (Trace(9, 6) - Trace(9, 8))) * (X.pow(trace_length / 32768) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 128) - Constant(1.into())), // sig_verify/exponentiate_generator/copy_point/x
-    (sig_verify__exponentiate_generator__bit_neg.clone() * (Trace(9, 4) - Trace(9, 6))) * (X.pow(trace_length / 32768) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 128) - Constant(1.into())), // sig_verify/exponentiate_generator/copy_point/y
-    (sig_verify__exponentiate_key__bit.clone() * (sig_verify__exponentiate_key__bit.clone() - Constant(1.into()))) * (X.pow(trace_length / 16384) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 64) - Constant(1.into())), // sig_verify/exponentiate_key/booleanity_test
-    (Trace(9, 4)) / (X.pow(trace_length / 16384) - trace_generator.pow(251 * trace_length / 256)), // sig_verify/exponentiate_key/bit_extraction_end
-    (Trace(9, 4)) / (X.pow(trace_length / 16384) - trace_generator.pow(255 * trace_length / 256)), // sig_verify/exponentiate_key/zeros_tail
-    (sig_verify__exponentiate_key__bit.clone() * (Trace(9, 8) - Trace(9, 2)) - Trace(9, 0) * (Trace(9, 8) - Trace(9, 0))) * (X.pow(trace_length / 16384) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 64) - Constant(1.into())), // sig_verify/exponentiate_key/add_points/slope
-    (Trace(9, 0) * Trace(9, 0) - sig_verify__exponentiate_key__bit.clone() * (Trace(9, 8) + Trace(9, 0) + Trace(9, 2))) * (X.pow(trace_length / 16384) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 64) - Constant(1.into())), // sig_verify/exponentiate_key/add_points/x
-    (sig_verify__exponentiate_key__bit.clone() * (Trace(9, 8) + Trace(9, 2)) - Trace(9, 0) * (Trace(9, 8) - Trace(9, 2))) * (X.pow(trace_length / 16384) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 64) - Constant(1.into())), // sig_verify/exponentiate_key/add_points/y
-    (Trace(9, 6) * (Trace(9, 8) - Trace(9, 0)) - Constant(1.into())) * (X.pow(trace_length / 16384) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 64) - Constant(1.into())), // sig_verify/exponentiate_key/add_points/x_diff_inv
-    (sig_verify__exponentiate_key__bit_neg.clone() * (Trace(9, 2) - Trace(9, 8))) * (X.pow(trace_length / 16384) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 64) - Constant(1.into())), // sig_verify/exponentiate_key/copy_point/x
-    (sig_verify__exponentiate_key__bit_neg.clone() * (Trace(9, 2) - Trace(9, 8))) * (X.pow(trace_length / 16384) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 64) - Constant(1.into())), // sig_verify/exponentiate_key/copy_point/y
-    (Trace(9, 8) - sig_config.shift_point.x.clone()) / (X.pow(trace_length / 32768) - Constant(1.into())), // sig_verify/init_gen/x
-    (Trace(9, 6) + sig_config.shift_point.y.clone()) / (X.pow(trace_length / 32768) - Constant(1.into())), // sig_verify/init_gen/y
-    (Trace(9, 8) - sig_config.shift_point.x.clone()) / (X.pow(trace_length / 16384) - Constant(1.into())), // sig_verify/init_key/x
-    (Trace(9, 8) - sig_config.shift_point.y.clone()) / (X.pow(trace_length / 16384) - Constant(1.into())), // sig_verify/init_key/y
-    (Trace(9, 6) - Trace(9, 8) - Trace(9, 4) * (Trace(9, 8) - Trace(9, 8))) / (X.pow(trace_length / 32768) - Constant(1.into())), // sig_verify/add_results/slope
-    (Trace(9, 4) * Trace(9, 4) - (Trace(9, 8) + Trace(9, 8) + Trace(9, 4))) / (X.pow(trace_length / 32768) - Constant(1.into())), // sig_verify/add_results/x
-    (Trace(9, 6) + Trace(9, 6) - Trace(9, 4) * (Trace(9, 8) - Trace(9, 4))) / (X.pow(trace_length / 32768) - Constant(1.into())), // sig_verify/add_results/y
-    (Trace(9, 0) * (Trace(9, 8) - Trace(9, 8)) - Constant(1.into())) / (X.pow(trace_length / 32768) - Constant(1.into())), // sig_verify/add_results/x_diff_inv
-    (Trace(9, 2) + sig_config.shift_point.y.clone() - Trace(8, 9) * (Trace(9, 2) - sig_config.shift_point.x.clone())) / (X.pow(trace_length / 32768) - Constant(1.into())), // sig_verify/extract_r/slope
-    (Trace(8, 9) * Trace(8, 9) - (Trace(9, 2) + sig_config.shift_point.x.clone() + Trace(9, 4))) / (X.pow(trace_length / 32768) - Constant(1.into())), // sig_verify/extract_r/x
-    (Trace(8, 3) * (Trace(9, 2) - sig_config.shift_point.x.clone()) - Constant(1.into())) / (X.pow(trace_length / 32768) - Constant(1.into())), // sig_verify/extract_r/x_diff_inv
-    (Trace(9, 0) * Trace(8, 1) - Constant(1.into())) / (X.pow(trace_length / 32768) - Constant(1.into())), // sig_verify/z_nonzero
-    (Trace(9, 4) * Trace(9, 6) - Constant(1.into())) / (X.pow(trace_length / 16384) - Constant(1.into())), // sig_verify/r_and_w_nonzero
-    (Trace(8, 5) - Trace(9, 0) * Trace(9, 0)) / (X.pow(trace_length / 32768) - Constant(1.into())), // sig_verify/q_on_curve/x_squared
-    (Trace(9, 2) * Trace(9, 2) - (Trace(9, 0) * Trace(8, 5) + sig_config.alpha.clone() * Trace(9, 0) + sig_config.beta)) / (X.pow(trace_length / 32768) - Constant(1.into())), // sig_verify/q_on_curve/on_curve
+    (doubling_key__x_squared.clone() + doubling_key__x_squared.clone() + doubling_key__x_squared.clone() + sig_config.alpha.clone() - (Trace(9, 2) + Trace(9, 2)) * Trace(9, 6)) * (X.pow(trace_length / 16384) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 64) - Constant(1.into())), // doubling_key/slope
+    (Trace(9, 6) * Trace(9, 6) - (Trace(9, 0) + Trace(9, 0) + Trace(9, 4))) * (X.pow(trace_length / 16384) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 64) - Constant(1.into())), // doubling_key/x
+    (Trace(9, 2) + Trace(9, 6) - Trace(9, 6) * (Trace(9, 0) - Trace(9, 4))) * (X.pow(trace_length / 16384) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 64) - Constant(1.into())), // doubling_key/y
+    (exponentiate_key__bit.clone() * (exponentiate_key__bit.clone() - Constant(1.into()))) * (X.pow(trace_length / 16384) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 64) - Constant(1.into())), // exponentiate_key/booleanity_test
+    (Trace(9, 4)) / (X.pow(trace_length / 16384) - trace_generator.pow(251 * trace_length / 256)), // exponentiate_key/bit_extraction_end
+    (Trace(9, 4)) / (X.pow(trace_length / 16384) - trace_generator.pow(255 * trace_length / 256)), // exponentiate_key/zeros_tail
+    (exponentiate_key__bit.clone() * (Trace(9, 8) - Trace(9, 2)) - Trace(9, 0) * (Trace(9, 8) - Trace(9, 0))) * (X.pow(trace_length / 16384) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 64) - Constant(1.into())), // exponentiate_key/add_points/slope
+    (Trace(9, 0) * Trace(9, 0) - exponentiate_key__bit.clone() * (Trace(9, 8) + Trace(9, 0) + Trace(9, 2))) * (X.pow(trace_length / 16384) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 64) - Constant(1.into())), // exponentiate_key/add_points/x
+    (exponentiate_key__bit.clone() * (Trace(9, 8) + Trace(9, 2)) - Trace(9, 0) * (Trace(9, 8) - Trace(9, 2))) * (X.pow(trace_length / 16384) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 64) - Constant(1.into())), // exponentiate_key/add_points/y
+    (Trace(9, 6) * (Trace(9, 8) - Trace(9, 0)) - Constant(1.into())) * (X.pow(trace_length / 16384) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 64) - Constant(1.into())), // exponentiate_key/add_points/x_diff_inv
+    (exponentiate_key__bit_neg.clone() * (Trace(9, 2) - Trace(9, 8))) * (X.pow(trace_length / 16384) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 64) - Constant(1.into())), // exponentiate_key/copy_point/x
+    (exponentiate_key__bit_neg.clone() * (Trace(9, 2) - Trace(9, 8))) * (X.pow(trace_length / 16384) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 64) - Constant(1.into())), // exponentiate_key/copy_point/y
+    (Trace(9, 8) - sig_config.shift_point.x.clone()) / (X.pow(trace_length / 32768) - Constant(1.into())), // init_gen/x
+    (Trace(9, 6) + sig_config.shift_point.y.clone()) / (X.pow(trace_length / 32768) - Constant(1.into())), // init_gen/y
+    (Trace(9, 8) - sig_config.shift_point.x.clone()) / (X.pow(trace_length / 16384) - Constant(1.into())), // init_key/x
+    (Trace(9, 8) - sig_config.shift_point.y.clone()) / (X.pow(trace_length / 16384) - Constant(1.into())), // init_key/y
+    (Trace(9, 6) - Trace(9, 8) - Trace(9, 4) * (Trace(9, 8) - Trace(9, 8))) / (X.pow(trace_length / 32768) - Constant(1.into())), // add_results/slope
+    (Trace(9, 4) * Trace(9, 4) - (Trace(9, 8) + Trace(9, 8) + Trace(9, 4))) / (X.pow(trace_length / 32768) - Constant(1.into())), // add_results/x
+    (Trace(9, 6) + Trace(9, 6) - Trace(9, 4) * (Trace(9, 8) - Trace(9, 4))) / (X.pow(trace_length / 32768) - Constant(1.into())), // add_results/y
+    (Trace(9, 0) * (Trace(9, 8) - Trace(9, 8)) - Constant(1.into())) / (X.pow(trace_length / 32768) - Constant(1.into())), // add_results/x_diff_inv
+    (Trace(9, 2) + sig_config.shift_point.y.clone() - Trace(8, 9) * (Trace(9, 2) - sig_config.shift_point.x.clone())) / (X.pow(trace_length / 32768) - Constant(1.into())), // extract_r/slope
+    (Trace(8, 9) * Trace(8, 9) - (Trace(9, 2) + sig_config.shift_point.x.clone() + Trace(9, 4))) / (X.pow(trace_length / 32768) - Constant(1.into())), // extract_r/x
+    (Trace(8, 3) * (Trace(9, 2) - sig_config.shift_point.x.clone()) - Constant(1.into())) / (X.pow(trace_length / 32768) - Constant(1.into())), // extract_r/x_diff_inv
+    (Trace(9, 0) * Trace(8, 1) - Constant(1.into())) / (X.pow(trace_length / 32768) - Constant(1.into())), // z_nonzero
+    (Trace(9, 4) * Trace(9, 6) - Constant(1.into())) / (X.pow(trace_length / 16384) - Constant(1.into())), // r_and_w_nonzero
+    (Trace(8, 5) - Trace(9, 0) * Trace(9, 0)) / (X.pow(trace_length / 32768) - Constant(1.into())), // q_on_curve/x_squared
+    (Trace(9, 2) * Trace(9, 2) - (Trace(9, 0) * Trace(8, 5) + sig_config.alpha.clone() * Trace(9, 0) + sig_config.beta)) / (X.pow(trace_length / 32768) - Constant(1.into())), // q_on_curve/on_curve
     ]
 }
 
