@@ -3,8 +3,8 @@
 use crate::FieldElement;
 use std::prelude::v1::*;
 use crate::geometric_series::root_series;
-use macros_decl::field_element;
-use u256::U256;
+use zkp_macros_decl::field_element;
+use zkp_u256::U256;
 
 // OPT: Implement parallel strategies: https://inf.ethz.ch/personal/markusp/teaching/263-2300-ETH-spring12/slides/class19.pdf
 
@@ -181,7 +181,7 @@ fn dif_ntt(length: usize, offset: usize, stride: usize, values: &mut [FieldEleme
 
             // Twiddle factors
             let omega = FieldElement::root(length).unwrap();
-            for i in 0..inner {ß
+            for i in 0..inner {
                 for j in 0..outer {
                     values[offset + (i * outer + j) * stride] *= omega.pow(i * j);
                 }
