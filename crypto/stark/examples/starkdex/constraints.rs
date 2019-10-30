@@ -1,7 +1,3 @@
-// use env_logger;
-// use log::info;
-// use std::{env, time::Instant};
-// use zkp_macros_decl::field_element;
 use zkp_primefield::FieldElement;
 use zkp_stark::{RationalExpression, DensePolynomial};
 
@@ -14,6 +10,22 @@ struct SignatureConfig {
 struct Point {
     pub x:  RationalExpression,
     pub y:  RationalExpression,
+}
+
+fn signature_verification_constraints() -> Vec<RationalExpression> {
+    use RationalExpression::*;
+
+    let trace_length = 10;
+    let path_length = 256;
+    let trace_generator = Constant(FieldElement::ZERO);
+
+    let sig_verify__doubling_key__x_squared = Trace(9, 0) * Trace(9, 0);
+    let sig_verify__exponentiate_generator__bit = Trace(9, 0) - (Trace(9, 8) + Trace(9, 8));
+    let sig_verify__exponentiate_generator__bit_neg = Constant(1.into()) - sig_verify__exponentiate_generator__bit.clone();
+    let sig_verify__exponentiate_key__bit = Trace(9, 4) - (Trace(9, 8) + Trace(9, 8));
+    let sig_verify__exponentiate_key__bit_neg = Constant(1.into()) - sig_verify__exponentiate_key__bit.clone();
+
+    vec![]
 }
 
 fn constraints() -> Vec<RationalExpression> {
