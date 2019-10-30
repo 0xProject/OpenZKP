@@ -85,14 +85,14 @@ fn constraints() -> Vec<RationalExpression> {
     let sig_verify__exponentiate_key__bit = Trace(9, 4) - (Trace(9, 8) + Trace(9, 8));
     let sig_verify__exponentiate_key__bit_neg = Constant(1.into()) - sig_verify__exponentiate_key__bit;
     vec![
-    (hash_pool__hash__ec_subset_sum__bit * (hash_pool__hash__ec_subset_sum__bit - Constant(1.into()))) * (X.pow(trace_length / 1024) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 4) - Constant(1.into())), // hash_pool/hash/ec_subset_sum/booleanity_test
+    (hash_pool__hash__ec_subset_sum__bit.clone() * (hash_pool__hash__ec_subset_sum__bit.clone() - Constant(1.into()))) * (X.pow(trace_length / 1024) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 4) - Constant(1.into())), // hash_pool/hash/ec_subset_sum/booleanity_test
     (Trace(8, 3)) / (X.pow(trace_length / 1024) - trace_generator.pow(251 * trace_length / 256)), // hash_pool/hash/ec_subset_sum/bit_extraction_end
     (Trace(8, 3)) / (X.pow(trace_length / 1024) - trace_generator.pow(255 * trace_length / 256)), // hash_pool/hash/ec_subset_sum/zeros_tail
-    (hash_pool__hash__ec_subset_sum__bit * (Trace(8, 2) - hash_pool_points__y) - Trace(8, 1) * (Trace(8, 0) - hash_pool_points__x)) * (X.pow(trace_length / 1024) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 4) - Constant(1.into())), // hash_pool/hash/ec_subset_sum/add_points/slope
-    (Trace(8, 1) * Trace(8, 1) - hash_pool__hash__ec_subset_sum__bit * (Trace(8, 0) + hash_pool_points__x + Trace(8, 4))) * (X.pow(trace_length / 1024) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 4) - Constant(1.into())), // hash_pool/hash/ec_subset_sum/add_points/x
-    (hash_pool__hash__ec_subset_sum__bit * (Trace(8, 2) + Trace(8, 6)) - Trace(8, 1) * (Trace(8, 0) - Trace(8, 4))) * (X.pow(trace_length / 1024) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 4) - Constant(1.into())), // hash_pool/hash/ec_subset_sum/add_points/y
-    (hash_pool__hash__ec_subset_sum__bit_neg * (Trace(8, 4) - Trace(8, 0))) * (X.pow(trace_length / 1024) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 4) - Constant(1.into())), // hash_pool/hash/ec_subset_sum/copy_point/x
-    (hash_pool__hash__ec_subset_sum__bit_neg * (Trace(8, 6) - Trace(8, 2))) * (X.pow(trace_length / 1024) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 4) - Constant(1.into())), // hash_pool/hash/ec_subset_sum/copy_point/y
+    (hash_pool__hash__ec_subset_sum__bit.clone() * (Trace(8, 2) - hash_pool_points__y) - Trace(8, 1) * (Trace(8, 0) - hash_pool_points__x)) * (X.pow(trace_length / 1024) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 4) - Constant(1.into())), // hash_pool/hash/ec_subset_sum/add_points/slope
+    (Trace(8, 1) * Trace(8, 1) - hash_pool__hash__ec_subset_sum__bit.clone() * (Trace(8, 0) + hash_pool_points__x + Trace(8, 4))) * (X.pow(trace_length / 1024) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 4) - Constant(1.into())), // hash_pool/hash/ec_subset_sum/add_points/x
+    (hash_pool__hash__ec_subset_sum__bit.clone() * (Trace(8, 2) + Trace(8, 6)) - Trace(8, 1) * (Trace(8, 0) - Trace(8, 4))) * (X.pow(trace_length / 1024) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 4) - Constant(1.into())), // hash_pool/hash/ec_subset_sum/add_points/y
+    (hash_pool__hash__ec_subset_sum__bit_neg.clone() * (Trace(8, 4) - Trace(8, 0))) * (X.pow(trace_length / 1024) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 4) - Constant(1.into())), // hash_pool/hash/ec_subset_sum/copy_point/x
+    (hash_pool__hash__ec_subset_sum__bit_neg.clone() * (Trace(8, 6) - Trace(8, 2))) * (X.pow(trace_length / 1024) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 4) - Constant(1.into())), // hash_pool/hash/ec_subset_sum/copy_point/y
     (Trace(8, 4) - Trace(8, 0)) * (X.pow(trace_length / 2048) - trace_generator.pow(trace_length / 2)) / (X.pow(trace_length / 1024) - Constant(1.into())), // hash_pool/hash/copy_point/x
     (Trace(8, 6) - Trace(8, 2)) * (X.pow(trace_length / 2048) - trace_generator.pow(trace_length / 2)) / (X.pow(trace_length / 1024) - Constant(1.into())), // hash_pool/hash/copy_point/y
     (Trace(8, 0) - shift_point.x) / (X.pow(trace_length / 2048) - Constant(1.into())), // hash_pool/hash/init/x
@@ -138,8 +138,8 @@ fn constraints() -> Vec<RationalExpression> {
     (is_modification * (Trace(6, 5) * boundary_base - boundary_vault_id)) / (X.pow(trace_length / 65536) - Constant(1.into())), // modification_boundary_vault_id
     (amounts_range_check__bit_0 * amounts_range_check__bit_0 - amounts_range_check__bit_0) * (X.pow(trace_length / 8192) - trace_generator.pow(63 * trace_length / 64)) / (X.pow(trace_length / 128) - Constant(1.into())), // amounts_range_check/bit
     (Trace(9, 4)) / (X.pow(trace_length / 8192) - trace_generator.pow(63 * trace_length / 64)), // amounts_range_check/zero
-    (is_settlement * (Trace(8, 5) - Trace(8, 7) - (Trace(8, 1) - Trace(8, 9)))) / (X.pow(trace_length / 65536) - Constant(1.into())), // total_token_a_not_changed
-    (is_settlement * (Trace(8, 3) - Trace(8, 5) - (Trace(8, 9) - Trace(8, 7)))) / (X.pow(trace_length / 65536) - Constant(1.into())), // total_token_b_not_changed
+    (is_settlement.clone() * (Trace(8, 5) - Trace(8, 7) - (Trace(8, 1) - Trace(8, 9)))) / (X.pow(trace_length / 65536) - Constant(1.into())), // total_token_a_not_changed
+    (is_settlement.clone() * (Trace(8, 3) - Trace(8, 5) - (Trace(8, 9) - Trace(8, 7)))) / (X.pow(trace_length / 65536) - Constant(1.into())), // total_token_b_not_changed
     ((Trace(9, 4) - (Trace(8, 5) - Trace(8, 7))) * is_settlement) / (X.pow(trace_length / 65536) - Constant(1.into())), // diff_a_range_check_input
     ((Trace(9, 2) - (Trace(8, 3) - Trace(8, 5))) * is_settlement) / (X.pow(trace_length / 65536) - Constant(1.into())), // diff_b_range_check_input
     (Trace(9, 6) - Trace(8, 7)) / (X.pow(trace_length / 16384) - Constant(1.into())), // amounts_range_check_inputs
@@ -179,20 +179,20 @@ fn constraints() -> Vec<RationalExpression> {
     (Trace(9, 4) * Trace(9, 6) - Constant(1.into())) / (X.pow(trace_length / 16384) - Constant(1.into())), // sig_verify/r_and_w_nonzero
     (Trace(8, 5) - Trace(9, 0) * Trace(9, 0)) / (X.pow(trace_length / 32768) - Constant(1.into())), // sig_verify/q_on_curve/x_squared
     (Trace(9, 2) * Trace(9, 2) - (Trace(9, 0) * Trace(8, 5) + sig_config.alpha * Trace(9, 0) + sig_config.beta)) / (X.pow(trace_length / 32768) - Constant(1.into())), // sig_verify/q_on_curve/on_curve
-    (is_settlement * (Trace(8, 1) - (((Trace(6, 5) * vault_shift + Trace(6, 7)) * amount_shift + Trace(9, 4)) * amount_shift + Trace(9, 2)) * trade_shift)) / (X.pow(trace_length / 65536) - Constant(1.into())), // maker_sig_input_packed
-    (is_settlement * (Trace(8, 7) - Trace(8, 8))) / (X.pow(trace_length / 65536) - Constant(1.into())), // taker_sig_input_maker_hash
-    (is_settlement * (Trace(8, 1) - Trace(6, 9))) / (X.pow(trace_length / 65536) - Constant(1.into())), // taker_sig_input_vault_a
-    (is_settlement * (Trace(8, 9) - Trace(6, 3))) / (X.pow(trace_length / 65536) - Constant(1.into())), // taker_sig_input_vault_b
-    (is_settlement * (Trace(8, 8) - Trace(9, 0))) / (X.pow(trace_length / 65536) - Constant(1.into())), // copy_signature_input_maker
-    (is_settlement * (Trace(8, 6) - Trace(9, 8))) / (X.pow(trace_length / 65536) - Constant(1.into())), // copy_signature_input_taker
-    (is_settlement * (Trace(9, 0) - Trace(9, 6))) / (X.pow(trace_length / 65536) - Constant(1.into())), // handle_empty_vault/consistency_key_change0
-    (is_settlement * (Trace(8, 9) - Trace(9, 0))) / (X.pow(trace_length / 65536) - Constant(1.into())), // handle_empty_vault/consistency_token_change0
-    (is_settlement * (Trace(9, 0) - Trace(9, 8))) / (X.pow(trace_length / 65536) - Constant(1.into())), // handle_empty_vault/consistency_key_change3
-    (is_settlement * (Trace(8, 3) - Trace(9, 2))) / (X.pow(trace_length / 65536) - Constant(1.into())), // handle_empty_vault/consistency_token_change3
-    (is_settlement * (Trace(9, 8) - Trace(9, 0))) / (X.pow(trace_length / 65536) - Constant(1.into())), // handle_empty_vault/consistency_key_change1
-    (is_settlement * (Trace(8, 9) - Trace(9, 4))) / (X.pow(trace_length / 65536) - Constant(1.into())), // handle_empty_vault/consistency_token_change1
-    (is_settlement * (Trace(9, 8) - Trace(9, 4))) / (X.pow(trace_length / 65536) - Constant(1.into())), // handle_empty_vault/consistency_key_change2
-    (is_settlement * (Trace(8, 3) - Trace(9, 8))) / (X.pow(trace_length / 65536) - Constant(1.into())), // handle_empty_vault/consistency_token_change2
+    (is_settlement.clone() * (Trace(8, 1) - (((Trace(6, 5) * vault_shift + Trace(6, 7)) * amount_shift + Trace(9, 4)) * amount_shift + Trace(9, 2)) * trade_shift)) / (X.pow(trace_length / 65536) - Constant(1.into())), // maker_sig_input_packed
+    (is_settlement.clone() * (Trace(8, 7) - Trace(8, 8))) / (X.pow(trace_length / 65536) - Constant(1.into())), // taker_sig_input_maker_hash
+    (is_settlement.clone() * (Trace(8, 1) - Trace(6, 9))) / (X.pow(trace_length / 65536) - Constant(1.into())), // taker_sig_input_vault_a
+    (is_settlement.clone() * (Trace(8, 9) - Trace(6, 3))) / (X.pow(trace_length / 65536) - Constant(1.into())), // taker_sig_input_vault_b
+    (is_settlement.clone() * (Trace(8, 8) - Trace(9, 0))) / (X.pow(trace_length / 65536) - Constant(1.into())), // copy_signature_input_maker
+    (is_settlement.clone() * (Trace(8, 6) - Trace(9, 8))) / (X.pow(trace_length / 65536) - Constant(1.into())), // copy_signature_input_taker
+    (is_settlement.clone() * (Trace(9, 0) - Trace(9, 6))) / (X.pow(trace_length / 65536) - Constant(1.into())), // handle_empty_vault/consistency_key_change0
+    (is_settlement.clone() * (Trace(8, 9) - Trace(9, 0))) / (X.pow(trace_length / 65536) - Constant(1.into())), // handle_empty_vault/consistency_token_change0
+    (is_settlement.clone() * (Trace(9, 0) - Trace(9, 8))) / (X.pow(trace_length / 65536) - Constant(1.into())), // handle_empty_vault/consistency_key_change3
+    (is_settlement.clone() * (Trace(8, 3) - Trace(9, 2))) / (X.pow(trace_length / 65536) - Constant(1.into())), // handle_empty_vault/consistency_token_change3
+    (is_settlement.clone() * (Trace(9, 8) - Trace(9, 0))) / (X.pow(trace_length / 65536) - Constant(1.into())), // handle_empty_vault/consistency_key_change1
+    (is_settlement.clone() * (Trace(8, 9) - Trace(9, 4))) / (X.pow(trace_length / 65536) - Constant(1.into())), // handle_empty_vault/consistency_token_change1
+    (is_settlement.clone() * (Trace(9, 8) - Trace(9, 4))) / (X.pow(trace_length / 65536) - Constant(1.into())), // handle_empty_vault/consistency_key_change2
+    (is_settlement.clone() * (Trace(8, 3) - Trace(9, 8))) / (X.pow(trace_length / 65536) - Constant(1.into())), // handle_empty_vault/consistency_token_change2
     (Trace(8, 1) * (Constant(1.into()) - Trace(8, 1))) / (X.pow(trace_length / 8192) - Constant(1.into())), // handle_empty_vault/vault_empty/empty_vault_booleanity
     (Trace(8, 1) * Trace(8, 5)) / (X.pow(trace_length / 8192) - Constant(1.into())), // handle_empty_vault/vault_empty/amount_zero_when_empty
     (Trace(8, 1) * Trace(8, 7)) / (X.pow(trace_length / 8192) - Constant(1.into())), // handle_empty_vault/vault_empty/amount_inv_zero_when_empty
