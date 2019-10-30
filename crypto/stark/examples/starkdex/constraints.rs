@@ -67,17 +67,17 @@ fn constraints() -> Vec<RationalExpression> {
     };
 
     let hash_pool__hash__ec_subset_sum__bit = Trace(8, 3) - (Trace(8, 7) + Trace(8, 7));
-    let hash_pool__hash__ec_subset_sum__bit_neg = Constant(1.into()) - hash_pool__hash__ec_subset_sum__bit;
+    let hash_pool__hash__ec_subset_sum__bit_neg = Constant(1.into()) - hash_pool__hash__ec_subset_sum__bit.clone();
     let state_transition__merkle_update__side_bit_extraction__bit_0 = Trace(6, 5) - (Trace(6, 7) + Trace(6, 7));
     let state_transition__merkle_update__prev_authentication__hashes__ec_subset_sum__bit = Trace(3, 0) - (Trace(3, 1) + Trace(3, 1));
     let state_transition__merkle_update__prev_authentication__hashes__ec_subset_sum__bit_neg = Constant(1.into()) - state_transition__merkle_update__prev_authentication__hashes__ec_subset_sum__bit.clone();
     let state_transition__merkle_update__side_bit_extraction__bit_1 = Trace(6, 7) - (Trace(6, 9) + Trace(6, 9));
     let state_transition__merkle_update__new_authentication__hashes__ec_subset_sum__bit = Trace(7, 0) - (Trace(7, 1) + Trace(7, 1));
     let state_transition__merkle_update__new_authentication__hashes__ec_subset_sum__bit_neg = Constant(1.into()) - state_transition__merkle_update__new_authentication__hashes__ec_subset_sum__bit.clone();
-    let state_transition__merkle_update__prev_authentication__sibling_0 = state_transition__merkle_update__side_bit_extraction__bit_0 * Trace(3, 0) + (Constant(1.into()) - state_transition__merkle_update__side_bit_extraction__bit_0) * Trace(3, 6);
-    let state_transition__merkle_update__new_authentication__sibling_0 = state_transition__merkle_update__side_bit_extraction__bit_0 * Trace(7, 0) + (Constant(1.into()) - state_transition__merkle_update__side_bit_extraction__bit_0) * Trace(7, 6);
-    let state_transition__merkle_update__prev_authentication__leaf_0 = (Constant(1.into()) - state_transition__merkle_update__side_bit_extraction__bit_0) * Trace(3, 0) + state_transition__merkle_update__side_bit_extraction__bit_0 * Trace(3, 6);
-    let state_transition__merkle_update__new_authentication__leaf_0 = (Constant(1.into()) - state_transition__merkle_update__side_bit_extraction__bit_0) * Trace(7, 0) + state_transition__merkle_update__side_bit_extraction__bit_0 * Trace(7, 6);
+    let state_transition__merkle_update__prev_authentication__sibling_0 = state_transition__merkle_update__side_bit_extraction__bit_0.clone() * Trace(3, 0) + (Constant(1.into()) - state_transition__merkle_update__side_bit_extraction__bit_0.clone()) * Trace(3, 6);
+    let state_transition__merkle_update__new_authentication__sibling_0 = state_transition__merkle_update__side_bit_extraction__bit_0.clone() * Trace(7, 0) + (Constant(1.into()) - state_transition__merkle_update__side_bit_extraction__bit_0.clone()) * Trace(7, 6);
+    let state_transition__merkle_update__prev_authentication__leaf_0 = (Constant(1.into()) - state_transition__merkle_update__side_bit_extraction__bit_0.clone()) * Trace(3, 0) + state_transition__merkle_update__side_bit_extraction__bit_0.clone() * Trace(3, 6);
+    let state_transition__merkle_update__new_authentication__leaf_0 = (Constant(1.into()) - state_transition__merkle_update__side_bit_extraction__bit_0.clone()) * Trace(7, 0) + state_transition__merkle_update__side_bit_extraction__bit_0.clone() * Trace(7, 6);
     let amounts_range_check__bit_0 = Trace(9, 4) - (Trace(9, 2) + Trace(9, 2));
     let sig_verify__doubling_key__x_squared = Trace(9, 0) * Trace(9, 0);
     let sig_verify__exponentiate_generator__bit = Trace(9, 0) - (Trace(9, 8) + Trace(9, 8));
@@ -85,12 +85,12 @@ fn constraints() -> Vec<RationalExpression> {
     let sig_verify__exponentiate_key__bit = Trace(9, 4) - (Trace(9, 8) + Trace(9, 8));
     let sig_verify__exponentiate_key__bit_neg = Constant(1.into()) - sig_verify__exponentiate_key__bit.clone();
     vec![
-    (hash_pool__hash__ec_subset_sum__bit.clone() * (hash_pool__hash__ec_subset_sum__bit.clone() - Constant(1.into()))) * (X.pow(trace_length / 1024) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 4) - Constant(1.into())), // hash_pool/hash/ec_subset_sum/booleanity_test
+    (hash_pool__hash__ec_subset_sum__bit.clone().clone() * (hash_pool__hash__ec_subset_sum__bit.clone().clone() - Constant(1.into()))) * (X.pow(trace_length / 1024) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 4) - Constant(1.into())), // hash_pool/hash/ec_subset_sum/booleanity_test
     (Trace(8, 3)) / (X.pow(trace_length / 1024) - trace_generator.pow(251 * trace_length / 256)), // hash_pool/hash/ec_subset_sum/bit_extraction_end
     (Trace(8, 3)) / (X.pow(trace_length / 1024) - trace_generator.pow(255 * trace_length / 256)), // hash_pool/hash/ec_subset_sum/zeros_tail
-    (hash_pool__hash__ec_subset_sum__bit.clone() * (Trace(8, 2) - hash_pool_points__y) - Trace(8, 1) * (Trace(8, 0) - hash_pool_points__x)) * (X.pow(trace_length / 1024) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 4) - Constant(1.into())), // hash_pool/hash/ec_subset_sum/add_points/slope
-    (Trace(8, 1) * Trace(8, 1) - hash_pool__hash__ec_subset_sum__bit.clone() * (Trace(8, 0) + hash_pool_points__x + Trace(8, 4))) * (X.pow(trace_length / 1024) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 4) - Constant(1.into())), // hash_pool/hash/ec_subset_sum/add_points/x
-    (hash_pool__hash__ec_subset_sum__bit.clone() * (Trace(8, 2) + Trace(8, 6)) - Trace(8, 1) * (Trace(8, 0) - Trace(8, 4))) * (X.pow(trace_length / 1024) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 4) - Constant(1.into())), // hash_pool/hash/ec_subset_sum/add_points/y
+    (hash_pool__hash__ec_subset_sum__bit.clone().clone() * (Trace(8, 2) - hash_pool_points__y) - Trace(8, 1) * (Trace(8, 0) - hash_pool_points__x.clone())) * (X.pow(trace_length / 1024) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 4) - Constant(1.into())), // hash_pool/hash/ec_subset_sum/add_points/slope
+    (Trace(8, 1) * Trace(8, 1) - hash_pool__hash__ec_subset_sum__bit.clone().clone() * (Trace(8, 0) + hash_pool_points__x.clone() + Trace(8, 4))) * (X.pow(trace_length / 1024) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 4) - Constant(1.into())), // hash_pool/hash/ec_subset_sum/add_points/x
+    (hash_pool__hash__ec_subset_sum__bit.clone().clone() * (Trace(8, 2) + Trace(8, 6)) - Trace(8, 1) * (Trace(8, 0) - Trace(8, 4))) * (X.pow(trace_length / 1024) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 4) - Constant(1.into())), // hash_pool/hash/ec_subset_sum/add_points/y
     (hash_pool__hash__ec_subset_sum__bit_neg.clone() * (Trace(8, 4) - Trace(8, 0))) * (X.pow(trace_length / 1024) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 4) - Constant(1.into())), // hash_pool/hash/ec_subset_sum/copy_point/x
     (hash_pool__hash__ec_subset_sum__bit_neg.clone() * (Trace(8, 6) - Trace(8, 2))) * (X.pow(trace_length / 1024) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 4) - Constant(1.into())), // hash_pool/hash/ec_subset_sum/copy_point/y
     (Trace(8, 4) - Trace(8, 0)) * (X.pow(trace_length / 2048) - trace_generator.pow(trace_length / 2)) / (X.pow(trace_length / 1024) - Constant(1.into())), // hash_pool/hash/copy_point/x
@@ -98,7 +98,7 @@ fn constraints() -> Vec<RationalExpression> {
     (Trace(8, 0) - shift_point.x.clone()) / (X.pow(trace_length / 2048) - Constant(1.into())), // hash_pool/hash/init/x
     (Trace(8, 2) - shift_point.y.clone()) / (X.pow(trace_length / 2048) - Constant(1.into())), // hash_pool/hash/init/y
     (Trace(8, 4) - Trace(8, 1)) / (X.pow(trace_length / 4096) - Constant(1.into())), // hash_pool/output_to_input
-    (state_transition__merkle_update__side_bit_extraction__bit_0 * state_transition__merkle_update__side_bit_extraction__bit_0 - state_transition__merkle_update__side_bit_extraction__bit_0) * (X.pow(trace_length / 16384) - trace_generator.pow(31 * trace_length / 32)) / (X.pow(trace_length / 512) - Constant(1.into())), // state_transition/merkle_update/side_bit_extraction/bit
+    (state_transition__merkle_update__side_bit_extraction__bit_0.clone() * state_transition__merkle_update__side_bit_extraction__bit_0.clone() - state_transition__merkle_update__side_bit_extraction__bit_0.clone()) * (X.pow(trace_length / 16384) - trace_generator.pow(31 * trace_length / 32)) / (X.pow(trace_length / 512) - Constant(1.into())), // state_transition/merkle_update/side_bit_extraction/bit
     (Trace(6, 5)) / (X.pow(trace_length / 16384) - trace_generator.pow(path_length * trace_length / 32)), // state_transition/merkle_update/side_bit_extraction/zero
     (state_transition__merkle_update__prev_authentication__hashes__ec_subset_sum__bit.clone() * (state_transition__merkle_update__prev_authentication__hashes__ec_subset_sum__bit.clone() - Constant(1.into()))) * (X.pow(trace_length / 256) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length) - Constant(1.into())), // state_transition/merkle_update/prev_authentication/hashes/ec_subset_sum/booleanity_test
     (Trace(3, 0)) / (X.pow(trace_length / 256) - trace_generator.pow(251 * trace_length / 256)), // state_transition/merkle_update/prev_authentication/hashes/ec_subset_sum/bit_extraction_end
