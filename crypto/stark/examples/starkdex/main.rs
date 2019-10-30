@@ -1,4 +1,4 @@
-#[rustfmt_skip] // For now, code is easier to grep unformated.
+#[rustfmt::skip] // For now, code is easier to grep unformated.
 mod constraints;
 // mod inputs;
 // mod periodic_columns;
