@@ -15,7 +15,8 @@ denominator_pattern = re.compile(
 
 def translate(line):
     return (re.sub(trace_table_pattern, r"Trace(\1, \2)", line)
-            .replace("point", "X")
+            .replace("point^", "X^")
+            .replace("point -", "X -")
             .replace("^", ".pow")
             .replace("powtrace_length", "pow(trace_length)")
             .replace(") - 1", ") - Constant(1.into())")
@@ -31,6 +32,7 @@ def get_intermediate_values(line):
         re.findall(r"(sig_verify__.*?)[ |\)]", line) +
         re.findall(r"(amounts_range_check__.*?)[ |\)]", line)
     )
+    # print matches
     return set(matches)
 
 
@@ -60,6 +62,7 @@ for line in lines:
         denominators.append(denominator)
 
 intermediate_values = set.union(*map(get_intermediate_values, bases))
+# print intermediate_values
 
 intermediate_values_pattern = re.compile(
     r"^\s*// (%s) = (.*)\n$" % "|".join(map(lambda s: s.replace("__", "/"),
