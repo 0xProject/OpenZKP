@@ -35,7 +35,6 @@ def get_intermediate_values(line):
         re.findall(r"(sig_verify__.*?)[ |\)]", line) +
         re.findall(r"(amounts_range_check__.*?)[ |\)]", line)
     )
-    # print matches
     return set(matches)
 
 
@@ -65,8 +64,10 @@ for line in lines:
         denominators.append(denominator)
 
 intermediate_values = set.union(*map(get_intermediate_values, bases))
-# print intermediate_values
-
+# This occurs at the end of the string, so the existing patterns don't
+# pick it up.
+intermediate_values.add(
+    "state_transition__merkle_update__new_authentication__sibling_0")
 intermediate_values_pattern = re.compile(
     r"^\s*// (%s) = (.*)\n$" % "|".join(map(lambda s: s.replace("__", "/"),
                                             intermediate_values)))

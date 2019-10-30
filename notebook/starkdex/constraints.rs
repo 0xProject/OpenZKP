@@ -7,6 +7,7 @@ let state_transition__merkle_update__side_bit_extraction__bit_1 = Trace(6, 7) - 
 let state_transition__merkle_update__new_authentication__hashes__ec_subset_sum__bit = Trace(7, 0) - (Trace(7, 1) + Trace(7, 1));
 let state_transition__merkle_update__new_authentication__hashes__ec_subset_sum__bit_neg = Constant(1.into()) - state_transition__merkle_update__new_authentication__hashes__ec_subset_sum__bit;
 let state_transition__merkle_update__prev_authentication__sibling_0 = state_transition__merkle_update__side_bit_extraction__bit_0 * Trace(3, 0) + (Constant(1.into()) - state_transition__merkle_update__side_bit_extraction__bit_0) * Trace(3, 6);
+let state_transition__merkle_update__new_authentication__sibling_0 = state_transition__merkle_update__side_bit_extraction__bit_0 * Trace(7, 0) + (Constant(1.into()) - state_transition__merkle_update__side_bit_extraction__bit_0) * Trace(7, 6);
 let state_transition__merkle_update__prev_authentication__leaf_0 = (Constant(1.into()) - state_transition__merkle_update__side_bit_extraction__bit_0) * Trace(3, 0) + state_transition__merkle_update__side_bit_extraction__bit_0 * Trace(3, 6);
 let state_transition__merkle_update__new_authentication__leaf_0 = (Constant(1.into()) - state_transition__merkle_update__side_bit_extraction__bit_0) * Trace(7, 0) + state_transition__merkle_update__side_bit_extraction__bit_0 * Trace(7, 6);
 let amounts_range_check__bit_0 = Trace(9, 4) - (Trace(9, 2) + Trace(9, 2));
