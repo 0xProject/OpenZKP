@@ -1558,12 +1558,14 @@ mod tests {
     #[test]
     fn pedersen_points_correct() {
         let evaluation_points = root_series(512);
-        let points: Vec<Affine> = evaluation_points.map(|f: FieldElement| {
-            Affine::Point {
-                x: DensePolynomial::new(&PEDERSEN_POINTS_X).evaluate(&f),
-                y: DensePolynomial::new(&PEDERSEN_POINTS_Y).evaluate(&f),
-            }
-        }).collect();
+        let points: Vec<Affine> = evaluation_points
+            .map(|f: FieldElement| {
+                Affine::Point {
+                    x: DensePolynomial::new(&PEDERSEN_POINTS_X).evaluate(&f),
+                    y: DensePolynomial::new(&PEDERSEN_POINTS_Y).evaluate(&f),
+                }
+            })
+            .collect();
 
         assert_eq!(points[0], Affine::Point {
             x: field_element!("01ef15c18599971b7beced415a40f0c7deacfd9b0d1819e03d723d8bc943cfca"),
