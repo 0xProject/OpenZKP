@@ -1,5 +1,6 @@
 use zkp_primefield::FieldElement;
 use zkp_stark::{RationalExpression, DensePolynomial};
+use super::periodic_columns::{PEDERSEN_POINTS_X, PEDERSEN_POINTS_Y, ECDSA_POINTS_X, ECDSA_POINTS_Y};
 
 struct SignatureConfig {
     pub shift_point: Point,
@@ -19,8 +20,8 @@ fn signature_verification_constraints() -> Vec<RationalExpression> {
         let trace_length = 10;
         let trace_generator = Constant(FieldElement::ZERO);
 
-        let ecdsa_points_x = Polynomial(DensePolynomial::new(&[FieldElement::ZERO]), Box::new(X.pow(20)));
-        let ecdsa_points_y = Polynomial(DensePolynomial::new(&[FieldElement::ZERO]), Box::new(X.pow(20)));
+        let ecdsa_points_x = Polynomial(DensePolynomial::new(&ECDSA_POINTS_X), Box::new(X.pow(20)));
+        let ecdsa_points_y = Polynomial(DensePolynomial::new(&ECDSA_POINTS_Y), Box::new(X.pow(20)));
 
         let bit = Trace(9, 0) - (Trace(9, 8) + Trace(9, 8));
         let bit_neg = Constant(1.into()) - bit.clone();
@@ -109,8 +110,8 @@ fn state_transition_constraints() -> Vec<RationalExpression> {
     let path_length = 256;
     let trace_generator = Constant(FieldElement::ZERO);
 
-    let merkle_hash_points_x = Polynomial(DensePolynomial::new(&[FieldElement::ZERO]), Box::new(X.pow(20)));
-    let merkle_hash_points_y = Polynomial(DensePolynomial::new(&[FieldElement::ZERO]), Box::new(X.pow(20)));
+    let merkle_hash_points_x = Polynomial(DensePolynomial::new(&PEDERSEN_POINTS_X), Box::new(X.pow(20)));
+    let merkle_hash_points_y = Polynomial(DensePolynomial::new(&PEDERSEN_POINTS_Y), Box::new(X.pow(20)));
 
     let shift_point = Point {
         x: Constant(FieldElement::ONE),
@@ -171,8 +172,8 @@ fn hash_pool_constraints() -> Vec<RationalExpression> {
     let trace_length = 10;
     let trace_generator = Constant(FieldElement::ZERO);
 
-    let hash_pool_points_x = Polynomial(DensePolynomial::new(&[FieldElement::ZERO]), Box::new(X.pow(20)));
-    let hash_pool_points_y = Polynomial(DensePolynomial::new(&[FieldElement::ZERO]), Box::new(X.pow(20)));
+    let hash_pool_points_x = Polynomial(DensePolynomial::new(&PEDERSEN_POINTS_X), Box::new(X.pow(20)));
+    let hash_pool_points_y = Polynomial(DensePolynomial::new(&PEDERSEN_POINTS_Y), Box::new(X.pow(20)));
 
     let shift_point = Point {
         x: Constant(FieldElement::ONE),
