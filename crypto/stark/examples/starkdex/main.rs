@@ -1,7 +1,7 @@
 #[rustfmt::skip] // For now, code is easier to grep unformated.
 mod constraints;
 // mod inputs;
-// mod periodic_columns;
+mod periodic_columns;
 // mod trace_table;
 
 use env_logger;
