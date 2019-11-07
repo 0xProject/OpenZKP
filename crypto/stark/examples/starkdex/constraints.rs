@@ -65,10 +65,10 @@ fn constraints(parameters: &Parameters) -> Vec<RationalExpression> {
     let state_transition__merkle_update__side_bit_extraction__bit_1 = Trace(6, 767) - (Trace(6, 1279) + Trace(6, 1279));
     let state_transition_merkle_update_new_authentication_hashes_ec_subset_sum_bit = Trace(7, 0) - (Trace(7, 1) + Trace(7, 1));
     let state_transition_merkle_update_new_authentication_hashes_ec_subset_sum_bit_neg = Constant(1.into()) - state_transition_merkle_update_new_authentication_hashes_ec_subset_sum_bit.clone();
-    let state_transition__merkle_update__prev_authentication__sibling_0 = state_transition__merkle_update__side_bit_extraction__bit_0 * Trace(3, 0) + (Constant(1.into()) - state_transition__merkle_update__side_bit_extraction__bit_0) * Trace(3, 256);
-    let state_transition__merkle_update__new_authentication__sibling_0 = state_transition__merkle_update__side_bit_extraction__bit_0 * Trace(7, 0) + (Constant(1.into()) - state_transition__merkle_update__side_bit_extraction__bit_0) * Trace(7, 256);
-    let state_transition__merkle_update__prev_authentication__leaf_0 = (Constant(1.into()) - state_transition__merkle_update__side_bit_extraction__bit_0) * Trace(3, 0) + state_transition__merkle_update__side_bit_extraction__bit_0 * Trace(3, 256);
-    let state_transition__merkle_update__new_authentication__leaf_0 = (Constant(1.into()) - state_transition__merkle_update__side_bit_extraction__bit_0) * Trace(7, 0) + state_transition__merkle_update__side_bit_extraction__bit_0 * Trace(7, 256);
+    let state_transition__merkle_update__prev_authentication__sibling_0 = state_transition__merkle_update__side_bit_extraction__bit_0.clone() * Trace(3, 0) + (Constant(1.into()) - state_transition__merkle_update__side_bit_extraction__bit_0.clone()) * Trace(3, 256);
+    let state_transition__merkle_update__new_authentication__sibling_0 = state_transition__merkle_update__side_bit_extraction__bit_0.clone() * Trace(7, 0) + (Constant(1.into()) - state_transition__merkle_update__side_bit_extraction__bit_0.clone()) * Trace(7, 256);
+    let state_transition__merkle_update__prev_authentication__leaf_0 = (Constant(1.into()) - state_transition__merkle_update__side_bit_extraction__bit_0.clone()) * Trace(3, 0) + state_transition__merkle_update__side_bit_extraction__bit_0.clone() * Trace(3, 256);
+    let state_transition__merkle_update__new_authentication__leaf_0 = (Constant(1.into()) - state_transition__merkle_update__side_bit_extraction__bit_0.clone()) * Trace(7, 0) + state_transition__merkle_update__side_bit_extraction__bit_0.clone() * Trace(7, 256);
     let amounts_range_check__bit_0 = Trace(9, 4) - (Trace(9, 132) + Trace(9, 132));
     let sig_verify__doubling_key__x_squared = Trace(9, 0) * Trace(9, 0);
     let sig_verify_exponentiate_generator_bit = Trace(9, 20) - (Trace(9, 148) + Trace(9, 148));
@@ -90,7 +90,7 @@ fn constraints(parameters: &Parameters) -> Vec<RationalExpression> {
     (Trace(8, 0) - hash_shift_x.clone()) / (X.pow(trace_length / 2048) - 1.into()), // hash_pool/hash/init/x
     (Trace(8, 2) - hash_shift_y.clone()) / (X.pow(trace_length / 2048) - 1.into()), // hash_pool/hash/init/y
     (Trace(8, 2044) - Trace(8, 2051)) / (X.pow(trace_length / 4096) - 1.into()), // hash_pool/output_to_input
-    (state_transition__merkle_update__side_bit_extraction__bit_0 * state_transition__merkle_update__side_bit_extraction__bit_0 - state_transition__merkle_update__side_bit_extraction__bit_0) * (X.pow(trace_length / 16384) - trace_generator.pow(31 * trace_length / 32)) / (X.pow(trace_length / 512) - 1.into()), // state_transition/merkle_update/side_bit_extraction/bit
+    (state_transition__merkle_update__side_bit_extraction__bit_0.clone() * state_transition__merkle_update__side_bit_extraction__bit_0.clone() - state_transition__merkle_update__side_bit_extraction__bit_0.clone()) * (X.pow(trace_length / 16384) - trace_generator.pow(31 * trace_length / 32)) / (X.pow(trace_length / 512) - 1.into()), // state_transition/merkle_update/side_bit_extraction/bit
     (Trace(6, 255)) / (X.pow(trace_length / 16384) - trace_generator.pow(path_length * trace_length / 32)), // state_transition/merkle_update/side_bit_extraction/zero
     (state_transition_merkle_update__prev_authentication__hashes__ec_subset_sum__bit.clone() * (state_transition_merkle_update__prev_authentication__hashes__ec_subset_sum__bit.clone() - 1.into())) * (X.pow(trace_length / 256) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length) - 1.into()), // state_transition/merkle_update/prev_authentication/hashes/ec_subset_sum/booleanity_test
     (Trace(3, 0)) / (X.pow(trace_length / 256) - trace_generator.pow(251 * trace_length / 256)), // state_transition/merkle_update/prev_authentication/hashes/ec_subset_sum/bit_extraction_end
