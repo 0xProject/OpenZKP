@@ -178,7 +178,7 @@ impl Tree {
 
     fn empty_hashes(&self) -> Vec<FieldElement> {
         assert!(self.left.is_none() || self.right.is_none());
-        (0..self.height).map(|i| Self::empty_hash(i)).collect()
+        (0..self.height).map(Self::empty_hash).collect()
     }
 }
 
