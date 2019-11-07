@@ -15,7 +15,7 @@ fn get_coordinates(p: &Affine) -> (RationalExpression, RationalExpression) {
 fn constraints(parameters: &Parameters) -> Vec<RationalExpression> {
     use RationalExpression::*;
 
-    let trace_length = 10000000;
+    let trace_length = 10_000_000;
     let trace_generator = Constant(FieldElement::ONE);
     let path_length = 165;
 
