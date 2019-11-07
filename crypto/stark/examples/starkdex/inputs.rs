@@ -131,12 +131,13 @@ impl Tree {
                 let direction = self.direction(index);
                 let mut result = match self.children.get(&direction) {
                     None => self.empty_hashes(),
-                    Some(t) => t.path(index),
+                    Some(subtree) => subtree.path(index),
                 };
-                result.push( match self.children.get(&direction.other()) {
+                let sibling = self.children.get(&direction.other());
+                result.push(match sibling {
                     None => Self::empty_hash(self.height - 1),
-                    Some(t) => t.hash.clone(),
-                } );
+                    Some(subtree) => subtree.hash.clone(),
+                });
                 result
             }
         }
@@ -188,7 +189,7 @@ impl Tree {
     }
 
     fn empty_hashes(&self) -> Vec<FieldElement> {
-        (1..self.height-1).map(Self::empty_hash).collect()
+        (1..self.height - 1).map(Self::empty_hash).collect()
     }
 }
 
@@ -253,7 +254,10 @@ mod tests {
     #[test]
     fn hash_test() {
         let x = field_element!("05d702904f10e78036abca2229077576488062ef2a9b44eb16b9e12a07932764");
-        assert_eq!(hash(&x, &x), field_element!("04eb5413fc27c3950f8e9d3bd9ba325b6fcc144f6f484e10ebb6b6fda9b642a9"));
+        assert_eq!(
+            hash(&x, &x),
+            field_element!("04eb5413fc27c3950f8e9d3bd9ba325b6fcc144f6f484e10ebb6b6fda9b642a9")
+        );
     }
 
     #[test]
