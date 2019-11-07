@@ -148,16 +148,10 @@ impl Tree {
             0 => self.hash = vault.hash(),
             _ => {
                 let height = self.height;
-                let direction = self.direction(index);
-                let next = self.children.get_mut(&direction);
-                match next {
-                    None => {
-                        let mut t = Tree::new(height - 1);
-                        t.update(index, vault);
-                        self.children.insert(direction, t);
-                    }
-                    Some(t) => t.update(index, vault),
-                };
+                self.children
+                    .entry(self.direction(index))
+                    .or_insert(Tree::new(height - 1))
+                    .update(index, vault);
 
                 let left_hash = match self.children.get(&Direction::LEFT) {
                     None => Self::empty_hash(height - 1),
@@ -182,14 +176,14 @@ impl Tree {
 
     fn empty_hash(height: usize) -> FieldElement {
         let mut result = FieldElement::ZERO;
-        for _ in 0..height {
+        for _ in 0..=height {
             result = hash(&result, &result);
         }
         result
     }
 
     fn empty_hashes(&self) -> Vec<FieldElement> {
-        (1..self.height - 1).map(Self::empty_hash).collect()
+        (0..self.height - 1).map(Self::empty_hash).collect()
     }
 }
 
@@ -221,13 +215,32 @@ mod tests {
     ) -> FieldElement {
         let mut root = leaf_hash.clone();
         for (direction, sibling_hash) in directions.iter().zip(path) {
-            assert_eq!(sibling_hash.clone(), root);
             root = match direction {
                 Direction::LEFT => hash(&root, &sibling_hash),
                 Direction::RIGHT => hash(&sibling_hash, &root),
             };
         }
         root
+    }
+
+    #[test]
+    fn empty_path_correct() {
+        let mut tree = Tree::new(4);
+        let vault = Vault {
+            key:    FieldElement::ZERO,
+            token:  FieldElement::ZERO,
+            amount: 1000,
+        };
+
+        let directions = &get_directions(5);
+        let path = tree.path(5);
+
+        dbg!(directions.clone());
+        dbg!(path.clone());
+
+        assert_eq!(directions.len(), path.len());
+
+        assert_eq!(root(&vault.hash(), &directions, &path), tree.hash);
     }
 
     #[test]
@@ -238,17 +251,13 @@ mod tests {
             token:  FieldElement::ZERO,
             amount: 1000,
         };
-        // tree.update(5, vault.clone());
-        // dbg!(tree.path(5));
-        // dbg!(tree.path(0));
-        // dbg!(tree.path(1));
+        tree.update(5, vault.clone());
 
         let directions = &get_directions(5);
         let path = tree.path(5);
         dbg!(directions.clone());
         dbg!(path.clone());
         assert_eq!(root(&vault.hash(), &directions, &path), tree.hash);
-        // assert!(false);
     }
 
     #[test]
