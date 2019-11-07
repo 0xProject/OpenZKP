@@ -198,6 +198,7 @@ fn other_constraints(n_vaults: usize) -> Vec<RationalExpression> {
 
     let is_settlement = Polynomial(DensePolynomial::new(&[FieldElement::ZERO]), Box::new(X.pow(5)));
     let is_modification = Polynomial(DensePolynomial::new(&[FieldElement::ZERO]), Box::new(X.pow(20)));
+    // should this next one be a constant???
     let boundary_base = Polynomial(DensePolynomial::new(&[FieldElement::ZERO]), Box::new(X.pow(20)));
     let boundary_key = Polynomial(DensePolynomial::new(&[FieldElement::ZERO]), Box::new(X.pow(20)));
     let boundary_token = Polynomial(DensePolynomial::new(&[FieldElement::ZERO]), Box::new(X.pow(20)));
@@ -205,6 +206,9 @@ fn other_constraints(n_vaults: usize) -> Vec<RationalExpression> {
     let boundary_amount1 = Polynomial(DensePolynomial::new(&[FieldElement::ZERO]), Box::new(X.pow(20)));
     let boundary_vault_id = Polynomial(DensePolynomial::new(&[FieldElement::ZERO]), Box::new(X.pow(20)));
 
+    // ctx[mm_vault_shift] = 2**32;
+    // ctx[mm_amount_shift] = 2**63; // 2**kRangeCheckBits
+    // ctx[mm_trade_shift] = 2**32;
     let trade_shift = Constant(FieldElement::ONE);
     let amount_shift = Constant(FieldElement::ONE);
     let vault_shift = Constant(FieldElement::ONE);

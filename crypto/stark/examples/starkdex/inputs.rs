@@ -1,5 +1,6 @@
 // use super::{constraints::get_pedersen_merkle_constraints,
 // trace_table::get_trace_table};
+use super::pedersen::hash;
 use std::{collections::BTreeMap, prelude::v1::*};
 use zkp_elliptic_curve::Affine;
 use zkp_hash::Hash;
@@ -9,6 +10,7 @@ use zkp_stark::{Constraints, Provable, TraceTable, Verifiable};
 #[derive(PartialEq, Clone)]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct Claim {
+    pub n_transactions: usize,
     pub modifications:       Vec<Modification>,
     pub initial_vaults_root: Hash,
     pub final_vaults_root:   Hash,
@@ -59,9 +61,9 @@ pub struct Modification {
 #[derive(PartialEq, Clone)]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct Vault {
-    key:    FieldElement,
-    token:  FieldElement,
-    amount: usize,
+    pub key:    FieldElement,
+    pub token:  FieldElement,
+    pub amount: usize,
 }
 
 #[derive(PartialEq, Clone)]
@@ -80,6 +82,12 @@ pub struct Tree {
     right:  Option<Box<Tree>>,
 }
 
+impl Vault {
+    pub fn hash(&self) -> FieldElement {
+        FieldElement::ZERO
+    }
+}
+
 impl Vaults {
     pub fn new() -> Self {
         Self {
@@ -87,19 +95,157 @@ impl Vaults {
             vaults: BTreeMap::new(),
         }
     }
+
+    pub fn path(&self, index: u32) -> Vec<FieldElement> {
+        self.tree.path(index)
+    }
 }
 
 impl Tree {
     pub fn new(height: usize) -> Self {
         Self {
             height,
-            hash:   Self::empty_hash(height),
-            left:   None,
-            right:  None,
+            hash: Self::empty_hash(height),
+            left: None,
+            right: None,
+        }
+    }
+
+    pub fn path(&self, index: u32) -> Vec<FieldElement> {
+        match self.height {
+            0 => vec![self.hash.clone()],
+            _ => {
+                let mut result = vec![self.hash.clone()];
+                let subtree = match self.subtree(index) {
+                    None => result.extend(self.empty_hashes()),
+                    Some(t) => result.extend(t.path(index)),
+                };
+                result
+            }
+        }
+        // let mut path: Vec<_> = (0..31).map(|i| Self::empty_hash(i)).collect();
+        // let mut subtree = self;
+        // for i in (0..31) {
+        //     let next = if index & (1 << i) != 0 {
+        //         &self.left
+        //     } else {
+        //         &self.right
+        //     };
+        //     match next {
+        //         Some(t) => subtree = &t,
+        //         None => break,
+        //     };
+        //     path[i] = subtree.hash.clone();
+        // }
+        // path
+    }
+
+    pub fn update(&mut self, index: u32, vault: Vault) {
+        match self.height {
+            0 => self.hash = vault.hash(),
+            _ => {
+                let height = self.height;
+                let mut next = self.mut_subtree(index);
+                match next {
+                    None => {
+                        let mut t = Tree::new(height - 1);
+                        t.update(index, vault);
+                        *next = Some(Box::new(t));
+                    },
+                    Some(t) => t.update(index, vault),
+                };
+
+                let left_hash = match &self.left {
+                    None => Self::empty_hash(height - 1),
+                    Some(t) => t.hash.clone(),
+                };
+                let right_hash = match &self.right {
+                    None => Self::empty_hash(height - 1),
+                    Some(t) => t.hash.clone(),
+                };
+                self.hash = hash(&left_hash, &right_hash);
+            }
+        };
+    }
+
+    fn mut_subtree(&mut self, index: u32) -> &mut Option<Box<Tree>> {
+        if index & (1 << self.height) != 0 {
+            &mut self.left
+        } else {
+            &mut self.right
+        }
+    }
+
+    fn subtree(&self, index: u32) -> &Option<Box<Tree>> {
+        if index & (1 << self.height) != 0 {
+            &self.left
+        } else {
+            &self.right
         }
     }
 
     fn empty_hash(height: usize) -> FieldElement {
-        FieldElement::ZERO
+        let mut result = FieldElement::ZERO;
+        for _ in (0..height) {
+            result = hash(&result, &result);
+        }
+        result
+    }
+
+    fn empty_hashes(&self) -> Vec<FieldElement> {
+        assert!(self.left.is_none() || self.right.is_none());
+        (0..self.height).map(|i| Self::empty_hash(i)).collect()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use zkp_macros_decl::field_element;
+    use zkp_primefield::FieldElement;
+    use zkp_u256::U256;
+
+    #[test]
+    fn test_tree() {
+        let mut tree = Tree::new(5);
+
+        let vault = Vault {
+            key: FieldElement::ONE,
+            token: FieldElement::ZERO,
+            amount: 3,
+        };
+
+        tree.update(2, vault);
+        dbg!(tree.path(2));
+        assert!(false);
+    }
+
+    #[test]
+    fn mason() {
+        let oods_point = field_element!("0342143aa4e0522de24cf42b3746e170dee7c72ad1459340483fed8524a80adb");
+        let x = field_element!("039ac85199efa890dd0f93be37fa97426d949638b5bb7e7a0e74252bbad9dcb6");
+        assert_eq!(x, oods_point.pow(4) - FieldElement::ONE);
+    }
+
+    #[test]
+    fn wayne() {
+        // get these values from using three modifications and n_transcations = 3...
+        // this means theres some rounding doing on?
+        let oods_point = field_element!("0342143aa4e0522de24cf42b3746e170dee7c72ad1459340483fed8524a80adb");
+        let x = field_element!("039ac85199efa890dd0f93be37fa97426d949638b5bb7e7a0e74252bbad9dcb6");
+
+        let is_settlement_oods = field_element!("01671673ce82eb78357e14917a70da38a40e55817dc8b41a72a153ac18bb42bd");
+        let is_modification_oods = field_element!("03c544b737bf7258e9601c1315ee8ec9759cdf34a4862b80cf94bfa8fc531e1e");
+        assert_eq!(is_settlement_oods * is_modification_oods, oods_point.pow(4) - FieldElement::ONE);
+    }
+
+    #[test]
+    fn mason_2() {
+        let oods_point = field_element!("0342143aa4e0522de24cf42b3746e170dee7c72ad1459340483fed8524a80adb");
+        let is_settlement_oods = field_element!("01671673ce82eb78357e14917a70da38a40e55817dc8b41a72a153ac18bb42bd");
+        let is_modification_oods = field_element!("03c544b737bf7258e9601c1315ee8ec9759cdf34a4862b80cf94bfa8fc531e1e");
+
+        // let x = field_element!("039ac85199efa890dd0f93be37fa97426d949638b5bb7e7a0e74252bbad9dcb6");
+        assert_eq!(is_settlement_oods * is_modification_oods, oods_point.pow(4) - FieldElement::ONE);
     }
 }
