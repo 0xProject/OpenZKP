@@ -4,7 +4,7 @@ base_pattern = re.compile(
     r"^\s*// Constraint expression for (.*): (.*)\.\n$")
 
 trace_table_pattern = re.compile(
-    r"column([0-9])+_row([0-9])+")
+    r"column([0-9]+)_row([0-9]+)")
 
 numerator_pattern = re.compile(
     r"^\s*// Numerator: (.*)\n$")
@@ -20,10 +20,10 @@ def translate(line):
         .replace("point -", "X -")
         .replace("^", ".pow")
         .replace("powtrace_length", "pow(trace_length)")
-        .replace(") - 1", ") - Constant(1.into())")
+        .replace(") - 1", ") - 1.into()")
         .replace("1 - ", "Constant(1.into()) - ")
-        .replace("X - 1", "X - Constant(1.into())")
-        .replace("t - 1", "t - Constant(1.into())")
+        .replace("X - 1", "X - 1.into()")
+        .replace("t - 1", "t - 1.into()")
         .replace("column4_row_exprConstant(1.into())", "column4_row_expr1")
     )
 
