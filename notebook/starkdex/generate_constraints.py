@@ -4,7 +4,7 @@ base_pattern = re.compile(
     r"^\s*// Constraint expression for (.*): (.*)\.\n$")
 
 trace_table_pattern = re.compile(
-    r"column([0-9])+_row([0-9])+")
+    r"column([0-9]+)_row([0-9]+)")
 
 numerator_pattern = re.compile(
     r"^\s*// Numerator: (.*)\n$")
