@@ -15,7 +15,7 @@ fn get_coordinates(p: &Affine) -> (RationalExpression, RationalExpression) {
 fn constraints(parameters: &Parameters) -> Vec<RationalExpression> {
     use RationalExpression::*;
 
-    let trace_length = 10000;
+    let trace_length = 10000000;
     let trace_generator = Constant(FieldElement::ONE);
     let path_length = 165;
 
@@ -33,10 +33,10 @@ fn constraints(parameters: &Parameters) -> Vec<RationalExpression> {
     let hash_pool_points_x = Polynomial(DensePolynomial::new(&PEDERSEN_POINTS_X), Box::new(X.pow(20)));
     let hash_pool_points_y = Polynomial(DensePolynomial::new(&PEDERSEN_POINTS_Y), Box::new(X.pow(20)));
 
-    let column4_row_expr0 = Trace(4, 10);
-    let column0_row_expr2 = Trace(4, 10);
-    let column4_row_expr1 = Trace(4, 1);
-    let column0_row_expr0 = Trace(4, 1);
+    let column4_row_expr0 = Trace(4, -30);
+    let column0_row_expr2 = Trace(0, -2);
+    let column4_row_expr1 = Trace(4, -1);
+    let column0_row_expr0 = Trace(0, -30);
 
     let is_settlement = Polynomial(DensePolynomial::new(&[FieldElement::ZERO]), Box::new(X.pow(5)));
     let is_modification = Polynomial(DensePolynomial::new(&[FieldElement::ZERO]), Box::new(X.pow(20)));
@@ -198,4 +198,39 @@ fn constraints(parameters: &Parameters) -> Vec<RationalExpression> {
     (column4_row_expr0.clone() - column0_row_expr2) * (X - trace_generator.pow(65536 * (trace_length / 65536 - 1) + 49152)) / (X.pow(trace_length / 16384) - 1.into()), // copy_merkle_roots
     (is_modification.clone() * (column4_row_expr0 - column4_row_expr1)) / (X.pow(trace_length / 65536) - 1.into()), // copy_merkle_roots_modification
     ]
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::inputs::SignatureParameters;
+    use crate::pedersen_points::SHIFT_POINT;
+    // use zkp_elliptic_curve::Affine;
+    // use zkp_primefield::geometric_series::root_series;
+    // use zkp_stark::DensePolynomial;
+    use std::{collections::BTreeSet};
+
+    #[test]
+    fn sanity_check() {
+        let parameters = Parameters {
+            signature: SignatureParameters {
+                shift_point: SHIFT_POINT,
+                alpha: FieldElement::ONE,
+                beta: FieldElement::ZERO,
+            },
+            hash_shift_point: SHIFT_POINT,
+            n_vaults: 30,
+        };
+
+        let constraints = constraints(&parameters);
+        assert_eq!(constraints.len(), 120);
+
+        let trace_arguments: Vec<_> = constraints.iter()
+                    .map(RationalExpression::trace_arguments)
+                    .fold(BTreeSet::new(), |x, y| &x | &y)
+                    .into_iter()
+                    .collect();
+        assert_eq!(trace_arguments.len(), 124);
+    }
 }

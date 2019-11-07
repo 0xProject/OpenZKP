@@ -184,7 +184,6 @@ impl Tree {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use zkp_macros_decl::field_element;
     use zkp_primefield::FieldElement;
     use zkp_u256::U256;
