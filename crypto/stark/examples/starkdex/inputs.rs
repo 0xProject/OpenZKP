@@ -190,21 +190,6 @@ mod tests {
     use zkp_u256::U256;
 
     #[test]
-    fn test_tree() {
-        let mut tree = Tree::new(5);
-
-        let vault = Vault {
-            key:    FieldElement::ONE,
-            token:  FieldElement::ZERO,
-            amount: 3,
-        };
-
-        tree.update(2, vault);
-        dbg!(tree.path(2));
-        assert!(false);
-    }
-
-    #[test]
     fn test_is_settlement_0() {
         let oods_point =
             field_element!("0342143aa4e0522de24cf42b3746e170dee7c72ad1459340483fed8524a80adb");
