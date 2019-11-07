@@ -1,19 +1,17 @@
 use zkp_primefield::FieldElement;
+use zkp_elliptic_curve::Affine;
 use zkp_stark::{RationalExpression, DensePolynomial};
+use super::inputs::{SignatureParameters, Parameters, Claim};
 use super::periodic_columns::{PEDERSEN_POINTS_X, PEDERSEN_POINTS_Y, ECDSA_POINTS_X, ECDSA_POINTS_Y};
 
-struct SignatureConfig {
-    pub shift_point: Point,
-    pub alpha: RationalExpression,
-    pub beta: RationalExpression,
+fn get_coordinates(p: &Affine) -> (RationalExpression, RationalExpression) {
+    match p {
+        Affine::Zero => panic!(),
+        Affine::Point { x, y } => (RationalExpression::Constant(x.clone()), RationalExpression::Constant(y.clone())),
+    }
 }
 
-struct Point {
-    pub x:  RationalExpression,
-    pub y:  RationalExpression,
-}
-
-fn signature_verification_constraints() -> Vec<RationalExpression> {
+fn signature_verification_constraints(parameters: &SignatureParameters) -> Vec<RationalExpression> {
     fn exponentiate_generator_constraints() -> Vec<RationalExpression> {
         use RationalExpression::*;
 
@@ -66,36 +64,31 @@ fn signature_verification_constraints() -> Vec<RationalExpression> {
     let trace_length = 10;
     let trace_generator = Constant(FieldElement::ZERO);
 
-    let sig_config = SignatureConfig {
-        shift_point: Point {
-            x: Constant(FieldElement::ONE),
-            y: Constant(FieldElement::ONE),
-        },
-        alpha: Constant(FieldElement::ONE),
-        beta: Constant(FieldElement::ONE),
-    };
+    let alpha = Constant(parameters.alpha.clone());
+    let beta = Constant(parameters.beta.clone());
+    let (x, y) = get_coordinates(&parameters.shift_point);
 
     let doubling_key_x_squared = Trace(9, 0) * Trace(9, 0);
 
     let mut result = vec![
-    (doubling_key_x_squared.clone() + doubling_key_x_squared.clone() + doubling_key_x_squared.clone() + sig_config.alpha.clone() - (Trace(9, 2) + Trace(9, 2)) * Trace(9, 6)) * (X.pow(trace_length / 16384) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 64) - 1.into()), // doubling_key/slope
+    (doubling_key_x_squared.clone() + doubling_key_x_squared.clone() + doubling_key_x_squared.clone() + alpha.clone() - (Trace(9, 2) + Trace(9, 2)) * Trace(9, 6)) * (X.pow(trace_length / 16384) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 64) - 1.into()), // doubling_key/slope
     (Trace(9, 6) * Trace(9, 6) - (Trace(9, 0) + Trace(9, 0) + Trace(9, 4))) * (X.pow(trace_length / 16384) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 64) - 1.into()), // doubling_key/x
     (Trace(9, 2) + Trace(9, 6) - Trace(9, 6) * (Trace(9, 0) - Trace(9, 4))) * (X.pow(trace_length / 16384) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 64) - 1.into()), // doubling_key/y
-    (Trace(9, 8) - sig_config.shift_point.x.clone()) / (X.pow(trace_length / 32768) - 1.into()), // init_gen/x
-    (Trace(9, 6) + sig_config.shift_point.y.clone()) / (X.pow(trace_length / 32768) - 1.into()), // init_gen/y
-    (Trace(9, 8) - sig_config.shift_point.x.clone()) / (X.pow(trace_length / 16384) - 1.into()), // init_key/x
-    (Trace(9, 8) - sig_config.shift_point.y.clone()) / (X.pow(trace_length / 16384) - 1.into()), // init_key/y
+    (Trace(9, 8) - x.clone()) / (X.pow(trace_length / 32768) - 1.into()), // init_gen/x
+    (Trace(9, 6) + y.clone()) / (X.pow(trace_length / 32768) - 1.into()), // init_gen/y
+    (Trace(9, 8) - x.clone()) / (X.pow(trace_length / 16384) - 1.into()), // init_key/x
+    (Trace(9, 8) - y.clone()) / (X.pow(trace_length / 16384) - 1.into()), // init_key/y
     (Trace(9, 6) - Trace(9, 8) - Trace(9, 4) * (Trace(9, 8) - Trace(9, 8))) / (X.pow(trace_length / 32768) - 1.into()), // add_results/slope
     (Trace(9, 4) * Trace(9, 4) - (Trace(9, 8) + Trace(9, 8) + Trace(9, 4))) / (X.pow(trace_length / 32768) - 1.into()), // add_results/x
     (Trace(9, 6) + Trace(9, 6) - Trace(9, 4) * (Trace(9, 8) - Trace(9, 4))) / (X.pow(trace_length / 32768) - 1.into()), // add_results/y
     (Trace(9, 0) * (Trace(9, 8) - Trace(9, 8)) - 1.into()) / (X.pow(trace_length / 32768) - 1.into()), // add_results/x_diff_inv
-    (Trace(9, 2) + sig_config.shift_point.y.clone() - Trace(8, 9) * (Trace(9, 2) - sig_config.shift_point.x.clone())) / (X.pow(trace_length / 32768) - 1.into()), // extract_r/slope
-    (Trace(8, 9) * Trace(8, 9) - (Trace(9, 2) + sig_config.shift_point.x.clone() + Trace(9, 4))) / (X.pow(trace_length / 32768) - 1.into()), // extract_r/x
-    (Trace(8, 3) * (Trace(9, 2) - sig_config.shift_point.x.clone()) - 1.into()) / (X.pow(trace_length / 32768) - 1.into()), // extract_r/x_diff_inv
+    (Trace(9, 2) + y.clone() - Trace(8, 9) * (Trace(9, 2) - x.clone())) / (X.pow(trace_length / 32768) - 1.into()), // extract_r/slope
+    (Trace(8, 9) * Trace(8, 9) - (Trace(9, 2) + x.clone() + Trace(9, 4))) / (X.pow(trace_length / 32768) - 1.into()), // extract_r/x
+    (Trace(8, 3) * (Trace(9, 2) - x.clone()) - 1.into()) / (X.pow(trace_length / 32768) - 1.into()), // extract_r/x_diff_inv
     (Trace(9, 0) * Trace(8, 1) - 1.into()) / (X.pow(trace_length / 32768) - 1.into()), // z_nonzero
     (Trace(9, 4) * Trace(9, 6) - 1.into()) / (X.pow(trace_length / 16384) - 1.into()), // r_and_w_nonzero
     (Trace(8, 5) - Trace(9, 0) * Trace(9, 0)) / (X.pow(trace_length / 32768) - 1.into()), // q_on_curve/x_squared
-    (Trace(9, 2) * Trace(9, 2) - (Trace(9, 0) * Trace(8, 5) + sig_config.alpha.clone() * Trace(9, 0) + sig_config.beta)) / (X.pow(trace_length / 32768) - 1.into()), // q_on_curve/on_curve
+    (Trace(9, 2) * Trace(9, 2) - (Trace(9, 0) * Trace(8, 5) + alpha * Trace(9, 0) + beta)) / (X.pow(trace_length / 32768) - 1.into()), // q_on_curve/on_curve
     ];
 
     result.extend(exponentiate_key_constraints());
@@ -103,7 +96,7 @@ fn signature_verification_constraints() -> Vec<RationalExpression> {
     result
 }
 
-fn state_transition_constraints() -> Vec<RationalExpression> {
+fn state_transition_constraints(hash_shift_point: &Affine) -> Vec<RationalExpression> {
     use RationalExpression::*;
 
     let trace_length = 10;
@@ -113,10 +106,7 @@ fn state_transition_constraints() -> Vec<RationalExpression> {
     let merkle_hash_points_x = Polynomial(DensePolynomial::new(&PEDERSEN_POINTS_X), Box::new(X.pow(20)));
     let merkle_hash_points_y = Polynomial(DensePolynomial::new(&PEDERSEN_POINTS_Y), Box::new(X.pow(20)));
 
-    let shift_point = Point {
-        x: Constant(FieldElement::ONE),
-        y: Constant(FieldElement::ONE),
-    };
+    let (x, y) = get_coordinates(&hash_shift_point);
 
     let side_bit_extraction_bit_0 = Trace(6, 5) - (Trace(6, 7) + Trace(6, 7));
     let prev_authentication_hashes_ec_subset_sum_bit = Trace(3, 0) - (Trace(3, 1) + Trace(3, 1));
@@ -142,8 +132,8 @@ fn state_transition_constraints() -> Vec<RationalExpression> {
     (prev_authentication_hashes_ec_subset_sum_bit_neg.clone() * (Trace(1, 1) - Trace(1, 0))) * (X.pow(trace_length / 256) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length) - 1.into()), // prev_authentication/hashes/ec_subset_sum/copy_point/y
     (Trace(0, 6) - Trace(0, 5)) * (X.pow(trace_length / 512) - trace_generator.pow(trace_length / 2)) / (X.pow(trace_length / 256) - 1.into()), // prev_authentication/hashes/copy_point/x
     (Trace(1, 6) - Trace(1, 5)) * (X.pow(trace_length / 512) - trace_generator.pow(trace_length / 2)) / (X.pow(trace_length / 256) - 1.into()), // prev_authentication/hashes/copy_point/y
-    (Trace(0, 0) - shift_point.x.clone()) / (X.pow(trace_length / 512) - 1.into()), // prev_authentication/hashes/init/x
-    (Trace(1, 0) - shift_point.y.clone()) / (X.pow(trace_length / 512) - 1.into()), // prev_authentication/hashes/init/y
+    (Trace(0, 0) - x.clone()) / (X.pow(trace_length / 512) - 1.into()), // prev_authentication/hashes/init/x
+    (Trace(1, 0) - y.clone()) / (X.pow(trace_length / 512) - 1.into()), // prev_authentication/hashes/init/y
     ((Constant(1.into()) - side_bit_extraction_bit_1.clone()) * (Trace(0, 1) - Trace(3, 2))) * ((X.pow(trace_length / 16384) - trace_generator.pow(31 * trace_length / 32)) * (X.pow(trace_length / 16384) - trace_generator.pow(15 * trace_length / 16))) / (X.pow(trace_length / 512) - 1.into()), // prev_authentication/copy_prev_to_left
     (side_bit_extraction_bit_1.clone() * (Trace(0, 1) - Trace(3, 8))) * ((X.pow(trace_length / 16384) - trace_generator.pow(31 * trace_length / 32)) * (X.pow(trace_length / 16384) - trace_generator.pow(15 * trace_length / 16))) / (X.pow(trace_length / 512) - 1.into()), // prev_authentication/copy_prev_to_right
     (new_authentication_hashes_ec_subset_sum_bit.clone() * (new_authentication_hashes_ec_subset_sum_bit.clone() - 1.into())) * (X.pow(trace_length / 256) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length) - 1.into()), // new_authentication/hashes/ec_subset_sum/booleanity_test
@@ -156,8 +146,8 @@ fn state_transition_constraints() -> Vec<RationalExpression> {
     (new_authentication_hashes_ec_subset_sum_bit_neg.clone() * (Trace(5, 1) - Trace(5, 0))) * (X.pow(trace_length / 256) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length) - 1.into()), // new_authentication/hashes/ec_subset_sum/copy_point/y
     (Trace(4, 6) - Trace(4, 5)) * (X.pow(trace_length / 512) - trace_generator.pow(trace_length / 2)) / (X.pow(trace_length / 256) - 1.into()), // new_authentication/hashes/copy_point/x
     (Trace(5, 6) - Trace(5, 5)) * (X.pow(trace_length / 512) - trace_generator.pow(trace_length / 2)) / (X.pow(trace_length / 256) - 1.into()), // new_authentication/hashes/copy_point/y
-    (Trace(4, 0) - shift_point.x.clone()) / (X.pow(trace_length / 512) - 1.into()), // new_authentication/hashes/init/x
-    (Trace(5, 0) - shift_point.y.clone()) / (X.pow(trace_length / 512) - 1.into()), // new_authentication/hashes/init/y
+    (Trace(4, 0) - x.clone()) / (X.pow(trace_length / 512) - 1.into()), // new_authentication/hashes/init/x
+    (Trace(5, 0) - y.clone()) / (X.pow(trace_length / 512) - 1.into()), // new_authentication/hashes/init/y
     ((Constant(1.into()) - side_bit_extraction_bit_1.clone()) * (Trace(4, 1) - Trace(7, 2))) * ((X.pow(trace_length / 16384) - trace_generator.pow(31 * trace_length / 32)) * (X.pow(trace_length / 16384) - trace_generator.pow(15 * trace_length / 16))) / (X.pow(trace_length / 512) - 1.into()), // new_authentication/copy_prev_to_left
     (side_bit_extraction_bit_1.clone() * (Trace(4, 1) - Trace(7, 8))) * ((X.pow(trace_length / 16384) - trace_generator.pow(31 * trace_length / 32)) * (X.pow(trace_length / 16384) - trace_generator.pow(15 * trace_length / 16))) / (X.pow(trace_length / 512) - 1.into()), // new_authentication/copy_prev_to_right
     (prev_authentication_sibling_0 - new_authentication_sibling_0) * (X.pow(trace_length / 16384) - trace_generator.pow(31 * trace_length / 32)) / (X.pow(trace_length / 512) - 1.into()), // same_siblings
@@ -166,19 +156,15 @@ fn state_transition_constraints() -> Vec<RationalExpression> {
     ]
 }
 
-fn hash_pool_constraints() -> Vec<RationalExpression> {
+fn hash_pool_constraints(hash_shift_point: &Affine) -> Vec<RationalExpression> {
     use RationalExpression::*;
 
     let trace_length = 10;
     let trace_generator = Constant(FieldElement::ZERO);
 
+    let (x, y) = get_coordinates(hash_shift_point);
     let hash_pool_points_x = Polynomial(DensePolynomial::new(&PEDERSEN_POINTS_X), Box::new(X.pow(20)));
     let hash_pool_points_y = Polynomial(DensePolynomial::new(&PEDERSEN_POINTS_Y), Box::new(X.pow(20)));
-
-    let shift_point = Point {
-        x: Constant(FieldElement::ONE),
-        y: Constant(FieldElement::ONE),
-    };
 
     let ec_subset_sum_bit = Trace(8, 3) - (Trace(8, 7) + Trace(8, 7));
     let ec_subset_sum_bit_neg = Constant(1.into()) - ec_subset_sum_bit.clone();
@@ -193,13 +179,13 @@ fn hash_pool_constraints() -> Vec<RationalExpression> {
     (ec_subset_sum_bit_neg.clone() * (Trace(8, 6) - Trace(8, 2))) * (X.pow(trace_length / 1024) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 4) - 1.into()), // ec_subset_sum/copy_point/y
     (Trace(8, 4) - Trace(8, 0)) * (X.pow(trace_length / 2048) - trace_generator.pow(trace_length / 2)) / (X.pow(trace_length / 1024) - 1.into()), // copy_point/x
     (Trace(8, 6) - Trace(8, 2)) * (X.pow(trace_length / 2048) - trace_generator.pow(trace_length / 2)) / (X.pow(trace_length / 1024) - 1.into()), // copy_point/y
-    (Trace(8, 0) - shift_point.x.clone()) / (X.pow(trace_length / 2048) - 1.into()), // init/x
-    (Trace(8, 2) - shift_point.y.clone()) / (X.pow(trace_length / 2048) - 1.into()), // init/y
+    (Trace(8, 0) - x.clone()) / (X.pow(trace_length / 2048) - 1.into()), // init/x
+    (Trace(8, 2) - y.clone()) / (X.pow(trace_length / 2048) - 1.into()), // init/y
     (Trace(8, 4) - Trace(8, 1)) / (X.pow(trace_length / 4096) - 1.into()), // output_to_input
     ]
 }
 
-fn other_constraints() -> Vec<RationalExpression> {
+fn other_constraints(_n_vaults: usize) -> Vec<RationalExpression> {
     use RationalExpression::*;
 
     let trace_length = 10;
@@ -212,6 +198,7 @@ fn other_constraints() -> Vec<RationalExpression> {
 
     let is_settlement = Polynomial(DensePolynomial::new(&[FieldElement::ZERO]), Box::new(X.pow(5)));
     let is_modification = Polynomial(DensePolynomial::new(&[FieldElement::ZERO]), Box::new(X.pow(20)));
+    // should this next one be a constant???
     let boundary_base = Polynomial(DensePolynomial::new(&[FieldElement::ZERO]), Box::new(X.pow(20)));
     let boundary_key = Polynomial(DensePolynomial::new(&[FieldElement::ZERO]), Box::new(X.pow(20)));
     let boundary_token = Polynomial(DensePolynomial::new(&[FieldElement::ZERO]), Box::new(X.pow(20)));
@@ -219,6 +206,9 @@ fn other_constraints() -> Vec<RationalExpression> {
     let boundary_amount1 = Polynomial(DensePolynomial::new(&[FieldElement::ZERO]), Box::new(X.pow(20)));
     let boundary_vault_id = Polynomial(DensePolynomial::new(&[FieldElement::ZERO]), Box::new(X.pow(20)));
 
+    // ctx[mm_vault_shift] = 2**32;
+    // ctx[mm_amount_shift] = 2**63; // 2**kRangeCheckBits
+    // ctx[mm_trade_shift] = 2**32;
     let trade_shift = Constant(FieldElement::ONE);
     let amount_shift = Constant(FieldElement::ONE);
     let vault_shift = Constant(FieldElement::ONE);
@@ -270,10 +260,10 @@ fn other_constraints() -> Vec<RationalExpression> {
 }
 
 #[allow(dead_code)]
-fn constraints() -> Vec<RationalExpression> {
-    let mut result = state_transition_constraints();
-    result.extend(signature_verification_constraints());
-    result.extend(hash_pool_constraints());
-    result.extend(other_constraints());
+fn constraints(_claim: &Claim, parameters: &Parameters) -> Vec<RationalExpression> {
+    let mut result = state_transition_constraints(&parameters.hash_shift_point);
+    result.extend(signature_verification_constraints(&parameters.signature));
+    result.extend(hash_pool_constraints(&parameters.hash_shift_point));
+    result.extend(other_constraints(parameters.n_vaults));
     result
 }

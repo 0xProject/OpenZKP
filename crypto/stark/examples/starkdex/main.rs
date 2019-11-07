@@ -1,6 +1,9 @@
 #[rustfmt::skip] // For now, code is easier to grep unformated.
 mod constraints;
-// mod inputs;
+mod inputs;
+#[allow(dead_code)]
+mod pedersen;
+mod pedersen_points;
 mod periodic_columns;
 // mod trace_table;
 
