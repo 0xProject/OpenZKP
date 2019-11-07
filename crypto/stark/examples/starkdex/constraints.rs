@@ -185,7 +185,7 @@ fn hash_pool_constraints(hash_shift_point: &Affine) -> Vec<RationalExpression> {
     ]
 }
 
-fn other_constraints(n_vaults: usize) -> Vec<RationalExpression> {
+fn other_constraints(_n_vaults: usize) -> Vec<RationalExpression> {
     use RationalExpression::*;
 
     let trace_length = 10;
@@ -260,7 +260,7 @@ fn other_constraints(n_vaults: usize) -> Vec<RationalExpression> {
 }
 
 #[allow(dead_code)]
-fn constraints(claim: &Claim, parameters: &Parameters) -> Vec<RationalExpression> {
+fn constraints(_claim: &Claim, parameters: &Parameters) -> Vec<RationalExpression> {
     let mut result = state_transition_constraints(&parameters.hash_shift_point);
     result.extend(signature_verification_constraints(&parameters.signature));
     result.extend(hash_pool_constraints(&parameters.hash_shift_point));

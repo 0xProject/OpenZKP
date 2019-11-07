@@ -1,11 +1,9 @@
 use super::pedersen_points::{PEDERSEN_POINTS, SHIFT_POINT};
 use std::prelude::v1::*;
 use zkp_elliptic_curve::{Affine, Jacobian};
-use zkp_macros_decl::u256h;
 use zkp_primefield::FieldElement;
 use zkp_u256::U256;
 
-const N_ELEMENTS: usize = 2;
 const N_ELEMENT_BITS: usize = 252;
 
 pub fn hash(a: &FieldElement, b: &FieldElement) -> FieldElement {

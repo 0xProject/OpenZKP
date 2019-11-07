@@ -1,16 +1,13 @@
-// use super::{constraints::get_pedersen_merkle_constraints,
-// trace_table::get_trace_table};
 use super::pedersen::hash;
 use std::{collections::BTreeMap, prelude::v1::*};
 use zkp_elliptic_curve::Affine;
 use zkp_hash::Hash;
 use zkp_primefield::FieldElement;
-use zkp_stark::{Constraints, Provable, TraceTable, Verifiable};
 
 #[derive(PartialEq, Clone)]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct Claim {
-    pub n_transactions: usize,
+    pub n_transactions:      usize,
     pub modifications:       Vec<Modification>,
     pub initial_vaults_root: Hash,
     pub final_vaults_root:   Hash,
@@ -88,6 +85,7 @@ impl Vault {
     }
 }
 
+#[allow(dead_code)]
 impl Vaults {
     pub fn new() -> Self {
         Self {
@@ -101,6 +99,7 @@ impl Vaults {
     }
 }
 
+#[allow(dead_code)]
 impl Tree {
     pub fn new(height: usize) -> Self {
         Self {
@@ -116,28 +115,13 @@ impl Tree {
             0 => vec![self.hash.clone()],
             _ => {
                 let mut result = vec![self.hash.clone()];
-                let subtree = match self.subtree(index) {
+                match self.subtree(index) {
                     None => result.extend(self.empty_hashes()),
                     Some(t) => result.extend(t.path(index)),
                 };
                 result
             }
         }
-        // let mut path: Vec<_> = (0..31).map(|i| Self::empty_hash(i)).collect();
-        // let mut subtree = self;
-        // for i in (0..31) {
-        //     let next = if index & (1 << i) != 0 {
-        //         &self.left
-        //     } else {
-        //         &self.right
-        //     };
-        //     match next {
-        //         Some(t) => subtree = &t,
-        //         None => break,
-        //     };
-        //     path[i] = subtree.hash.clone();
-        // }
-        // path
     }
 
     pub fn update(&mut self, index: u32, vault: Vault) {
@@ -145,13 +129,13 @@ impl Tree {
             0 => self.hash = vault.hash(),
             _ => {
                 let height = self.height;
-                let mut next = self.mut_subtree(index);
+                let next = self.mut_subtree(index);
                 match next {
                     None => {
                         let mut t = Tree::new(height - 1);
                         t.update(index, vault);
                         *next = Some(Box::new(t));
-                    },
+                    }
                     Some(t) => t.update(index, vault),
                 };
 
@@ -186,7 +170,7 @@ impl Tree {
 
     fn empty_hash(height: usize) -> FieldElement {
         let mut result = FieldElement::ZERO;
-        for _ in (0..height) {
+        for _ in 0..height {
             result = hash(&result, &result);
         }
         result
@@ -210,8 +194,8 @@ mod tests {
         let mut tree = Tree::new(5);
 
         let vault = Vault {
-            key: FieldElement::ONE,
-            token: FieldElement::ZERO,
+            key:    FieldElement::ONE,
+            token:  FieldElement::ZERO,
             amount: 3,
         };
 
@@ -221,31 +205,43 @@ mod tests {
     }
 
     #[test]
-    fn mason() {
-        let oods_point = field_element!("0342143aa4e0522de24cf42b3746e170dee7c72ad1459340483fed8524a80adb");
+    fn test_is_settlement_0() {
+        let oods_point =
+            field_element!("0342143aa4e0522de24cf42b3746e170dee7c72ad1459340483fed8524a80adb");
         let x = field_element!("039ac85199efa890dd0f93be37fa97426d949638b5bb7e7a0e74252bbad9dcb6");
         assert_eq!(x, oods_point.pow(4) - FieldElement::ONE);
     }
 
     #[test]
-    fn wayne() {
-        // get these values from using three modifications and n_transcations = 3...
-        // this means theres some rounding doing on?
-        let oods_point = field_element!("0342143aa4e0522de24cf42b3746e170dee7c72ad1459340483fed8524a80adb");
+    fn test_is_settlement_1() {
+        // get these values from using three modifications and n_transcations = 3.
+        // we round n_tractions up to the next power of two.
+        let oods_point =
+            field_element!("0342143aa4e0522de24cf42b3746e170dee7c72ad1459340483fed8524a80adb");
         let x = field_element!("039ac85199efa890dd0f93be37fa97426d949638b5bb7e7a0e74252bbad9dcb6");
 
-        let is_settlement_oods = field_element!("01671673ce82eb78357e14917a70da38a40e55817dc8b41a72a153ac18bb42bd");
-        let is_modification_oods = field_element!("03c544b737bf7258e9601c1315ee8ec9759cdf34a4862b80cf94bfa8fc531e1e");
-        assert_eq!(is_settlement_oods * is_modification_oods, oods_point.pow(4) - FieldElement::ONE);
+        let is_settlement_oods =
+            field_element!("01671673ce82eb78357e14917a70da38a40e55817dc8b41a72a153ac18bb42bd");
+        let is_modification_oods =
+            field_element!("03c544b737bf7258e9601c1315ee8ec9759cdf34a4862b80cf94bfa8fc531e1e");
+        assert_eq!(
+            is_settlement_oods * is_modification_oods,
+            oods_point.pow(4) - FieldElement::ONE
+        );
     }
 
     #[test]
-    fn mason_2() {
-        let oods_point = field_element!("0342143aa4e0522de24cf42b3746e170dee7c72ad1459340483fed8524a80adb");
-        let is_settlement_oods = field_element!("01671673ce82eb78357e14917a70da38a40e55817dc8b41a72a153ac18bb42bd");
-        let is_modification_oods = field_element!("03c544b737bf7258e9601c1315ee8ec9759cdf34a4862b80cf94bfa8fc531e1e");
+    fn test_is_settlement_2() {
+        let oods_point =
+            field_element!("0342143aa4e0522de24cf42b3746e170dee7c72ad1459340483fed8524a80adb");
+        let is_settlement_oods =
+            field_element!("01671673ce82eb78357e14917a70da38a40e55817dc8b41a72a153ac18bb42bd");
+        let is_modification_oods =
+            field_element!("03c544b737bf7258e9601c1315ee8ec9759cdf34a4862b80cf94bfa8fc531e1e");
 
-        // let x = field_element!("039ac85199efa890dd0f93be37fa97426d949638b5bb7e7a0e74252bbad9dcb6");
-        assert_eq!(is_settlement_oods * is_modification_oods, oods_point.pow(4) - FieldElement::ONE);
+        assert_eq!(
+            is_settlement_oods * is_modification_oods,
+            oods_point.pow(4) - FieldElement::ONE
+        );
     }
 }
