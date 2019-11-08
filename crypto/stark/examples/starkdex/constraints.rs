@@ -33,10 +33,10 @@ fn constraints(parameters: &Parameters) -> Vec<RationalExpression> {
     let hash_pool_points_x = Polynomial(DensePolynomial::new(&PEDERSEN_POINTS_X), Box::new(X.pow(20)));
     let hash_pool_points_y = Polynomial(DensePolynomial::new(&PEDERSEN_POINTS_Y), Box::new(X.pow(20)));
 
-    let column4_row_expr0 = Trace(4, -30);
-    let column0_row_expr2 = Trace(0, -2);
-    let column4_row_expr1 = Trace(4, -1);
-    let column0_row_expr0 = Trace(0, -30);
+    let column0_row_expr0 = Trace(0, -3); // 0x2240
+    let column0_row_expr2 = Trace(0, -2); // 0x2260
+    let column4_row_expr1 = Trace(4, -1); // 0x2460
+    let column4_row_expr0 = Trace(4, -3); // 0x2480
 
     let is_settlement = Polynomial(DensePolynomial::new(&[FieldElement::ZERO]), Box::new(X.pow(5)));
     let is_modification = Polynomial(DensePolynomial::new(&[FieldElement::ZERO]), Box::new(X.pow(20)));
