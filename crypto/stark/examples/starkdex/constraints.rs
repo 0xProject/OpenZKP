@@ -1,7 +1,7 @@
 use zkp_primefield::FieldElement;
 use zkp_elliptic_curve::Affine;
 use zkp_stark::{RationalExpression, DensePolynomial};
-use super::inputs::{Parameters};
+use super::inputs::{Parameters, Claim};
 use super::periodic_columns::{PEDERSEN_POINTS_X, PEDERSEN_POINTS_Y, ECDSA_POINTS_X, ECDSA_POINTS_Y};
 
 fn get_coordinates(p: &Affine) -> (RationalExpression, RationalExpression) {
@@ -12,12 +12,13 @@ fn get_coordinates(p: &Affine) -> (RationalExpression, RationalExpression) {
 }
 
 #[allow(dead_code)]
-fn constraints(parameters: &Parameters) -> Vec<RationalExpression> {
+fn constraints(claim: &Claim, parameters: &Parameters) -> Vec<RationalExpression> {
     use RationalExpression::*;
 
-    let trace_length = 10_000_000;
-    let trace_generator = Constant(FieldElement::ONE);
-    let path_length = 165;
+    assert!(claim.n_transactions.is_power_of_two());
+    let trace_length = 65536 * claim.n_transactions;
+    let trace_generator = Constant(FieldElement::root(trace_length).expect("trace_length not power of 2."));
+    let path_length = 31; // Depth of vaults merkle tree.
 
     let ecdsa_points_x = Polynomial(DensePolynomial::new(&ECDSA_POINTS_X), Box::new(X.pow(20)));
     let ecdsa_points_y = Polynomial(DensePolynomial::new(&ECDSA_POINTS_Y), Box::new(X.pow(20)));
@@ -47,15 +48,12 @@ fn constraints(parameters: &Parameters) -> Vec<RationalExpression> {
     let boundary_amount1 = Polynomial(DensePolynomial::new(&[FieldElement::ZERO]), Box::new(X.pow(20)));
     let boundary_vault_id = Polynomial(DensePolynomial::new(&[FieldElement::ZERO]), Box::new(X.pow(20)));
 
-    // ctx[mm_vault_shift] = 2**32;
-    // ctx[mm_amount_shift] = 2**63; // 2**kRangeCheckBits
-    // ctx[mm_trade_shift] = 2**32;
-    let trade_shift = Constant(FieldElement::ONE);
-    let amount_shift = Constant(FieldElement::ONE);
-    let vault_shift = Constant(FieldElement::ONE);
+    let vault_shift = Constant((1u64<<32).into());
+    let amount_shift = Constant((1u64<<63).into());
+    let trade_shift = Constant((1u64<<32).into());
 
-    let initial_root = Constant(FieldElement::ONE);
-    let final_root = Constant(FieldElement::ONE);
+    let initial_root = Constant(claim.initial_vaults_root.clone());
+    let final_root = Constant(claim.final_vaults_root.clone());
 
     let hash_pool_hash_ec_subset_sum_bit = Trace(8, 3) - (Trace(8, 7) + Trace(8, 7));
     let hash_pool_hash_ec_subset_sum_bit_neg = Constant(1.into()) - hash_pool_hash_ec_subset_sum_bit.clone();
@@ -206,9 +204,6 @@ mod tests {
     use super::*;
     use crate::inputs::SignatureParameters;
     use crate::pedersen_points::SHIFT_POINT;
-    // use zkp_elliptic_curve::Affine;
-    // use zkp_primefield::geometric_series::root_series;
-    // use zkp_stark::DensePolynomial;
     use std::{collections::BTreeSet};
 
     #[test]
@@ -223,7 +218,14 @@ mod tests {
             n_vaults: 30,
         };
 
-        let constraints = constraints(&parameters);
+        let claim = Claim {
+            n_transactions: 4,
+            modifications: vec![],
+            initial_vaults_root: FieldElement::ZERO,
+            final_vaults_root: FieldElement::ZERO,
+        };
+
+        let constraints = constraints(&claim, &parameters);
         assert_eq!(constraints.len(), 120);
 
         let trace_arguments: Vec<_> = constraints.iter()
@@ -231,6 +233,6 @@ mod tests {
                     .fold(BTreeSet::new(), |x, y| &x | &y)
                     .into_iter()
                     .collect();
-        assert_eq!(trace_arguments.len(), 124);
+        assert_eq!(trace_arguments.len(), 127); // number of slots in memory map of constraint polynomial contract: [0x21a0, 0x3180) - oods_values
     }
 }

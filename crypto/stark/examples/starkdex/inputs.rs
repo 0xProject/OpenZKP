@@ -1,7 +1,6 @@
 use super::pedersen::hash;
 use std::{collections::BTreeMap, prelude::v1::*};
 use zkp_elliptic_curve::Affine;
-use zkp_hash::Hash;
 use zkp_primefield::FieldElement;
 
 const VAULTS_DEPTH: usize = 31;
@@ -11,8 +10,8 @@ const VAULTS_DEPTH: usize = 31;
 pub struct Claim {
     pub n_transactions:      usize,
     pub modifications:       Vec<Modification>,
-    pub initial_vaults_root: Hash,
-    pub final_vaults_root:   Hash,
+    pub initial_vaults_root: FieldElement,
+    pub final_vaults_root:   FieldElement,
 }
 
 #[derive(PartialEq, Clone)]
@@ -221,7 +220,6 @@ impl Tree {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use quickcheck_macros::quickcheck;
     use zkp_macros_decl::field_element;
     use zkp_primefield::FieldElement;
     use zkp_u256::U256;
