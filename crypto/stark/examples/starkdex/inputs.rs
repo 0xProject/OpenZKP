@@ -150,7 +150,7 @@ impl Tree {
                 let height = self.height;
                 self.children
                     .entry(self.direction(index))
-                    .or_insert(Tree::new(height - 1))
+                    .or_insert_with(|| Tree::new(height - 1))
                     .update(index, vault);
 
                 let left_hash = match self.children.get(&Direction::LEFT) {
@@ -225,7 +225,7 @@ mod tests {
 
     #[test]
     fn empty_path_correct() {
-        let mut tree = Tree::new(4);
+        let tree = Tree::new(4);
         let vault = Vault {
             key:    FieldElement::ZERO,
             token:  FieldElement::ZERO,
@@ -235,11 +235,7 @@ mod tests {
         let directions = &get_directions(5);
         let path = tree.path(5);
 
-        dbg!(directions.clone());
-        dbg!(path.clone());
-
         assert_eq!(directions.len(), path.len());
-
         assert_eq!(root(&vault.hash(), &directions, &path), tree.hash);
     }
 
@@ -255,8 +251,8 @@ mod tests {
 
         let directions = &get_directions(5);
         let path = tree.path(5);
-        dbg!(directions.clone());
-        dbg!(path.clone());
+
+        assert_eq!(directions.len(), path.len());
         assert_eq!(root(&vault.hash(), &directions, &path), tree.hash);
     }
 
@@ -283,7 +279,6 @@ mod tests {
         // we round n_tractions up to the next power of two.
         let oods_point =
             field_element!("0342143aa4e0522de24cf42b3746e170dee7c72ad1459340483fed8524a80adb");
-        let x = field_element!("039ac85199efa890dd0f93be37fa97426d949638b5bb7e7a0e74252bbad9dcb6");
 
         let is_settlement_oods =
             field_element!("01671673ce82eb78357e14917a70da38a40e55817dc8b41a72a153ac18bb42bd");
