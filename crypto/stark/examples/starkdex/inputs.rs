@@ -193,7 +193,7 @@ impl Tree {
     }
 
     fn direction(&self, index: u32) -> Direction {
-        if index & (1 << self.height - 1) != 0 {
+        if index & (1 << (self.height - 1)) != 0 {
             Direction::LEFT
         } else {
             Direction::RIGHT
