@@ -4,6 +4,8 @@ use zkp_elliptic_curve::Affine;
 use zkp_hash::Hash;
 use zkp_primefield::FieldElement;
 
+const VAULTS_DEPTH: usize = 31;
+
 #[derive(PartialEq, Clone)]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct Claim {
@@ -100,21 +102,45 @@ impl Vault {
     }
 }
 
-#[allow(dead_code)]
-impl Vaults {
-    pub fn new() -> Self {
+impl Default for Vault {
+    fn default() -> Self {
         Self {
-            tree:   Tree::new(31),
-            vaults: BTreeMap::new(),
+            key:    FieldElement::ZERO,
+            token:  FieldElement::ZERO,
+            amount: 0,
         }
-    }
-
-    pub fn path(&self, index: u32) -> Vec<FieldElement> {
-        self.tree.path(index)
     }
 }
 
 #[allow(dead_code)]
+impl Vaults {
+    pub fn new() -> Self {
+        Self {
+            tree:   Tree::new(VAULTS_DEPTH),
+            vaults: BTreeMap::new(),
+        }
+    }
+
+    pub fn root(&self) -> FieldElement {
+        self.tree.hash.clone()
+    }
+
+    pub fn path(&self, index: u32) -> (Vault, Vec<FieldElement>) {
+        (
+            match self.vaults.get(&index) {
+                None => Vault::default(),
+                Some(vault) => vault.clone(),
+            },
+            self.tree.path(index),
+        )
+    }
+
+    pub fn update(&mut self, index: u32, vault: Vault) {
+        self.tree.update(index, &vault);
+        *self.vaults.entry(index).or_insert_with(Vault::default) = vault;
+    }
+}
+
 impl Tree {
     pub fn new(height: usize) -> Self {
         Self {
@@ -143,7 +169,7 @@ impl Tree {
         }
     }
 
-    pub fn update(&mut self, index: u32, vault: Vault) {
+    pub fn update(&mut self, index: u32, vault: &Vault) {
         match self.height {
             0 => self.hash = vault.hash(),
             _ => {
@@ -167,7 +193,7 @@ impl Tree {
     }
 
     fn direction(&self, index: u32) -> Direction {
-        if index & (1 << self.height) != 0 {
+        if index & (1 << self.height - 1) != 0 {
             Direction::LEFT
         } else {
             Direction::RIGHT
@@ -183,21 +209,27 @@ impl Tree {
     }
 
     fn empty_hashes(&self) -> Vec<FieldElement> {
-        (0..self.height - 1).map(Self::empty_hash).collect()
+        (0..self.height - 1)
+            .scan(FieldElement::ZERO, |digest, _| {
+                *digest = hash(digest, digest);
+                Some(digest.clone())
+            })
+            .collect()
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use quickcheck_macros::quickcheck;
     use zkp_macros_decl::field_element;
     use zkp_primefield::FieldElement;
     use zkp_u256::U256;
 
-    fn get_directions(index: usize) -> Vec<Direction> {
+    fn get_directions(index: u32) -> Vec<Direction> {
         let mut index = index;
         let mut directions = vec![];
-        for _ in 0..4 {
+        for _ in 0..VAULTS_DEPTH {
             directions.push(if index % 2 == 0 {
                 Direction::LEFT
             } else {
@@ -208,16 +240,12 @@ mod tests {
         directions
     }
 
-    fn root(
-        leaf_hash: &FieldElement,
-        directions: &[Direction],
-        path: &[FieldElement],
-    ) -> FieldElement {
-        let mut root = leaf_hash.clone();
+    fn root(leaf: &Vault, directions: &[Direction], path: &[FieldElement]) -> FieldElement {
+        let mut root = leaf.hash();
         for (direction, sibling_hash) in directions.iter().zip(path) {
             root = match direction {
-                Direction::LEFT => hash(&root, &sibling_hash),
-                Direction::RIGHT => hash(&sibling_hash, &root),
+                Direction::LEFT => hash(&sibling_hash, &root),
+                Direction::RIGHT => hash(&root, &sibling_hash),
             };
         }
         root
@@ -225,35 +253,48 @@ mod tests {
 
     #[test]
     fn empty_path_correct() {
-        let tree = Tree::new(4);
-        let vault = Vault {
-            key:    FieldElement::ZERO,
-            token:  FieldElement::ZERO,
-            amount: 1000,
-        };
+        let vaults = Vaults::new();
+        let index = 1351234;
+        let (vault, path) = vaults.path(index);
 
-        let directions = &get_directions(5);
-        let path = tree.path(5);
-
-        assert_eq!(directions.len(), path.len());
-        assert_eq!(root(&vault.hash(), &directions, &path), tree.hash);
+        assert_eq!(root(&vault, &get_directions(index), &path), vaults.root());
     }
 
     #[test]
-    fn path_correct() {
-        let mut tree = Tree::new(4);
+    fn own_path_correct() {
+        let mut vaults = Vaults::new();
+        let index = 97234123;
+
         let vault = Vault {
-            key:    FieldElement::ZERO,
-            token:  FieldElement::ZERO,
+            key:    FieldElement::GENERATOR,
+            token:  FieldElement::NEGATIVE_ONE,
             amount: 1000,
         };
-        tree.update(5, vault.clone());
+        vaults.update(index, vault);
+        let (vault, path) = vaults.path(index);
 
-        let directions = &get_directions(5);
-        let path = tree.path(5);
+        assert_eq!(root(&vault, &get_directions(index), &path), vaults.root());
+    }
 
-        assert_eq!(directions.len(), path.len());
-        assert_eq!(root(&vault.hash(), &directions, &path), tree.hash);
+    #[test]
+    fn other_path_correct() {
+        let mut vaults = Vaults::new();
+
+        let update_index = 2341972323;
+        let vault = Vault {
+            key:    FieldElement::GENERATOR,
+            token:  FieldElement::NEGATIVE_ONE,
+            amount: 1000,
+        };
+        vaults.update(update_index, vault);
+
+        let path_index = 1234123123;
+        let (vault, path) = vaults.path(path_index);
+
+        assert_eq!(
+            root(&vault, &get_directions(path_index), &path),
+            vaults.root()
+        );
     }
 
     #[test]
