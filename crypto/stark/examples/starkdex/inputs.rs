@@ -2,6 +2,7 @@ use super::pedersen::hash;
 use std::{collections::BTreeMap, prelude::v1::*};
 use zkp_elliptic_curve::Affine;
 use zkp_primefield::FieldElement;
+use zkp_stark::RationalExpression;
 
 const VAULTS_DEPTH: usize = 31;
 
@@ -48,12 +49,12 @@ pub struct Settlement {
 #[derive(PartialEq, Clone)]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct Modification {
-    initial_amount: u32,
-    final_amount:   u32,
-    index:          usize,
-    key:            FieldElement,
-    token:          FieldElement,
-    vault:          u32,
+    pub initial_amount: u32,
+    pub final_amount:   u32,
+    pub index:          usize,
+    pub key:            FieldElement,
+    pub token:          FieldElement,
+    pub vault:          u32,
 }
 
 #[derive(PartialEq, Clone)]
@@ -86,6 +87,43 @@ impl Direction {
         }
     }
 }
+
+// let boundary_base =
+// let boundary_key = Polynomial(DensePolynom
+// let boundary_token = Polynomial(DensePolynomial::new(
+// let boundary_amount0 = Polynomial(DensePolynomial::n
+// let boundary_amount1 = Polynomial(DensePolyn
+// let boundary_vault_id = Polynomial(DensePolynomial:
+
+pub fn get_is_settlement(claim: &Claim) -> RationalExpression {
+    use RationalExpression::*;
+
+    let root = FieldElement::root(claim.n_transactions).unwrap();
+    let mut is_modification = Constant(FieldElement::ONE);
+    for modification in &claim.modifications {
+        is_modification = is_modification * (X - Constant(root.pow(modification.index)));
+    }
+    is_modification
+}
+
+pub fn get_is_modification(claim: &Claim) -> RationalExpression {
+    (RationalExpression::X.pow(claim.n_transactions) - 1.into()) / get_is_settlement(claim)
+}
+
+// pub fn get_boundary_base(claim: &Claim, x: &FieldElement) -> FieldElement {
+//     let boundary_base = FieldElement::ZERO;
+//     let mut prod = FieldElement::ONE;
+//
+//
+//     for modification in claim.modifications.iter().rev() {
+//         let point_minus_x_value = point_minus_x_values[i];
+//         let others_prod = prod * cumulative_products[i];
+//         boundary_base += others_prod;
+//         key += others_prod * &modification.stark_key;
+//         prod *= point_minus_x_value;
+//     }
+//     key
+// }
 
 #[derive(PartialEq, Clone)]
 #[cfg_attr(feature = "std", derive(Debug))]
@@ -296,51 +334,43 @@ mod tests {
     }
 
     #[test]
-    fn hash_test() {
-        let x = field_element!("05d702904f10e78036abca2229077576488062ef2a9b44eb16b9e12a07932764");
+    fn test_is_modification() {
+        let oods_point =
+            field_element!("0342143aa4e0522de24cf42b3746e170dee7c72ad1459340483fed8524a80adb");
+        let claim = Claim {
+            n_transactions:      4,
+            modifications:       vec![
+                Modification {
+                    initial_amount: 0,
+                    final_amount:   0,
+                    index:          0,
+                    key:            FieldElement::ONE,
+                    token:          FieldElement::ONE,
+                    vault:          123412,
+                },
+                Modification {
+                    initial_amount: 0,
+                    final_amount:   0,
+                    index:          1,
+                    key:            FieldElement::ONE,
+                    token:          FieldElement::ONE,
+                    vault:          123412,
+                },
+            ],
+            initial_vaults_root: FieldElement::ZERO,
+            final_vaults_root:   FieldElement::ZERO,
+        };
+
+        let is_modification = get_is_modification(&claim);
         assert_eq!(
-            hash(&x, &x),
-            field_element!("04eb5413fc27c3950f8e9d3bd9ba325b6fcc144f6f484e10ebb6b6fda9b642a9")
+            is_modification.evaluate(&oods_point, &|_, _| FieldElement::ZERO),
+            field_element!("02f87ef00f13bcc7631b24e2acde4b512bd8e6ab2ba4356b36bdc2357d5d44d7")
         );
-    }
 
-    #[test]
-    fn test_is_settlement_0() {
-        let oods_point =
-            field_element!("0342143aa4e0522de24cf42b3746e170dee7c72ad1459340483fed8524a80adb");
-        let x = field_element!("039ac85199efa890dd0f93be37fa97426d949638b5bb7e7a0e74252bbad9dcb6");
-        assert_eq!(x, oods_point.pow(4) - FieldElement::ONE);
-    }
-
-    #[test]
-    fn test_is_settlement_1() {
-        // get these values from using three modifications and n_transcations = 3.
-        // we round n_tractions up to the next power of two.
-        let oods_point =
-            field_element!("0342143aa4e0522de24cf42b3746e170dee7c72ad1459340483fed8524a80adb");
-
-        let is_settlement_oods =
-            field_element!("01671673ce82eb78357e14917a70da38a40e55817dc8b41a72a153ac18bb42bd");
-        let is_modification_oods =
-            field_element!("03c544b737bf7258e9601c1315ee8ec9759cdf34a4862b80cf94bfa8fc531e1e");
+        let is_settlement = get_is_settlement(&claim);
         assert_eq!(
-            is_settlement_oods * is_modification_oods,
-            oods_point.pow(4) - FieldElement::ONE
-        );
-    }
-
-    #[test]
-    fn test_is_settlement_2() {
-        let oods_point =
-            field_element!("0342143aa4e0522de24cf42b3746e170dee7c72ad1459340483fed8524a80adb");
-        let is_settlement_oods =
-            field_element!("01671673ce82eb78357e14917a70da38a40e55817dc8b41a72a153ac18bb42bd");
-        let is_modification_oods =
-            field_element!("03c544b737bf7258e9601c1315ee8ec9759cdf34a4862b80cf94bfa8fc531e1e");
-
-        assert_eq!(
-            is_settlement_oods * is_modification_oods,
-            oods_point.pow(4) - FieldElement::ONE
+            is_settlement.evaluate(&oods_point, &|_, _| FieldElement::ZERO),
+            field_element!("021176ec9b276df960e146810ff872147f2559844b5a3e494ef179c1f9590b63")
         );
     }
 }
