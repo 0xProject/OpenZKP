@@ -110,20 +110,30 @@ pub fn get_is_modification(claim: &Claim) -> RationalExpression {
     (RationalExpression::X.pow(claim.n_transactions) - 1.into()) / get_is_settlement(claim)
 }
 
-// pub fn get_boundary_base(claim: &Claim, x: &FieldElement) -> FieldElement {
-//     let boundary_base = FieldElement::ZERO;
-//     let mut prod = FieldElement::ONE;
-//
-//
-//     for modification in claim.modifications.iter().rev() {
-//         let point_minus_x_value = point_minus_x_values[i];
-//         let others_prod = prod * cumulative_products[i];
-//         boundary_base += others_prod;
-//         key += others_prod * &modification.stark_key;
-//         prod *= point_minus_x_value;
-//     }
-//     key
-// }
+pub fn get_boundary_base(claim: &Claim, x: &FieldElement) -> FieldElement {
+    let root = FieldElement::root(claim.n_transactions).unwrap();
+
+    let point_minus_x_values: Vec<_> = claim
+        .modifications
+        .iter()
+        .map(|modification| x - root.pow(modification.index))
+        .collect();
+
+    let mut cumulative_products: Vec<FieldElement> = vec![];
+    let mut cumulative_product = FieldElement::ONE;
+    for term in &point_minus_x_values {
+        cumulative_products.push(cumulative_product.clone());
+        cumulative_product *= term;
+    }
+
+    let mut boundary_base = FieldElement::ZERO;
+    let mut prod = FieldElement::ONE;
+    for i in (0..claim.modifications.len()).rev() {
+        boundary_base += &prod * cumulative_products[i].clone();
+        prod *= &point_minus_x_values[i];
+    }
+    boundary_base
+}
 
 #[derive(PartialEq, Clone)]
 #[cfg_attr(feature = "std", derive(Debug))]
@@ -259,7 +269,11 @@ impl Tree {
 mod tests {
     use super::*;
     use zkp_macros_decl::field_element;
-    use zkp_primefield::FieldElement;
+    use zkp_primefield::{
+        fft::{ifft_permuted, permute},
+        FieldElement,
+    };
+    use zkp_stark::DensePolynomial;
     use zkp_u256::U256;
 
     fn get_directions(index: u32) -> Vec<Direction> {
@@ -373,4 +387,127 @@ mod tests {
             field_element!("021176ec9b276df960e146810ff872147f2559844b5a3e494ef179c1f9590b63")
         );
     }
+
+    #[test]
+    fn mason() {
+        let mut x: Vec<FieldElement> = vec![1.into(), 2.into(), 4.into(), 8.into()];
+        ifft_permuted(&mut x);
+        permute(&mut x);
+
+        let p = DensePolynomial::new(&x);
+        // dbg!(p.evaluate(&(2.into())) / field_element!(
+        //     "0590f95483183421066c9ecd368215a8b08c54fbfa769d7180dbcd8b23c65865"
+        // ));
+        assert_eq!(p.evaluate(&(2.into())), 1.into());
+    }
+
+    #[test]
+    fn base_1() {
+        let claim = Claim {
+            n_transactions:      4,
+            modifications:       vec![
+                Modification {
+                    initial_amount: 0,
+                    final_amount:   0,
+                    index:          0,
+                    key:            FieldElement::ONE,
+                    token:          FieldElement::ONE,
+                    vault:          123412,
+                },
+                Modification {
+                    initial_amount: 0,
+                    final_amount:   0,
+                    index:          1,
+                    key:            FieldElement::ONE,
+                    token:          FieldElement::ONE,
+                    vault:          123412,
+                },
+                Modification {
+                    initial_amount: 0,
+                    final_amount:   0,
+                    index:          2,
+                    key:            FieldElement::ONE,
+                    token:          FieldElement::ONE,
+                    vault:          123412,
+                },
+                Modification {
+                    initial_amount: 0,
+                    final_amount:   0,
+                    index:          3,
+                    key:            FieldElement::ONE,
+                    token:          FieldElement::ONE,
+                    vault:          123412,
+                },
+            ],
+            initial_vaults_root: FieldElement::ZERO,
+            final_vaults_root:   FieldElement::ZERO,
+        };
+        assert_eq!(get_boundary_base(&claim, &FieldElement::ONE), 4.into());
+    }
+
+    #[test]
+    fn base_2() {
+        let claim = Claim {
+            n_transactions:      4,
+            modifications:       vec![
+                Modification {
+                    initial_amount: 0,
+                    final_amount:   0,
+                    index:          0,
+                    key:            FieldElement::ONE,
+                    token:          FieldElement::ONE,
+                    vault:          123412,
+                },
+                Modification {
+                    initial_amount: 0,
+                    final_amount:   0,
+                    index:          1,
+                    key:            FieldElement::ONE,
+                    token:          FieldElement::ONE,
+                    vault:          123412,
+                },
+            ],
+            initial_vaults_root: FieldElement::ZERO,
+            final_vaults_root:   FieldElement::ZERO,
+        };
+        assert_eq!(get_boundary_base(&claim, &2.into()), field_element!("01dafdc6d65d66b5accedf99bcd607383ad971a9537cdf25d59e99d90becc821"));
+    }
+
+    #[test]
+    fn base_3() {
+        let claim = Claim {
+            n_transactions:      4,
+            modifications:       vec![
+                Modification {
+                    initial_amount: 0,
+                    final_amount:   0,
+                    index:          0,
+                    key:            FieldElement::ONE,
+                    token:          FieldElement::ONE,
+                    vault:          123412,
+                },
+                Modification {
+                    initial_amount: 0,
+                    final_amount:   0,
+                    index:          3,
+                    key:            FieldElement::ONE,
+                    token:          FieldElement::ONE,
+                    vault:          123412,
+                },
+            ],
+            initial_vaults_root: FieldElement::ZERO,
+            final_vaults_root:   FieldElement::ZERO,
+        };
+        assert_eq!(get_boundary_base(&claim, &3.into()), field_element!("0625023929a2995b533120664329f8c7c5268e56ac8320da2a616626f41337e8"));
+    }
+
+
+    // 0 -> 0 4       24    15
+    // 1 -> 4     28      39    51
+    // 2 -> 32    76    90     -3
+    // 3 -> 108   148  87
+    // 4 -> 256 244   120  24
+    // 5 -> 500 364   144
+    // 6 -> 864 508
+    // 7 -> 1372
 }
