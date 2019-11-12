@@ -181,7 +181,7 @@ impl Constraints {
         32 * total_decommitment
     }
 
-    pub(crate) fn combine(&self, constraint_coefficients: &[FieldElement]) -> RationalExpression {
+    pub fn combine(&self, constraint_coefficients: &[FieldElement]) -> RationalExpression {
         use RationalExpression::*;
         assert_eq!(2 * self.len(), constraint_coefficients.len());
         let target_degree = self.degree() * self.trace_nrows() - 1;

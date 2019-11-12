@@ -1,16 +1,24 @@
-use zkp_primefield::FieldElement;
+use super::{
+    inputs::{Claim, ClaimPolynomials, Parameters},
+    periodic_columns::{ECDSA_POINTS_X, ECDSA_POINTS_Y, PEDERSEN_POINTS_X, PEDERSEN_POINTS_Y},
+};
 use zkp_elliptic_curve::Affine;
-use zkp_stark::{RationalExpression, DensePolynomial};
-use super::inputs::{Parameters, Claim};
-use super::periodic_columns::{PEDERSEN_POINTS_X, PEDERSEN_POINTS_Y, ECDSA_POINTS_X, ECDSA_POINTS_Y};
+use zkp_primefield::FieldElement;
+use zkp_stark::{DensePolynomial, RationalExpression};
 
 fn get_coordinates(p: &Affine) -> (RationalExpression, RationalExpression) {
     match p {
         Affine::Zero => panic!(),
-        Affine::Point { x, y } => (RationalExpression::Constant(x.clone()), RationalExpression::Constant(y.clone())),
+        Affine::Point { x, y } => {
+            (
+                RationalExpression::Constant(x.clone()),
+                RationalExpression::Constant(y.clone()),
+            )
+        }
     }
 }
 
+#[rustfmt::skip] // For now, code is easier to grep unformated.
 #[allow(dead_code)]
 fn constraints(claim: &Claim, parameters: &Parameters) -> Vec<RationalExpression> {
     use RationalExpression::*;
@@ -39,14 +47,15 @@ fn constraints(claim: &Claim, parameters: &Parameters) -> Vec<RationalExpression
     let column4_row_expr1 = Trace(4, -1); // 0x2460
     let column4_row_expr0 = Trace(4, -3); // 0x2480
 
-    let is_settlement = Polynomial(DensePolynomial::new(&[FieldElement::ZERO]), Box::new(X.pow(5)));
-    let is_modification = Polynomial(DensePolynomial::new(&[FieldElement::ZERO]), Box::new(X.pow(20)));
-    let boundary_base = Polynomial(DensePolynomial::new(&[FieldElement::ZERO]), Box::new(X.pow(20)));
-    let boundary_key = Polynomial(DensePolynomial::new(&[FieldElement::ZERO]), Box::new(X.pow(20)));
-    let boundary_token = Polynomial(DensePolynomial::new(&[FieldElement::ZERO]), Box::new(X.pow(20)));
-    let boundary_amount0 = Polynomial(DensePolynomial::new(&[FieldElement::ZERO]), Box::new(X.pow(20)));
-    let boundary_amount1 = Polynomial(DensePolynomial::new(&[FieldElement::ZERO]), Box::new(X.pow(20)));
-    let boundary_vault_id = Polynomial(DensePolynomial::new(&[FieldElement::ZERO]), Box::new(X.pow(20)));
+    let claim_polynomials = ClaimPolynomials::from(claim);
+    let is_settlement = claim_polynomials.is_settlement.clone();
+    let is_modification = claim_polynomials.is_modification.clone();
+    let boundary_base = claim_polynomials.base.clone();
+    let boundary_key = claim_polynomials.key.clone();
+    let boundary_token = claim_polynomials.token.clone();
+    let boundary_amount0 = claim_polynomials.initial_amount.clone();
+    let boundary_amount1 = claim_polynomials.final_amount.clone();
+    let boundary_vault_id = claim_polynomials.vault.clone();
 
     let vault_shift = Constant((1u64<<32).into());
     let amount_shift = Constant((1u64<<63).into());
@@ -198,41 +207,151 @@ fn constraints(claim: &Claim, parameters: &Parameters) -> Vec<RationalExpression
     ]
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::inputs::SignatureParameters;
-    use crate::pedersen_points::SHIFT_POINT;
-    use std::{collections::BTreeSet};
+    use crate::{inputs::SignatureParameters, pedersen_points::SHIFT_POINT};
+    use crate::inputs::Modification;
+    use zkp_stark::Constraints;
+    use std::collections::BTreeSet;
+    use std::collections::BTreeMap;
+    use zkp_macros_decl::field_element;
+    use zkp_primefield::FieldElement;
+    use zkp_u256::U256;
 
     #[test]
     fn sanity_check() {
         let parameters = Parameters {
-            signature: SignatureParameters {
+            signature:        SignatureParameters {
                 shift_point: SHIFT_POINT,
-                alpha: FieldElement::ONE,
-                beta: FieldElement::ZERO,
+                alpha:       FieldElement::ONE,
+                beta:        FieldElement::ZERO,
             },
             hash_shift_point: SHIFT_POINT,
-            n_vaults: 30,
+            n_vaults:         30,
         };
 
         let claim = Claim {
-            n_transactions: 4,
-            modifications: vec![],
+            n_transactions:      4,
+            modifications:       vec![],
             initial_vaults_root: FieldElement::ZERO,
-            final_vaults_root: FieldElement::ZERO,
+            final_vaults_root:   FieldElement::ZERO,
         };
 
         let constraints = constraints(&claim, &parameters);
         assert_eq!(constraints.len(), 120);
 
-        let trace_arguments: Vec<_> = constraints.iter()
-                    .map(RationalExpression::trace_arguments)
-                    .fold(BTreeSet::new(), |x, y| &x | &y)
-                    .into_iter()
-                    .collect();
-        assert_eq!(trace_arguments.len(), 127); // number of slots in memory map of constraint polynomial contract: [0x21a0, 0x3180) - oods_values
+        let trace_arguments: Vec<_> = constraints
+            .iter()
+            .map(RationalExpression::trace_arguments)
+            .fold(BTreeSet::new(), |x, y| &x | &y)
+            .into_iter()
+            .collect();
+        assert_eq!(trace_arguments.len(), 127); // number of slots in memory map
+                                                // of constraint polynomial
+                                                // contract: [0x21a0, 0x3180) -
+                                                // oods_values
+    }
+
+    #[test]
+    fn oods_check() {
+        let parameters = Parameters {
+            signature:        SignatureParameters {
+                shift_point: SHIFT_POINT,
+                alpha:       FieldElement::ONE,
+                beta:        FieldElement::ZERO,
+            },
+            hash_shift_point: SHIFT_POINT,
+            n_vaults:         30,
+        };
+
+        let claim = Claim {
+            n_transactions:      4,
+            modifications:       vec![
+                Modification {
+                    initial_amount: 0,
+                    final_amount:   1000,
+                    index:          0,
+                    key:            field_element!(
+                        "057d5d2e5da7409db60d64ae4e79443fedfd5eb925b5e54523eaf42cc1978169"
+                    ),
+                    token:          field_element!(
+                        "03e7aa5d1a9b180d6a12d451d3ae6fb95e390f722280f1ea383bb49d11828d"
+                    ),
+                    vault:          1,
+                },
+                Modification {
+                    initial_amount: 0,
+                    final_amount:   1000,
+                    index:          1,
+                    key:            field_element!(
+                        "024dca9f8032c9c8d1a2aae85b49df5dded9bb8da46d32284e339f5a9b30e820"
+                    ),
+                    token:          field_element!(
+                        "03e7aa5d1a9b180d6a12d451d3ae6fb95e390f722280f1ea383bb49d11828d"
+                    ),
+                    vault:          2,
+                },
+                Modification {
+                    initial_amount: 0,
+                    final_amount:   1000,
+                    index:          2,
+                    key:            field_element!(
+                        "03be0fef73793139380d0d5c27a33d6b1a67c29eb3bbe24e5635bc13b3439542"
+                    ),
+                    token:          field_element!(
+                        "03e7aa5d1a9b180d6a12d451d3ae6fb95e390f722280f1ea383bb49d11828d"
+                    ),
+                    vault:          3,
+                },
+                Modification {
+                    initial_amount: 0,
+                    final_amount:   1000,
+                    index:          3,
+                    key:            field_element!(
+                        "03f0f302fdf6ba1a4669ce4fc9bd2b4ba17bdc088ae32984f40c26e7006d2f9b"
+                    ),
+                    token:          field_element!(
+                        "03e7aa5d1a9b180d6a12d451d3ae6fb95e390f722280f1ea383bb49d11828d"
+                    ),
+                    vault:          4,
+                },
+            ],
+            initial_vaults_root: field_element!(
+                "00156823f988424670b3a750156e77068328aa496ff883106ccc78ff85ea1dc1"
+            ),
+            final_vaults_root:   field_element!(
+                "0181ae03ea55029827c08a70034df9861bc6c86689205155d966f28bf2cfb20a"
+            ),
+        };
+
+        let trace_length = claim.n_transactions * 65536;
+        let constraints = constraints(&claim, &parameters);
+        let trace_arguments: Vec<_> = constraints
+            .iter()
+            .map(RationalExpression::trace_arguments)
+            .fold(BTreeSet::new(), |x, y| &x | &y)
+            .into_iter()
+            .collect();
+        let trace_values: BTreeMap<(usize, isize), FieldElement> = trace_arguments
+            .into_iter()
+            .zip(vec![FieldElement::ONE; 127].into_iter())
+            .collect();
+        let trace = |i: usize, j: isize| trace_values.get(&(i, j)).unwrap().clone();
+
+        let mut coefficients = vec![FieldElement::ZERO; 2* 120];
+        for i in 0..10 {
+            coefficients[i] = FieldElement::ONE;
+        }
+
+        let system =
+            Constraints::from_expressions((trace_length, 10), vec![], constraints)
+                .unwrap();
+                let oods_point =
+                    field_element!("0342143aa4e0522de24cf42b3746e170dee7c72ad1459340483fed8524a80adb");
+        assert_eq!(
+            system.combine(&coefficients).evaluate(&oods_point, &trace),
+            FieldElement::ZERO
+        );
     }
 }
