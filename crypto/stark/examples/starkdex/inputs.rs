@@ -129,7 +129,8 @@ pub fn get_boundary_base(claim: &Claim, x: &FieldElement) -> FieldElement {
     let mut boundary_base = FieldElement::ZERO;
     let mut prod = FieldElement::ONE;
     for i in (0..claim.modifications.len()).rev() {
-        boundary_base += &prod * cumulative_products[i].clone();
+        let others_prod = &prod * &cumulative_products[i];
+        boundary_base += others_prod;
         prod *= &point_minus_x_values[i];
     }
     boundary_base
@@ -151,6 +152,29 @@ pub fn get_boundary_base_2(claim: &Claim, x: &FieldElement) -> FieldElement {
     });
 
     product * harmonic_sum
+}
+
+pub fn get_key(claim: &Claim, x: &FieldElement) -> FieldElement {
+    let root = FieldElement::root(claim.n_transactions).unwrap();
+
+    let keys = claim
+        .modifications
+        .iter()
+        .map(|modification| modification.key.clone());
+
+    let factors = claim
+        .modifications
+        .iter()
+        .map(|modification| x - root.pow(modification.index));
+
+    let product = factors
+        .clone()
+        .fold(FieldElement::ONE, |product, factor| &product * factor);
+    let weighted_sum = keys
+        .zip(factors)
+        .fold(FieldElement::ZERO, |sum, (key, factor)| &sum + key / factor);
+
+    product * weighted_sum
 }
 
 #[derive(PartialEq, Clone)]
@@ -558,6 +582,37 @@ mod tests {
         assert_eq!(
             get_boundary_base(&claim, &10.into()),
             get_boundary_base_2(&claim, &10.into())
+        );
+    }
+
+    #[test]
+    fn key() {
+        let claim = Claim {
+            n_transactions:      4,
+            modifications:       vec![
+                Modification {
+                    initial_amount: 0,
+                    final_amount:   0,
+                    index:          0,
+                    key:            1.into(),
+                    token:          FieldElement::ONE,
+                    vault:          123412,
+                },
+                Modification {
+                    initial_amount: 0,
+                    final_amount:   0,
+                    index:          3,
+                    key:            4.into(),
+                    token:          FieldElement::ONE,
+                    vault:          123412,
+                },
+            ],
+            initial_vaults_root: FieldElement::ZERO,
+            final_vaults_root:   FieldElement::ZERO,
+        };
+        assert_eq!(
+            get_key(&claim, &3.into()),
+            field_element!("0625023929a2995b533120664329f8c7c5268e56ac8320da2a616626f41337ee")
         );
     }
 
