@@ -286,11 +286,7 @@ impl Tree {
 mod tests {
     use super::*;
     use zkp_macros_decl::field_element;
-    use zkp_primefield::{
-        fft::{ifft_permuted, permute},
-        FieldElement,
-    };
-    use zkp_stark::DensePolynomial;
+    use zkp_primefield::FieldElement;
     use zkp_u256::U256;
 
     fn get_directions(index: u32) -> Vec<Direction> {
