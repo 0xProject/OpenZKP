@@ -135,6 +135,24 @@ pub fn get_boundary_base(claim: &Claim, x: &FieldElement) -> FieldElement {
     boundary_base
 }
 
+pub fn get_boundary_base_2(claim: &Claim, x: &FieldElement) -> FieldElement {
+    let root = FieldElement::root(claim.n_transactions).unwrap();
+
+    let factors = claim
+        .modifications
+        .iter()
+        .map(|modification| x - root.pow(modification.index));
+
+    let product = factors
+        .clone()
+        .fold(FieldElement::ONE, |product, factor| &product * factor);
+    let harmonic_sum = factors.fold(FieldElement::ZERO, |sum, factor| {
+        &sum + factor.inv().unwrap()
+    });
+
+    product * harmonic_sum
+}
+
 #[derive(PartialEq, Clone)]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct Tree {
@@ -443,6 +461,18 @@ mod tests {
             final_vaults_root:   FieldElement::ZERO,
         };
         assert_eq!(get_boundary_base(&claim, &FieldElement::ONE), 4.into());
+        assert_eq!(
+            get_boundary_base(&claim, &3.into()),
+            get_boundary_base_2(&claim, &3.into())
+        );
+        assert_eq!(
+            get_boundary_base(&claim, &5.into()),
+            get_boundary_base_2(&claim, &5.into())
+        );
+        assert_eq!(
+            get_boundary_base(&claim, &10.into()),
+            get_boundary_base_2(&claim, &10.into())
+        );
     }
 
     #[test]
@@ -470,7 +500,22 @@ mod tests {
             initial_vaults_root: FieldElement::ZERO,
             final_vaults_root:   FieldElement::ZERO,
         };
-        assert_eq!(get_boundary_base(&claim, &2.into()), field_element!("01dafdc6d65d66b5accedf99bcd607383ad971a9537cdf25d59e99d90becc821"));
+        assert_eq!(
+            get_boundary_base(&claim, &2.into()),
+            field_element!("01dafdc6d65d66b5accedf99bcd607383ad971a9537cdf25d59e99d90becc821")
+        );
+        assert_eq!(
+            get_boundary_base(&claim, &3.into()),
+            get_boundary_base_2(&claim, &3.into())
+        );
+        assert_eq!(
+            get_boundary_base(&claim, &5.into()),
+            get_boundary_base_2(&claim, &5.into())
+        );
+        assert_eq!(
+            get_boundary_base(&claim, &10.into()),
+            get_boundary_base_2(&claim, &10.into())
+        );
     }
 
     #[test]
@@ -498,9 +543,23 @@ mod tests {
             initial_vaults_root: FieldElement::ZERO,
             final_vaults_root:   FieldElement::ZERO,
         };
-        assert_eq!(get_boundary_base(&claim, &3.into()), field_element!("0625023929a2995b533120664329f8c7c5268e56ac8320da2a616626f41337e8"));
+        assert_eq!(
+            get_boundary_base(&claim, &3.into()),
+            field_element!("0625023929a2995b533120664329f8c7c5268e56ac8320da2a616626f41337e8")
+        );
+        assert_eq!(
+            get_boundary_base(&claim, &3.into()),
+            get_boundary_base_2(&claim, &3.into())
+        );
+        assert_eq!(
+            get_boundary_base(&claim, &5.into()),
+            get_boundary_base_2(&claim, &5.into())
+        );
+        assert_eq!(
+            get_boundary_base(&claim, &10.into()),
+            get_boundary_base_2(&claim, &10.into())
+        );
     }
-
 
     // 0 -> 0 4       24    15
     // 1 -> 4     28      39    51
