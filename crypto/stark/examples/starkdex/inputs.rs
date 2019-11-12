@@ -1,8 +1,8 @@
 use super::pedersen::hash;
 use std::{collections::BTreeMap, prelude::v1::*};
 use zkp_elliptic_curve::Affine;
-use zkp_hash::Hash;
 use zkp_primefield::FieldElement;
+use zkp_stark::RationalExpression;
 
 const VAULTS_DEPTH: usize = 31;
 
@@ -11,8 +11,8 @@ const VAULTS_DEPTH: usize = 31;
 pub struct Claim {
     pub n_transactions:      usize,
     pub modifications:       Vec<Modification>,
-    pub initial_vaults_root: Hash,
-    pub final_vaults_root:   Hash,
+    pub initial_vaults_root: FieldElement,
+    pub final_vaults_root:   FieldElement,
 }
 
 #[derive(PartialEq, Clone)]
@@ -49,12 +49,25 @@ pub struct Settlement {
 #[derive(PartialEq, Clone)]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct Modification {
-    initial_amount: u32,
-    final_amount:   u32,
-    index:          usize,
-    key:            FieldElement,
-    token:          FieldElement,
-    vault:          u32,
+    pub initial_amount: u32,
+    pub final_amount:   u32,
+    pub index:          usize,
+    pub key:            FieldElement,
+    pub token:          FieldElement,
+    pub vault:          u32,
+}
+
+#[derive(Clone)]
+#[cfg_attr(feature = "std", derive(Debug))]
+pub struct ClaimPolynomials {
+    pub is_settlement:   RationalExpression,
+    pub is_modification: RationalExpression,
+    pub base:            RationalExpression,
+    pub key:             RationalExpression,
+    pub token:           RationalExpression,
+    pub initial_amount:  RationalExpression,
+    pub final_amount:    RationalExpression,
+    pub vault:           RationalExpression,
 }
 
 #[derive(PartialEq, Clone)]
@@ -84,6 +97,57 @@ impl Direction {
         match self {
             Self::LEFT => Self::RIGHT,
             Self::RIGHT => Self::LEFT,
+        }
+    }
+}
+
+impl From<&Claim> for ClaimPolynomials {
+    fn from(claim: &Claim) -> Self {
+        use RationalExpression::*;
+
+        let root = Constant(FieldElement::root(claim.n_transactions).unwrap());
+        let mut is_modification = Constant(FieldElement::ONE);
+        for modification in &claim.modifications {
+            is_modification = is_modification * (X - root.pow(modification.index));
+        }
+        let is_settlement = (X.pow(claim.n_transactions) - 1.into()) / is_modification.clone();
+
+        let modifications_and_weights = claim.modifications.iter().map(|modification| {
+            (
+                modification.clone(),
+                (X - root.pow(modification.index)).inv(),
+            )
+        });
+
+        let gcd = modifications_and_weights
+            .clone()
+            .fold(Constant(1.into()), |product, (_modification, weight)| {
+                product * weight
+            })
+            .inv();
+
+        let get_weighted_field = |getter: &dyn Fn(&Modification) -> RationalExpression| {
+            gcd.clone()
+                * modifications_and_weights
+                    .clone()
+                    .fold(Constant(0.into()), |sum, (modification, weight)| {
+                        sum + getter(&modification) * weight
+                    })
+        };
+
+        ClaimPolynomials {
+            is_settlement,
+            is_modification,
+            base: get_weighted_field(&|_modification| 1.into()),
+            key: get_weighted_field(&|modification| Constant(modification.key.clone())),
+            token: get_weighted_field(&|modification| Constant(modification.token.clone())),
+            initial_amount: get_weighted_field(&|modification| {
+                Constant(modification.initial_amount.into())
+            }),
+            final_amount: get_weighted_field(&|modification| {
+                Constant(modification.final_amount.into())
+            }),
+            vault: get_weighted_field(&|modification| Constant(modification.vault.into())),
         }
     }
 }
@@ -221,7 +285,6 @@ impl Tree {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use quickcheck_macros::quickcheck;
     use zkp_macros_decl::field_element;
     use zkp_primefield::FieldElement;
     use zkp_u256::U256;
@@ -298,51 +361,118 @@ mod tests {
     }
 
     #[test]
-    fn hash_test() {
-        let x = field_element!("05d702904f10e78036abca2229077576488062ef2a9b44eb16b9e12a07932764");
+    fn test_claim_polynomials() {
+        let claim = Claim {
+            n_transactions:      4,
+            modifications:       vec![
+                Modification {
+                    initial_amount: 0,
+                    final_amount:   1000,
+                    index:          0,
+                    key:            field_element!(
+                        "057d5d2e5da7409db60d64ae4e79443fedfd5eb925b5e54523eaf42cc1978169"
+                    ),
+                    token:          field_element!(
+                        "03e7aa5d1a9b180d6a12d451d3ae6fb95e390f722280f1ea383bb49d11828d"
+                    ),
+                    vault:          1,
+                },
+                Modification {
+                    initial_amount: 0,
+                    final_amount:   1000,
+                    index:          1,
+                    key:            field_element!(
+                        "024dca9f8032c9c8d1a2aae85b49df5dded9bb8da46d32284e339f5a9b30e820"
+                    ),
+                    token:          field_element!(
+                        "03e7aa5d1a9b180d6a12d451d3ae6fb95e390f722280f1ea383bb49d11828d"
+                    ),
+                    vault:          2,
+                },
+                Modification {
+                    initial_amount: 0,
+                    final_amount:   1000,
+                    index:          2,
+                    key:            field_element!(
+                        "03be0fef73793139380d0d5c27a33d6b1a67c29eb3bbe24e5635bc13b3439542"
+                    ),
+                    token:          field_element!(
+                        "03e7aa5d1a9b180d6a12d451d3ae6fb95e390f722280f1ea383bb49d11828d"
+                    ),
+                    vault:          3,
+                },
+                Modification {
+                    initial_amount: 0,
+                    final_amount:   1000,
+                    index:          3,
+                    key:            field_element!(
+                        "03f0f302fdf6ba1a4669ce4fc9bd2b4ba17bdc088ae32984f40c26e7006d2f9b"
+                    ),
+                    token:          field_element!(
+                        "03e7aa5d1a9b180d6a12d451d3ae6fb95e390f722280f1ea383bb49d11828d"
+                    ),
+                    vault:          4,
+                },
+            ],
+            initial_vaults_root: field_element!(
+                "00156823f988424670b3a750156e77068328aa496ff883106ccc78ff85ea1dc1"
+            ),
+            final_vaults_root:   field_element!(
+                "0181ae03ea55029827c08a70034df9861bc6c86689205155d966f28bf2cfb20a"
+            ),
+        };
+
+        let claim_polynomials = ClaimPolynomials::from(&claim);
+        let oods_point =
+            field_element!("0342143aa4e0522de24cf42b3746e170dee7c72ad1459340483fed8524a80adb");
+
         assert_eq!(
-            hash(&x, &x),
-            field_element!("04eb5413fc27c3950f8e9d3bd9ba325b6fcc144f6f484e10ebb6b6fda9b642a9")
+            claim_polynomials
+                .is_modification
+                .evaluate(&oods_point, &|_, _| FieldElement::ZERO),
+            field_element!("039ac85199efa890dd0f93be37fa97426d949638b5bb7e7a0e74252bbad9dcb6")
         );
-    }
-
-    #[test]
-    fn test_is_settlement_0() {
-        let oods_point =
-            field_element!("0342143aa4e0522de24cf42b3746e170dee7c72ad1459340483fed8524a80adb");
-        let x = field_element!("039ac85199efa890dd0f93be37fa97426d949638b5bb7e7a0e74252bbad9dcb6");
-        assert_eq!(x, oods_point.pow(4) - FieldElement::ONE);
-    }
-
-    #[test]
-    fn test_is_settlement_1() {
-        // get these values from using three modifications and n_transcations = 3.
-        // we round n_tractions up to the next power of two.
-        let oods_point =
-            field_element!("0342143aa4e0522de24cf42b3746e170dee7c72ad1459340483fed8524a80adb");
-
-        let is_settlement_oods =
-            field_element!("01671673ce82eb78357e14917a70da38a40e55817dc8b41a72a153ac18bb42bd");
-        let is_modification_oods =
-            field_element!("03c544b737bf7258e9601c1315ee8ec9759cdf34a4862b80cf94bfa8fc531e1e");
         assert_eq!(
-            is_settlement_oods * is_modification_oods,
-            oods_point.pow(4) - FieldElement::ONE
+            claim_polynomials
+                .is_settlement
+                .evaluate(&oods_point, &|_, _| FieldElement::ZERO),
+            FieldElement::ONE
         );
-    }
-
-    #[test]
-    fn test_is_settlement_2() {
-        let oods_point =
-            field_element!("0342143aa4e0522de24cf42b3746e170dee7c72ad1459340483fed8524a80adb");
-        let is_settlement_oods =
-            field_element!("01671673ce82eb78357e14917a70da38a40e55817dc8b41a72a153ac18bb42bd");
-        let is_modification_oods =
-            field_element!("03c544b737bf7258e9601c1315ee8ec9759cdf34a4862b80cf94bfa8fc531e1e");
-
         assert_eq!(
-            is_settlement_oods * is_modification_oods,
-            oods_point.pow(4) - FieldElement::ONE
+            claim_polynomials
+                .base
+                .evaluate(&oods_point, &|_, _| FieldElement::ZERO),
+            field_element!("02b6835713475a8483f0a8a2db5ff732c40f774a37ff51af3b4b8a7f2dd36c78")
+        );
+        assert_eq!(
+            claim_polynomials
+                .key
+                .evaluate(&oods_point, &|_, _| FieldElement::ZERO),
+            field_element!("07116091279aaca9bd5ba2cbf348d5965babde6eddf84ba27fe7075f86fe939e")
+        );
+        assert_eq!(
+            claim_polynomials
+                .token
+                .evaluate(&oods_point, &|_, _| FieldElement::ZERO),
+            field_element!("030953503ac2a75aa07fe5635f3eeb53deb9f239cd0821ae239dc68169083d4d")
+        );
+        assert_eq!(
+            claim_polynomials
+                .initial_amount
+                .evaluate(&oods_point, &|_, _| FieldElement::ZERO),
+            FieldElement::ZERO,
+        );
+        assert_eq!(
+            claim_polynomials
+                .final_amount
+                .evaluate(&oods_point, &|_, _| FieldElement::ZERO),
+            field_element!("00f10c234eb97f206412bc28eedd9e4ddc69f9eabd57147f9f1500cb01dfb36d")
+        );
+        assert_eq!(
+            claim_polynomials
+                .vault
+                .evaluate(&oods_point, &|_, _| FieldElement::ZERO),
+            field_element!("04379eb23f17a18ebd075ed4ac1a402252a7897b9b12c85fe4d424a6c5bd34b4")
         );
     }
 }
