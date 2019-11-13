@@ -63,7 +63,7 @@ fn constraints(claim: &Claim, parameters: &Parameters) -> Vec<RationalExpression
     let column0_row_expr0 = Trace(0, 1000000 - 3); // 0x2240
     let column0_row_expr2 = Trace(0, 1000000 - 2); // 0x2260
     let column4_row_expr1 = Trace(4, 1000000 - 1); // 0x2460
-    let column4_row_expr0 = Trace(4, 1000000 - 3); // 0x2480
+    let column4_row_expr0 = Trace(4, 1000000 + 3); // 0x2480
 
     let claim_polynomials = ClaimPolynomials::from(claim);
     let is_settlement = claim_polynomials.is_settlement.clone();
@@ -293,7 +293,7 @@ mod tests {
             signature:        SignatureParameters {
                 shift_point: SHIFT_POINT,
                 alpha:       FieldElement::ONE,
-                beta:        FieldElement::ZERO,
+                beta:        field_element!("06f21413efbe40de150e596d72f7a8c5609ad26c15c915c1f4cdfcb99cee9e89"),
             },
             hash_shift_point: SHIFT_POINT,
             n_vaults:         30,
@@ -374,7 +374,7 @@ mod tests {
         let trace = |i: usize, j: isize| trace_values.get(&(i, j)).unwrap().clone();
 
         let mut coefficients = vec![FieldElement::ZERO; 2 * 120];
-        for i in 0..60 {
+        for i in 0..80 {
             coefficients[i] = FieldElement::ONE;
         }
 
