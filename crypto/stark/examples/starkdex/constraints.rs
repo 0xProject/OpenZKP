@@ -63,8 +63,8 @@ fn constraints(claim: &Claim, parameters: &Parameters) -> Vec<RationalExpression
     let column4_row_expr0 = Trace(4, 1000000 + 3); // 0x2480
 
     let claim_polynomials = ClaimPolynomials::from(claim);
-    let is_settlement = claim_polynomials.is_settlement.clone();
-    let is_modification = claim_polynomials.is_modification.clone();
+    let is_modification = claim_polynomials.is_settlement.clone();
+    let is_settlement = claim_polynomials.is_modification.clone();
     let boundary_base = claim_polynomials.base.clone();
     let boundary_key = claim_polynomials.key.clone();
     let boundary_token = claim_polynomials.token.clone();
@@ -356,7 +356,7 @@ mod tests {
         let trace = |i: usize, j: isize| trace_values.get(&(i, j)).unwrap().clone();
 
         let mut coefficients = vec![FieldElement::ZERO; 2 * 120];
-        for i in 0..92 {
+        for i in 0..93 {
             coefficients[i] = FieldElement::ONE;
         }
 
