@@ -5,7 +5,7 @@ use super::{
 use zkp_elliptic_curve::Affine;
 use zkp_macros_decl::field_element;
 use zkp_primefield::FieldElement;
-use zkp_stark::{Constraints, DensePolynomial, RationalExpression};
+use zkp_stark::{DensePolynomial, RationalExpression};
 use zkp_u256::U256;
 
 fn get_coordinates(p: &Affine) -> (RationalExpression, RationalExpression) {
@@ -56,10 +56,10 @@ fn constraints(claim: &Claim, parameters: &Parameters) -> Vec<RationalExpression
         field_element!("05f9a0057058edbb6c48c9cb7c3726efaabafec5fda2c207c2977694c8e99a7a")
     );
 
-    let column0_row_expr0 = Trace(0, 1000000 - 3); // 0x2240
-    let column0_row_expr2 = Trace(0, 1000000 - 2); // 0x2260
-    let column4_row_expr1 = Trace(4, 1000000 - 1); // 0x2460
-    let column4_row_expr0 = Trace(4, 1000000 + 3); // 0x2480
+    let column0_row_expr0 = Trace(0, 1_000_000 - 3); // 0x2240
+    let column0_row_expr2 = Trace(0, 1_000_000 - 2); // 0x2260
+    let column4_row_expr1 = Trace(4, 1_000_000 - 1); // 0x2460
+    let column4_row_expr0 = Trace(4, 1_000_000 + 3); // 0x2480
 
     let claim_polynomials = ClaimPolynomials::from(claim);
     let is_modification = claim_polynomials.is_settlement.clone();
