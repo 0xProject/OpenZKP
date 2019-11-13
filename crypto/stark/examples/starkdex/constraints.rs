@@ -25,7 +25,6 @@ fn get_coordinates(p: &Affine) -> (RationalExpression, RationalExpression) {
 #[allow(dead_code)]
 fn constraints(claim: &Claim, parameters: &Parameters) -> Vec<RationalExpression> {
     use RationalExpression::*;
-
     assert!(claim.n_transactions.is_power_of_two());
     let trace_length = 65536 * claim.n_transactions;
     let trace_generator = Constant(FieldElement::root(trace_length).expect("trace_length not power of 2."));
@@ -57,8 +56,6 @@ fn constraints(claim: &Claim, parameters: &Parameters) -> Vec<RationalExpression
             .evaluate(&oods_point, &|_, _| FieldElement::ZERO),
         field_element!("05f9a0057058edbb6c48c9cb7c3726efaabafec5fda2c207c2977694c8e99a7a")
     );
-
-
 
     let column0_row_expr0 = Trace(0, 1000000 - 3); // 0x2240
     let column0_row_expr2 = Trace(0, 1000000 - 2); // 0x2260
@@ -100,21 +97,6 @@ fn constraints(claim: &Claim, parameters: &Parameters) -> Vec<RationalExpression
     let sig_verify_exponentiate_generator_bit_neg = Constant(1.into()) - sig_verify_exponentiate_generator_bit.clone();
     let sig_verify_exponentiate_key_bit = Trace(9, 24) - (Trace(9, 88) + Trace(9, 88));
     let sig_verify_exponentiate_key_bit_neg = Constant(1.into()) - sig_verify_exponentiate_key_bit.clone();
-
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-
     vec![
     (hash_pool_hash_ec_subset_sum_bit.clone() * (hash_pool_hash_ec_subset_sum_bit.clone() - 1.into())) * (X.pow(trace_length / 1024) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 4) - 1.into()), // hash_pool/hash/ec_subset_sum/booleanity_test
     (Trace(8, 3)) / (X.pow(trace_length / 1024) - trace_generator.pow(251 * trace_length / 256)), // hash_pool/hash/ec_subset_sum/bit_extraction_end
@@ -374,7 +356,7 @@ mod tests {
         let trace = |i: usize, j: isize| trace_values.get(&(i, j)).unwrap().clone();
 
         let mut coefficients = vec![FieldElement::ZERO; 2 * 120];
-        for i in 0..90 {
+        for i in 0..92 {
             coefficients[i] = FieldElement::ONE;
         }
 
