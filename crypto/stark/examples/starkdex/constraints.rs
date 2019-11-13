@@ -210,13 +210,15 @@ fn constraints(claim: &Claim, parameters: &Parameters) -> Vec<RationalExpression
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{inputs::SignatureParameters, pedersen_points::SHIFT_POINT};
-    use crate::inputs::Modification;
-    use zkp_stark::Constraints;
-    use std::collections::BTreeSet;
-    use std::collections::BTreeMap;
+    use crate::{
+        inputs::{Modification, SignatureParameters},
+        oods_values::OODS_VALUES,
+        pedersen_points::SHIFT_POINT,
+    };
+    use std::collections::{BTreeMap, BTreeSet};
     use zkp_macros_decl::field_element;
     use zkp_primefield::FieldElement;
+    use zkp_stark::Constraints;
     use zkp_u256::U256;
 
     #[test]
@@ -335,20 +337,19 @@ mod tests {
             .collect();
         let trace_values: BTreeMap<(usize, isize), FieldElement> = trace_arguments
             .into_iter()
-            .zip(vec![FieldElement::ONE; 127].into_iter())
+            .zip(OODS_VALUES.to_vec().into_iter())
             .collect();
         let trace = |i: usize, j: isize| trace_values.get(&(i, j)).unwrap().clone();
 
-        let mut coefficients = vec![FieldElement::ZERO; 2* 120];
-        for i in 0..10 {
+        let mut coefficients = vec![FieldElement::ZERO; 2 * 120];
+        for i in 0..5 {
             coefficients[i] = FieldElement::ONE;
         }
 
         let system =
-            Constraints::from_expressions((trace_length, 10), vec![], constraints)
-                .unwrap();
-                let oods_point =
-                    field_element!("0342143aa4e0522de24cf42b3746e170dee7c72ad1459340483fed8524a80adb");
+            Constraints::from_expressions((trace_length, 10), vec![], constraints).unwrap();
+        let oods_point =
+            field_element!("0342143aa4e0522de24cf42b3746e170dee7c72ad1459340483fed8524a80adb");
         assert_eq!(
             system.combine(&coefficients).evaluate(&oods_point, &trace),
             FieldElement::ZERO
