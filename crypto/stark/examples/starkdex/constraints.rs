@@ -5,6 +5,9 @@ use super::{
 use zkp_elliptic_curve::Affine;
 use zkp_primefield::FieldElement;
 use zkp_stark::{DensePolynomial, RationalExpression};
+use zkp_macros_decl::field_element;
+use zkp_stark::Constraints;
+use zkp_u256::U256;
 
 fn get_coordinates(p: &Affine) -> (RationalExpression, RationalExpression) {
     match p {
@@ -28,8 +31,8 @@ fn constraints(claim: &Claim, parameters: &Parameters) -> Vec<RationalExpression
     let trace_generator = Constant(FieldElement::root(trace_length).expect("trace_length not power of 2."));
     let path_length = 31; // Depth of vaults merkle tree.
 
-    let ecdsa_points_x = Polynomial(DensePolynomial::new(&ECDSA_POINTS_X), Box::new(X.pow(20)));
-    let ecdsa_points_y = Polynomial(DensePolynomial::new(&ECDSA_POINTS_Y), Box::new(X.pow(20)));
+    let ecdsa_points_x = Polynomial(DensePolynomial::new(&ECDSA_POINTS_X), Box::new(X.pow(trace_length / 256 / 128)));
+    let ecdsa_points_y = Polynomial(DensePolynomial::new(&ECDSA_POINTS_Y), Box::new(X.pow(trace_length / 256 / 128)));
 
     let alpha = Constant(parameters.signature.alpha.clone());
     let beta = Constant(parameters.signature.beta.clone());
@@ -42,10 +45,25 @@ fn constraints(claim: &Claim, parameters: &Parameters) -> Vec<RationalExpression
     let hash_pool_points_x = Polynomial(DensePolynomial::new(&PEDERSEN_POINTS_X), Box::new(X.pow(trace_length / (512 * 4))));
     let hash_pool_points_y = Polynomial(DensePolynomial::new(&PEDERSEN_POINTS_Y), Box::new(X.pow(trace_length / (512 * 4))));
 
-    let column0_row_expr0 = Trace(0, -3); // 0x2240
-    let column0_row_expr2 = Trace(0, -2); // 0x2260
-    let column4_row_expr1 = Trace(4, -1); // 0x2460
-    let column4_row_expr0 = Trace(4, -3); // 0x2480
+    let oods_point =
+        field_element!("0342143aa4e0522de24cf42b3746e170dee7c72ad1459340483fed8524a80adb");
+    assert_eq!(
+        hash_pool_points_x
+            .evaluate(&oods_point, &|_, _| FieldElement::ZERO),
+        field_element!("00023a5a1ae50e344c8015b0469f1538aea5903315d14c5bde80f374d821826c")
+    );
+    assert_eq!(
+        merkle_hash_points_x
+            .evaluate(&oods_point, &|_, _| FieldElement::ZERO),
+        field_element!("05f9a0057058edbb6c48c9cb7c3726efaabafec5fda2c207c2977694c8e99a7a")
+    );
+
+
+
+    let column0_row_expr0 = Trace(0, 1000000 - 3); // 0x2240
+    let column0_row_expr2 = Trace(0, 1000000 - 2); // 0x2260
+    let column4_row_expr1 = Trace(4, 1000000 - 1); // 0x2460
+    let column4_row_expr0 = Trace(4, 1000000 - 3); // 0x2480
 
     let claim_polynomials = ClaimPolynomials::from(claim);
     let is_settlement = claim_polynomials.is_settlement.clone();
@@ -82,6 +100,20 @@ fn constraints(claim: &Claim, parameters: &Parameters) -> Vec<RationalExpression
     let sig_verify_exponentiate_generator_bit_neg = Constant(1.into()) - sig_verify_exponentiate_generator_bit.clone();
     let sig_verify_exponentiate_key_bit = Trace(9, 24) - (Trace(9, 88) + Trace(9, 88));
     let sig_verify_exponentiate_key_bit_neg = Constant(1.into()) - sig_verify_exponentiate_key_bit.clone();
+
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
 
     vec![
     (hash_pool_hash_ec_subset_sum_bit.clone() * (hash_pool_hash_ec_subset_sum_bit.clone() - 1.into())) * (X.pow(trace_length / 1024) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 4) - 1.into()), // hash_pool/hash/ec_subset_sum/booleanity_test
@@ -342,7 +374,7 @@ mod tests {
         let trace = |i: usize, j: isize| trace_values.get(&(i, j)).unwrap().clone();
 
         let mut coefficients = vec![FieldElement::ZERO; 2 * 120];
-        for i in 0..36 {
+        for i in 0..60 {
             coefficients[i] = FieldElement::ONE;
         }
 
