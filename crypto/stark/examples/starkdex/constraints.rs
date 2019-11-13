@@ -374,7 +374,7 @@ mod tests {
         let trace = |i: usize, j: isize| trace_values.get(&(i, j)).unwrap().clone();
 
         let mut coefficients = vec![FieldElement::ZERO; 2 * 120];
-        for i in 0..80 {
+        for i in 0..90 {
             coefficients[i] = FieldElement::ONE;
         }
 
