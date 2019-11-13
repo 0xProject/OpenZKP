@@ -3,10 +3,9 @@ use super::{
     periodic_columns::{ECDSA_POINTS_X, ECDSA_POINTS_Y, PEDERSEN_POINTS_X, PEDERSEN_POINTS_Y},
 };
 use zkp_elliptic_curve::Affine;
-use zkp_primefield::FieldElement;
-use zkp_stark::{DensePolynomial, RationalExpression};
 use zkp_macros_decl::field_element;
-use zkp_stark::Constraints;
+use zkp_primefield::FieldElement;
+use zkp_stark::{Constraints, DensePolynomial, RationalExpression};
 use zkp_u256::U256;
 
 fn get_coordinates(p: &Affine) -> (RationalExpression, RationalExpression) {
@@ -275,7 +274,9 @@ mod tests {
             signature:        SignatureParameters {
                 shift_point: SHIFT_POINT,
                 alpha:       FieldElement::ONE,
-                beta:        field_element!("06f21413efbe40de150e596d72f7a8c5609ad26c15c915c1f4cdfcb99cee9e89"),
+                beta:        field_element!(
+                    "06f21413efbe40de150e596d72f7a8c5609ad26c15c915c1f4cdfcb99cee9e89"
+                ),
             },
             hash_shift_point: SHIFT_POINT,
             n_vaults:         30,
