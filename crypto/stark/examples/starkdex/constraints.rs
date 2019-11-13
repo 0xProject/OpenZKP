@@ -35,12 +35,12 @@ fn constraints(claim: &Claim, parameters: &Parameters) -> Vec<RationalExpression
     let beta = Constant(parameters.signature.beta.clone());
     let (signature_shift_x, signature_shift_y) = get_coordinates(&parameters.signature.shift_point);
 
-    let merkle_hash_points_x = Polynomial(DensePolynomial::new(&PEDERSEN_POINTS_X), Box::new(X.pow(20)));
-    let merkle_hash_points_y = Polynomial(DensePolynomial::new(&PEDERSEN_POINTS_Y), Box::new(X.pow(20)));
+    let merkle_hash_points_x = Polynomial(DensePolynomial::new(&PEDERSEN_POINTS_X), Box::new(X.pow(trace_length / 512)));
+    let merkle_hash_points_y = Polynomial(DensePolynomial::new(&PEDERSEN_POINTS_Y), Box::new(X.pow(trace_length / 512)));
     let (hash_shift_x, hash_shift_y) = get_coordinates(&parameters.hash_shift_point);
 
-    let hash_pool_points_x = Polynomial(DensePolynomial::new(&PEDERSEN_POINTS_X), Box::new(X.pow(20)));
-    let hash_pool_points_y = Polynomial(DensePolynomial::new(&PEDERSEN_POINTS_Y), Box::new(X.pow(20)));
+    let hash_pool_points_x = Polynomial(DensePolynomial::new(&PEDERSEN_POINTS_X), Box::new(X.pow(trace_length / (512 * 4))));
+    let hash_pool_points_y = Polynomial(DensePolynomial::new(&PEDERSEN_POINTS_Y), Box::new(X.pow(trace_length / (512 * 4))));
 
     let column0_row_expr0 = Trace(0, -3); // 0x2240
     let column0_row_expr2 = Trace(0, -2); // 0x2260
@@ -342,7 +342,7 @@ mod tests {
         let trace = |i: usize, j: isize| trace_values.get(&(i, j)).unwrap().clone();
 
         let mut coefficients = vec![FieldElement::ZERO; 2 * 120];
-        for i in 0..5 {
+        for i in 0..8 {
             coefficients[i] = FieldElement::ONE;
         }
 
