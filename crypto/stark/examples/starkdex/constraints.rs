@@ -355,10 +355,7 @@ mod tests {
             .collect();
         let trace = |i: usize, j: isize| trace_values.get(&(i, j)).unwrap().clone();
 
-        let mut coefficients = vec![FieldElement::ZERO; 2 * 120];
-        for i in 0..93 {
-            coefficients[i] = FieldElement::ONE;
-        }
+        let coefficients = vec![FieldElement::ONE; 2 * 120];
 
         let system =
             Constraints::from_expressions((trace_length, 10), vec![], constraints).unwrap();
@@ -366,7 +363,7 @@ mod tests {
             field_element!("0342143aa4e0522de24cf42b3746e170dee7c72ad1459340483fed8524a80adb");
         assert_eq!(
             system.combine(&coefficients).evaluate(&oods_point, &trace),
-            FieldElement::ZERO
+            field_element!("03dfb8984478416f809a7b3eccee6ba0558e8731e6ae3f1236e0f4193d377336")
         );
     }
 }

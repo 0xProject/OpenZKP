@@ -102,7 +102,7 @@ impl RationalExpression {
     ///
     /// Calculates an upper bound. Cancelations may occur.
     // Note: We can have trace polynomials of different degree here if we want.
-    pub fn degree(&self, trace_degree: usize) -> (usize, usize) {
+        pub fn degree(&self, trace_degree: usize) -> (usize, usize) {
         self.degree_impl(1, trace_degree)
     }
 
@@ -146,7 +146,7 @@ impl RationalExpression {
         }
     }
 
-    // Note - This function is incomplete in it's treatment of rational expressions
+    // Note - This function is incomplete in its treatment of rational expressions
     // and may not produce the right answer when used with nested expressions
     // containing inverses
     pub fn check(
