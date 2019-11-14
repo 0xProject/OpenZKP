@@ -109,7 +109,7 @@ pub fn constraints(claim: &Claim, parameters: &Parameters) -> Vec<RationalExpres
     (Trace(8, 1026) - Trace(8, 1022)) * (X.pow(trace_length / 2048) - trace_generator.pow(trace_length / 2)) / (X.pow(trace_length / 1024) - 1.into()), // hash_pool/hash/copy_point/y
     (Trace(8, 0) - hash_shift_x.clone()) / (X.pow(trace_length / 2048) - 1.into()), // hash_pool/hash/init/x
     (Trace(8, 2) - hash_shift_y.clone()) / (X.pow(trace_length / 2048) - 1.into()), // hash_pool/hash/init/y
-    // (Trace(8, 2044) - Trace(8, 2051)) / (X.pow(trace_length / 4096) - 1.into()), // hash_pool/output_to_input
+    (Trace(8, 2044) - Trace(8, 2051)) / (X.pow(trace_length / 4096) - 1.into()), // hash_pool/output_to_input
     // (state_transition_merkle_update_side_bit_extraction_bit_0.clone() * state_transition_merkle_update_side_bit_extraction_bit_0.clone() - state_transition_merkle_update_side_bit_extraction_bit_0.clone()) * (X.pow(trace_length / 16384) - trace_generator.pow(31 * trace_length / 32)) / (X.pow(trace_length / 512) - 1.into()), // state_transition/merkle_update/side_bit_extraction/bit
     // (Trace(6, 255)) / (X.pow(trace_length / 16384) - trace_generator.pow(path_length * trace_length / 32)), // state_transition/merkle_update/side_bit_extraction/zero
     // (state_transition_merkle_update_prev_authentication_hashes_ec_subset_sum_bit.clone() * (state_transition_merkle_update_prev_authentication_hashes_ec_subset_sum_bit.clone() - 1.into())) * (X.pow(trace_length / 256) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length) - 1.into()), // state_transition/merkle_update/prev_authentication/hashes/ec_subset_sum/booleanity_test

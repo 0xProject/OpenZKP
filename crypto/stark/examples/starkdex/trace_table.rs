@@ -125,14 +125,24 @@ mod tests {
         let mut trace_table = TraceTable::new(trace_length, 10);
         let mut hash_pool_accumulator = SHIFT_POINT.clone();
 
-        for hash_pool_index in 0..trace_length / 2048 {
+        for hash_pool_index in 0..trace_length / 4096 {
             let (sources, xs, ys, slopes) = get_pedersen_hash_columns(&7.into(), &FieldElement::ONE);
 
             for (i, (source, x, y, slope)) in izip!(&sources, &xs, &ys, &slopes).enumerate() {
-                trace_table[(2048 * hash_pool_index + 4 * i + 3, 8)] = source.clone();
-                trace_table[(2048 * hash_pool_index + 4 * i + 0, 8)] = x.clone();
-                trace_table[(2048 * hash_pool_index + 4 * i + 2, 8)] = y.clone();
-                trace_table[(2048 * hash_pool_index + 4 * i + 1, 8)] = slope.clone();
+                trace_table[(4096 * hash_pool_index + 4 * i + 3, 8)] = source.clone();
+                trace_table[(4096 * hash_pool_index + 4 * i + 0, 8)] = x.clone();
+                trace_table[(4096 * hash_pool_index + 4 * i + 2, 8)] = y.clone();
+                trace_table[(4096 * hash_pool_index + 4 * i + 1, 8)] = slope.clone();
+            }
+
+            let (sources, xs, ys, slopes) = get_pedersen_hash_columns(&xs[512], &FieldElement::ONE);
+
+            for (i, (source, x, y, slope)) in izip!(&sources, &xs, &ys, &slopes).enumerate() {
+                let i = i + 512;
+                trace_table[(4096 * hash_pool_index + 4 * i + 3, 8)] = source.clone();
+                trace_table[(4096 * hash_pool_index + 4 * i + 0, 8)] = x.clone();
+                trace_table[(4096 * hash_pool_index + 4 * i + 2, 8)] = y.clone();
+                trace_table[(4096 * hash_pool_index + 4 * i + 1, 8)] = slope.clone();
             }
         }
 
