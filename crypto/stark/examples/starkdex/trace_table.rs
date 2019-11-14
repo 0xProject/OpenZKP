@@ -127,7 +127,6 @@ mod tests {
 
         for hash_pool_index in 0..trace_length / 4096 {
             let (sources, xs, ys, slopes) = get_pedersen_hash_columns(&7.into(), &FieldElement::ONE);
-
             for (i, (source, x, y, slope)) in izip!(&sources, &xs, &ys, &slopes).enumerate() {
                 trace_table[(4096 * hash_pool_index + 4 * i + 3, 8)] = source.clone();
                 trace_table[(4096 * hash_pool_index + 4 * i + 0, 8)] = x.clone();
@@ -136,7 +135,6 @@ mod tests {
             }
 
             let (sources, xs, ys, slopes) = get_pedersen_hash_columns(&xs[512], &FieldElement::ONE);
-
             for (i, (source, x, y, slope)) in izip!(&sources, &xs, &ys, &slopes).enumerate() {
                 let i = i + 512;
                 trace_table[(4096 * hash_pool_index + 4 * i + 3, 8)] = source.clone();
