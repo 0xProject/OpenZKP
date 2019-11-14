@@ -144,6 +144,16 @@ mod tests {
             }
         }
 
+        for opening_hash_index in 0..trace_length / 512 {
+            let (sources, xs, ys, slopes) = get_pedersen_hash_columns(&7.into(), &FieldElement::ONE);
+            for (i, (source, x, y, slope)) in izip!(&sources, &xs, &ys, &slopes).enumerate() {
+                trace_table[(512 * opening_hash_index + i, 3)] = source.clone();
+                trace_table[(512 * opening_hash_index + i, 0)] = x.clone();
+                trace_table[(512 * opening_hash_index + i, 1)] = y.clone();
+                trace_table[(512 * opening_hash_index + i, 2)] = slope.clone();
+            }
+        }
+
 
 
         let result = check_constraints(&system, &trace_table);
