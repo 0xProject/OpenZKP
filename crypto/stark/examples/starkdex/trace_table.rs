@@ -1,138 +1,97 @@
-use super::{
-    inputs::{Claim, Witness},
-    pedersen_points::{PEDERSEN_POINTS, SHIFT_POINT},
-};
-use std::prelude::v1::*;
-use zkp_elliptic_curve::Affine;
-use zkp_primefield::FieldElement;
-use zkp_stark::TraceTable;
-use zkp_u256::U256;
-
-// TODO: Naming
-#[allow(clippy::module_name_repetitions)]
-pub fn get_trace_table(claim: &Claim, witness: &Witness) -> TraceTable {
-    let mut trace = TraceTable::new(1, 10);
-
-    let mut row: Row = Row::default();
-    row.right.point = Affine::Point {
-        x: claim.leaf.clone(),
-        y: FieldElement::ZERO,
-    };
-
-    for path_index in 0..claim.path_length {
-        for bit_index in 0..256 {
-            if bit_index % 256 == 0 {
-                let other_hash = U256::from(&witness.path[path_index]);
-                let (x, _) = get_coordinates(&row.right.point);
-                if witness.directions[path_index] {
-                    row = initialize_hash(other_hash, U256::from(x));
-                } else {
-                    row = initialize_hash(U256::from(x), other_hash);
-                }
-            } else {
-                row = hash_next_bit(&row, bit_index);
-            }
-            let row_index = path_index * 256 + bit_index;
-
-            let (left_x, left_y) = get_coordinates(&row.left.point);
-            trace[(row_index, 0)] = FieldElement::from(row.left.source.clone());
-            trace[(row_index, 1)] = row.left.slope.clone();
-            trace[(row_index, 2)] = left_x.clone();
-            trace[(row_index, 3)] = left_y.clone();
-
-            let (right_x, right_y) = get_coordinates(&row.right.point);
-            trace[(row_index, 4)] = FieldElement::from(row.right.source.clone());
-            trace[(row_index, 5)] = row.right.slope.clone();
-            trace[(row_index, 6)] = right_x.clone();
-            trace[(row_index, 7)] = right_y.clone();
-        }
-    }
-    trace
-}
-
-fn initialize_hash(left_source: U256, right_source: U256) -> Row {
-    let mut row: Row = Row::default();
-    row.left.source = left_source;
-    row.right.source = right_source;
-    row.right.point = SHIFT_POINT;
-    row
-}
-
-fn hash_next_bit(row: &Row, bit_index: usize) -> Row {
-    let mut next_row = Row {
-        left:  Subrow {
-            source: row.left.source.clone() >> 1,
-            point: row.right.point.clone(),
-            ..Subrow::default()
-        },
-        right: Subrow {
-            source: row.right.source.clone() >> 1,
-            ..Subrow::default()
-        },
-    };
-    if row.left.source.bit(0) {
-        let p = &PEDERSEN_POINTS[bit_index];
-        next_row.left.slope = get_slope(&next_row.left.point, &p);
-        next_row.left.point += p;
-    }
-
-    next_row.right.point = next_row.left.point.clone();
-    if row.right.source.bit(0) {
-        let p = &PEDERSEN_POINTS[bit_index + 252];
-        next_row.right.slope = get_slope(&next_row.right.point, &p);
-        next_row.right.point += p;
-    }
-    next_row
-}
-
-#[derive(Default)]
-struct Row {
-    left:  Subrow,
-    right: Subrow,
-}
-
-struct Subrow {
-    source: U256,
-    slope:  FieldElement,
-    point:  Affine,
-}
-
-impl Default for Subrow {
-    fn default() -> Self {
-        Self {
-            source: U256::ZERO,
-            slope:  FieldElement::ZERO,
-            point:  Affine::Point {
-                x: FieldElement::ZERO,
-                y: FieldElement::ZERO,
-            },
-        }
-    }
-}
-
-fn get_slope(p_1: &Affine, p_2: &Affine) -> FieldElement {
-    let (x_1, y_1) = get_coordinates(p_1);
-    let (x_2, y_2) = get_coordinates(p_2);
-    (y_1 - y_2) / (x_1 - x_2)
-}
-
-fn get_coordinates(p: &Affine) -> (&FieldElement, &FieldElement) {
-    match p {
-        Affine::Zero => panic!(),
-        Affine::Point { x, y } => (x, y),
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use super::{
-        super::inputs::{short_witness, SHORT_CLAIM},
-        *,
+    use crate::{
+        constraints::constraints,
+        inputs::{Claim, Modification, Parameters, SignatureParameters},
+        pedersen_points::SHIFT_POINT,
     };
+    use zkp_macros_decl::field_element;
+    use zkp_primefield::FieldElement;
+    use zkp_stark::{check_constraints, Constraints, TraceTable};
+    use zkp_u256::U256;
 
     #[test]
-    fn short_inputs_consistent() {
-        let trace = get_trace_table(&SHORT_CLAIM, &short_witness());
-        assert_eq!(trace[(trace.num_rows() - 1, 6)], SHORT_CLAIM.root);
+    fn test_trace() {
+        let parameters = Parameters {
+            signature:        SignatureParameters {
+                shift_point: SHIFT_POINT,
+                alpha:       FieldElement::ONE,
+                beta:        field_element!(
+                    "06f21413efbe40de150e596d72f7a8c5609ad26c15c915c1f4cdfcb99cee9e89"
+                ),
+            },
+            hash_shift_point: SHIFT_POINT,
+            n_vaults:         30,
+        };
+
+        let claim = Claim {
+            n_transactions:      4,
+            modifications:       vec![
+                Modification {
+                    initial_amount: 0,
+                    final_amount:   1000,
+                    index:          0,
+                    key:            field_element!(
+                        "057d5d2e5da7409db60d64ae4e79443fedfd5eb925b5e54523eaf42cc1978169"
+                    ),
+                    token:          field_element!(
+                        "03e7aa5d1a9b180d6a12d451d3ae6fb95e390f722280f1ea383bb49d11828d"
+                    ),
+                    vault:          1,
+                },
+                Modification {
+                    initial_amount: 0,
+                    final_amount:   1000,
+                    index:          1,
+                    key:            field_element!(
+                        "024dca9f8032c9c8d1a2aae85b49df5dded9bb8da46d32284e339f5a9b30e820"
+                    ),
+                    token:          field_element!(
+                        "03e7aa5d1a9b180d6a12d451d3ae6fb95e390f722280f1ea383bb49d11828d"
+                    ),
+                    vault:          2,
+                },
+                Modification {
+                    initial_amount: 0,
+                    final_amount:   1000,
+                    index:          2,
+                    key:            field_element!(
+                        "03be0fef73793139380d0d5c27a33d6b1a67c29eb3bbe24e5635bc13b3439542"
+                    ),
+                    token:          field_element!(
+                        "03e7aa5d1a9b180d6a12d451d3ae6fb95e390f722280f1ea383bb49d11828d"
+                    ),
+                    vault:          3,
+                },
+                Modification {
+                    initial_amount: 0,
+                    final_amount:   1000,
+                    index:          3,
+                    key:            field_element!(
+                        "03f0f302fdf6ba1a4669ce4fc9bd2b4ba17bdc088ae32984f40c26e7006d2f9b"
+                    ),
+                    token:          field_element!(
+                        "03e7aa5d1a9b180d6a12d451d3ae6fb95e390f722280f1ea383bb49d11828d"
+                    ),
+                    vault:          4,
+                },
+            ],
+            initial_vaults_root: field_element!(
+                "00156823f988424670b3a750156e77068328aa496ff883106ccc78ff85ea1dc1"
+            ),
+            final_vaults_root:   field_element!(
+                "0181ae03ea55029827c08a70034df9861bc6c86689205155d966f28bf2cfb20a"
+            ),
+        };
+
+        let constraints = constraints(&claim, &parameters);
+        let trace_length = claim.n_transactions * 65536;
+
+        let system =
+            Constraints::from_expressions((trace_length, 10), vec![], constraints).unwrap();
+
+        let trace_table = TraceTable::new(trace_length, 10);
+
+        assert!(check_constraints(&system, &trace_table).is_ok());
     }
 }

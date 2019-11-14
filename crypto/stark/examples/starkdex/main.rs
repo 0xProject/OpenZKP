@@ -4,7 +4,7 @@ mod oods_values;
 mod pedersen;
 mod pedersen_points;
 mod periodic_columns;
-// mod trace_table;
+mod trace_table;
 
 use env_logger;
 // use log::info;

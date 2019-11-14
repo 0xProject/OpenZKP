@@ -22,7 +22,7 @@ fn get_coordinates(p: &Affine) -> (RationalExpression, RationalExpression) {
 
 #[rustfmt::skip] // For now, code is easier to grep unformated.
 #[allow(dead_code)]
-fn constraints(claim: &Claim, parameters: &Parameters) -> Vec<RationalExpression> {
+pub fn constraints(claim: &Claim, parameters: &Parameters) -> Vec<RationalExpression> {
     use RationalExpression::*;
     assert!(claim.n_transactions.is_power_of_two());
     let trace_length = 65536 * claim.n_transactions;
