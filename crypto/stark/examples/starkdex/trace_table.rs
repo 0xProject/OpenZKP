@@ -213,9 +213,8 @@ mod tests {
             Constraints::from_expressions((trace_length, 10), vec![], constraints).unwrap();
 
         let mut trace_table = TraceTable::new(trace_length, 10);
-        let mut hash_pool_accumulator = SHIFT_POINT.clone();
 
-        for transaction_index in 0..claim.n_transactions {
+        for (transaction_index, modification) in claim.modifications.iter().enumerate() {
             let offset = transaction_index * 65536;
 
             let modification = Modification {
@@ -229,7 +228,7 @@ mod tests {
                     "03e7aa5d1a9b180d6a12d451d3ae6fb95e390f722280f1ea383bb49d11828d"
                 ),
                 vault:          1,
-            };
+           };
 
             for (quarter, modification) in modification_tetrad(&modification).iter().enumerate() {
                 dbg!(quarter);
@@ -277,13 +276,8 @@ mod tests {
                     trace_table[(offset + i, 1)] = y.clone();
                     trace_table[(offset + i, 2)] = slope.clone();
                 }
-                // assert_eq!(trace_table[(offset + 4092, 8)], quarter_vaults[0].hash());
-                // assert_eq!(trace_table[(offset + 4092, 8)], trace_table[(offset + 256, 3)]);
-                // assert_eq!(trace_table[(offset + 4092, 8)], trace_table[(offset, 3)]);
-
 
                 vaults.update(modification.vault, quarter_vaults[2].clone());
-                // let mut closing_digest = trace_table[(offset + 12284, 8)].clone();
 
                 let (sources, xs, ys, slopes) =
                     get_merkle_tree_columns(&vaults, modification.vault);
@@ -295,24 +289,14 @@ mod tests {
                     trace_table[(offset + i, 6)] = slope.clone();
                 }
 
-                dbg!(trace_table[(511, 4)].clone());
-                dbg!(trace_table[(512, 7)].clone());
-                dbg!(trace_table[(768, 7)].clone());
-
                 trace_table[(offset + 255, 6)] = modification.vault.into();
-
-                assert_eq!(modification.vault, 1);
                 for i in 0..31 {
                     trace_table[(offset + 255 + i * 512 + 512, 6)] =
                         shift_right(&trace_table[(offset + 255 + i * 512, 6)]);
                 }
-                // dbg!(trace_table[(255, 6)].clone());
-                // dbg!(trace_table[(767, 6)].clone());
-                // dbg!(trace_table[(offset + 255, 6)].clone());
             }
             trace_table[(offset + 16376, 9)] = modification.key.clone();
             trace_table[(offset + 16360, 9)] = modification.token.clone();
-            // trace_table[(offset + 255, 6)] = modification.vault.into();
             assert_eq!(trace_table[(offset + 16376, 9)], modification.key);
             assert_eq!(trace_table[(offset + 16360, 9)], modification.token);
             assert_eq!(
@@ -325,8 +309,6 @@ mod tests {
             );
             assert_eq!(trace_table[(offset + 255, 6)], modification.vault.into());
         }
-
-        dbg!(trace_table[(15872, 0)].clone());
 
         let result = check_constraints(&system, &trace_table);
 
