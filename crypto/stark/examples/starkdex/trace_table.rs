@@ -16,6 +16,10 @@ fn get_slope(p_1: &Affine, p_2: &Affine) -> FieldElement {
     (y_1 - y_2) / (x_1 - x_2)
 }
 
+fn shift_right(x: &FieldElement) -> FieldElement {
+    (U256::from(x) >> 1).into()
+}
+
 fn get_pedersen_hash_columns(
     left: &FieldElement,
     right: &FieldElement,
@@ -134,9 +138,9 @@ mod tests {
                 for hash_pool_index in 0..4 {
                     let offset = offset + hash_pool_index * 4096;
 
-                    let dummy_1: FieldElement = 123412341.into();
-                    let dummy_2: FieldElement = 123412341.into();
-                    let dummy_3: FieldElement = 123412341.into();
+                    let dummy_1 = FieldElement::NEGATIVE_ONE / FieldElement::from(2);
+                    let dummy_2 = FieldElement::NEGATIVE_ONE / FieldElement::from(2);
+                    let dummy_3 = FieldElement::from(1 << 30); // This is the amount in the vault
 
                     let (sources, xs, ys, slopes) = get_pedersen_hash_columns(&dummy_1, &dummy_2);
                     for (i, (source, x, y, slope)) in izip!(&sources, &xs, &ys, &slopes).enumerate() {
@@ -154,6 +158,12 @@ mod tests {
                         trace_table[(offset + 4 * i + 2, 8)] = y.clone();
                         trace_table[(offset + 4 * i + 3, 8)] = source.clone();
                     }
+                }
+
+                trace_table[(offset + 8196, 9)] = trace_table[(offset + 11267, 8)].clone();
+                for i in 0..32 {
+                    let offset = offset + 8196;
+                    trace_table[(offset + 128 * i + 128, 9)] = shift_right(&trace_table[(offset + 128 * i, 9)]);
                 }
 
                 let mut digest = trace_table[(offset + 4092, 8)].clone();

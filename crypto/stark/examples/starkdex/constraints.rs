@@ -143,18 +143,18 @@ pub fn constraints(claim: &Claim, parameters: &Parameters) -> Vec<RationalExpres
     (state_transition_merkle_update_prev_authentication_sibling_0 - state_transition_merkle_update_new_authentication_sibling_0) * (X.pow(trace_length / 16384) - trace_generator.pow(31 * trace_length / 32)) / (X.pow(trace_length / 512) - 1.into()), // state_transition/merkle_update/same_siblings
     (state_transition_merkle_update_prev_authentication_leaf_0 - Trace(8, 4092)) / (X.pow(trace_length / 16384) - 1.into()), // state_transition/merkle_set_prev_leaf
     (state_transition_merkle_update_new_authentication_leaf_0 - Trace(8, 12284)) / (X.pow(trace_length / 16384) - 1.into()), // state_transition/merkle_set_new_leaf
-    // (is_modification.clone() * (Trace(9, 16376) * boundary_base.clone() - boundary_key.clone())) / (X.pow(trace_length / 65536) - 1.into()), // modification_boundary_key.clone()
-    // (is_modification.clone() * (Trace(9, 16360) * boundary_base.clone() - boundary_token.clone())) / (X.pow(trace_length / 65536) - 1.into()), // modification_boundary_token.clone()
-    // (is_modification.clone() * (Trace(8, 3075) * boundary_base.clone() - boundary_amount0.clone())) / (X.pow(trace_length / 65536) - 1.into()), // modification_boundary_amount0.clone()
-    // (is_modification.clone() * (Trace(8, 11267) * boundary_base.clone() - boundary_amount1.clone())) / (X.pow(trace_length / 65536) - 1.into()), // modification_boundary_amount1.clone()
-    // (is_modification.clone() * (Trace(6, 255) * boundary_base.clone() - boundary_vault_id.clone())) / (X.pow(trace_length / 65536) - 1.into()), // modification_boundary_vault_id.clone()
-    // (amounts_range_check_bit_0.clone() * amounts_range_check_bit_0.clone() - amounts_range_check_bit_0.clone()) * (X.pow(trace_length / 8192) - trace_generator.pow(63 * trace_length / 64)) / (X.pow(trace_length / 128) - 1.into()), // amounts_range_check/bit
-    // (Trace(9, 4)) / (X.pow(trace_length / 8192) - trace_generator.pow(63 * trace_length / 64)), // amounts_range_check/zero
-    // (is_settlement.clone() * (Trace(8, 3075) - Trace(8, 11267) - (Trace(8, 27651) - Trace(8, 19459)))) / (X.pow(trace_length / 65536) - 1.into()), // total_token_a_not_changed
-    // (is_settlement.clone() * (Trace(8, 35843) - Trace(8, 44035) - (Trace(8, 60419) - Trace(8, 52227)))) / (X.pow(trace_length / 65536) - 1.into()), // total_token_b_not_changed
-    // ((Trace(9, 4) - (Trace(8, 3075) - Trace(8, 11267))) * is_settlement.clone()) / (X.pow(trace_length / 65536) - 1.into()), // diff_a_range_check_input
-    // ((Trace(9, 32772) - (Trace(8, 35843) - Trace(8, 44035))) * is_settlement.clone()) / (X.pow(trace_length / 65536) - 1.into()), // diff_b_range_check_input
-    // (Trace(9, 8196) - Trace(8, 11267)) / (X.pow(trace_length / 16384) - 1.into()), // amounts_range_check_inputs
+    (is_modification.clone() * (Trace(9, 16376) * boundary_base.clone() - boundary_key.clone())) / (X.pow(trace_length / 65536) - 1.into()), // modification_boundary_key.clone()
+    (is_modification.clone() * (Trace(9, 16360) * boundary_base.clone() - boundary_token.clone())) / (X.pow(trace_length / 65536) - 1.into()), // modification_boundary_token.clone()
+    (is_modification.clone() * (Trace(8, 3075) * boundary_base.clone() - boundary_amount0.clone())) / (X.pow(trace_length / 65536) - 1.into()), // modification_boundary_amount0.clone()
+    (is_modification.clone() * (Trace(8, 11267) * boundary_base.clone() - boundary_amount1.clone())) / (X.pow(trace_length / 65536) - 1.into()), // modification_boundary_amount1.clone()
+    (is_modification.clone() * (Trace(6, 255) * boundary_base.clone() - boundary_vault_id.clone())) / (X.pow(trace_length / 65536) - 1.into()), // modification_boundary_vault_id.clone()
+    (amounts_range_check_bit_0.clone() * amounts_range_check_bit_0.clone() - amounts_range_check_bit_0.clone()) * (X.pow(trace_length / 8192) - trace_generator.pow(63 * trace_length / 64)) / (X.pow(trace_length / 128) - 1.into()), // amounts_range_check/bit
+    (Trace(9, 4)) / (X.pow(trace_length / 8192) - trace_generator.pow(63 * trace_length / 64)), // amounts_range_check/zero
+    (is_settlement.clone() * (Trace(8, 3075) - Trace(8, 11267) - (Trace(8, 27651) - Trace(8, 19459)))) / (X.pow(trace_length / 65536) - 1.into()), // total_token_a_not_changed
+    (is_settlement.clone() * (Trace(8, 35843) - Trace(8, 44035) - (Trace(8, 60419) - Trace(8, 52227)))) / (X.pow(trace_length / 65536) - 1.into()), // total_token_b_not_changed
+    ((Trace(9, 4) - (Trace(8, 3075) - Trace(8, 11267))) * is_settlement.clone()) / (X.pow(trace_length / 65536) - 1.into()), // diff_a_range_check_input
+    ((Trace(9, 32772) - (Trace(8, 35843) - Trace(8, 44035))) * is_settlement.clone()) / (X.pow(trace_length / 65536) - 1.into()), // diff_b_range_check_input
+    (Trace(9, 8196) - Trace(8, 11267)) / (X.pow(trace_length / 16384) - 1.into()), // amounts_range_check_inputs
     // (sig_verify_doubling_key_x_squared.clone() + sig_verify_doubling_key_x_squared.clone() + sig_verify_doubling_key_x_squared.clone() + alpha.clone() - (Trace(9, 32) + Trace(9, 32)) * Trace(9, 16)) * (X.pow(trace_length / 16384) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 64) - 1.into()), // sig_verify/doubling_key/slope
     // (Trace(9, 16) * Trace(9, 16) - (Trace(9, 0) + Trace(9, 0) + Trace(9, 64))) * (X.pow(trace_length / 16384) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 64) - 1.into()), // sig_verify/doubling_key/x
     // (Trace(9, 32) + Trace(9, 96) - Trace(9, 16) * (Trace(9, 0) - Trace(9, 64))) * (X.pow(trace_length / 16384) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 64) - 1.into()), // sig_verify/doubling_key/y
