@@ -27,8 +27,8 @@ fn shift_right(x: &FieldElement) -> FieldElement {
 fn get_quarter_vaults(modification: &Modification) -> Vec<Vault> {
     vec![
         Vault {
-            key:    FieldElement::ZERO, // TODO: fix
-            token:  FieldElement::ZERO, // TODO: fix
+            key:    modification.key.clone(),
+            token:  modification.token.clone(),
             amount: modification.initial_amount.clone(),
         },
         Vault {
@@ -176,11 +176,16 @@ mod tests {
         let mut vaults = Vaults::new();
         let initial_root = vaults.root();
 
-        let update_index = 2341972323;
+        let key =
+            field_element!("057d5d2e5da7409db60d64ae4e79443fedfd5eb925b5e54523eaf42cc1978169");
+        let token =
+            field_element!("03e7aa5d1a9b180d6a12d451d3ae6fb95e390f722280f1ea383bb49d11828d");
+
+        let update_index = 12;
         let vault = Vault {
-            key:    FieldElement::GENERATOR,
-            token:  FieldElement::NEGATIVE_ONE,
-            amount: 1000,
+            key:    key.clone(),
+            token:  token.clone(),
+            amount: 2,
         };
         vaults.update(update_index, vault);
         let final_root = vaults.root();
@@ -189,19 +194,23 @@ mod tests {
         let (vault, path) = vaults.path(path_index);
 
         let claim = Claim {
-            n_transactions:      1,
+            n_transactions:      2,
             modifications:       vec![Modification {
-                initial_amount: 123412,
+                initial_amount: 2,
                 final_amount:   1000,
                 index:          0,
-                key:            field_element!(
-                    "057d5d2e5da7409db60d64ae4e79443fedfd5eb925b5e54523eaf42cc1978169"
-                ),
-                token:          field_element!(
-                    "03e7aa5d1a9b180d6a12d451d3ae6fb95e390f722280f1ea383bb49d11828d"
-                ),
-                vault:          1,
-            }],
+                key:            key.clone(),
+                token:          token.clone(),
+                vault:          update_index,
+            },
+            Modification {
+                initial_amount: 1000,
+                final_amount:   1300,
+                index:          1,
+                key:            key.clone(),
+                token:          token.clone(),
+                vault:          update_index,
+            },],
             initial_vaults_root: initial_root,
             final_vaults_root:   final_root,
         };
@@ -216,19 +225,6 @@ mod tests {
 
         for (transaction_index, modification) in claim.modifications.iter().enumerate() {
             let offset = transaction_index * 65536;
-
-            let modification = Modification {
-                initial_amount: 0,
-                final_amount:   1000,
-                index:          0,
-                key:            field_element!(
-                    "057d5d2e5da7409db60d64ae4e79443fedfd5eb925b5e54523eaf42cc1978169"
-                ),
-                token:          field_element!(
-                    "03e7aa5d1a9b180d6a12d451d3ae6fb95e390f722280f1ea383bb49d11828d"
-                ),
-                vault:          1,
-           };
 
             for (quarter, modification) in modification_tetrad(&modification).iter().enumerate() {
                 dbg!(quarter);
@@ -309,6 +305,12 @@ mod tests {
             );
             assert_eq!(trace_table[(offset + 255, 6)], modification.vault.into());
         }
+
+        // dbg!(trace_table[(255, 6)].clone());
+        // dbg!(trace_table[(767, 6)].clone());
+        // dbg!(trace_table[(0, 3)].clone());
+        // dbg!(trace_table[(256, 3)].clone());
+        // dbg!(trace_table[(4092, 8)].clone());
 
         let result = check_constraints(&system, &trace_table);
 
