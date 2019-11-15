@@ -75,7 +75,7 @@ pub struct ClaimPolynomials {
 pub struct Vault {
     pub key:    FieldElement,
     pub token:  FieldElement,
-    pub amount: usize,
+    pub amount: u32,
 }
 
 #[derive(PartialEq, Clone)]

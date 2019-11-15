@@ -2,6 +2,8 @@ use crate::pedersen_points::{PEDERSEN_POINTS, SHIFT_POINT};
 use zkp_elliptic_curve::Affine;
 use zkp_primefield::FieldElement;
 use zkp_u256::U256;
+use crate::inputs::Vault;
+use crate::inputs::Modification;
 
 fn get_coordinates(point: &Affine) -> (FieldElement, FieldElement) {
     match point {
@@ -18,6 +20,31 @@ fn get_slope(p_1: &Affine, p_2: &Affine) -> FieldElement {
 
 fn shift_right(x: &FieldElement) -> FieldElement {
     (U256::from(x) >> 1).into()
+}
+
+fn get_quarter_vaults(modification: &Modification) -> Vec<Vault> {
+    vec![
+    Vault {
+        key:  modification.key.clone(),
+        token: modification.token.clone(),
+        amount: modification.initial_amount.clone(),
+    },
+    Vault {
+        key:  FieldElement::ZERO,
+        token: FieldElement::ZERO,
+        amount: 0,
+    },
+    Vault {
+        key:  modification.key.clone(),
+        token: modification.token.clone(),
+        amount: modification.final_amount.clone(),
+    },
+    Vault {
+        key:  FieldElement::ZERO,
+        token: FieldElement::ZERO,
+        amount: 0,
+    },
+    ]
 }
 
 fn get_pedersen_hash_columns(
@@ -66,7 +93,7 @@ mod tests {
     use super::*;
     use crate::{
         constraints::constraints,
-        inputs::{Claim, Modification, Parameters, SignatureParameters, Tree, Vault, Vaults},
+        inputs::{Claim, Parameters, SignatureParameters, Tree, Vaults},
         pedersen_points::SHIFT_POINT,
     };
     use itertools::izip;
@@ -129,21 +156,30 @@ mod tests {
         let mut trace_table = TraceTable::new(trace_length, 10);
         let mut hash_pool_accumulator = SHIFT_POINT.clone();
 
-        let dummy_4: FieldElement = 123412341.into();
-
         for transaction_index in 0..claim.n_transactions {
             let offset = transaction_index * 65536;
+
+            let modification = Modification {
+                initial_amount: 0,
+                final_amount:   1000,
+                index:          0,
+                key:            field_element!(
+                    "057d5d2e5da7409db60d64ae4e79443fedfd5eb925b5e54523eaf42cc1978169"
+                ),
+                token:          field_element!(
+                    "03e7aa5d1a9b180d6a12d451d3ae6fb95e390f722280f1ea383bb49d11828d"
+                ),
+                vault:          1,
+            };
+
             for quarter in 0..4 {
                 let offset = offset + 16384 * quarter;
-                for hash_pool_index in 0..4 {
+                for (hash_pool_index, vault) in get_quarter_vaults(&modification).iter().enumerate() {
                     let offset = offset + hash_pool_index * 4096;
 
-                    let dummy_1 = FieldElement::NEGATIVE_ONE / FieldElement::from(2);
-                    let dummy_2 = FieldElement::NEGATIVE_ONE / FieldElement::from(2);
-                    let dummy_3 = FieldElement::from(1 << 30); // This is the amount in the vault
-
-                    let (sources, xs, ys, slopes) = get_pedersen_hash_columns(&dummy_1, &dummy_2);
-                    for (i, (source, x, y, slope)) in izip!(&sources, &xs, &ys, &slopes).enumerate() {
+                    let (sources, xs, ys, slopes) = get_pedersen_hash_columns(&vault.key, &vault.token);
+                    for (i, (source, x, y, slope)) in izip!(&sources, &xs, &ys, &slopes).enumerate()
+                    {
                         trace_table[(offset + 4 * i + 0, 8)] = x.clone();
                         trace_table[(offset + 4 * i + 1, 8)] = slope.clone();
                         trace_table[(offset + 4 * i + 2, 8)] = y.clone();
@@ -151,8 +187,9 @@ mod tests {
                     }
 
                     let offset = offset + 2048;
-                    let (sources, xs, ys, slopes) = get_pedersen_hash_columns(&xs[512], &dummy_3);
-                    for (i, (source, x, y, slope)) in izip!(&sources, &xs, &ys, &slopes).enumerate() {
+                    let (sources, xs, ys, slopes) = get_pedersen_hash_columns(&xs[512], &vault.amount.into());
+                    for (i, (source, x, y, slope)) in izip!(&sources, &xs, &ys, &slopes).enumerate()
+                    {
                         trace_table[(offset + 4 * i + 0, 8)] = x.clone();
                         trace_table[(offset + 4 * i + 1, 8)] = slope.clone();
                         trace_table[(offset + 4 * i + 2, 8)] = y.clone();
@@ -161,9 +198,11 @@ mod tests {
                 }
 
                 trace_table[(offset + 8196, 9)] = trace_table[(offset + 11267, 8)].clone();
+                dbg!(trace_table[(offset + 11267, 8)].clone());
                 for i in 0..32 {
                     let offset = offset + 8196;
-                    trace_table[(offset + 128 * i + 128, 9)] = shift_right(&trace_table[(offset + 128 * i, 9)]);
+                    trace_table[(offset + 128 * i + 128, 9)] =
+                        shift_right(&trace_table[(offset + 128 * i, 9)]);
                 }
 
                 let mut digest = trace_table[(offset + 4092, 8)].clone();
@@ -171,7 +210,8 @@ mod tests {
                     let offset = offset + 512 * opening_hash_index;
 
                     let (sources, xs, ys, slopes) = get_pedersen_hash_columns(&digest, &digest);
-                    for (i, (source, x, y, slope)) in izip!(&sources, &xs, &ys, &slopes).enumerate() {
+                    for (i, (source, x, y, slope)) in izip!(&sources, &xs, &ys, &slopes).enumerate()
+                    {
                         trace_table[(offset + i, 3)] = source.clone();
                         trace_table[(offset + i, 0)] = x.clone();
                         trace_table[(offset + i, 1)] = y.clone();
@@ -184,8 +224,10 @@ mod tests {
                 for closing_hash_index in 0..32 {
                     let offset = offset + 512 * closing_hash_index;
 
-                    let (sources, xs, ys, slopes) = get_pedersen_hash_columns(&closing_digest, &closing_digest);
-                    for (i, (source, x, y, slope)) in izip!(&sources, &xs, &ys, &slopes).enumerate() {
+                    let (sources, xs, ys, slopes) =
+                        get_pedersen_hash_columns(&closing_digest, &closing_digest);
+                    for (i, (source, x, y, slope)) in izip!(&sources, &xs, &ys, &slopes).enumerate()
+                    {
                         trace_table[(offset + i, 7)] = source.clone();
                         trace_table[(offset + i, 4)] = x.clone();
                         trace_table[(offset + i, 5)] = y.clone();
@@ -194,6 +236,14 @@ mod tests {
                     closing_digest = xs[512].clone();
                 }
             }
+            trace_table[(offset + 16376, 9)] = modification.key.clone();
+            trace_table[(offset + 16360, 9)] = modification.token.clone();
+            trace_table[(offset + 255, 6)] = modification.vault.into();
+            assert_eq!(trace_table[(offset + 16376, 9)], modification.key);
+            assert_eq!(trace_table[(offset + 16360, 9)], modification.token);
+            assert_eq!(trace_table[(offset + 3075, 8)], modification.initial_amount.into());
+            assert_eq!(trace_table[(offset + 11267, 8)], modification.final_amount.into());
+            assert_eq!(trace_table[(offset + 255, 6)], modification.vault.into());
         }
 
         let result = check_constraints(&system, &trace_table);
