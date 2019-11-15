@@ -101,7 +101,7 @@ mod tests {
         let claim = Claim {
             n_transactions:      1,
             modifications:       vec![Modification {
-                initial_amount: 0,
+                initial_amount: 123412,
                 final_amount:   1000,
                 index:          0,
                 key:            field_element!(
@@ -125,50 +125,66 @@ mod tests {
         let mut trace_table = TraceTable::new(trace_length, 10);
         let mut hash_pool_accumulator = SHIFT_POINT.clone();
 
-        for hash_pool_index in 0..trace_length / 4096 {
-            let (sources, xs, ys, slopes) = get_pedersen_hash_columns(&7.into(), &FieldElement::ONE);
-            for (i, (source, x, y, slope)) in izip!(&sources, &xs, &ys, &slopes).enumerate() {
-                trace_table[(4096 * hash_pool_index + 4 * i + 3, 8)] = source.clone();
-                trace_table[(4096 * hash_pool_index + 4 * i + 0, 8)] = x.clone();
-                trace_table[(4096 * hash_pool_index + 4 * i + 2, 8)] = y.clone();
-                trace_table[(4096 * hash_pool_index + 4 * i + 1, 8)] = slope.clone();
-            }
+        let dummy_4: FieldElement = 123412341.into();
 
-            let (sources, xs, ys, slopes) = get_pedersen_hash_columns(&xs[512], &FieldElement::ONE);
-            for (i, (source, x, y, slope)) in izip!(&sources, &xs, &ys, &slopes).enumerate() {
-                let i = i + 512;
-                trace_table[(4096 * hash_pool_index + 4 * i + 3, 8)] = source.clone();
-                trace_table[(4096 * hash_pool_index + 4 * i + 0, 8)] = x.clone();
-                trace_table[(4096 * hash_pool_index + 4 * i + 2, 8)] = y.clone();
-                trace_table[(4096 * hash_pool_index + 4 * i + 1, 8)] = slope.clone();
+        for transaction_index in 0..claim.n_transactions {
+            let offset = transaction_index * 65536;
+            for quarter in 0..4 {
+                let offset = offset + 16384 * quarter;
+                for hash_pool_index in 0..4 {
+                    let offset = offset + hash_pool_index * 4096;
+
+                    let dummy_1: FieldElement = 123412341.into();
+                    let dummy_2: FieldElement = 123412341.into();
+                    let dummy_3: FieldElement = 123412341.into();
+
+                    let (sources, xs, ys, slopes) = get_pedersen_hash_columns(&dummy_1, &dummy_2);
+                    for (i, (source, x, y, slope)) in izip!(&sources, &xs, &ys, &slopes).enumerate() {
+                        trace_table[(offset + 4 * i + 0, 8)] = x.clone();
+                        trace_table[(offset + 4 * i + 1, 8)] = slope.clone();
+                        trace_table[(offset + 4 * i + 2, 8)] = y.clone();
+                        trace_table[(offset + 4 * i + 3, 8)] = source.clone();
+                    }
+
+                    let offset = offset + 2048;
+                    let (sources, xs, ys, slopes) = get_pedersen_hash_columns(&xs[512], &dummy_3);
+                    for (i, (source, x, y, slope)) in izip!(&sources, &xs, &ys, &slopes).enumerate() {
+                        trace_table[(offset + 4 * i + 0, 8)] = x.clone();
+                        trace_table[(offset + 4 * i + 1, 8)] = slope.clone();
+                        trace_table[(offset + 4 * i + 2, 8)] = y.clone();
+                        trace_table[(offset + 4 * i + 3, 8)] = source.clone();
+                    }
+                }
+
+                let mut digest = trace_table[(offset + 4092, 8)].clone();
+                for opening_hash_index in 0..32 {
+                    let offset = offset + 512 * opening_hash_index;
+
+                    let (sources, xs, ys, slopes) = get_pedersen_hash_columns(&digest, &digest);
+                    for (i, (source, x, y, slope)) in izip!(&sources, &xs, &ys, &slopes).enumerate() {
+                        trace_table[(offset + i, 3)] = source.clone();
+                        trace_table[(offset + i, 0)] = x.clone();
+                        trace_table[(offset + i, 1)] = y.clone();
+                        trace_table[(offset + i, 2)] = slope.clone();
+                    }
+                    digest = xs[512].clone();
+                }
+
+                let mut closing_digest = trace_table[(offset + 12284, 8)].clone();
+                for closing_hash_index in 0..32 {
+                    let offset = offset + 512 * closing_hash_index;
+
+                    let (sources, xs, ys, slopes) = get_pedersen_hash_columns(&closing_digest, &closing_digest);
+                    for (i, (source, x, y, slope)) in izip!(&sources, &xs, &ys, &slopes).enumerate() {
+                        trace_table[(offset + i, 7)] = source.clone();
+                        trace_table[(offset + i, 4)] = x.clone();
+                        trace_table[(offset + i, 5)] = y.clone();
+                        trace_table[(offset + i, 6)] = slope.clone();
+                    }
+                    closing_digest = xs[512].clone();
+                }
             }
         }
-
-        let mut digest = FieldElement::ZERO;
-        for opening_hash_index in 0..trace_length / 512 {
-            let (sources, xs, ys, slopes) = get_pedersen_hash_columns(&digest, &FieldElement::ONE);
-            for (i, (source, x, y, slope)) in izip!(&sources, &xs, &ys, &slopes).enumerate() {
-                trace_table[(512 * opening_hash_index + i, 3)] = source.clone();
-                trace_table[(512 * opening_hash_index + i, 0)] = x.clone();
-                trace_table[(512 * opening_hash_index + i, 1)] = y.clone();
-                trace_table[(512 * opening_hash_index + i, 2)] = slope.clone();
-            }
-            digest = xs[512].clone();
-        }
-
-        let mut closing_digest = FieldElement::ZERO;
-        for closing_hash_index in 0..trace_length / 512 {
-            let (sources, xs, ys, slopes) = get_pedersen_hash_columns(&closing_digest, &FieldElement::ONE);
-            for (i, (source, x, y, slope)) in izip!(&sources, &xs, &ys, &slopes).enumerate() {
-                trace_table[(512 * closing_hash_index + i, 7)] = source.clone();
-                trace_table[(512 * closing_hash_index + i, 4)] = x.clone();
-                trace_table[(512 * closing_hash_index + i, 5)] = y.clone();
-                trace_table[(512 * closing_hash_index + i, 6)] = slope.clone();
-            }
-            closing_digest = xs[512].clone();
-        }
-
-
 
         let result = check_constraints(&system, &trace_table);
 
