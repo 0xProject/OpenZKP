@@ -4,7 +4,7 @@ use zkp_elliptic_curve::Affine;
 use zkp_primefield::FieldElement;
 use zkp_stark::RationalExpression;
 
-const VAULTS_DEPTH: usize = 31;
+const VAULTS_DEPTH: usize = 32;
 
 #[derive(PartialEq, Clone)]
 #[cfg_attr(feature = "std", derive(Debug))]
@@ -87,7 +87,7 @@ pub struct Vaults {
 
 #[derive(PartialEq, Clone, PartialOrd, Eq, Ord)]
 #[cfg_attr(feature = "std", derive(Debug))]
-enum Direction {
+pub enum Direction {
     LEFT,
     RIGHT,
 }
@@ -162,7 +162,7 @@ pub struct Tree {
 
 impl Vault {
     pub fn hash(&self) -> FieldElement {
-        hash(&self.key, &self.token)
+        hash(&hash(&self.key, &self.token), &self.amount.into())
     }
 }
 
@@ -202,6 +202,13 @@ impl Vaults {
     pub fn update(&mut self, index: u32, vault: Vault) {
         self.tree.update(index, &vault);
         *self.vaults.entry(index).or_insert_with(Vault::default) = vault;
+    }
+
+    pub fn get(&self, index: u32) -> Vault {
+        match self.vaults.get(&index) {
+            Some(v) => v.clone(),
+            None => Vault::default(),
+        }
     }
 }
 
@@ -258,15 +265,15 @@ impl Tree {
 
     fn direction(&self, index: u32) -> Direction {
         if index & (1 << (self.height - 1)) != 0 {
-            Direction::LEFT
-        } else {
             Direction::RIGHT
+        } else {
+            Direction::LEFT
         }
     }
 
     fn empty_hash(height: usize) -> FieldElement {
-        let mut result = FieldElement::ZERO;
-        for _ in 0..=height {
+        let mut result = Vault::default().hash();
+        for _ in 0..height {
             result = hash(&result, &result);
         }
         result
@@ -274,12 +281,38 @@ impl Tree {
 
     fn empty_hashes(&self) -> Vec<FieldElement> {
         (0..self.height - 1)
-            .scan(FieldElement::ZERO, |digest, _| {
+            .scan(Vault::default().hash(), |digest, _| {
+                let old_digest = digest.clone();
                 *digest = hash(digest, digest);
-                Some(digest.clone())
+                Some(old_digest)
             })
             .collect()
     }
+}
+
+pub fn get_directions(index: u32) -> Vec<Direction> {
+    let mut index = index;
+    let mut directions = vec![];
+    for _ in 0..VAULTS_DEPTH {
+        directions.push(if index % 2 == 1 {
+            Direction::LEFT
+        } else {
+            Direction::RIGHT
+        });
+        index /= 2;
+    }
+    directions
+}
+
+pub fn root(leaf: &Vault, directions: &[Direction], path: &[FieldElement]) -> FieldElement {
+    let mut root = leaf.hash();
+    for (direction, sibling_hash) in directions.iter().zip(path) {
+        root = match direction {
+            Direction::LEFT => hash(&sibling_hash, &root),
+            Direction::RIGHT => hash(&root, &sibling_hash),
+        };
+    }
+    root
 }
 
 #[cfg(test)]
@@ -288,31 +321,6 @@ mod tests {
     use zkp_macros_decl::field_element;
     use zkp_primefield::FieldElement;
     use zkp_u256::U256;
-
-    fn get_directions(index: u32) -> Vec<Direction> {
-        let mut index = index;
-        let mut directions = vec![];
-        for _ in 0..VAULTS_DEPTH {
-            directions.push(if index % 2 == 0 {
-                Direction::LEFT
-            } else {
-                Direction::RIGHT
-            });
-            index /= 2;
-        }
-        directions
-    }
-
-    fn root(leaf: &Vault, directions: &[Direction], path: &[FieldElement]) -> FieldElement {
-        let mut root = leaf.hash();
-        for (direction, sibling_hash) in directions.iter().zip(path) {
-            root = match direction {
-                Direction::LEFT => hash(&sibling_hash, &root),
-                Direction::RIGHT => hash(&root, &sibling_hash),
-            };
-        }
-        root
-    }
 
     #[test]
     fn empty_path_correct() {

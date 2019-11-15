@@ -10,7 +10,7 @@ pub fn hash(a: &FieldElement, b: &FieldElement) -> FieldElement {
     let mut result = Jacobian::from(SHIFT_POINT);
     for (i, element) in [U256::from(a), U256::from(b)].iter().enumerate() {
         assert!(element.bits() <= N_ELEMENT_BITS);
-        let start = 1 + i * N_ELEMENT_BITS;
+        let start = 1 + i * (N_ELEMENT_BITS - 1);
         let end = start + N_ELEMENT_BITS;
         for (j, point) in PEDERSEN_POINTS[start..end].iter().enumerate() {
             if element.bit(j) {
