@@ -34,6 +34,30 @@ impl RationalExpression {
     pub fn pow(&self, exponent: usize) -> Self {
         Self::Exp(Box::new(self.clone()), exponent)
     }
+
+    /// Apply a function bottom up on the expression.
+    /// 
+    /// **Note.** Unlike the conventional generalization of `map` to tree structures,
+    /// this map also applies the function to each tree node, after it has been applied
+    /// to all its descendants.
+    pub fn map<F>(self, f:  &mut F) -> Self 
+        where F: FnMut(Self) -> Self
+    {
+        use RationalExpression::*;
+        let e = match self {
+            // Tree types are recursed first
+            Polynomial(p, e) => Polynomial(p, Box::new(e.map(f))),
+            Add(a, b) => Add(Box::new(a.map(f)), Box::new(b.map(f))),
+            Neg(a) => Neg(Box::new(a.map(f))),
+            Mul(a, b) => Mul(Box::new(a.map(f)), Box::new(b.map(f))),
+            Inv(a) => Inv(Box::new(a.map(f))),
+            Exp(a, e) => Exp(Box::new(a.map(f)), e),
+
+            // Leaf types are mapped as is.
+            e => e
+        };
+        f(e)
+    }
 }
 
 impl From<i32> for RationalExpression {
