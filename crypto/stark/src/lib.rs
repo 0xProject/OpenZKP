@@ -45,6 +45,7 @@ mod proof_of_work;
 mod rational_expression;
 mod traits;
 mod verifier;
+mod component;
 
 // Optional prover functionality. Note that prover requires std.
 // TODO: Make it work without std.
