@@ -1,18 +1,24 @@
 use crate::{
-    inputs::{get_directions, root, Direction, Modification, Vault, Vaults},
+    inputs::{get_directions, root, Direction, Modification, SignatureParameters, Vault, Vaults},
     pedersen::hash,
     pedersen_points::{PEDERSEN_POINTS, SHIFT_POINT},
 };
 use zkp_elliptic_curve::Affine;
 use zkp_primefield::FieldElement;
 use zkp_u256::U256;
-use crate::inputs::SignatureParameters;
 
 fn get_coordinates(point: &Affine) -> (FieldElement, FieldElement) {
     match point {
         Affine::Zero => panic!(),
         Affine::Point { x, y } => (x.clone(), y.clone()),
     }
+}
+
+fn get_point(x: &FieldElement, alpha: &FieldElement, beta: &FieldElement) -> Affine {
+    let y = (x.pow(3) + alpha * x + beta)
+        .square_root()
+        .expect("x is not on curve");
+    Affine::Point { x: x.clone(), y }
 }
 
 fn get_slope(p_1: &Affine, p_2: &Affine) -> FieldElement {
@@ -23,7 +29,7 @@ fn get_slope(p_1: &Affine, p_2: &Affine) -> FieldElement {
 
 fn get_tangent_slope(p: &Affine, alpha: &FieldElement) -> FieldElement {
     let (x, y) = get_coordinates(p);
-    let numerator = x.pow(2) * alpha * FieldElement::from(3);
+    let numerator = x.pow(2) * FieldElement::from(3) + alpha;
     let denominator = y * FieldElement::from(2);
     numerator / denominator
 }
@@ -116,13 +122,9 @@ fn get_pedersen_hash_columns(
 fn verify_signatures(
     public_key: &Affine,
     parameters: &SignatureParameters,
-    // left: &FieldElement,
-    // right: &FieldElement,
-) -> (
-    Vec<FieldElement>,
-    Vec<FieldElement>,
-    Vec<FieldElement>,
-) {
+    /* left: &FieldElement,
+     * right: &FieldElement, */
+) -> (Vec<FieldElement>, Vec<FieldElement>, Vec<FieldElement>) {
     //  + 16 is slope of line tangent to point being doubled
     // + 0 is x coordinate of point being doubled
     // + 32 is y coordinate of point being doubled
@@ -140,11 +142,7 @@ fn verify_signatures(
         slopes.push(get_tangent_slope(&p, &parameters.alpha));
         p = p.clone() + p;
     }
-    (
-        x_coordinates,
-        y_coordinates,
-        slopes,
-    )
+    (x_coordinates, y_coordinates, slopes)
 }
 
 fn get_merkle_tree_columns(
@@ -237,22 +235,24 @@ mod tests {
 
         let claim = Claim {
             n_transactions:      2,
-            modifications:       vec![Modification {
-                initial_amount: 2,
-                final_amount:   1000,
-                index:          0,
-                key:            key.clone(),
-                token:          token.clone(),
-                vault:          update_index,
-            },
-            Modification {
-                initial_amount: 1000,
-                final_amount:   1300,
-                index:          1,
-                key:            key.clone(),
-                token:          token.clone(),
-                vault:          update_index,
-            },],
+            modifications:       vec![
+                Modification {
+                    initial_amount: 2,
+                    final_amount:   1000,
+                    index:          0,
+                    key:            key.clone(),
+                    token:          token.clone(),
+                    vault:          update_index,
+                },
+                Modification {
+                    initial_amount: 1000,
+                    final_amount:   1300,
+                    index:          1,
+                    key:            key.clone(),
+                    token:          token.clone(),
+                    vault:          update_index,
+                },
+            ],
             initial_vaults_root: initial_root,
             final_vaults_root:   final_root,
         };
@@ -271,16 +271,22 @@ mod tests {
             for (quarter, modification) in modification_tetrad(&modification).iter().enumerate() {
                 let offset = offset + 16384 * quarter;
                 let quarter_vaults = get_quarter_vaults(&modification);
+
+                let public_key = get_point(
+                    &modification.key,
+                    &parameters.signature.alpha,
+                    &parameters.signature.beta,
+                );
+                let (xs, ys, slopes) = verify_signatures(&public_key, &parameters.signature);
+                for (i, (x, y, slope)) in izip!(&xs, &ys, &slopes).enumerate() {
+                    let stride = 64;
+                    trace_table[(offset + stride * i + 0, 9)] = x.clone();
+                    trace_table[(offset + stride * i + 16, 9)] = slope.clone();
+                    trace_table[(offset + stride * i + 32, 9)] = y.clone();
+                }
+
                 for (hash_pool_index, vault) in quarter_vaults.iter().enumerate() {
                     let offset = offset + hash_pool_index * 4096;
-                    let (xs, ys, slopes) = get_signature_values(&parameters.signature);
-                    for (i, (x, y, slope)) in izip!(&sources, &xs, &ys, &slopes).enumerate()
-                    {
-                        trace_table[(offset + 4 * i + 0, 8)] = x.clone();
-                        trace_table[(offset + 4 * i + 1, 8)] = slope.clone();
-                        trace_table[(offset + 4 * i + 2, 8)] = y.clone();
-                        trace_table[(offset + 4 * i + 3, 8)] = source.clone();
-                    }
 
                     let (sources, xs, ys, slopes) =
                         get_pedersen_hash_columns(&vault.key, &vault.token);
@@ -356,7 +362,9 @@ mod tests {
             assert_eq!(trace_table[(offset + 255, 6)], modification.vault.into());
         }
 
-        dbg!(trace_table[(20, 9)].clone());
+        dbg!(trace_table[(0, 9)].clone());
+        dbg!(trace_table[(16, 9)].clone());
+        dbg!(trace_table[(32, 9)].clone());
 
         let result = check_constraints(&system, &trace_table);
 

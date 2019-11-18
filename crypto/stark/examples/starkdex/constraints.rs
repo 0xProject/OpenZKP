@@ -155,9 +155,9 @@ pub fn constraints(claim: &Claim, parameters: &Parameters) -> Vec<RationalExpres
     ((Trace(9, 4) - (Trace(8, 3075) - Trace(8, 11267))) * is_settlement.clone()) / (X.pow(trace_length / 65536) - 1.into()), // diff_a_range_check_input
     ((Trace(9, 32772) - (Trace(8, 35843) - Trace(8, 44035))) * is_settlement.clone()) / (X.pow(trace_length / 65536) - 1.into()), // diff_b_range_check_input
     (Trace(9, 8196) - Trace(8, 11267)) / (X.pow(trace_length / 16384) - 1.into()), // amounts_range_check_inputs
-    // (sig_verify_doubling_key_x_squared.clone() + sig_verify_doubling_key_x_squared.clone() + sig_verify_doubling_key_x_squared.clone() + alpha.clone() - (Trace(9, 32) + Trace(9, 32)) * Trace(9, 16)) * (X.pow(trace_length / 16384) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 64) - 1.into()), // sig_verify/doubling_key/slope
-    // (Trace(9, 16) * Trace(9, 16) - (Trace(9, 0) + Trace(9, 0) + Trace(9, 64))) * (X.pow(trace_length / 16384) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 64) - 1.into()), // sig_verify/doubling_key/x
-    // (Trace(9, 32) + Trace(9, 96) - Trace(9, 16) * (Trace(9, 0) - Trace(9, 64))) * (X.pow(trace_length / 16384) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 64) - 1.into()), // sig_verify/doubling_key/y
+    (sig_verify_doubling_key_x_squared.clone() + sig_verify_doubling_key_x_squared.clone() + sig_verify_doubling_key_x_squared.clone() + alpha.clone() - (Trace(9, 32) + Trace(9, 32)) * Trace(9, 16)) * (X.pow(trace_length / 16384) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 64) - 1.into()), // sig_verify/doubling_key/slope
+    (Trace(9, 16) * Trace(9, 16) - (Trace(9, 0) + Trace(9, 0) + Trace(9, 64))) * (X.pow(trace_length / 16384) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 64) - 1.into()), // sig_verify/doubling_key/x
+    (Trace(9, 32) + Trace(9, 96) - Trace(9, 16) * (Trace(9, 0) - Trace(9, 64))) * (X.pow(trace_length / 16384) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 64) - 1.into()), // sig_verify/doubling_key/y
     // (sig_verify_exponentiate_generator_bit.clone() * (sig_verify_exponentiate_generator_bit.clone() - 1.into())) * (X.pow(trace_length / 32768) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 128) - 1.into()), // sig_verify/exponentiate_generator/booleanity_test
     // (Trace(9, 20)) / (X.pow(trace_length / 32768) - trace_generator.pow(251 * trace_length / 256)), // sig_verify/exponentiate_generator/bit_extraction_end
     // (Trace(9, 20)) / (X.pow(trace_length / 32768) - trace_generator.pow(255 * trace_length / 256)), // sig_verify/exponentiate_generator/zeros_tail
@@ -178,8 +178,8 @@ pub fn constraints(claim: &Claim, parameters: &Parameters) -> Vec<RationalExpres
     // (sig_verify_exponentiate_key_bit_neg.clone() * (Trace(9, 72) - Trace(9, 8))) * (X.pow(trace_length / 16384) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 64) - 1.into()), // sig_verify/exponentiate_key/copy_point/y
     // (Trace(9, 68) - signature_shift_x.clone()) / (X.pow(trace_length / 32768) - 1.into()), // sig_verify/init_gen/x
     // (Trace(9, 36) + signature_shift_y.clone()) / (X.pow(trace_length / 32768) - 1.into()), // sig_verify/init_gen/y
-    (Trace(9, 48) - signature_shift_x.clone()) / (X.pow(trace_length / 16384) - 1.into()), // sig_verify/init_key/x
-    (Trace(9, 8) - signature_shift_y.clone()) / (X.pow(trace_length / 16384) - 1.into()), // sig_verify/init_key/y
+    // (Trace(9, 48) - signature_shift_x.clone()) / (X.pow(trace_length / 16384) - 1.into()), // sig_verify/init_key/x
+    // (Trace(9, 8) - signature_shift_y.clone()) / (X.pow(trace_length / 16384) - 1.into()), // sig_verify/init_key/y
     // (Trace(9, 32676) - Trace(9, 16328) - Trace(9, 32724) * (Trace(9, 32708) - Trace(9, 16368))) / (X.pow(trace_length / 32768) - 1.into()), // sig_verify/add_results/slope
     // (Trace(9, 32724) * Trace(9, 32724) - (Trace(9, 32708) + Trace(9, 16368) + Trace(9, 16384))) / (X.pow(trace_length / 32768) - 1.into()), // sig_verify/add_results/x
     // (Trace(9, 32676) + Trace(9, 16416) - Trace(9, 32724) * (Trace(9, 32708) - Trace(9, 16384))) / (X.pow(trace_length / 32768) - 1.into()), // sig_verify/add_results/y
