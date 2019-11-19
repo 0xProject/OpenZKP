@@ -351,6 +351,7 @@ mod tests {
                     trace_table[(offset + stride * i + 48, 9)] = result_x.clone();
                     trace_table[(offset + stride * i + 8, 9)] = result_y.clone();
                     trace_table[(offset + stride * i + 40, 9)] = result_slope.clone();
+                    trace_table[(offset + stride * i + 56, 9)] = (result_x - doubling_x).inv().expect("Why should never be 0?");
                 }
 
                 for (hash_pool_index, vault) in quarter_vaults.iter().enumerate() {
