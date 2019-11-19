@@ -356,20 +356,21 @@ mod tests {
 
                 if quarter % 2 == 0 {
                     let u_1 = FieldElement::GENERATOR.pow(10); // dummy value
-                    let (sources, xs, ys, slopes, delta_xs) = exponentiate_generator(&u_1, &parameters.signature);
-                    for (i, (source, x, y, slope, delta)) in izip!(&sources, &xs, &ys, &slopes, delta_xs).enumerate() {
+                    let (sources, xs, ys, slopes, delta_xs) =
+                        exponentiate_generator(&u_1, &parameters.signature);
+                    for (i, (source, x, y, slope, delta)) in
+                        izip!(&sources, &xs, &ys, &slopes, delta_xs).enumerate()
+                    {
                         let stride = 128;
 
                         trace_table[(offset + stride * i + 20, 9)] = source.clone();
                         trace_table[(offset + stride * i + 68, 9)] = x.clone();
                         trace_table[(offset + stride * i + 36, 9)] = y.clone();
                         trace_table[(offset + stride * i + 100, 9)] = slope.clone();
-                        trace_table[(offset + stride * i + 84, 9)] = delta
-                            .inv()
-                            .expect("Why should never be 0?");
+                        trace_table[(offset + stride * i + 84, 9)] =
+                            delta.inv().expect("Why should never be 0?");
                     }
                 }
-
 
                 let u_2 = FieldElement::GENERATOR; // dummy value.
                 let (
