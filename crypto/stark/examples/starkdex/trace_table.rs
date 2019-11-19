@@ -269,6 +269,7 @@ mod tests {
             let offset = transaction_index * 65536;
 
             for (quarter, modification) in modification_tetrad(&modification).iter().enumerate() {
+                dbg!(quarter);
                 let offset = offset + 16384 * quarter;
                 let quarter_vaults = get_quarter_vaults(&modification);
 
@@ -293,7 +294,10 @@ mod tests {
                     for (i, (source, x, y, slope)) in izip!(&sources, &xs, &ys, &slopes).enumerate()
                     {
                         trace_table[(offset + 4 * i + 0, 8)] = x.clone();
-                        trace_table[(offset + 4 * i + 1, 8)] = slope.clone();
+                        let slope_index = offset + 4 * i + 1;
+                        if !slope.is_zero() {
+                            trace_table[(offset + 4 * i + 1, 8)] = slope.clone();
+                        }
                         trace_table[(offset + 4 * i + 2, 8)] = y.clone();
                         trace_table[(offset + 4 * i + 3, 8)] = source.clone();
                     }
@@ -304,10 +308,16 @@ mod tests {
                     for (i, (source, x, y, slope)) in izip!(&sources, &xs, &ys, &slopes).enumerate()
                     {
                         trace_table[(offset + 4 * i + 0, 8)] = x.clone();
-                        trace_table[(offset + 4 * i + 1, 8)] = slope.clone();
+                        if !slope.is_zero() { // need to special case this to not overwrite trace_table[(offset + 27645, 8)].
+                            trace_table[(offset + 4 * i + 1, 8)] = slope.clone();
+                        }
                         trace_table[(offset + 4 * i + 2, 8)] = y.clone();
                         trace_table[(offset + 4 * i + 3, 8)] = source.clone();
                     }
+                }
+
+                if quarter % 2 == 0 {
+                    trace_table[(offset + 27645, 8)] = modification.key.pow(2);
                 }
 
                 trace_table[(offset + 8196, 9)] = trace_table[(offset + 11267, 8)].clone();
@@ -316,6 +326,7 @@ mod tests {
                     trace_table[(offset + 128 * i + 128, 9)] =
                         shift_right(&trace_table[(offset + 128 * i, 9)]);
                 }
+                assert_eq!(trace_table[(0, 9)].pow(2), trace_table[(27645, 8)]);
 
                 assert_eq!(trace_table[(offset + 4092, 8)], quarter_vaults[0].hash());
                 let (sources, xs, ys, slopes) =
@@ -361,10 +372,6 @@ mod tests {
             );
             assert_eq!(trace_table[(offset + 255, 6)], modification.vault.into());
         }
-
-        dbg!(trace_table[(0, 9)].clone());
-        dbg!(trace_table[(16, 9)].clone());
-        dbg!(trace_table[(32, 9)].clone());
 
         let result = check_constraints(&system, &trace_table);
 
