@@ -198,17 +198,20 @@ fn exponentiate_generator(
         sources.push(sources[i].clone() >> 1);
 
         let (x, y) = get_coordinates(&result);
-        xs.push(x);
+        xs.push(x.clone());
         ys.push(y);
 
-        let (delta_x, _) = get_coordinates(&(result.clone() - doubling_generator.clone()));
-        delta_xs.push(delta_x);
+        let (doubling_x, _) = get_coordinates(&doubling_generator);
+        delta_xs.push(x - doubling_x);
 
         if sources[i].bit(0) {
             slopes[i] = get_slope(&result, &doubling_generator);
             result = result + doubling_generator.clone();
         }
-        doubling_generator = doubling_generator.clone() + doubling_generator;
+
+        if i < 250 { // ecdsa columns stop doubling after this index.
+            doubling_generator = doubling_generator.clone() + doubling_generator;
+        }
     }
 
     (
@@ -506,8 +509,6 @@ mod tests {
             );
             assert_eq!(trace_table[(offset + 255, 6)], modification.vault.into());
         }
-
-        dbg!(trace_table[(8188, 8)].clone());
 
         let result = check_constraints(&system, &trace_table);
 
