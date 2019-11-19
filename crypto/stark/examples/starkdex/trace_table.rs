@@ -2,6 +2,7 @@ use crate::{
     inputs::{get_directions, root, Direction, Modification, SignatureParameters, Vault, Vaults},
     pedersen::hash,
     pedersen_points::{PEDERSEN_POINTS, SHIFT_POINT},
+    periodic_columns::ECDSA_GENERATOR,
 };
 use zkp_elliptic_curve::Affine;
 use zkp_primefield::FieldElement;
@@ -174,52 +175,50 @@ fn exponentiate_key(
         result_slopes,
     )
 }
-// fn exponentiate_generator(
-//     u_1: &FieldElement, // from Wikipedia ECDSA name
-//     parameters: &SignatureParameters,
-// ) -> (
-//     Vec<FieldElement>,
-//     Vec<FieldElement>,
-//     Vec<FieldElement>,
-//     Vec<FieldElement>,
-// ) {
-//     let mut sources = vec![U256::from(u_1)];
-//     let mut slopes = vec![FieldElement::ZERO; 256];
-//     let mut xs = Vec::with_capacity(256);
-//     let mut ys = Vec::with_capacity(256);
-//
-//     let mut doubling_generator = public_key.clone();
-//     let mut result = Affine::ZERO - parameters.shift_point.clone();
-//     for i in 0..256 {
-//         sources.push(sources[i].clone() >> 1);
-//
-//         let (x, y) = get_coordinates(&doubling_key);
-//         doubling_xs.push(x);
-//         doubling_ys.push(y);
-//         doubling_slopes.push(get_tangent_slope(&doubling_key,
-// &parameters.alpha));
-//
-//         let (x, y) = get_coordinates(&result);
-//         result_xs.push(x);
-//         result_ys.push(y);
-//
-//         if sources[i].bit(0) {
-//             result_slopes[i] = get_slope(&result, &doubling_key);
-//             result = result + doubling_key.clone();
-//         }
-//         doubling_key = doubling_key.clone() + doubling_key;
-//     }
-//
-//     (
-//         doubling_xs,
-//         doubling_ys,
-//         doubling_slopes,
-//         sources.iter().map(|x| FieldElement::from(x)).collect(),
-//         result_xs,
-//         result_ys,
-//         result_slopes,
-//     )
-// }
+fn exponentiate_generator(
+    u_1: &FieldElement, // from Wikipedia ECDSA name
+    parameters: &SignatureParameters,
+) -> (
+    Vec<FieldElement>,
+    Vec<FieldElement>,
+    Vec<FieldElement>,
+    Vec<FieldElement>,
+    Vec<FieldElement>,
+) {
+    let mut sources = vec![U256::from(u_1)];
+    let mut slopes = vec![FieldElement::ZERO; 256];
+    let mut xs = Vec::with_capacity(256);
+    let mut ys = Vec::with_capacity(256);
+    let mut delta_xs = Vec::with_capacity(256);
+
+    let mut doubling_generator = ECDSA_GENERATOR;
+    let mut result = Affine::ZERO - parameters.shift_point.clone();
+
+    for i in 0..256 {
+        sources.push(sources[i].clone() >> 1);
+
+        let (x, y) = get_coordinates(&result);
+        xs.push(x);
+        ys.push(y);
+
+        let (delta_x, _) = get_coordinates(&(result.clone() - doubling_generator.clone()));
+        delta_xs.push(delta_x);
+
+        if sources[i].bit(0) {
+            slopes[i] = get_slope(&result, &doubling_generator);
+            result = result + doubling_generator.clone();
+        }
+        doubling_generator = doubling_generator.clone() + doubling_generator;
+    }
+
+    (
+        sources.iter().map(|x| FieldElement::from(x)).collect(),
+        xs,
+        ys,
+        slopes,
+        delta_xs,
+    )
+}
 
 fn get_merkle_tree_columns(
     vaults: &Vaults,
@@ -355,7 +354,24 @@ mod tests {
                     &parameters.signature.beta,
                 );
 
-                let u_2 = FieldElement::GENERATOR; // this is dummy value.
+                if quarter % 2 == 0 {
+                    let u_1 = FieldElement::GENERATOR.pow(10); // dummy value
+                    let (sources, xs, ys, slopes, delta_xs) = exponentiate_generator(&u_1, &parameters.signature);
+                    for (i, (source, x, y, slope, delta)) in izip!(&sources, &xs, &ys, &slopes, delta_xs).enumerate() {
+                        let stride = 128;
+
+                        trace_table[(offset + stride * i + 20, 9)] = source.clone();
+                        trace_table[(offset + stride * i + 68, 9)] = x.clone();
+                        trace_table[(offset + stride * i + 36, 9)] = y.clone();
+                        trace_table[(offset + stride * i + 100, 9)] = slope.clone();
+                        trace_table[(offset + stride * i + 84, 9)] = delta
+                            .inv()
+                            .expect("Why should never be 0?");
+                    }
+                }
+
+
+                let u_2 = FieldElement::GENERATOR; // dummy value.
                 let (
                     doubling_xs,
                     doubling_ys,
@@ -435,9 +451,6 @@ mod tests {
 
                 if quarter % 2 == 0 {
                     trace_table[(offset + 27645, 8)] = modification.key.pow(2);
-                    let (x, y) = get_coordinates(&parameters.signature.shift_point);
-                    trace_table[(offset + 68, 9)] = x;
-                    trace_table[(offset + 36, 9)] = -&y; // [sic]
                 }
 
                 trace_table[(offset + 8196, 9)] = trace_table[(offset + 11267, 8)].clone();
