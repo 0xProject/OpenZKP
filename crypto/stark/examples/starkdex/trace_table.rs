@@ -63,6 +63,8 @@ fn get_quarter_vaults(modification: &Modification) -> Vec<Vault> {
     ]
 }
 
+// fn translate_settlement(settlement: &Settlement) -> Vec<Vault> {}
+
 fn modification_tetrad(modification: &Modification) -> Vec<Modification> {
     let mut noop_modification = modification.clone();
     noop_modification.initial_amount = modification.final_amount.clone();
@@ -119,30 +121,58 @@ fn get_pedersen_hash_columns(
     )
 }
 
-fn verify_signatures(
+fn exponentiate_key(
+    u_2: &FieldElement, // from Wikipedia ECDSA name
     public_key: &Affine,
     parameters: &SignatureParameters,
-    /* left: &FieldElement,
-     * right: &FieldElement, */
-) -> (Vec<FieldElement>, Vec<FieldElement>, Vec<FieldElement>) {
-    //  + 16 is slope of line tangent to point being doubled
-    // + 0 is x coordinate of point being doubled
-    // + 32 is y coordinate of point being doubled
-    // the point being doubled is the public key?
+) -> (
+    Vec<FieldElement>,
+    Vec<FieldElement>,
+    Vec<FieldElement>,
+    Vec<FieldElement>,
+    Vec<FieldElement>,
+    Vec<FieldElement>,
+    Vec<FieldElement>,
+) {
+    let mut doubling_xs = Vec::with_capacity(256);
+    let mut doubling_ys = Vec::with_capacity(256);
+    let mut doubling_slopes = Vec::with_capacity(256);
 
-    let mut x_coordinates = Vec::with_capacity(256);
-    let mut y_coordinates = Vec::with_capacity(256);
-    let mut slopes = Vec::with_capacity(256);
+    let mut sources = vec![U256::from(u_2)];
+    let mut result_slopes = vec![FieldElement::ZERO; 256];
+    let mut result_xs = Vec::with_capacity(256);
+    let mut result_ys = Vec::with_capacity(256);
 
-    let mut p = public_key.clone();
-    for _ in 0..256 {
-        let (x, y) = get_coordinates(&p);
-        x_coordinates.push(x);
-        y_coordinates.push(y);
-        slopes.push(get_tangent_slope(&p, &parameters.alpha));
-        p = p.clone() + p;
+    let mut doubling_key = public_key.clone();
+    let mut result = SHIFT_POINT;
+    for i in 0..256 {
+        sources.push(sources[i].clone() >> 1);
+
+        let (x, y) = get_coordinates(&doubling_key);
+        doubling_xs.push(x);
+        doubling_ys.push(y);
+        doubling_slopes.push(get_tangent_slope(&doubling_key, &parameters.alpha));
+
+        if sources[i].bit(0) {
+            result_slopes[i] = get_slope(&result, &doubling_key);
+            result = result + doubling_key.clone();
+        }
+        let (x, y) = get_coordinates(&result);
+        result_xs.push(x);
+        result_ys.push(y);
+
+        doubling_key = doubling_key.clone() + doubling_key;
     }
-    (x_coordinates, y_coordinates, slopes)
+
+    (
+        doubling_xs,
+        doubling_ys,
+        doubling_slopes,
+        sources.iter().map(|x| FieldElement::from(x)).collect(),
+        result_xs,
+        result_ys,
+        result_slopes,
+    )
 }
 
 fn get_merkle_tree_columns(
@@ -278,8 +308,21 @@ mod tests {
                     &parameters.signature.alpha,
                     &parameters.signature.beta,
                 );
-                let (xs, ys, slopes) = verify_signatures(&public_key, &parameters.signature);
-                for (i, (x, y, slope)) in izip!(&xs, &ys, &slopes).enumerate() {
+
+                let u_2 = FieldElement::GENERATOR;
+                let (
+                    doubling_xs,
+                    doubling_ys,
+                    doubling_slopes,
+                    sources,
+                    result_xs,
+                    result_ys,
+                    result_slopes,
+                ) = exponentiate_key(&u_2, &public_key, &parameters.signature);
+                assert_eq!(doubling_xs.len(), 256);
+                for (i, (x, y, slope)) in
+                    izip!(&doubling_xs, &doubling_ys, &doubling_slopes).enumerate()
+                {
                     let stride = 64;
                     trace_table[(offset + stride * i + 0, 9)] = x.clone();
                     trace_table[(offset + stride * i + 16, 9)] = slope.clone();
@@ -294,7 +337,6 @@ mod tests {
                     for (i, (source, x, y, slope)) in izip!(&sources, &xs, &ys, &slopes).enumerate()
                     {
                         trace_table[(offset + 4 * i + 0, 8)] = x.clone();
-                        let slope_index = offset + 4 * i + 1;
                         if !slope.is_zero() {
                             trace_table[(offset + 4 * i + 1, 8)] = slope.clone();
                         }
@@ -308,7 +350,9 @@ mod tests {
                     for (i, (source, x, y, slope)) in izip!(&sources, &xs, &ys, &slopes).enumerate()
                     {
                         trace_table[(offset + 4 * i + 0, 8)] = x.clone();
-                        if !slope.is_zero() { // need to special case this to not overwrite trace_table[(offset + 27645, 8)].
+                        if !slope.is_zero() {
+                            // need to special case this to not overwrite trace_table[(offset +
+                            // 27645, 8)].
                             trace_table[(offset + 4 * i + 1, 8)] = slope.clone();
                         }
                         trace_table[(offset + 4 * i + 2, 8)] = y.clone();
@@ -318,6 +362,9 @@ mod tests {
 
                 if quarter % 2 == 0 {
                     trace_table[(offset + 27645, 8)] = modification.key.pow(2);
+                    let (x, y) = get_coordinates(&parameters.signature.shift_point);
+                    trace_table[(offset + 68, 9)] = x;
+                    trace_table[(offset + 36, 9)] = -&y; // [sic]
                 }
 
                 trace_table[(offset + 8196, 9)] = trace_table[(offset + 11267, 8)].clone();
@@ -372,6 +419,8 @@ mod tests {
             );
             assert_eq!(trace_table[(offset + 255, 6)], modification.vault.into());
         }
+
+        dbg!(trace_table[(8188, 8)].clone());
 
         let result = check_constraints(&system, &trace_table);
 
