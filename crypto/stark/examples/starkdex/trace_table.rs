@@ -144,7 +144,7 @@ fn exponentiate_key(
     let mut result_ys = Vec::with_capacity(256);
 
     let mut doubling_key = public_key.clone();
-    let mut result = SHIFT_POINT;
+    let mut result = parameters.shift_point.clone();
     for i in 0..256 {
         sources.push(sources[i].clone() >> 1);
 
@@ -153,14 +153,14 @@ fn exponentiate_key(
         doubling_ys.push(y);
         doubling_slopes.push(get_tangent_slope(&doubling_key, &parameters.alpha));
 
-        if sources[i].bit(0) {
-            result_slopes[i] = get_slope(&result, &doubling_key);
-            result = result + doubling_key.clone();
-        }
         let (x, y) = get_coordinates(&result);
         result_xs.push(x);
         result_ys.push(y);
 
+        if sources[i].bit(0) {
+            result_slopes[i] = get_slope(&result, &doubling_key);
+            result = result + doubling_key.clone();
+        }
         doubling_key = doubling_key.clone() + doubling_key;
     }
 
@@ -309,7 +309,7 @@ mod tests {
                     &parameters.signature.beta,
                 );
 
-                let u_2 = FieldElement::GENERATOR;
+                let u_2 = FieldElement::GENERATOR; // this is dummy value.
                 let (
                     doubling_xs,
                     doubling_ys,
@@ -320,13 +320,37 @@ mod tests {
                     result_slopes,
                 ) = exponentiate_key(&u_2, &public_key, &parameters.signature);
                 assert_eq!(doubling_xs.len(), 256);
-                for (i, (x, y, slope)) in
-                    izip!(&doubling_xs, &doubling_ys, &doubling_slopes).enumerate()
+                for (
+                    i,
+                    (
+                        doubling_x,
+                        doubling_y,
+                        doubling_slope,
+                        source,
+                        result_x,
+                        result_y,
+                        result_slope,
+                    ),
+                ) in izip!(
+                    &doubling_xs,
+                    &doubling_ys,
+                    &doubling_slopes,
+                    &sources,
+                    &result_xs,
+                    &result_ys,
+                    &result_slopes,
+                )
+                .enumerate()
                 {
                     let stride = 64;
-                    trace_table[(offset + stride * i + 0, 9)] = x.clone();
-                    trace_table[(offset + stride * i + 16, 9)] = slope.clone();
-                    trace_table[(offset + stride * i + 32, 9)] = y.clone();
+                    trace_table[(offset + stride * i + 0, 9)] = doubling_x.clone();
+                    trace_table[(offset + stride * i + 16, 9)] = doubling_slope.clone();
+                    trace_table[(offset + stride * i + 32, 9)] = doubling_y.clone();
+
+                    trace_table[(offset + stride * i + 24, 9)] = source.clone();
+                    trace_table[(offset + stride * i + 48, 9)] = result_x.clone();
+                    trace_table[(offset + stride * i + 8, 9)] = result_y.clone();
+                    trace_table[(offset + stride * i + 40, 9)] = result_slope.clone();
                 }
 
                 for (hash_pool_index, vault) in quarter_vaults.iter().enumerate() {

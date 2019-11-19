@@ -170,7 +170,7 @@ pub fn constraints(claim: &Claim, parameters: &Parameters) -> Vec<RationalExpres
     (sig_verify_exponentiate_key_bit.clone() * (sig_verify_exponentiate_key_bit.clone() - 1.into())) * (X.pow(trace_length / 16384) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 64) - 1.into()), // sig_verify/exponentiate_key/booleanity_test
     (Trace(9, 24)) / (X.pow(trace_length / 16384) - trace_generator.pow(251 * trace_length / 256)), // sig_verify/exponentiate_key/bit_extraction_end
     (Trace(9, 24)) / (X.pow(trace_length / 16384) - trace_generator.pow(255 * trace_length / 256)), // sig_verify/exponentiate_key/zeros_tail
-    // (sig_verify_exponentiate_key_bit.clone() * (Trace(9, 8) - Trace(9, 32)) - Trace(9, 40) * (Trace(9, 48) - Trace(9, 0))) * (X.pow(trace_length / 16384) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 64) - 1.into()), // sig_verify/exponentiate_key/add_points/slope
+    (sig_verify_exponentiate_key_bit.clone() * (Trace(9, 8) - Trace(9, 32)) - Trace(9, 40) * (Trace(9, 48) - Trace(9, 0))) * (X.pow(trace_length / 16384) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 64) - 1.into()), // sig_verify/exponentiate_key/add_points/slope
     // (Trace(9, 40) * Trace(9, 40) - sig_verify_exponentiate_key_bit.clone() * (Trace(9, 48) + Trace(9, 0) + Trace(9, 112))) * (X.pow(trace_length / 16384) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 64) - 1.into()), // sig_verify/exponentiate_key/add_points/x
     // (sig_verify_exponentiate_key_bit.clone() * (Trace(9, 8) + Trace(9, 72)) - Trace(9, 40) * (Trace(9, 48) - Trace(9, 112))) * (X.pow(trace_length / 16384) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 64) - 1.into()), // sig_verify/exponentiate_key/add_points/y
     // (Trace(9, 56) * (Trace(9, 48) - Trace(9, 0)) - 1.into()) * (X.pow(trace_length / 16384) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 64) - 1.into()), // sig_verify/exponentiate_key/add_points/x_diff_inv
@@ -178,8 +178,8 @@ pub fn constraints(claim: &Claim, parameters: &Parameters) -> Vec<RationalExpres
     // (sig_verify_exponentiate_key_bit_neg.clone() * (Trace(9, 72) - Trace(9, 8))) * (X.pow(trace_length / 16384) - trace_generator.pow(255 * trace_length / 256)) / (X.pow(trace_length / 64) - 1.into()), // sig_verify/exponentiate_key/copy_point/y
     (Trace(9, 68) - signature_shift_x.clone()) / (X.pow(trace_length / 32768) - 1.into()), // sig_verify/init_gen/x
     (Trace(9, 36) + signature_shift_y.clone()) / (X.pow(trace_length / 32768) - 1.into()), // sig_verify/init_gen/y
-    // (Trace(9, 48) - signature_shift_x.clone()) / (X.pow(trace_length / 16384) - 1.into()), // sig_verify/init_key/x
-    // (Trace(9, 8) - signature_shift_y.clone()) / (X.pow(trace_length / 16384) - 1.into()), // sig_verify/init_key/y
+    (Trace(9, 48) - signature_shift_x.clone()) / (X.pow(trace_length / 16384) - 1.into()), // sig_verify/init_key/x
+    (Trace(9, 8) - signature_shift_y.clone()) / (X.pow(trace_length / 16384) - 1.into()), // sig_verify/init_key/y
     // (Trace(9, 32676) - Trace(9, 16328) - Trace(9, 32724) * (Trace(9, 32708) - Trace(9, 16368))) / (X.pow(trace_length / 32768) - 1.into()), // sig_verify/add_results/slope
     // (Trace(9, 32724) * Trace(9, 32724) - (Trace(9, 32708) + Trace(9, 16368) + Trace(9, 16384))) / (X.pow(trace_length / 32768) - 1.into()), // sig_verify/add_results/x
     // (Trace(9, 32676) + Trace(9, 16416) - Trace(9, 32724) * (Trace(9, 32708) - Trace(9, 16384))) / (X.pow(trace_length / 32768) - 1.into()), // sig_verify/add_results/y
