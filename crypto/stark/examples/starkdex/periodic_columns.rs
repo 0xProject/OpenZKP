@@ -1555,17 +1555,23 @@ mod tests {
     use zkp_primefield::geometric_series::root_series;
     use zkp_stark::DensePolynomial;
 
-    #[test]
-    fn pedersen_points_correct() {
-        let evaluation_points = root_series(512);
-        let points: Vec<Affine> = evaluation_points
+    fn evaluate_periodic_column(x_column: &[FieldElement], y_column: &[FieldElement]) -> Vec<Affine> {
+        assert_eq!(x_column.len(), y_column.len());
+        let evaluation_points = root_series(x_column.len());
+
+        evaluation_points
             .map(|f: FieldElement| {
                 Affine::Point {
-                    x: DensePolynomial::new(&PEDERSEN_POINTS_X).evaluate(&f),
-                    y: DensePolynomial::new(&PEDERSEN_POINTS_Y).evaluate(&f),
+                    x: DensePolynomial::new(x_column).evaluate(&f),
+                    y: DensePolynomial::new(y_column).evaluate(&f),
                 }
             })
-            .collect();
+            .collect()
+    }
+
+    #[test]
+    fn pedersen_points_correct() {
+        let points = evaluate_periodic_column(&PEDERSEN_POINTS_X, &PEDERSEN_POINTS_Y);
 
         assert_eq!(points[0], Affine::Point {
             x: field_element!("01ef15c18599971b7beced415a40f0c7deacfd9b0d1819e03d723d8bc943cfca"),
@@ -1586,5 +1592,18 @@ mod tests {
             x: field_element!("06240eb2a837f465a300958d036b054c95f10f84c316821db3bdddf4e99c8046"),
             y: field_element!("01105e2f7b9193fd9d140b44b7261d4ca215d239996a98ef32a910ca166aab76"),
         });
+    }
+
+    #[test]
+    fn ecdsa_points_correct() {
+        let points = evaluate_periodic_column(&ECDSA_POINTS_X, &ECDSA_POINTS_Y);
+
+        for i in 0..250 {
+            assert_eq!(points[i].clone() + points[i].clone(), points[i + 1]);
+        }
+        assert_eq!(points[251], points[252]);
+        assert_eq!(points[252], points[253]);
+        assert_eq!(points[252], points[254]);
+        assert_eq!(points[253], points[255]);
     }
 }
