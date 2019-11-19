@@ -28,6 +28,12 @@ fn get_slope(p_1: &Affine, p_2: &Affine) -> FieldElement {
     (y_1 - y_2) / (x_1 - x_2)
 }
 
+fn add_points(p_1: &Affine, p_2: &Affine) -> (FieldElement, FieldElement, FieldElement) {
+    let slope = get_slope(&p_1, &p_2);
+    let (x, y) = get_coordinates(&(p_1 + p_2));
+    (x, y, slope)
+}
+
 fn get_tangent_slope(p: &Affine, alpha: &FieldElement) -> FieldElement {
     let (x, y) = get_coordinates(p);
     let numerator = x.pow(2) * FieldElement::from(3) + alpha;
@@ -209,7 +215,8 @@ fn exponentiate_generator(
             result = result + doubling_generator.clone();
         }
 
-        if i < 250 { // ecdsa columns stop doubling after this index.
+        if i < 250 {
+            // ecdsa columns stop doubling after this index.
             doubling_generator = doubling_generator.clone() + doubling_generator;
         }
     }
@@ -409,6 +416,7 @@ mod tests {
                 .enumerate()
                 {
                     let stride = 64;
+                    // assert!(offset + stride * i != 16384);
                     trace_table[(offset + stride * i + 0, 9)] = doubling_x.clone();
                     trace_table[(offset + stride * i + 16, 9)] = doubling_slope.clone();
                     trace_table[(offset + stride * i + 32, 9)] = doubling_y.clone();
@@ -455,6 +463,25 @@ mod tests {
 
                 if quarter % 2 == 0 {
                     trace_table[(offset + 27645, 8)] = modification.key.pow(2);
+
+                    let p_1 = Affine::Point {
+                        x: trace_table[(offset + 32708, 9)].clone(),
+                        y: trace_table[(offset + 32676, 9)].clone(),
+                    };
+                    let p_2 = Affine::Point {
+                        x: trace_table[(offset + 16368, 9)].clone(),
+                        y: trace_table[(offset + 16328, 9)].clone(),
+                    };
+                    let (x, y, slope) = add_points(&p_1, &p_2);
+                    trace_table[(offset + 32724, 9)] = slope;
+                    dbg!(trace_table[(offset + 16384, 9)].clone());
+                    dbg!(x.clone());
+                    trace_table[(offset + 16384, 9)] = -&x; // this is clashing, which means you need to have done something correctly here.
+                                                            // This should be r.
+                    trace_table[(offset + 16416, 9)] = y; // this won't fix the
+                                                          // constraint until
+                                                          // you get the r/x to
+                                                          // line up above.
                 }
 
                 trace_table[(offset + 8196, 9)] = trace_table[(offset + 11267, 8)].clone();
@@ -493,6 +520,7 @@ mod tests {
                     trace_table[(offset + 255 + i * 512 + 512, 6)] =
                         shift_right(&trace_table[(offset + 255 + i * 512, 6)]);
                 }
+                dbg!(trace_table[(16384, 9)].clone());
             }
 
             trace_table[(offset + 16376, 9)] = modification.key.clone();
