@@ -1,3 +1,4 @@
+use zkp_elliptic_curve::Affine;
 use zkp_macros_decl::field_element;
 use zkp_primefield::FieldElement;
 use zkp_u256::U256;
@@ -1031,6 +1032,10 @@ pub(crate) const PEDERSEN_POINTS_Y: [FieldElement; 512] = [
     field_element!("00239278bcc35bbe2538d61a00e79bb488592a0102208b1eb07c8a3bfd51b713"),
 ];
 
+pub(crate) const ECDSA_GENERATOR: Affine = Affine::Point {
+    x: field_element!("01ef15c18599971b7beced415a40f0c7deacfd9b0d1819e03d723d8bc943cfca"),
+    y: field_element!("005668060aa49730b7be4801df46ec62de53ecd11abe43a32873000c36e8dc1f"),
+};
 pub(crate) const ECDSA_POINTS_X: [FieldElement; 256] = [
     field_element!("0679061e5f453c8bb1855dce8f7d61f2cb64b15d2c4e70b969ec4ead3fc6a226"),
     field_element!("0421fac0e48da8e6355c07f6a64bcea96384848e8ea9a7113ab45f15b1dd15aa"),
@@ -1551,11 +1556,14 @@ pub(crate) const ECDSA_POINTS_Y: [FieldElement; 256] = [
 #[cfg(test)]
 mod tests {
     use super::*;
-    use zkp_elliptic_curve::Affine;
+
     use zkp_primefield::geometric_series::root_series;
     use zkp_stark::DensePolynomial;
 
-    fn evaluate_periodic_column(x_column: &[FieldElement], y_column: &[FieldElement]) -> Vec<Affine> {
+    fn evaluate_periodic_column(
+        x_column: &[FieldElement],
+        y_column: &[FieldElement],
+    ) -> Vec<Affine> {
         assert_eq!(x_column.len(), y_column.len());
         let evaluation_points = root_series(x_column.len());
 
@@ -1597,6 +1605,8 @@ mod tests {
     #[test]
     fn ecdsa_points_correct() {
         let points = evaluate_periodic_column(&ECDSA_POINTS_X, &ECDSA_POINTS_Y);
+
+        assert_eq!(points[0], ECDSA_GENERATOR);
 
         for i in 0..250 {
             assert_eq!(points[i].clone() + points[i].clone(), points[i + 1]);

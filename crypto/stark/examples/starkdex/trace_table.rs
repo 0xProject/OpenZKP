@@ -174,6 +174,52 @@ fn exponentiate_key(
         result_slopes,
     )
 }
+// fn exponentiate_generator(
+//     u_1: &FieldElement, // from Wikipedia ECDSA name
+//     parameters: &SignatureParameters,
+// ) -> (
+//     Vec<FieldElement>,
+//     Vec<FieldElement>,
+//     Vec<FieldElement>,
+//     Vec<FieldElement>,
+// ) {
+//     let mut sources = vec![U256::from(u_1)];
+//     let mut slopes = vec![FieldElement::ZERO; 256];
+//     let mut xs = Vec::with_capacity(256);
+//     let mut ys = Vec::with_capacity(256);
+//
+//     let mut doubling_generator = public_key.clone();
+//     let mut result = Affine::ZERO - parameters.shift_point.clone();
+//     for i in 0..256 {
+//         sources.push(sources[i].clone() >> 1);
+//
+//         let (x, y) = get_coordinates(&doubling_key);
+//         doubling_xs.push(x);
+//         doubling_ys.push(y);
+//         doubling_slopes.push(get_tangent_slope(&doubling_key,
+// &parameters.alpha));
+//
+//         let (x, y) = get_coordinates(&result);
+//         result_xs.push(x);
+//         result_ys.push(y);
+//
+//         if sources[i].bit(0) {
+//             result_slopes[i] = get_slope(&result, &doubling_key);
+//             result = result + doubling_key.clone();
+//         }
+//         doubling_key = doubling_key.clone() + doubling_key;
+//     }
+//
+//     (
+//         doubling_xs,
+//         doubling_ys,
+//         doubling_slopes,
+//         sources.iter().map(|x| FieldElement::from(x)).collect(),
+//         result_xs,
+//         result_ys,
+//         result_slopes,
+//     )
+// }
 
 fn get_merkle_tree_columns(
     vaults: &Vaults,
@@ -351,7 +397,9 @@ mod tests {
                     trace_table[(offset + stride * i + 48, 9)] = result_x.clone();
                     trace_table[(offset + stride * i + 8, 9)] = result_y.clone();
                     trace_table[(offset + stride * i + 40, 9)] = result_slope.clone();
-                    trace_table[(offset + stride * i + 56, 9)] = (result_x - doubling_x).inv().expect("Why should never be 0?");
+                    trace_table[(offset + stride * i + 56, 9)] = (result_x - doubling_x)
+                        .inv()
+                        .expect("Why should never be 0?");
                 }
 
                 for (hash_pool_index, vault) in quarter_vaults.iter().enumerate() {
