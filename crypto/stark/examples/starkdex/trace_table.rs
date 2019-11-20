@@ -7,6 +7,7 @@ use crate::{
 use zkp_elliptic_curve::Affine;
 use zkp_primefield::FieldElement;
 use zkp_u256::U256;
+use zkp_elliptic_curve_crypto::sign;
 
 fn get_coordinates(point: &Affine) -> (FieldElement, FieldElement) {
     match point {
@@ -104,9 +105,10 @@ fn modification_tetrad(modification: &Modification) -> Vec<Modification> {
     ]
 }
 
-// fn sign(&private_key: U256, Modification) {
-//
-// }
+fn sign_vault(private_key:& U256, vault: &Vault) -> (FieldElement, FieldElement) {
+    let (r, w) = sign(&vault.hash().into(), private_key);
+    (r.into(), w.into())
+}
 
 fn get_pedersen_hash_columns(
     left: &FieldElement,
@@ -411,61 +413,6 @@ mod tests {
                     &parameters.signature.beta,
                 );
 
-                let u_2 = FieldElement::GENERATOR; // dummy value.
-                // on even ones, public key is fead in, on
-
-                // on odd rounds,
-                let (
-                    doubling_xs,
-                    doubling_ys,
-                    doubling_slopes,
-                    sources,
-                    result_xs,
-                    result_ys,
-                    result_slopes,
-                ) = exponentiate_key(&u_2, &public_key, &parameters.signature);
-                assert_eq!(doubling_xs.len(), 256);
-                for (
-                    i,
-                    (
-                        doubling_x,
-                        doubling_y,
-                        doubling_slope,
-                        source,
-                        result_x,
-                        result_y,
-                        result_slope,
-                    ),
-                ) in izip!(
-                    &doubling_xs,
-                    &doubling_ys,
-                    &doubling_slopes,
-                    &sources,
-                    &result_xs,
-                    &result_ys,
-                    &result_slopes,
-                )
-                .enumerate()
-                {
-                    let stride = 64;
-                    // assert!(offset + stride * i != 16384);
-                    trace_table[(offset + stride * i + 0, 9)] = doubling_x.clone();
-                    trace_table[(offset + stride * i + 16, 9)] = doubling_slope.clone();
-                    trace_table[(offset + stride * i + 32, 9)] = doubling_y.clone();
-
-                    trace_table[(offset + stride * i + 24, 9)] = source.clone();
-                    trace_table[(offset + stride * i + 48, 9)] = result_x.clone();
-                    trace_table[(offset + stride * i + 8, 9)] = result_y.clone();
-                    if i == 255 {
-                        continue;
-                    }
-                    trace_table[(offset + stride * i + 40, 9)] = result_slope.clone();
-                    trace_table[(offset + stride * i + 56, 9)] = (result_x - doubling_x)
-                        .inv()
-                        .expect("Why should never be 0?");
-                }
-                trace_table[(offset + 16336, 9)] = u_2.inv().expect("r_and_w_nonzero");
-
                 let mut z = FieldElement::ZERO;
                 for (hash_pool_index, vault) in quarter_vaults.iter().enumerate() {
                     let offset = offset + hash_pool_index * 4096;
@@ -530,11 +477,65 @@ mod tests {
                             delta.inv().expect("Why should never be 0?");
                     }
                     trace_table[(offset + 11261, 8)] = z.inv().expect("z_nonzero");
+
+                    trace_table[(offset + 27645, 8)] = modification.key.pow(2);
+                }
+
+                let u_2 = FieldElement::GENERATOR; // dummy value.
+                // on even ones, public key is fead in, on
+
+                // on odd rounds,
+                let (
+                    doubling_xs,
+                    doubling_ys,
+                    doubling_slopes,
+                    sources,
+                    result_xs,
+                    result_ys,
+                    result_slopes,
+                ) = exponentiate_key(&u_2, &public_key, &parameters.signature);
+                assert_eq!(doubling_xs.len(), 256);
+                for (
+                    i,
+                    (
+                        doubling_x,
+                        doubling_y,
+                        doubling_slope,
+                        source,
+                        result_x,
+                        result_y,
+                        result_slope,
+                    ),
+                ) in izip!(
+                    &doubling_xs,
+                    &doubling_ys,
+                    &doubling_slopes,
+                    &sources,
+                    &result_xs,
+                    &result_ys,
+                    &result_slopes,
+                )
+                .enumerate()
+                {
+                    let stride = 64;
+                    // assert!(offset + stride * i != 16384);
+                    trace_table[(offset + stride * i + 0, 9)] = doubling_x.clone();
+                    trace_table[(offset + stride * i + 16, 9)] = doubling_slope.clone();
+                    trace_table[(offset + stride * i + 32, 9)] = doubling_y.clone();
+
+                    trace_table[(offset + stride * i + 24, 9)] = source.clone();
+                    trace_table[(offset + stride * i + 48, 9)] = result_x.clone();
+                    trace_table[(offset + stride * i + 8, 9)] = result_y.clone();
+                    if i == 255 {
+                        continue;
+                    }
+                    trace_table[(offset + stride * i + 40, 9)] = result_slope.clone();
+                    trace_table[(offset + stride * i + 56, 9)] = (result_x - doubling_x)
+                        .inv()
+                        .expect("Why should never be 0?");
                 }
 
                 if quarter % 2 == 0 {
-                    trace_table[(offset + 27645, 8)] = modification.key.pow(2);
-
                     let p_1 = Affine::Point {
                         x: trace_table[(offset + 32708, 9)].clone(),
                         y: trace_table[(offset + 32676, 9)].clone(),
@@ -568,7 +569,11 @@ mod tests {
                     // Theory: (9, 24) is r * w mod n.
                     // (9, 20) is z?
                     //
+
+                    // u_2 =
                 }
+
+                trace_table[(offset + 16336, 9)] = u_2.inv().expect("r_and_w_nonzero");
 
                 trace_table[(offset + 8196, 9)] = trace_table[(offset + 11267, 8)].clone();
                 for i in 0..32 {
