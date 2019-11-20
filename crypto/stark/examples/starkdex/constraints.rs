@@ -191,20 +191,20 @@ pub fn constraints(claim: &Claim, parameters: &Parameters) -> Vec<RationalExpres
     // (Trace(9, 24) * Trace(9, 16336) - 1.into()) / (X.pow(trace_length / 16384) - 1.into()), // sig_verify/r_and_w_nonzero
     (Trace(8, 27645) - Trace(9, 0) * Trace(9, 0)) / (X.pow(trace_length / 32768) - 1.into()), // sig_verify/q_on_curve/x_squared
     (Trace(9, 32) * Trace(9, 32) - (Trace(9, 0) * Trace(8, 27645) + alpha.clone() * Trace(9, 0) + beta)) / (X.pow(trace_length / 32768) - 1.into()), // sig_verify/q_on_curve/on_curve
-    // (is_settlement.clone() * (Trace(8, 7171) - (((Trace(6, 255) * vault_shift.clone() + Trace(6, 49407)) * amount_shift.clone() + Trace(9, 4)) * amount_shift.clone() + Trace(9, 32772)) * trade_shift)) / (X.pow(trace_length / 65536) - 1.into()), // maker_sig_input_packed
-    // (is_settlement.clone() * (Trace(8, 36867) - Trace(8, 8188))) / (X.pow(trace_length / 65536) - 1.into()), // taker_sig_input_maker_hash
-    // (is_settlement.clone() * (Trace(8, 37891) - Trace(6, 16639))) / (X.pow(trace_length / 65536) - 1.into()), // taker_sig_input_vault_a
-    // (is_settlement.clone() * (Trace(8, 39939) - Trace(6, 33023))) / (X.pow(trace_length / 65536) - 1.into()), // taker_sig_input_vault_b
-    // (is_settlement.clone() * (Trace(8, 8188) - Trace(9, 20))) / (X.pow(trace_length / 65536) - 1.into()), // copy_signature_input_maker
-    // (is_settlement.clone() * (Trace(8, 40956) - Trace(9, 32788))) / (X.pow(trace_length / 65536) - 1.into()), // copy_signature_input_taker
-    // (is_settlement.clone() * (Trace(9, 0) - Trace(9, 16376))) / (X.pow(trace_length / 65536) - 1.into()), // handle_empty_vault/consistency_key_change0
-    // (is_settlement.clone() * (Trace(8, 4099) - Trace(9, 16360))) / (X.pow(trace_length / 65536) - 1.into()), // handle_empty_vault/consistency_token_change0
-    // (is_settlement.clone() * (Trace(9, 0) - Trace(9, 65528))) / (X.pow(trace_length / 65536) - 1.into()), // handle_empty_vault/consistency_key_change3
-    // (is_settlement.clone() * (Trace(8, 5123) - Trace(9, 65512))) / (X.pow(trace_length / 65536) - 1.into()), // handle_empty_vault/consistency_token_change3
-    // (is_settlement.clone() * (Trace(9, 32768) - Trace(9, 32760))) / (X.pow(trace_length / 65536) - 1.into()), // handle_empty_vault/consistency_key_change1
-    // (is_settlement.clone() * (Trace(8, 4099) - Trace(9, 32744))) / (X.pow(trace_length / 65536) - 1.into()), // handle_empty_vault/consistency_token_change1
-    // (is_settlement.clone() * (Trace(9, 32768) - Trace(9, 49144))) / (X.pow(trace_length / 65536) - 1.into()), // handle_empty_vault/consistency_key_change2
-    // (is_settlement.clone() * (Trace(8, 5123) - Trace(9, 49128))) / (X.pow(trace_length / 65536) - 1.into()), // handle_empty_vault/consistency_token_change2
+    (is_settlement.clone() * (Trace(8, 7171) - (((Trace(6, 255) * vault_shift.clone() + Trace(6, 49407)) * amount_shift.clone() + Trace(9, 4)) * amount_shift.clone() + Trace(9, 32772)) * trade_shift)) / (X.pow(trace_length / 65536) - 1.into()), // maker_sig_input_packed
+    (is_settlement.clone() * (Trace(8, 36867) - Trace(8, 8188))) / (X.pow(trace_length / 65536) - 1.into()), // taker_sig_input_maker_hash
+    (is_settlement.clone() * (Trace(8, 37891) - Trace(6, 16639))) / (X.pow(trace_length / 65536) - 1.into()), // taker_sig_input_vault_a
+    (is_settlement.clone() * (Trace(8, 39939) - Trace(6, 33023))) / (X.pow(trace_length / 65536) - 1.into()), // taker_sig_input_vault_b
+    (is_settlement.clone() * (Trace(8, 8188) - Trace(9, 20))) / (X.pow(trace_length / 65536) - 1.into()), // copy_signature_input_maker
+    (is_settlement.clone() * (Trace(8, 40956) - Trace(9, 32788))) / (X.pow(trace_length / 65536) - 1.into()), // copy_signature_input_taker
+    (is_settlement.clone() * (Trace(9, 0) - Trace(9, 16376))) / (X.pow(trace_length / 65536) - 1.into()), // handle_empty_vault/consistency_key_change0
+    (is_settlement.clone() * (Trace(8, 4099) - Trace(9, 16360))) / (X.pow(trace_length / 65536) - 1.into()), // handle_empty_vault/consistency_token_change0
+    (is_settlement.clone() * (Trace(9, 0) - Trace(9, 65528))) / (X.pow(trace_length / 65536) - 1.into()), // handle_empty_vault/consistency_key_change3
+    (is_settlement.clone() * (Trace(8, 5123) - Trace(9, 65512))) / (X.pow(trace_length / 65536) - 1.into()), // handle_empty_vault/consistency_token_change3
+    (is_settlement.clone() * (Trace(9, 32768) - Trace(9, 32760))) / (X.pow(trace_length / 65536) - 1.into()), // handle_empty_vault/consistency_key_change1
+    (is_settlement.clone() * (Trace(8, 4099) - Trace(9, 32744))) / (X.pow(trace_length / 65536) - 1.into()), // handle_empty_vault/consistency_token_change1
+    (is_settlement.clone() * (Trace(9, 32768) - Trace(9, 49144))) / (X.pow(trace_length / 65536) - 1.into()), // handle_empty_vault/consistency_key_change2
+    (is_settlement.clone() * (Trace(8, 5123) - Trace(9, 49128))) / (X.pow(trace_length / 65536) - 1.into()), // handle_empty_vault/consistency_token_change2
     // (Trace(8, 1021) * (Constant(1.into()) - Trace(8, 1021))) / (X.pow(trace_length / 8192) - 1.into()), // handle_empty_vault/vault_empty/empty_vault_booleanity
     // (Trace(8, 1021) * Trace(8, 3075)) / (X.pow(trace_length / 8192) - 1.into()), // handle_empty_vault/vault_empty/amount_zero_when_empty
     // (Trace(8, 1021) * Trace(8, 5117)) / (X.pow(trace_length / 8192) - 1.into()), // handle_empty_vault/vault_empty/amount_inv_zero_when_empty
