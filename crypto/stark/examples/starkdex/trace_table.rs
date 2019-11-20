@@ -614,7 +614,10 @@ mod tests {
             );
             assert_eq!(trace_table[(offset + 255, 6)], modification.vault.into());
         }
-        assert_eq!(trace_table[(claim.n_transactions * 16384 * 4 - 1, 4)], claim.final_vaults_root);
+        assert_eq!(
+            trace_table[(claim.n_transactions * 16384 * 4 - 1, 4)],
+            claim.final_vaults_root
+        );
 
         let result = check_constraints(&system, &trace_table);
 
