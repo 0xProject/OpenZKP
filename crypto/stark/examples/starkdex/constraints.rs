@@ -209,10 +209,10 @@ pub fn constraints(claim: &Claim, parameters: &Parameters) -> Vec<RationalExpres
     (Trace(8, 1021) * Trace(8, 3075)) / (X.pow(trace_length / 8192) - 1.into()), // handle_empty_vault/vault_empty/amount_zero_when_empty
     (Trace(8, 1021) * Trace(8, 5117)) / (X.pow(trace_length / 8192) - 1.into()), // handle_empty_vault/vault_empty/amount_inv_zero_when_empty
     (Trace(8, 3075) * Trace(8, 5117) - (Constant(1.into()) - Trace(8, 1021))) / (X.pow(trace_length / 8192) - 1.into()), // handle_empty_vault/vault_empty/empty_when_amount_zero
-    // ((Constant(1.into()) - Trace(8, 1021)) * Trace(9, 16376) - Trace(8, 3)) / (X.pow(trace_length / 16384) - 1.into()), // handle_empty_vault/consistency_key_stage0
-    // ((Constant(1.into()) - Trace(8, 1021)) * Trace(9, 16360) - Trace(8, 1027)) / (X.pow(trace_length / 16384) - 1.into()), // handle_empty_vault/consistency_token_stage0
-    // ((Constant(1.into()) - Trace(8, 9213)) * Trace(9, 16376) - Trace(8, 8195)) / (X.pow(trace_length / 16384) - 1.into()), // handle_empty_vault/consistency_key_stage1
-    // ((Constant(1.into()) - Trace(8, 9213)) * Trace(9, 16360) - Trace(8, 9219)) / (X.pow(trace_length / 16384) - 1.into()), // handle_empty_vault/consistency_token_stage1
+    ((Constant(1.into()) - Trace(8, 1021)) * Trace(9, 16376) - Trace(8, 3)) / (X.pow(trace_length / 16384) - 1.into()), // handle_empty_vault/consistency_key_stage0
+    ((Constant(1.into()) - Trace(8, 1021)) * Trace(9, 16360) - Trace(8, 1027)) / (X.pow(trace_length / 16384) - 1.into()), // handle_empty_vault/consistency_token_stage0
+    ((Constant(1.into()) - Trace(8, 9213)) * Trace(9, 16376) - Trace(8, 8195)) / (X.pow(trace_length / 16384) - 1.into()), // handle_empty_vault/consistency_key_stage1
+    ((Constant(1.into()) - Trace(8, 9213)) * Trace(9, 16360) - Trace(8, 9219)) / (X.pow(trace_length / 16384) - 1.into()), // handle_empty_vault/consistency_token_stage1
     // (column0_row_expr0 - initial_root) / (X - 1.into()), // initial_root
     // (column4_row_expr1.clone() - final_root) / (X - trace_generator.pow(65536 * (trace_length / 65536 - 1))), // final_root
     // (column4_row_expr0.clone() - column0_row_expr2) * (X - trace_generator.pow(65536 * (trace_length / 65536 - 1) + 49152)) / (X.pow(trace_length / 16384) - 1.into()), // copy_merkle_roots

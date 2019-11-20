@@ -46,26 +46,47 @@ fn shift_right(x: &FieldElement) -> FieldElement {
 }
 
 fn get_quarter_vaults(modification: &Modification) -> Vec<Vault> {
+    let empty_vault = Vault {
+        key:    FieldElement::ZERO,
+        token:  FieldElement::ZERO,
+        amount: 0,
+    };
     vec![
-        Vault {
-            key:    modification.key.clone(),
-            token:  modification.token.clone(),
-            amount: modification.initial_amount.clone(),
+        if modification.initial_amount == 0 {
+            empty_vault.clone()
+        } else {
+            Vault {
+                key:    modification.key.clone(),
+                token:  modification.token.clone(),
+                amount: modification.initial_amount.clone(),
+            }
         },
-        Vault {
-            key:    modification.key.clone(),
-            token:  modification.token.clone(),
-            amount: modification.initial_amount.clone(),
+        if modification.initial_amount == 0 {
+            empty_vault.clone()
+        } else {
+            Vault {
+                key:    modification.key.clone(),
+                token:  modification.token.clone(),
+                amount: modification.initial_amount.clone(),
+            }
         },
-        Vault {
-            key:    modification.key.clone(),
-            token:  modification.token.clone(),
-            amount: modification.final_amount.clone(),
+        if modification.final_amount == 0 {
+            empty_vault.clone()
+        } else {
+            Vault {
+                key:    modification.key.clone(),
+                token:  modification.token.clone(),
+                amount: modification.final_amount.clone(),
+            }
         },
-        Vault {
-            key:    modification.key.clone(),
-            token:  modification.token.clone(),
-            amount: modification.final_amount.clone(),
+        if modification.final_amount == 0 {
+            empty_vault.clone()
+        } else {
+            Vault {
+                key:    modification.key.clone(),
+                token:  modification.token.clone(),
+                amount: modification.final_amount.clone(),
+            }
         },
     ]
 }
@@ -353,12 +374,12 @@ mod tests {
         for (transaction_index, modification) in claim.modifications.iter().enumerate() {
             let offset = transaction_index * 65536;
 
-            trace_table[(offset + 16376, 9)] = modification.key.clone();
-            trace_table[(offset + 16360, 9)] = modification.token.clone();
-
             for (quarter, modification) in modification_tetrad(&modification).iter().enumerate() {
                 dbg!(quarter);
                 let offset = offset + 16384 * quarter;
+                trace_table[(offset + 16376, 9)] = modification.key.clone();
+                trace_table[(offset + 16360, 9)] = modification.token.clone();
+
                 let quarter_vaults = get_quarter_vaults(&modification);
 
                 let public_key = get_point(
