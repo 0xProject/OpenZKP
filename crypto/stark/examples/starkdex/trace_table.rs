@@ -342,34 +342,44 @@ mod tests {
         }
         let initial_root = vaults.root();
 
-        // have to do something here....
-        let final_root = vaults.root();
+        let modifications = vec![
+            Modification {
+                initial_amount: 2,
+                final_amount:   1000,
+                index:          0,
+                key:            key.clone(),
+                token:          token.clone(),
+                vault:          0,
+            },
+            Modification {
+                initial_amount: 1000,
+                final_amount:   1300,
+                index:          1,
+                key:            key.clone(),
+                token:          token.clone(),
+                vault:          1,
+            },
+        ];
+
+        let mut temp_vaults = vaults.clone();
+        for modification in &modifications {
+            // Some verification logic here?
+            temp_vaults.update(modification.vault, Vault {
+                key:    modification.key.clone(),
+                token:  modification.token.clone(),
+                amount: modification.final_amount,
+            });
+        }
+        let final_root = temp_vaults.root();
 
         // let path_index = 1234123123;
         // let (vault, path) = vaults.path(path_index);
 
         let claim = Claim {
-            n_transactions:      2,
-            modifications:       vec![
-                Modification {
-                    initial_amount: 2,
-                    final_amount:   1000,
-                    index:          0,
-                    key:            key.clone(),
-                    token:          token.clone(),
-                    vault:          0,
-                },
-                Modification {
-                    initial_amount: 1000,
-                    final_amount:   1300,
-                    index:          1,
-                    key:            key.clone(),
-                    token:          token.clone(),
-                    vault:          1,
-                },
-            ],
+            n_transactions: 2,
+            modifications,
             initial_vaults_root: initial_root,
-            final_vaults_root:   final_root,
+            final_vaults_root: final_root,
         };
 
         let constraints = constraints(&claim, &parameters);
@@ -604,6 +614,7 @@ mod tests {
             );
             assert_eq!(trace_table[(offset + 255, 6)], modification.vault.into());
         }
+        assert_eq!(trace_table[(claim.n_transactions * 16384 * 4 - 1, 4)], claim.final_vaults_root);
 
         let result = check_constraints(&system, &trace_table);
 

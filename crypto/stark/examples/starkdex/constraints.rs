@@ -7,6 +7,7 @@ use zkp_macros_decl::field_element;
 use zkp_primefield::FieldElement;
 use zkp_stark::{DensePolynomial, RationalExpression};
 use zkp_u256::U256;
+use std::convert::TryInto;
 
 fn get_coordinates(p: &Affine) -> (RationalExpression, RationalExpression) {
     match p {
@@ -56,6 +57,9 @@ pub fn constraints(claim: &Claim, parameters: &Parameters) -> Vec<RationalExpres
     //     field_element!("05f9a0057058edbb6c48c9cb7c3726efaabafec5fda2c207c2977694c8e99a7a")
     // );
 
+    let row_expression_0 = 16384 - 1;
+    let row_expression_1: isize = 4 * 16384 - 1; // 0x2460
+    // let row_expression_2 =
     let column0_row_expr0 = Trace(0, 16384 - 1); // 0x2240
     let column0_row_expr2 = Trace(0, 1_000_000 - 2); // 0x2260
     let column4_row_expr1 = Trace(4, 1_000_000 - 1); // 0x2460
@@ -214,7 +218,7 @@ pub fn constraints(claim: &Claim, parameters: &Parameters) -> Vec<RationalExpres
     ((Constant(1.into()) - Trace(8, 9213)) * Trace(9, 16376) - Trace(8, 8195)) / (X.pow(trace_length / 16384) - 1.into()), // handle_empty_vault/consistency_key_stage1
     ((Constant(1.into()) - Trace(8, 9213)) * Trace(9, 16360) - Trace(8, 9219)) / (X.pow(trace_length / 16384) - 1.into()), // handle_empty_vault/consistency_token_stage1
     (column0_row_expr0 - initial_root) / (X - 1.into()), // initial_root
-    // (column4_row_expr1.clone() - final_root) / (X - trace_generator.pow(65536 * (trace_length / 65536 - 1))), // final_root
+    (Trace(4, row_expression_1) - final_root) / (X - trace_generator.pow(65536 * (trace_length / 65536 - 1))), // final_root
     // (column4_row_expr0.clone() - column0_row_expr2) * (X - trace_generator.pow(65536 * (trace_length / 65536 - 1) + 49152)) / (X.pow(trace_length / 16384) - 1.into()), // copy_merkle_roots
     // (is_modification.clone() * (column4_row_expr0 - column4_row_expr1)) / (X.pow(trace_length / 65536) - 1.into()), // copy_merkle_roots_modification
     ]
