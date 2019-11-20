@@ -53,9 +53,9 @@ fn get_quarter_vaults(modification: &Modification) -> Vec<Vault> {
             amount: modification.initial_amount.clone(),
         },
         Vault {
-            key:    FieldElement::ZERO,
-            token:  FieldElement::ZERO,
-            amount: 0,
+            key:    modification.key.clone(),
+            token:  modification.token.clone(),
+            amount: modification.initial_amount.clone(),
         },
         Vault {
             key:    modification.key.clone(),
@@ -63,9 +63,9 @@ fn get_quarter_vaults(modification: &Modification) -> Vec<Vault> {
             amount: modification.final_amount.clone(),
         },
         Vault {
-            key:    FieldElement::ZERO,
-            token:  FieldElement::ZERO,
-            amount: 0,
+            key:    modification.key.clone(),
+            token:  modification.token.clone(),
+            amount: modification.final_amount.clone(),
         },
     ]
 }
@@ -483,14 +483,13 @@ mod tests {
                                                           // you get the r/x to
                                                           // line up above.
 
-                    // assert!(!trace_table[(32752, 9)].is_zero());
-                    // assert!(!trace_table[(32712, 9)].is_zero());
-
                     let mystery_point = Affine::Point {
-                        x: trace_table[(32752, 9)].clone(),
-                        y: trace_table[(32712, 9)].clone(),
+                        // will this hack still work for settlements?
+                        x: trace_table[(offset + 32752 - 16384, 9)].clone(),
+                        y: trace_table[(offset + 32712 - 16384, 9)].clone(),
                     }; // somehow the final one is being writtern in to this one.
-                    trace_table[(3069 + offset, 8)] = get_slope(&(Affine::ZERO - SHIFT_POINT), &mystery_point);
+                    trace_table[(3069 + offset, 8)] =
+                        get_slope(&(Affine::ZERO - SHIFT_POINT), &mystery_point);
                     dbg!(trace_table[(32752, 9)].clone());
                     dbg!(trace_table[(32712, 9)].clone());
                     dbg!(trace_table[(3069, 8)].clone());
