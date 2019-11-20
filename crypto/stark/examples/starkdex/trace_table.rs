@@ -438,6 +438,16 @@ mod tests {
 
                 for (hash_pool_index, vault) in quarter_vaults.iter().enumerate() {
                     let offset = offset + hash_pool_index * 4096;
+                    if hash_pool_index % 2 == 0 {
+                        if vault.amount == 0 {
+                            trace_table[(offset + 1021, 8)] = FieldElement::ONE;
+                        } else {
+                            trace_table[(offset + 1021, 8)] = FieldElement::ZERO;
+                            trace_table[(offset + 5117, 8)] = FieldElement::from(vault.amount)
+                                .inv()
+                                .expect("Amount cannot be 0");
+                        }
+                    }
 
                     let (sources, xs, ys, slopes) =
                         get_pedersen_hash_columns(&vault.key, &vault.token);
@@ -450,6 +460,7 @@ mod tests {
                         trace_table[(offset + 4 * i + 2, 8)] = y.clone();
                         trace_table[(offset + 4 * i + 3, 8)] = source.clone();
                     }
+                    assert_eq!(sources.len(), 512);
 
                     let offset = offset + 2048;
                     let (sources, xs, ys, slopes) =
@@ -465,6 +476,8 @@ mod tests {
                         trace_table[(offset + 4 * i + 2, 8)] = y.clone();
                         trace_table[(offset + 4 * i + 3, 8)] = source.clone();
                     }
+                    assert_eq!(sources.len(), 512);
+                    assert_eq!(trace_table[(offset + 3075 - 2048, 8)], vault.amount.into());
                 }
 
                 if quarter % 2 == 0 {
@@ -497,8 +510,9 @@ mod tests {
                     }; // somehow the final one is being writtern in to this one.
                     trace_table[(3069 + offset, 8)] =
                         get_slope(&(Affine::ZERO - SHIFT_POINT), &mystery_point);
-                    // need to subtract out the shift point, which exists so that
-                    // we don't have intermediate values that are Affine::Zero.
+                    // need to subtract out the shift point, which exists so
+                    // that we don't have intermediate
+                    // values that are Affine::Zero.
                     // the resulting x value is the hash, which is fed into the
 
                     // trace_table[(3069 + offset, 8)] =

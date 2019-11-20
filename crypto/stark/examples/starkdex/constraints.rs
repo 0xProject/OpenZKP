@@ -205,10 +205,10 @@ pub fn constraints(claim: &Claim, parameters: &Parameters) -> Vec<RationalExpres
     (is_settlement.clone() * (Trace(8, 4099) - Trace(9, 32744))) / (X.pow(trace_length / 65536) - 1.into()), // handle_empty_vault/consistency_token_change1
     (is_settlement.clone() * (Trace(9, 32768) - Trace(9, 49144))) / (X.pow(trace_length / 65536) - 1.into()), // handle_empty_vault/consistency_key_change2
     (is_settlement.clone() * (Trace(8, 5123) - Trace(9, 49128))) / (X.pow(trace_length / 65536) - 1.into()), // handle_empty_vault/consistency_token_change2
-    // (Trace(8, 1021) * (Constant(1.into()) - Trace(8, 1021))) / (X.pow(trace_length / 8192) - 1.into()), // handle_empty_vault/vault_empty/empty_vault_booleanity
-    // (Trace(8, 1021) * Trace(8, 3075)) / (X.pow(trace_length / 8192) - 1.into()), // handle_empty_vault/vault_empty/amount_zero_when_empty
-    // (Trace(8, 1021) * Trace(8, 5117)) / (X.pow(trace_length / 8192) - 1.into()), // handle_empty_vault/vault_empty/amount_inv_zero_when_empty
-    // (Trace(8, 3075) * Trace(8, 5117) - (Constant(1.into()) - Trace(8, 1021))) / (X.pow(trace_length / 8192) - 1.into()), // handle_empty_vault/vault_empty/empty_when_amount_zero
+    (Trace(8, 1021) * (Constant(1.into()) - Trace(8, 1021))) / (X.pow(trace_length / 8192) - 1.into()), // handle_empty_vault/vault_empty/empty_vault_booleanity
+    (Trace(8, 1021) * Trace(8, 3075)) / (X.pow(trace_length / 8192) - 1.into()), // handle_empty_vault/vault_empty/amount_zero_when_empty
+    (Trace(8, 1021) * Trace(8, 5117)) / (X.pow(trace_length / 8192) - 1.into()), // handle_empty_vault/vault_empty/amount_inv_zero_when_empty
+    (Trace(8, 3075) * Trace(8, 5117) - (Constant(1.into()) - Trace(8, 1021))) / (X.pow(trace_length / 8192) - 1.into()), // handle_empty_vault/vault_empty/empty_when_amount_zero
     // ((Constant(1.into()) - Trace(8, 1021)) * Trace(9, 16376) - Trace(8, 3)) / (X.pow(trace_length / 16384) - 1.into()), // handle_empty_vault/consistency_key_stage0
     // ((Constant(1.into()) - Trace(8, 1021)) * Trace(9, 16360) - Trace(8, 1027)) / (X.pow(trace_length / 16384) - 1.into()), // handle_empty_vault/consistency_token_stage0
     // ((Constant(1.into()) - Trace(8, 9213)) * Trace(9, 16376) - Trace(8, 8195)) / (X.pow(trace_length / 16384) - 1.into()), // handle_empty_vault/consistency_key_stage1
