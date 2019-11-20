@@ -353,6 +353,9 @@ mod tests {
         for (transaction_index, modification) in claim.modifications.iter().enumerate() {
             let offset = transaction_index * 65536;
 
+            trace_table[(offset + 16376, 9)] = modification.key.clone();
+            trace_table[(offset + 16360, 9)] = modification.token.clone();
+
             for (quarter, modification) in modification_tetrad(&modification).iter().enumerate() {
                 dbg!(quarter);
                 let offset = offset + 16384 * quarter;
@@ -424,6 +427,9 @@ mod tests {
                     trace_table[(offset + stride * i + 24, 9)] = source.clone();
                     trace_table[(offset + stride * i + 48, 9)] = result_x.clone();
                     trace_table[(offset + stride * i + 8, 9)] = result_y.clone();
+                    if i == 255 {
+                        continue;
+                    }
                     trace_table[(offset + stride * i + 40, 9)] = result_slope.clone();
                     trace_table[(offset + stride * i + 56, 9)] = (result_x - doubling_x)
                         .inv()
@@ -534,8 +540,6 @@ mod tests {
                 dbg!(trace_table[(16384, 9)].clone());
             }
 
-            trace_table[(offset + 16376, 9)] = modification.key.clone();
-            trace_table[(offset + 16360, 9)] = modification.token.clone();
             assert_eq!(trace_table[(offset + 16376, 9)], modification.key);
             assert_eq!(trace_table[(offset + 16360, 9)], modification.token);
             assert_eq!(
