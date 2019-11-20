@@ -404,6 +404,7 @@ mod tests {
                         trace_table[(offset + stride * i + 84, 9)] =
                             delta.inv().expect("Why should never be 0?");
                     }
+                    trace_table[(offset + 11261, 8)] = u_1.inv().expect("z_nonzero");
                 }
 
                 let u_2 = FieldElement::GENERATOR; // dummy value.
@@ -456,6 +457,7 @@ mod tests {
                         .inv()
                         .expect("Why should never be 0?");
                 }
+                trace_table[(offset + 16336, 9)] = u_2.inv().expect("r_and_w_nonzero");
 
                 for (hash_pool_index, vault) in quarter_vaults.iter().enumerate() {
                     let offset = offset + hash_pool_index * 4096;

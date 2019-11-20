@@ -187,8 +187,8 @@ pub fn constraints(claim: &Claim, parameters: &Parameters) -> Vec<RationalExpres
     (Trace(9, 32712) + signature_shift_y.clone() - Trace(8, 3069) * (Trace(9, 32752) - signature_shift_x.clone())) / (X.pow(trace_length / 32768) - 1.into()), // sig_verify/extract_r/slope
     // (Trace(8, 3069) * Trace(8, 3069) - (Trace(9, 32752) + signature_shift_x.clone() + Trace(9, 24))) / (X.pow(trace_length / 32768) - 1.into()), // sig_verify/extract_r/x
     // (Trace(8, 19453) * (Trace(9, 32752) - signature_shift_x.clone()) - 1.into()) / (X.pow(trace_length / 32768) - 1.into()), // sig_verify/extract_r/x_diff_inv
-    // (Trace(9, 20) * Trace(8, 11261) - 1.into()) / (X.pow(trace_length / 32768) - 1.into()), // sig_verify/z_nonzero
-    // (Trace(9, 24) * Trace(9, 16336) - 1.into()) / (X.pow(trace_length / 16384) - 1.into()), // sig_verify/r_and_w_nonzero
+    (Trace(9, 20) * Trace(8, 11261) - 1.into()) / (X.pow(trace_length / 32768) - 1.into()), // sig_verify/z_nonzero
+    (Trace(9, 24) * Trace(9, 16336) - 1.into()) / (X.pow(trace_length / 16384) - 1.into()), // sig_verify/r_and_w_nonzero
     (Trace(8, 27645) - Trace(9, 0) * Trace(9, 0)) / (X.pow(trace_length / 32768) - 1.into()), // sig_verify/q_on_curve/x_squared
     (Trace(9, 32) * Trace(9, 32) - (Trace(9, 0) * Trace(8, 27645) + alpha.clone() * Trace(9, 0) + beta)) / (X.pow(trace_length / 32768) - 1.into()), // sig_verify/q_on_curve/on_curve
     (is_settlement.clone() * (Trace(8, 7171) - (((Trace(6, 255) * vault_shift.clone() + Trace(6, 49407)) * amount_shift.clone() + Trace(9, 4)) * amount_shift.clone() + Trace(9, 32772)) * trade_shift)) / (X.pow(trace_length / 65536) - 1.into()), // maker_sig_input_packed
