@@ -297,6 +297,7 @@ mod tests {
     use itertools::izip;
     use zkp_macros_decl::field_element;
     use zkp_stark::{check_constraints, Constraints, TraceTable};
+    use zkp_elliptic_curve_crypto::private_to_public;
 
     #[test]
     fn mason() {
@@ -319,8 +320,10 @@ mod tests {
             n_vaults:         30,
         };
 
-        let key =
-            field_element!("057d5d2e5da7409db60d64ae4e79443fedfd5eb925b5e54523eaf42cc1978169");
+        let private_key = U256::from(12123);
+        let public_key = private_to_public(&private_key);
+        let (key, _) = get_coordinates(&public_key);
+
         let token =
             field_element!("03e7aa5d1a9b180d6a12d451d3ae6fb95e390f722280f1ea383bb49d11828d");
         let initial_vaults = vec![
@@ -371,9 +374,6 @@ mod tests {
             });
         }
         let final_root = temp_vaults.root();
-
-        // let path_index = 1234123123;
-        // let (vault, path) = vaults.path(path_index);
 
         let claim = Claim {
             n_transactions: 2,
@@ -535,8 +535,6 @@ mod tests {
                     };
                     let (x, y, slope) = add_points(&p_1, &p_2);
                     trace_table[(offset + 32724, 9)] = slope;
-                    dbg!(trace_table[(offset + 16384, 9)].clone());
-                    dbg!(x.clone());
                     trace_table[(offset + 16384, 9)] = -&x; // this is clashing, which means you need to have done something correctly here.
                                                             // This should be r.
                     trace_table[(offset + 16416, 9)] = y; // this won't fix the
@@ -556,11 +554,6 @@ mod tests {
                     // that we don't have intermediate
                     // values that are Affine::Zero.
                     // the resulting x value is the hash, which is fed into the
-
-                    // trace_table[(3069 + offset, 8)] =
-                    // dbg!(trace_table[(32752, 9)].clone());
-                    // dbg!(trace_table[(32712, 9)].clone());
-                    // dbg!(trace_table[(3069, 8)].clone());
                 }
 
                 trace_table[(offset + 8196, 9)] = trace_table[(offset + 11267, 8)].clone();
