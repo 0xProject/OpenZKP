@@ -482,6 +482,18 @@ mod tests {
                                                           // constraint until
                                                           // you get the r/x to
                                                           // line up above.
+
+                    // assert!(!trace_table[(32752, 9)].is_zero());
+                    // assert!(!trace_table[(32712, 9)].is_zero());
+
+                    let mystery_point = Affine::Point {
+                        x: trace_table[(32752, 9)].clone(),
+                        y: trace_table[(32712, 9)].clone(),
+                    }; // somehow the final one is being writtern in to this one.
+                    trace_table[(3069 + offset, 8)] = get_slope(&(Affine::ZERO - SHIFT_POINT), &mystery_point);
+                    dbg!(trace_table[(32752, 9)].clone());
+                    dbg!(trace_table[(32712, 9)].clone());
+                    dbg!(trace_table[(3069, 8)].clone());
                 }
 
                 trace_table[(offset + 8196, 9)] = trace_table[(offset + 11267, 8)].clone();
