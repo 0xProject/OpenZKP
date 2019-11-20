@@ -319,25 +319,34 @@ mod tests {
             n_vaults:         30,
         };
 
-        let mut vaults = Vaults::new();
-        let initial_root = vaults.root();
-
         let key =
             field_element!("057d5d2e5da7409db60d64ae4e79443fedfd5eb925b5e54523eaf42cc1978169");
         let token =
             field_element!("03e7aa5d1a9b180d6a12d451d3ae6fb95e390f722280f1ea383bb49d11828d");
+        let initial_vaults = vec![
+            (0, Vault {
+                key:    key.clone(),
+                token:  token.clone(),
+                amount: 2,
+            }),
+            (1, Vault {
+                key:    key.clone(),
+                token:  token.clone(),
+                amount: 1000,
+            }),
+        ];
 
-        let update_index = 12;
-        let vault = Vault {
-            key:    key.clone(),
-            token:  token.clone(),
-            amount: 2,
-        };
-        vaults.update(update_index, vault);
+        let mut vaults = Vaults::new();
+        for (index, vault) in initial_vaults.into_iter() {
+            vaults.update(index, vault);
+        }
+        let initial_root = vaults.root();
+
+        // have to do something here....
         let final_root = vaults.root();
 
-        let path_index = 1234123123;
-        let (vault, path) = vaults.path(path_index);
+        // let path_index = 1234123123;
+        // let (vault, path) = vaults.path(path_index);
 
         let claim = Claim {
             n_transactions:      2,
@@ -348,7 +357,7 @@ mod tests {
                     index:          0,
                     key:            key.clone(),
                     token:          token.clone(),
-                    vault:          update_index,
+                    vault:          0,
                 },
                 Modification {
                     initial_amount: 1000,
@@ -356,7 +365,7 @@ mod tests {
                     index:          1,
                     key:            key.clone(),
                     token:          token.clone(),
-                    vault:          update_index,
+                    vault:          1,
                 },
             ],
             initial_vaults_root: initial_root,
