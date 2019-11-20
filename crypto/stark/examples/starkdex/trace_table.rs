@@ -104,6 +104,10 @@ fn modification_tetrad(modification: &Modification) -> Vec<Modification> {
     ]
 }
 
+// fn sign(&private_key: U256, Modification) {
+//
+// }
+
 fn get_pedersen_hash_columns(
     left: &FieldElement,
     right: &FieldElement,
@@ -407,26 +411,10 @@ mod tests {
                     &parameters.signature.beta,
                 );
 
-                if quarter % 2 == 0 {
-                    let u_1 = FieldElement::GENERATOR.pow(10); // dummy value
-                    let (sources, xs, ys, slopes, delta_xs) =
-                        exponentiate_generator(&u_1, &parameters.signature);
-                    for (i, (source, x, y, slope, delta)) in
-                        izip!(&sources, &xs, &ys, &slopes, delta_xs).enumerate()
-                    {
-                        let stride = 128;
-
-                        trace_table[(offset + stride * i + 20, 9)] = source.clone();
-                        trace_table[(offset + stride * i + 68, 9)] = x.clone();
-                        trace_table[(offset + stride * i + 36, 9)] = y.clone();
-                        trace_table[(offset + stride * i + 100, 9)] = slope.clone();
-                        trace_table[(offset + stride * i + 84, 9)] =
-                            delta.inv().expect("Why should never be 0?");
-                    }
-                    trace_table[(offset + 11261, 8)] = u_1.inv().expect("z_nonzero");
-                }
-
                 let u_2 = FieldElement::GENERATOR; // dummy value.
+                // on even ones, public key is fead in, on
+
+                // on odd rounds,
                 let (
                     doubling_xs,
                     doubling_ys,
@@ -478,6 +466,7 @@ mod tests {
                 }
                 trace_table[(offset + 16336, 9)] = u_2.inv().expect("r_and_w_nonzero");
 
+                let mut z = FieldElement::ZERO;
                 for (hash_pool_index, vault) in quarter_vaults.iter().enumerate() {
                     let offset = offset + hash_pool_index * 4096;
                     if hash_pool_index % 2 == 0 {
@@ -520,6 +509,27 @@ mod tests {
                     }
                     assert_eq!(sources.len(), 512);
                     assert_eq!(trace_table[(offset + 3075 - 2048, 8)], vault.amount.into());
+
+                    z = xs[511].clone();
+                }
+
+                if quarter % 2 == 0 {
+                    let u_1 = z.clone();
+                    let (sources, xs, ys, slopes, delta_xs) =
+                        exponentiate_generator(&u_1, &parameters.signature);
+                    for (i, (source, x, y, slope, delta)) in
+                        izip!(&sources, &xs, &ys, &slopes, delta_xs).enumerate()
+                    {
+                        let stride = 128;
+
+                        trace_table[(offset + stride * i + 20, 9)] = source.clone();
+                        trace_table[(offset + stride * i + 68, 9)] = x.clone();
+                        trace_table[(offset + stride * i + 36, 9)] = y.clone();
+                        trace_table[(offset + stride * i + 100, 9)] = slope.clone();
+                        trace_table[(offset + stride * i + 84, 9)] =
+                            delta.inv().expect("Why should never be 0?");
+                    }
+                    trace_table[(offset + 11261, 8)] = z.inv().expect("z_nonzero");
                 }
 
                 if quarter % 2 == 0 {
@@ -554,6 +564,10 @@ mod tests {
                     // that we don't have intermediate
                     // values that are Affine::Zero.
                     // the resulting x value is the hash, which is fed into the
+
+                    // Theory: (9, 24) is r * w mod n.
+                    // (9, 20) is z?
+                    //
                 }
 
                 trace_table[(offset + 8196, 9)] = trace_table[(offset + 11267, 8)].clone();
