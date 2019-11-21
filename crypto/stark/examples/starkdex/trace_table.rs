@@ -484,7 +484,7 @@ mod tests {
                 let u_2 = FieldElement::GENERATOR; // dummy value.
                 // on even ones, public key is fead in, on
 
-                // on odd rounds,
+                // on odd rounds, feed in r * G.
                 let (
                     doubling_xs,
                     doubling_ys,
