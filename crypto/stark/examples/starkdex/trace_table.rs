@@ -117,46 +117,31 @@ fn sign_vault(private_key: &U256, vault: &Vault) -> (FieldElement, FieldElement)
 fn get_pedersen_hash_columns(
     left: &FieldElement,
     right: &FieldElement,
-) -> (
-    Vec<FieldElement>,
-    Vec<FieldElement>,
-    Vec<FieldElement>,
-    Vec<FieldElement>,
-) {
-    let mut sources = vec![U256::from(left)];
+) -> Vec<(FieldElement, FieldElement, FieldElement, FieldElement)> {
+    let mut sources = vec![left.clone()];
     for i in 0..255 {
-        sources.push(sources[i].clone() >> 1);
+        sources.push(shift_right(&sources[i]));
     }
-    sources.push(U256::from(right));
+    sources.push(right.clone());
     for i in 256..511 {
-        sources.push(sources[i].clone() >> 1);
+        sources.push(shift_right(&sources[i]));
     }
     assert_eq!(sources.len(), 512);
 
     let mut sum = SHIFT_POINT;
-    let mut x_coordinates = Vec::with_capacity(512);
-    let mut y_coordinates = Vec::with_capacity(512);
-    let mut slopes = vec![FieldElement::ZERO; 512];
+    let mut result = Vec::with_capacity(256);
     for (i, source) in sources.iter().enumerate() {
         let (x, y) = get_coordinates(&sum);
-        x_coordinates.push(x);
-        y_coordinates.push(y);
-
-        if source.bit(0) {
-            let point = PEDERSEN_POINTS[if i < 256 { i + 1 } else { i - 4 }].clone();
-            slopes[i] = get_slope(&sum, &point);
+        let mut slope = FieldElement::ZERO;
+        if is_odd(source) {
+            let point = &PEDERSEN_POINTS[if i < 256 { i + 1 } else { i - 4 }].clone();
+            slope = get_slope(&sum, &point);
             sum += point;
         }
+        result.push((x, y, slope, source.clone()))
     }
-
-    assert_eq!(hash(left, right), x_coordinates[511]);
-
-    (
-        sources.iter().map(|x| FieldElement::from(x)).collect(),
-        x_coordinates,
-        y_coordinates,
-        slopes,
-    )
+    assert_eq!(hash(left, right), result[511].0);
+    result
 }
 
 fn scalar_multiply(
@@ -172,7 +157,7 @@ fn scalar_multiply(
     let mut sum = parameters.shift_point.clone();
 
     let mut result = Vec::with_capacity(256);
-    for i in 0..256 {
+    for _ in 0..256 {
         let (x, y) = get_coordinates(&point);
         let doubling_values = (x, y, get_tangent_slope(&point, &parameters.alpha));
 
@@ -243,36 +228,22 @@ fn exponentiate_generator(
 fn get_merkle_tree_columns(
     vaults: &Vaults,
     index: u32,
-) -> (
-    Vec<FieldElement>,
-    Vec<FieldElement>,
-    Vec<FieldElement>,
-    Vec<FieldElement>,
-) {
+) -> Vec<(FieldElement, FieldElement, FieldElement, FieldElement)> {
     let (vault, digests) = vaults.path(index);
     let directions = get_directions(index);
     assert_eq!(root(&vault, &directions, &digests), vaults.root());
 
-    let mut xs = vec![];
-    let mut ys = vec![];
-    let mut sources = vec![];
-    let mut slopes = vec![];
-
     let mut root = vault.hash();
+    let mut result = Vec::with_capacity(512 * directions.len());
     for (direction, digest) in directions.iter().zip(&digests) {
-        let columns = match direction {
+        result.extend(match direction {
             Direction::LEFT => get_pedersen_hash_columns(digest, &root),
             Direction::RIGHT => get_pedersen_hash_columns(&root, digest),
-        };
-        sources.extend(columns.0);
-        xs.extend(columns.1);
-        ys.extend(columns.2);
-        slopes.extend(columns.3);
-
-        root = xs[xs.len() - 1].clone();
+        });
+        root = result[result.len() - 1].0.clone();
     }
-    assert_eq!(vaults.root(), xs[xs.len() - 1]);
-    (sources, xs, ys, slopes)
+    assert_eq!(vaults.root(), result[result.len() - 1].0);
+    result
 }
 
 #[cfg(test)]
@@ -410,10 +381,8 @@ mod tests {
                         }
                     }
 
-                    let (sources, xs, ys, slopes) =
-                        get_pedersen_hash_columns(&vault.key, &vault.token);
-                    for (i, (source, x, y, slope)) in izip!(&sources, &xs, &ys, &slopes).enumerate()
-                    {
+                    let key_token_hash_values = get_pedersen_hash_columns(&vault.key, &vault.token);
+                    for (i, (x, y, slope, source)) in key_token_hash_values.iter().enumerate() {
                         trace_table[(offset + 4 * i + 0, 8)] = x.clone();
                         if !slope.is_zero() {
                             trace_table[(offset + 4 * i + 1, 8)] = slope.clone();
@@ -421,13 +390,14 @@ mod tests {
                         trace_table[(offset + 4 * i + 2, 8)] = y.clone();
                         trace_table[(offset + 4 * i + 3, 8)] = source.clone();
                     }
-                    assert_eq!(sources.len(), 512);
+                    assert_eq!(key_token_hash_values.len(), 512);
 
                     let offset = offset + 2048;
-                    let (sources, xs, ys, slopes) =
-                        get_pedersen_hash_columns(&xs[511], &vault.amount.into());
-                    for (i, (source, x, y, slope)) in izip!(&sources, &xs, &ys, &slopes).enumerate()
-                    {
+                    let vault_hash_values = get_pedersen_hash_columns(
+                        &key_token_hash_values[511].0,
+                        &vault.amount.into(),
+                    );
+                    for (i, (x, y, slope, source)) in vault_hash_values.iter().enumerate() {
                         trace_table[(offset + 4 * i + 0, 8)] = x.clone();
                         if !slope.is_zero() {
                             // need to special case this to not overwrite trace_table[(offset +
@@ -437,10 +407,10 @@ mod tests {
                         trace_table[(offset + 4 * i + 2, 8)] = y.clone();
                         trace_table[(offset + 4 * i + 3, 8)] = source.clone();
                     }
-                    assert_eq!(sources.len(), 512);
+                    assert_eq!(vault_hash_values.len(), 512);
                     assert_eq!(trace_table[(offset + 3075 - 2048, 8)], vault.amount.into());
 
-                    z = xs[511].clone();
+                    z = vault_hash_values[511].0.clone();
                 }
 
                 if quarter % 2 == 0 {
@@ -474,9 +444,9 @@ mod tests {
                         .enumerate()
                 {
                     let stride = 64;
-                    let (doubling_x, doubling_y, doubling_slope) = doubling_values;
 
                     // assert!(offset + stride * i != 16384);
+                    let (doubling_x, doubling_y, doubling_slope) = doubling_values;
                     trace_table[(offset + stride * i + 0, 9)] = doubling_x.clone();
                     trace_table[(offset + stride * i + 16, 9)] = doubling_slope.clone();
                     trace_table[(offset + stride * i + 32, 9)] = doubling_y.clone();
@@ -543,10 +513,9 @@ mod tests {
                 assert_eq!(trace_table[(0, 9)].pow(2), trace_table[(27645, 8)]);
 
                 assert_eq!(trace_table[(offset + 4092, 8)], quarter_vaults[0].hash());
-                let (sources, xs, ys, slopes) =
-                    get_merkle_tree_columns(&vaults, modification.vault);
-                assert_eq!(sources.len(), 16384);
-                for (i, (x, y, source, slope)) in izip!(&xs, &ys, &sources, &slopes).enumerate() {
+
+                let old_root_path_values = get_merkle_tree_columns(&vaults, modification.vault);
+                for (i, (x, y, slope, source)) in old_root_path_values.iter().enumerate() {
                     trace_table[(offset + i, 3)] = source.clone();
                     trace_table[(offset + i, 0)] = x.clone();
                     trace_table[(offset + i, 1)] = y.clone();
@@ -555,10 +524,8 @@ mod tests {
 
                 vaults.update(modification.vault, quarter_vaults[2].clone());
 
-                let (sources, xs, ys, slopes) =
-                    get_merkle_tree_columns(&vaults, modification.vault);
-                assert_eq!(sources.len(), 16384);
-                for (i, (x, y, source, slope)) in izip!(&xs, &ys, &sources, &slopes).enumerate() {
+                let new_root_path_values = get_merkle_tree_columns(&vaults, modification.vault);
+                for (i, (x, y, slope, source)) in new_root_path_values.iter().enumerate() {
                     trace_table[(offset + i, 7)] = source.clone();
                     trace_table[(offset + i, 4)] = x.clone();
                     trace_table[(offset + i, 5)] = y.clone();
