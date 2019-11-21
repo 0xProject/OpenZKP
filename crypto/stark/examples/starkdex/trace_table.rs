@@ -5,9 +5,9 @@ use crate::{
     periodic_columns::ECDSA_GENERATOR,
 };
 use zkp_elliptic_curve::Affine;
+use zkp_elliptic_curve_crypto::sign;
 use zkp_primefield::FieldElement;
 use zkp_u256::U256;
-use zkp_elliptic_curve_crypto::sign;
 
 fn get_coordinates(point: &Affine) -> (FieldElement, FieldElement) {
     match point {
@@ -44,6 +44,10 @@ fn get_tangent_slope(p: &Affine, alpha: &FieldElement) -> FieldElement {
 
 fn shift_right(x: &FieldElement) -> FieldElement {
     (U256::from(x) >> 1).into()
+}
+
+fn is_odd(x: &FieldElement) -> bool {
+    U256::from(x).is_odd()
 }
 
 fn get_quarter_vaults(modification: &Modification) -> Vec<Vault> {
@@ -105,7 +109,7 @@ fn modification_tetrad(modification: &Modification) -> Vec<Modification> {
     ]
 }
 
-fn sign_vault(private_key:& U256, vault: &Vault) -> (FieldElement, FieldElement) {
+fn sign_vault(private_key: &U256, vault: &Vault) -> (FieldElement, FieldElement) {
     let (r, w) = sign(&vault.hash().into(), private_key);
     (r.into(), w.into())
 }
@@ -155,58 +159,37 @@ fn get_pedersen_hash_columns(
     )
 }
 
-fn exponentiate_key(
-    u_2: &FieldElement, // from Wikipedia ECDSA name
-    public_key: &Affine,
+fn scalar_multiply(
+    point: &Affine,
+    scalar: &FieldElement,
     parameters: &SignatureParameters,
-) -> (
-    Vec<FieldElement>,
-    Vec<FieldElement>,
-    Vec<FieldElement>,
-    Vec<FieldElement>,
-    Vec<FieldElement>,
-    Vec<FieldElement>,
-    Vec<FieldElement>,
-) {
-    let mut doubling_xs = Vec::with_capacity(256);
-    let mut doubling_ys = Vec::with_capacity(256);
-    let mut doubling_slopes = Vec::with_capacity(256);
+) -> Vec<(
+    (FieldElement, FieldElement, FieldElement),
+    (FieldElement, FieldElement, FieldElement, FieldElement),
+)> {
+    let mut point = point.clone();
+    let mut scalar = scalar.clone();
+    let mut sum = parameters.shift_point.clone();
 
-    let mut sources = vec![U256::from(u_2)];
-    let mut result_slopes = vec![FieldElement::ZERO; 256];
-    let mut result_xs = Vec::with_capacity(256);
-    let mut result_ys = Vec::with_capacity(256);
-
-    let mut doubling_key = public_key.clone();
-    let mut result = parameters.shift_point.clone();
+    let mut result = Vec::with_capacity(256);
     for i in 0..256 {
-        sources.push(sources[i].clone() >> 1);
+        let (x, y) = get_coordinates(&point);
+        let doubling_values = (x, y, get_tangent_slope(&point, &parameters.alpha));
 
-        let (x, y) = get_coordinates(&doubling_key);
-        doubling_xs.push(x);
-        doubling_ys.push(y);
-        doubling_slopes.push(get_tangent_slope(&doubling_key, &parameters.alpha));
+        let (x, y) = get_coordinates(&sum);
+        let mut slope = FieldElement::ZERO;
+        if is_odd(&scalar) {
+            slope = get_slope(&sum, &point);
+            sum += point.clone();
+        };
+        let sum_values = (x, y, slope, scalar.clone());
 
-        let (x, y) = get_coordinates(&result);
-        result_xs.push(x);
-        result_ys.push(y);
+        result.push((doubling_values, sum_values));
 
-        if sources[i].bit(0) {
-            result_slopes[i] = get_slope(&result, &doubling_key);
-            result = result + doubling_key.clone();
-        }
-        doubling_key = doubling_key.clone() + doubling_key;
+        scalar = shift_right(&scalar);
+        point += point.clone();
     }
-
-    (
-        doubling_xs,
-        doubling_ys,
-        doubling_slopes,
-        sources.iter().map(|x| FieldElement::from(x)).collect(),
-        result_xs,
-        result_ys,
-        result_slopes,
-    )
+    result
 }
 fn exponentiate_generator(
     u_1: &FieldElement, // from Wikipedia ECDSA name
@@ -301,9 +284,9 @@ mod tests {
         pedersen_points::SHIFT_POINT,
     };
     use itertools::izip;
+    use zkp_elliptic_curve_crypto::private_to_public;
     use zkp_macros_decl::field_element;
     use zkp_stark::{check_constraints, Constraints, TraceTable};
-    use zkp_elliptic_curve_crypto::private_to_public;
 
     #[test]
     fn mason() {
@@ -482,47 +465,23 @@ mod tests {
                 }
 
                 let u_2 = FieldElement::GENERATOR; // dummy value.
-                // on even ones, public key is fead in, on
+                                                   // on even ones, public key is fead in, on
 
                 // on odd rounds, feed in r * G.
-                let (
-                    doubling_xs,
-                    doubling_ys,
-                    doubling_slopes,
-                    sources,
-                    result_xs,
-                    result_ys,
-                    result_slopes,
-                ) = exponentiate_key(&u_2, &public_key, &parameters.signature);
-                assert_eq!(doubling_xs.len(), 256);
-                for (
-                    i,
-                    (
-                        doubling_x,
-                        doubling_y,
-                        doubling_slope,
-                        source,
-                        result_x,
-                        result_y,
-                        result_slope,
-                    ),
-                ) in izip!(
-                    &doubling_xs,
-                    &doubling_ys,
-                    &doubling_slopes,
-                    &sources,
-                    &result_xs,
-                    &result_ys,
-                    &result_slopes,
-                )
-                .enumerate()
+                for (i, (doubling_values, sum_values)) in
+                    scalar_multiply(&public_key, &u_2, &parameters.signature)
+                        .iter()
+                        .enumerate()
                 {
                     let stride = 64;
+                    let (doubling_x, doubling_y, doubling_slope) = doubling_values;
+
                     // assert!(offset + stride * i != 16384);
                     trace_table[(offset + stride * i + 0, 9)] = doubling_x.clone();
                     trace_table[(offset + stride * i + 16, 9)] = doubling_slope.clone();
                     trace_table[(offset + stride * i + 32, 9)] = doubling_y.clone();
 
+                    let (result_x, result_y, result_slope, source) = sum_values;
                     trace_table[(offset + stride * i + 24, 9)] = source.clone();
                     trace_table[(offset + stride * i + 48, 9)] = result_x.clone();
                     trace_table[(offset + stride * i + 8, 9)] = result_y.clone();
