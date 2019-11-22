@@ -456,6 +456,7 @@ mod tests {
                     assert_eq!(trace_table[(offset + 3075 - 2048, 8)], vault.amount.into());
 
                     z = vault_hash_values[511].0.clone();
+                    assert_eq!(z, vault.hash());
                 }
 
                 if quarter % 2 == 0 {
@@ -479,21 +480,38 @@ mod tests {
                     trace_table[(offset + 27645, 8)] = modification.key.pow(2);
                 }
 
-                let u_2 = FieldElement::GENERATOR; // dummy value.
-                                                   // on even ones, public key is fead in, on
+                let (r, w) = sign_vault(&private_key, &quarter_vaults[3]);
+                dbg!(r.clone());
+                let mut scalar_multiply_values =
+                    scalar_multiply(&public_key, &r, &parameters.signature);
+                trace_table[(offset + 16336, 9)] = if quarter % 2 == 0 {
+                    r.inv().expect("r_and_w_nonzero")
+                } else {
+                    w.inv().expect("r_and_w_nonzero")
+                };
 
-                // on odd rounds, feed in r * G.
-                for (i, (doubling_values, sum_values)) in
-                    scalar_multiply(&public_key, &u_2, &parameters.signature)
-                        .iter()
-                        .enumerate()
+                if quarter % 2 == 1 {
+                    let p_1 = Affine::Point {
+                        x: trace_table[(offset + 32708 - 16384, 9)].clone(),
+                        y: trace_table[(offset + 32676 - 16384, 9)].clone(),
+                    };
+                    let p_2 = Affine::Point {
+                        x: trace_table[(offset + 16368 - 16384, 9)].clone(),
+                        y: trace_table[(offset + 16328 - 16384, 9)].clone(),
+                    };
+                    trace_table[(offset + 32724 - 16384, 9)] = get_slope(&p_1, &p_2);
+                    scalar_multiply_values =
+                        scalar_multiply(&(p_1 + p_2), &w, &parameters.signature)
+                }
+
+                for (i, (doubling_values, sum_values)) in scalar_multiply_values.iter().enumerate()
                 {
                     let stride = 64;
-
-                    // assert!(offset + stride * i != 16384);
                     let (doubling_x, doubling_y, doubling_slope) = doubling_values;
                     trace_table[(offset + stride * i + 0, 9)] = doubling_x.clone();
-                    trace_table[(offset + stride * i + 16, 9)] = doubling_slope.clone();
+                    if i != 255 {
+                        trace_table[(offset + stride * i + 16, 9)] = doubling_slope.clone();
+                    }
                     trace_table[(offset + stride * i + 32, 9)] = doubling_y.clone();
 
                     let (result_x, result_y, result_slope, source) = sum_values;
@@ -510,45 +528,13 @@ mod tests {
                 }
 
                 if quarter % 2 == 1 {
-                    let p_1 = Affine::Point {
-                        x: trace_table[(offset + 32708 - 16384, 9)].clone(),
-                        y: trace_table[(offset + 32676 - 16384, 9)].clone(),
-                    };
-                    let p_2 = Affine::Point {
-                        x: trace_table[(offset + 16368 - 16384, 9)].clone(),
-                        y: trace_table[(offset + 16328 - 16384, 9)].clone(),
-                    };
-                    let (x, y, slope) = add_points(&p_1, &p_2);
-                    trace_table[(offset + 32724 - 16384, 9)] = slope;
-                    // trace_table[(offset + 16384 - 16384, 9)] = -&x; // this is clashing, which
-                    // means you need to have done something correctly here.
-                    // This should be r.
-                    // trace_table[(offset + 16416 - 16384, 9)] = y; // this won't fix the
-                    // constraint until
-                    // you get the r/x to
-                    // line up above.
-
                     let mystery_point = Affine::Point {
-                        // will this hack still work for settlements?
-                        // this should be the hash of something....
-                        x: trace_table[(offset + 32752 - 16384 - 16384, 9)].clone(),
-                        y: trace_table[(offset + 32712 - 16384 - 16384, 9)].clone(),
-                    }; // somehow the final one is being writtern in to this one.
+                        x: trace_table[(offset + 32752 - 16384, 9)].clone(),
+                        y: trace_table[(offset + 32712 - 16384, 9)].clone(),
+                    };
                     trace_table[(3069 + offset - 16384, 8)] =
                         get_slope(&(Affine::ZERO - SHIFT_POINT), &mystery_point);
-                    // need to subtract out the shift point, which exists so
-                    // that we don't have intermediate
-                    // values that are Affine::Zero.
-                    // the resulting x value is the hash, which is fed into the
-
-                    // Theory: (9, 24) is r * w mod n.
-                    // (9, 20) is z?
-                    //
-
-                    // u_2 =
                 }
-
-                trace_table[(offset + 16336, 9)] = u_2.inv().expect("r_and_w_nonzero");
 
                 trace_table[(offset + 8196, 9)] = trace_table[(offset + 11267, 8)].clone();
                 for i in 0..32 {
