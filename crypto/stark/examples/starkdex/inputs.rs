@@ -483,4 +483,79 @@ mod tests {
             field_element!("04379eb23f17a18ebd075ed4ac1a402252a7897b9b12c85fe4d424a6c5bd34b4")
         );
     }
+
+    #[test]
+    fn test_claim_polynomials_2() {
+        let claim = Claim {
+            n_transactions:      4,
+            modifications:       vec![
+                Modification {
+                    initial_amount: 0,
+                    final_amount:   1000,
+                    index:          0,
+                    key:            field_element!(
+                        "057d5d2e5da7409db60d64ae4e79443fedfd5eb925b5e54523eaf42cc1978169"
+                    ),
+                    token:          field_element!(
+                        "03e7aa5d1a9b180d6a12d451d3ae6fb95e390f722280f1ea383bb49d11828d"
+                    ),
+                    vault:          1,
+                },
+                Modification {
+                    initial_amount: 0,
+                    final_amount:   1000,
+                    index:          1,
+                    key:            field_element!(
+                        "024dca9f8032c9c8d1a2aae85b49df5dded9bb8da46d32284e339f5a9b30e820"
+                    ),
+                    token:          field_element!(
+                        "03e7aa5d1a9b180d6a12d451d3ae6fb95e390f722280f1ea383bb49d11828d"
+                    ),
+                    vault:          2,
+                },
+                Modification {
+                    initial_amount: 0,
+                    final_amount:   1000,
+                    index:          2,
+                    key:            field_element!(
+                        "03be0fef73793139380d0d5c27a33d6b1a67c29eb3bbe24e5635bc13b3439542"
+                    ),
+                    token:          field_element!(
+                        "03e7aa5d1a9b180d6a12d451d3ae6fb95e390f722280f1ea383bb49d11828d"
+                    ),
+                    vault:          3,
+                },
+                Modification {
+                    initial_amount: 0,
+                    final_amount:   1000,
+                    index:          3,
+                    key:            field_element!(
+                        "03f0f302fdf6ba1a4669ce4fc9bd2b4ba17bdc088ae32984f40c26e7006d2f9b"
+                    ),
+                    token:          field_element!(
+                        "03e7aa5d1a9b180d6a12d451d3ae6fb95e390f722280f1ea383bb49d11828d"
+                    ),
+                    vault:          4,
+                },
+            ],
+            initial_vaults_root: field_element!(
+                "00156823f988424670b3a750156e77068328aa496ff883106ccc78ff85ea1dc1"
+            ),
+            final_vaults_root:   field_element!(
+                "0181ae03ea55029827c08a70034df9861bc6c86689205155d966f28bf2cfb20a"
+            ),
+        };
+
+        let claim_polynomials = ClaimPolynomials::from(&claim);
+
+        assert_eq!(
+            claim_polynomials
+                .base
+                .evaluate(&FieldElement::ONE, &|_, _| FieldElement::ZERO)
+                / claim_polynomials
+                    .key
+                    .evaluate(&FieldElement::ONE, &|_, _| FieldElement::ZERO),
+            field_element!("057d5d2e5da7409db60d64ae4e79443fedfd5eb925b5e54523eaf42cc1978169")
+        );
+    }
 }
