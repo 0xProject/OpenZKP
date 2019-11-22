@@ -266,6 +266,51 @@ mod tests {
         get_pedersen_hash_columns(&FieldElement::ZERO, &FieldElement::ONE);
     }
 
+    fn multiply(n: &FieldElement, p: &Affine) -> Affine {
+        let values = scalar_multiply(p, n, &SignatureParameters {
+            shift_point: SHIFT_POINT,
+            alpha:       FieldElement::ONE,
+            beta:        field_element!(
+                "06f21413efbe40de150e596d72f7a8c5609ad26c15c915c1f4cdfcb99cee9e89"
+            ),
+        });
+
+        Affine::Point {
+            x: (values[255].1).0.clone(),
+            y: (values[255].1).1.clone(),
+        }
+    }
+
+    #[test]
+    fn test_sign_vault() {
+        let vault = Vault {
+            key:    field_element!(
+                "06f21413efbe40de150e596d72f7a8c5609ad26c15c915c1f4cdfcb99cee9e89"
+            ),
+            token:  field_element!(
+                "03e7aa5d1a9b180d6a12d451d3ae6fb95e390f722280f1ea383bb49d11828d"
+            ),
+            amount: 2,
+        };
+        let private_key = U256::from(2342);
+        let public_key = private_to_public(&private_key);
+
+        let (r, w) = sign_vault(&private_key, &vault);
+        let z = vault.hash();
+
+        let a = multiply(&z, &ECDSA_GENERATOR) - SHIFT_POINT;
+        let b = multiply(&r, &public_key) - SHIFT_POINT;
+
+        let result = multiply(&w, &(a + b)) - SHIFT_POINT;
+
+        let claim = match result {
+            Affine::Zero => panic!(),
+            Affine::Point { x, y } => x,
+        };
+
+        assert_eq!(claim, r);
+    }
+
     #[test]
     fn test_trace() {
         let parameters = Parameters {
@@ -464,31 +509,32 @@ mod tests {
                         .expect("Why should never be 0?");
                 }
 
-                if quarter % 2 == 0 {
+                if quarter % 2 == 1 {
                     let p_1 = Affine::Point {
-                        x: trace_table[(offset + 32708, 9)].clone(),
-                        y: trace_table[(offset + 32676, 9)].clone(),
+                        x: trace_table[(offset + 32708 - 16384, 9)].clone(),
+                        y: trace_table[(offset + 32676 - 16384, 9)].clone(),
                     };
                     let p_2 = Affine::Point {
-                        x: trace_table[(offset + 16368, 9)].clone(),
-                        y: trace_table[(offset + 16328, 9)].clone(),
+                        x: trace_table[(offset + 16368 - 16384, 9)].clone(),
+                        y: trace_table[(offset + 16328 - 16384, 9)].clone(),
                     };
                     let (x, y, slope) = add_points(&p_1, &p_2);
-                    trace_table[(offset + 32724, 9)] = slope;
-                    trace_table[(offset + 16384, 9)] = -&x; // this is clashing, which means you need to have done something correctly here.
-                                                            // This should be r.
-                    trace_table[(offset + 16416, 9)] = y; // this won't fix the
-                                                          // constraint until
-                                                          // you get the r/x to
-                                                          // line up above.
+                    trace_table[(offset + 32724 - 16384, 9)] = slope;
+                    // trace_table[(offset + 16384 - 16384, 9)] = -&x; // this is clashing, which
+                    // means you need to have done something correctly here.
+                    // This should be r.
+                    // trace_table[(offset + 16416 - 16384, 9)] = y; // this won't fix the
+                    // constraint until
+                    // you get the r/x to
+                    // line up above.
 
                     let mystery_point = Affine::Point {
                         // will this hack still work for settlements?
                         // this should be the hash of something....
-                        x: trace_table[(offset + 32752 - 16384, 9)].clone(),
-                        y: trace_table[(offset + 32712 - 16384, 9)].clone(),
+                        x: trace_table[(offset + 32752 - 16384 - 16384, 9)].clone(),
+                        y: trace_table[(offset + 32712 - 16384 - 16384, 9)].clone(),
                     }; // somehow the final one is being writtern in to this one.
-                    trace_table[(3069 + offset, 8)] =
+                    trace_table[(3069 + offset - 16384, 8)] =
                         get_slope(&(Affine::ZERO - SHIFT_POINT), &mystery_point);
                     // need to subtract out the shift point, which exists so
                     // that we don't have intermediate
