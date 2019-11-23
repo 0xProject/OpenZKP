@@ -2,12 +2,15 @@ use crate::RationalExpression;
 use crate::TraceTable;
 use crate::primefield::FieldElement;
 use std::convert::TryFrom;
+use crate::Constraints;
+use crate::constraint_check::check_constraints;
 
 // TODO: Introduce prover/verifier distinction
 
 // OPT: Don't reallocate trace table so many times, instead use a view
 // that is passed top-down for writing.
 
+#[derive(Clone)]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct Component {
     trace:       TraceTable,
@@ -26,7 +29,16 @@ impl Component {
             constraints: Vec::new(),
         }
     }
+
+    pub fn check(&self) -> bool {
+        let constraints = Constraints::from_expressions(
+            (self.trace.num_rows(), self.trace.num_columns()),
+            Vec::new(),
+            self.constraints.clone()).unwrap();
+        check_constraints(&constraints, &self.trace).is_ok()
+    }
 }
+
 
 // OPT: Use the degree of freedom provided by shift_x + shift_trace to
 // minimize the number of trace values to reveal.
@@ -227,9 +239,126 @@ pub fn compose_folded(a: Component, b: Component) -> Component {
     }
 }
 
+#[cfg(feature = "test")]
+use quickcheck::{Gen, Arbitrary};
+
+#[cfg(feature = "test")]
+impl Component {
+    /// Creates an example constraint system of given size
+    pub fn example(rows: usize, cols: usize, start: &FieldElement) -> Self {
+        use RationalExpression::*;
+
+        // Construct a sequence using the quadratic recurrence relation:
+        //     x[0]   = start
+        //     x[1]   = start.pow(3)
+        //     x[i+2] = x[i] * x[i + 1] + start.pow(5)
+        let mut x0 = start.clone();
+        let mut x1 = start.pow(3);
+        let offset = start.pow(5);
+        let mut next = || {
+            let result = x0.clone();
+            let x2 = &x0 * &x1 + &offset;
+            x0 = x1.clone();
+            x1 = x2;
+            result
+        };
+
+        // Fill in the trace table with the sequence
+        // the sequence is written left-to-right, then top-to-bottom.
+        let mut trace = TraceTable::new(rows, cols);
+        for i in 0..(rows*cols) {
+            trace[(i / cols, i % cols)] = next();
+        }
+
+        // Construct the constraint system for the sequence.
+        let omega = Constant(FieldElement::root(rows).unwrap());
+        let mut constraints = Vec::new();
+        // x[0] = start
+        if cols >= 1 {
+            constraints.push(
+                (Trace(0, 0) - start.into()) / (X - omega.pow(0)),
+            );
+        }
+        // For each column we need to add a constraint
+        for i in 0..cols {
+            // Find the previous two cells in the table
+            let (x0, x1) = match (i, cols) {
+                (0, 1) => (Trace(0, -2), Trace(0, -1)),
+                (0, _) => (Trace(cols - 2, -1), Trace(cols - 1, -1)),
+                (1, _) => (Trace(cols - 1, -1), Trace(0, 0)),
+                (_, _) => (Trace(i - 2, 0), Trace(i - 1, 0)),
+            };
+            // Exempt the first two cells
+            let exceptions = match (i, cols) {
+                (0, 1) => (X - omega.pow(0)) * (X - omega.pow(1)),
+                (0, _) | (1, _) => (X - omega.pow(0)),
+                (_, _) => 1.into(),
+            };
+            // x[i+2] = x[i] * x[i + 1] + offset
+            constraints.push(
+                (Trace(i, 0) - x0 * x1 - (&offset).into())
+                * exceptions / (X.pow(rows) - 1.into())
+            )
+        }
+
+        Component { trace, constraints }
+    }
+}
+
+#[cfg(feature = "test")]
+fn arbitrary_dimensions<G: Gen>(g: &mut G) -> (usize, usize) {
+    // rows = 0 1 2 4 .. 1024
+    let rows = (1 << (usize::arbitrary(g) % 12)) >> 1;
+    // cols = 0 1 2 3 .. 10
+    let cols = usize::arbitrary(g) %  11;
+    (rows, cols)
+}
+
+#[cfg(feature = "test")]
+impl Arbitrary for Component {
+    /// Creates an arbitrary constraint system up to 1024x10
+    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+        let (rows, cols) = arbitrary_dimensions(g);
+        let mut seed = FieldElement::arbitrary(g);
+        while seed == FieldElement::ZERO || seed == FieldElement::ONE {
+            seed += FieldElement::arbitrary(g);
+        }
+        Component::example(rows, cols, &seed)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use quickcheck_macros::*;
 
-    
+    #[quickcheck]
+    fn empty_check(rows: usize, cols: usize) -> bool {
+        let rows = 1 << (rows % 11);
+        let cols = cols % 10;
+        Component::empty(rows, cols).check()
+    }
+
+    #[quickcheck]
+    fn arbitrary_check(component: Component) -> bool {
+        component.check()
+    }
+
+    // For transformations and combinations we would ideally
+    // like to check that the new Component proofs the same claims
+    // as the input ones. Unfortunately, this is difficult to verify.
+    // Instead, we verify:
+    //
+    // * The new Component is internally consistent.
+    // * Labeled values remain and have the same values.
+    // * The new Component's trace has at least as many values as the
+    //   input traces (although you could imagine an inlining transform
+    //   that violates this.)
+    // * The new Component has at least as many constraints as the inputs
+    //   combined. Except for vertical composition, where the inputs have
+    //   identical constraints and only one copy results. (We could also
+    //   imagine an optimization pass that combines constraints if possible
+    //   and removes redundant ones.)
+
 }
+

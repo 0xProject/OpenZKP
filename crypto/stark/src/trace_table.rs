@@ -10,6 +10,7 @@ use zkp_primefield::{
     FieldElement,
 };
 
+#[derive(Clone)]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct TraceTable {
     trace_length: usize,
