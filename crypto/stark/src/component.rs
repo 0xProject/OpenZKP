@@ -330,6 +330,7 @@ impl Arbitrary for Component {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use quickcheck::TestResult;
     use quickcheck_macros::*;
 
     #[quickcheck]
@@ -352,13 +353,49 @@ mod tests {
     // * The new Component is internally consistent.
     // * Labeled values remain and have the same values.
     // * The new Component's trace has at least as many values as the
-    //   input traces (although you could imagine an inlining transform
-    //   that violates this.)
+    //   input traces. Although you could imagine a row inlining transform
+    //   that violates this.
     // * The new Component has at least as many constraints as the inputs
     //   combined. Except for vertical composition, where the inputs have
-    //   identical constraints and only one copy results. (We could also
+    //   identical constraints and only one copy results. We could also
     //   imagine an optimization pass that combines constraints if possible
-    //   and removes redundant ones.)
+    //   and removes redundant ones.
 
+
+    fn arbitrary_permutation<G: Gen>(n: usize, g: &mut G) -> Self {
+        let mut result: Vec<usize> = (0..n).collect();
+        // Fisher-Yates shuffle
+        for i in 0..(n - 1) {
+            let j = i + usize::arbitrary(g) % (n - i);
+            result.swap(i, j);
+        }
+        Permutation(result)
+    }
+
+    struct PermuteColumnsTest {
+        component: Component,
+        permutation: Vec<usize>,
+    }
+
+    impl Arbitrary for PermuteColumnsTest {
+        
+    }
+
+    #[quickcheck]
+    fn permute_columns_check(component: Component) -> bool {
+    }
+
+    #[quickcheck]
+    fn shift_check(component: Component, amount: isize) -> bool {
+        shift(component, amount).check()
+    }
+
+    #[quickcheck]
+    fn fold_check(component: Component) -> TestResult {
+        if component.trace.num_columns() % 2 == 1 { 
+            return TestResult::discard()
+        }
+        TestResult::from_bool(fold(component).check())
+    }
 }
 
