@@ -38,6 +38,7 @@
 #![cfg_attr(feature = "std", warn(missing_debug_implementations,))]
 
 mod channel;
+mod component;
 mod constraints;
 mod polynomial;
 mod proof;
@@ -45,7 +46,6 @@ mod proof_of_work;
 mod rational_expression;
 mod traits;
 mod verifier;
-mod component;
 
 // Optional prover functionality. Note that prover requires std.
 // TODO: Make it work without std.
@@ -69,14 +69,13 @@ extern crate no_std_compat as std;
 pub use zkp_primefield as primefield;
 
 // Exports for verifier
+pub use component::*;
 pub use constraints::{Constraints, Error as ConstraintError};
 pub use polynomial::DensePolynomial;
 pub use proof::Proof;
 pub use rational_expression::RationalExpression;
 pub use traits::Verifiable;
 pub use verifier::{verify, Error as VerifierError};
-pub use component::*;
-
 
 // Exports for prover
 #[cfg(feature = "prover")]

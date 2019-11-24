@@ -1,11 +1,8 @@
-use crate::RationalExpression;
-use crate::TraceTable;
-use crate::primefield::FieldElement;
+use crate::{
+    constraint_check::check_constraints, primefield::FieldElement, Constraints, Provable,
+    RationalExpression, TraceTable, Verifiable,
+};
 use std::convert::TryFrom;
-use crate::Constraints;
-use crate::constraint_check::check_constraints;
-use crate::Verifiable;
-use crate::Provable;
 
 // TODO: Introduce prover/verifier distinction
 
@@ -20,9 +17,8 @@ pub struct Component {
 }
 
 impl Component {
-
     /// Constructs an empty component of given size.
-    /// 
+    ///
     /// This is useful in combination with composition combinators to pad out a
     /// component to a required size.
     pub fn empty(rows: usize, columns: usize) -> Self {
@@ -36,7 +32,9 @@ impl Component {
         let constraints = Constraints::from_expressions(
             (self.trace.num_rows(), self.trace.num_columns()),
             Vec::new(),
-            self.constraints.clone()).unwrap();
+            self.constraints.clone(),
+        )
+        .unwrap();
         check_constraints(&constraints, &self.trace).is_ok()
     }
 }
@@ -46,8 +44,9 @@ impl Verifiable for Component {
         Constraints::from_expressions(
             (self.trace.num_rows(), self.trace.num_columns()),
             Vec::new(), // TODO: create a meaningful seed value
-            self.constraints.clone()
-        ).expect("Could not produce Constaint object for Component")
+            self.constraints.clone(),
+        )
+        .expect("Could not produce Constaint object for Component")
     }
 }
 
@@ -70,7 +69,10 @@ pub fn permute_columns(a: Component, permutation: Vec<usize>) -> Component {
     // Validate the permutation
     // TODO: Check that there are nu duplicate values in permutation.
     assert_eq!(a.trace.num_columns(), permutation.len());
-    assert_eq!(permutation.iter().find(|&e| *e >= a.trace.num_columns()), None);
+    assert_eq!(
+        permutation.iter().find(|&e| *e >= a.trace.num_columns()),
+        None
+    );
 
     // Create a new trace table that permutes the columns
     let mut trace = TraceTable::new(a.trace.num_rows(), a.trace.num_columns());
@@ -79,21 +81,27 @@ pub fn permute_columns(a: Component, permutation: Vec<usize>) -> Component {
             trace[(i, permutation[j])] = a.trace[(i, j)].clone();
         }
     }
-    
+
     // Permute the columns in the constraints
     use RationalExpression::*;
-    let constraints = a.constraints.into_iter().map(|constraint| constraint.map(
-        &mut |expression| match expression {
-            Trace(column, offset) => Trace(permutation[column], offset),
-            other                 => other,
-        }
-    )).collect(); 
+    let constraints = a
+        .constraints
+        .into_iter()
+        .map(|constraint| {
+            constraint.map(&mut |expression| {
+                match expression {
+                    Trace(column, offset) => Trace(permutation[column], offset),
+                    other => other,
+                }
+            })
+        })
+        .collect();
 
     Component { trace, constraints }
 }
 
 /// Rotate around the row indices
-/// 
+///
 /// `new_row_index = old_row_index + amount`
 pub fn shift(a: Component, amount: isize) -> Component {
     if a.trace.num_rows() <= 1 {
@@ -101,8 +109,8 @@ pub fn shift(a: Component, amount: isize) -> Component {
     }
 
     // Normalize shift amount
-    let amount_abs: usize = usize::try_from(
-        amount.rem_euclid(isize::try_from(a.trace.num_rows()).unwrap())).unwrap();
+    let amount_abs: usize =
+        usize::try_from(amount.rem_euclid(isize::try_from(a.trace.num_rows()).unwrap())).unwrap();
 
     // Create a new trace table that permutes the columns
     let mut trace = TraceTable::new(a.trace.num_rows(), a.trace.num_columns());
@@ -117,16 +125,20 @@ pub fn shift(a: Component, amount: isize) -> Component {
     // (alternatively, we could modify the Trace(...) offsets)
     use RationalExpression::*;
     let factor = FieldElement::root(trace.num_rows())
-    .expect("No generator for trace length")
-    .pow(-amount);
-    let constraints = a.constraints.into_iter().map(
-        |constraint| constraint.map(
-            &mut |expression| match expression {
-                X     => Constant(factor.clone()) * X,
-                other => other,
-            }
-        )
-    ).collect();
+        .expect("No generator for trace length")
+        .pow(-amount);
+    let constraints = a
+        .constraints
+        .into_iter()
+        .map(|constraint| {
+            constraint.map(&mut |expression| {
+                match expression {
+                    X => Constant(factor.clone()) * X,
+                    other => other,
+                }
+            })
+        })
+        .collect();
 
     Component { trace, constraints }
 }
@@ -134,9 +146,9 @@ pub fn shift(a: Component, amount: isize) -> Component {
 /// TODO: Reverse the order of the rows
 
 /// Half the number of columns and double the number of rows.
-/// 
+///
 /// Folds even columns into even rows and odd columns into odd rows.
-/// 
+///
 /// **Note.** The number of columns is required to be even. To make it even,
 /// you can horizontally compose with an empty component of size n x 1.
 pub fn fold(a: Component) -> Component {
@@ -154,18 +166,22 @@ pub fn fold(a: Component) -> Component {
 
     // Adjust constraint system by interpolating and changing the columns
     use RationalExpression::*;
-    let constraints = a.constraints.into_iter().map(
-        |constraint| constraint.map(
-            &mut |expression| match expression {
-                Trace(i, j) => {
-                    let row = i % 2;
-                    let col = i / 2;
-                    Trace(col, 2 * j + isize::try_from(row).unwrap())
-                },
-                other => other,
-            }
-        )
-    ).collect();
+    let constraints = a
+        .constraints
+        .into_iter()
+        .map(|constraint| {
+            constraint.map(&mut |expression| {
+                match expression {
+                    Trace(i, j) => {
+                        let row = i % 2;
+                        let col = i / 2;
+                        Trace(col, 2 * j + isize::try_from(row).unwrap())
+                    }
+                    other => other,
+                }
+            })
+        })
+        .collect();
 
     Component { trace, constraints }
 }
@@ -174,7 +190,10 @@ pub fn compose_horizontal(a: Component, b: Component) -> Component {
     assert_eq!(a.trace.num_rows(), b.trace.num_rows());
 
     // Create a new trace table that horizontally concatenates a and b
-    let mut trace = TraceTable::new(a.trace.num_rows(), a.trace.num_columns() + b.trace.num_columns());
+    let mut trace = TraceTable::new(
+        a.trace.num_rows(),
+        a.trace.num_columns() + b.trace.num_columns(),
+    );
     for i in 0..a.trace.num_rows() {
         for j in 0..a.trace.num_columns() {
             trace[(i, j)] = a.trace[(i, j)].clone();
@@ -188,14 +207,14 @@ pub fn compose_horizontal(a: Component, b: Component) -> Component {
     use RationalExpression::*;
     let a_cols = a.trace.num_columns();
     let mut constraints = a.constraints;
-    constraints.extend(b.constraints.into_iter().map(|constraint|
+    constraints.extend(b.constraints.into_iter().map(|constraint| {
         constraint.map(&mut |expression| {
             match expression {
                 Trace(i, j) => Trace(i + a_cols, j),
                 other => other,
             }
         })
-    ));
+    }));
 
     Component { trace, constraints }
 }
@@ -217,18 +236,21 @@ pub fn compose_vertical(a: Component, b: Component) -> Component {
 
     // Repeat a's constraints twice
     use RationalExpression::*;
-    let constraints = a.constraints.into_iter().map(|constraint|
-        constraint.map(&mut |expression| {
-            match expression {
-                X => X.pow(2),
-                other => other,
-            }
+    let constraints = a
+        .constraints
+        .into_iter()
+        .map(|constraint| {
+            constraint.map(&mut |expression| {
+                match expression {
+                    X => X.pow(2),
+                    other => other,
+                }
+            })
         })
-    ).collect();
+        .collect();
 
     Component { trace, constraints }
 }
-
 
 /// Fold a component a number of times, padding if necessary.
 pub fn fold_many(a: Component, folds: usize) -> Component {
@@ -248,8 +270,12 @@ pub fn compose_folded(a: Component, b: Component) -> Component {
     use std::cmp::Ordering::*;
     let a_len = a.trace.num_rows();
     let b_len = b.trace.num_rows();
-    if a_len == 0 { return b }
-    if b_len == 0 { return a }
+    if a_len == 0 {
+        return b;
+    }
+    if b_len == 0 {
+        return a;
+    }
     match a_len.cmp(&b_len) {
         Less => {
             let folds = usize::try_from((b_len / a_len).trailing_zeros()).unwrap();
@@ -266,14 +292,14 @@ pub fn compose_folded(a: Component, b: Component) -> Component {
 #[cfg(feature = "test")]
 impl Component {
     /// Creates an example constraint system of given size
-    /// 
+    ///
     /// It takes two seed values, one to make the constraints unique
     /// and one to make the witness unique.
     pub fn example(
         rows: usize,
         columns: usize,
         constraint_seed: &FieldElement,
-        witness_seed: &FieldElement
+        witness_seed: &FieldElement,
     ) -> Self {
         use RationalExpression::*;
 
@@ -303,9 +329,7 @@ impl Component {
         let mut constraints = Vec::new();
         // x[0] = start
         if rows * columns >= 1 {
-            constraints.push(
-                (Trace(0, 0) - constraint_seed.into()) / (X - omega.pow(0)),
-            );
+            constraints.push((Trace(0, 0) - constraint_seed.into()) / (X - omega.pow(0)));
         }
         if rows * columns >= 3 {
             // For each column we need to add a constraint
@@ -315,18 +339,18 @@ impl Component {
                     (0, 1) => (Trace(0, -2), Trace(0, -1)),
                     (0, _) => (Trace(columns - 2, -1), Trace(columns - 1, -1)),
                     (1, _) => (Trace(columns - 1, -1), Trace(0, 0)),
-                    (_, _) => (Trace(i - 2, 0), Trace(i - 1, 0)),
+                    (..) => (Trace(i - 2, 0), Trace(i - 1, 0)),
                 };
                 // Exempt the first two cells
                 let exceptions = match (i, columns) {
                     (0, 1) => (X - omega.pow(0)) * (X - omega.pow(1)),
                     (0, _) | (1, _) => (X - omega.pow(0)),
-                    (_, _) => 1.into(),
+                    (..) => 1.into(),
                 };
                 // x[i+2] = x[i] * x[i + 1] + offset
                 constraints.push(
-                    (Trace(i, 0) - x0 * x1 - constraint_seed.into())
-                    * exceptions / (X.pow(rows) - 1.into())
+                    (Trace(i, 0) - x0 * x1 - constraint_seed.into()) * exceptions
+                        / (X.pow(rows) - 1.into()),
                 )
             }
         }
@@ -343,52 +367,49 @@ mod tests {
 
     /// Generates an arbitrary permutation on n numbers
     fn arb_permutation(n: usize) -> impl Strategy<Value = Vec<usize>> {
-        prop::collection::vec(any::<usize>(), if n > 1 { n - 1 } else { 0 })
-        .prop_map(move |random| {
-            let mut result: Vec<usize> = (0..n).collect();
-            // Fisher-Yates shuffle
-            if n > 1 {
-                for i in 0..(n - 1) {
-                    let j = i + random[i] % (n - i);
-                    result.swap(i, j);
+        prop::collection::vec(any::<usize>(), if n > 1 { n - 1 } else { 0 }).prop_map(
+            move |random| {
+                let mut result: Vec<usize> = (0..n).collect();
+                // Fisher-Yates shuffle
+                if n > 1 {
+                    for i in 0..(n - 1) {
+                        let j = i + random[i] % (n - i);
+                        result.swap(i, j);
+                    }
                 }
-            }
-            result
-        })
+                result
+            },
+        )
     }
 
     /// Generates powers of two including 0 and 2^max
     fn arb_2exp(max_exponent: usize) -> impl Strategy<Value = usize> {
-        (0..max_exponent + 2)
-        .prop_map(move |v| (1 << v) >> 1)
+        (0..max_exponent + 2).prop_map(move |v| (1 << v) >> 1)
     }
 
     /// Generates an arbitrary field element
     fn arb_field_element() -> impl Strategy<Value = FieldElement> {
         (any::<u64>(), any::<u64>(), any::<u64>(), any::<u64>())
-        .prop_map(move |(a, b, c, d)|
-            FieldElement::from(U256::from_limbs(a,b,c,d))
-        )
+            .prop_map(move |(a, b, c, d)| FieldElement::from(U256::from_limbs(a, b, c, d)))
     }
 
     /// Generates an arbitrary component of given size
     fn arb_component_size(rows: usize, cols: usize) -> impl Strategy<Value = Component> {
-        (arb_field_element(), arb_field_element())
-        .prop_map(move |(constraint_seed, witness_seed)|
-            Component::example(rows, cols, &constraint_seed, &witness_seed)
+        (arb_field_element(), arb_field_element()).prop_map(
+            move |(constraint_seed, witness_seed)| {
+                Component::example(rows, cols, &constraint_seed, &witness_seed)
+            },
         )
     }
 
     /// Generates an arbitrary component
     fn arb_component() -> impl Strategy<Value = Component> {
-        (arb_2exp(10), 0_usize..=10)
-        .prop_flat_map(|(rows, cols)| arb_component_size(rows, cols))
+        (arb_2exp(10), 0_usize..=10).prop_flat_map(|(rows, cols)| arb_component_size(rows, cols))
     }
 
     /// Generates an arbitrary component and column permutation
     fn arb_component_and_permutation() -> impl Strategy<Value = (Component, Vec<usize>)> {
-        arb_component()
-        .prop_flat_map(|component| {
+        arb_component().prop_flat_map(|component| {
             let permutation = arb_permutation(component.trace.num_columns());
             (Just(component), permutation)
         })
@@ -396,21 +417,31 @@ mod tests {
 
     /// Generate two components with equal number of rows
     fn arb_hor_components() -> impl Strategy<Value = (Component, Component)> {
-        (arb_2exp(10), 0_usize..=10, 0_usize..=10)
-        .prop_flat_map(|(rows, cols_left, cols_right)|
-            (arb_component_size(rows, cols_left), arb_component_size(rows, cols_right))
-        )
+        (arb_2exp(10), 0_usize..=10, 0_usize..=10).prop_flat_map(|(rows, cols_left, cols_right)| {
+            (
+                arb_component_size(rows, cols_left),
+                arb_component_size(rows, cols_right),
+            )
+        })
     }
-    
+
     /// Generate two components with equal number of rows
     fn arb_ver_components() -> impl Strategy<Value = (Component, Component)> {
-        (arb_2exp(10), 0_usize..=10, arb_field_element(), arb_field_element(), arb_field_element())
-        .prop_map(|(rows, cols, constraint_seed, top_seed, bottom_seed)| (
-            Component::example(rows, cols, &constraint_seed, &top_seed),
-            Component::example(rows, cols, &constraint_seed, &bottom_seed),
-        ))
+        (
+            arb_2exp(10),
+            0_usize..=10,
+            arb_field_element(),
+            arb_field_element(),
+            arb_field_element(),
+        )
+            .prop_map(|(rows, cols, constraint_seed, top_seed, bottom_seed)| {
+                (
+                    Component::example(rows, cols, &constraint_seed, &top_seed),
+                    Component::example(rows, cols, &constraint_seed, &bottom_seed),
+                )
+            })
     }
-    
+
     proptest! {
         #[test]
         fn test_empty(rows in arb_2exp(10), cols in 0_usize..=10) {
@@ -523,7 +554,7 @@ mod tests {
 
     proptest! {
         #![proptest_config(ProptestConfig::with_cases(10))]
-        
+
         #[test]
         fn test_component_provable(component in arb_component()) {
             // TODO: Make prove and verify support empty/tiny traces correctly
@@ -534,4 +565,3 @@ mod tests {
         }
     }
 }
-

@@ -36,12 +36,13 @@ impl RationalExpression {
     }
 
     /// Apply a function bottom up on the expression.
-    /// 
-    /// **Note.** Unlike the conventional generalization of `map` to tree structures,
-    /// this map also applies the function to each tree node, after it has been applied
-    /// to all its descendants.
-    pub fn map<F>(self, f:  &mut F) -> Self 
-        where F: FnMut(Self) -> Self
+    ///
+    /// **Note.** Unlike the conventional generalization of `map` to tree
+    /// structures, this map also applies the function to each tree node,
+    /// after it has been applied to all its descendants.
+    pub fn map<F>(self, f: &mut F) -> Self
+    where
+        F: FnMut(Self) -> Self,
     {
         use RationalExpression::*;
         let e = match self {
@@ -54,7 +55,7 @@ impl RationalExpression {
             Exp(a, e) => Exp(Box::new(a.map(f)), e),
 
             // Leaf types are mapped as is.
-            e => e
+            e => e,
         };
         f(e)
     }
