@@ -38,7 +38,6 @@
 #![cfg_attr(feature = "std", warn(missing_debug_implementations,))]
 
 mod channel;
-mod component;
 mod constraints;
 mod polynomial;
 mod proof;
@@ -57,6 +56,8 @@ mod constraint_check;
 mod prover;
 #[cfg(feature = "prover")]
 mod trace_table;
+#[cfg(feature = "prover")]
+mod component;
 
 // TODO: Have unconditional Debug trait on all types
 
@@ -69,7 +70,6 @@ extern crate no_std_compat as std;
 pub use zkp_primefield as primefield;
 
 // Exports for verifier
-pub use component::*;
 pub use constraints::{Constraints, Error as ConstraintError};
 pub use polynomial::DensePolynomial;
 pub use proof::Proof;
