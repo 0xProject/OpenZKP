@@ -520,5 +520,18 @@ mod tests {
                 left.constraints.len() + right.constraints.len());
         }
     }
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(10))]
+        
+        #[test]
+        fn test_component_provable(component in arb_component()) {
+            // TODO: Make prove and verify support empty/tiny traces correctly
+            prop_assume!(component.trace.num_rows() >= 2);
+            prop_assume!(component.trace.num_columns() >= 1);
+            let proof = component.prove(()).unwrap();
+            component.verify(&proof).unwrap();
+        }
+    }
 }
 
