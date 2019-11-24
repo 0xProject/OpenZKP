@@ -79,6 +79,10 @@ pub fn permute_columns(a: Component, permutation: Vec<usize>) -> Component {
 /// 
 /// `new_row_index = old_row_index + amount`
 pub fn shift(a: Component, amount: isize) -> Component {
+    if a.trace.num_rows() <= 1 {
+        return a;
+    }
+
     // Normalize shift amount
     let amount_abs: usize = usize::try_from(
         amount.rem_euclid(isize::try_from(a.trace.num_rows()).unwrap())).unwrap();
@@ -240,9 +244,6 @@ pub fn compose_folded(a: Component, b: Component) -> Component {
 }
 
 #[cfg(feature = "test")]
-use quickcheck::{Gen, Arbitrary};
-
-#[cfg(feature = "test")]
 impl Component {
     /// Creates an example constraint system of given size
     pub fn example(rows: usize, cols: usize, start: &FieldElement) -> Self {
@@ -266,7 +267,7 @@ impl Component {
         // Fill in the trace table with the sequence
         // the sequence is written left-to-right, then top-to-bottom.
         let mut trace = TraceTable::new(rows, cols);
-        for i in 0..(rows*cols) {
+        for i in 0..(rows * cols) {
             trace[(i / cols, i % cols)] = next();
         }
 
@@ -274,128 +275,160 @@ impl Component {
         let omega = Constant(FieldElement::root(rows).unwrap());
         let mut constraints = Vec::new();
         // x[0] = start
-        if cols >= 1 {
+        if rows * cols >= 1 {
             constraints.push(
                 (Trace(0, 0) - start.into()) / (X - omega.pow(0)),
             );
         }
-        // For each column we need to add a constraint
-        for i in 0..cols {
-            // Find the previous two cells in the table
-            let (x0, x1) = match (i, cols) {
-                (0, 1) => (Trace(0, -2), Trace(0, -1)),
-                (0, _) => (Trace(cols - 2, -1), Trace(cols - 1, -1)),
-                (1, _) => (Trace(cols - 1, -1), Trace(0, 0)),
-                (_, _) => (Trace(i - 2, 0), Trace(i - 1, 0)),
-            };
-            // Exempt the first two cells
-            let exceptions = match (i, cols) {
-                (0, 1) => (X - omega.pow(0)) * (X - omega.pow(1)),
-                (0, _) | (1, _) => (X - omega.pow(0)),
-                (_, _) => 1.into(),
-            };
-            // x[i+2] = x[i] * x[i + 1] + offset
-            constraints.push(
-                (Trace(i, 0) - x0 * x1 - (&offset).into())
-                * exceptions / (X.pow(rows) - 1.into())
-            )
+        if rows * cols >= 3 {
+            // For each column we need to add a constraint
+            for i in 0..cols {
+                // Find the previous two cells in the table
+                let (x0, x1) = match (i, cols) {
+                    (0, 1) => (Trace(0, -2), Trace(0, -1)),
+                    (0, _) => (Trace(cols - 2, -1), Trace(cols - 1, -1)),
+                    (1, _) => (Trace(cols - 1, -1), Trace(0, 0)),
+                    (_, _) => (Trace(i - 2, 0), Trace(i - 1, 0)),
+                };
+                // Exempt the first two cells
+                let exceptions = match (i, cols) {
+                    (0, 1) => (X - omega.pow(0)) * (X - omega.pow(1)),
+                    (0, _) | (1, _) => (X - omega.pow(0)),
+                    (_, _) => 1.into(),
+                };
+                // x[i+2] = x[i] * x[i + 1] + offset
+                constraints.push(
+                    (Trace(i, 0) - x0 * x1 - (&offset).into())
+                    * exceptions / (X.pow(rows) - 1.into())
+                )
+            }
         }
 
         Component { trace, constraints }
     }
 }
 
-#[cfg(feature = "test")]
-fn arbitrary_dimensions<G: Gen>(g: &mut G) -> (usize, usize) {
-    // rows = 0 1 2 4 .. 1024
-    let rows = (1 << (usize::arbitrary(g) % 12)) >> 1;
-    // cols = 0 1 2 3 .. 10
-    let cols = usize::arbitrary(g) %  11;
-    (rows, cols)
-}
-
-#[cfg(feature = "test")]
-impl Arbitrary for Component {
-    /// Creates an arbitrary constraint system up to 1024x10
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
-        let (rows, cols) = arbitrary_dimensions(g);
-        let mut seed = FieldElement::arbitrary(g);
-        while seed == FieldElement::ZERO || seed == FieldElement::ONE {
-            seed += FieldElement::arbitrary(g);
-        }
-        Component::example(rows, cols, &seed)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use quickcheck::TestResult;
-    use quickcheck_macros::*;
+    use proptest::prelude::*;
+    use zkp_primefield::u256::U256;
 
-    #[quickcheck]
-    fn empty_check(rows: usize, cols: usize) -> bool {
-        let rows = 1 << (rows % 11);
-        let cols = cols % 10;
-        Component::empty(rows, cols).check()
+    /// Generates an arbitrary permutation on n numbers
+    fn arb_permutation(n: usize) -> impl Strategy<Value = Vec<usize>> {
+        prop::collection::vec(any::<usize>(), if n > 1 { n - 1 } else { 0 })
+        .prop_map(move |random| {
+            let mut result: Vec<usize> = (0..n).collect();
+            // Fisher-Yates shuffle
+            if n > 1 {
+                for i in 0..(n - 1) {
+                    let j = i + random[i] % (n - i);
+                    result.swap(i, j);
+                }
+            }
+            result
+        })
     }
 
-    #[quickcheck]
-    fn arbitrary_check(component: Component) -> bool {
-        component.check()
+    /// Generates powers of two including 0 and 2^max
+    fn arb_2exp(max_exponent: usize) -> impl Strategy<Value = usize> {
+        (0..max_exponent + 2)
+        .prop_map(move |v| (1 << v) >> 1)
     }
 
-    // For transformations and combinations we would ideally
-    // like to check that the new Component proofs the same claims
-    // as the input ones. Unfortunately, this is difficult to verify.
-    // Instead, we verify:
-    //
-    // * The new Component is internally consistent.
-    // * Labeled values remain and have the same values.
-    // * The new Component's trace has at least as many values as the
-    //   input traces. Although you could imagine a row inlining transform
-    //   that violates this.
-    // * The new Component has at least as many constraints as the inputs
-    //   combined. Except for vertical composition, where the inputs have
-    //   identical constraints and only one copy results. We could also
-    //   imagine an optimization pass that combines constraints if possible
-    //   and removes redundant ones.
+    /// Generates an arbitrary field element
+    fn arb_field_element() -> impl Strategy<Value = FieldElement> {
+        (any::<u64>(), any::<u64>(), any::<u64>(), any::<u64>())
+        .prop_map(move |(a, b, c, d)|
+            FieldElement::from(U256::from_limbs(a,b,c,d))
+        )
+    }
 
+    /// Generates an arbitrary component of given size
+    fn arb_component_size(rows: usize, cols: usize) -> impl Strategy<Value = Component> {
+        arb_field_element()
+        .prop_map(move |seed| Component::example(rows, cols, &seed))
+    }
 
-    fn arbitrary_permutation<G: Gen>(n: usize, g: &mut G) -> Self {
-        let mut result: Vec<usize> = (0..n).collect();
-        // Fisher-Yates shuffle
-        for i in 0..(n - 1) {
-            let j = i + usize::arbitrary(g) % (n - i);
-            result.swap(i, j);
+    /// Generates an arbitrary component
+    fn arb_component() -> impl Strategy<Value = Component> {
+        (arb_2exp(10), 0_usize..=10)
+        .prop_flat_map(|(rows, cols)| arb_component_size(rows, cols))
+    }
+
+    /// Generates an arbitrary component and column permutation
+    fn arb_component_and_permutation() -> impl Strategy<Value = (Component, Vec<usize>)> {
+        arb_component()
+        .prop_flat_map(|component| {
+            let permutation = arb_permutation(component.trace.num_columns());
+            (Just(component), permutation)
+        })
+    }
+
+    proptest! {
+        #[test]
+        fn empty_check(rows in arb_2exp(10), cols in 0_usize..=10) {
+            assert!(Component::empty(rows, cols).check())
         }
-        Permutation(result)
-    }
 
-    struct PermuteColumnsTest {
-        component: Component,
-        permutation: Vec<usize>,
-    }
-
-    impl Arbitrary for PermuteColumnsTest {
-        
-    }
-
-    #[quickcheck]
-    fn permute_columns_check(component: Component) -> bool {
-    }
-
-    #[quickcheck]
-    fn shift_check(component: Component, amount: isize) -> bool {
-        shift(component, amount).check()
-    }
-
-    #[quickcheck]
-    fn fold_check(component: Component) -> TestResult {
-        if component.trace.num_columns() % 2 == 1 { 
-            return TestResult::discard()
+        #[test]
+        fn arb_check(component in arb_component()) {
+            assert!(component.check())
         }
-        TestResult::from_bool(fold(component).check())
+
+        // For transformations and combinations we would ideally
+        // like to check that the new Component proofs the same claims
+        // as the input ones. Unfortunately, this is difficult to verify.
+        // Instead, we verify:
+        //
+        // * The new Component is internally consistent.
+        // * Labeled values remain and have the same values.
+        // * The new Component's trace has at least as many values as the
+        //   input traces. Although you could imagine a row inlining transform
+        //   that violates this.
+        // * The new Component has at least as many constraints as the inputs
+        //   combined. Except for vertical composition, where the inputs have
+        //   identical constraints and only one copy results. We could also
+        //   imagine an optimization pass that combines constraints if possible
+        //   and removes redundant ones.
+
+        #[test]
+        fn permute_columns_check((component, permutation) in arb_component_and_permutation()) {
+            let result = permute_columns(component.clone(), permutation);
+            assert!(result.check());
+            assert_eq!(result.trace.num_rows(), component.trace.num_rows());
+            assert_eq!(result.trace.num_columns(), component.trace.num_columns());
+            assert_eq!(result.constraints.len(), component.constraints.len());
+        }
+
+        #[test]
+        fn shift_check(component in arb_component(), amount in -10000_isize..10000) {
+            let result = shift(component.clone(), amount);
+            assert!(result.check());
+            assert_eq!(result.trace.num_rows(), component.trace.num_rows());
+            assert_eq!(result.trace.num_columns(), component.trace.num_columns());
+            assert_eq!(result.constraints.len(), component.constraints.len());
+        }
+
+        #[test]
+        fn fold_check(component in arb_component()) {
+            prop_assume!(component.trace.num_columns() % 2 == 0);
+            let result = fold(component.clone());
+            assert!(result.check());
+            assert_eq!(result.trace.num_rows(), component.trace.num_rows() * 2);
+            assert_eq!(result.trace.num_columns(), component.trace.num_columns() / 2);
+            assert_eq!(result.constraints.len(), component.constraints.len());
+        }
+
+        #[test]
+        fn fold_many_check(component in arb_component(), folds in 0_usize..4) {
+            let result = fold_many(component.clone(), folds);
+            assert!(result.check());
+            assert_eq!(result.trace.num_rows(), component.trace.num_rows() << folds);
+            let col_delta = result.trace.num_columns() - (component.trace.num_columns() >> folds);
+            assert!(col_delta == 0 || col_delta == 1);
+            assert_eq!(result.constraints.len(), component.constraints.len());
+        }
     }
 }
 

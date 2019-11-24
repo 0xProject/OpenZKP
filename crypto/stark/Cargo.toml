@@ -41,6 +41,7 @@ criterion = { version = "0.3.0", optional = true }
 zkp-criterion-utils = { version = "0.1.0", path = "../../utils/criterion-utils", optional = true }
 quickcheck_macros = { version = "0.8", optional = true }
 hex = { version = "0.4.0", optional = true }
+proptest = { version = "0.9.4", optional = true }
 
 [[bench]]
 name = "benchmark"
@@ -69,6 +70,7 @@ test = [
     "zkp-primefield/test",
     "zkp-elliptic-curve/test",
     "zkp-elliptic-curve-crypto/test",
+    "proptest",
     "quickcheck",
     "quickcheck_macros",
     "hex",
