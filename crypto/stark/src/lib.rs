@@ -51,13 +51,13 @@ mod verifier;
 #[cfg(feature = "prover")]
 mod algebraic_dag;
 #[cfg(feature = "prover")]
+mod component;
+#[cfg(feature = "prover")]
 mod constraint_check;
 #[cfg(feature = "prover")]
 mod prover;
 #[cfg(feature = "prover")]
 mod trace_table;
-#[cfg(feature = "prover")]
-mod component;
 
 // TODO: Have unconditional Debug trait on all types
 
@@ -78,6 +78,11 @@ pub use traits::Verifiable;
 pub use verifier::{verify, Error as VerifierError};
 
 // Exports for prover
+#[cfg(feature = "prover")]
+pub use component::{
+    compose_folded, compose_horizontal, compose_vertical, fold, fold_many, permute_columns, shift,
+    Component,
+};
 #[cfg(feature = "prover")]
 pub use prover::{prove, Error as ProverError};
 #[cfg(feature = "prover")]
