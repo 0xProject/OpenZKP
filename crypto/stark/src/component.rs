@@ -6,6 +6,8 @@ use std::convert::TryFrom;
 
 // TODO: Introduce prover/verifier distinction
 
+// TODO: Pass by reference, or rather, have a high level structure.
+
 // OPT: Don't reallocate trace table so many times, instead use a view
 // that is passed top-down for writing.
 
@@ -22,7 +24,7 @@ impl Component {
     /// This is useful in combination with composition combinators to pad out a
     /// component to a required size.
     pub fn empty(rows: usize, columns: usize) -> Self {
-        Component {
+        Self {
             trace:       TraceTable::new(rows, columns),
             constraints: Vec::new(),
         }
@@ -65,7 +67,9 @@ impl Provable<()> for Component {
 /// Change the order of the columns
 ///
 /// `new_column_index = permutation[old_column_index]`
-pub fn permute_columns(a: Component, permutation: Vec<usize>) -> Component {
+pub fn permute_columns(a: Component, permutation: &[usize]) -> Component {
+    use RationalExpression::*;
+    
     // Validate the permutation
     // TODO: Check that there are nu duplicate values in permutation.
     assert_eq!(a.trace.num_columns(), permutation.len());
@@ -83,7 +87,6 @@ pub fn permute_columns(a: Component, permutation: Vec<usize>) -> Component {
     }
 
     // Permute the columns in the constraints
-    use RationalExpression::*;
     let constraints = a
         .constraints
         .into_iter()
@@ -104,6 +107,7 @@ pub fn permute_columns(a: Component, permutation: Vec<usize>) -> Component {
 ///
 /// `new_row_index = old_row_index + amount`
 pub fn shift(a: Component, amount: isize) -> Component {
+    use RationalExpression::*;
     if a.trace.num_rows() <= 1 {
         return a;
     }
@@ -123,7 +127,6 @@ pub fn shift(a: Component, amount: isize) -> Component {
 
     // Adjust constraint system by replacing X
     // (alternatively, we could modify the Trace(...) offsets)
-    use RationalExpression::*;
     let factor = FieldElement::root(trace.num_rows())
         .expect("No generator for trace length")
         .pow(-amount);
@@ -152,6 +155,7 @@ pub fn shift(a: Component, amount: isize) -> Component {
 /// **Note.** The number of columns is required to be even. To make it even,
 /// you can horizontally compose with an empty component of size n x 1.
 pub fn fold(a: Component) -> Component {
+    use RationalExpression::*;
     assert_eq!(a.trace.num_columns() % 2, 0);
 
     // Create a new trace table that interleaves columns in odd and even rows
@@ -165,7 +169,6 @@ pub fn fold(a: Component) -> Component {
     }
 
     // Adjust constraint system by interpolating and changing the columns
-    use RationalExpression::*;
     let constraints = a
         .constraints
         .into_iter()
@@ -187,6 +190,7 @@ pub fn fold(a: Component) -> Component {
 }
 
 pub fn compose_horizontal(a: Component, b: Component) -> Component {
+    use RationalExpression::*;
     assert_eq!(a.trace.num_rows(), b.trace.num_rows());
 
     // Create a new trace table that horizontally concatenates a and b
@@ -204,7 +208,6 @@ pub fn compose_horizontal(a: Component, b: Component) -> Component {
     }
 
     // Shift b's constraints over by a's columns.
-    use RationalExpression::*;
     let a_cols = a.trace.num_columns();
     let mut constraints = a.constraints;
     constraints.extend(b.constraints.into_iter().map(|constraint| {
@@ -219,7 +222,10 @@ pub fn compose_horizontal(a: Component, b: Component) -> Component {
     Component { trace, constraints }
 }
 
+// We allow this for symmetry
+#[allow(clippy::needless_pass_by_value)]
 pub fn compose_vertical(a: Component, b: Component) -> Component {
+    use RationalExpression::*;
     assert_eq!(a.trace.num_rows(), b.trace.num_rows());
     assert_eq!(a.trace.num_columns(), b.trace.num_columns());
     assert_eq!(a.constraints.len(), b.constraints.len());
@@ -235,7 +241,6 @@ pub fn compose_vertical(a: Component, b: Component) -> Component {
     }
 
     // Repeat a's constraints twice
-    use RationalExpression::*;
     let constraints = a
         .constraints
         .into_iter()
@@ -355,7 +360,7 @@ impl Component {
             }
         }
 
-        Component { trace, constraints }
+        Self { trace, constraints }
     }
 }
 
@@ -372,8 +377,8 @@ mod tests {
                 let mut result: Vec<usize> = (0..n).collect();
                 // Fisher-Yates shuffle
                 if n > 1 {
-                    for i in 0..(n - 1) {
-                        let j = i + random[i] % (n - i);
+                    for (i, random) in random.into_iter().enumerate() {
+                        let j = i + random % (n - i);
                         result.swap(i, j);
                     }
                 }
@@ -479,7 +484,7 @@ mod tests {
 
         #[test]
         fn test_permute_columns((component, permutation) in arb_component_and_permutation()) {
-            let result = permute_columns(component.clone(), permutation);
+            let result = permute_columns(component.clone(), &permutation);
             assert!(result.check());
             assert_eq!(result.trace.num_rows(), component.trace.num_rows());
             assert_eq!(result.trace.num_columns(), component.trace.num_columns());
