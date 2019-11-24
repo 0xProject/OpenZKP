@@ -186,7 +186,8 @@ pub fn compose_horizontal(a: Component, b: Component) -> Component {
 pub fn compose_vertical(a: Component, b: Component) -> Component {
     assert_eq!(a.trace.num_rows(), b.trace.num_rows());
     assert_eq!(a.trace.num_columns(), b.trace.num_columns());
-    // TODO: assert_eq!(a.constraints, b.constraints);
+    assert_eq!(a.constraints.len(), b.constraints.len());
+    // TODO: assert_eq!(Set(a.constraints), Set(b.constraints));
 
     // Create a new trace table that vertically concatenates a and b
     let mut trace = TraceTable::new(2 * a.trace.num_rows(), a.trace.num_columns());
@@ -230,6 +231,8 @@ pub fn compose_folded(a: Component, b: Component) -> Component {
     use std::cmp::Ordering::*;
     let a_len = a.trace.num_rows();
     let b_len = b.trace.num_rows();
+    if a_len == 0 { return b }
+    if b_len == 0 { return a }
     match a_len.cmp(&b_len) {
         Less => {
             let folds = usize::try_from((b_len / a_len).trailing_zeros()).unwrap();
@@ -246,19 +249,26 @@ pub fn compose_folded(a: Component, b: Component) -> Component {
 #[cfg(feature = "test")]
 impl Component {
     /// Creates an example constraint system of given size
-    pub fn example(rows: usize, cols: usize, start: &FieldElement) -> Self {
+    /// 
+    /// It takes two seed values, one to make the constraints unique
+    /// and one to make the witness unique.
+    pub fn example(
+        rows: usize,
+        columns: usize,
+        constraint_seed: &FieldElement,
+        witness_seed: &FieldElement
+    ) -> Self {
         use RationalExpression::*;
 
         // Construct a sequence using the quadratic recurrence relation:
-        //     x[0]   = start
-        //     x[1]   = start.pow(3)
-        //     x[i+2] = x[i] * x[i + 1] + start.pow(5)
-        let mut x0 = start.clone();
-        let mut x1 = start.pow(3);
-        let offset = start.pow(5);
+        //     x[0]   = constraint_seed     (part of constraints)
+        //     x[1]   = witness_seed        (not part of constraints)
+        //     x[i+2] = x[i] * x[i + 1] + constraint_seed
+        let mut x0 = constraint_seed.clone();
+        let mut x1 = witness_seed.clone();
         let mut next = || {
             let result = x0.clone();
-            let x2 = &x0 * &x1 + &offset;
+            let x2 = &x0 * &x1 + constraint_seed;
             x0 = x1.clone();
             x1 = x2;
             result
@@ -266,39 +276,39 @@ impl Component {
 
         // Fill in the trace table with the sequence
         // the sequence is written left-to-right, then top-to-bottom.
-        let mut trace = TraceTable::new(rows, cols);
-        for i in 0..(rows * cols) {
-            trace[(i / cols, i % cols)] = next();
+        let mut trace = TraceTable::new(rows, columns);
+        for i in 0..(rows * columns) {
+            trace[(i / columns, i % columns)] = next();
         }
 
         // Construct the constraint system for the sequence.
         let omega = Constant(FieldElement::root(rows).unwrap());
         let mut constraints = Vec::new();
         // x[0] = start
-        if rows * cols >= 1 {
+        if rows * columns >= 1 {
             constraints.push(
-                (Trace(0, 0) - start.into()) / (X - omega.pow(0)),
+                (Trace(0, 0) - constraint_seed.into()) / (X - omega.pow(0)),
             );
         }
-        if rows * cols >= 3 {
+        if rows * columns >= 3 {
             // For each column we need to add a constraint
-            for i in 0..cols {
+            for i in 0..columns {
                 // Find the previous two cells in the table
-                let (x0, x1) = match (i, cols) {
+                let (x0, x1) = match (i, columns) {
                     (0, 1) => (Trace(0, -2), Trace(0, -1)),
-                    (0, _) => (Trace(cols - 2, -1), Trace(cols - 1, -1)),
-                    (1, _) => (Trace(cols - 1, -1), Trace(0, 0)),
+                    (0, _) => (Trace(columns - 2, -1), Trace(columns - 1, -1)),
+                    (1, _) => (Trace(columns - 1, -1), Trace(0, 0)),
                     (_, _) => (Trace(i - 2, 0), Trace(i - 1, 0)),
                 };
                 // Exempt the first two cells
-                let exceptions = match (i, cols) {
+                let exceptions = match (i, columns) {
                     (0, 1) => (X - omega.pow(0)) * (X - omega.pow(1)),
                     (0, _) | (1, _) => (X - omega.pow(0)),
                     (_, _) => 1.into(),
                 };
                 // x[i+2] = x[i] * x[i + 1] + offset
                 constraints.push(
-                    (Trace(i, 0) - x0 * x1 - (&offset).into())
+                    (Trace(i, 0) - x0 * x1 - constraint_seed.into())
                     * exceptions / (X.pow(rows) - 1.into())
                 )
             }
@@ -346,8 +356,10 @@ mod tests {
 
     /// Generates an arbitrary component of given size
     fn arb_component_size(rows: usize, cols: usize) -> impl Strategy<Value = Component> {
-        arb_field_element()
-        .prop_map(move |seed| Component::example(rows, cols, &seed))
+        (arb_field_element(), arb_field_element())
+        .prop_map(move |(constraint_seed, witness_seed)|
+            Component::example(rows, cols, &constraint_seed, &witness_seed)
+        )
     }
 
     /// Generates an arbitrary component
@@ -365,14 +377,31 @@ mod tests {
         })
     }
 
+    /// Generate two components with equal number of rows
+    fn arb_hor_components() -> impl Strategy<Value = (Component, Component)> {
+        (arb_2exp(10), 0_usize..=10, 0_usize..=10)
+        .prop_flat_map(|(rows, cols_left, cols_right)|
+            (arb_component_size(rows, cols_left), arb_component_size(rows, cols_right))
+        )
+    }
+    
+    /// Generate two components with equal number of rows
+    fn arb_ver_components() -> impl Strategy<Value = (Component, Component)> {
+        (arb_2exp(10), 0_usize..=10, arb_field_element(), arb_field_element(), arb_field_element())
+        .prop_map(|(rows, cols, constraint_seed, top_seed, bottom_seed)| (
+            Component::example(rows, cols, &constraint_seed, &top_seed),
+            Component::example(rows, cols, &constraint_seed, &bottom_seed),
+        ))
+    }
+    
     proptest! {
         #[test]
-        fn empty_check(rows in arb_2exp(10), cols in 0_usize..=10) {
+        fn test_empty(rows in arb_2exp(10), cols in 0_usize..=10) {
             assert!(Component::empty(rows, cols).check())
         }
 
         #[test]
-        fn arb_check(component in arb_component()) {
+        fn test_arb_component(component in arb_component()) {
             assert!(component.check())
         }
 
@@ -393,7 +422,7 @@ mod tests {
         //   and removes redundant ones.
 
         #[test]
-        fn permute_columns_check((component, permutation) in arb_component_and_permutation()) {
+        fn test_permute_columns((component, permutation) in arb_component_and_permutation()) {
             let result = permute_columns(component.clone(), permutation);
             assert!(result.check());
             assert_eq!(result.trace.num_rows(), component.trace.num_rows());
@@ -402,7 +431,7 @@ mod tests {
         }
 
         #[test]
-        fn shift_check(component in arb_component(), amount in -10000_isize..10000) {
+        fn test_shift(component in arb_component(), amount in -10000_isize..10000) {
             let result = shift(component.clone(), amount);
             assert!(result.check());
             assert_eq!(result.trace.num_rows(), component.trace.num_rows());
@@ -411,7 +440,7 @@ mod tests {
         }
 
         #[test]
-        fn fold_check(component in arb_component()) {
+        fn test_fold(component in arb_component()) {
             prop_assume!(component.trace.num_columns() % 2 == 0);
             let result = fold(component.clone());
             assert!(result.check());
@@ -421,13 +450,49 @@ mod tests {
         }
 
         #[test]
-        fn fold_many_check(component in arb_component(), folds in 0_usize..4) {
+        fn test_fold_many(component in arb_component(), folds in 0_usize..4) {
             let result = fold_many(component.clone(), folds);
             assert!(result.check());
             assert_eq!(result.trace.num_rows(), component.trace.num_rows() << folds);
             let col_delta = result.trace.num_columns() - (component.trace.num_columns() >> folds);
             assert!(col_delta == 0 || col_delta == 1);
             assert_eq!(result.constraints.len(), component.constraints.len());
+        }
+
+        #[test]
+        fn test_compose_horizontal((left, right) in arb_hor_components()) {
+            prop_assume!(left.trace.num_rows() == right.trace.num_rows());
+            let result = compose_horizontal(left.clone(), right.clone());
+            assert!(result.check());
+            assert_eq!(result.trace.num_rows(), left.trace.num_rows());
+            assert_eq!(result.trace.num_columns(),
+                left.trace.num_columns() + right.trace.num_columns());
+            assert_eq!(result.constraints.len(),
+                left.constraints.len() + right.constraints.len());
+        }
+
+        #[test]
+        fn test_compose_vertical((top, bottom) in arb_ver_components()) {
+            prop_assume!(top.trace.num_rows() == bottom.trace.num_rows());
+            prop_assume!(top.trace.num_columns() == bottom.trace.num_columns());
+            prop_assume!(top.constraints.len() == bottom.constraints.len());
+            let result = compose_vertical(top.clone(), bottom.clone());
+            assert!(result.check());
+            assert_eq!(result.trace.num_rows(), 2 * top.trace.num_rows());
+            assert_eq!(result.trace.num_columns(), top.trace.num_columns());
+            assert_eq!(result.constraints.len(), top.constraints.len());
+        }
+
+        #[test]
+        fn test_compose_folded(left in arb_component(), right in arb_component()) {
+            let result = compose_folded(left.clone(), right.clone());
+            assert!(result.check());
+            assert_eq!(result.trace.num_rows(),
+                std::cmp::max(left.trace.num_rows(), right.trace.num_rows()));
+            assert!(result.trace.num_columns() <=
+                left.trace.num_columns() + right.trace.num_columns());
+            assert_eq!(result.constraints.len(),
+                left.constraints.len() + right.constraints.len());
         }
     }
 }
