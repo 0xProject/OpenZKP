@@ -397,12 +397,20 @@ mod tests {
     proptest! {
         #[test]
         fn test_empty(rows in arb_2exp(10), cols in 0_usize..=10) {
-            assert!(Component::empty(rows, cols).check())
+            let component = Component::empty(rows, cols);
+            assert!(component.check())
         }
 
         #[test]
-        fn test_arb_component(component in arb_component()) {
-            assert!(component.check())
+        fn test_arb_component(mut component in arb_component(), row: usize, col: usize) {
+            assert!(component.check());
+            if component.trace.num_rows() * component.trace.num_columns() > 2 {
+                // Spotcheck to make sure constraints constraint the table
+                let row = row % component.trace.num_rows();
+                let col = col % component.trace.num_columns();
+                component.trace[(row, col)] += FieldElement::ONE;
+                assert!(!component.check());
+            }
         }
 
         // For transformations and combinations we would ideally
