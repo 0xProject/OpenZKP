@@ -3,6 +3,7 @@ use crate::{
     RationalExpression, TraceTable, Verifiable,
 };
 use std::convert::TryFrom;
+use std::collections::HashMap;
 
 // TODO: Introduce prover/verifier distinction
 
@@ -16,6 +17,7 @@ use std::convert::TryFrom;
 pub struct Component {
     trace:       TraceTable,
     constraints: Vec<RationalExpression>,
+    labels:      HashMap<String, (usize, RationalExpression)>,
 }
 
 impl Component {
@@ -27,6 +29,7 @@ impl Component {
         Self {
             trace:       TraceTable::new(rows, columns),
             constraints: Vec::new(),
+            labels:      HashMap::new(),
         }
     }
 
@@ -87,20 +90,22 @@ pub fn permute_columns(a: Component, permutation: &[usize]) -> Component {
     }
 
     // Permute the columns in the constraints
+    let map = &mut |expression| match expression {
+        Trace(column, offset) => Trace(permutation[column], offset),
+        other => other,
+    };
     let constraints = a
         .constraints
         .into_iter()
-        .map(|constraint| {
-            constraint.map(&mut |expression| {
-                match expression {
-                    Trace(column, offset) => Trace(permutation[column], offset),
-                    other => other,
-                }
-            })
-        })
+        .map(|constraint| constraint.map(map))
+        .collect();
+    let labels = a
+        .labels
+        .iter()
+        .map(|(label, (row, expression))| (label.clone(), (*row, expression.clone().map(map))))
         .collect();
 
-    Component { trace, constraints }
+    Component { trace, constraints, labels }
 }
 
 /// Rotate around the row indices
@@ -130,20 +135,22 @@ pub fn shift(a: Component, amount: isize) -> Component {
     let factor = FieldElement::root(trace.num_rows())
         .expect("No generator for trace length")
         .pow(-amount);
+    let map = &mut |expression| match expression {
+        X => Constant(factor.clone()) * X,
+        other => other,
+    };
     let constraints = a
         .constraints
         .into_iter()
-        .map(|constraint| {
-            constraint.map(&mut |expression| {
-                match expression {
-                    X => Constant(factor.clone()) * X,
-                    other => other,
-                }
-            })
-        })
+        .map(|constraint| constraint.map(map))
+        .collect();
+    let labels = a
+        .labels
+        .into_iter()
+        .map(|(label, (row, expression))| (label.clone(), (row, expression.map(map))))
         .collect();
 
-    Component { trace, constraints }
+    Component { trace, constraints, labels }
 }
 
 /// TODO: Reverse the order of the rows
@@ -169,24 +176,26 @@ pub fn fold(a: Component) -> Component {
     }
 
     // Adjust constraint system by interpolating and changing the columns
+    let map = &mut |expression| match expression {
+        Trace(i, j) => {
+            let row = i % 2;
+            let col = i / 2;
+            Trace(col, 2 * j + isize::try_from(row).unwrap())
+        }
+        other => other,
+    };
     let constraints = a
         .constraints
         .into_iter()
-        .map(|constraint| {
-            constraint.map(&mut |expression| {
-                match expression {
-                    Trace(i, j) => {
-                        let row = i % 2;
-                        let col = i / 2;
-                        Trace(col, 2 * j + isize::try_from(row).unwrap())
-                    }
-                    other => other,
-                }
-            })
-        })
+        .map(|constraint| constraint.map(map))
+        .collect();
+    let labels = a
+        .labels
+        .into_iter()
+        .map(|(label, (row, expression))| (label.clone(), (row, expression.map(map))))
         .collect();
 
-    Component { trace, constraints }
+    Component { trace, constraints, labels }
 }
 
 pub fn compose_horizontal(a: Component, b: Component) -> Component {
@@ -218,8 +227,9 @@ pub fn compose_horizontal(a: Component, b: Component) -> Component {
             }
         })
     }));
+    let labels = HashMap::default(); // TODO
 
-    Component { trace, constraints }
+    Component { trace, constraints, labels }
 }
 
 // We allow this for symmetry
@@ -253,8 +263,9 @@ pub fn compose_vertical(a: Component, b: Component) -> Component {
             })
         })
         .collect();
+    let labels = HashMap::default(); // TODO
 
-    Component { trace, constraints }
+    Component { trace, constraints, labels }
 }
 
 /// Fold a component a number of times, padding if necessary.
@@ -332,11 +343,19 @@ impl Component {
         // Construct the constraint system for the sequence.
         let omega = Constant(FieldElement::root(rows).unwrap());
         let mut constraints = Vec::new();
+        let mut labels = HashMap::new();
         // x[0] = start
         if rows * columns >= 1 {
             constraints.push((Trace(0, 0) - constraint_seed.into()) / (X - omega.pow(0)));
+            let _ = labels.insert("start".to_owned(), (0, Trace(0, 0)));
         }
         if rows * columns >= 3 {
+            let _ = labels.insert("final".to_owned(), (rows - 1, Trace(columns - 1, 0)));
+            let _ = labels.insert("next".to_owned(), (rows - 1, if columns == 1 {
+                Trace(0, -1) * Trace(0, 0) + constraint_seed.into()
+            } else {
+                Trace(columns - 2, 0) * Trace(columns - 1, 0) + constraint_seed.into()
+            }));
             // For each column we need to add a constraint
             for i in 0..columns {
                 // Find the previous two cells in the table
@@ -360,7 +379,7 @@ impl Component {
             }
         }
 
-        Self { trace, constraints }
+        Self { trace, constraints, labels }
     }
 }
 
@@ -447,7 +466,17 @@ mod tests {
             })
     }
 
+    #[test]
+    fn test_labels() {
+        let component = Component::example(16, 2, &2.into(), &3.into());
+        let (row, start) = &component.labels["final"];
+        dbg!(row, start);
+        let value = start.evaluate_on_trace_row(&component.trace, *row);
+        dbg!(value);
+    }
+
     proptest! {
+
         #[test]
         fn test_empty(rows in arb_2exp(10), cols in 0_usize..=10) {
             let component = Component::empty(rows, cols);

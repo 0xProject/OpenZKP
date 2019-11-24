@@ -6,6 +6,8 @@ use std::{
     prelude::v1::*,
 };
 use zkp_primefield::FieldElement;
+#[cfg(feature = "prover")]
+use crate::TraceTable;
 
 // TODO: Rename to algebraic expression
 #[derive(Clone)]
@@ -256,6 +258,23 @@ impl RationalExpression {
                 }
             }
         }
+    }
+
+    #[cfg(feature = "prover")]
+    pub fn evaluate_on_trace_row(
+        &self,
+        trace: &TraceTable,
+        row: usize
+    ) -> FieldElement {
+        use std::convert::TryFrom;
+        let omega = FieldElement::root(trace.num_rows()).unwrap(); // TODO
+        self.evaluate(&omega.pow(row), &|column, offset: isize| {
+            let n = isize::try_from(trace.num_rows()).unwrap();
+            let row = isize::try_from(row).unwrap();
+            let row = (row + offset).rem_euclid(n);
+            let row = usize::try_from(row).unwrap();
+            trace[(row , column)].clone()
+        })
     }
 
     pub fn evaluate(
