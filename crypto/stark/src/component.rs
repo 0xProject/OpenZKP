@@ -69,7 +69,7 @@ impl Provable<()> for Component {
 /// `new_column_index = permutation[old_column_index]`
 pub fn permute_columns(a: Component, permutation: &[usize]) -> Component {
     use RationalExpression::*;
-    
+
     // Validate the permutation
     // TODO: Check that there are nu duplicate values in permutation.
     assert_eq!(a.trace.num_columns(), permutation.len());
