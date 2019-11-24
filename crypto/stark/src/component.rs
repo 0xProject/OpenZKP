@@ -4,6 +4,8 @@ use crate::primefield::FieldElement;
 use std::convert::TryFrom;
 use crate::Constraints;
 use crate::constraint_check::check_constraints;
+use crate::Verifiable;
+use crate::Provable;
 
 // TODO: Introduce prover/verifier distinction
 
@@ -39,6 +41,21 @@ impl Component {
     }
 }
 
+impl Verifiable for Component {
+    fn constraints(&self) -> Constraints {
+        Constraints::from_expressions(
+            (self.trace.num_rows(), self.trace.num_columns()),
+            Vec::new(), // TODO: create a meaningful seed value
+            self.constraints.clone()
+        ).expect("Could not produce Constaint object for Component")
+    }
+}
+
+impl Provable<()> for Component {
+    fn trace(&self, _witness: ()) -> TraceTable {
+        self.trace.clone()
+    }
+}
 
 // OPT: Use the degree of freedom provided by shift_x + shift_trace to
 // minimize the number of trace values to reveal.
