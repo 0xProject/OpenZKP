@@ -20,6 +20,14 @@ pub struct Component {
     labels:      HashMap<String, (usize, RationalExpression)>,
 }
 
+/// Utility function to add offsets on indices
+fn index_rotate(len: usize, index: usize,  offset: isize) -> usize {
+    let len = len as isize;
+    let index = index as isize;
+    let index = (index + offset).rem_euclid(len);
+    index as usize
+}
+
 impl Component {
     /// Constructs an empty component of given size.
     ///
@@ -41,6 +49,26 @@ impl Component {
         )
         .unwrap();
         check_constraints(&constraints, &self.trace).is_ok()
+    }
+
+    pub fn generator(&self) -> FieldElement {
+        FieldElement::root(self.trace.num_rows())
+        .expect("no generator for trace length")
+    }
+
+    // TODO: Generic eval for given X that interpolates the columns
+
+    pub fn eval_row(&self, expression: &RationalExpression, row: usize) -> FieldElement {
+        assert!(row < self.trace.num_rows());
+        let x = self.generator().pow(row);
+        expression.evaluate(&x, &|col, offset| {
+            self.trace[(index_rotate(self.trace.num_rows(), row, offset), col)].clone()
+        })
+    }
+
+    pub fn eval_label(&self, label: &str) -> FieldElement {
+        let (row, expression) = &self.labels[label];
+        self.eval_row(expression, *row)
     }
 
     fn project_into(&self, 
@@ -346,6 +374,7 @@ mod tests {
     use super::*;
     use proptest::prelude::*;
     use zkp_primefield::u256::U256;
+    use zkp_macros_decl::field_element;
 
     /// Generates an arbitrary permutation on n numbers
     fn arb_permutation(n: usize) -> impl Strategy<Value = Vec<usize>> {
@@ -426,11 +455,19 @@ mod tests {
 
     #[test]
     fn test_labels() {
-        let component = Component::example(16, 2, &2.into(), &3.into());
-        let (row, start) = &component.labels["final"];
-        dbg!(row, start);
-        let value = start.evaluate_on_trace_row(&component.trace, *row);
-        dbg!(value);
+        let component = Component::example(4, 2, &2.into(), &3.into());
+        assert_eq!(
+            component.eval_label("start"),
+            field_element!("0000000000000000000000000000000000000000000000000000000000000002")
+        );
+        assert_eq!(
+            component.eval_label("final"),
+            field_element!("00000000000000000000000000000000000000000000000000000001756cd5b6")
+        );
+        assert_eq!(
+            component.eval_label("next"),
+            field_element!("000000000000000000000000000000000000000000000000001987bfbe4f8af6")
+        );
     }
 
     proptest! {
@@ -476,6 +513,9 @@ mod tests {
             assert_eq!(result.trace.num_rows(), component.trace.num_rows());
             assert_eq!(result.trace.num_columns(), component.trace.num_columns());
             assert_eq!(result.constraints.len(), component.constraints.len());
+            for label in component.labels.keys() {
+                assert_eq!(component.eval_label(label), result.eval_label(label))
+            }
         }
 
         #[test]
@@ -485,6 +525,9 @@ mod tests {
             assert_eq!(result.trace.num_rows(), component.trace.num_rows());
             assert_eq!(result.trace.num_columns(), component.trace.num_columns());
             assert_eq!(result.constraints.len(), component.constraints.len());
+            for label in component.labels.keys() {
+                assert_eq!(component.eval_label(label), result.eval_label(label))
+            }
         }
 
         #[test]
@@ -495,6 +538,9 @@ mod tests {
             assert_eq!(result.trace.num_rows(), component.trace.num_rows() * 2);
             assert_eq!(result.trace.num_columns(), component.trace.num_columns() / 2);
             assert_eq!(result.constraints.len(), component.constraints.len());
+            for label in component.labels.keys() {
+                assert_eq!(component.eval_label(label), result.eval_label(label))
+            }
         }
 
         #[test]
