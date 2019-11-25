@@ -44,19 +44,6 @@ pub fn constraints(claim: &Claim, parameters: &Parameters) -> Vec<RationalExpres
     let hash_pool_points_x = Polynomial(DensePolynomial::new(&PEDERSEN_POINTS_X), Box::new(X.pow(trace_length / (512 * 4))));
     let hash_pool_points_y = Polynomial(DensePolynomial::new(&PEDERSEN_POINTS_Y), Box::new(X.pow(trace_length / (512 * 4))));
 
-    // let oods_point =
-    //     field_element!("0342143aa4e0522de24cf42b3746e170dee7c72ad1459340483fed8524a80adb");
-    // assert_eq!(
-    //     hash_pool_points_x
-    //         .evaluate(&oods_point, &|_, _| FieldElement::ZERO),
-    //     field_element!("00023a5a1ae50e344c8015b0469f1538aea5903315d14c5bde80f374d821826c")
-    // );
-    // assert_eq!(
-    //     merkle_hash_points_x
-    //         .evaluate(&oods_point, &|_, _| FieldElement::ZERO),
-    //     field_element!("05f9a0057058edbb6c48c9cb7c3726efaabafec5fda2c207c2977694c8e99a7a")
-    // );
-
     let row_expression_0 = 16384 - 1;
     let row_expression_1 = 4 * 16384 - 1;
     let row_expression_2 = 2 * 16384 - 1;
