@@ -94,7 +94,7 @@ impl Constraints {
         // TODO: Validate expressions
         // TODO: Hash expressions into channel seed
         // TODO - Examine if we want to up these security params further.
-        // 15*5 + 30  = 90
+        // 15*4 + 30 queries = 90
         Ok(Self {
             channel_seed,
             trace_nrows,

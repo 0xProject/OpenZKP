@@ -1,13 +1,17 @@
 use crate::polynomial::DensePolynomial;
 use primefield::FieldElement;
+use u256::U256;
+use std::ops::Deref;
 use std::{
     iter::Sum,
     ops::{Add, Div, Mul, Sub},
+    hash::{Hash, Hasher},
+    collections::HashMap,
     prelude::v1::*,
 };
 
 // TODO: Rename to algebraic expression
-#[derive(Clone)]
+#[derive(Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub enum RationalExpression {
     X,
@@ -19,6 +23,48 @@ pub enum RationalExpression {
     Mul(Box<RationalExpression>, Box<RationalExpression>),
     Inv(Box<RationalExpression>),
     Exp(Box<RationalExpression>, usize),
+}
+
+impl Hash for RationalExpression {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        use RationalExpression::*;
+        match self {
+            X => {"x".hash(state);},
+            Constant(c) => {c.hash(state);},
+            &Trace(i, j) => {
+                "trace".hash(state);
+                i.hash(state);
+                j.hash(state);
+            },
+            Polynomial(p, a) => {
+                "poly".hash(state);
+                a.hash(state);
+            },
+            Add(a, b) => {
+                "add".hash(state);
+                a.hash(state);
+                b.hash(state);
+            },
+            Neg(a) => {
+                "neg".hash(state);
+                a.hash(state);
+            },
+            Mul(a, b) => {
+                "mul".hash(state);
+                a.hash(state);
+                b.hash(state);
+            },
+            Inv(a) => {
+                "inv".hash(state);
+                a.hash(state);
+            },
+            Exp(a, e) => {
+                "exp".hash(state);
+                a.hash(state);
+                e.hash(state);
+            },
+        }
+    }
 }
 
 impl RationalExpression {
@@ -160,6 +206,99 @@ impl RationalExpression {
             Mul(a, b) => a.evaluate(x, trace) * b.evaluate(x, trace),
             Inv(a) => a.evaluate(x, trace).inv().expect("divided by zero"),
             Exp(a, e) => a.evaluate(x, trace).pow(*e),
+        }
+    }
+
+    pub fn soldity_encode(&self, memory_layout: &HashMap<RationalExpression, String>) -> String {
+        use RationalExpression::*;
+
+        match self {
+            X => "mload(0)".to_owned(),
+            Constant(c) if memory_layout.contains_key(self) => memory_layout.get(self).unwrap().clone(),
+            Constant(c) => format!("0x{}", U256::from(c).to_string()),
+            Trace(i, j) => memory_layout.get(self).unwrap().clone(),
+            // TODO - add periodic ids
+            Polynomial(p, a) => memory_layout.get(self).unwrap().clone(),
+            Add(a, b) => format!("addmod({}, {}, PRIME)" , a.soldity_encode(memory_layout), b.soldity_encode(memory_layout)),
+            Neg(a) => format!("sub(PRIME , {})", a.soldity_encode(memory_layout)),
+            Mul(a, b) => format!("mulmod({}, {}, PRIME)" , a.soldity_encode(memory_layout), b.soldity_encode(memory_layout)),
+            Inv(a) => memory_layout.get(self).unwrap().clone(),
+            Exp(a, e) => {
+                match e {
+                    0 =>  "0x01".to_owned(),
+                    1 => a.soldity_encode(memory_layout),
+                    _ => {
+                        // TODO - Check the gas to see what the real breaking point should be
+                        if *e < 10 {
+                            format!("small_expmod({}, {})", a.soldity_encode(memory_layout), e.to_string())
+                        } else {
+                            format!("expmod({}, {})", a.soldity_encode(memory_layout), e.to_string())
+                        }
+                    }
+                }
+            },
+        }
+    }
+
+    // TODO - DRY this by writing a generic search over subtypes
+
+    pub fn trace_search(&self) -> HashMap::<RationalExpression, bool> {
+        use RationalExpression::*;
+
+        match self {
+            X => HashMap::new(),
+            Constant(c) => HashMap::new(),
+            Trace(i, j) => [(Trace(*i, *j), true)].iter().cloned().collect(),
+            Polynomial(p, a) => a.trace_search(),
+            Add(a, b) => { let mut first = a.trace_search();
+                            first.extend(b.trace_search());
+                            first},
+            Neg(a) => a.trace_search(),
+            Mul(a, b) => { let mut first = a.trace_search();
+                            first.extend(b.trace_search());
+                            first},
+            Inv(a) => a.trace_search(),
+            Exp(a, e) => a.trace_search(),
+        }
+    }
+
+    pub fn inv_search(&self) -> HashMap::<RationalExpression, bool> {
+        use RationalExpression::*;
+
+        match self {
+            X => HashMap::new(),
+            Constant(c) => HashMap::new(),
+            Trace(i, j) => HashMap::new(),
+            Polynomial(p, a) => a.inv_search(),
+            Add(a, b) => { let mut first = a.inv_search();
+                            first.extend(b.inv_search());
+                            first},
+            Neg(a) => a.inv_search(),
+            Mul(a, b) => { let mut first = a.inv_search();
+                            first.extend(b.inv_search());
+                            first},
+            Inv(a) => [(self.clone(), true)].iter().cloned().collect(),
+            Exp(a, e) => a.inv_search(),
+        }
+    }
+
+    pub fn periodic_search(&self) -> HashMap::<RationalExpression, bool> {
+        use RationalExpression::*;
+
+        match self {
+            X => HashMap::new(),
+            Constant(c) => HashMap::new(),
+            Trace(i, j) => HashMap::new(),
+            Polynomial(p, a) => [(self.clone(), true)].iter().cloned().collect(),
+            Add(a, b) => { let mut first = a.periodic_search();
+                            first.extend(b.periodic_search());
+                            first},
+            Neg(a) => a.periodic_search(),
+            Mul(a, b) => { let mut first = a.periodic_search();
+                            first.extend(b.periodic_search());
+                            first},
+            Inv(a) => a.periodic_search(),
+            Exp(a, e) => a.periodic_search(),
         }
     }
 }

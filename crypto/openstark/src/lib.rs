@@ -55,6 +55,8 @@ mod algebraic_dag;
 mod prover;
 #[cfg(feature = "prover")]
 mod trace_table;
+#[cfg(feature = "prover")]
+pub mod solidity_encode;
 
 // TODO: Have unconditional Debug trait on all types
 

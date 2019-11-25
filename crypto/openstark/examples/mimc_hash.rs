@@ -1,9 +1,9 @@
 use macros_decl::{field_element};
 use openstark::{
-    Constraints, DensePolynomial, Provable, RationalExpression, TraceTable, Verifiable,
+    Constraints, DensePolynomial, Provable, RationalExpression, TraceTable, Verifiable, solidity_encode::autogen_oods,
 };
 use primefield::{fft::ifft, FieldElement};
-use std::time::Instant;
+use std::{time::Instant, collections::HashMap};
 use u256::U256;
 
 const Q: FieldElement = field_element!("0B");
@@ -169,20 +169,33 @@ impl Verifiable for Claim {
         };
         let k_coef = periodic(&ifft(&K_COEF.to_vec()));
 
-        let on_loop_rows = |len: usize| {
-            (X.pow(len) - Constant(trace_generator.pow(len * (trace_length - 1))))
+        let on_loop_rows = |length: usize| {
+            (X.pow(trace_length/length) - Constant(trace_generator.pow((trace_length/length) * (trace_length - 1))))
                 / (X.pow(trace_length) - 1.into())
         };
 
-        Constraints::from_expressions((trace_length, 2), seed, vec![
+        let const_before_x = Constant(self.before_x.clone());
+        let const_before_y = Constant(self.before_y.clone());
+        let const_after = Constant(self.after.clone());
+
+        let expressions = vec![
             ((Exp(Trace(0,0).into(), 3) + Constant(3.into()) * Constant(Q.clone()) * Trace(0, 0)  * Exp(Trace(1, 0).into(), 2) + k_coef) - Trace(0, 1)) * on_loop_rows(128),
             (Constant(3.into())*Exp(Trace(0, 0).into(), 2) + Constant(Q.clone())*Exp(Trace(1, 0).into(), 3) - Trace(1, 1)) * every_row(),
             // Boundary constraints
-            (Trace(0, 0) - Constant(self.before_x.clone())) * on_row(0),
+            (Trace(0, 0) - const_before_x.clone()) * on_row(0),
             Trace(1, 0) * on_row(0),
-            (Trace(0, 0) - Constant(self.before_y.clone())) * on_row(128),
-            (Trace(0, 0) - Constant(self.after.clone())) * on_row(255),
-        ])
+            (Trace(0, 0) - const_before_y.clone()) * on_row(128),
+            (Trace(0, 0) - const_after.clone()) * on_row(255),
+        ];
+
+        let public = vec![
+            &const_before_x,
+            &const_before_y,
+            &const_after,
+        ];
+
+        autogen_oods(public.as_slice(), expressions.as_slice());
+        Constraints::from_expressions((trace_length, 2), seed, expressions)
         .unwrap()
     }
 }
