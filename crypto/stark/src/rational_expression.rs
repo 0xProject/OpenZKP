@@ -42,22 +42,19 @@ impl RationalExpression {
     /// **Note.** Unlike the conventional generalization of `map` to tree
     /// structures, this map also applies the function to each tree node,
     /// after it has been applied to all its descendants.
-    pub fn map<F>(self, f: &mut F) -> Self
-    where
-        F: FnMut(Self) -> Self,
-    {
+    pub fn map(&self, f: &impl Fn(Self) -> Self) -> Self {
         use RationalExpression::*;
         let e = match self {
             // Tree types are recursed first
-            Polynomial(p, e) => Polynomial(p, Box::new(e.map(f))),
+            Polynomial(p, e) => Polynomial(p.clone(), Box::new(e.map(f))),
             Add(a, b) => Add(Box::new(a.map(f)), Box::new(b.map(f))),
             Neg(a) => Neg(Box::new(a.map(f))),
             Mul(a, b) => Mul(Box::new(a.map(f)), Box::new(b.map(f))),
             Inv(a) => Inv(Box::new(a.map(f))),
-            Exp(a, e) => Exp(Box::new(a.map(f)), e),
+            Exp(a, e) => Exp(Box::new(a.map(f)), *e),
 
             // Leaf types are mapped as is.
-            e => e,
+            other => other.clone(),
         };
         f(e)
     }

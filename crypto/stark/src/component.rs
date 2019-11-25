@@ -42,6 +42,33 @@ impl Component {
         .unwrap();
         check_constraints(&constraints, &self.trace).is_ok()
     }
+
+    fn project_into(&self, 
+        target: &mut Self,
+        trace_map: impl Fn(usize, usize) -> (usize, usize),
+        expr_map: impl Fn(RationalExpression) -> RationalExpression,
+    ) {
+        // Copy over TraceTable
+        for i in 0..self.trace.num_rows() {
+            for j in 0..self.trace.num_columns() {
+                target.trace[trace_map(i, j)] = self.trace[(i, j)].clone();
+            }
+        }
+        // Copy over Constraints
+        target.constraints.extend(
+            self.constraints.iter().map(
+                |expr| expr.clone().map(&expr_map)
+            )
+        );
+        // Copy over Labels
+        // TODO: Rename colliding labels?
+        // TODO: Row numbers?
+        target.labels.extend(
+            self.labels.iter().map(|(label, (row, expr))|
+                (label.clone(), (*row, expr.map(&expr_map)))
+            )
+        )
+    }
 }
 
 impl Verifiable for Component {
@@ -51,7 +78,7 @@ impl Verifiable for Component {
             Vec::new(), // TODO: create a meaningful seed value
             self.constraints.clone(),
         )
-        .expect("Could not produce Constaint object for Component")
+        .expect("Could not produce Constraint object for Component")
     }
 }
 
@@ -90,19 +117,19 @@ pub fn permute_columns(a: Component, permutation: &[usize]) -> Component {
     }
 
     // Permute the columns in the constraints
-    let map = &mut |expression| match expression {
+    let map = |expression| match expression {
         Trace(column, offset) => Trace(permutation[column], offset),
         other => other,
     };
     let constraints = a
         .constraints
         .into_iter()
-        .map(|constraint| constraint.map(map))
+        .map(|constraint| constraint.map(&map))
         .collect();
     let labels = a
         .labels
         .iter()
-        .map(|(label, (row, expression))| (label.clone(), (*row, expression.clone().map(map))))
+        .map(|(label, (row, expression))| (label.clone(), (*row, expression.clone().map(&map))))
         .collect();
 
     Component { trace, constraints, labels }
@@ -135,19 +162,19 @@ pub fn shift(a: Component, amount: isize) -> Component {
     let factor = FieldElement::root(trace.num_rows())
         .expect("No generator for trace length")
         .pow(-amount);
-    let map = &mut |expression| match expression {
+    let map = |expression| match expression {
         X => Constant(factor.clone()) * X,
         other => other,
     };
     let constraints = a
         .constraints
         .into_iter()
-        .map(|constraint| constraint.map(map))
+        .map(|constraint| constraint.map(&map))
         .collect();
     let labels = a
         .labels
         .into_iter()
-        .map(|(label, (row, expression))| (label.clone(), (row, expression.map(map))))
+        .map(|(label, (row, expression))| (label.clone(), (row, expression.map(&map))))
         .collect();
 
     Component { trace, constraints, labels }
@@ -176,7 +203,7 @@ pub fn fold(a: Component) -> Component {
     }
 
     // Adjust constraint system by interpolating and changing the columns
-    let map = &mut |expression| match expression {
+    let map = |expression| match expression {
         Trace(i, j) => {
             let row = i % 2;
             let col = i / 2;
@@ -187,12 +214,12 @@ pub fn fold(a: Component) -> Component {
     let constraints = a
         .constraints
         .into_iter()
-        .map(|constraint| constraint.map(map))
+        .map(|constraint| constraint.map(&map))
         .collect();
     let labels = a
         .labels
         .into_iter()
-        .map(|(label, (row, expression))| (label.clone(), (row, expression.map(map))))
+        .map(|(label, (row, expression))| (label.clone(), (row, expression.map(&map))))
         .collect();
 
     Component { trace, constraints, labels }
@@ -220,7 +247,7 @@ pub fn compose_horizontal(a: Component, b: Component) -> Component {
     let a_cols = a.trace.num_columns();
     let mut constraints = a.constraints;
     constraints.extend(b.constraints.into_iter().map(|constraint| {
-        constraint.map(&mut |expression| {
+        constraint.map(&|expression| {
             match expression {
                 Trace(i, j) => Trace(i + a_cols, j),
                 other => other,
@@ -255,7 +282,7 @@ pub fn compose_vertical(a: Component, b: Component) -> Component {
         .constraints
         .into_iter()
         .map(|constraint| {
-            constraint.map(&mut |expression| {
+            constraint.map(&|expression| {
                 match expression {
                     X => X.pow(2),
                     other => other,
