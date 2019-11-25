@@ -109,30 +109,16 @@ pub fn permute_columns(a: Component, permutation: &[usize]) -> Component {
     );
 
     // Create a new trace table that permutes the columns
-    let mut trace = TraceTable::new(a.trace.num_rows(), a.trace.num_columns());
-    for i in 0..trace.num_rows() {
-        for j in 0..trace.num_columns() {
-            trace[(i, permutation[j])] = a.trace[(i, j)].clone();
+    let mut result = Component::empty(a.trace.num_rows(), a.trace.num_columns());
+    a.project_into(
+        &mut result,
+        |i, j| (i, permutation[j]),
+        |expression| match expression {
+            Trace(column, offset) => Trace(permutation[column], offset),
+            other => other,
         }
-    }
-
-    // Permute the columns in the constraints
-    let map = |expression| match expression {
-        Trace(column, offset) => Trace(permutation[column], offset),
-        other => other,
-    };
-    let constraints = a
-        .constraints
-        .into_iter()
-        .map(|constraint| constraint.map(&map))
-        .collect();
-    let labels = a
-        .labels
-        .iter()
-        .map(|(label, (row, expression))| (label.clone(), (*row, expression.clone().map(&map))))
-        .collect();
-
-    Component { trace, constraints, labels }
+    );
+    result
 }
 
 /// Rotate around the row indices
@@ -143,41 +129,21 @@ pub fn shift(a: Component, amount: isize) -> Component {
     if a.trace.num_rows() <= 1 {
         return a;
     }
-
-    // Normalize shift amount
     let amount_abs: usize =
         usize::try_from(amount.rem_euclid(isize::try_from(a.trace.num_rows()).unwrap())).unwrap();
-
-    // Create a new trace table that permutes the columns
-    let mut trace = TraceTable::new(a.trace.num_rows(), a.trace.num_columns());
-    for i in 0..trace.num_rows() {
-        for j in 0..trace.num_columns() {
-            let new_row_index = (i + amount_abs) % trace.num_rows();
-            trace[(new_row_index, j)] = a.trace[(i, j)].clone();
-        }
-    }
-
-    // Adjust constraint system by replacing X
-    // (alternatively, we could modify the Trace(...) offsets)
-    let factor = FieldElement::root(trace.num_rows())
+    let mut result = Component::empty(a.trace.num_rows(), a.trace.num_columns());
+    let factor = FieldElement::root(a.trace.num_rows())
         .expect("No generator for trace length")
         .pow(-amount);
-    let map = |expression| match expression {
-        X => Constant(factor.clone()) * X,
-        other => other,
-    };
-    let constraints = a
-        .constraints
-        .into_iter()
-        .map(|constraint| constraint.map(&map))
-        .collect();
-    let labels = a
-        .labels
-        .into_iter()
-        .map(|(label, (row, expression))| (label.clone(), (row, expression.map(&map))))
-        .collect();
-
-    Component { trace, constraints, labels }
+    a.project_into(
+        &mut result,
+        |i, j| ((i + amount_abs) % a.trace.num_rows(), j),
+        |expression| match expression {
+            X => Constant(factor.clone()) * X,
+            other => other,
+        }
+    );
+    result
 }
 
 /// TODO: Reverse the order of the rows
@@ -191,72 +157,42 @@ pub fn shift(a: Component, amount: isize) -> Component {
 pub fn fold(a: Component) -> Component {
     use RationalExpression::*;
     assert_eq!(a.trace.num_columns() % 2, 0);
-
-    // Create a new trace table that interleaves columns in odd and even rows
-    let mut trace = TraceTable::new(2 * a.trace.num_rows(), a.trace.num_columns() / 2);
-    for i in 0..a.trace.num_rows() {
-        for j in 0..a.trace.num_columns() {
-            let row = j % 2;
-            let col = j / 2;
-            trace[(2 * i + row, col)] = a.trace[(i, j)].clone();
+    let mut result = Component::empty(
+        2 * a.trace.num_rows(),
+        a.trace.num_columns() / 2
+    );
+    a.project_into(
+        &mut result,
+        |i, j| (2 * i + (j % 2), j / 2),
+        |expression| match expression {
+            Trace(i, j) => Trace(i / 2, 2 * j + isize::try_from(i % 2).unwrap()),
+            other => other,
         }
-    }
-
-    // Adjust constraint system by interpolating and changing the columns
-    let map = |expression| match expression {
-        Trace(i, j) => {
-            let row = i % 2;
-            let col = i / 2;
-            Trace(col, 2 * j + isize::try_from(row).unwrap())
-        }
-        other => other,
-    };
-    let constraints = a
-        .constraints
-        .into_iter()
-        .map(|constraint| constraint.map(&map))
-        .collect();
-    let labels = a
-        .labels
-        .into_iter()
-        .map(|(label, (row, expression))| (label.clone(), (row, expression.map(&map))))
-        .collect();
-
-    Component { trace, constraints, labels }
+    );
+    result
 }
 
 pub fn compose_horizontal(a: Component, b: Component) -> Component {
     use RationalExpression::*;
     assert_eq!(a.trace.num_rows(), b.trace.num_rows());
-
-    // Create a new trace table that horizontally concatenates a and b
-    let mut trace = TraceTable::new(
+    let mut result = Component::empty(
         a.trace.num_rows(),
         a.trace.num_columns() + b.trace.num_columns(),
     );
-    for i in 0..a.trace.num_rows() {
-        for j in 0..a.trace.num_columns() {
-            trace[(i, j)] = a.trace[(i, j)].clone();
-        }
-        for j in 0..b.trace.num_columns() {
-            trace[(i, j + a.trace.num_columns())] = b.trace[(i, j)].clone();
-        }
-    }
-
-    // Shift b's constraints over by a's columns.
-    let a_cols = a.trace.num_columns();
-    let mut constraints = a.constraints;
-    constraints.extend(b.constraints.into_iter().map(|constraint| {
-        constraint.map(&|expression| {
-            match expression {
-                Trace(i, j) => Trace(i + a_cols, j),
-                other => other,
-            }
-        })
-    }));
-    let labels = HashMap::default(); // TODO
-
-    Component { trace, constraints, labels }
+    a.project_into(
+        &mut result,
+        |i, j| (i, j),
+        |expression| expression,
+    );
+    b.project_into(
+        &mut result,
+        |i, j| (i, j + a.trace.num_columns()),
+        |expression| match expression {
+            Trace(i, j) => Trace(i + a.trace.num_columns(), j),
+            other => other,
+        },
+    );
+    result
 }
 
 // We allow this for symmetry
@@ -267,32 +203,27 @@ pub fn compose_vertical(a: Component, b: Component) -> Component {
     assert_eq!(a.trace.num_columns(), b.trace.num_columns());
     assert_eq!(a.constraints.len(), b.constraints.len());
     // TODO: assert_eq!(Set(a.constraints), Set(b.constraints));
-
-    // Create a new trace table that vertically concatenates a and b
-    let mut trace = TraceTable::new(2 * a.trace.num_rows(), a.trace.num_columns());
-    for i in 0..a.trace.num_rows() {
-        for j in 0..a.trace.num_columns() {
-            trace[(i, j)] = a.trace[(i, j)].clone();
-            trace[(i + a.trace.num_rows(), j)] = b.trace[(i, j)].clone();
-        }
-    }
-
-    // Repeat a's constraints twice
-    let constraints = a
-        .constraints
-        .into_iter()
-        .map(|constraint| {
-            constraint.map(&|expression| {
-                match expression {
-                    X => X.pow(2),
-                    other => other,
-                }
-            })
-        })
-        .collect();
-    let labels = HashMap::default(); // TODO
-
-    Component { trace, constraints, labels }
+    let expr_map = |expression| match expression {
+        X => X.pow(2),
+        other => other,
+    };
+    let mut result = Component::empty(
+        2 * a.trace.num_rows(),
+        a.trace.num_columns(),
+    );
+    a.project_into(
+        &mut result,
+        |i, j| (i, j),
+        expr_map,
+    );
+    b.project_into(
+        &mut result,
+        |i, j| (i + a.trace.num_rows(), j),
+        expr_map,
+    );
+    // Remove b's constraints (but keep the mapped labels)
+    result.constraints.truncate(a.constraints.len());
+    result
 }
 
 /// Fold a component a number of times, padding if necessary.
