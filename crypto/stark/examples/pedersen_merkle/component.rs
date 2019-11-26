@@ -127,8 +127,8 @@ pub fn tree_layer(leaf: &FieldElement, direction: bool, sibling: &FieldElement) 
 
     // Labels
     let mut labels = HashMap::default();
-    labels.insert("hash".to_owned(), (255, Trace(6, 0)));
-    labels.insert("hash".to_owned(), (255, Trace(6, 0)));
+    labels.insert("left".to_owned(), (0, Trace(0, 0)));
+    labels.insert("right".to_owned(), (0, Trace(4, 0)));
     labels.insert("hash".to_owned(), (255, Trace(6, 0)));
 
     Component {
@@ -372,9 +372,21 @@ fn get_coordinates(p: &Affine) -> (&FieldElement, &FieldElement) {
 
 #[cfg(test)]
 mod test {
-    use super::{super::pedersen_points::merkle_hash, *};
+    use super::{
+        super::{
+            inputs::{short_witness, SHORT_CLAIM},
+            pedersen_points::merkle_hash,
+        },
+        *,
+    };
     use quickcheck_macros::quickcheck;
+    use rand::{
+        distributions::{Distribution, Uniform},
+        Rng, SeedableRng,
+    };
+    use rand_xoshiro::Xoshiro256PlusPlus;
     use zkp_macros_decl::field_element;
+    use zkp_stark::prove;
     use zkp_u256::U256;
 
     #[test]
@@ -384,12 +396,13 @@ mod test {
         let direction = true;
         let sibling =
             field_element!("0465da90a0487ff6d4ea63658db7439f4023957b750f3ae8a5e0a18edef453b1");
+        let hash =
+            field_element!("02fe7d53bedb42fbc905d7348bd5d61302882ba48a27377b467a9005d6e8d3fd");
         let component = tree_layer(&leaf, direction, &sibling);
         assert!(component.check());
-        assert_eq!(
-            component.eval_label("hash"),
-            field_element!("02fe7d53bedb42fbc905d7348bd5d61302882ba48a27377b467a9005d6e8d3fd")
-        );
+        assert_eq!(&component.eval_label("left"), &sibling);
+        assert_eq!(&component.eval_label("right"), &leaf);
+        assert_eq!(&component.eval_label("hash"), &hash);
     }
 
     #[quickcheck]
@@ -402,5 +415,55 @@ mod test {
         };
         assert!(component.check());
         assert_eq!(component.eval_label("hash"), hash);
+    }
+
+    #[test]
+    fn test_pedersen_merkle_small_proof() {
+        let claim = SHORT_CLAIM;
+        let witness = short_witness();
+        let component = pedersen_merkle(&claim, &witness);
+        let mut constraints = Constraints::from_expressions(
+            (component.trace.num_rows(), component.trace.num_columns()),
+            (&claim).into(),
+            component.constraints,
+        )
+        .unwrap();
+        constraints.blowup = 16;
+        constraints.pow_bits = 0;
+        constraints.num_queries = 13;
+        constraints.fri_layout = vec![3, 2];
+        let proof = prove(&constraints, &component.trace).unwrap();
+
+        assert_eq!(
+            hex::encode(proof.as_bytes()[0..32].to_vec()),
+            "e2c4e35c37e33aa3b439592f2f3c5c82f464f026000000000000000000000000"
+        );
+        assert_eq!(
+            hex::encode(proof.as_bytes()[32..64].to_vec()),
+            "c5df989253ac4c3eff4fdb4130f832db1d2a9826000000000000000000000000"
+        );
+
+        // FRI commitments
+        assert_eq!(
+            hex::encode(proof.as_bytes()[640..672].to_vec()),
+            "744f04f8bcd9c5aafb8907586428fbe9dd81b976000000000000000000000000"
+        );
+        assert_eq!(
+            hex::encode(proof.as_bytes()[672..704].to_vec()),
+            "ce329839a5eccb8009ffebf029312989e68f1cde000000000000000000000000"
+        );
+    }
+
+    #[quickcheck]
+    fn test_pedersen_merkle(seed: u64) {
+        let mut rng = Xoshiro256PlusPlus::seed_from_u64(seed);
+        let size = 1 << Uniform::from(0..8).sample(&mut rng);
+        let witness = Witness {
+            directions: (0..size).map(|_| rng.gen()).collect(),
+            path:       (0..size).map(|_| rng.gen()).collect(),
+        };
+        let claim = Claim::from_leaf_witness(rng.gen(), &witness);
+        let component = pedersen_merkle(&claim, &witness);
+        assert!(component.check());
     }
 }

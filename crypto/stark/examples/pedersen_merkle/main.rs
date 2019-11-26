@@ -1,5 +1,4 @@
 mod component;
-mod constraints;
 mod inputs;
 mod pedersen_points;
 mod periodic_columns;
