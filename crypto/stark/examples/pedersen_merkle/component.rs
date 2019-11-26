@@ -12,6 +12,132 @@ use zkp_primefield::FieldElement;
 use zkp_stark::{Component, Constraints, DensePolynomial, RationalExpression, TraceTable};
 use zkp_u256::U256;
 
+pub fn tree_layer(leaf: &FieldElement, direction: bool, sibling: &FieldElement) -> Component {
+    use RationalExpression::*;
+
+    // Compute trace table
+    let mut trace = TraceTable::new(256, 8);
+    let leaf = U256::from(leaf);
+    let other_hash = U256::from(sibling);
+    let mut row = if direction {
+        initialize_hash(other_hash, leaf)
+    } else {
+        initialize_hash(leaf, other_hash)
+    };
+    for bit_index in 0..256 {
+        if bit_index > 0 {
+            row = hash_next_bit(&row, bit_index);
+        }
+
+        let (left_x, left_y) = get_coordinates(&row.left.point);
+        trace[(bit_index, 0)] = FieldElement::from(row.left.source.clone());
+        trace[(bit_index, 1)] = row.left.slope.clone();
+        trace[(bit_index, 2)] = left_x.clone();
+        trace[(bit_index, 3)] = left_y.clone();
+
+        let (right_x, right_y) = get_coordinates(&row.right.point);
+        trace[(bit_index, 4)] = FieldElement::from(row.right.source.clone());
+        trace[(bit_index, 5)] = row.right.slope.clone();
+        trace[(bit_index, 6)] = right_x.clone();
+        trace[(bit_index, 7)] = right_y.clone();
+    }
+
+    // Constraints
+    let field_element_bits = 252;
+    let (shift_point_x, shift_point_y) = match SHIFT_POINT {
+        Affine::Zero => panic!(),
+        Affine::Point { x, y } => (x, y),
+    };
+
+    // Periodic columns
+    let periodic = |coefficients| Polynomial(DensePolynomial::new(coefficients), Box::new(X));
+    let periodic_left_x = periodic(&LEFT_X_COEFFICIENTS);
+    let periodic_left_y = periodic(&LEFT_Y_COEFFICIENTS);
+    let periodic_right_x = periodic(&RIGHT_X_COEFFICIENTS);
+    let periodic_right_y = periodic(&RIGHT_Y_COEFFICIENTS);
+
+    // Repeating patterns
+    let omega = FieldElement::root(256).unwrap();
+    let omega_i = |i| Constant(omega.pow(i));
+    let row = |i| X - omega_i(i);
+    let all_rows = || X.pow(256) - 1.into();
+    let on_no_hash_rows = |a: RationalExpression| a / row(255);
+    let on_hash_start_rows = |a: RationalExpression| a / row(0);
+    let on_hash_loop_rows = |a: RationalExpression| a * row(255) / all_rows();
+    let on_fe_end_rows = |a: RationalExpression| a / row(field_element_bits);
+
+    // Common sub-expressions
+    let left_bit = Trace(0, 0) - Trace(0, 1) * 2.into();
+    let right_bit = Trace(4, 0) - Trace(4, 1) * 2.into();
+
+    let constraints = vec![
+        Trace(0, 0),
+        Trace(1, 0),
+        Trace(2, 0),
+        Trace(3, 0),
+        Trace(4, 0),
+        Trace(5, 0),
+        Trace(6, 0),
+        Trace(7, 0),
+        on_hash_start_rows(Trace(6, 0) - Constant(shift_point_x.clone())),
+        on_hash_start_rows(Trace(7, 0) - Constant(shift_point_y.clone())),
+        on_hash_loop_rows(left_bit.clone() * (left_bit.clone() - 1.into())),
+        on_hash_loop_rows(
+            left_bit.clone() * (Trace(7, 0) - periodic_left_y.clone())
+                - Trace(1, 1) * (Trace(6, 0) - periodic_left_x.clone()),
+        ),
+        on_hash_loop_rows(
+            Trace(1, 1) * Trace(1, 1)
+                - left_bit.clone() * (Trace(6, 0) + periodic_left_x.clone() + Trace(2, 1)),
+        ),
+        on_hash_loop_rows(
+            left_bit.clone() * (Trace(7, 0) + Trace(3, 1))
+                - Trace(1, 1) * (Trace(6, 0) - Trace(2, 1)),
+        ),
+        on_hash_loop_rows(
+            (Constant(FieldElement::ONE) - left_bit.clone()) * (Trace(6, 0) - Trace(2, 1)),
+        ),
+        on_hash_loop_rows(
+            (Constant(FieldElement::ONE) - left_bit.clone()) * (Trace(7, 0) - Trace(3, 1)),
+        ),
+        on_fe_end_rows(Trace(0, 0)),
+        on_no_hash_rows(Trace(0, 0)),
+        on_hash_loop_rows(right_bit.clone() * (right_bit.clone() - 1.into())),
+        on_hash_loop_rows(
+            right_bit.clone() * (Trace(3, 1) - periodic_right_y.clone())
+                - Trace(5, 1) * (Trace(2, 1) - periodic_right_x.clone()),
+        ),
+        on_hash_loop_rows(
+            Trace(5, 1) * Trace(5, 1)
+                - right_bit.clone() * (Trace(2, 1) + periodic_right_x.clone() + Trace(6, 1)),
+        ),
+        on_hash_loop_rows(
+            right_bit.clone() * (Trace(3, 1) + Trace(7, 1))
+                - Trace(5, 1) * (Trace(2, 1) - Trace(6, 1)),
+        ),
+        on_hash_loop_rows(
+            (Constant(FieldElement::ONE) - right_bit.clone()) * (Trace(2, 1) - Trace(6, 1)),
+        ),
+        on_hash_loop_rows(
+            (Constant(FieldElement::ONE) - right_bit.clone()) * (Trace(3, 1) - Trace(7, 1)),
+        ),
+        on_fe_end_rows(Trace(4, 0)),
+        on_no_hash_rows(Trace(4, 0)),
+    ];
+
+    // Labels
+    let mut labels = HashMap::default();
+    labels.insert("hash".to_owned(), (255, Trace(6, 0)));
+    labels.insert("hash".to_owned(), (255, Trace(6, 0)));
+    labels.insert("hash".to_owned(), (255, Trace(6, 0)));
+
+    Component {
+        trace,
+        constraints,
+        labels,
+    }
+}
+
 pub fn pedersen_merkle(claim: &Claim, witness: &Witness) -> Component {
     use RationalExpression::*;
     info!("Constructing constraint system...");
@@ -53,7 +179,7 @@ pub fn pedersen_merkle(claim: &Claim, witness: &Witness) -> Component {
         }
     }
 
-    //
+    // Construct constraints
     let path_length = claim.path_length;
     let trace_length = path_length * 256;
     let root = claim.root.clone();
@@ -78,7 +204,6 @@ pub fn pedersen_merkle(claim: &Claim, witness: &Witness) -> Component {
     let periodic_right_y = periodic(&RIGHT_Y_COEFFICIENTS);
 
     // Repeating patterns
-    // TODO: Clean this up
     let trace_generator = Constant(FieldElement::root(trace_length).unwrap());
     let on_first_row = |a: RationalExpression| a / (X - Constant(FieldElement::ONE));
     let on_last_row = |a: RationalExpression| a / (X - trace_generator.pow(trace_length - 1));
@@ -242,5 +367,40 @@ fn get_coordinates(p: &Affine) -> (&FieldElement, &FieldElement) {
     match p {
         Affine::Zero => panic!(),
         Affine::Point { x, y } => (x, y),
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::{super::pedersen_points::merkle_hash, *};
+    use quickcheck_macros::quickcheck;
+    use zkp_macros_decl::field_element;
+    use zkp_u256::U256;
+
+    #[test]
+    fn test_tree_layer_example() {
+        let leaf =
+            field_element!("061af4ecd745b4c67e476860ce382ae8696dc1e258d02c59557bb7abcf66f1e8");
+        let direction = true;
+        let sibling =
+            field_element!("0465da90a0487ff6d4ea63658db7439f4023957b750f3ae8a5e0a18edef453b1");
+        let component = tree_layer(&leaf, direction, &sibling);
+        assert!(component.check());
+        assert_eq!(
+            component.eval_label("hash"),
+            field_element!("02fe7d53bedb42fbc905d7348bd5d61302882ba48a27377b467a9005d6e8d3fd")
+        );
+    }
+
+    #[quickcheck]
+    fn test_tree_layer(leaf: FieldElement, direction: bool, sibling: FieldElement) {
+        let component = tree_layer(&leaf, direction, &sibling);
+        let hash = if direction {
+            merkle_hash(&sibling, &leaf)
+        } else {
+            merkle_hash(&leaf, &sibling)
+        };
+        assert!(component.check());
+        assert_eq!(component.eval_label("hash"), hash);
     }
 }
