@@ -171,6 +171,10 @@ pub fn shift(a: Component, amount: isize) -> Component {
             other => other,
         }
     );
+    for (row, _expr) in result.labels.values_mut() {
+        *row += amount_abs;
+        *row %= a.trace.num_rows();
+    }
     result
 }
 
@@ -193,25 +197,34 @@ pub fn fold(a: Component) -> Component {
         &mut result,
         |i, j| (2 * i + (j % 2), j / 2),
         |expression| match expression {
-            Trace(i, j) => Trace(i / 2, 2 * j + isize::try_from(i % 2).unwrap()),
+            Trace(i, j) => Trace(i / 2, 2 * j + ((i % 2) as isize)),
             other => other,
         }
     );
+    for (row, _expr) in result.labels.values_mut() {
+        *row *= 2;
+    }
     result
 }
 
-pub fn compose_horizontal(a: Component, b: Component) -> Component {
+pub fn compose_horizontal(mut a: Component, mut b: Component) -> Component {
     use RationalExpression::*;
     assert_eq!(a.trace.num_rows(), b.trace.num_rows());
     let mut result = Component::empty(
         a.trace.num_rows(),
         a.trace.num_columns() + b.trace.num_columns(),
     );
+    a.labels = a.labels.into_iter().map(|(key, val)|
+        (format!("left_{}", key), val)
+    ).collect();
     a.project_into(
         &mut result,
         |i, j| (i, j),
         |expression| expression,
     );
+    b.labels = b.labels.into_iter().map(|(key, val)|
+        (format!("right_{}", key), val)
+    ).collect();
     b.project_into(
         &mut result,
         |i, j| (i, j + a.trace.num_columns()),
@@ -225,7 +238,7 @@ pub fn compose_horizontal(a: Component, b: Component) -> Component {
 
 // We allow this for symmetry
 #[allow(clippy::needless_pass_by_value)]
-pub fn compose_vertical(a: Component, b: Component) -> Component {
+pub fn compose_vertical(mut a: Component, mut b: Component) -> Component {
     use RationalExpression::*;
     assert_eq!(a.trace.num_rows(), b.trace.num_rows());
     assert_eq!(a.trace.num_columns(), b.trace.num_columns());
@@ -239,11 +252,17 @@ pub fn compose_vertical(a: Component, b: Component) -> Component {
         2 * a.trace.num_rows(),
         a.trace.num_columns(),
     );
+    a.labels = a.labels.into_iter().map(|(key, val)|
+        (format!("top_{}", key), val)
+    ).collect();
     a.project_into(
         &mut result,
         |i, j| (i, j),
         expr_map,
     );
+    b.labels = b.labels.into_iter().map(|(key, (row, expr))|
+        (format!("bottom_{}", key), (row + a.trace.num_rows(), expr))
+    ).collect();
     b.project_into(
         &mut result,
         |i, j| (i + a.trace.num_rows(), j),
@@ -260,7 +279,11 @@ pub fn fold_many(a: Component, folds: usize) -> Component {
     for _ in 0..folds {
         if result.trace.num_columns() % 2 == 1 {
             let rows = result.trace.num_rows();
-            result = compose_horizontal(result, Component::empty(rows, 1))
+            result = compose_horizontal(result, Component::empty(rows, 1));
+            result.labels = result.labels.into_iter().map(|(label, val)|
+                // Remove `left_` prefix from labels
+                (label.trim_start_matches("left_").to_owned(), val)
+            ).collect();
         }
         result = fold(result)
     }
@@ -268,20 +291,26 @@ pub fn fold_many(a: Component, folds: usize) -> Component {
 }
 
 /// Horizontally compose two components of potentially unequal length
-pub fn compose_folded(a: Component, b: Component) -> Component {
+pub fn compose_folded(mut a: Component, mut b: Component) -> Component {
     use std::cmp::Ordering::*;
     let a_len = a.trace.num_rows();
     let b_len = b.trace.num_rows();
     if a_len == 0 {
+        b.labels = b.labels.into_iter().map(|(key, val)|
+            (format!("right_{}", key), val)
+        ).collect();
         return b;
     }
     if b_len == 0 {
+        a.labels = a.labels.into_iter().map(|(key, val)|
+            (format!("left_{}", key), val)
+        ).collect();
         return a;
     }
     match a_len.cmp(&b_len) {
         Less => {
             let folds = usize::try_from((b_len / a_len).trailing_zeros()).unwrap();
-            compose_folded(fold_many(a, folds), b)
+            compose_horizontal(fold_many(a, folds), b)
         }
         Equal => compose_horizontal(a, b),
         Greater => {
@@ -551,6 +580,9 @@ mod tests {
             let col_delta = result.trace.num_columns() - (component.trace.num_columns() >> folds);
             assert!(col_delta == 0 || col_delta == 1);
             assert_eq!(result.constraints.len(), component.constraints.len());
+            for label in component.labels.keys() {
+                assert_eq!(component.eval_label(label), result.eval_label(label))
+            }
         }
 
         #[test]
@@ -563,6 +595,18 @@ mod tests {
                 left.trace.num_columns() + right.trace.num_columns());
             assert_eq!(result.constraints.len(),
                 left.constraints.len() + right.constraints.len());
+            for label in left.labels.keys() {
+                assert_eq!(
+                    left.eval_label(label),
+                    result.eval_label(&format!("left_{}", label))
+                )
+            }
+            for label in right.labels.keys() {
+                assert_eq!(
+                    right.eval_label(label),
+                    result.eval_label(&format!("right_{}", label))
+                )
+            }
         }
 
         #[test]
@@ -575,6 +619,18 @@ mod tests {
             assert_eq!(result.trace.num_rows(), 2 * top.trace.num_rows());
             assert_eq!(result.trace.num_columns(), top.trace.num_columns());
             assert_eq!(result.constraints.len(), top.constraints.len());
+            for label in top.labels.keys() {
+                assert_eq!(
+                    top.eval_label(label),
+                    result.eval_label(&format!("top_{}", label))
+                )
+            }
+            for label in bottom.labels.keys() {
+                assert_eq!(
+                    bottom.eval_label(label),
+                    result.eval_label(&format!("bottom_{}", label))
+                )
+            }
         }
 
         #[test]
@@ -587,6 +643,18 @@ mod tests {
                 left.trace.num_columns() + right.trace.num_columns());
             assert_eq!(result.constraints.len(),
                 left.constraints.len() + right.constraints.len());
+            for label in left.labels.keys() {
+                assert_eq!(
+                    left.eval_label(label),
+                    result.eval_label(&format!("left_{}", label))
+                )
+            }
+            for label in right.labels.keys() {
+                assert_eq!(
+                    right.eval_label(label),
+                    result.eval_label(&format!("right_{}", label))
+                )
+            }
         }
     }
 
