@@ -1,5 +1,4 @@
-use super::{constraints::get_pedersen_merkle_constraints, trace_table::get_trace_table};
-use crate::pedersen_points::merkle_hash;
+use super::pedersen_points::merkle_hash;
 use std::{prelude::v1::*, vec};
 use zkp_primefield::FieldElement;
 use zkp_stark::{Constraints, Provable, TraceTable, Verifiable};
