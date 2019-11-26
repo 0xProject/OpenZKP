@@ -43,6 +43,9 @@ quickcheck_macros = { version = "0.8", optional = true }
 hex = { version = "0.4.0", optional = true }
 proptest = { version = "0.9.4", optional = true }
 
+# Examples dependencies
+structopt = { version = "0.3.5", optional = true }
+
 [[bench]]
 name = "benchmark"
 harness = false
@@ -85,6 +88,7 @@ examples = [
     "env_logger",
     "zkp-elliptic-curve",
     "zkp-elliptic-curve-crypto",
+    "structopt",
 ]
 prover = [
     "std", # TODO: Make prove run in no-std wasm.
