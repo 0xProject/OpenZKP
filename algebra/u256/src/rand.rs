@@ -4,7 +4,6 @@ use rand::{
         uniform::{SampleBorrow, SampleUniform, UniformSampler},
         Distribution, Standard,
     },
-    prelude::*,
     Rng,
 };
 
@@ -36,7 +35,7 @@ impl UniformSampler for UniformU256 {
     {
         let low = low.borrow().clone();
         let range = high.borrow() - &low;
-        UniformU256::Ranged { low, range }
+        Self::Ranged { low, range }
     }
 
     fn new_inclusive<B1, B2>(low: B1, high: B2) -> Self
@@ -45,22 +44,22 @@ impl UniformSampler for UniformU256 {
         B2: SampleBorrow<U256> + Sized,
     {
         if low.borrow() == &U256::ZERO && high.borrow() == &U256::MAX {
-            UniformU256::Full
+            Self::Full
         } else {
             let low = low.borrow().clone();
             let range = high.borrow() - &low + U256::ONE;
-            UniformU256::Ranged { low, range }
+            Self::Ranged { low, range }
         }
     }
 
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> U256 {
         match self {
-            UniformU256::Full => rng.gen(),
-            UniformU256::Ranged { low, range } => {
+            Self::Full => rng.gen(),
+            Self::Ranged { low, range } => {
                 // Strategy: bitshift to within 2x then rejection sample.
                 let shift = range.leading_zeros();
                 let mut result = U256::MAX;
-                while &result >= range {
+                while result >= *range {
                     result = rng.gen();
                     result >>= shift;
                 }

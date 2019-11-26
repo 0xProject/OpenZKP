@@ -36,6 +36,8 @@
     variant_size_differences
 )]
 #![cfg_attr(feature = "std", warn(missing_debug_implementations,))]
+// We need rand_xorshiro-0.4.0 in examples, but som dep requires v 0.3.1.
+#![cfg_attr(feature = "examples", allow(clippy::multiple_crate_versions))]
 
 mod channel;
 mod constraints;
