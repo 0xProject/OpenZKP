@@ -4,17 +4,19 @@ mod pedersen_points;
 mod periodic_columns;
 mod trace_table;
 mod starkware_example;
+mod component;
 
 use env_logger;
-use log::info;
+use log::{info, error};
 use std::time::Instant;
 use zkp_macros_decl::{field_element, hex};
 use zkp_primefield::FieldElement;
 use zkp_stark::{prove, Provable, Component, Constraints};
 use zkp_u256::U256;
 use std::collections::HashMap;
-use starkware_example::{STARKWARE_CLAIM, starkware_witness};
+use starkware_example::{starkware_example};
 use structopt::StructOpt;
+use component::pedersen_merkle;
 
 use constraints::get_pedersen_merkle_constraints;
 use inputs::{Claim, Witness};
@@ -23,22 +25,45 @@ use inputs::{Claim, Witness};
 #[allow(unused_imports)]
 use zkp_logging_allocator;
 
-fn pedersen_merkle(claim: &Claim, witness: &Witness) -> Component {
-    info!("Constructing constraint system...");
-    let constraints = get_pedersen_merkle_constraints(&claim).expressions().to_vec();
-    let trace = claim.trace(witness);
-    let labels = HashMap::default();
-    Component { trace, constraints, labels }
-}
 
 #[derive(StructOpt, Debug)]
+#[structopt(
+    name = "zkp-stark pedersen_merkle example",
+    about = "Example zkp-stark project verifying Pedersen Merkle trees."
+)]
 struct Options {
-    size: usize,
 
     // The number of occurrences of the `v/verbose` flag
     /// Verbose mode (-v, -vv, -vvv, etc.)
     #[structopt(short, long, parse(from_occurrences))]
     verbose: u8,
+
+    /// Run a size 8192 build-in example
+    #[structopt(long)]
+    large_example: bool,
+
+    /// Depth of pedersen proof to simulate
+    size: usize,
+}
+
+struct Timer {
+    start: Instant,
+}
+
+impl Default for Timer {
+    fn default() -> Self {
+        info!("Starting timer");
+        Self {
+            start: Instant::now(),
+        }
+    }
+}
+
+impl Drop for Timer {
+    fn drop(&mut self) {
+        let duration = self.start.elapsed();
+        println!("Time elapsed generating proof: {:?}", duration);
+    }
 }
 
 fn main() {
@@ -55,67 +80,14 @@ fn main() {
     })
     .init();
 
-    dbg!(options);
-    
-    info!("Starting Pederson benchmark...");
-    let start = Instant::now();
+    // Measure time elapsed (from here till it goes out of scope)
+    let _timer = Timer::default();
 
-    info!("Constructing claim");
-    let claim = STARKWARE_CLAIM;
-    info!("Claim: {:?}", claim);
+    // Run specific large example if requested
+    if options.large_example {
+        starkware_example();
+        return;
+    }
 
-    info!("Constructing witness...");
-    let witness = starkware_witness();
-
-    info!("Constructing component...");
-    let component = pedersen_merkle(&claim, &witness);
-    info!("Constructed {:?}x{:?} trace", component.trace.num_rows(), component.trace.num_columns());
-    info!("Constructed {:?} constraints", component.constraints.len());
-
-    info!("Constructing proof...");
-    let mut constraints = Constraints::from_expressions(
-        (component.trace.num_rows(), component.trace.num_columns()),
-        (&claim).into(),
-        component.constraints
-    ).expect("Could not create Constraint object");
-    constraints.blowup = 16;
-    constraints.pow_bits = 28;
-    constraints.num_queries = 13;
-    constraints.fri_layout = vec![3, 3, 3, 3, 2];
-    let proof = prove(&constraints, &component.trace).unwrap();
-
-    info!("Spot checking proof...");
-    assert_eq!(
-        proof.as_bytes()[0..32],
-        hex!("b00a4c7f03959e01df2504fb73d2b238a8ab08b2000000000000000000000000")
-    );
-    assert_eq!(
-        proof.as_bytes()[32..64],
-        hex!("2e821fe1f3062acdbd3a4bd0be2293f4264abc7b000000000000000000000000")
-    );
-
-    // FRI commitments
-    assert_eq!(
-        proof.as_bytes()[640..672],
-        hex!("b5ae7a8389c7de33f08f79c7dca057e5db5c0d65000000000000000000000000")
-    );
-    assert_eq!(
-        proof.as_bytes()[672..704],
-        hex!("83f4858900e1519c1b788333f55b54762485e5d6000000000000000000000000")
-    );
-    assert_eq!(
-        proof.as_bytes()[704..736],
-        hex!("be090ca452f0affe901588d522960b7b92d8882c000000000000000000000000")
-    );
-    assert_eq!(
-        proof.as_bytes()[736..768],
-        hex!("3cc9adaad436cfab60978d57f13d5f22e6a8791f000000000000000000000000")
-    );
-    assert_eq!(
-        proof.as_bytes()[768..800],
-        hex!("8af79c56d74b9252c3c542fc2b56d4692c608c98000000000000000000000000")
-    );
-
-    let duration = start.elapsed();
-    println!("Time elapsed generating proof: {:?}", duration);
+    error!("Variable size trees not implemented yet!");
 }

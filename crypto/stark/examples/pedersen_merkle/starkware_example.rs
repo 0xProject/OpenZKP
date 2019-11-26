@@ -1,7 +1,70 @@
-use zkp_macros_decl::field_element;
 use crate::inputs::{Claim, Witness};
 use zkp_u256::U256;
 use zkp_primefield::FieldElement;
+use log::info;
+use std::time::Instant;
+use zkp_macros_decl::{field_element, hex};
+use zkp_stark::{prove, Provable, Component, Constraints};
+use std::collections::HashMap;
+use crate::component::pedersen_merkle;
+
+pub fn starkware_example() {
+    info!("Constructing claim");
+    let claim = STARKWARE_CLAIM;
+    info!("Claim: {:?}", claim);
+
+    info!("Constructing witness...");
+    let witness = starkware_witness();
+
+    info!("Constructing component...");
+    let component = pedersen_merkle(&claim, &witness);
+    info!("Constructed {:?}x{:?} trace", component.trace.num_rows(), component.trace.num_columns());
+    info!("Constructed {:?} constraints", component.constraints.len());
+
+    info!("Constructing proof...");
+    let mut constraints = Constraints::from_expressions(
+        (component.trace.num_rows(), component.trace.num_columns()),
+        (&claim).into(),
+        component.constraints
+    ).expect("Could not create Constraint object");
+    constraints.blowup = 16;
+    constraints.pow_bits = 28;
+    constraints.num_queries = 13;
+    constraints.fri_layout = vec![3, 3, 3, 3, 2];
+    let proof = prove(&constraints, &component.trace).unwrap();
+
+    info!("Spot checking proof...");
+    assert_eq!(
+        proof.as_bytes()[0..32],
+        hex!("b00a4c7f03959e01df2504fb73d2b238a8ab08b2000000000000000000000000")
+    );
+    assert_eq!(
+        proof.as_bytes()[32..64],
+        hex!("2e821fe1f3062acdbd3a4bd0be2293f4264abc7b000000000000000000000000")
+    );
+
+    // FRI commitments
+    assert_eq!(
+        proof.as_bytes()[640..672],
+        hex!("b5ae7a8389c7de33f08f79c7dca057e5db5c0d65000000000000000000000000")
+    );
+    assert_eq!(
+        proof.as_bytes()[672..704],
+        hex!("83f4858900e1519c1b788333f55b54762485e5d6000000000000000000000000")
+    );
+    assert_eq!(
+        proof.as_bytes()[704..736],
+        hex!("be090ca452f0affe901588d522960b7b92d8882c000000000000000000000000")
+    );
+    assert_eq!(
+        proof.as_bytes()[736..768],
+        hex!("3cc9adaad436cfab60978d57f13d5f22e6a8791f000000000000000000000000")
+    );
+    assert_eq!(
+        proof.as_bytes()[768..800],
+        hex!("8af79c56d74b9252c3c542fc2b56d4692c608c98000000000000000000000000")
+    );
+}
 
 pub const STARKWARE_CLAIM: Claim = Claim {
     path_length: 8192,
@@ -19,10 +82,12 @@ pub fn starkware_witness() -> Witness {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
     #[ignore] // Expensive test to run
-    fn starkware_example() {
-        
+    fn test_starkware_example() {
+        starkware_example();
     }
 }
 
