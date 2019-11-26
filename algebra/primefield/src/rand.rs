@@ -1,7 +1,6 @@
 use crate::FieldElement;
 use rand::{
     distributions::{Distribution, Standard, Uniform},
-    prelude::*,
     Rng,
 };
 use zkp_u256::U256;

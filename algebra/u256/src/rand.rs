@@ -1,7 +1,7 @@
 use crate::U256;
 use rand::{
     distributions::{
-        uniform::{SampleBorrow, SampleUniform, Uniform, UniformInt, UniformSampler},
+        uniform::{SampleBorrow, SampleUniform, UniformSampler},
         Distribution, Standard,
     },
     prelude::*,
