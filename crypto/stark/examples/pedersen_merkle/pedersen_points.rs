@@ -1,7 +1,29 @@
-use zkp_elliptic_curve::Affine;
+use zkp_elliptic_curve::{Affine, Jacobian};
 use zkp_macros_decl::field_element;
 use zkp_primefield::FieldElement;
 use zkp_u256::U256;
+
+pub fn merkle_hash(left: &FieldElement, right: &FieldElement) -> FieldElement {
+    let mut point = Jacobian::from(SHIFT_POINT);
+    let mut left = U256::from(left);
+    let mut right = U256::from(right);
+    for i in 0..253 {
+        if left.is_odd() {
+            point += &PEDERSEN_POINTS[i + 1];
+        }
+        left >>= 1;
+    }
+    for i in 0..253 {
+        if right.is_odd() {
+            point += &PEDERSEN_POINTS[253 + i];
+        }
+        right >>= 1;
+    }
+    match Affine::from(&point) {
+        Affine::Zero => panic!("Hashed to zero point!"),
+        Affine::Point { x, .. } => x
+    }
+}
 
 pub(crate) const SHIFT_POINT: Affine = Affine::Point {
     x: field_element!("049ee3eba8c1600700ee1b87eb599f16716b0b1022947733551fde4050ca6804"),

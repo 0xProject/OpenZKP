@@ -1,12 +1,13 @@
-use crate::inputs::{Claim, Witness};
-use zkp_u256::U256;
-use zkp_primefield::FieldElement;
+use crate::{
+    component::pedersen_merkle,
+    inputs::{Claim, Witness},
+};
 use log::info;
-use std::time::Instant;
+use std::{collections::HashMap, time::Instant};
 use zkp_macros_decl::{field_element, hex};
-use zkp_stark::{prove, Provable, Component, Constraints};
-use std::collections::HashMap;
-use crate::component::pedersen_merkle;
+use zkp_primefield::FieldElement;
+use zkp_stark::{prove, Component, Constraints, Provable};
+use zkp_u256::U256;
 
 pub fn starkware_example() {
     info!("Constructing claim");
@@ -16,17 +17,25 @@ pub fn starkware_example() {
     info!("Constructing witness...");
     let witness = starkware_witness();
 
+    info!("Verifying claim and witness...");
+    claim.verify(&witness);
+
     info!("Constructing component...");
     let component = pedersen_merkle(&claim, &witness);
-    info!("Constructed {:?}x{:?} trace", component.trace.num_rows(), component.trace.num_columns());
+    info!(
+        "Constructed {:?}x{:?} trace",
+        component.trace.num_rows(),
+        component.trace.num_columns()
+    );
     info!("Constructed {:?} constraints", component.constraints.len());
 
     info!("Constructing proof...");
     let mut constraints = Constraints::from_expressions(
         (component.trace.num_rows(), component.trace.num_columns()),
         (&claim).into(),
-        component.constraints
-    ).expect("Could not create Constraint object");
+        component.constraints,
+    )
+    .expect("Could not create Constraint object");
     constraints.blowup = 16;
     constraints.pow_bits = 28;
     constraints.num_queries = 13;
@@ -78,7 +87,6 @@ pub fn starkware_witness() -> Witness {
         path:       STARKWARE_PATH.to_vec(),
     }
 }
-
 
 #[cfg(test)]
 mod tests {

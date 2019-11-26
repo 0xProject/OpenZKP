@@ -2,6 +2,7 @@ use super::{constraints::get_pedersen_merkle_constraints, trace_table::get_trace
 use std::{prelude::v1::*, vec};
 use zkp_primefield::FieldElement;
 use zkp_stark::{Constraints, Provable, TraceTable, Verifiable};
+use crate::pedersen_points::merkle_hash;
 
 #[derive(PartialEq, Clone)]
 #[cfg_attr(feature = "std", derive(Debug))]
@@ -38,6 +39,25 @@ impl From<&Claim> for Vec<u8> {
         bytes.extend_from_slice(&claim.root.as_montgomery().to_bytes_be());
         bytes.extend_from_slice(&claim.leaf.as_montgomery().to_bytes_be());
         bytes
+    }
+}
+
+impl Claim {
+    pub fn from_leaf_witness(leaf: FieldElement, witness: &Witness) -> Self {
+        let path_length = witness.path.len();
+        let mut root = leaf.clone();
+        for (direction, sibling) in witness.directions.iter().zip(witness.path.iter()) {
+            root = if *direction {
+                merkle_hash(sibling, &root)
+            } else {
+                merkle_hash(&root, sibling)
+            }
+        }
+        Claim { path_length, leaf, root }
+    }
+
+    pub fn verify(&self, witness: &Witness) {
+        assert_eq!(self, &Claim::from_leaf_witness(self.leaf.clone(), witness));
     }
 }
 
