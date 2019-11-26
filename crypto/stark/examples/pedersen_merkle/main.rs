@@ -8,24 +8,16 @@ mod trace_table;
 
 use crate::{
     component::pedersen_merkle,
-    constraints::get_pedersen_merkle_constraints,
     inputs::{Claim, Witness},
     starkware_example::starkware_example,
 };
 use env_logger;
-use log::{error, info};
-use rand::{
-    distributions::{Distribution, Standard},
-    prelude::*,
-    SeedableRng,
-};
+use log::info;
+use rand::{prelude::*, SeedableRng};
 use rand_xoshiro::Xoshiro256PlusPlus;
-use std::{collections::HashMap, num::ParseIntError, time::Instant};
+use std::{num::ParseIntError, time::Instant};
 use structopt::StructOpt;
-use zkp_macros_decl::{field_element, hex};
-use zkp_primefield::FieldElement;
-use zkp_stark::{prove, Component, Constraints, Provable};
-use zkp_u256::U256;
+use zkp_stark::{Provable, Verifiable};
 
 // Need to import to active the logging allocator
 #[allow(unused_imports)]
@@ -75,7 +67,7 @@ impl Default for Timer {
 impl Drop for Timer {
     fn drop(&mut self) {
         let duration = self.start.elapsed();
-        println!("Time elapsed generating proof: {:?}", duration);
+        println!("Prover time {:?}", duration);
     }
 }
 
@@ -93,28 +85,43 @@ fn main() {
         })
         .init();
 
-    // Measure time elapsed (from here till it goes out of scope)
-    let _timer = Timer::default();
-
     // Run specific large example if requested
     if options.large_example {
+        let _timer = Timer::default();
         starkware_example();
         return;
     }
 
     // Initialize a reproducible random number generator
     let seed = options.seed.unwrap_or_else(random);
-    println!("Using random seed: {:x}", seed);
+    println!("Using random seed {:x}", seed);
     let mut rng = Xoshiro256PlusPlus::seed_from_u64(seed.into());
 
-    // Generate a random merkle proof
+    // Generate a random merkle proof instance
+    info!("Generating random instance of size {}...", options.size);
     let witness = Witness {
         directions: (0..options.size).map(|_| rng.gen()).collect(),
-        path: (0..options.size).map(|_| rng.gen()).collect(),
+        path:       (0..options.size).map(|_| rng.gen()).collect(),
     };
     let claim = Claim::from_leaf_witness(rng.gen(), &witness);
-    claim.verify(&witness);
-    dbg!(claim, witness);
 
-    error!("Variable size trees not implemented yet!");
+    info!("Constructing component...");
+    let component = pedersen_merkle(&claim, &witness);
+    println!(
+        "Constructed {} by {} trace with {} constraints",
+        component.trace.num_rows(),
+        component.trace.num_columns(),
+        component.constraints.len(),
+    );
+
+    info!("Constructing proof...");
+    let proof = {
+        let _timer = Timer::default();
+        component.prove(())
+    }
+    .expect("failed to create proof");
+    println!("Proof size is {}", proof.as_bytes().len());
+
+    info!("Verifying proof...");
+    component.verify(&proof).expect("Verification failed");
 }

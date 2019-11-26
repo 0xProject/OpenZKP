@@ -21,7 +21,7 @@ pub fn merkle_hash(left: &FieldElement, right: &FieldElement) -> FieldElement {
     }
     match Affine::from(&point) {
         Affine::Zero => panic!("Hashed to zero point!"),
-        Affine::Point { x, .. } => x
+        Affine::Point { x, .. } => x,
     }
 }
 

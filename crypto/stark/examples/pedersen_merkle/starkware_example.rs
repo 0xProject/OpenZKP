@@ -3,10 +3,9 @@ use crate::{
     inputs::{Claim, Witness},
 };
 use log::info;
-use std::{collections::HashMap, time::Instant};
 use zkp_macros_decl::{field_element, hex};
 use zkp_primefield::FieldElement;
-use zkp_stark::{prove, Component, Constraints, Provable};
+use zkp_stark::{prove, Constraints};
 use zkp_u256::U256;
 
 pub fn starkware_example() {

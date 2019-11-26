@@ -3,11 +3,8 @@ use crate::{
     inputs::{Claim, Witness},
 };
 use log::info;
-use std::{collections::HashMap, time::Instant};
-use zkp_macros_decl::{field_element, hex};
-use zkp_primefield::FieldElement;
-use zkp_stark::{prove, Component, Constraints, Provable};
-use zkp_u256::U256;
+use std::collections::HashMap;
+use zkp_stark::{Component, Provable};
 
 pub fn pedersen_merkle(claim: &Claim, witness: &Witness) -> Component {
     info!("Constructing constraint system...");
