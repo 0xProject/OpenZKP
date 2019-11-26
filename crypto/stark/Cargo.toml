@@ -43,6 +43,11 @@ quickcheck_macros = { version = "0.8", optional = true }
 hex = { version = "0.4.0", optional = true }
 proptest = { version = "0.9.4", optional = true }
 
+# Examples dependencies
+structopt = { version = "0.3.5", optional = true }
+rand = { version = "0.7.2", optional = true }
+rand_xoshiro = { version = "0.4.0", optional = true }
+
 [[bench]]
 name = "benchmark"
 harness = false
@@ -81,10 +86,14 @@ bench = [
     "zkp-criterion-utils",
 ]
 examples = [
+    "zkp-primefield/use_rand",
     "zkp-logging-allocator",
-    "env_logger",
     "zkp-elliptic-curve",
     "zkp-elliptic-curve-crypto",
+    "env_logger",
+    "structopt",
+    "rand",
+    "rand_xoshiro",
 ]
 prover = [
     "std", # TODO: Make prove run in no-std wasm.

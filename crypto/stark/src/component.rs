@@ -14,9 +14,10 @@ use std::{collections::HashMap, convert::TryFrom};
 #[derive(Clone)]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct Component {
-    trace:       TraceTable,
-    constraints: Vec<RationalExpression>,
-    labels:      HashMap<String, (usize, RationalExpression)>,
+    // TODO: Make private
+    pub trace:       TraceTable,
+    pub constraints: Vec<RationalExpression>,
+    pub labels:      HashMap<String, (usize, RationalExpression)>,
 }
 
 /// Utility function to add offsets on indices

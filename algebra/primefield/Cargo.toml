@@ -17,6 +17,7 @@ edition = "2018"
 [dependencies]
 zkp-macros-decl = { version = "0.1.0", path = "../../utils/macros-decl",  default_features = false }
 zkp-u256 =  { version = "0.1.0", path = "../u256", default_features = false }
+rand = { version = "0.7.2", optional = true }
 
 no-std-compat = { version = "0.1.0", features = [ "alloc" ] }
 hex = { version = "0.4.0", optional = true }
@@ -54,6 +55,13 @@ std = [
     "itertools/use_std",
     "crunchy/std",
     "hex",
+]
+# HACK: Cargo does not allow features with the same name as dependencies.
+# this is fine (since optional dependencies are their own feature) but not
+# if we need to enable other features as a consequence.
+use_rand = [
+    "rand",
+    "zkp-u256/use_rand",
 ]
 
 # Allow math in docs
