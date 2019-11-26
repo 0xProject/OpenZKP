@@ -9,8 +9,9 @@ use log::info;
 use std::time::Instant;
 use zkp_macros_decl::{field_element, hex};
 use zkp_primefield::FieldElement;
-use zkp_stark::{prove, Provable};
+use zkp_stark::{prove, Provable, Component, Constraints};
 use zkp_u256::U256;
+use std::collections::HashMap;
 
 use constraints::get_pedersen_merkle_constraints;
 use inputs::{Claim, Witness};
@@ -18,6 +19,14 @@ use inputs::{Claim, Witness};
 // Need to import to active the logging allocator
 #[allow(unused_imports)]
 use zkp_logging_allocator;
+
+fn pedersen_merkle(claim: &Claim, witness: &Witness) -> Component {
+    info!("Constructing constraint system...");
+    let constraints = get_pedersen_merkle_constraints(&claim).expressions().to_vec();
+    let trace = claim.trace(witness);
+    let labels = HashMap::default();
+    Component { trace, constraints, labels }
+}
 
 fn main() {
     env_logger::init();
@@ -32,19 +41,22 @@ fn main() {
     info!("Constructing witness...");
     let witness = starkware_witness();
 
-    info!("Constructing constraint system...");
-    let mut constraints = get_pedersen_merkle_constraints(&claim);
+    info!("Constructing component...");
+    let component = pedersen_merkle(&claim, &witness);
+    info!("Constructed {:?}x{:?} trace", component.trace.num_rows(), component.trace.num_columns());
+    info!("Constructed {:?} constraints", component.constraints.len());
+
+    info!("Constructing proof...");
+    let mut constraints = Constraints::from_expressions(
+        (component.trace.num_rows(), component.trace.num_columns()),
+        (&claim).into(),
+        component.constraints
+    ).expect("Could not create Constraint object");
     constraints.blowup = 16;
     constraints.pow_bits = 28;
     constraints.num_queries = 13;
     constraints.fri_layout = vec![3, 3, 3, 3, 2];
-    info!("Constructed {:?} constraints", constraints);
-
-    info!("Constructing trace...");
-    let trace = claim.trace(&witness);
-
-    info!("Constructing proof...");
-    let proof = prove(&constraints, &trace).unwrap();
+    let proof = prove(&constraints, &component.trace).unwrap();
 
     info!("Spot checking proof...");
     assert_eq!(
