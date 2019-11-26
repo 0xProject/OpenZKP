@@ -18,19 +18,6 @@ pub struct Witness {
     pub path:       Vec<FieldElement>,
 }
 
-impl Verifiable for Claim {
-    fn constraints(&self) -> Constraints {
-        get_pedersen_merkle_constraints(self)
-    }
-}
-
-#[cfg(feature = "prover")]
-impl Provable<&Witness> for Claim {
-    fn trace(&self, witness: &Witness) -> TraceTable {
-        get_trace_table(self, witness)
-    }
-}
-
 impl From<&Claim> for Vec<u8> {
     fn from(claim: &Claim) -> Self {
         let mut bytes: Self = vec![];

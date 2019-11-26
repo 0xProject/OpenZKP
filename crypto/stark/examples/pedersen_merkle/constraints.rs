@@ -10,7 +10,6 @@ use zkp_elliptic_curve::Affine;
 use zkp_primefield::FieldElement;
 use zkp_stark::{Constraints, DensePolynomial, RationalExpression};
 
-
 #[cfg(test)]
 mod tests {
     use super::{

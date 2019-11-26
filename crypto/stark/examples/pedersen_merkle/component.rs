@@ -1,12 +1,17 @@
-use crate::{
+use super::{
     inputs::{Claim, Witness},
+    pedersen_points::{PEDERSEN_POINTS, SHIFT_POINT},
+    periodic_columns::{
+        LEFT_X_COEFFICIENTS, LEFT_Y_COEFFICIENTS, RIGHT_X_COEFFICIENTS, RIGHT_Y_COEFFICIENTS,
+    },
 };
 use log::info;
 use std::collections::HashMap;
-use zkp_stark::{Component, Provable, RationalExpression};
+use zkp_elliptic_curve::Affine;
+use zkp_primefield::FieldElement;
+use zkp_stark::{Component, Constraints, DensePolynomial, RationalExpression, TraceTable};
+use zkp_u256::U256;
 
-// TODO: Naming
-#[allow(clippy::module_name_repetitions)]
 pub fn get_trace_table(claim: &Claim, witness: &Witness) -> TraceTable {
     let num_columns = 8;
     let mut trace = TraceTable::new(claim.path_length * 256, num_columns);
@@ -234,14 +239,12 @@ pub fn get_pedersen_merkle_constraints(claim: &Claim) -> Constraints {
     .unwrap()
 }
 
-
-
 pub fn pedersen_merkle(claim: &Claim, witness: &Witness) -> Component {
     info!("Constructing constraint system...");
     let constraints = get_pedersen_merkle_constraints(&claim)
         .expressions()
         .to_vec();
-    let trace = claim.trace(witness);
+    let trace = get_trace_table(claim, witness);
     let labels = HashMap::default();
     Component {
         trace,
