@@ -40,7 +40,7 @@
 mod binops;
 mod division;
 mod gcd;
-#[cfg(feature = "rand")]
+#[cfg(feature = "use_rand")]
 mod rand;
 mod u256;
 

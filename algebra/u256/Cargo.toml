@@ -52,6 +52,9 @@ std = [
     "crunchy/std",
     "hex"
 ]
+use_rand = [
+    "rand"
+]
 
 # Allow math in docs
 [package.metadata.docs.rs]
