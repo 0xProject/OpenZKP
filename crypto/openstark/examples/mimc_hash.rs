@@ -194,7 +194,7 @@ impl Verifiable for Claim {
             &const_after,
         ];
 
-        autogen_oods(public.as_slice(), expressions.as_slice());
+        autogen_oods(trace_length, public.as_slice(), expressions.as_slice());
         Constraints::from_expressions((trace_length, 2), seed, expressions)
         .unwrap()
     }
