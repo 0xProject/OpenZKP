@@ -40,6 +40,8 @@
 mod binops;
 mod division;
 mod gcd;
+#[cfg(feature = "rand")]
+mod rand;
 mod u256;
 
 // TODO: This seems out of scope for U256 to export.
