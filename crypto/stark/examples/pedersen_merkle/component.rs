@@ -5,14 +5,15 @@ use super::{
         LEFT_X_COEFFICIENTS, LEFT_Y_COEFFICIENTS, RIGHT_X_COEFFICIENTS, RIGHT_Y_COEFFICIENTS,
     },
 };
+use itertools::Itertools;
 use log::info;
 use std::collections::HashMap;
 use zkp_elliptic_curve::Affine;
 use zkp_primefield::FieldElement;
-use zkp_stark::{Component, Constraints, DensePolynomial, RationalExpression, TraceTable};
-use zkp_stark::compose_vertical;
+use zkp_stark::{
+    compose_vertical, Component, Constraints, DensePolynomial, RationalExpression, TraceTable,
+};
 use zkp_u256::U256;
-use itertools::Itertools;
 
 pub fn tree_layer(leaf: &FieldElement, direction: bool, sibling: &FieldElement) -> Component {
     use RationalExpression::*;
@@ -145,15 +146,26 @@ pub fn pedersen_merkle(claim: &Claim, witness: &Witness) -> Component {
         components.push(component);
     }
     while components.len() > 1 {
-        components = components.into_iter().tuples().map(|(top, bottom)| {
-            compose_vertical(top, bottom)
-        }).collect()
+        components = components
+            .into_iter()
+            .tuples()
+            .map(|(top, bottom)| {
+                let mut composite = compose_vertical(top, bottom);
+                composite.rename_label("top_left", "left");
+                composite.rename_label("top_right", "right");
+                composite.remove_label("top_hash");
+                composite.remove_label("bottom_left");
+                composite.remove_label("bottom_right");
+                composite.rename_label("bottom_hash", "hash");
+                composite
+            })
+            .collect()
     }
     let mut component = components[0].clone();
 
     // Construct constraints
     let path_length = claim.path_length;
-    let trace_length = path_length * 256;
+    let trace_length = component.trace.num_rows();
     let root = claim.root.clone();
     let leaf = claim.leaf.clone();
 
@@ -161,24 +173,29 @@ pub fn pedersen_merkle(claim: &Claim, witness: &Witness) -> Component {
     let omega = FieldElement::root(trace_length).unwrap();
     let omega_i = |i| Constant(omega.pow(i));
     let row = |i| X - omega_i(i);
-    
+
     // Connect components together
-    component.constraints.insert(0, 
-        (Trace(6, 0) - Trace(0, 1))
-        * (Trace(6, 0) - Trace(4, 1))
-        * row(trace_length - 1)
-        / (X.pow(path_length) - omega_i(trace_length - path_length))
+    // TODO: How do we do this cleanly using labels?
+    component.constraints.insert(
+        0,
+        (Trace(6, 0) - Trace(0, 1)) * (Trace(6, 0) - Trace(4, 1)) * row(trace_length - 1)
+            / (X.pow(path_length) - omega_i(trace_length - path_length)),
     );
 
     // Add boundary constraints
-    component.constraints.insert(0, 
-        (Constant(leaf.clone()) - Trace(0, 0))
-        * (Constant(leaf.clone()) - Trace(4, 0))
-        / row(0),
+    // `leaf` is equals either left or right, they should be on the same row
+    assert_eq!(component.labels["left"].0, component.labels["left"].0);
+    component.constraints.insert(
+        0,
+        (Constant(leaf.clone()) - component.labels["left"].1.clone())
+            * (Constant(leaf.clone()) - component.labels["right"].1.clone())
+            / row(component.labels["left"].0),
     );
-    component.constraints.insert(1, 
-        (Constant(root.clone()) - Trace(6, 0))
-        / row(trace_length - 1),
+    // The final hash equals `root`
+    component.constraints.insert(
+        1,
+        (Constant(root.clone()) - component.labels["hash"].1.clone())
+            / row(component.labels["hash"].0),
     );
 
     // Add column constraints

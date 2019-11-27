@@ -71,7 +71,8 @@ impl Drop for Timer {
 }
 
 // cargo t -p zkp-stark -- test_pedersen_merkle_small_proof --nocapture
-// cargo b --release && target/release/examples/pedersen_merkle -vv --large-example
+// cargo b --release && target/release/examples/pedersen_merkle -vv
+// --large-example
 
 fn main() {
     // Parse command line options
