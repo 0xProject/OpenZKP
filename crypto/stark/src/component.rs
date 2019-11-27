@@ -73,6 +73,20 @@ impl Component {
         self.eval_row(expression, *row)
     }
 
+    pub fn rename_label(&mut self, old: &str, new: &str) {
+        if let Some(value) = self.labels.remove(old) {
+            let _ = self.labels.insert(new.to_string(), value);
+        } else {
+            panic!("Label '{}' not found", old);
+        }
+    }
+
+    pub fn remove_label(&mut self, label: &str) {
+        if self.labels.remove(label).is_none() {
+            panic!("Label '{}' not found", label);
+        }
+    }
+
     fn project_into(
         &self,
         target: &mut Self,

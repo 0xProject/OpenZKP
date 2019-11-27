@@ -1,8 +1,6 @@
-use super::{constraints::get_pedersen_merkle_constraints, trace_table::get_trace_table};
-use crate::pedersen_points::merkle_hash;
+use super::pedersen_points::merkle_hash;
 use std::{prelude::v1::*, vec};
 use zkp_primefield::FieldElement;
-use zkp_stark::{Constraints, Provable, TraceTable, Verifiable};
 
 #[derive(PartialEq, Clone)]
 #[cfg_attr(feature = "std", derive(Debug))]
@@ -17,19 +15,6 @@ pub struct Claim {
 pub struct Witness {
     pub directions: Vec<bool>,
     pub path:       Vec<FieldElement>,
-}
-
-impl Verifiable for Claim {
-    fn constraints(&self) -> Constraints {
-        get_pedersen_merkle_constraints(self)
-    }
-}
-
-#[cfg(feature = "prover")]
-impl Provable<&Witness> for Claim {
-    fn trace(&self, witness: &Witness) -> TraceTable {
-        get_trace_table(self, witness)
-    }
 }
 
 impl From<&Claim> for Vec<u8> {

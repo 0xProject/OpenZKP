@@ -1,10 +1,8 @@
 mod component;
-mod constraints;
 mod inputs;
 mod pedersen_points;
 mod periodic_columns;
 mod starkware_example;
-mod trace_table;
 
 use crate::{
     component::pedersen_merkle,
@@ -70,6 +68,10 @@ impl Drop for Timer {
         println!("Prover time {:?}", duration);
     }
 }
+
+// cargo t -p zkp-stark -- test_pedersen_merkle_small_proof --nocapture
+// cargo b --release && target/release/examples/pedersen_merkle -vv
+// --large-example
 
 fn main() {
     // Parse command line options
