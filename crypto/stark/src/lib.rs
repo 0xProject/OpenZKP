@@ -78,6 +78,7 @@ pub use proof::Proof;
 pub use rational_expression::RationalExpression;
 pub use traits::Verifiable;
 pub use verifier::{verify, Error as VerifierError};
+pub use constraint_check::check_constraints;
 
 // Exports for prover
 #[cfg(feature = "prover")]
