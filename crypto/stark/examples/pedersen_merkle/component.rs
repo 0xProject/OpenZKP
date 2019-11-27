@@ -158,26 +158,27 @@ pub fn pedersen_merkle(claim: &Claim, witness: &Witness) -> Component {
     let leaf = claim.leaf.clone();
 
     // Repeating patterns
+    let omega = FieldElement::root(trace_length).unwrap();
+    let omega_i = |i| Constant(omega.pow(i));
+    let row = |i| X - omega_i(i);
     
-    let trace_generator = Constant(FieldElement::root(trace_length).unwrap());
-    let on_first_row = |a: RationalExpression| a / (X - Constant(FieldElement::ONE));
-    let on_last_row = |a: RationalExpression| a / (X - trace_generator.pow(trace_length - 1));
-    let on_hash_end_rows = |a: RationalExpression| {
-        a * (X - trace_generator.pow(trace_length - 1))
-            / (X.pow(path_length) - trace_generator.pow(path_length * (trace_length - 1)))
-    };
+    // Connect components together
+    component.constraints.insert(0, 
+        (Trace(6, 0) - Trace(0, 1))
+        * (Trace(6, 0) - Trace(4, 1))
+        * row(trace_length - 1)
+        / (X.pow(path_length) - omega_i(trace_length - path_length))
+    );
 
     // Add boundary constraints
     component.constraints.insert(0, 
-        on_first_row(
-            (Constant(leaf.clone()) - Trace(0, 0)) * (Constant(leaf.clone()) - Trace(4, 0)),
-        ),
+        (Constant(leaf.clone()) - Trace(0, 0))
+        * (Constant(leaf.clone()) - Trace(4, 0))
+        / row(0),
     );
     component.constraints.insert(1, 
-        (Constant(root.clone()) - Trace(6, 0)) / (X - trace_generator.pow(trace_length - 1)),
-    );
-    component.constraints.insert(2, 
-        on_hash_end_rows(Trace(6, 0) - Trace(0, 1)) * (Trace(6, 0) - Trace(4, 1)),
+        (Constant(root.clone()) - Trace(6, 0))
+        / row(trace_length - 1),
     );
 
     // Add column constraints
