@@ -10,7 +10,9 @@ use std::collections::HashMap;
 use zkp_elliptic_curve::Affine;
 use zkp_primefield::FieldElement;
 use zkp_stark::{Component, Constraints, DensePolynomial, RationalExpression, TraceTable};
+use zkp_stark::compose_vertical;
 use zkp_u256::U256;
+use itertools::Itertools;
 
 pub fn tree_layer(leaf: &FieldElement, direction: bool, sibling: &FieldElement) -> Component {
     use RationalExpression::*;
@@ -143,41 +145,20 @@ pub fn pedersen_merkle(claim: &Claim, witness: &Witness) -> Component {
     info!("Constructing constraint system...");
 
     // Construct trace
-    let num_columns = 8;
-    let mut trace = TraceTable::new(claim.path_length * 256, num_columns);
-    let mut row: Row = Row::default();
-    row.right.point = Affine::Point {
-        x: claim.leaf.clone(),
-        y: FieldElement::ZERO,
-    };
-    for path_index in 0..claim.path_length {
-        for bit_index in 0..256 {
-            if bit_index % 256 == 0 {
-                let other_hash = U256::from(&witness.path[path_index]);
-                let (x, _) = get_coordinates(&row.right.point);
-                if witness.directions[path_index] {
-                    row = initialize_hash(other_hash, U256::from(x));
-                } else {
-                    row = initialize_hash(U256::from(x), other_hash);
-                }
-            } else {
-                row = hash_next_bit(&row, bit_index);
-            }
-            let row_index = path_index * 256 + bit_index;
-
-            let (left_x, left_y) = get_coordinates(&row.left.point);
-            trace[(row_index, 0)] = FieldElement::from(row.left.source.clone());
-            trace[(row_index, 1)] = row.left.slope.clone();
-            trace[(row_index, 2)] = left_x.clone();
-            trace[(row_index, 3)] = left_y.clone();
-
-            let (right_x, right_y) = get_coordinates(&row.right.point);
-            trace[(row_index, 4)] = FieldElement::from(row.right.source.clone());
-            trace[(row_index, 5)] = row.right.slope.clone();
-            trace[(row_index, 6)] = right_x.clone();
-            trace[(row_index, 7)] = right_y.clone();
-        }
+    let mut hash = claim.leaf.clone();
+    let mut components = Vec::default();
+    for (direction, sibling) in witness.directions.iter().zip(witness.path.iter()) {
+        let component = tree_layer(&hash, *direction, sibling);
+        hash = component.eval_label("hash");
+        components.push(component);
     }
+    while components.len() > 1 {
+        components = components.into_iter().tuples().map(|(top, bottom)| {
+            compose_vertical(top, bottom)
+        }).collect()
+    }
+    let mut component = components[0].clone();
+    let trace = component.trace.clone();
 
     // Construct constraints
     let path_length = claim.path_length;
@@ -286,10 +267,10 @@ pub fn pedersen_merkle(claim: &Claim, witness: &Witness) -> Component {
         on_fe_end_rows(Trace(4, 0)),
         on_no_hash_rows(Trace(4, 0)),
     ];
-
+    
     // Labels
     let labels = HashMap::default();
-
+    
     Component {
         trace,
         constraints,
