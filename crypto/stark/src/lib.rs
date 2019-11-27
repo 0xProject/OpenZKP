@@ -86,6 +86,8 @@ pub use component::{
     Component,
 };
 #[cfg(feature = "prover")]
+pub use constraint_check::check_constraints;
+#[cfg(feature = "prover")]
 pub use prover::{prove, Error as ProverError};
 #[cfg(feature = "prover")]
 pub use trace_table::TraceTable;
