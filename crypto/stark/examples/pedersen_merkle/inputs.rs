@@ -1,7 +1,6 @@
 use super::pedersen_points::merkle_hash;
 use std::{prelude::v1::*, vec};
 use zkp_primefield::FieldElement;
-use zkp_stark::{Constraints, Provable, TraceTable, Verifiable};
 
 #[derive(PartialEq, Clone)]
 #[cfg_attr(feature = "std", derive(Debug))]

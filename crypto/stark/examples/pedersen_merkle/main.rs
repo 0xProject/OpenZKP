@@ -3,7 +3,6 @@ mod inputs;
 mod pedersen_points;
 mod periodic_columns;
 mod starkware_example;
-mod trace_table;
 
 use crate::{
     component::pedersen_merkle,
