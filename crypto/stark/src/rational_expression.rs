@@ -8,7 +8,7 @@ use std::{
 use zkp_primefield::FieldElement;
 
 // TODO: Rename to algebraic expression
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub enum RationalExpression {
     X,
