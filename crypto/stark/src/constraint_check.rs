@@ -31,7 +31,7 @@ use zkp_primefield::FieldElement;
 /// best experience using it to check constraints while developing it is best to
 /// limit the trace table to the smallest meeting your needs.
 
-pub(crate) fn check_constraints(
+pub fn check_constraints(
     constraints: &Constraints,
     table: &TraceTable,
 ) -> Result<(), (usize, usize)> {
