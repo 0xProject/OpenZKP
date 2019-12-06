@@ -87,7 +87,7 @@ impl Component {
         }
     }
 
-    fn project_into(
+    pub fn project_into(
         &self,
         target: &mut Self,
         trace_map: impl Fn(usize, usize) -> (usize, usize),
