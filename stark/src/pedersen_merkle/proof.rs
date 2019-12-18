@@ -26,10 +26,9 @@ mod tests {
         );
 
         let mut columns: [Vec<FieldElement>; 8] = Default::default();
-        let r1 = FieldElement::ONE.0;
         for (i, value) in trace_table.iter().enumerate() {
             if i % 4 == 0 {
-                columns[i % 8].push(FieldElement::from(&r1) * value.clone());
+                columns[i % 8].push(value.clone());
             } else {
                 columns[i % 8].push(value.clone());
             }

@@ -86,7 +86,7 @@ pub struct ProofParams {
 #[allow(clippy::type_complexity)]
 pub struct Constraint<'a> {
     pub num_constraints: usize,
-    pub eval: &'a Fn(
+    pub eval: &'a dyn Fn(
         &FieldElement,      // X point
         &[&[FieldElement]], // Polynomials
         usize,              // Claim Index
@@ -94,7 +94,7 @@ pub struct Constraint<'a> {
         &[FieldElement],    // Constraint_coefficient
     ) -> FieldElement,
     pub eval_loop: Option<
-        &'a Fn(
+        &'a dyn Fn(
             &[&[FieldElement]], // Evaluated polynomials (LDEn)
             &[FieldElement],    // Constraint Coefficents
             usize,              // Claim index
@@ -107,7 +107,7 @@ impl<'a> Constraint<'a> {
     #[allow(clippy::type_complexity)]
     pub fn new(
         num_constraints: usize,
-        eval: &'a Fn(
+        eval: &'a dyn Fn(
             &FieldElement,
             &[&[FieldElement]],
             usize,
@@ -115,7 +115,7 @@ impl<'a> Constraint<'a> {
             &[FieldElement],
         ) -> FieldElement,
         eval_loop: Option<
-            &'a Fn(&[&[FieldElement]], &[FieldElement], usize, &FieldElement) -> Vec<FieldElement>,
+            &'a dyn Fn(&[&[FieldElement]], &[FieldElement], usize, &FieldElement) -> Vec<FieldElement>,
         >,
     ) -> Self {
         Self {
