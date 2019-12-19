@@ -9,10 +9,34 @@ use std::fmt;
 
 pub trait Field: Sized + fmt::Debug + Add<Output = Self> {
     fn modulus() -> U256;
+
     fn zero() -> Self;
+
     fn one() -> Self;
 
     fn from_u256(value: U256) -> Self;
+
+    /*
+    fn add_assign_inlined(&mut self, other: &Self);
+
+    fn mul_assign_inlined(&mut self, other: &Self);
+
+    fn neg_inplace_inlined(&mut self);
+
+    // self' = self - other
+    fn sub_assign_inlined(&mut self, other: &Self);
+
+    // self' = other - self
+    fn sub_from_assign_inlined(&mut self, other: &Self);
+
+    fn inv_inplace_inlined(&mut self);
+
+    // self' = self / other
+    fn div_assign_inlined(&mut self, other: &Self);
+
+    // self' = other / self
+    fn div_from_assign_inlined(&mut self, other: &Self);
+    */
 }
 
 pub struct PrimeFieldParameters {
@@ -79,6 +103,7 @@ pub trait StaticPrimeFieldParameters {
     // Ideally we'd have a 
     // const PARAMATERS: &'a PrimeFieldParameters
     // here, but Rust does not allow this.
+    #[inline(always)]
     fn parameters() -> &'static PrimeFieldParameters;
 }
 
@@ -170,6 +195,7 @@ mod tests {
             static mut FIELD_PARAMETERS: PrimeFieldParameters = PrimeFieldParameters {
                 modulus: U256::ZERO
             };
+            // const TEST: &'static PrimeFieldParameters = &FIELD_PARAMETERS;
             unsafe {
                 // Setting modulus is unsafe while field elements exist.
                 FIELD_PARAMETERS.modulus = modulus;
@@ -178,7 +204,13 @@ mod tests {
             // Create a type F that implements a Prime Field
             struct SmallFieldParameters();
             impl StaticPrimeFieldParameters for SmallFieldParameters {
+                // TODO: Check if this inlining works. We could even use it
+                // for constant fields if the inlining is good enough.
+                #[inline(always)]
                 fn parameters() -> &'static PrimeFieldParameters {
+                    // Returning a shared reference to an mutable static is unsafe
+                    // We need to be sure to drop all references before a mutation
+                    // happens.
                     unsafe {
                         &FIELD_PARAMETERS
                     }
