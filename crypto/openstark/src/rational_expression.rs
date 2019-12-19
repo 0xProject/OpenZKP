@@ -1,7 +1,7 @@
 use crate::polynomial::DensePolynomial;
 use primefield::FieldElement;
+use macros_decl::field_element;
 use u256::U256;
-use std::ops::Deref;
 use std::{
     iter::Sum,
     ops::{Add, Div, Mul, Sub},
@@ -38,6 +38,8 @@ impl Hash for RationalExpression {
             },
             Polynomial(p, a) => {
                 "poly".hash(state);
+                let x = field_element!("754ed488ec9208d1c552bb254c0890042078a9e1f7e36072ebff1bf4e193d11b");
+                (p.evaluate(&x)).hash(state);
                 a.hash(state);
             },
             Add(a, b) => {
@@ -214,15 +216,14 @@ impl RationalExpression {
 
         match self {
             X => "mload(0)".to_owned(),
-            Constant(c) if memory_layout.contains_key(self) => memory_layout.get(self).unwrap().clone(),
+            Constant(_) if memory_layout.contains_key(self) => memory_layout.get(self).unwrap().clone(),
             Constant(c) => format!("0x{}", U256::from(c).to_string()),
-            Trace(i, j) => memory_layout.get(self).unwrap().clone(),
-            // TODO - add periodic ids
-            Polynomial(p, a) => memory_layout.get(self).unwrap().clone(),
+            Trace(_, _) => memory_layout.get(self).unwrap().clone(),
+            Polynomial(_, _) => memory_layout.get(self).unwrap().clone(),
             Add(a, b) => format!("addmod({}, {}, PRIME)" , a.soldity_encode(memory_layout), b.soldity_encode(memory_layout)),
             Neg(a) => format!("sub(PRIME , {})", a.soldity_encode(memory_layout)),
             Mul(a, b) => format!("mulmod({}, {}, PRIME)" , a.soldity_encode(memory_layout), b.soldity_encode(memory_layout)),
-            Inv(a) => memory_layout.get(self).unwrap().clone(),
+            Inv(_) => memory_layout.get(self).unwrap().clone(),
             Exp(a, e) => {
                 match e {
                     0 =>  "0x01".to_owned(),
@@ -230,9 +231,9 @@ impl RationalExpression {
                     _ => {
                         // TODO - Check the gas to see what the real breaking point should be
                         if *e < 10 {
-                            format!("small_expmod({}, {})", a.soldity_encode(memory_layout), e.to_string())
+                            format!("small_expmod({}, {}, PRIME)", a.soldity_encode(memory_layout), e.to_string())
                         } else {
-                            format!("expmod({}, {})", a.soldity_encode(memory_layout), e.to_string())
+                            format!("expmod({}, {}, PRIME)", a.soldity_encode(memory_layout), e.to_string())
                         }
                     }
                 }
@@ -247,9 +248,9 @@ impl RationalExpression {
 
         match self {
             X => HashMap::new(),
-            Constant(c) => HashMap::new(),
-            Trace(i, j) => [(Trace(*i, *j), true)].iter().cloned().collect(),
-            Polynomial(p, a) => a.trace_search(),
+            Constant(_) => HashMap::new(),
+            Trace(_, _) => [(self.clone(), true)].iter().cloned().collect(),
+            Polynomial(_, a) => a.trace_search(),
             Add(a, b) => { let mut first = a.trace_search();
                             first.extend(b.trace_search());
                             first},
@@ -258,7 +259,7 @@ impl RationalExpression {
                             first.extend(b.trace_search());
                             first},
             Inv(a) => a.trace_search(),
-            Exp(a, e) => a.trace_search(),
+            Exp(a, _) => a.trace_search(),
         }
     }
 
@@ -267,9 +268,9 @@ impl RationalExpression {
 
         match self {
             X => HashMap::new(),
-            Constant(c) => HashMap::new(),
-            Trace(i, j) => HashMap::new(),
-            Polynomial(p, a) => a.inv_search(),
+            Constant(_) => HashMap::new(),
+            Trace(_, _) => HashMap::new(),
+            Polynomial(_, a) => a.inv_search(),
             Add(a, b) => { let mut first = a.inv_search();
                             first.extend(b.inv_search());
                             first},
@@ -277,8 +278,8 @@ impl RationalExpression {
             Mul(a, b) => { let mut first = a.inv_search();
                             first.extend(b.inv_search());
                             first},
-            Inv(a) => [(self.clone(), true)].iter().cloned().collect(),
-            Exp(a, e) => a.inv_search(),
+            Inv(_) => [(self.clone(), true)].iter().cloned().collect(),
+            Exp(a, _) => a.inv_search(),
         }
     }
 
@@ -287,9 +288,9 @@ impl RationalExpression {
 
         match self {
             X => HashMap::new(),
-            Constant(c) => HashMap::new(),
-            Trace(i, j) => HashMap::new(),
-            Polynomial(p, a) => [(self.clone(), true)].iter().cloned().collect(),
+            Constant(_) => HashMap::new(),
+            Trace(_, _) => HashMap::new(),
+            Polynomial(_, _) => [(self.clone(), true)].iter().cloned().collect(),
             Add(a, b) => { let mut first = a.periodic_search();
                             first.extend(b.periodic_search());
                             first},
@@ -298,7 +299,7 @@ impl RationalExpression {
                             first.extend(b.periodic_search());
                             first},
             Inv(a) => a.periodic_search(),
-            Exp(a, e) => a.periodic_search(),
+            Exp(a, _) => a.periodic_search(),
         }
     }
 }
