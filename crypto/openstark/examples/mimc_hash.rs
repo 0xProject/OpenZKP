@@ -1,9 +1,9 @@
 use macros_decl::{field_element};
 use openstark::{
-    Constraints, DensePolynomial, Provable, RationalExpression, TraceTable, Verifiable, solidity_encode::autogen_oods,
+    Constraints, DensePolynomial, Provable, RationalExpression, TraceTable, Verifiable, solidity_encode::autogen_constraint_poly,
 };
 use primefield::{fft::ifft, FieldElement};
-use std::{time::Instant, collections::HashMap};
+use std::time::Instant;
 use u256::U256;
 
 const Q: FieldElement = field_element!("0B");
@@ -194,7 +194,12 @@ impl Verifiable for Claim {
             &const_after,
         ];
 
-        autogen_oods(trace_length, public.as_slice(), expressions.as_slice());
+        match autogen_constraint_poly(trace_length, public.as_slice(), expressions.as_slice(), 2, 2) {
+            Ok(()) => {},
+            Err(error) => {
+                panic!("File io problem: {:?}", error)
+            },
+        };
         Constraints::from_expressions((trace_length, 2), seed, expressions)
         .unwrap()
     }

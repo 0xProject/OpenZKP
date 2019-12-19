@@ -6,7 +6,7 @@ use super::{
     },
 };
 use elliptic_curve::Affine;
-use openstark::{Constraints, DensePolynomial, RationalExpression};
+use openstark::{Constraints, DensePolynomial, RationalExpression, solidity_encode::autogen_constraint_poly};
 use primefield::FieldElement;
 use std::{prelude::v1::*, vec};
 
@@ -63,7 +63,7 @@ pub fn get_pedersen_merkle_constraints(claim: &Claim) -> Constraints {
     let left_bit = Trace(0, 0) - Trace(0, 1) * 2.into();
     let right_bit = Trace(4, 0) - Trace(4, 1) * 2.into();
 
-    Constraints::from_expressions((trace_length, 8), claim.into(), vec![
+    let expressions = vec![
         Trace(0, 0),
         Trace(1, 0),
         Trace(2, 0),
@@ -121,8 +121,27 @@ pub fn get_pedersen_merkle_constraints(claim: &Claim) -> Constraints {
         ),
         on_fe_end_rows(Trace(4, 0)),
         on_no_hash_rows(Trace(4, 0)),
-    ])
-    .unwrap()
+    ];
+
+    let path_len_const = Constant(FieldElement::from(claim.path_length));
+    let root_const = Constant(claim.root.clone());
+    let leaf_const = Constant(claim.leaf.clone());
+
+    let public = vec![
+        &path_len_const,
+        &root_const,
+        &leaf_const,
+    ];
+
+    match autogen_constraint_poly(trace_length, public.as_slice(), expressions.as_slice(), 2, 8) {
+        Ok(()) => {},
+        Err(error) => {
+            panic!("File io problem: {:?}", error)
+        },
+    };
+
+    Constraints::from_expressions((trace_length, 8), claim.into(), expressions)
+    .unwrap()    
 }
 
 #[cfg(test)]
