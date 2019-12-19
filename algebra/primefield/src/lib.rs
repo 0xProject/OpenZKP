@@ -40,6 +40,7 @@
 #![allow(clippy::multiple_crate_versions)]
 
 pub mod fft;
+mod const_generics;
 mod field;
 pub mod geometric_series;
 mod montgomery;
