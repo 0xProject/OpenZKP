@@ -259,10 +259,10 @@ impl Provable<()> for Claim {
 fn mimc(x: &FieldElement, y: &FieldElement) -> FieldElement {
     let mut left = x.clone();
     let mut right = FieldElement::ZERO;
-    for i in 0..128 {
+    for item in K_COEF.iter() {
         let new_left = (left.clone()).pow(U256::from(3))
             + FieldElement::from(3) * &Q * &left * (&right.pow(2))
-            + &K_COEF[i];
+            + item;
         let new_right =
             FieldElement::from(3) * (&left.pow(U256::from(2))) + &Q * (&right.pow(U256::from(3)));
         left = new_left;
@@ -270,10 +270,10 @@ fn mimc(x: &FieldElement, y: &FieldElement) -> FieldElement {
     }
     left = y.clone();
 
-    for i in 0..127 {
+    for item in K_COEF.iter().take(127) {
         let new_left = (left.clone()).pow(U256::from(3))
             + FieldElement::from(3) * &Q * &left * (&right.pow(2))
-            + &K_COEF[i];
+            + item;
         let new_right =
             FieldElement::from(3) * (&left.pow(U256::from(2))) + &Q * (&right.pow(U256::from(3)));
         left = new_left;
