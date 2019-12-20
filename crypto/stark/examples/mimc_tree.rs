@@ -2,10 +2,10 @@
 use std::time::Instant;
 use zkp_macros_decl::field_element;
 use zkp_primefield::{fft::ifft, FieldElement};
-use zkp_u256::U256;
 use zkp_stark::{
     Constraints, DensePolynomial, Provable, RationalExpression, TraceTable, Verifiable,
 };
+use zkp_u256::U256;
 
 const Q: FieldElement = field_element!("0B");
 const K_COEF: [FieldElement; 128] = [
@@ -334,7 +334,11 @@ fn main() {
         path.extend_from_slice(&K_COEF);
     }
     let is_left: Vec<bool> = (0..path.len()).map(|x| x % 2 != 0).collect();
-    let start_left = if is_left[0] { FieldElement::ONE } else { FieldElement::ZERO };
+    let start_left = if is_left[0] {
+        FieldElement::ONE
+    } else {
+        FieldElement::ZERO
+    };
     let root = mimc_path(&element, &path, &is_left);
     let start = Instant::now();
     let claim = Claim {
