@@ -302,7 +302,7 @@ impl RationalExpression {
     pub fn soldity_encode(&self, memory_layout: &HashMap<Self, String>) -> String {
         use RationalExpression::*;
 
-        #[warn(clippy::match_same_arms)]
+        #[allow(clippy::match_same_arms)]
         match self {
             X => "mload(0)".to_owned(),
             Constant(_) if memory_layout.contains_key(self) => {
