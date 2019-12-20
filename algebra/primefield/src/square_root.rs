@@ -1,6 +1,6 @@
 use crate::field::FieldElement;
-use macros_decl::u256h;
-use u256::U256;
+use zkp_macros_decl::u256h;
+use zkp_u256::U256;
 
 pub(crate) fn square_root(a: &FieldElement) -> Option<FieldElement> {
     if is_quadratic_residue(a) {

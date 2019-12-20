@@ -5,7 +5,7 @@ version: 2.1
 #  example projects as guides. This is probably only worthwhile on `master`.
 #  See https://doc.rust-lang.org/rustc/profile-guided-optimization.html
 
-# TODO: Push relevant packages to crates.io
+# TODO: Push relevant packages to crates.io when a version of master is tagged.
 
 # TODO: Generate rustdoc and host somewhere
 # TODO: Report documentation coverage.
@@ -52,7 +52,7 @@ executors:
         crypto/hash
         crypto/merkle-tree
         crypto/elliptic-curve-crypto
-        crypto/openstark
+        crypto/stark
 commands:
   stop-if-image-exists:
     steps:
@@ -135,7 +135,7 @@ jobs:
     # Requires non-incremental build.
     executor: docker-rust
     environment:
-      GRCOVFLAGS: -s . --llvm --branch --ignore-not-existing --ignore-dir "/*"
+      GRCOVFLAGS: -s . --llvm --branch --ignore-not-existing --ignore "/*"
     steps:
       - checkout
       - enable-sccache
@@ -191,7 +191,7 @@ jobs:
             # Exclude benchmarks that compare against external crates (pulls in a lot of deps)
             # HACK: We add 'bench' as a feature so dev-dependencies can be included as optional
             # regular dependencies behind a feature flag. This solves problems with feature
-            # unification. 
+            # unification.
             # HACK: We can not specify --features=bench in a workspace environment, instead
             # we enable all features (which makes sense from a test coverage perspective).
             # TODO: We don't need an optimized build here, re-using debug build would be ok.

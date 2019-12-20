@@ -1,8 +1,8 @@
 // Names `from` and `to` are not very meaningful on their own
 #![allow(clippy::module_name_repetitions)]
 use crate::field::FieldElement;
-use macros_decl::u256h;
-use u256::{
+use zkp_macros_decl::u256h;
+use zkp_u256::{
     utils::{adc, mac, sbb},
     U256,
 };

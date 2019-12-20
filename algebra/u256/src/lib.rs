@@ -36,10 +36,14 @@
     variant_size_differences
 )]
 #![cfg_attr(feature = "std", warn(missing_debug_implementations,))]
+// rand_xoshiro v0.4.0 is required for a zkp-stark example and v0.3.1 for criterion
+#![allow(clippy::multiple_crate_versions)]
 
 mod binops;
 mod division;
 mod gcd;
+#[cfg(feature = "use_rand")]
+mod rand;
 mod u256;
 
 // TODO: This seems out of scope for U256 to export.

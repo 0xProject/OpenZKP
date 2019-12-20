@@ -36,6 +36,10 @@
     variant_size_differences
 )]
 #![cfg_attr(feature = "std", warn(missing_debug_implementations,))]
+// rand_xoshiro v0.4.0 is required for a zkp-stark example and v0.3.1 for criterion
+#![allow(clippy::multiple_crate_versions)]
+// rand_xoshiro v0.4.0 is required for a zkp-stark example and v0.3.1 for criterion
+#![allow(clippy::multiple_crate_versions)]
 
 mod curve;
 mod jacobian;
@@ -48,9 +52,9 @@ pub use curve::Affine;
 pub use jacobian::Jacobian;
 pub use wnaf::{base_mul, double_base_mul, double_mul, mul, window_table_affine};
 
-use macros_decl::u256h;
-use primefield::FieldElement;
-use u256::U256;
+use zkp_macros_decl::u256h;
+use zkp_primefield::FieldElement;
+use zkp_u256::U256;
 
 // Curve parameters
 

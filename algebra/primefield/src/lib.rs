@@ -36,17 +36,24 @@
     variant_size_differences
 )]
 #![cfg_attr(feature = "std", warn(missing_debug_implementations,))]
+// rand_xoshiro v0.4.0 is required for a zkp-stark example and v0.3.1 for criterion
+#![allow(clippy::multiple_crate_versions)]
 
 pub mod fft;
 mod field;
 pub mod geometric_series;
 mod montgomery;
+#[cfg(feature = "use_rand")]
+mod rand;
 mod square_root;
 
 pub use field::FieldElement;
 
 // TODO: Make member functions of FieldElement?
 pub use field::{invert_batch, invert_batch_src_dst};
+
+// Re-exports dependencies that are part of the public interface
+pub use zkp_u256 as u256;
 
 // Std/no-std imports
 #[cfg(not(feature = "std"))]

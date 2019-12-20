@@ -1,8 +1,8 @@
 #![warn(clippy::all)]
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use elliptic_curve_crypto::{private_to_public, sign, verify};
-use macros_decl::u256h;
-use u256::U256;
+use zkp_elliptic_curve_crypto::{private_to_public, sign, verify};
+use zkp_macros_decl::u256h;
+use zkp_u256::U256;
 
 fn ecdsa_sign(crit: &mut Criterion) {
     let message_hash = u256h!("03d937c035c878245caf64531a5756109c53068da139362728feb561405371cb");

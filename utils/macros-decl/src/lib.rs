@@ -36,6 +36,8 @@
     variant_size_differences
 )]
 #![cfg_attr(feature = "std", warn(missing_debug_implementations,))]
+// rand_xoshiro v0.4.0 is required for a zkp-stark example and v0.3.1 for criterion
+#![allow(clippy::multiple_crate_versions)]
 
 use proc_macro_hack::proc_macro_hack;
 
@@ -43,16 +45,16 @@ use proc_macro_hack::proc_macro_hack;
 ///
 /// (Documentation goes here on the re-export, not in the other crate.)
 #[proc_macro_hack]
-pub use macros_impl::hex;
+pub use zkp_macros_impl::hex;
 
 /// U256 hexadecimal literal
 ///
 /// (Documentation goes here on the re-export, not in the other crate.)
 #[proc_macro_hack]
-pub use macros_impl::u256h;
+pub use zkp_macros_impl::u256h;
 
 /// FieldElement hexadecimal literal
 ///
 /// (Documentation goes here on the re-export, not in the other crate.)
 #[proc_macro_hack]
-pub use macros_impl::field_element;
+pub use zkp_macros_impl::field_element;

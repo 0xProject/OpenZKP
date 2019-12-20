@@ -1,8 +1,8 @@
 use crate::{Error, Index, Result};
-use error_utils::require;
-use hash::Hash;
 use itertools::Itertools;
 use std::prelude::v1::*;
+use zkp_error_utils::require;
+use zkp_hash::Hash;
 
 #[derive(Clone, Default)]
 #[cfg_attr(feature = "std", derive(Debug))]

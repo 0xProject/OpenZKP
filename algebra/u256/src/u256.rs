@@ -873,8 +873,8 @@ impl Arbitrary for U256 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use macros_decl::u256h;
     use quickcheck_macros::quickcheck;
+    use zkp_macros_decl::u256h;
 
     #[allow(dead_code)]
     const TEST_CONST: U256 =
