@@ -1,5 +1,5 @@
   function oods_prepare_inverses(uint256[] memory context) internal pure {
-        uint trace_generator = 0x01f4c2bfbeea04f127e46d76ecbf157b030530a6e7c1b2fd006547440e5ffcb8;
+        uint trace_generator = 0x00c92ecbfd121b58bc7924d5dd51a717c4d78992d0e87cd59f1bc8d7ff0cb347;
         uint oods_point = context[mm_oods_point];
         for (uint i = 0; i < context[mm_n_unique_queries]; i ++) {
             // Get the shifted eval point
@@ -7,8 +7,8 @@
             // Preparing denominator for row 0
         context[batch_inverse_chunk*i + 0 + mm_batch_inverse_in] = fsub(x, fmul(oods_point, 0x0000000000000000000000000000000000000000000000000000000000000001));
             // Preparing denominator for row 1
-        context[batch_inverse_chunk*i + 1 + mm_batch_inverse_in] = fsub(x, fmul(oods_point, 0x01f4c2bfbeea04f127e46d76ecbf157b030530a6e7c1b2fd006547440e5ffcb8));
-        context[batch_inverse_chunk*i + 2 + mm_batch_inverse_in] = fsub(x, fpow2(oods_point, 2));
+        context[batch_inverse_chunk*i + 1 + mm_batch_inverse_in] = fsub(x, fmul(oods_point, 0x00c92ecbfd121b58bc7924d5dd51a717c4d78992d0e87cd59f1bc8d7ff0cb347));
+        context[batch_inverse_chunk*i + 2 + mm_batch_inverse_in] = fsub(x, fpow2(oods_point, 3));
         context[batch_inverse_chunk*i + 3 + mm_batch_inverse_in] = context[i + mm_oods_eval_points];
 }
 
@@ -38,9 +38,9 @@
       let fri_values := /*fri_values*/ add(context, 1824)
       let fri_values_end := add(fri_values,  mul(/*n_unique_queries*/ mload(add(context, 288)), 0x20))
       let fri_inv_points := /*fri_inv_points*/ add(context, 2528)
-      let trace_query_responses := /*trace_query_responses*/ add(context, 14976)
+      let trace_query_responses := /*trace_query_responses*/ add(context, 12704)
 
-      let composition_query_responses := /*composition_query_responses*/ add(context, 20608)
+      let composition_query_responses := /*composition_query_responses*/ add(context, 14112)
 
       // Set denominators_ptr to point to the batch_inverse_out array.
       // The content of batch_inverse_out is described in oods_prepare_inverses.
@@ -54,17 +54,17 @@
               res := addmod(
                     res,
                     mulmod(mulmod( /* denom for 0th row */ mload(add(denominators_ptr, 0)),
-                                  /*oods_coefficients*/ mload(add(context, 14400)),
+                                  /*oods_coefficients*/ mload(add(context, 12480)),
                                   PRIME),
-                           add(column_value, sub(PRIME, /*oods_values*/ mload(add(context, 13088)))),
+                           add(column_value, sub(PRIME, /*oods_values*/ mload(add(context, 11520)))),
                            PRIME),
                     PRIME)
               res := addmod(
                     res,
                     mulmod(mulmod( /* denom for 1th row */ mload(add(denominators_ptr, 32)),
-                                  /*oods_coefficients*/ mload(add(context, 14432)),
+                                  /*oods_coefficients*/ mload(add(context, 12512)),
                                   PRIME),
-                           add(column_value, sub(PRIME, /*oods_values*/ mload(add(context, 13120)))),
+                           add(column_value, sub(PRIME, /*oods_values*/ mload(add(context, 11552)))),
                            PRIME),
                     PRIME)
                 }
@@ -75,147 +75,21 @@
               res := addmod(
                     res,
                     mulmod(mulmod( /* denom for 0th row */ mload(add(denominators_ptr, 0)),
-                                  /*oods_coefficients*/ mload(add(context, 14464)),
+                                  /*oods_coefficients*/ mload(add(context, 12544)),
                                   PRIME),
-                           add(column_value, sub(PRIME, /*oods_values*/ mload(add(context, 13152)))),
+                           add(column_value, sub(PRIME, /*oods_values*/ mload(add(context, 11584)))),
                            PRIME),
                     PRIME)
               res := addmod(
                     res,
                     mulmod(mulmod( /* denom for 1th row */ mload(add(denominators_ptr, 32)),
-                                  /*oods_coefficients*/ mload(add(context, 14496)),
+                                  /*oods_coefficients*/ mload(add(context, 12576)),
                                   PRIME),
-                           add(column_value, sub(PRIME, /*oods_values*/ mload(add(context, 13184)))),
+                           add(column_value, sub(PRIME, /*oods_values*/ mload(add(context, 11616)))),
                            PRIME),
                     PRIME)
                 }
-              // Mask items for column #2.
-                    {
-                    // Read the next element.
-                    let column_value := mulmod(mload(add(trace_query_responses, 64)), k_montgomery_r_inv, PRIME)
-              res := addmod(
-                    res,
-                    mulmod(mulmod( /* denom for 0th row */ mload(add(denominators_ptr, 0)),
-                                  /*oods_coefficients*/ mload(add(context, 14528)),
-                                  PRIME),
-                           add(column_value, sub(PRIME, /*oods_values*/ mload(add(context, 13216)))),
-                           PRIME),
-                    PRIME)
-              res := addmod(
-                    res,
-                    mulmod(mulmod( /* denom for 1th row */ mload(add(denominators_ptr, 32)),
-                                  /*oods_coefficients*/ mload(add(context, 14560)),
-                                  PRIME),
-                           add(column_value, sub(PRIME, /*oods_values*/ mload(add(context, 13248)))),
-                           PRIME),
-                    PRIME)
-                }
-              // Mask items for column #3.
-                    {
-                    // Read the next element.
-                    let column_value := mulmod(mload(add(trace_query_responses, 96)), k_montgomery_r_inv, PRIME)
-              res := addmod(
-                    res,
-                    mulmod(mulmod( /* denom for 0th row */ mload(add(denominators_ptr, 0)),
-                                  /*oods_coefficients*/ mload(add(context, 14592)),
-                                  PRIME),
-                           add(column_value, sub(PRIME, /*oods_values*/ mload(add(context, 13280)))),
-                           PRIME),
-                    PRIME)
-              res := addmod(
-                    res,
-                    mulmod(mulmod( /* denom for 1th row */ mload(add(denominators_ptr, 32)),
-                                  /*oods_coefficients*/ mload(add(context, 14624)),
-                                  PRIME),
-                           add(column_value, sub(PRIME, /*oods_values*/ mload(add(context, 13312)))),
-                           PRIME),
-                    PRIME)
-                }
-              // Mask items for column #4.
-                    {
-                    // Read the next element.
-                    let column_value := mulmod(mload(add(trace_query_responses, 128)), k_montgomery_r_inv, PRIME)
-              res := addmod(
-                    res,
-                    mulmod(mulmod( /* denom for 0th row */ mload(add(denominators_ptr, 0)),
-                                  /*oods_coefficients*/ mload(add(context, 14656)),
-                                  PRIME),
-                           add(column_value, sub(PRIME, /*oods_values*/ mload(add(context, 13344)))),
-                           PRIME),
-                    PRIME)
-              res := addmod(
-                    res,
-                    mulmod(mulmod( /* denom for 1th row */ mload(add(denominators_ptr, 32)),
-                                  /*oods_coefficients*/ mload(add(context, 14688)),
-                                  PRIME),
-                           add(column_value, sub(PRIME, /*oods_values*/ mload(add(context, 13376)))),
-                           PRIME),
-                    PRIME)
-                }
-              // Mask items for column #5.
-                    {
-                    // Read the next element.
-                    let column_value := mulmod(mload(add(trace_query_responses, 160)), k_montgomery_r_inv, PRIME)
-              res := addmod(
-                    res,
-                    mulmod(mulmod( /* denom for 0th row */ mload(add(denominators_ptr, 0)),
-                                  /*oods_coefficients*/ mload(add(context, 14720)),
-                                  PRIME),
-                           add(column_value, sub(PRIME, /*oods_values*/ mload(add(context, 13408)))),
-                           PRIME),
-                    PRIME)
-              res := addmod(
-                    res,
-                    mulmod(mulmod( /* denom for 1th row */ mload(add(denominators_ptr, 32)),
-                                  /*oods_coefficients*/ mload(add(context, 14752)),
-                                  PRIME),
-                           add(column_value, sub(PRIME, /*oods_values*/ mload(add(context, 13440)))),
-                           PRIME),
-                    PRIME)
-                }
-              // Mask items for column #6.
-                    {
-                    // Read the next element.
-                    let column_value := mulmod(mload(add(trace_query_responses, 192)), k_montgomery_r_inv, PRIME)
-              res := addmod(
-                    res,
-                    mulmod(mulmod( /* denom for 0th row */ mload(add(denominators_ptr, 0)),
-                                  /*oods_coefficients*/ mload(add(context, 14784)),
-                                  PRIME),
-                           add(column_value, sub(PRIME, /*oods_values*/ mload(add(context, 13472)))),
-                           PRIME),
-                    PRIME)
-              res := addmod(
-                    res,
-                    mulmod(mulmod( /* denom for 1th row */ mload(add(denominators_ptr, 32)),
-                                  /*oods_coefficients*/ mload(add(context, 14816)),
-                                  PRIME),
-                           add(column_value, sub(PRIME, /*oods_values*/ mload(add(context, 13504)))),
-                           PRIME),
-                    PRIME)
-                }
-              // Mask items for column #7.
-                    {
-                    // Read the next element.
-                    let column_value := mulmod(mload(add(trace_query_responses, 224)), k_montgomery_r_inv, PRIME)
-              res := addmod(
-                    res,
-                    mulmod(mulmod( /* denom for 0th row */ mload(add(denominators_ptr, 0)),
-                                  /*oods_coefficients*/ mload(add(context, 14848)),
-                                  PRIME),
-                           add(column_value, sub(PRIME, /*oods_values*/ mload(add(context, 13536)))),
-                           PRIME),
-                    PRIME)
-              res := addmod(
-                    res,
-                    mulmod(mulmod( /* denom for 1th row */ mload(add(denominators_ptr, 32)),
-                                  /*oods_coefficients*/ mload(add(context, 14880)),
-                                  PRIME),
-                           add(column_value, sub(PRIME, /*oods_values*/ mload(add(context, 13568)))),
-                           PRIME),
-                    PRIME)
-                }
-              trace_query_responses := add(trace_query_responses, 256)
+              trace_query_responses := add(trace_query_responses, 64)
          // Composition constraints.
               {
             // Read the next element.
@@ -223,10 +97,10 @@
             res := addmod(
                 res,
                 mulmod(mulmod(mload(add(denominators_ptr, 64)),
-                              mload(/*oods_coefficients*/ add(context, 14912)),
+                              mload(/*oods_coefficients*/ add(context, 12608)),
                               PRIME),
                        add(column_value,
-                           sub(PRIME, /*composition_oods_values*/ mload(add(context, 13600)))),
+                           sub(PRIME, /*composition_oods_values*/ mload(add(context, 11648)))),
                        PRIME),
                 PRIME)
             }
@@ -236,15 +110,28 @@
             res := addmod(
                 res,
                 mulmod(mulmod(mload(add(denominators_ptr, 64)),
-                              mload(/*oods_coefficients*/ add(context, 14944)),
+                              mload(/*oods_coefficients*/ add(context, 12640)),
                               PRIME),
                        add(column_value,
-                           sub(PRIME, /*composition_oods_values*/ mload(add(context, 13632)))),
+                           sub(PRIME, /*composition_oods_values*/ mload(add(context, 11680)))),
+                       PRIME),
+                PRIME)
+            }
+              {
+            // Read the next element.
+            let column_value := mulmod(mload(add(composition_query_responses, 64)), k_montgomery_r_inv, PRIME)
+            res := addmod(
+                res,
+                mulmod(mulmod(mload(add(denominators_ptr, 64)),
+                              mload(/*oods_coefficients*/ add(context, 12672)),
+                              PRIME),
+                       add(column_value,
+                           sub(PRIME, /*composition_oods_values*/ mload(add(context, 11712)))),
                        PRIME),
                 PRIME)
             }
               // Advance the composition_query_responses by the the amount we've read (0x20 * constraint_degree).
-    composition_query_responses := add(composition_query_responses, 64)
+    composition_query_responses := add(composition_query_responses, 96)
 
     // Append the sum of the trace boundary constraints to the fri_values array.
     // Note that we need to add the sum of the composition boundary constraints to those
