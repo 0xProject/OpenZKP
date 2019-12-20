@@ -4,7 +4,6 @@ use zkp_primefield::{fft::ifft, FieldElement};
 use zkp_stark::{
     Constraints, DensePolynomial, Provable, RationalExpression, TraceTable, Verifiable,
 };
-use zkp_u256::U256;
 
 const Q: FieldElement = field_element!("0B");
 const K_COEF: [FieldElement; 128] = [
