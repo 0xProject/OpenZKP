@@ -1,5 +1,5 @@
 use crate::polynomial::DensePolynomial;
-#[cfg_attr(not(feature = "std"))]
+#[cfg(feature = "std")]
 use std::collections::HashMap;
 use std::{
     collections::BTreeSet,
@@ -300,7 +300,7 @@ impl RationalExpression {
         }
     }
 
-    #[cfg_attr(not(feature = "std"))]
+    #[cfg(feature = "std")]
     pub fn soldity_encode(&self, memory_layout: &HashMap<Self, String>) -> String {
         use RationalExpression::*;
 
@@ -354,7 +354,7 @@ impl RationalExpression {
     }
 
     // TODO - DRY this by writing a generic search over subtypes
-    #[cfg_attr(not(feature = "std"))]
+    #[cfg(feature = "std")]
     pub fn trace_search(&self) -> HashMap<Self, bool> {
         use RationalExpression::*;
 
@@ -370,7 +370,7 @@ impl RationalExpression {
         }
     }
 
-    #[cfg_attr(not(feature = "std"))]
+    #[cfg(feature = "std")]
     pub fn inv_search(&self) -> HashMap<Self, bool> {
         use RationalExpression::*;
 
@@ -386,7 +386,7 @@ impl RationalExpression {
         }
     }
 
-    #[cfg_attr(not(feature = "std"))]
+    #[cfg(feature = "std")]
     pub fn periodic_search(&self) -> HashMap<Self, bool> {
         use RationalExpression::*;
 
