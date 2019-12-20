@@ -1,15 +1,14 @@
 use crate::polynomial::DensePolynomial;
 use std::{
-    collections::BTreeSet,
+    collections::{BTreeSet, HashMap},
+    hash::{Hash, Hasher},
     iter::Sum,
     ops::{Add, Div, Mul, Sub},
-    hash::{Hash, Hasher},
-    collections::HashMap,
     prelude::v1::*,
 };
+use zkp_macros_decl::field_element;
 use zkp_primefield::FieldElement;
 use zkp_u256::U256;
-use zkp_macros_decl::field_element;
 
 // TODO: Rename to algebraic expression
 #[derive(Clone, Eq, PartialEq)]
@@ -357,14 +356,14 @@ impl RationalExpression {
         use RationalExpression::*;
 
         match self {
-            X  | Constant(..)=> HashMap::new(),
+            X | Constant(..) => HashMap::new(),
             Trace(..) => [(self.clone(), true)].iter().cloned().collect(),
             Add(a, b) | Mul(a, b) => {
                 let mut first = a.trace_search();
                 first.extend(b.trace_search());
                 first
             }
-            Polynomial(_, a) | Inv(a) | Exp(a, _) |  Neg(a) => a.trace_search(),
+            Polynomial(_, a) | Inv(a) | Exp(a, _) | Neg(a) => a.trace_search(),
         }
     }
 
@@ -379,7 +378,7 @@ impl RationalExpression {
                 first
             }
             Inv(_) => [(self.clone(), true)].iter().cloned().collect(),
-            Polynomial(_, a) | Exp(a, _) |  Neg(a) => a.inv_search(),
+            Polynomial(_, a) | Exp(a, _) | Neg(a) => a.inv_search(),
         }
     }
 
@@ -394,7 +393,7 @@ impl RationalExpression {
                 first.extend(b.periodic_search());
                 first
             }
-            Inv(a) | Exp(a, _) |  Neg(a) => a.periodic_search(),
+            Inv(a) | Exp(a, _) | Neg(a) => a.periodic_search(),
         }
     }
 }
@@ -404,42 +403,48 @@ impl Hash for RationalExpression {
     fn hash<H: Hasher>(&self, state: &mut H) {
         use RationalExpression::*;
         match self {
-            X => {"x".hash(state);},
-            Constant(c) => {c.hash(state);},
+            X => {
+                "x".hash(state);
+            }
+            Constant(c) => {
+                c.hash(state);
+            }
             &Trace(i, j) => {
                 "trace".hash(state);
                 i.hash(state);
                 j.hash(state);
-            },
+            }
             Polynomial(p, a) => {
                 "poly".hash(state);
-                let x = field_element!("754ed488ec9208d1c552bb254c0890042078a9e1f7e36072ebff1bf4e193d11b");
+                let x = field_element!(
+                    "754ed488ec9208d1c552bb254c0890042078a9e1f7e36072ebff1bf4e193d11b"
+                );
                 (p.evaluate(&x)).hash(state);
                 a.hash(state);
-            },
+            }
             Add(a, b) => {
                 "add".hash(state);
                 a.hash(state);
                 b.hash(state);
-            },
+            }
             Neg(a) => {
                 "neg".hash(state);
                 a.hash(state);
-            },
+            }
             Mul(a, b) => {
                 "mul".hash(state);
                 a.hash(state);
                 b.hash(state);
-            },
+            }
             Inv(a) => {
                 "inv".hash(state);
                 a.hash(state);
-            },
+            }
             Exp(a, e) => {
                 "exp".hash(state);
                 a.hash(state);
                 e.hash(state);
-            },
+            }
         }
     }
 }
