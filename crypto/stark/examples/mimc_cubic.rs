@@ -1,3 +1,4 @@
+use std::time::Instant;
 use zkp_macros_decl::field_element;
 use zkp_primefield::{fft::ifft, FieldElement};
 use zkp_stark::{
@@ -93,8 +94,12 @@ fn mimc(start: &FieldElement) -> FieldElement {
 fn main() {
     let before = field_element!("00a74f2a70da4ea3723cabd2acc55d03f9ff6d0e7acef0fc63263b12c10dd837");
     let after = mimc(&before);
+    let start = Instant::now();
     let claim = Claim { before, after };
     assert_eq!(claim.check(()), Ok(()));
     let proof = claim.prove(()).unwrap();
+    let duration = start.elapsed();
+    println!("Time elapsed in proof function is: {:?}", duration);
+    println!("The proof length is {}", proof.as_bytes().len());
     claim.verify(&proof).unwrap();
 }
