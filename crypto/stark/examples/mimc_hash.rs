@@ -1,3 +1,4 @@
+#![allow(clippy::possible_missing_comma)]
 use std::time::Instant;
 use zkp_macros_decl::field_element;
 use zkp_primefield::{fft::ifft, FieldElement};

@@ -1,6 +1,8 @@
+#![allow(clippy::possible_missing_comma)]
 use std::time::Instant;
-use zkp_macros_decl::{field_element, u256h};
+use zkp_macros_decl::field_element;
 use zkp_primefield::{fft::ifft, FieldElement};
+use zkp_u256::U256;
 use zkp_stark::{
     Constraints, DensePolynomial, Provable, RationalExpression, TraceTable, Verifiable,
 };
@@ -301,10 +303,10 @@ fn mimc_path(x: &FieldElement, path: &[FieldElement], is_left: &[bool]) -> Field
 fn mimc_hash(x: &FieldElement, y: &FieldElement) -> FieldElement {
     let mut left = x.clone();
     let mut right = FieldElement::ZERO;
-    for i in 0..128 {
+    for item in K_COEF.iter() {
         let new_left = (left.clone()).pow(U256::from(3))
             + FieldElement::from(3) * &Q * &left * (&right.pow(2))
-            + &K_COEF[i];
+            + item;
         let new_right =
             FieldElement::from(3) * (&left.pow(U256::from(2))) + &Q * (&right.pow(U256::from(3)));
         left = new_left;
@@ -312,10 +314,10 @@ fn mimc_hash(x: &FieldElement, y: &FieldElement) -> FieldElement {
     }
     left = y.clone();
 
-    for i in 0..127 {
+    for item in K_COEF.iter().take(127) {
         let new_left = (left.clone()).pow(U256::from(3))
             + FieldElement::from(3) * &Q * &left * (&right.pow(2))
-            + &K_COEF[i];
+            + item;
         let new_right =
             FieldElement::from(3) * (&left.pow(U256::from(2))) + &Q * (&right.pow(U256::from(3)));
         left = new_left;
@@ -332,12 +334,7 @@ fn main() {
         path.extend_from_slice(&K_COEF);
     }
     let is_left: Vec<bool> = (0..path.len()).map(|x| x % 2 != 0).collect();
-    let start_left;
-    if is_left[0] {
-        start_left = FieldElement::ONE;
-    } else {
-        start_left = FieldElement::ZERO;
-    }
+    let start_left = if is_left[0] { FieldElement::ONE } else { FieldElement::ZERO };
     let root = mimc_path(&element, &path, &is_left);
     let start = Instant::now();
     let claim = Claim {
