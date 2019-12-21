@@ -250,12 +250,9 @@ pub fn verify(constraints: &Constraints, proof: &Proof) -> Result<()> {
     );
 
     // Get values and check decommitment of low degree extension
-    let lde_values: Vec<(usize, Vec<U256>)> = queries
+    let lde_values: Vec<(usize, Vec<FieldElement>)> = queries
         .iter()
-        .map(|&index| {
-            let held = Replayable::<U256>::replay_many(&mut channel, trace_cols);
-            (index, held)
-        })
+        .map(|&index| (index, Replayable::replay_many(&mut channel, trace_cols)))
         .collect();
     let lde_proof_length = lde_commitment.proof_size(&queries)?;
     let lde_hashes = Replayable::<Hash>::replay_many(&mut channel, lde_proof_length);
@@ -317,7 +314,7 @@ pub fn verify(constraints: &Constraints, proof: &Proof) -> Result<()> {
                     } else {
                         let z_reverse = fft::permute_index(eval_domain_size, queries[z]);
                         coset.push(out_of_domain_element(
-                            lde_values[z].1.as_slice(),
+                            &lde_values[z].1,
                             &constraint_values[z].1,
                             &eval_x[z_reverse],
                             &oods_point,
@@ -494,7 +491,7 @@ fn fri_single_fold(
 
 #[allow(clippy::too_many_arguments)]
 fn out_of_domain_element(
-    poly_points_u: &[U256],
+    poly_points: &[FieldElement],
     constraint_oods_values: &[FieldElement],
     x_cord: &FieldElement,
     oods_point: &FieldElement,
@@ -504,10 +501,6 @@ fn out_of_domain_element(
     blowup: usize,
     trace_arguments: &[(usize, isize)],
 ) -> Result<FieldElement> {
-    let poly_points: Vec<FieldElement> = poly_points_u
-        .iter()
-        .map(|i| FieldElement::from_montgomery(i.clone()))
-        .collect();
     let x_transform = x_cord * FieldElement::GENERATOR;
     let omega = match FieldElement::root(eval_domain_size) {
         Some(x) => x,
