@@ -34,10 +34,10 @@ impl From<core::num::ParseIntError> for ParseError {
 
 #[derive(PartialEq, Eq, Clone, Default)]
 pub struct U256 {
-    pub c0: u64,
-    pub c1: u64,
-    pub c2: u64,
-    pub c3: u64,
+    pub(crate) c0: u64,
+    pub(crate) c1: u64,
+    pub(crate) c2: u64,
+    pub(crate) c3: u64,
 }
 
 impl U256 {
@@ -52,6 +52,17 @@ impl U256 {
 
     pub const fn from_limbs(c0: u64, c1: u64, c2: u64, c3: u64) -> Self {
         Self { c0, c1, c2, c3 }
+    }
+
+    #[inline(always)]
+    pub fn limb(&self, i: usize) -> u64 {
+        match i {
+            0 => self.c0,
+            1 => self.c1,
+            2 => self.c2,
+            3 => self.c3,
+            _ => 0_u64
+        }
     }
 
     pub fn from_bytes_be(n: &[u8; 32]) -> Self {

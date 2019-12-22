@@ -89,7 +89,7 @@ pub(crate) fn non_adjacent_form(mut scalar: U256, window: usize) -> [i16; 257] {
         // Extract window and shift W buts
         // The mask prevents truncations
         #[allow(clippy::cast_possible_truncation)]
-        let mut n: i16 = (scalar.c0 & mask) as i16;
+        let mut n: i16 = (scalar.limb(0) & mask) as i16;
         scalar >>= window;
 
         // Make negative if n > 2^(w-1)

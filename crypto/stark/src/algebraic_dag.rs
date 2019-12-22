@@ -123,7 +123,7 @@ impl std::fmt::Debug for AlgebraicGraph {
                 fmt,
                 "{:?}: {:016x} {:>8} {:?}",
                 Index(i),
-                n.hash.as_montgomery().c0,
+                n.hash.as_montgomery().limb(0),
                 n.period,
                 n.op
             )?

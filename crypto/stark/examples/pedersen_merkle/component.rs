@@ -293,7 +293,7 @@ mod test {
     };
     use rand_xoshiro::Xoshiro256PlusPlus;
     use zkp_macros_decl::field_element;
-    use zkp_stark::prove;
+    use zkp_stark::{prove, Constraints};
     use zkp_u256::U256;
 
     #[test]
