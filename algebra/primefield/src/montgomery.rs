@@ -33,7 +33,11 @@ pub(crate) fn to_montgomery_const(x: &U256) -> U256 {
     let (a1, carry) = mac(a2, k, FieldElement::MODULUS.limb(2), carry);
     let (a2, carry) = mac(a3, k, FieldElement::MODULUS.limb(3), carry);
     let a3 = a4 + carry;
-    let k = x.limb(1).wrapping_mul(R2.limb(0)).wrapping_add(a0).wrapping_mul(M64);
+    let k = x
+        .limb(1)
+        .wrapping_mul(R2.limb(0))
+        .wrapping_add(a0)
+        .wrapping_mul(M64);
     let (a0, carry) = mac(a0, x.limb(1), R2.limb(0), 0);
     let (a1, carry) = mac(a1, x.limb(1), R2.limb(1), carry);
     let (a2, carry) = mac(a2, x.limb(1), R2.limb(2), carry);
@@ -44,7 +48,11 @@ pub(crate) fn to_montgomery_const(x: &U256) -> U256 {
     let (a1, carry) = mac(a2, k, FieldElement::MODULUS.limb(2), carry);
     let (a2, carry) = mac(a3, k, FieldElement::MODULUS.limb(3), carry);
     let a3 = a4 + carry;
-    let k = x.limb(2).wrapping_mul(R2.limb(0)).wrapping_add(a0).wrapping_mul(M64);
+    let k = x
+        .limb(2)
+        .wrapping_mul(R2.limb(0))
+        .wrapping_add(a0)
+        .wrapping_mul(M64);
     let (a0, carry) = mac(a0, x.limb(2), R2.limb(0), 0);
     let (a1, carry) = mac(a1, x.limb(2), R2.limb(1), carry);
     let (a2, carry) = mac(a2, x.limb(2), R2.limb(2), carry);
@@ -55,7 +63,11 @@ pub(crate) fn to_montgomery_const(x: &U256) -> U256 {
     let (a1, carry) = mac(a2, k, FieldElement::MODULUS.limb(2), carry);
     let (a2, carry) = mac(a3, k, FieldElement::MODULUS.limb(3), carry);
     let a3 = a4 + carry;
-    let k = x.limb(3).wrapping_mul(R2.limb(0)).wrapping_add(a0).wrapping_mul(M64);
+    let k = x
+        .limb(3)
+        .wrapping_mul(R2.limb(0))
+        .wrapping_add(a0)
+        .wrapping_mul(M64);
     let (a0, carry) = mac(a0, x.limb(3), R2.limb(0), 0);
     let (a1, carry) = mac(a1, x.limb(3), R2.limb(1), carry);
     let (a2, carry) = mac(a2, x.limb(3), R2.limb(2), carry);
@@ -140,7 +152,11 @@ pub(crate) fn mul_redc(x: &U256, y: &U256) -> U256 {
     let (a1, carry) = mac(a2, k, FieldElement::MODULUS.limb(2), carry);
     let (a2, carry) = mac(a3, k, FieldElement::MODULUS.limb(3), carry);
     let a3 = a4 + carry;
-    let k = x.limb(1).wrapping_mul(y.limb(0)).wrapping_add(a0).wrapping_mul(M64);
+    let k = x
+        .limb(1)
+        .wrapping_mul(y.limb(0))
+        .wrapping_add(a0)
+        .wrapping_mul(M64);
     let (a0, carry) = mac(a0, x.limb(1), y.limb(0), 0);
     let (a1, carry) = mac(a1, x.limb(1), y.limb(1), carry);
     let (a2, carry) = mac(a2, x.limb(1), y.limb(2), carry);
@@ -151,7 +167,11 @@ pub(crate) fn mul_redc(x: &U256, y: &U256) -> U256 {
     let (a1, carry) = mac(a2, k, FieldElement::MODULUS.limb(2), carry);
     let (a2, carry) = mac(a3, k, FieldElement::MODULUS.limb(3), carry);
     let a3 = a4 + carry;
-    let k = x.limb(2).wrapping_mul(y.limb(0)).wrapping_add(a0).wrapping_mul(M64);
+    let k = x
+        .limb(2)
+        .wrapping_mul(y.limb(0))
+        .wrapping_add(a0)
+        .wrapping_mul(M64);
     let (a0, carry) = mac(a0, x.limb(2), y.limb(0), 0);
     let (a1, carry) = mac(a1, x.limb(2), y.limb(1), carry);
     let (a2, carry) = mac(a2, x.limb(2), y.limb(2), carry);
@@ -162,7 +182,11 @@ pub(crate) fn mul_redc(x: &U256, y: &U256) -> U256 {
     let (a1, carry) = mac(a2, k, FieldElement::MODULUS.limb(2), carry);
     let (a2, carry) = mac(a3, k, FieldElement::MODULUS.limb(3), carry);
     let a3 = a4 + carry;
-    let k = x.limb(3).wrapping_mul(y.limb(0)).wrapping_add(a0).wrapping_mul(M64);
+    let k = x
+        .limb(3)
+        .wrapping_mul(y.limb(0))
+        .wrapping_add(a0)
+        .wrapping_mul(M64);
     let (a0, carry) = mac(a0, x.limb(3), y.limb(0), 0);
     let (a1, carry) = mac(a1, x.limb(3), y.limb(1), carry);
     let (a2, carry) = mac(a2, x.limb(3), y.limb(2), carry);

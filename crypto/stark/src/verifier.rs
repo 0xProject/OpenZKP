@@ -447,9 +447,12 @@ fn get_indices(num: usize, bits: u32, proof: &mut VerifierChannel) -> Vec<usize>
     let mut query_indices = Vec::with_capacity(num + 3);
     while query_indices.len() < num {
         let val: U256 = proof.get_random();
-        query_indices.push(((val.clone() >> (0x100 - 0x040)).limb(0) & (2_u64.pow(bits) - 1)) as usize);
-        query_indices.push(((val.clone() >> (0x100 - 0x080)).limb(0) & (2_u64.pow(bits) - 1)) as usize);
-        query_indices.push(((val.clone() >> (0x100 - 0x0C0)).limb(0) & (2_u64.pow(bits) - 1)) as usize);
+        query_indices
+            .push(((val.clone() >> (0x100 - 0x040)).limb(0) & (2_u64.pow(bits) - 1)) as usize);
+        query_indices
+            .push(((val.clone() >> (0x100 - 0x080)).limb(0) & (2_u64.pow(bits) - 1)) as usize);
+        query_indices
+            .push(((val.clone() >> (0x100 - 0x0C0)).limb(0) & (2_u64.pow(bits) - 1)) as usize);
         query_indices.push((val.limb(0) & (2_u64.pow(bits) - 1)) as usize);
     }
     query_indices.truncate(num);

@@ -77,7 +77,7 @@ pub(crate) struct Node {
 
     /// Scratch space for the evaluators
     // TODO: Something cleaner
-    note: FieldElement,
+    note:   FieldElement,
     values: [FieldElement; CHUNK_SIZE],
 }
 

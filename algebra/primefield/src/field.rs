@@ -161,7 +161,10 @@ impl fmt::Debug for FieldElement {
         write!(
             f,
             "field_element!(\"{:016x}{:016x}{:016x}{:016x}\")",
-            n.limb(3), n.limb(2), n.limb(1), n.limb(0)
+            n.limb(3),
+            n.limb(2),
+            n.limb(1),
+            n.limb(0)
         )
     }
 }
