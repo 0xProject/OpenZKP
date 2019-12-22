@@ -49,11 +49,17 @@ impl U256 {
         Self([c0, c1, c2, c3])
     }
 
+    // It's important that this gets inlined, because `index` is nearly always
+    // a compile time constant, which means the range check will get optimized
+    // away.
     #[inline(always)]
     pub fn limb(&self, index: usize) -> u64 {
         self.0.get(index).cloned().unwrap_or_default()
     }
 
+    // It's important that this gets inlined, because `index` is nearly always
+    // a compile time constant, which means the range check will get optimized
+    // away.
     #[inline(always)]
     pub fn set_limb(&mut self, index: usize, value: u64) {
         if let Some(elem) = self.0.get_mut(index) {
