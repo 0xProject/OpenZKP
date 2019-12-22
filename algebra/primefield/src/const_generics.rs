@@ -1,3 +1,5 @@
+/// This file contains sketches and expriments and is not part of the main library.
+
 use std::{fmt, marker::PhantomData, ops::Add};
 use zkp_u256::U256;
 
