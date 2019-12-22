@@ -46,7 +46,7 @@ impl U256 {
     pub const ZERO: Self = Self::from_limbs(0, 0, 0, 0);
 
     pub const fn from_limbs(c0: u64, c1: u64, c2: u64, c3: u64) -> Self {
-        Self([ c0, c1, c2, c3 ])
+        Self([c0, c1, c2, c3])
     }
 
     #[inline(always)]
@@ -56,15 +56,12 @@ impl U256 {
 
     #[inline(always)]
     pub fn set_limb(&mut self, index: usize, value: u64) {
-        match index {
-            0 => self.0[0] = value,
-            1 => self.0[1] = value,
-            2 => self.0[2] = value,
-            3 => self.0[3] = value,
-            _ => panic!("Limb index out of range")
+        if let Some(elem) = self.0.get_mut(index) {
+            *elem = value;
+        } else {
+            panic!("Limb out of range.")
         }
     }
-
 
     pub fn from_bytes_be(n: &[u8; 32]) -> Self {
         Self::from_limbs(
@@ -283,7 +280,12 @@ impl U256 {
         let mut numerator = [self.limb(0), self.limb(1), self.limb(2), self.limb(3), 0];
         if rhs.limb(3) > 0 {
             // divrem_nby4
-            divrem_nbym(&mut numerator, &mut [rhs.limb(0), rhs.limb(1), rhs.limb(2), rhs.limb(3)]);
+            divrem_nbym(&mut numerator, &mut [
+                rhs.limb(0),
+                rhs.limb(1),
+                rhs.limb(2),
+                rhs.limb(3),
+            ]);
             Some((
                 Self::from_limbs(numerator[4], 0, 0, 0),
                 Self::from_limbs(numerator[0], numerator[1], numerator[2], numerator[3]),
@@ -315,14 +317,31 @@ impl U256 {
 
     pub fn mulmod(&self, rhs: &Self, modulus: &Self) -> Self {
         let (lo, hi) = self.mul_full(rhs);
-        let mut numerator = [lo.limb(0), lo.limb(1), lo.limb(2), lo.limb(3), hi.limb(0), hi.limb(1), hi.limb(2), hi.limb(3), 0];
+        let mut numerator = [
+            lo.limb(0),
+            lo.limb(1),
+            lo.limb(2),
+            lo.limb(3),
+            hi.limb(0),
+            hi.limb(1),
+            hi.limb(2),
+            hi.limb(3),
+            0,
+        ];
         if modulus.limb(3) > 0 {
             divrem_nbym(&mut numerator, &mut [
-                modulus.limb(0), modulus.limb(1), modulus.limb(2), modulus.limb(3),
+                modulus.limb(0),
+                modulus.limb(1),
+                modulus.limb(2),
+                modulus.limb(3),
             ]);
             Self::from_limbs(numerator[0], numerator[1], numerator[2], numerator[3])
         } else if modulus.limb(2) > 0 {
-            divrem_nbym(&mut numerator, &mut [modulus.limb(0), modulus.limb(1), modulus.limb(2)]);
+            divrem_nbym(&mut numerator, &mut [
+                modulus.limb(0),
+                modulus.limb(1),
+                modulus.limb(2),
+            ]);
             Self::from_limbs(numerator[0], numerator[1], numerator[2], 0)
         } else if modulus.limb(1) > 0 {
             divrem_nbym(&mut numerator, &mut [modulus.limb(0), modulus.limb(1)]);
@@ -500,7 +519,10 @@ impl fmt::Display for U256 {
         write!(
             f,
             "{:016x}{:016x}{:016x}{:016x}",
-            self.limb(3), self.limb(2), self.limb(1), self.limb(0)
+            self.limb(3),
+            self.limb(2),
+            self.limb(1),
+            self.limb(0)
         )
     }
 }
@@ -511,7 +533,10 @@ impl fmt::Debug for U256 {
         write!(
             f,
             "u256h!(\"{:016x}{:016x}{:016x}{:016x}\")",
-            self.limb(3), self.limb(2), self.limb(1), self.limb(0)
+            self.limb(3),
+            self.limb(2),
+            self.limb(1),
+            self.limb(0)
         )
     }
 }
