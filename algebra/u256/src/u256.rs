@@ -51,13 +51,7 @@ impl U256 {
 
     #[inline(always)]
     pub fn limb(&self, index: usize) -> u64 {
-        match index {
-            0 => self.0[0],
-            1 => self.0[1],
-            2 => self.0[2],
-            3 => self.0[3],
-            _ => 0_u64
-        }
+        self.0.get(index).cloned().unwrap_or_default()
     }
 
     #[inline(always)]
