@@ -11,10 +11,10 @@ edition = "2018"
 
 [dev-dependencies]
 criterion = "0.3"
-macros-decl = { version = "0.1.0", path = "../../macros-decl" }
-primefield = { version = "0.1.0", path = "..", version = "0.1.0" }
-u256 = { version = "0.1.0", path = "../../u256", version = "0.1.0" }
-ecc = { version = "0.1.0", path = "../../ecc", version = "0.1.0", features = ["unsafe_ecdsa"] }
+zkp-macros-decl = { name = "macros-decl", version = "0.1.0", path = "../../../utils/macros-decl" }
+zkp-primefield = { name = "primefield", version = "0.1.0", path = ".." }
+zkp-u256 = { name = "u256", version = "0.1.0", path = "../../u256" }
+zkp-elliptic-curve-crypto = { name = "ecc", version = "0.1.0", path = "../../../crypto/elliptic-curve-crypto", features = ["unsafe_ecdsa"] }
 secp256k1-bindings = { package = "secp256k1", version = "0.12.2" }
 secp256k1-native = { package = "libsecp256k1", version = "0.2.2" }
 ed25519-dalek = "0.9.1"
@@ -33,7 +33,11 @@ rand = "0.6"
 name = "benchmark"
 harness = false
 
-# The benchmarks are build using the release profile from the workspace
-# cargo configuration. To modify compiler flags, you need to edit the
-# [profile.release] section in ../Cargo.toml.
-# Don't forget to run `cargo clean` to force a rebuild!
+[features]
+default = [ "std" ]
+std = []
+
+[profile.release]
+opt-level = 3
+lto = true
+panic = 'unwind'
