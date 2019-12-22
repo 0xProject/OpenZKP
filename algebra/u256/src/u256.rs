@@ -33,12 +33,7 @@ impl From<core::num::ParseIntError> for ParseError {
 }
 
 #[derive(PartialEq, Eq, Clone, Default)]
-pub struct U256 {
-    c0: u64,
-    c1: u64,
-    c2: u64,
-    c3: u64,
-}
+pub struct U256([u64; 4]);
 
 impl U256 {
     pub const MAX: Self = Self::from_limbs(
@@ -51,16 +46,16 @@ impl U256 {
     pub const ZERO: Self = Self::from_limbs(0, 0, 0, 0);
 
     pub const fn from_limbs(c0: u64, c1: u64, c2: u64, c3: u64) -> Self {
-        Self { c0, c1, c2, c3 }
+        Self([ c0, c1, c2, c3 ])
     }
 
     #[inline(always)]
     pub fn limb(&self, index: usize) -> u64 {
         match index {
-            0 => self.c0,
-            1 => self.c1,
-            2 => self.c2,
-            3 => self.c3,
+            0 => self.0[0],
+            1 => self.0[1],
+            2 => self.0[2],
+            3 => self.0[3],
             _ => 0_u64
         }
     }
@@ -68,10 +63,10 @@ impl U256 {
     #[inline(always)]
     pub fn set_limb(&mut self, index: usize, value: u64) {
         match index {
-            0 => self.c0 = value,
-            1 => self.c1 = value,
-            2 => self.c2 = value,
-            3 => self.c3 = value,
+            0 => self.0[0] = value,
+            1 => self.0[1] = value,
+            2 => self.0[2] = value,
+            3 => self.0[3] = value,
             _ => panic!("Limb index out of range")
         }
     }
