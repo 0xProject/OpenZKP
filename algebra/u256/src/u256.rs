@@ -34,10 +34,10 @@ impl From<core::num::ParseIntError> for ParseError {
 
 #[derive(PartialEq, Eq, Clone, Default)]
 pub struct U256 {
-    pub(crate) c0: u64,
-    pub(crate) c1: u64,
-    pub(crate) c2: u64,
-    pub(crate) c3: u64,
+    c0: u64,
+    c1: u64,
+    c2: u64,
+    c3: u64,
 }
 
 impl U256 {
@@ -55,8 +55,8 @@ impl U256 {
     }
 
     #[inline(always)]
-    pub fn limb(&self, i: usize) -> u64 {
-        match i {
+    pub fn limb(&self, index: usize) -> u64 {
+        match index {
             0 => self.c0,
             1 => self.c1,
             2 => self.c2,
@@ -64,6 +64,18 @@ impl U256 {
             _ => 0_u64
         }
     }
+
+    #[inline(always)]
+    pub fn set_limb(&mut self, index: usize, value: u64) {
+        match index {
+            0 => self.c0 = value,
+            1 => self.c1 = value,
+            2 => self.c2 = value,
+            3 => self.c3 = value,
+            _ => panic!("Limb index out of range")
+        }
+    }
+
 
     pub fn from_bytes_be(n: &[u8; 32]) -> Self {
         Self::from_limbs(
