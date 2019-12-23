@@ -45,7 +45,8 @@
 // TODO: Provide two versions of hot functions `_inlined` and plain.
 #![allow(clippy::inline_always)]
 // TODO: Document errors
-#![allow(clippy::missing_errors_doc)]
+// TODO: Toggle based on stable/nightly
+// #![allow(clippy::missing_errors_doc)]
 
 mod additive;
 pub mod algorithms;
