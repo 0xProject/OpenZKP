@@ -3,7 +3,7 @@
 use crate::field::FieldElement;
 use zkp_macros_decl::u256h;
 use zkp_u256::{
-    utils::{adc, mac, sbb},
+    algorithms::limb_operations::{adc, mac, sbb},
     U256,
 };
 

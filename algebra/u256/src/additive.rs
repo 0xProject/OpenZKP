@@ -1,7 +1,6 @@
 use crate::{
-    commutative_binop, noncommutative_binop,
-    utils::{adc, sbb},
-    U256,
+    algorithms::limb_operations::{adc, sbb},
+    commutative_binop, noncommutative_binop, U256,
 };
 use std::{
     ops::{Add, AddAssign, Sub, SubAssign},
@@ -54,7 +53,6 @@ impl core::iter::Sum for U256 {
 mod tests {
     use super::*;
     use quickcheck_macros::quickcheck;
-    use zkp_macros_decl::u256h;
 
     #[test]
     fn test_add() {

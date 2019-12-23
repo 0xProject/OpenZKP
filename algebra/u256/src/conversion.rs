@@ -134,14 +134,3 @@ impl U256 {
         (self.limb(0) as i128) | ((self.limb(1) as i128) << 64)
     }
 }
-
-// TODO: Replace literals with u256h!
-#[allow(clippy::unreadable_literal)]
-// Quickcheck requires pass by value
-#[allow(clippy::needless_pass_by_value)]
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use quickcheck_macros::quickcheck;
-    use zkp_macros_decl::u256h;
-}

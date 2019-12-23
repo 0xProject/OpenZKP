@@ -1,4 +1,4 @@
-use crate::utils::{adc, msb};
+use crate::algorithms::limb_operations::{adc, msb};
 use core::{convert::TryFrom, u64};
 
 const fn val_2(lo: u64, hi: u64) -> u128 {

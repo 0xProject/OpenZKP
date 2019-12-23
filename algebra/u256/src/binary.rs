@@ -242,8 +242,6 @@ commutative_binop!(U256, BitAnd, bitand, BitAndAssign, bitand_assign);
 #[cfg(test)]
 mod tests {
     use super::*;
-    use quickcheck_macros::quickcheck;
-    use zkp_macros_decl::u256h;
 
     #[test]
     fn test_shl() {

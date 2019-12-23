@@ -1,8 +1,9 @@
 use crate::{
-    algorithms::{divrem_nby1, divrem_nbym},
-    commutative_binop,
-    utils::{adc, mac},
-    U256,
+    algorithms::{
+        divrem_nby1, divrem_nbym,
+        limb_operations::{adc, mac},
+    },
+    commutative_binop, U256,
 };
 use std::{
     ops::{Mul, MulAssign},
@@ -266,7 +267,6 @@ impl core::iter::Product for U256 {
 mod tests {
     use super::*;
     use quickcheck_macros::quickcheck;
-    use zkp_macros_decl::u256h;
 
     #[test]
     fn test_mul() {

@@ -1,8 +1,6 @@
 use crate::{
-    algorithms::{divrem_nby1, divrem_nbym, inv_mod},
-    noncommutative_binop,
-    utils::div_2_1,
-    U256,
+    algorithms::{divrem_nby1, divrem_nbym, inv_mod, limb_operations::div_2_1},
+    noncommutative_binop, U256,
 };
 use std::{
     num::Wrapping,
@@ -125,7 +123,7 @@ noncommutative_binop!(U256, Rem, rem, RemAssign, rem_assign);
 mod tests {
     use super::*;
     use quickcheck_macros::quickcheck;
-    use zkp_macros_decl::u256h;
+
     #[test]
     fn test_invmod256() {
         let a = U256::from_limbs(

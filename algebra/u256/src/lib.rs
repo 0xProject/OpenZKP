@@ -47,20 +47,20 @@
 // TODO: Document errors
 #![allow(clippy::missing_errors_doc)]
 
-mod add;
+mod additive;
 pub mod algorithms;
 mod binary;
-mod binops;
 mod conversion;
-mod div;
+mod division;
+mod encoding;
 mod functions;
-mod mul;
+mod multiplicative;
 #[cfg(feature = "use_rand")]
 mod rand;
 mod u256;
 
-// TODO: This seems out of scope for U256 to export.
-pub mod utils;
+// TODO: Create a BinaryRing trait that represents numbers modulo some power of
+// two.
 
 pub use crate::u256::U256;
 
