@@ -134,14 +134,17 @@ pub fn redc(lo: &U256, hi: &U256) -> U256 {
     r
 }
 
+pub fn mul_redc(x: &U256, y: &U256) -> U256 {
+    mul_redc_inlined(x, y)
+}
+
 // We rebind variables for readability
 #[allow(clippy::shadow_unrelated)]
-pub fn mul_redc(x: &U256, y: &U256) -> U256 {
+#[inline(always)]
+pub fn mul_redc_inlined(x: &U256, y: &U256) -> U256 {
     let x = x.as_limbs();
     let modulus = MODULUS.as_limbs();
-    // TODO: This might not be faster than:
-    // let (lo, hi) = x.mul_full(y);
-    // return redc(&lo, &hi);
+
     let k = x[0].wrapping_mul(y.limb(0)).wrapping_mul(M64);
     let (a0, carry) = mac(0, x[0], y.limb(0), 0);
     let (a1, carry) = mac(0, x[0], y.limb(1), carry);
@@ -210,6 +213,8 @@ pub fn sqr_redc(a: &U256) -> U256 {
 }
 
 pub fn inv_redc(n: &U256) -> Option<U256> {
+    // OPT: Fold mul into GCD computation by starting with (0, R3) instead
+    // of (0, 1).
     n.invmod(&MODULUS).map(|ni| mul_redc(&ni, &R3))
 }
 

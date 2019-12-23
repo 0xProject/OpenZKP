@@ -54,12 +54,16 @@ impl U256 {
 }
 
 impl PartialOrd for U256 {
+    // This is a small function that appears often in hot paths.
+    #[inline(always)]
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
 impl Ord for U256 {
+    // This is a small function that appears often in hot paths.
+    #[inline(always)]
     fn cmp(&self, other: &Self) -> Ordering {
         let t = self.limb(3).cmp(&other.limb(3));
         if t != Ordering::Equal {

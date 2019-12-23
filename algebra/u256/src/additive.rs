@@ -11,6 +11,8 @@ use std::{
 // TODO: SubFrom
 
 impl AddAssign<&U256> for U256 {
+    // This is a small function that appears often in hot paths.
+    #[inline(always)]
     fn add_assign(&mut self, rhs: &Self) {
         let (c0, carry) = adc(self.limb(0), rhs.limb(0), 0);
         let (c1, carry) = adc(self.limb(1), rhs.limb(1), carry);
@@ -24,6 +26,8 @@ impl AddAssign<&U256> for U256 {
 }
 
 impl SubAssign<&U256> for U256 {
+    // This is a small function that appears often in hot paths.
+    #[inline(always)]
     fn sub_assign(&mut self, rhs: &Self) {
         let (c0, borrow) = sbb(self.limb(0), rhs.limb(0), 0);
         let (c1, borrow) = sbb(self.limb(1), rhs.limb(1), borrow);
