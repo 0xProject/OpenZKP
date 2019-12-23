@@ -39,9 +39,14 @@ impl U256 {
         )
     }
 
+    pub fn sqr_full(&self) -> (Self, Self) {
+        self.sqr_full_inline()
+    }
+
     // We shadow carry for readability
     #[allow(clippy::shadow_unrelated)]
-    pub fn sqr_full(&self) -> (Self, Self) {
+    #[inline(always)]
+    pub fn sqr_full_inline(&self) -> (Self, Self) {
         let (r1, carry) = mac(0, self.limb(0), self.limb(1), 0);
         let (r2, carry) = mac(0, self.limb(0), self.limb(2), carry);
         let (r3, r4) = mac(0, self.limb(0), self.limb(3), carry);

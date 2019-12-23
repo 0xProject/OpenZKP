@@ -14,6 +14,16 @@ use std::fmt;
 #[derive(PartialEq, Eq, Clone, Hash)]
 pub struct FieldElement(U256);
 
+impl Parameters for FieldElement {
+    const M64: u64 = 0xffff_ffff_ffff_ffff;
+    const MODULUS: U256 =
+        u256h!("0800000000000011000000000000000000000000000000000000000000000001");
+    // = -1
+    const R1: U256 = u256h!("07fffffffffffdf0ffffffffffffffffffffffffffffffffffffffffffffffe1");
+    const R2: U256 = u256h!("07ffd4ab5e008810ffffffffff6f800000000001330ffffffffffd737e000401");
+    const R3: U256 = u256h!("038e5f79873c0a6df47d84f8363000187545706677ffcc06cc7177d1406df18e");
+}
+
 impl FieldElement {
     pub const GENERATOR: Self = Self::from_montgomery(u256h!(
         "07fffffffffff9b0ffffffffffffffffffffffffffffffffffffffffffffffa1"
@@ -27,13 +37,14 @@ impl FieldElement {
     pub const NEGATIVE_ONE: Self = Self::from_montgomery(u256h!(
         "0000000000000220000000000000000000000000000000000000000000000020"
     ));
-    pub const ONE: Self = Self::from_montgomery(R1);
+    pub const ONE: Self = Self::from_montgomery(Self::R1);
     pub const ZERO: Self = Self::from_montgomery(U256::ZERO);
 
     pub fn from_u256_const(n: &U256) -> Self {
-        Self(to_montgomery_const(n))
+        Self(to_montgomery_const(n, &Self::MODULUS, Self::M64, &Self::R2))
     }
 
+    #[inline(always)]
     pub const fn from_montgomery(n: U256) -> Self {
         // TODO: Uncomment assertion when support in `const fn` is enabled.
         // See https://github.com/rust-lang/rust/issues/57563
@@ -46,6 +57,7 @@ impl FieldElement {
         Self::from(U256::from_hex_str(s))
     }
 
+    #[inline(always)]
     pub fn as_montgomery(&self) -> &U256 {
         &self.0
     }
@@ -55,11 +67,11 @@ impl FieldElement {
     }
 
     pub fn is_one(&self) -> bool {
-        self.0 == R1
+        self.0 == Self::R1
     }
 
     pub fn inv(&self) -> Option<Self> {
-        inv_redc(&self.0).map(Self)
+        inv_redc::<Self>(&self.0).map(Self)
     }
 
     #[inline(always)]
@@ -75,7 +87,7 @@ impl FieldElement {
 
     #[inline(always)]
     pub fn square(&self) -> Self {
-        Self::from_montgomery(sqr_redc(&self.0))
+        Self::from_montgomery(sqr_redc_inline::<Self>(&self.0))
     }
 
     pub fn square_root(&self) -> Option<Self> {
@@ -260,7 +272,7 @@ impl From<U256> for FieldElement {
 
 impl From<&U256> for FieldElement {
     fn from(n: &U256) -> Self {
-        Self::from_montgomery(to_montgomery(n))
+        Self::from_montgomery(to_montgomery::<Self>(n))
     }
 }
 
@@ -272,7 +284,7 @@ impl From<FieldElement> for U256 {
 
 impl From<&FieldElement> for U256 {
     fn from(n: &FieldElement) -> Self {
-        from_montgomery(n.as_montgomery())
+        from_montgomery::<FieldElement>(n.as_montgomery())
     }
 }
 
@@ -308,7 +320,7 @@ impl SubAssign<&FieldElement> for FieldElement {
 impl MulAssign<&FieldElement> for FieldElement {
     #[inline(always)]
     fn mul_assign(&mut self, rhs: &Self) {
-        self.0 = mul_redc_inlined(&self.0, &rhs.0);
+        self.0 = mul_redc_inline::<Self>(&self.0, &rhs.0);
     }
 }
 
