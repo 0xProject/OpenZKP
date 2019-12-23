@@ -1,4 +1,5 @@
 use crate::U256;
+use std::prelude::v1::*;
 
 #[cfg(feature = "std")]
 use std::{fmt, format};
