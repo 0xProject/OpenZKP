@@ -142,6 +142,7 @@ pub fn mul_redc<M: Parameters>(x: &U256, y: &U256) -> U256 {
 #[allow(clippy::shadow_unrelated)]
 #[inline(always)]
 pub fn mul_redc_inline<M: Parameters>(x: &U256, y: &U256) -> U256 {
+    return mulx(x, y);
     let x = x.as_limbs();
     let modulus = M::MODULUS.as_limbs();
 
@@ -238,6 +239,7 @@ pub fn from_montgomery<M: Parameters>(n: &U256) -> U256 {
 // https://www.intel.com/content/dam/www/public/us/en/documents/white-papers/large-integer-squaring-ia-paper.pdf
 // https://github.com/AztecProtocol/barretenberg/blob/master/src/barretenberg/fields/asm_macros.hpp
 
+#[inline(always)]
 pub fn mulx(a: &U256, b: &U256) -> U256 {
     const ZERO: u64 = 0;
     const MODULUS_0: u64 = 1;
