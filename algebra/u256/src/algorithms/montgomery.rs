@@ -34,10 +34,7 @@ pub const fn to_montgomery_const(x: &U256) -> U256 {
     let (a1, carry) = mac(a2, k, modulus[2], carry);
     let (a2, carry) = mac(a3, k, modulus[3], carry);
     let a3 = a4 + carry;
-    let k = x[1]
-        .wrapping_mul(r2[0])
-        .wrapping_add(a0)
-        .wrapping_mul(M64);
+    let k = x[1].wrapping_mul(r2[0]).wrapping_add(a0).wrapping_mul(M64);
     let (a0, carry) = mac(a0, x[1], r2[0], 0);
     let (a1, carry) = mac(a1, x[1], r2[1], carry);
     let (a2, carry) = mac(a2, x[1], r2[2], carry);
@@ -48,10 +45,7 @@ pub const fn to_montgomery_const(x: &U256) -> U256 {
     let (a1, carry) = mac(a2, k, modulus[2], carry);
     let (a2, carry) = mac(a3, k, modulus[3], carry);
     let a3 = a4 + carry;
-    let k = x[2]
-        .wrapping_mul(r2[0])
-        .wrapping_add(a0)
-        .wrapping_mul(M64);
+    let k = x[2].wrapping_mul(r2[0]).wrapping_add(a0).wrapping_mul(M64);
     let (a0, carry) = mac(a0, x[2], r2[0], 0);
     let (a1, carry) = mac(a1, x[2], r2[1], carry);
     let (a2, carry) = mac(a2, x[2], r2[2], carry);
@@ -62,10 +56,7 @@ pub const fn to_montgomery_const(x: &U256) -> U256 {
     let (a1, carry) = mac(a2, k, modulus[2], carry);
     let (a2, carry) = mac(a3, k, modulus[3], carry);
     let a3 = a4 + carry;
-    let k = x[3]
-        .wrapping_mul(r2[0])
-        .wrapping_add(a0)
-        .wrapping_mul(M64);
+    let k = x[3].wrapping_mul(r2[0]).wrapping_add(a0).wrapping_mul(M64);
     let (a0, carry) = mac(a0, x[3], r2[0], 0);
     let (a1, carry) = mac(a1, x[3], r2[1], carry);
     let (a2, carry) = mac(a2, x[3], r2[2], carry);
@@ -218,10 +209,12 @@ pub fn inv_redc(n: &U256) -> Option<U256> {
     n.invmod(&MODULUS).map(|ni| mul_redc(&ni, &R3))
 }
 
+#[allow(clippy::module_name_repetitions)]
 pub fn to_montgomery(n: &U256) -> U256 {
     mul_redc(n, &R2)
 }
 
+#[allow(clippy::module_name_repetitions)]
 pub fn from_montgomery(n: &U256) -> U256 {
     redc(n, &U256::ZERO)
 }

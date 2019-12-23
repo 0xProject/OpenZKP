@@ -40,6 +40,10 @@
 #![allow(clippy::multiple_crate_versions)]
 // TODO: Add `must_use` where relevant
 #![allow(clippy::must_use_candidate)]
+// All `#[inline(always)]` attributes are carefully considered and benchmarked.
+// Performance is an important goal of this library.
+// TODO: Provide two versions of hot functions `_inlined` and plain.
+#![allow(clippy::inline_always)]
 
 pub mod fft;
 mod field;

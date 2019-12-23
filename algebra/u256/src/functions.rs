@@ -4,11 +4,11 @@ use crate::{
 };
 
 impl U256 {
-    pub fn gcd(a: &U256, b: &U256) -> U256 {
+    pub fn gcd(a: &Self, b: &Self) -> Self {
         gcd(a.clone(), b.clone())
     }
 
-    pub fn gcd_extended(a: &U256, b: &U256) -> (U256, U256, U256, bool) {
+    pub fn gcd_extended(a: &Self, b: &Self) -> (Self, Self, Self, bool) {
         gcd_extended(a.clone(), b.clone())
     }
 
