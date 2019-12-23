@@ -1,6 +1,6 @@
 use crate::{
     commutative_binop,
-    division::{divrem_nby1, divrem_nbym},
+    algorithms::{divrem_nby1, divrem_nbym},
     utils::{adc, div_2_1, mac, sbb},
     U256,
 };

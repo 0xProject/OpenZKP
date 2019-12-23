@@ -47,17 +47,16 @@
 // TODO: Document errors
 #![allow(clippy::missing_errors_doc)]
 
-mod binops;
-mod division;
-mod gcd;
-mod mul;
 mod add;
+mod algorithms;
+mod binary;
+mod binops;
+mod conversion;
+mod div;
+mod mul;
 #[cfg(feature = "use_rand")]
 mod rand;
 mod u256;
-mod binary;
-mod conversion;
-mod div;
 
 // TODO: This seems out of scope for U256 to export.
 pub mod utils;
@@ -65,6 +64,7 @@ pub mod utils;
 pub use crate::u256::U256;
 
 // TODO: Make member functions of U256?
-pub use gcd::{gcd, gcd_extended};
+pub use algorithms::{gcd, gcd_extended};
+
 #[cfg(not(feature = "std"))]
 extern crate no_std_compat as std;

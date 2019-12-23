@@ -1,10 +1,10 @@
 use crate::{
-    U256,
     commutative_binop,
-    division::{divrem_nby1, divrem_nbym},
-    gcd::inv_mod,
+    algorithms::{divrem_nby1, divrem_nbym},
+    algorithms::inv_mod,
     noncommutative_binop,
     utils::{adc, div_2_1, mac, sbb},
+    U256,
 };
 use std::{
     cmp::Ordering,
@@ -49,7 +49,6 @@ impl SubAssign<&U256> for U256 {
 commutative_binop!(U256, Add, add, AddAssign, add_assign);
 noncommutative_binop!(U256, Sub, sub, SubAssign, sub_assign);
 
-
 impl core::iter::Sum for U256 {
     fn sum<I: Iterator<Item = U256>>(iter: I) -> Self {
         iter.fold(Self::ONE, Add::add)
@@ -65,7 +64,6 @@ mod tests {
     use super::*;
     use quickcheck_macros::quickcheck;
     use zkp_macros_decl::u256h;
-
 
     #[test]
     fn test_add() {

@@ -1,10 +1,10 @@
 use crate::{
-    U256,
     commutative_binop,
-    division::{divrem_nby1, divrem_nbym},
-    gcd::inv_mod,
+    algorithms::{divrem_nby1, divrem_nbym},
+    algorithms::inv_mod,
     noncommutative_binop,
     utils::{adc, div_2_1, mac, sbb},
+    U256,
 };
 use std::{
     cmp::Ordering,
@@ -17,8 +17,8 @@ use std::{
     u64,
 };
 
-// Division like routines: Integer division/remaindering, Ring division/inversion
-// Modular inversions/divisions.
+// Division like routines: Integer division/remaindering, Ring
+// division/inversion Modular inversions/divisions.
 
 impl U256 {
     // Short division

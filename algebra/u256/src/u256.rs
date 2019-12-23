@@ -1,7 +1,7 @@
 use crate::{
     commutative_binop,
-    division::{divrem_nby1, divrem_nbym},
-    gcd::inv_mod,
+    algorithms::{divrem_nby1, divrem_nbym},
+    algorithms::inv_mod,
     noncommutative_binop,
     utils::{adc, div_2_1, mac, sbb},
 };

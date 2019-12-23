@@ -1,10 +1,10 @@
 use crate::{
-    U256,
     commutative_binop,
-    division::{divrem_nby1, divrem_nbym},
-    gcd::inv_mod,
+    algorithms::{divrem_nby1, divrem_nbym},
+    algorithms::inv_mod,
     noncommutative_binop,
     utils::{adc, div_2_1, mac, sbb},
+    U256,
 };
 use std::{
     cmp::Ordering,
@@ -160,5 +160,4 @@ mod tests {
     use super::*;
     use quickcheck_macros::quickcheck;
     use zkp_macros_decl::u256h;
-
 }
