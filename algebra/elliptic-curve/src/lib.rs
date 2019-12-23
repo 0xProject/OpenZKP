@@ -40,6 +40,8 @@
 #![allow(clippy::multiple_crate_versions)]
 // rand_xoshiro v0.4.0 is required for a zkp-stark example and v0.3.1 for criterion
 #![allow(clippy::multiple_crate_versions)]
+// TODO: Add `must_use` where relevant
+#![allow(clippy::must_use_candidate)]
 
 mod curve;
 mod jacobian;
