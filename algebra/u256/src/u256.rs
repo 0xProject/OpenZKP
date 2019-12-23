@@ -32,7 +32,7 @@ impl From<core::num::ParseIntError> for ParseError {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Default)]
+#[derive(PartialEq, Eq, Clone, Default, Hash)]
 pub struct U256([u64; 4]);
 
 impl U256 {
