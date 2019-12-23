@@ -35,6 +35,8 @@ impl From<core::num::ParseIntError> for ParseError {
 #[derive(PartialEq, Eq, Clone, Default, Hash)]
 pub struct U256([u64; 4]);
 
+// TODO: impl core::iter::Step so we have ranges
+
 impl U256 {
     pub const MAX: Self = Self::from_limbs(
         u64::max_value(),

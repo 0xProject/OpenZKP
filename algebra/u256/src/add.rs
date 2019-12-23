@@ -49,6 +49,13 @@ impl SubAssign<&U256> for U256 {
 commutative_binop!(U256, Add, add, AddAssign, add_assign);
 noncommutative_binop!(U256, Sub, sub, SubAssign, sub_assign);
 
+
+impl core::iter::Sum for U256 {
+    fn sum<I: Iterator<Item = U256>>(iter: I) -> Self {
+        iter.fold(Self::ONE, Add::add)
+    }
+}
+
 // TODO: Replace literals with u256h!
 #[allow(clippy::unreadable_literal)]
 // Quickcheck requires pass by value
