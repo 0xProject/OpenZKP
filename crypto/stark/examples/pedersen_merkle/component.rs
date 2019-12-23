@@ -194,8 +194,7 @@ pub fn pedersen_merkle(claim: &Claim, witness: &Witness) -> Component {
     // The final hash equals `root`
     component.constraints.insert(
         1,
-        (Constant(root) - component.labels["hash"].1.clone())
-            / row(component.labels["hash"].0),
+        (Constant(root) - component.labels["hash"].1.clone()) / row(component.labels["hash"].0),
     );
 
     // Add column constraints
