@@ -1,12 +1,10 @@
 use crate::{
-    commutative_binop,
     algorithms::{divrem_nby1, divrem_nbym},
-    utils::{adc, div_2_1, mac, sbb},
+    commutative_binop,
+    utils::{adc, mac},
     U256,
 };
 use std::{
-    cmp::Ordering,
-    num::Wrapping,
     ops::{Mul, MulAssign},
     prelude::v1::*,
     u64,

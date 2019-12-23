@@ -48,11 +48,12 @@
 #![allow(clippy::missing_errors_doc)]
 
 mod add;
-mod algorithms;
+pub mod algorithms;
 mod binary;
 mod binops;
 mod conversion;
 mod div;
+mod functions;
 mod mul;
 #[cfg(feature = "use_rand")]
 mod rand;
@@ -62,9 +63,6 @@ mod u256;
 pub mod utils;
 
 pub use crate::u256::U256;
-
-// TODO: Make member functions of U256?
-pub use algorithms::{gcd, gcd_extended};
 
 #[cfg(not(feature = "std"))]
 extern crate no_std_compat as std;
