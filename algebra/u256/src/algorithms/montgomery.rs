@@ -94,7 +94,7 @@ pub fn redc<M: Parameters>(lo: &U256, hi: &U256) -> U256 {
     redc_inline::<M>(lo, hi)
 }
 
-    // We rebind variables for readability
+// We rebind variables for readability
 #[allow(clippy::shadow_unrelated)]
 #[inline(always)]
 pub fn redc_inline<M: Parameters>(lo: &U256, hi: &U256) -> U256 {
@@ -219,7 +219,8 @@ pub fn sqr_redc_inline<M: Parameters>(a: &U256) -> U256 {
 pub fn inv_redc<M: Parameters>(n: &U256) -> Option<U256> {
     // OPT: Fold mul into GCD computation by starting with (0, R3) instead
     // of (0, 1).
-    n.invmod(&M::MODULUS).map(|ni| mul_redc_inline::<M>(&ni, &M::R3))
+    n.invmod(&M::MODULUS)
+        .map(|ni| mul_redc_inline::<M>(&ni, &M::R3))
 }
 
 #[allow(clippy::module_name_repetitions)]
