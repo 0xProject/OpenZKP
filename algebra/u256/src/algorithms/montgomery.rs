@@ -90,9 +90,14 @@ pub const fn to_montgomery_const(x: &U256, modulus: &U256, m64: u64, r2: &U256) 
     U256::from_limbs([a0, a1, a2, a3])
 }
 
-// We rebind variables for readability
-#[allow(clippy::shadow_unrelated)]
 pub fn redc<M: Parameters>(lo: &U256, hi: &U256) -> U256 {
+    redc_inline::<M>(lo, hi)
+}
+
+    // We rebind variables for readability
+#[allow(clippy::shadow_unrelated)]
+#[inline(always)]
+pub fn redc_inline<M: Parameters>(lo: &U256, hi: &U256) -> U256 {
     let modulus = M::MODULUS.as_limbs();
     // Algorithm 14.32 from Handbook of Applied Cryptography.
     // TODO: Optimize for the specific values of M64 and MODULUS.
@@ -130,13 +135,13 @@ pub fn redc<M: Parameters>(lo: &U256, hi: &U256) -> U256 {
 }
 
 pub fn mul_redc<M: Parameters>(x: &U256, y: &U256) -> U256 {
-    mul_redc_inlined::<M>(x, y)
+    mul_redc_inline::<M>(x, y)
 }
 
 // We rebind variables for readability
 #[allow(clippy::shadow_unrelated)]
 #[inline(always)]
-pub fn mul_redc_inlined<M: Parameters>(x: &U256, y: &U256) -> U256 {
+pub fn mul_redc_inline<M: Parameters>(x: &U256, y: &U256) -> U256 {
     let x = x.as_limbs();
     let modulus = M::MODULUS.as_limbs();
 
@@ -203,14 +208,18 @@ pub fn mul_redc_inlined<M: Parameters>(x: &U256, y: &U256) -> U256 {
 }
 
 pub fn sqr_redc<M: Parameters>(a: &U256) -> U256 {
-    let (lo, hi) = a.sqr_full();
-    redc::<M>(&lo, &hi)
+    sqr_redc_inline::<M>(a)
+}
+
+pub fn sqr_redc_inline<M: Parameters>(a: &U256) -> U256 {
+    let (lo, hi) = a.sqr_full_inline();
+    redc_inline::<M>(&lo, &hi)
 }
 
 pub fn inv_redc<M: Parameters>(n: &U256) -> Option<U256> {
     // OPT: Fold mul into GCD computation by starting with (0, R3) instead
     // of (0, 1).
-    n.invmod(&M::MODULUS).map(|ni| mul_redc::<M>(&ni, &M::R3))
+    n.invmod(&M::MODULUS).map(|ni| mul_redc_inline::<M>(&ni, &M::R3))
 }
 
 #[allow(clippy::module_name_repetitions)]

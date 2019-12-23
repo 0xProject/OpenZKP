@@ -44,6 +44,7 @@ impl FieldElement {
         Self(to_montgomery_const(n, &Self::MODULUS, Self::M64, &Self::R2))
     }
 
+    #[inline(always)]
     pub const fn from_montgomery(n: U256) -> Self {
         // TODO: Uncomment assertion when support in `const fn` is enabled.
         // See https://github.com/rust-lang/rust/issues/57563
@@ -56,6 +57,7 @@ impl FieldElement {
         Self::from(U256::from_hex_str(s))
     }
 
+    #[inline(always)]
     pub fn as_montgomery(&self) -> &U256 {
         &self.0
     }
@@ -85,7 +87,7 @@ impl FieldElement {
 
     #[inline(always)]
     pub fn square(&self) -> Self {
-        Self::from_montgomery(sqr_redc::<Self>(&self.0))
+        Self::from_montgomery(sqr_redc_inline::<Self>(&self.0))
     }
 
     pub fn square_root(&self) -> Option<Self> {
@@ -318,7 +320,7 @@ impl SubAssign<&FieldElement> for FieldElement {
 impl MulAssign<&FieldElement> for FieldElement {
     #[inline(always)]
     fn mul_assign(&mut self, rhs: &Self) {
-        self.0 = mul_redc_inlined::<Self>(&self.0, &rhs.0);
+        self.0 = mul_redc_inline::<Self>(&self.0, &rhs.0);
     }
 }
 
