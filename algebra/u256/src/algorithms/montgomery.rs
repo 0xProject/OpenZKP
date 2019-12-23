@@ -233,6 +233,153 @@ pub fn from_montgomery<M: Parameters>(n: &U256) -> U256 {
     redc::<M>(n, &U256::ZERO)
 }
 
+// https://doc.rust-lang.org/1.12.0/book/inline-assembly.html
+// https://llvm.org/docs/LangRef.html#inline-assembler-expressions
+// https://www.intel.com/content/dam/www/public/us/en/documents/white-papers/large-integer-squaring-ia-paper.pdf
+// https://github.com/AztecProtocol/barretenberg/blob/master/src/barretenberg/fields/asm_macros.hpp
+
+pub fn mulx(a: &U256, b: &U256) -> U256 {
+    const ZERO: u64 = 0;
+    const MODULUS_0: u64 = 1;
+    const MODULUS_1: u64 = 0;
+    const MODULUS_2: u64 = 0;
+    const MODULUS_3: u64 = 0x0800000000000011;
+    const M64: u64 = 0xffff_ffff_ffff_ffff;
+    let a = a.as_limbs();
+    let b = b.as_limbs();
+    let mut result: [u64; 4] = [0,0,0,0];
+    // MULX dst_high, dst_low, src_b (src_a = %rdx)
+    // src_b can be register or memory, not immediate
+    unsafe {
+        asm!(r"
+            movq 0($1), %rdx
+            xorq %r8, %r8
+            mulxq 8($2), %r8, %r9
+            mulxq 24($2), %rdi, %r12
+            mulxq 0($2), %r13, %r14
+            mulxq 16($2), %r15, %r10
+            movq %r13, %rdx
+            mulxq $8, %rdx, %r11
+            adcxq %r8, %r14
+            adoxq %rdi, %r10
+            adcxq %r9, %r15
+            adoxq $3, %r12
+            adcxq $3, %r10
+            mulxq $4, %r8, %r9
+            mulxq $5, %rdi, %r11
+            adoxq %r8, %r13
+            adcxq %rdi, %r14
+            adoxq %r9, %r14
+            adcxq %r11, %r15
+            mulxq $6, %r8, %r9
+            mulxq $7, %rdi, %r11
+            adoxq %r8, %r15
+            adcxq %rdi, %r10
+            adoxq %r9, %r10
+            adcxq %r11, %r12
+            adoxq $3, %r12
+            movq 8($1), %rdx
+            mulxq 0($2), %r8, %r9
+            mulxq 8($2), %rdi, %r11
+            adcxq %r8, %r14
+            adoxq %r9, %r15
+            adcxq %rdi, %r15
+            adoxq %r11, %r10
+            mulxq 16($2), %r8, %r9
+            mulxq 24($2), %rdi, %r13
+            adcxq %r8, %r10
+            adoxq %rdi, %r12
+            adcxq %r9, %r12
+            adoxq $3, %r13
+            adcxq $3, %r13
+            movq %r14, %rdx
+            mulxq $8, %rdx, %r8
+            mulxq $4, %r8, %r9
+            mulxq $5, %rdi, %r11
+            adoxq %r8, %r14
+            adcxq %rdi, %r15
+            adoxq %r9, %r15
+            adcxq %r11, %r10
+            mulxq $6, %r8, %r9
+            mulxq $7, %rdi, %r11
+            adoxq %r8, %r10
+            adcxq %r9, %r12
+            adoxq %rdi, %r12
+            adcxq %r11, %r13
+            adoxq $3, %r13
+            movq 16($1), %rdx
+            mulxq 0($2), %r8, %r9
+            mulxq 8($2), %rdi, %r11
+            adcxq %r8, %r15
+            adoxq %r9, %r10
+            adcxq %rdi, %r10
+            adoxq %r11, %r12
+            mulxq 16($2), %r8, %r9
+            mulxq 24($2), %rdi, %r14
+            adcxq %r8, %r12
+            adoxq %r9, %r13
+            adcxq %rdi, %r13
+            adoxq $3, %r14
+            adcxq $3, %r14
+            movq %r15, %rdx
+            mulxq $8, %rdx, %r8
+            mulxq $4, %r8, %r9
+            mulxq $5, %rdi, %r11
+            adoxq %r8, %r15
+            adcxq %r9, %r10
+            adoxq %rdi, %r10
+            adcxq %r11, %r12
+            mulxq $6, %r8, %r9
+            mulxq $7, %rdi, %r11
+            adoxq %r8, %r12
+            adcxq %r9, %r13
+            adoxq %rdi, %r13
+            adcxq %r11, %r14
+            adoxq $3, %r14
+            movq 24($1), %rdx
+            mulxq 0($2), %r8, %r9
+            mulxq 8($2), %rdi, %r11
+            adcxq %r8, %r10
+            adoxq %r9, %r12
+            adcxq %rdi, %r12
+            adoxq %r11, %r13
+            mulxq 16($2), %r8, %r9
+            mulxq 24($2), %rdi, %r15
+            adcxq %r8, %r13
+            adoxq %r9, %r14
+            adcxq %rdi, %r14
+            adoxq $3, %r15
+            adcxq $3, %r15
+            movq %r10, %rdx
+            mulxq $8, %rdx, %r8
+            mulxq $4, %r8, %r9
+            mulxq $5, %rdi, %r11
+            adoxq %r8, %r10
+            adcxq %r9, %r12
+            adoxq %rdi, %r12
+            adcxq %r11, %r13
+            mulxq $6, %r8, %r9
+            mulxq $7, %rdi, %rdx
+            adoxq %r8, %r13
+            adcxq %r9, %r14
+            adoxq %rdi, %r14
+            adcxq %rdx, %r15
+            adoxq $3, %r15
+
+            movq %r12, 0($0)
+            movq %r13, 8($0)
+            movq %r14, 16($0)
+            movq %r15, 24($0)
+            "
+            : 
+            : "r"(&result), "r"(a), "r"(b),
+              "m"(ZERO), "m"(MODULUS_0), "m"(MODULUS_1), "m"(MODULUS_2), "m"(MODULUS_3), "m"(M64)
+            : "rdx", "rdi", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15", "cc", "memory"
+        );
+    }
+    U256::from_limbs(result)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -249,6 +396,13 @@ mod tests {
         const R1: U256 = u256h!("07fffffffffffdf0ffffffffffffffffffffffffffffffffffffffffffffffe1");
         const R2: U256 = u256h!("07ffd4ab5e008810ffffffffff6f800000000001330ffffffffffd737e000401");
         const R3: U256 = u256h!("038e5f79873c0a6df47d84f8363000187545706677ffcc06cc7177d1406df18e");
+    }
+    #[test]
+    fn test_mulx() {
+        let a = u256h!("0548c135e26faa9c977fb2eda057b54b2e0baa9a77a0be7c80278f4f03462d4c");
+        let b = u256h!("024385f6bebc1c496e09955db534ef4b1eaff9a78e27d4093cfa8f7c8f886f6b");
+        let c = u256h!("012b854fc6321976d374ad069cfdec8bb7b2bd184259dae8f530cbb28f0805b4");
+        assert_eq!(mulx(&a, &b), c);
     }
 
     #[test]
