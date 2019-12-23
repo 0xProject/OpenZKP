@@ -12,7 +12,7 @@ use std::{
     u64,
 };
 
-// Mul, square, mulmod, pow, etc. routines
+// Multiplicative operations: Mul, square, mulmod, pow, etc. routines
 
 impl U256 {
     // We shadow carry for readability

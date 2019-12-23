@@ -51,9 +51,11 @@ mod binops;
 mod division;
 mod gcd;
 mod mul;
+mod add;
 #[cfg(feature = "use_rand")]
 mod rand;
 mod u256;
+mod binary;
 
 // TODO: This seems out of scope for U256 to export.
 pub mod utils;
