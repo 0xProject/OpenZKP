@@ -19,78 +19,78 @@ const R3: U256 = u256h!("038e5f79873c0a6df47d84f8363000187545706677ffcc06cc7177d
 
 // We rebind variables for readability
 #[allow(clippy::shadow_unrelated)]
-pub fn to_montgomery_const(x: &U256) -> U256 {
-    let k = x.limb(0).wrapping_mul(R2.limb(0)).wrapping_mul(M64);
-    let (a0, carry) = mac(0, x.limb(0), R2.limb(0), 0);
-    let (a1, carry) = mac(0, x.limb(0), R2.limb(1), carry);
-    let (a2, carry) = mac(0, x.limb(0), R2.limb(2), carry);
-    let (a3, carry) = mac(0, x.limb(0), R2.limb(3), carry);
+pub const fn to_montgomery_const(x: &U256) -> U256 {
+    let x = x.as_limbs();
+    let r2 = R2.as_limbs();
+    let modulus = MODULUS.as_limbs();
+    let k = x[0].wrapping_mul(r2[0]).wrapping_mul(M64);
+    let (a0, carry) = mac(0, x[0], r2[0], 0);
+    let (a1, carry) = mac(0, x[0], r2[1], carry);
+    let (a2, carry) = mac(0, x[0], r2[2], carry);
+    let (a3, carry) = mac(0, x[0], r2[3], carry);
     let a4 = carry;
-    let (_, carry) = mac(a0, k, MODULUS.limb(0), 0);
-    let (a0, carry) = mac(a1, k, MODULUS.limb(1), carry);
-    let (a1, carry) = mac(a2, k, MODULUS.limb(2), carry);
-    let (a2, carry) = mac(a3, k, MODULUS.limb(3), carry);
+    let (_, carry) = mac(a0, k, modulus[0], 0);
+    let (a0, carry) = mac(a1, k, modulus[1], carry);
+    let (a1, carry) = mac(a2, k, modulus[2], carry);
+    let (a2, carry) = mac(a3, k, modulus[3], carry);
     let a3 = a4 + carry;
-    let k = x
-        .limb(1)
-        .wrapping_mul(R2.limb(0))
+    let k = x[1]
+        .wrapping_mul(r2[0])
         .wrapping_add(a0)
         .wrapping_mul(M64);
-    let (a0, carry) = mac(a0, x.limb(1), R2.limb(0), 0);
-    let (a1, carry) = mac(a1, x.limb(1), R2.limb(1), carry);
-    let (a2, carry) = mac(a2, x.limb(1), R2.limb(2), carry);
-    let (a3, carry) = mac(a3, x.limb(1), R2.limb(3), carry);
+    let (a0, carry) = mac(a0, x[1], r2[0], 0);
+    let (a1, carry) = mac(a1, x[1], r2[1], carry);
+    let (a2, carry) = mac(a2, x[1], r2[2], carry);
+    let (a3, carry) = mac(a3, x[1], r2[3], carry);
     let a4 = carry;
-    let (_, carry) = mac(a0, k, MODULUS.limb(0), 0);
-    let (a0, carry) = mac(a1, k, MODULUS.limb(1), carry);
-    let (a1, carry) = mac(a2, k, MODULUS.limb(2), carry);
-    let (a2, carry) = mac(a3, k, MODULUS.limb(3), carry);
+    let (_, carry) = mac(a0, k, modulus[0], 0);
+    let (a0, carry) = mac(a1, k, modulus[1], carry);
+    let (a1, carry) = mac(a2, k, modulus[2], carry);
+    let (a2, carry) = mac(a3, k, modulus[3], carry);
     let a3 = a4 + carry;
-    let k = x
-        .limb(2)
-        .wrapping_mul(R2.limb(0))
+    let k = x[2]
+        .wrapping_mul(r2[0])
         .wrapping_add(a0)
         .wrapping_mul(M64);
-    let (a0, carry) = mac(a0, x.limb(2), R2.limb(0), 0);
-    let (a1, carry) = mac(a1, x.limb(2), R2.limb(1), carry);
-    let (a2, carry) = mac(a2, x.limb(2), R2.limb(2), carry);
-    let (a3, carry) = mac(a3, x.limb(2), R2.limb(3), carry);
+    let (a0, carry) = mac(a0, x[2], r2[0], 0);
+    let (a1, carry) = mac(a1, x[2], r2[1], carry);
+    let (a2, carry) = mac(a2, x[2], r2[2], carry);
+    let (a3, carry) = mac(a3, x[2], r2[3], carry);
     let a4 = carry;
-    let (_, carry) = mac(a0, k, MODULUS.limb(0), 0);
-    let (a0, carry) = mac(a1, k, MODULUS.limb(1), carry);
-    let (a1, carry) = mac(a2, k, MODULUS.limb(2), carry);
-    let (a2, carry) = mac(a3, k, MODULUS.limb(3), carry);
+    let (_, carry) = mac(a0, k, modulus[0], 0);
+    let (a0, carry) = mac(a1, k, modulus[1], carry);
+    let (a1, carry) = mac(a2, k, modulus[2], carry);
+    let (a2, carry) = mac(a3, k, modulus[3], carry);
     let a3 = a4 + carry;
-    let k = x
-        .limb(3)
-        .wrapping_mul(R2.limb(0))
+    let k = x[3]
+        .wrapping_mul(r2[0])
         .wrapping_add(a0)
         .wrapping_mul(M64);
-    let (a0, carry) = mac(a0, x.limb(3), R2.limb(0), 0);
-    let (a1, carry) = mac(a1, x.limb(3), R2.limb(1), carry);
-    let (a2, carry) = mac(a2, x.limb(3), R2.limb(2), carry);
-    let (a3, carry) = mac(a3, x.limb(3), R2.limb(3), carry);
+    let (a0, carry) = mac(a0, x[3], r2[0], 0);
+    let (a1, carry) = mac(a1, x[3], r2[1], carry);
+    let (a2, carry) = mac(a2, x[3], r2[2], carry);
+    let (a3, carry) = mac(a3, x[3], r2[3], carry);
     let a4 = carry;
-    let (_, carry) = mac(a0, k, MODULUS.limb(0), 0);
-    let (a0, carry) = mac(a1, k, MODULUS.limb(1), carry);
-    let (a1, carry) = mac(a2, k, MODULUS.limb(2), carry);
-    let (a2, carry) = mac(a3, k, MODULUS.limb(3), carry);
+    let (_, carry) = mac(a0, k, modulus[0], 0);
+    let (a0, carry) = mac(a1, k, modulus[1], carry);
+    let (a1, carry) = mac(a2, k, modulus[2], carry);
+    let (a2, carry) = mac(a3, k, modulus[3], carry);
     let a3 = a4 + carry;
 
     // The result (a0, a1, a2, a3) may be off by at most one modulus.
     // In a `const fn` we can not conditionally subtract, so instead
     // we always subtract
-    let (a0, borrow) = sbb(a0, MODULUS.limb(0), 0);
-    let (a1, borrow) = sbb(a1, MODULUS.limb(1), borrow);
-    let (a2, borrow) = sbb(a2, MODULUS.limb(2), borrow);
-    let (a3, borrow) = sbb(a3, MODULUS.limb(3), borrow);
+    let (a0, borrow) = sbb(a0, modulus[0], 0);
+    let (a1, borrow) = sbb(a1, modulus[1], borrow);
+    let (a2, borrow) = sbb(a2, modulus[2], borrow);
+    let (a3, borrow) = sbb(a3, modulus[3], borrow);
     // Now we may have accidentally subtracted where we shouldn't.
     // If this is the case `borrow == 1` and else `borrow = 0`. We can
     // use  this to conditionally add back a modulus.
-    let (a0, carry) = adc(a0, borrow * MODULUS.limb(0), 0);
-    let (a1, carry) = adc(a1, borrow * MODULUS.limb(1), carry);
-    let (a2, carry) = adc(a2, borrow * MODULUS.limb(2), carry);
-    let (a3, _) = adc(a3, borrow * MODULUS.limb(3), carry);
+    let (a0, carry) = adc(a0, borrow * modulus[0], 0);
+    let (a1, carry) = adc(a1, borrow * modulus[1], carry);
+    let (a2, carry) = adc(a2, borrow * modulus[2], carry);
+    let (a3, _) = adc(a3, borrow * modulus[3], carry);
     // Return the now reduced result
     U256::from_limbs([a0, a1, a2, a3])
 }
@@ -98,31 +98,32 @@ pub fn to_montgomery_const(x: &U256) -> U256 {
 // We rebind variables for readability
 #[allow(clippy::shadow_unrelated)]
 pub fn redc(lo: &U256, hi: &U256) -> U256 {
+    let modulus = MODULUS.as_limbs();
     // Algorithm 14.32 from Handbook of Applied Cryptography.
     // TODO: Optimize for the specific values of M64 and MODULUS.
     let ui = lo.limb(0).wrapping_mul(M64);
-    let (_a0, carry) = mac(lo.limb(0), ui, MODULUS.limb(0), 0);
-    let (a1, carry) = mac(lo.limb(1), ui, MODULUS.limb(1), carry);
-    let (a2, carry) = mac(lo.limb(2), ui, MODULUS.limb(2), carry);
-    let (a3, carry) = mac(lo.limb(3), ui, MODULUS.limb(3), carry);
+    let (_a0, carry) = mac(lo.limb(0), ui, modulus[0], 0);
+    let (a1, carry) = mac(lo.limb(1), ui, modulus[1], carry);
+    let (a2, carry) = mac(lo.limb(2), ui, modulus[2], carry);
+    let (a3, carry) = mac(lo.limb(3), ui, modulus[3], carry);
     let (a4, carry2) = adc(hi.limb(0), 0, carry);
     let ui = a1.wrapping_mul(M64);
-    let (_a1, carry) = mac(a1, ui, MODULUS.limb(0), 0);
-    let (a2, carry) = mac(a2, ui, MODULUS.limb(1), carry);
-    let (a3, carry) = mac(a3, ui, MODULUS.limb(2), carry);
-    let (a4, carry) = mac(a4, ui, MODULUS.limb(3), carry);
+    let (_a1, carry) = mac(a1, ui, modulus[0], 0);
+    let (a2, carry) = mac(a2, ui, modulus[1], carry);
+    let (a3, carry) = mac(a3, ui, modulus[2], carry);
+    let (a4, carry) = mac(a4, ui, modulus[3], carry);
     let (a5, carry2) = adc(hi.limb(1), carry2, carry);
     let ui = a2.wrapping_mul(M64);
-    let (_a2, carry) = mac(a2, ui, MODULUS.limb(0), 0);
-    let (a3, carry) = mac(a3, ui, MODULUS.limb(1), carry);
-    let (a4, carry) = mac(a4, ui, MODULUS.limb(2), carry);
-    let (a5, carry) = mac(a5, ui, MODULUS.limb(3), carry);
+    let (_a2, carry) = mac(a2, ui, modulus[0], 0);
+    let (a3, carry) = mac(a3, ui, modulus[1], carry);
+    let (a4, carry) = mac(a4, ui, modulus[2], carry);
+    let (a5, carry) = mac(a5, ui, modulus[3], carry);
     let (a6, carry2) = adc(hi.limb(2), carry2, carry);
     let ui = a3.wrapping_mul(M64);
-    let (_a3, carry) = mac(a3, ui, MODULUS.limb(0), 0);
-    let (a4, carry) = mac(a4, ui, MODULUS.limb(1), carry);
-    let (a5, carry) = mac(a5, ui, MODULUS.limb(2), carry);
-    let (a6, carry) = mac(a6, ui, MODULUS.limb(3), carry);
+    let (_a3, carry) = mac(a3, ui, modulus[0], 0);
+    let (a4, carry) = mac(a4, ui, modulus[1], carry);
+    let (a5, carry) = mac(a5, ui, modulus[2], carry);
+    let (a6, carry) = mac(a6, ui, modulus[3], carry);
     let (a7, _) = adc(hi.limb(3), carry2, carry);
 
     // Final reduction
@@ -136,64 +137,63 @@ pub fn redc(lo: &U256, hi: &U256) -> U256 {
 // We rebind variables for readability
 #[allow(clippy::shadow_unrelated)]
 pub fn mul_redc(x: &U256, y: &U256) -> U256 {
+    let x = x.as_limbs();
+    let modulus = MODULUS.as_limbs();
     // TODO: This might not be faster than:
     // let (lo, hi) = x.mul_full(y);
     // return redc(&lo, &hi);
-    let k = x.limb(0).wrapping_mul(y.limb(0)).wrapping_mul(M64);
-    let (a0, carry) = mac(0, x.limb(0), y.limb(0), 0);
-    let (a1, carry) = mac(0, x.limb(0), y.limb(1), carry);
-    let (a2, carry) = mac(0, x.limb(0), y.limb(2), carry);
-    let (a3, carry) = mac(0, x.limb(0), y.limb(3), carry);
+    let k = x[0].wrapping_mul(y.limb(0)).wrapping_mul(M64);
+    let (a0, carry) = mac(0, x[0], y.limb(0), 0);
+    let (a1, carry) = mac(0, x[0], y.limb(1), carry);
+    let (a2, carry) = mac(0, x[0], y.limb(2), carry);
+    let (a3, carry) = mac(0, x[0], y.limb(3), carry);
     let a4 = carry;
-    let (_a, carry) = mac(a0, k, MODULUS.limb(0), 0);
-    let (a0, carry) = mac(a1, k, MODULUS.limb(1), carry);
-    let (a1, carry) = mac(a2, k, MODULUS.limb(2), carry);
-    let (a2, carry) = mac(a3, k, MODULUS.limb(3), carry);
+    let (_a, carry) = mac(a0, k, modulus[0], 0);
+    let (a0, carry) = mac(a1, k, modulus[1], carry);
+    let (a1, carry) = mac(a2, k, modulus[2], carry);
+    let (a2, carry) = mac(a3, k, modulus[3], carry);
     let a3 = a4 + carry;
-    let k = x
-        .limb(1)
+    let k = x[1]
         .wrapping_mul(y.limb(0))
         .wrapping_add(a0)
         .wrapping_mul(M64);
-    let (a0, carry) = mac(a0, x.limb(1), y.limb(0), 0);
-    let (a1, carry) = mac(a1, x.limb(1), y.limb(1), carry);
-    let (a2, carry) = mac(a2, x.limb(1), y.limb(2), carry);
-    let (a3, carry) = mac(a3, x.limb(1), y.limb(3), carry);
+    let (a0, carry) = mac(a0, x[1], y.limb(0), 0);
+    let (a1, carry) = mac(a1, x[1], y.limb(1), carry);
+    let (a2, carry) = mac(a2, x[1], y.limb(2), carry);
+    let (a3, carry) = mac(a3, x[1], y.limb(3), carry);
     let a4 = carry;
-    let (_a, carry) = mac(a0, k, MODULUS.limb(0), 0);
-    let (a0, carry) = mac(a1, k, MODULUS.limb(1), carry);
-    let (a1, carry) = mac(a2, k, MODULUS.limb(2), carry);
-    let (a2, carry) = mac(a3, k, MODULUS.limb(3), carry);
+    let (_a, carry) = mac(a0, k, modulus[0], 0);
+    let (a0, carry) = mac(a1, k, modulus[1], carry);
+    let (a1, carry) = mac(a2, k, modulus[2], carry);
+    let (a2, carry) = mac(a3, k, modulus[3], carry);
     let a3 = a4 + carry;
-    let k = x
-        .limb(2)
+    let k = x[2]
         .wrapping_mul(y.limb(0))
         .wrapping_add(a0)
         .wrapping_mul(M64);
-    let (a0, carry) = mac(a0, x.limb(2), y.limb(0), 0);
-    let (a1, carry) = mac(a1, x.limb(2), y.limb(1), carry);
-    let (a2, carry) = mac(a2, x.limb(2), y.limb(2), carry);
-    let (a3, carry) = mac(a3, x.limb(2), y.limb(3), carry);
+    let (a0, carry) = mac(a0, x[2], y.limb(0), 0);
+    let (a1, carry) = mac(a1, x[2], y.limb(1), carry);
+    let (a2, carry) = mac(a2, x[2], y.limb(2), carry);
+    let (a3, carry) = mac(a3, x[2], y.limb(3), carry);
     let a4 = carry;
-    let (_a, carry) = mac(a0, k, MODULUS.limb(0), 0);
-    let (a0, carry) = mac(a1, k, MODULUS.limb(1), carry);
-    let (a1, carry) = mac(a2, k, MODULUS.limb(2), carry);
-    let (a2, carry) = mac(a3, k, MODULUS.limb(3), carry);
+    let (_a, carry) = mac(a0, k, modulus[0], 0);
+    let (a0, carry) = mac(a1, k, modulus[1], carry);
+    let (a1, carry) = mac(a2, k, modulus[2], carry);
+    let (a2, carry) = mac(a3, k, modulus[3], carry);
     let a3 = a4 + carry;
-    let k = x
-        .limb(3)
+    let k = x[3]
         .wrapping_mul(y.limb(0))
         .wrapping_add(a0)
         .wrapping_mul(M64);
-    let (a0, carry) = mac(a0, x.limb(3), y.limb(0), 0);
-    let (a1, carry) = mac(a1, x.limb(3), y.limb(1), carry);
-    let (a2, carry) = mac(a2, x.limb(3), y.limb(2), carry);
-    let (a3, carry) = mac(a3, x.limb(3), y.limb(3), carry);
+    let (a0, carry) = mac(a0, x[3], y.limb(0), 0);
+    let (a1, carry) = mac(a1, x[3], y.limb(1), carry);
+    let (a2, carry) = mac(a2, x[3], y.limb(2), carry);
+    let (a3, carry) = mac(a3, x[3], y.limb(3), carry);
     let a4 = carry;
-    let (_a, carry) = mac(a0, k, MODULUS.limb(0), 0);
-    let (a0, carry) = mac(a1, k, MODULUS.limb(1), carry);
-    let (a1, carry) = mac(a2, k, MODULUS.limb(2), carry);
-    let (a2, carry) = mac(a3, k, MODULUS.limb(3), carry);
+    let (_a, carry) = mac(a0, k, modulus[0], 0);
+    let (a0, carry) = mac(a1, k, modulus[1], carry);
+    let (a1, carry) = mac(a2, k, modulus[2], carry);
+    let (a2, carry) = mac(a3, k, modulus[3], carry);
     let a3 = a4 + carry;
 
     // Final reduction

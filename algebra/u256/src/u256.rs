@@ -15,8 +15,16 @@ impl U256 {
     pub const ONE: Self = Self::from_limbs([1, 0, 0, 0]);
     pub const ZERO: Self = Self::from_limbs([0, 0, 0, 0]);
 
+    // Force inlined because it is a trivial conversion which appears in many hot paths
+    #[inline(always)]
     pub const fn from_limbs(limbs: [u64; 4]) -> Self {
         Self(limbs)
+    }
+
+    // Force inlined because it is a trivial conversion which appears in many hot paths
+    #[inline(always)]
+    pub const fn as_limbs(&self) -> &[u64; 4] {
+        &self.0
     }
 
     // It's important that this gets inlined, because `index` is nearly always
