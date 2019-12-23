@@ -74,7 +74,7 @@ impl U256 {
         if self.is_even() {
             None
         } else {
-            // Invert using Hensel lifted Newton-Rhapson itteration
+            // Invert using Hensel lifted Newton-Rhapson iteration
             // See: https://arxiv.org/abs/1303.0328
             // r[2] = 3 * self XOR 2 mod 2^4
             // r[n+1] = r[n] * (1 - self * r[n]) mod 2^(2^n)
