@@ -44,7 +44,6 @@
 pub mod fft;
 mod field;
 pub mod geometric_series;
-mod montgomery;
 #[cfg(feature = "use_rand")]
 mod rand;
 mod square_root;

@@ -1,10 +1,10 @@
-use crate::{montgomery::*, square_root::square_root};
+use crate::square_root::square_root;
 use std::{
     ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign},
     prelude::v1::*,
 };
 use zkp_macros_decl::u256h;
-use zkp_u256::{commutative_binop, noncommutative_binop, U256};
+use zkp_u256::{algorithms::montgomery::*, commutative_binop, noncommutative_binop, U256};
 // TODO: Implement Serde
 #[cfg(feature = "std")]
 use std::fmt;
