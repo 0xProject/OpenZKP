@@ -2,10 +2,9 @@ use crate::{
     algorithms::limb_operations::{adc, mac, sbb},
     U256,
 };
-use zkp_macros_decl::u256h;
 
 // TODO: const-compute from modulus
-pub trait MontgomeryParameters {
+pub trait Parameters {
     /// The modulus to implement in Montgomery form
     const MODULUS: U256;
 
@@ -93,7 +92,7 @@ pub const fn to_montgomery_const(x: &U256, modulus: &U256, m64: u64, r2: &U256) 
 
 // We rebind variables for readability
 #[allow(clippy::shadow_unrelated)]
-pub fn redc<M: MontgomeryParameters>(lo: &U256, hi: &U256) -> U256 {
+pub fn redc<M: Parameters>(lo: &U256, hi: &U256) -> U256 {
     let modulus = M::MODULUS.as_limbs();
     // Algorithm 14.32 from Handbook of Applied Cryptography.
     // TODO: Optimize for the specific values of M64 and MODULUS.
@@ -130,14 +129,14 @@ pub fn redc<M: MontgomeryParameters>(lo: &U256, hi: &U256) -> U256 {
     r
 }
 
-pub fn mul_redc<M: MontgomeryParameters>(x: &U256, y: &U256) -> U256 {
+pub fn mul_redc<M: Parameters>(x: &U256, y: &U256) -> U256 {
     mul_redc_inlined::<M>(x, y)
 }
 
 // We rebind variables for readability
 #[allow(clippy::shadow_unrelated)]
 #[inline(always)]
-pub fn mul_redc_inlined<M: MontgomeryParameters>(x: &U256, y: &U256) -> U256 {
+pub fn mul_redc_inlined<M: Parameters>(x: &U256, y: &U256) -> U256 {
     let x = x.as_limbs();
     let modulus = M::MODULUS.as_limbs();
 
@@ -203,24 +202,24 @@ pub fn mul_redc_inlined<M: MontgomeryParameters>(x: &U256, y: &U256) -> U256 {
     r
 }
 
-pub fn sqr_redc<M: MontgomeryParameters>(a: &U256) -> U256 {
+pub fn sqr_redc<M: Parameters>(a: &U256) -> U256 {
     let (lo, hi) = a.sqr_full();
     redc::<M>(&lo, &hi)
 }
 
-pub fn inv_redc<M: MontgomeryParameters>(n: &U256) -> Option<U256> {
+pub fn inv_redc<M: Parameters>(n: &U256) -> Option<U256> {
     // OPT: Fold mul into GCD computation by starting with (0, R3) instead
     // of (0, 1).
     n.invmod(&M::MODULUS).map(|ni| mul_redc::<M>(&ni, &M::R3))
 }
 
 #[allow(clippy::module_name_repetitions)]
-pub fn to_montgomery<M: MontgomeryParameters>(n: &U256) -> U256 {
+pub fn to_montgomery<M: Parameters>(n: &U256) -> U256 {
     mul_redc::<M>(n, &M::R2)
 }
 
 #[allow(clippy::module_name_repetitions)]
-pub fn from_montgomery<M: MontgomeryParameters>(n: &U256) -> U256 {
+pub fn from_montgomery<M: Parameters>(n: &U256) -> U256 {
     redc::<M>(n, &U256::ZERO)
 }
 
@@ -228,10 +227,11 @@ pub fn from_montgomery<M: MontgomeryParameters>(n: &U256) -> U256 {
 mod tests {
     use super::*;
     use quickcheck_macros::quickcheck;
+    use zkp_macros_decl::u256h;
 
-    pub struct PrimeField();
+    struct PrimeField();
 
-    impl MontgomeryParameters for PrimeField {
+    impl Parameters for PrimeField {
         const M64: u64 = 0xffff_ffff_ffff_ffff;
         const MODULUS: U256 =
             u256h!("0800000000000011000000000000000000000000000000000000000000000001");

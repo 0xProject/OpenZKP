@@ -14,7 +14,7 @@ use std::fmt;
 #[derive(PartialEq, Eq, Clone, Hash)]
 pub struct FieldElement(U256);
 
-impl MontgomeryParameters for FieldElement {
+impl Parameters for FieldElement {
     const M64: u64 = 0xffff_ffff_ffff_ffff;
     const MODULUS: U256 =
         u256h!("0800000000000011000000000000000000000000000000000000000000000001");
