@@ -36,7 +36,7 @@ executors:
       # Necessary for `docker manifest` subcommand
       DOCKER_CLI_EXPERIMENTAL: enabled
       # Bump the tag version whenever changes are made.
-      IMAGE: &build_image "0xchain/rust-build-env:8"
+      IMAGE: &build_image "0xchain/rust-build-env:9"
   docker-rust:
     docker:
       - image: *build_image
