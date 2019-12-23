@@ -13,6 +13,8 @@ use zkp_primefield::FieldElement;
 use zkp_stark::{compose_vertical, Component, DensePolynomial, RationalExpression, TraceTable};
 use zkp_u256::U256;
 
+// TODO: Clean up redundant clones
+#[allow(clippy::redundant_clone)]
 pub fn tree_layer(leaf: &FieldElement, direction: bool, sibling: &FieldElement) -> Component {
     use RationalExpression::*;
 
@@ -186,14 +188,13 @@ pub fn pedersen_merkle(claim: &Claim, witness: &Witness) -> Component {
     component.constraints.insert(
         0,
         (Constant(leaf.clone()) - component.labels["left"].1.clone())
-            * (Constant(leaf.clone()) - component.labels["right"].1.clone())
+            * (Constant(leaf) - component.labels["right"].1.clone())
             / row(component.labels["left"].0),
     );
     // The final hash equals `root`
     component.constraints.insert(
         1,
-        (Constant(root.clone()) - component.labels["hash"].1.clone())
-            / row(component.labels["hash"].0),
+        (Constant(root) - component.labels["hash"].1.clone()) / row(component.labels["hash"].0),
     );
 
     // Add column constraints
@@ -293,7 +294,7 @@ mod test {
     };
     use rand_xoshiro::Xoshiro256PlusPlus;
     use zkp_macros_decl::field_element;
-    use zkp_stark::prove;
+    use zkp_stark::{prove, Constraints};
     use zkp_u256::U256;
 
     #[test]

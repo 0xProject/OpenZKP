@@ -187,6 +187,7 @@ fn montgomery_convert(x: (u64, u64, u64, u64)) -> (u64, u64, u64, u64) {
     }
 }
 
+#[must_use]
 pub fn hex(input: TokenStream) -> TokenStream {
     // Wrapped in a closure so we can use `?` and
     // capture the Result<T,E>.
@@ -198,6 +199,7 @@ pub fn hex(input: TokenStream) -> TokenStream {
     .unwrap_or_else(|err: syn::Error| err.to_compile_error())
 }
 
+#[must_use]
 pub fn u256h(input: TokenStream) -> TokenStream {
     (|| {
         // TODO: Also accept integer literals
@@ -216,6 +218,7 @@ pub fn u256h(input: TokenStream) -> TokenStream {
     .unwrap_or_else(|err: syn::Error| err.to_compile_error())
 }
 
+#[must_use]
 pub fn field_element(input: TokenStream) -> TokenStream {
     (|| {
         // TODO: Also accept integer literals

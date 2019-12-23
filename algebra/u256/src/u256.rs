@@ -33,12 +33,7 @@ impl From<core::num::ParseIntError> for ParseError {
 }
 
 #[derive(PartialEq, Eq, Clone, Default, Hash)]
-pub struct U256 {
-    pub c0: u64,
-    pub c1: u64,
-    pub c2: u64,
-    pub c3: u64,
-}
+pub struct U256([u64; 4]);
 
 impl U256 {
     pub const MAX: Self = Self::from_limbs(
@@ -51,7 +46,27 @@ impl U256 {
     pub const ZERO: Self = Self::from_limbs(0, 0, 0, 0);
 
     pub const fn from_limbs(c0: u64, c1: u64, c2: u64, c3: u64) -> Self {
-        Self { c0, c1, c2, c3 }
+        Self([c0, c1, c2, c3])
+    }
+
+    // It's important that this gets inlined, because `index` is nearly always
+    // a compile time constant, which means the range check will get optimized
+    // away.
+    #[inline(always)]
+    pub fn limb(&self, index: usize) -> u64 {
+        self.0.get(index).cloned().unwrap_or_default()
+    }
+
+    // It's important that this gets inlined, because `index` is nearly always
+    // a compile time constant, which means the range check will get optimized
+    // away.
+    #[inline(always)]
+    pub fn set_limb(&mut self, index: usize, value: u64) {
+        if let Some(elem) = self.0.get_mut(index) {
+            *elem = value;
+        } else {
+            panic!("Limb out of range.")
+        }
     }
 
     pub fn from_bytes_be(n: &[u8; 32]) -> Self {
@@ -69,7 +84,7 @@ impl U256 {
         // We want truncation here
         #[allow(clippy::cast_possible_truncation)]
         for i in (0..32).rev() {
-            r[i] = n.c0 as u8;
+            r[i] = n.limb(0) as u8;
             n >>= 8;
         }
         r
@@ -118,7 +133,7 @@ impl U256 {
         let mut copy = self.clone();
         while copy > Self::ZERO {
             // OPT: Convert 19 digits at a time using u64.
-            let digit = (&copy % Self::from(10_u64)).c0;
+            let digit = (&copy % Self::from(10_u64)).limb(0);
             result.push_str(&digit.to_string());
             copy /= Self::from(10_u64);
         }
@@ -137,12 +152,12 @@ impl U256 {
         Self::from_bytes_be(&array)
     }
 
-    pub const fn is_even(&self) -> bool {
-        self.c0 & 1 == 0
+    pub fn is_even(&self) -> bool {
+        self.limb(0) & 1 == 0
     }
 
-    pub const fn is_odd(&self) -> bool {
-        self.c0 & 1 == 1
+    pub fn is_odd(&self) -> bool {
+        self.limb(0) & 1 == 1
     }
 
     pub fn bits(&self) -> usize {
@@ -155,41 +170,41 @@ impl U256 {
 
     pub fn bit(&self, i: usize) -> bool {
         if i < 64 {
-            self.c0 >> i & 1 == 1
+            self.limb(0) >> i & 1 == 1
         } else if i < 128 {
-            self.c1 >> (i - 64) & 1 == 1
+            self.limb(1) >> (i - 64) & 1 == 1
         } else if i < 192 {
-            self.c2 >> (i - 128) & 1 == 1
+            self.limb(2) >> (i - 128) & 1 == 1
         } else if i < 256 {
-            self.c3 >> (i - 192) & 1 == 1
+            self.limb(3) >> (i - 192) & 1 == 1
         } else {
             false
         }
     }
 
     pub fn leading_zeros(&self) -> usize {
-        if self.c3 > 0 {
-            self.c3.leading_zeros() as usize
-        } else if self.c2 > 0 {
-            64 + self.c2.leading_zeros() as usize
-        } else if self.c1 > 0 {
-            128 + self.c1.leading_zeros() as usize
-        } else if self.c0 > 0 {
-            192 + self.c0.leading_zeros() as usize
+        if self.limb(3) > 0 {
+            self.limb(3).leading_zeros() as usize
+        } else if self.limb(2) > 0 {
+            64 + self.limb(2).leading_zeros() as usize
+        } else if self.limb(1) > 0 {
+            128 + self.limb(1).leading_zeros() as usize
+        } else if self.limb(0) > 0 {
+            192 + self.limb(0).leading_zeros() as usize
         } else {
             256
         }
     }
 
     pub fn trailing_zeros(&self) -> usize {
-        if self.c0 > 0 {
-            self.c0.trailing_zeros() as usize
-        } else if self.c1 > 0 {
-            64 + self.c1.trailing_zeros() as usize
-        } else if self.c2 > 0 {
-            128 + self.c2.trailing_zeros() as usize
-        } else if self.c3 > 0 {
-            192 + self.c3.trailing_zeros() as usize
+        if self.limb(0) > 0 {
+            self.limb(0).trailing_zeros() as usize
+        } else if self.limb(1) > 0 {
+            64 + self.limb(1).trailing_zeros() as usize
+        } else if self.limb(2) > 0 {
+            128 + self.limb(2).trailing_zeros() as usize
+        } else if self.limb(3) > 0 {
+            192 + self.limb(3).trailing_zeros() as usize
         } else {
             256
         }
@@ -197,23 +212,23 @@ impl U256 {
 
     // We shadow carry for readability
     #[allow(clippy::shadow_unrelated)]
-    pub const fn mul_full(&self, rhs: &Self) -> (Self, Self) {
-        let (r0, carry) = mac(0, self.c0, rhs.c0, 0);
-        let (r1, carry) = mac(0, self.c0, rhs.c1, carry);
-        let (r2, carry) = mac(0, self.c0, rhs.c2, carry);
-        let (r3, r4) = mac(0, self.c0, rhs.c3, carry);
-        let (r1, carry) = mac(r1, self.c1, rhs.c0, 0);
-        let (r2, carry) = mac(r2, self.c1, rhs.c1, carry);
-        let (r3, carry) = mac(r3, self.c1, rhs.c2, carry);
-        let (r4, r5) = mac(r4, self.c1, rhs.c3, carry);
-        let (r2, carry) = mac(r2, self.c2, rhs.c0, 0);
-        let (r3, carry) = mac(r3, self.c2, rhs.c1, carry);
-        let (r4, carry) = mac(r4, self.c2, rhs.c2, carry);
-        let (r5, r6) = mac(r5, self.c2, rhs.c3, carry);
-        let (r3, carry) = mac(r3, self.c3, rhs.c0, 0);
-        let (r4, carry) = mac(r4, self.c3, rhs.c1, carry);
-        let (r5, carry) = mac(r5, self.c3, rhs.c2, carry);
-        let (r6, r7) = mac(r6, self.c3, rhs.c3, carry);
+    pub fn mul_full(&self, rhs: &Self) -> (Self, Self) {
+        let (r0, carry) = mac(0, self.limb(0), rhs.limb(0), 0);
+        let (r1, carry) = mac(0, self.limb(0), rhs.limb(1), carry);
+        let (r2, carry) = mac(0, self.limb(0), rhs.limb(2), carry);
+        let (r3, r4) = mac(0, self.limb(0), rhs.limb(3), carry);
+        let (r1, carry) = mac(r1, self.limb(1), rhs.limb(0), 0);
+        let (r2, carry) = mac(r2, self.limb(1), rhs.limb(1), carry);
+        let (r3, carry) = mac(r3, self.limb(1), rhs.limb(2), carry);
+        let (r4, r5) = mac(r4, self.limb(1), rhs.limb(3), carry);
+        let (r2, carry) = mac(r2, self.limb(2), rhs.limb(0), 0);
+        let (r3, carry) = mac(r3, self.limb(2), rhs.limb(1), carry);
+        let (r4, carry) = mac(r4, self.limb(2), rhs.limb(2), carry);
+        let (r5, r6) = mac(r5, self.limb(2), rhs.limb(3), carry);
+        let (r3, carry) = mac(r3, self.limb(3), rhs.limb(0), 0);
+        let (r4, carry) = mac(r4, self.limb(3), rhs.limb(1), carry);
+        let (r5, carry) = mac(r5, self.limb(3), rhs.limb(2), carry);
+        let (r6, r7) = mac(r6, self.limb(3), rhs.limb(3), carry);
         (
             Self::from_limbs(r0, r1, r2, r3),
             Self::from_limbs(r4, r5, r6, r7),
@@ -222,13 +237,13 @@ impl U256 {
 
     // We shadow carry for readability
     #[allow(clippy::shadow_unrelated)]
-    pub const fn sqr_full(&self) -> (Self, Self) {
-        let (r1, carry) = mac(0, self.c0, self.c1, 0);
-        let (r2, carry) = mac(0, self.c0, self.c2, carry);
-        let (r3, r4) = mac(0, self.c0, self.c3, carry);
-        let (r3, carry) = mac(r3, self.c1, self.c2, 0);
-        let (r4, r5) = mac(r4, self.c1, self.c3, carry);
-        let (r5, r6) = mac(r5, self.c2, self.c3, 0);
+    pub fn sqr_full(&self) -> (Self, Self) {
+        let (r1, carry) = mac(0, self.limb(0), self.limb(1), 0);
+        let (r2, carry) = mac(0, self.limb(0), self.limb(2), carry);
+        let (r3, r4) = mac(0, self.limb(0), self.limb(3), carry);
+        let (r3, carry) = mac(r3, self.limb(1), self.limb(2), 0);
+        let (r4, r5) = mac(r4, self.limb(1), self.limb(3), carry);
+        let (r5, r6) = mac(r5, self.limb(2), self.limb(3), 0);
         let r7 = r6 >> 63;
         let r6 = (r6 << 1) | (r5 >> 63);
         let r5 = (r5 << 1) | (r4 >> 63);
@@ -236,13 +251,13 @@ impl U256 {
         let r3 = (r3 << 1) | (r2 >> 63);
         let r2 = (r2 << 1) | (r1 >> 63);
         let r1 = r1 << 1;
-        let (r0, carry) = mac(0, self.c0, self.c0, 0);
+        let (r0, carry) = mac(0, self.limb(0), self.limb(0), 0);
         let (r1, carry) = adc(r1, 0, carry);
-        let (r2, carry) = mac(r2, self.c1, self.c1, carry);
+        let (r2, carry) = mac(r2, self.limb(1), self.limb(1), carry);
         let (r3, carry) = adc(r3, 0, carry);
-        let (r4, carry) = mac(r4, self.c2, self.c2, carry);
+        let (r4, carry) = mac(r4, self.limb(2), self.limb(2), carry);
         let (r5, carry) = adc(r5, 0, carry);
-        let (r6, carry) = mac(r6, self.c3, self.c3, carry);
+        let (r6, carry) = mac(r6, self.limb(3), self.limb(3), carry);
         let (r7, _) = adc(r7, 0, carry);
         (
             Self::from_limbs(r0, r1, r2, r3),
@@ -258,40 +273,45 @@ impl U256 {
         } else {
             // Knuth Algorithm S
             // 4 by 1 division
-            let (q3, r) = div_2_1(self.c3, 0, rhs);
-            let (q2, r) = div_2_1(self.c2, r, rhs);
-            let (q1, r) = div_2_1(self.c1, r, rhs);
-            let (q0, r) = div_2_1(self.c0, r, rhs);
+            let (q3, r) = div_2_1(self.limb(3), 0, rhs);
+            let (q2, r) = div_2_1(self.limb(2), r, rhs);
+            let (q1, r) = div_2_1(self.limb(1), r, rhs);
+            let (q0, r) = div_2_1(self.limb(0), r, rhs);
             Some((Self::from_limbs(q0, q1, q2, q3), r))
         }
     }
 
     // Long division
     pub fn divrem(&self, rhs: &Self) -> Option<(Self, Self)> {
-        let mut numerator = [self.c0, self.c1, self.c2, self.c3, 0];
-        if rhs.c3 > 0 {
+        let mut numerator = [self.limb(0), self.limb(1), self.limb(2), self.limb(3), 0];
+        if rhs.limb(3) > 0 {
             // divrem_nby4
-            divrem_nbym(&mut numerator, &mut [rhs.c0, rhs.c1, rhs.c2, rhs.c3]);
+            divrem_nbym(&mut numerator, &mut [
+                rhs.limb(0),
+                rhs.limb(1),
+                rhs.limb(2),
+                rhs.limb(3),
+            ]);
             Some((
                 Self::from_limbs(numerator[4], 0, 0, 0),
                 Self::from_limbs(numerator[0], numerator[1], numerator[2], numerator[3]),
             ))
-        } else if rhs.c2 > 0 {
+        } else if rhs.limb(2) > 0 {
             // divrem_nby3
-            divrem_nbym(&mut numerator, &mut [rhs.c0, rhs.c1, rhs.c2]);
+            divrem_nbym(&mut numerator, &mut [rhs.limb(0), rhs.limb(1), rhs.limb(2)]);
             Some((
                 Self::from_limbs(numerator[3], numerator[4], 0, 0),
                 Self::from_limbs(numerator[0], numerator[1], numerator[2], 0),
             ))
-        } else if rhs.c1 > 0 {
+        } else if rhs.limb(1) > 0 {
             // divrem_nby2
-            divrem_nbym(&mut numerator, &mut [rhs.c0, rhs.c1]);
+            divrem_nbym(&mut numerator, &mut [rhs.limb(0), rhs.limb(1)]);
             Some((
                 Self::from_limbs(numerator[2], numerator[3], numerator[4], 0),
                 Self::from_limbs(numerator[0], numerator[1], 0, 0),
             ))
-        } else if rhs.c0 > 0 {
-            let remainder = divrem_nby1(&mut numerator, rhs.c0);
+        } else if rhs.limb(0) > 0 {
+            let remainder = divrem_nby1(&mut numerator, rhs.limb(0));
             Some((
                 Self::from_limbs(numerator[0], numerator[1], numerator[2], numerator[3]),
                 Self::from_limbs(remainder, 0, 0, 0),
@@ -303,20 +323,37 @@ impl U256 {
 
     pub fn mulmod(&self, rhs: &Self, modulus: &Self) -> Self {
         let (lo, hi) = self.mul_full(rhs);
-        let mut numerator = [lo.c0, lo.c1, lo.c2, lo.c3, hi.c0, hi.c1, hi.c2, hi.c3, 0];
-        if modulus.c3 > 0 {
+        let mut numerator = [
+            lo.limb(0),
+            lo.limb(1),
+            lo.limb(2),
+            lo.limb(3),
+            hi.limb(0),
+            hi.limb(1),
+            hi.limb(2),
+            hi.limb(3),
+            0,
+        ];
+        if modulus.limb(3) > 0 {
             divrem_nbym(&mut numerator, &mut [
-                modulus.c0, modulus.c1, modulus.c2, modulus.c3,
+                modulus.limb(0),
+                modulus.limb(1),
+                modulus.limb(2),
+                modulus.limb(3),
             ]);
             Self::from_limbs(numerator[0], numerator[1], numerator[2], numerator[3])
-        } else if modulus.c2 > 0 {
-            divrem_nbym(&mut numerator, &mut [modulus.c0, modulus.c1, modulus.c2]);
+        } else if modulus.limb(2) > 0 {
+            divrem_nbym(&mut numerator, &mut [
+                modulus.limb(0),
+                modulus.limb(1),
+                modulus.limb(2),
+            ]);
             Self::from_limbs(numerator[0], numerator[1], numerator[2], 0)
-        } else if modulus.c1 > 0 {
-            divrem_nbym(&mut numerator, &mut [modulus.c0, modulus.c1]);
+        } else if modulus.limb(1) > 0 {
+            divrem_nbym(&mut numerator, &mut [modulus.limb(0), modulus.limb(1)]);
             Self::from_limbs(numerator[0], numerator[1], 0, 0)
-        } else if modulus.c0 > 0 {
-            let remainder = divrem_nby1(&mut numerator, modulus.c0);
+        } else if modulus.limb(0) > 0 {
+            let remainder = divrem_nby1(&mut numerator, modulus.limb(0));
             Self::from_limbs(remainder, 0, 0, 0)
         } else {
             panic!(); // TODO: return Option<>
@@ -332,7 +369,7 @@ impl U256 {
             // See: https://arxiv.org/abs/1303.0328
             // r[2] = 3 * self XOR 2 mod 2^4
             // r[n+1] = r[n] * (1 - self * r[n]) mod 2^(2^n)
-            let c = Wrapping(self.c0);
+            let c = Wrapping(self.limb(0));
             let mut r: Wrapping<u64> = (Wrapping(3) * c) ^ Wrapping(2); // mod 2^4
             r *= Wrapping(2) - c * r; // mod 2^8
             r *= Wrapping(2) - c * r; // mod 2^16
@@ -450,7 +487,7 @@ macro_rules! as_int {
         // $type could be u64, which triggers the lint.
         #[allow(trivial_numeric_casts)]
         pub fn $name(&self) -> $type {
-            self.c0 as $type
+            self.limb(0) as $type
         }
     };
 }
@@ -472,13 +509,13 @@ impl U256 {
     // Clippy is afraid that casting u64 to u128 is lossy
     #[allow(clippy::cast_lossless)]
     pub fn as_u128(&self) -> u128 {
-        (self.c0 as u128) | ((self.c1 as u128) << 64)
+        (self.limb(0) as u128) | ((self.limb(1) as u128) << 64)
     }
 
     // Clippy is afraid that casting u64 to u128 is lossy
     #[allow(clippy::cast_lossless)]
     pub fn as_i128(&self) -> i128 {
-        (self.c0 as i128) | ((self.c1 as i128) << 64)
+        (self.limb(0) as i128) | ((self.limb(1) as i128) << 64)
     }
 }
 
@@ -488,7 +525,10 @@ impl fmt::Display for U256 {
         write!(
             f,
             "{:016x}{:016x}{:016x}{:016x}",
-            self.c3, self.c2, self.c1, self.c0
+            self.limb(3),
+            self.limb(2),
+            self.limb(1),
+            self.limb(0)
         )
     }
 }
@@ -499,7 +539,10 @@ impl fmt::Debug for U256 {
         write!(
             f,
             "u256h!(\"{:016x}{:016x}{:016x}{:016x}\")",
-            self.c3, self.c2, self.c1, self.c0
+            self.limb(3),
+            self.limb(2),
+            self.limb(1),
+            self.limb(0)
         )
     }
 }
@@ -512,19 +555,19 @@ impl PartialOrd for U256 {
 
 impl Ord for U256 {
     fn cmp(&self, other: &Self) -> Ordering {
-        let t = self.c3.cmp(&other.c3);
+        let t = self.limb(3).cmp(&other.limb(3));
         if t != Ordering::Equal {
             return t;
         }
-        let t = self.c2.cmp(&other.c2);
+        let t = self.limb(2).cmp(&other.limb(2));
         if t != Ordering::Equal {
             return t;
         }
-        let t = self.c1.cmp(&other.c1);
+        let t = self.limb(1).cmp(&other.limb(1));
         if t != Ordering::Equal {
             return t;
         }
-        self.c0.cmp(&other.c0)
+        self.limb(0).cmp(&other.limb(0))
     }
 }
 
@@ -533,16 +576,16 @@ impl BitAnd<u64> for &U256 {
     type Output = u64;
 
     fn bitand(self, rhs: u64) -> u64 {
-        self.c0 & rhs
+        self.limb(0) & rhs
     }
 }
 
 impl BitAndAssign<&U256> for U256 {
     fn bitand_assign(&mut self, rhs: &Self) {
-        self.c0 &= rhs.c0;
-        self.c1 &= rhs.c1;
-        self.c2 &= rhs.c2;
-        self.c3 &= rhs.c3;
+        self.set_limb(0, self.limb(0) & rhs.limb(0));
+        self.set_limb(1, self.limb(1) & rhs.limb(1));
+        self.set_limb(2, self.limb(2) & rhs.limb(2));
+        self.set_limb(3, self.limb(3) & rhs.limb(3));
     }
 }
 
@@ -553,54 +596,62 @@ impl ShlAssign<usize> for U256 {
         // Note: Test small values first, they are expected to be more common.
         // Note: We need to handle 0, 64, 128, 192 specially because `>> 0` is
         //       illegal.
+        let mut c0 = self.limb(0);
+        let mut c1 = self.limb(1);
+        let mut c2 = self.limb(2);
+        let mut c3 = self.limb(3);
         if rhs == 0 {
         } else if rhs < 64 {
-            self.c3 <<= rhs;
-            self.c3 |= self.c2 >> (64 - rhs);
-            self.c2 <<= rhs;
-            self.c2 |= self.c1 >> (64 - rhs);
-            self.c1 <<= rhs;
-            self.c1 |= self.c0 >> (64 - rhs);
-            self.c0 <<= rhs;
+            c3 <<= rhs;
+            c3 |= c2 >> (64 - rhs);
+            c2 <<= rhs;
+            c2 |= c1 >> (64 - rhs);
+            c1 <<= rhs;
+            c1 |= c0 >> (64 - rhs);
+            c0 <<= rhs;
         } else if rhs == 64 {
-            self.c3 = self.c2;
-            self.c2 = self.c1;
-            self.c1 = self.c0;
-            self.c0 = 0;
+            c3 = c2;
+            c2 = c1;
+            c1 = c0;
+            c0 = 0;
         } else if rhs < 128 {
-            self.c3 = self.c2 << (rhs - 64);
-            self.c3 |= self.c1 >> (128 - rhs);
-            self.c2 = self.c1 << (rhs - 64);
-            self.c2 |= self.c0 >> (128 - rhs);
-            self.c1 = self.c0 << (rhs - 64);
-            self.c0 = 0;
+            c3 = c2 << (rhs - 64);
+            c3 |= c1 >> (128 - rhs);
+            c2 = c1 << (rhs - 64);
+            c2 |= c0 >> (128 - rhs);
+            c1 = c0 << (rhs - 64);
+            c0 = 0;
         } else if rhs == 128 {
-            self.c3 = self.c1;
-            self.c2 = self.c0;
-            self.c1 = 0;
-            self.c0 = 0;
+            c3 = c1;
+            c2 = c0;
+            c1 = 0;
+            c0 = 0;
         } else if rhs < 192 {
-            self.c3 = self.c1 << (rhs - 128);
-            self.c3 |= self.c0 >> (192 - rhs);
-            self.c2 = self.c0 << (rhs - 128);
-            self.c1 = 0;
-            self.c0 = 0;
+            c3 = c1 << (rhs - 128);
+            c3 |= c0 >> (192 - rhs);
+            c2 = c0 << (rhs - 128);
+            c1 = 0;
+            c0 = 0;
         } else if rhs == 192 {
-            self.c3 = self.c0;
-            self.c2 = 0;
-            self.c1 = 0;
-            self.c0 = 0;
+            c3 = c0;
+            c2 = 0;
+            c1 = 0;
+            c0 = 0;
         } else if rhs < 256 {
-            self.c3 = self.c0 << (rhs - 192);
-            self.c2 = 0;
-            self.c1 = 0;
-            self.c0 = 0;
+            c3 = c0 << (rhs - 192);
+            c2 = 0;
+            c1 = 0;
+            c0 = 0;
         } else {
-            self.c3 = 0;
-            self.c2 = 0;
-            self.c1 = 0;
-            self.c0 = 0;
+            c3 = 0;
+            c2 = 0;
+            c1 = 0;
+            c0 = 0;
         }
+        self.set_limb(0, c0);
+        self.set_limb(1, c1);
+        self.set_limb(2, c2);
+        self.set_limb(3, c3);
     }
 }
 
@@ -619,54 +670,62 @@ impl ShrAssign<usize> for U256 {
         // the branches to be optimized away.
         // TODO: Test optimizing for RHS being exactly 0, 64, 128, ...
         // Note: Test small values first, they are expected to be more common.
+        let mut c0 = self.limb(0);
+        let mut c1 = self.limb(1);
+        let mut c2 = self.limb(2);
+        let mut c3 = self.limb(3);
         if rhs == 0 {
         } else if rhs < 64 {
-            self.c0 >>= rhs;
-            self.c0 |= self.c1 << (64 - rhs);
-            self.c1 >>= rhs;
-            self.c1 |= self.c2 << (64 - rhs);
-            self.c2 >>= rhs;
-            self.c2 |= self.c3 << (64 - rhs);
-            self.c3 >>= rhs;
+            c0 >>= rhs;
+            c0 |= c1 << (64 - rhs);
+            c1 >>= rhs;
+            c1 |= c2 << (64 - rhs);
+            c2 >>= rhs;
+            c2 |= c3 << (64 - rhs);
+            c3 >>= rhs;
         } else if rhs == 64 {
-            self.c0 = self.c1;
-            self.c1 = self.c2;
-            self.c2 = self.c3;
-            self.c3 = 0;
+            c0 = c1;
+            c1 = c2;
+            c2 = c3;
+            c3 = 0;
         } else if rhs < 128 {
-            self.c0 = self.c1 >> (rhs - 64);
-            self.c0 |= self.c2 << (128 - rhs);
-            self.c1 = self.c2 >> (rhs - 64);
-            self.c1 |= self.c3 << (128 - rhs);
-            self.c2 = self.c3 >> (rhs - 64);
-            self.c3 = 0;
+            c0 = c1 >> (rhs - 64);
+            c0 |= c2 << (128 - rhs);
+            c1 = c2 >> (rhs - 64);
+            c1 |= c3 << (128 - rhs);
+            c2 = c3 >> (rhs - 64);
+            c3 = 0;
         } else if rhs == 128 {
-            self.c0 = self.c2;
-            self.c1 = self.c3;
-            self.c2 = 0;
-            self.c3 = 0;
+            c0 = c2;
+            c1 = c3;
+            c2 = 0;
+            c3 = 0;
         } else if rhs < 192 {
-            self.c0 = self.c2 >> (rhs - 128);
-            self.c0 |= self.c3 << (192 - rhs);
-            self.c1 = self.c3 >> (rhs - 128);
-            self.c2 = 0;
-            self.c3 = 0;
+            c0 = c2 >> (rhs - 128);
+            c0 |= c3 << (192 - rhs);
+            c1 = c3 >> (rhs - 128);
+            c2 = 0;
+            c3 = 0;
         } else if rhs == 192 {
-            self.c0 = self.c3;
-            self.c1 = 0;
-            self.c2 = 0;
-            self.c3 = 0;
+            c0 = c3;
+            c1 = 0;
+            c2 = 0;
+            c3 = 0;
         } else if rhs < 256 {
-            self.c0 = self.c3 >> (rhs - 192);
-            self.c1 = 0;
-            self.c2 = 0;
-            self.c3 = 0;
+            c0 = c3 >> (rhs - 192);
+            c1 = 0;
+            c2 = 0;
+            c3 = 0;
         } else {
-            self.c0 = 0;
-            self.c1 = 0;
-            self.c2 = 0;
-            self.c3 = 0;
+            c0 = 0;
+            c1 = 0;
+            c2 = 0;
+            c3 = 0;
         }
+        self.set_limb(0, c0);
+        self.set_limb(1, c1);
+        self.set_limb(2, c2);
+        self.set_limb(3, c3);
     }
 }
 
@@ -681,27 +740,27 @@ impl Shr<usize> for U256 {
 
 impl AddAssign<&U256> for U256 {
     fn add_assign(&mut self, rhs: &Self) {
-        let (c0, carry) = adc(self.c0, rhs.c0, 0);
-        let (c1, carry) = adc(self.c1, rhs.c1, carry);
-        let (c2, carry) = adc(self.c2, rhs.c2, carry);
-        let (c3, _) = adc(self.c3, rhs.c3, carry);
-        self.c0 = c0;
-        self.c1 = c1;
-        self.c2 = c2;
-        self.c3 = c3;
+        let (c0, carry) = adc(self.limb(0), rhs.limb(0), 0);
+        let (c1, carry) = adc(self.limb(1), rhs.limb(1), carry);
+        let (c2, carry) = adc(self.limb(2), rhs.limb(2), carry);
+        let (c3, _) = adc(self.limb(3), rhs.limb(3), carry);
+        self.set_limb(0, c0);
+        self.set_limb(1, c1);
+        self.set_limb(2, c2);
+        self.set_limb(3, c3);
     }
 }
 
 impl SubAssign<&U256> for U256 {
     fn sub_assign(&mut self, rhs: &Self) {
-        let (c0, borrow) = sbb(self.c0, rhs.c0, 0);
-        let (c1, borrow) = sbb(self.c1, rhs.c1, borrow);
-        let (c2, borrow) = sbb(self.c2, rhs.c2, borrow);
-        let (c3, _) = sbb(self.c3, rhs.c3, borrow);
-        self.c0 = c0;
-        self.c1 = c1;
-        self.c2 = c2;
-        self.c3 = c3;
+        let (c0, borrow) = sbb(self.limb(0), rhs.limb(0), 0);
+        let (c1, borrow) = sbb(self.limb(1), rhs.limb(1), borrow);
+        let (c2, borrow) = sbb(self.limb(2), rhs.limb(2), borrow);
+        let (c3, _) = sbb(self.limb(3), rhs.limb(3), borrow);
+        self.set_limb(0, c0);
+        self.set_limb(1, c1);
+        self.set_limb(2, c2);
+        self.set_limb(3, c3);
     }
 }
 
@@ -709,20 +768,20 @@ impl MulAssign<&U256> for U256 {
     // We shadow carry for readability
     #[allow(clippy::shadow_unrelated)]
     fn mul_assign(&mut self, rhs: &Self) {
-        let (r0, carry) = mac(0, self.c0, rhs.c0, 0);
-        let (r1, carry) = mac(0, self.c0, rhs.c1, carry);
-        let (r2, carry) = mac(0, self.c0, rhs.c2, carry);
-        let (r3, _) = mac(0, self.c0, rhs.c3, carry);
-        self.c0 = r0;
-        let (r1, carry) = mac(r1, self.c1, rhs.c0, 0);
-        let (r2, carry) = mac(r2, self.c1, rhs.c1, carry);
-        let (r3, _) = mac(r3, self.c1, rhs.c2, carry);
-        self.c1 = r1;
-        let (r2, carry) = mac(r2, self.c2, rhs.c0, 0);
-        let (r3, _) = mac(r3, self.c2, rhs.c1, carry);
-        self.c2 = r2;
-        let (r3, _) = mac(r3, self.c3, rhs.c0, 0);
-        self.c3 = r3;
+        let (r0, carry) = mac(0, self.limb(0), rhs.limb(0), 0);
+        let (r1, carry) = mac(0, self.limb(0), rhs.limb(1), carry);
+        let (r2, carry) = mac(0, self.limb(0), rhs.limb(2), carry);
+        let (r3, _) = mac(0, self.limb(0), rhs.limb(3), carry);
+        self.set_limb(0, r0);
+        let (r1, carry) = mac(r1, self.limb(1), rhs.limb(0), 0);
+        let (r2, carry) = mac(r2, self.limb(1), rhs.limb(1), carry);
+        let (r3, _) = mac(r3, self.limb(1), rhs.limb(2), carry);
+        self.set_limb(1, r1);
+        let (r2, carry) = mac(r2, self.limb(2), rhs.limb(0), 0);
+        let (r3, _) = mac(r3, self.limb(2), rhs.limb(1), carry);
+        self.set_limb(2, r2);
+        let (r3, _) = mac(r3, self.limb(3), rhs.limb(0), 0);
+        self.set_limb(3, r3);
     }
 }
 
@@ -749,14 +808,14 @@ noncommutative_binop!(U256, Rem, rem, RemAssign, rem_assign);
 
 impl MulAssign<u64> for U256 {
     fn mul_assign(&mut self, rhs: u64) {
-        let (r0, carry) = mac(0, self.c0, rhs, 0);
-        let (r1, carry) = mac(0, self.c1, rhs, carry);
-        let (r2, carry) = mac(0, self.c2, rhs, carry);
-        let (r3, _) = mac(0, self.c3, rhs, carry);
-        self.c0 = r0;
-        self.c1 = r1;
-        self.c2 = r2;
-        self.c3 = r3;
+        let (r0, carry) = mac(0, self.limb(0), rhs, 0);
+        let (r1, carry) = mac(0, self.limb(1), rhs, carry);
+        let (r2, carry) = mac(0, self.limb(2), rhs, carry);
+        let (r3, _) = mac(0, self.limb(3), rhs, carry);
+        self.set_limb(0, r0);
+        self.set_limb(1, r1);
+        self.set_limb(2, r2);
+        self.set_limb(3, r3);
     }
 }
 
@@ -802,17 +861,17 @@ impl MulAssign<u128> for U256 {
         // We want the truncation here
         #[allow(clippy::cast_possible_truncation)]
         let (lo, hi) = (rhs as u64, (rhs >> 64) as u64);
-        let (r0, carry) = mac(0, self.c0, lo, 0);
-        let (r1, carry) = mac(0, self.c1, lo, carry);
-        let (r2, carry) = mac(0, self.c2, lo, carry);
-        let (r3, _) = mac(0, self.c3, lo, carry);
-        let (r1, carry) = mac(r1, self.c0, hi, 0);
-        let (r2, carry) = mac(r2, self.c1, hi, carry);
-        let (r3, _) = mac(r3, self.c2, hi, carry);
-        self.c0 = r0;
-        self.c1 = r1;
-        self.c2 = r2;
-        self.c3 = r3;
+        let (r0, carry) = mac(0, self.limb(0), lo, 0);
+        let (r1, carry) = mac(0, self.limb(1), lo, carry);
+        let (r2, carry) = mac(0, self.limb(2), lo, carry);
+        let (r3, _) = mac(0, self.limb(3), lo, carry);
+        let (r1, carry) = mac(r1, self.limb(0), hi, 0);
+        let (r2, carry) = mac(r2, self.limb(1), hi, carry);
+        let (r3, _) = mac(r3, self.limb(2), hi, carry);
+        self.set_limb(0, r0);
+        self.set_limb(1, r1);
+        self.set_limb(2, r2);
+        self.set_limb(3, r3);
     }
 }
 

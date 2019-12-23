@@ -38,6 +38,10 @@
 #![cfg_attr(feature = "std", warn(missing_debug_implementations,))]
 // rand_xoshiro v0.4.0 is required for a zkp-stark example and v0.3.1 for criterion
 #![allow(clippy::multiple_crate_versions)]
+// TODO: Toggle based on stable/nightly
+// #![allow(clippy::missing_errors_doc)]
+// TODO: Add `must_use` attributes
+#![allow(clippy::must_use_candidate)]
 
 #[cfg(not(feature = "std"))]
 extern crate no_std_compat as std;

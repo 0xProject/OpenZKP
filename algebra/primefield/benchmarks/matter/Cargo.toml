@@ -5,7 +5,11 @@ authors = ["Remco Bloemen <remco@0x.org>"]
 edition = "2018"
 
 [dependencies]
-ff = { package = "ff_ce", version = "0.6", features = ["derive"] }
+ff = { package = "ff_ce", version = "0.8", features = ["derive"] }
 serde = { version = "1.0.80", features = ["derive"] }
 hex = "0.4.0"
 rand = "0.4.0"
+
+[features]
+default = ["std"]
+std= []

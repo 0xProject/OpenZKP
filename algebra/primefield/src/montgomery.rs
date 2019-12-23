@@ -21,66 +21,78 @@ const R3: U256 = u256h!("038e5f79873c0a6df47d84f8363000187545706677ffcc06cc7177d
 
 // We rebind variables for readability
 #[allow(clippy::shadow_unrelated)]
-pub(crate) const fn to_montgomery_const(x: &U256) -> U256 {
-    let k = x.c0.wrapping_mul(R2.c0).wrapping_mul(M64);
-    let (a0, carry) = mac(0, x.c0, R2.c0, 0);
-    let (a1, carry) = mac(0, x.c0, R2.c1, carry);
-    let (a2, carry) = mac(0, x.c0, R2.c2, carry);
-    let (a3, carry) = mac(0, x.c0, R2.c3, carry);
+pub(crate) fn to_montgomery_const(x: &U256) -> U256 {
+    let k = x.limb(0).wrapping_mul(R2.limb(0)).wrapping_mul(M64);
+    let (a0, carry) = mac(0, x.limb(0), R2.limb(0), 0);
+    let (a1, carry) = mac(0, x.limb(0), R2.limb(1), carry);
+    let (a2, carry) = mac(0, x.limb(0), R2.limb(2), carry);
+    let (a3, carry) = mac(0, x.limb(0), R2.limb(3), carry);
     let a4 = carry;
-    let (_, carry) = mac(a0, k, FieldElement::MODULUS.c0, 0);
-    let (a0, carry) = mac(a1, k, FieldElement::MODULUS.c1, carry);
-    let (a1, carry) = mac(a2, k, FieldElement::MODULUS.c2, carry);
-    let (a2, carry) = mac(a3, k, FieldElement::MODULUS.c3, carry);
+    let (_, carry) = mac(a0, k, FieldElement::MODULUS.limb(0), 0);
+    let (a0, carry) = mac(a1, k, FieldElement::MODULUS.limb(1), carry);
+    let (a1, carry) = mac(a2, k, FieldElement::MODULUS.limb(2), carry);
+    let (a2, carry) = mac(a3, k, FieldElement::MODULUS.limb(3), carry);
     let a3 = a4 + carry;
-    let k = x.c1.wrapping_mul(R2.c0).wrapping_add(a0).wrapping_mul(M64);
-    let (a0, carry) = mac(a0, x.c1, R2.c0, 0);
-    let (a1, carry) = mac(a1, x.c1, R2.c1, carry);
-    let (a2, carry) = mac(a2, x.c1, R2.c2, carry);
-    let (a3, carry) = mac(a3, x.c1, R2.c3, carry);
+    let k = x
+        .limb(1)
+        .wrapping_mul(R2.limb(0))
+        .wrapping_add(a0)
+        .wrapping_mul(M64);
+    let (a0, carry) = mac(a0, x.limb(1), R2.limb(0), 0);
+    let (a1, carry) = mac(a1, x.limb(1), R2.limb(1), carry);
+    let (a2, carry) = mac(a2, x.limb(1), R2.limb(2), carry);
+    let (a3, carry) = mac(a3, x.limb(1), R2.limb(3), carry);
     let a4 = carry;
-    let (_, carry) = mac(a0, k, FieldElement::MODULUS.c0, 0);
-    let (a0, carry) = mac(a1, k, FieldElement::MODULUS.c1, carry);
-    let (a1, carry) = mac(a2, k, FieldElement::MODULUS.c2, carry);
-    let (a2, carry) = mac(a3, k, FieldElement::MODULUS.c3, carry);
+    let (_, carry) = mac(a0, k, FieldElement::MODULUS.limb(0), 0);
+    let (a0, carry) = mac(a1, k, FieldElement::MODULUS.limb(1), carry);
+    let (a1, carry) = mac(a2, k, FieldElement::MODULUS.limb(2), carry);
+    let (a2, carry) = mac(a3, k, FieldElement::MODULUS.limb(3), carry);
     let a3 = a4 + carry;
-    let k = x.c2.wrapping_mul(R2.c0).wrapping_add(a0).wrapping_mul(M64);
-    let (a0, carry) = mac(a0, x.c2, R2.c0, 0);
-    let (a1, carry) = mac(a1, x.c2, R2.c1, carry);
-    let (a2, carry) = mac(a2, x.c2, R2.c2, carry);
-    let (a3, carry) = mac(a3, x.c2, R2.c3, carry);
+    let k = x
+        .limb(2)
+        .wrapping_mul(R2.limb(0))
+        .wrapping_add(a0)
+        .wrapping_mul(M64);
+    let (a0, carry) = mac(a0, x.limb(2), R2.limb(0), 0);
+    let (a1, carry) = mac(a1, x.limb(2), R2.limb(1), carry);
+    let (a2, carry) = mac(a2, x.limb(2), R2.limb(2), carry);
+    let (a3, carry) = mac(a3, x.limb(2), R2.limb(3), carry);
     let a4 = carry;
-    let (_, carry) = mac(a0, k, FieldElement::MODULUS.c0, 0);
-    let (a0, carry) = mac(a1, k, FieldElement::MODULUS.c1, carry);
-    let (a1, carry) = mac(a2, k, FieldElement::MODULUS.c2, carry);
-    let (a2, carry) = mac(a3, k, FieldElement::MODULUS.c3, carry);
+    let (_, carry) = mac(a0, k, FieldElement::MODULUS.limb(0), 0);
+    let (a0, carry) = mac(a1, k, FieldElement::MODULUS.limb(1), carry);
+    let (a1, carry) = mac(a2, k, FieldElement::MODULUS.limb(2), carry);
+    let (a2, carry) = mac(a3, k, FieldElement::MODULUS.limb(3), carry);
     let a3 = a4 + carry;
-    let k = x.c3.wrapping_mul(R2.c0).wrapping_add(a0).wrapping_mul(M64);
-    let (a0, carry) = mac(a0, x.c3, R2.c0, 0);
-    let (a1, carry) = mac(a1, x.c3, R2.c1, carry);
-    let (a2, carry) = mac(a2, x.c3, R2.c2, carry);
-    let (a3, carry) = mac(a3, x.c3, R2.c3, carry);
+    let k = x
+        .limb(3)
+        .wrapping_mul(R2.limb(0))
+        .wrapping_add(a0)
+        .wrapping_mul(M64);
+    let (a0, carry) = mac(a0, x.limb(3), R2.limb(0), 0);
+    let (a1, carry) = mac(a1, x.limb(3), R2.limb(1), carry);
+    let (a2, carry) = mac(a2, x.limb(3), R2.limb(2), carry);
+    let (a3, carry) = mac(a3, x.limb(3), R2.limb(3), carry);
     let a4 = carry;
-    let (_, carry) = mac(a0, k, FieldElement::MODULUS.c0, 0);
-    let (a0, carry) = mac(a1, k, FieldElement::MODULUS.c1, carry);
-    let (a1, carry) = mac(a2, k, FieldElement::MODULUS.c2, carry);
-    let (a2, carry) = mac(a3, k, FieldElement::MODULUS.c3, carry);
+    let (_, carry) = mac(a0, k, FieldElement::MODULUS.limb(0), 0);
+    let (a0, carry) = mac(a1, k, FieldElement::MODULUS.limb(1), carry);
+    let (a1, carry) = mac(a2, k, FieldElement::MODULUS.limb(2), carry);
+    let (a2, carry) = mac(a3, k, FieldElement::MODULUS.limb(3), carry);
     let a3 = a4 + carry;
 
     // The result (a0, a1, a2, a3) may be off by at most one modulus.
     // In a `const fn` we can not conditionally subtract, so instead
     // we always subtract
-    let (a0, borrow) = sbb(a0, FieldElement::MODULUS.c0, 0);
-    let (a1, borrow) = sbb(a1, FieldElement::MODULUS.c1, borrow);
-    let (a2, borrow) = sbb(a2, FieldElement::MODULUS.c2, borrow);
-    let (a3, borrow) = sbb(a3, FieldElement::MODULUS.c3, borrow);
+    let (a0, borrow) = sbb(a0, FieldElement::MODULUS.limb(0), 0);
+    let (a1, borrow) = sbb(a1, FieldElement::MODULUS.limb(1), borrow);
+    let (a2, borrow) = sbb(a2, FieldElement::MODULUS.limb(2), borrow);
+    let (a3, borrow) = sbb(a3, FieldElement::MODULUS.limb(3), borrow);
     // Now we may have accidentally subtracted where we shouldn't.
     // If this is the case `borrow == 1` and else `borrow = 0`. We can
     // use  this to conditionally add back a modulus.
-    let (a0, carry) = adc(a0, borrow * FieldElement::MODULUS.c0, 0);
-    let (a1, carry) = adc(a1, borrow * FieldElement::MODULUS.c1, carry);
-    let (a2, carry) = adc(a2, borrow * FieldElement::MODULUS.c2, carry);
-    let (a3, _) = adc(a3, borrow * FieldElement::MODULUS.c3, carry);
+    let (a0, carry) = adc(a0, borrow * FieldElement::MODULUS.limb(0), 0);
+    let (a1, carry) = adc(a1, borrow * FieldElement::MODULUS.limb(1), carry);
+    let (a2, carry) = adc(a2, borrow * FieldElement::MODULUS.limb(2), carry);
+    let (a3, _) = adc(a3, borrow * FieldElement::MODULUS.limb(3), carry);
     // Return the now reduced result
     U256::from_limbs(a0, a1, a2, a3)
 }
@@ -90,30 +102,30 @@ pub(crate) const fn to_montgomery_const(x: &U256) -> U256 {
 pub(crate) fn redc(lo: &U256, hi: &U256) -> U256 {
     // Algorithm 14.32 from Handbook of Applied Cryptography.
     // TODO: Optimize for the specific values of M64 and MODULUS.
-    let ui = lo.c0.wrapping_mul(M64);
-    let (_a0, carry) = mac(lo.c0, ui, FieldElement::MODULUS.c0, 0);
-    let (a1, carry) = mac(lo.c1, ui, FieldElement::MODULUS.c1, carry);
-    let (a2, carry) = mac(lo.c2, ui, FieldElement::MODULUS.c2, carry);
-    let (a3, carry) = mac(lo.c3, ui, FieldElement::MODULUS.c3, carry);
-    let (a4, carry2) = adc(hi.c0, 0, carry);
+    let ui = lo.limb(0).wrapping_mul(M64);
+    let (_a0, carry) = mac(lo.limb(0), ui, FieldElement::MODULUS.limb(0), 0);
+    let (a1, carry) = mac(lo.limb(1), ui, FieldElement::MODULUS.limb(1), carry);
+    let (a2, carry) = mac(lo.limb(2), ui, FieldElement::MODULUS.limb(2), carry);
+    let (a3, carry) = mac(lo.limb(3), ui, FieldElement::MODULUS.limb(3), carry);
+    let (a4, carry2) = adc(hi.limb(0), 0, carry);
     let ui = a1.wrapping_mul(M64);
-    let (_a1, carry) = mac(a1, ui, FieldElement::MODULUS.c0, 0);
-    let (a2, carry) = mac(a2, ui, FieldElement::MODULUS.c1, carry);
-    let (a3, carry) = mac(a3, ui, FieldElement::MODULUS.c2, carry);
-    let (a4, carry) = mac(a4, ui, FieldElement::MODULUS.c3, carry);
-    let (a5, carry2) = adc(hi.c1, carry2, carry);
+    let (_a1, carry) = mac(a1, ui, FieldElement::MODULUS.limb(0), 0);
+    let (a2, carry) = mac(a2, ui, FieldElement::MODULUS.limb(1), carry);
+    let (a3, carry) = mac(a3, ui, FieldElement::MODULUS.limb(2), carry);
+    let (a4, carry) = mac(a4, ui, FieldElement::MODULUS.limb(3), carry);
+    let (a5, carry2) = adc(hi.limb(1), carry2, carry);
     let ui = a2.wrapping_mul(M64);
-    let (_a2, carry) = mac(a2, ui, FieldElement::MODULUS.c0, 0);
-    let (a3, carry) = mac(a3, ui, FieldElement::MODULUS.c1, carry);
-    let (a4, carry) = mac(a4, ui, FieldElement::MODULUS.c2, carry);
-    let (a5, carry) = mac(a5, ui, FieldElement::MODULUS.c3, carry);
-    let (a6, carry2) = adc(hi.c2, carry2, carry);
+    let (_a2, carry) = mac(a2, ui, FieldElement::MODULUS.limb(0), 0);
+    let (a3, carry) = mac(a3, ui, FieldElement::MODULUS.limb(1), carry);
+    let (a4, carry) = mac(a4, ui, FieldElement::MODULUS.limb(2), carry);
+    let (a5, carry) = mac(a5, ui, FieldElement::MODULUS.limb(3), carry);
+    let (a6, carry2) = adc(hi.limb(2), carry2, carry);
     let ui = a3.wrapping_mul(M64);
-    let (_a3, carry) = mac(a3, ui, FieldElement::MODULUS.c0, 0);
-    let (a4, carry) = mac(a4, ui, FieldElement::MODULUS.c1, carry);
-    let (a5, carry) = mac(a5, ui, FieldElement::MODULUS.c2, carry);
-    let (a6, carry) = mac(a6, ui, FieldElement::MODULUS.c3, carry);
-    let (a7, _) = adc(hi.c3, carry2, carry);
+    let (_a3, carry) = mac(a3, ui, FieldElement::MODULUS.limb(0), 0);
+    let (a4, carry) = mac(a4, ui, FieldElement::MODULUS.limb(1), carry);
+    let (a5, carry) = mac(a5, ui, FieldElement::MODULUS.limb(2), carry);
+    let (a6, carry) = mac(a6, ui, FieldElement::MODULUS.limb(3), carry);
+    let (a7, _) = adc(hi.limb(3), carry2, carry);
 
     // Final reduction
     let mut r = U256::from_limbs(a4, a5, a6, a7);
@@ -129,49 +141,61 @@ pub(crate) fn mul_redc(x: &U256, y: &U256) -> U256 {
     // TODO: This might not be faster than:
     // let (lo, hi) = x.mul_full(y);
     // return redc(&lo, &hi);
-    let k = x.c0.wrapping_mul(y.c0).wrapping_mul(M64);
-    let (a0, carry) = mac(0, x.c0, y.c0, 0);
-    let (a1, carry) = mac(0, x.c0, y.c1, carry);
-    let (a2, carry) = mac(0, x.c0, y.c2, carry);
-    let (a3, carry) = mac(0, x.c0, y.c3, carry);
+    let k = x.limb(0).wrapping_mul(y.limb(0)).wrapping_mul(M64);
+    let (a0, carry) = mac(0, x.limb(0), y.limb(0), 0);
+    let (a1, carry) = mac(0, x.limb(0), y.limb(1), carry);
+    let (a2, carry) = mac(0, x.limb(0), y.limb(2), carry);
+    let (a3, carry) = mac(0, x.limb(0), y.limb(3), carry);
     let a4 = carry;
-    let (_a, carry) = mac(a0, k, FieldElement::MODULUS.c0, 0);
-    let (a0, carry) = mac(a1, k, FieldElement::MODULUS.c1, carry);
-    let (a1, carry) = mac(a2, k, FieldElement::MODULUS.c2, carry);
-    let (a2, carry) = mac(a3, k, FieldElement::MODULUS.c3, carry);
+    let (_a, carry) = mac(a0, k, FieldElement::MODULUS.limb(0), 0);
+    let (a0, carry) = mac(a1, k, FieldElement::MODULUS.limb(1), carry);
+    let (a1, carry) = mac(a2, k, FieldElement::MODULUS.limb(2), carry);
+    let (a2, carry) = mac(a3, k, FieldElement::MODULUS.limb(3), carry);
     let a3 = a4 + carry;
-    let k = x.c1.wrapping_mul(y.c0).wrapping_add(a0).wrapping_mul(M64);
-    let (a0, carry) = mac(a0, x.c1, y.c0, 0);
-    let (a1, carry) = mac(a1, x.c1, y.c1, carry);
-    let (a2, carry) = mac(a2, x.c1, y.c2, carry);
-    let (a3, carry) = mac(a3, x.c1, y.c3, carry);
+    let k = x
+        .limb(1)
+        .wrapping_mul(y.limb(0))
+        .wrapping_add(a0)
+        .wrapping_mul(M64);
+    let (a0, carry) = mac(a0, x.limb(1), y.limb(0), 0);
+    let (a1, carry) = mac(a1, x.limb(1), y.limb(1), carry);
+    let (a2, carry) = mac(a2, x.limb(1), y.limb(2), carry);
+    let (a3, carry) = mac(a3, x.limb(1), y.limb(3), carry);
     let a4 = carry;
-    let (_a, carry) = mac(a0, k, FieldElement::MODULUS.c0, 0);
-    let (a0, carry) = mac(a1, k, FieldElement::MODULUS.c1, carry);
-    let (a1, carry) = mac(a2, k, FieldElement::MODULUS.c2, carry);
-    let (a2, carry) = mac(a3, k, FieldElement::MODULUS.c3, carry);
+    let (_a, carry) = mac(a0, k, FieldElement::MODULUS.limb(0), 0);
+    let (a0, carry) = mac(a1, k, FieldElement::MODULUS.limb(1), carry);
+    let (a1, carry) = mac(a2, k, FieldElement::MODULUS.limb(2), carry);
+    let (a2, carry) = mac(a3, k, FieldElement::MODULUS.limb(3), carry);
     let a3 = a4 + carry;
-    let k = x.c2.wrapping_mul(y.c0).wrapping_add(a0).wrapping_mul(M64);
-    let (a0, carry) = mac(a0, x.c2, y.c0, 0);
-    let (a1, carry) = mac(a1, x.c2, y.c1, carry);
-    let (a2, carry) = mac(a2, x.c2, y.c2, carry);
-    let (a3, carry) = mac(a3, x.c2, y.c3, carry);
+    let k = x
+        .limb(2)
+        .wrapping_mul(y.limb(0))
+        .wrapping_add(a0)
+        .wrapping_mul(M64);
+    let (a0, carry) = mac(a0, x.limb(2), y.limb(0), 0);
+    let (a1, carry) = mac(a1, x.limb(2), y.limb(1), carry);
+    let (a2, carry) = mac(a2, x.limb(2), y.limb(2), carry);
+    let (a3, carry) = mac(a3, x.limb(2), y.limb(3), carry);
     let a4 = carry;
-    let (_a, carry) = mac(a0, k, FieldElement::MODULUS.c0, 0);
-    let (a0, carry) = mac(a1, k, FieldElement::MODULUS.c1, carry);
-    let (a1, carry) = mac(a2, k, FieldElement::MODULUS.c2, carry);
-    let (a2, carry) = mac(a3, k, FieldElement::MODULUS.c3, carry);
+    let (_a, carry) = mac(a0, k, FieldElement::MODULUS.limb(0), 0);
+    let (a0, carry) = mac(a1, k, FieldElement::MODULUS.limb(1), carry);
+    let (a1, carry) = mac(a2, k, FieldElement::MODULUS.limb(2), carry);
+    let (a2, carry) = mac(a3, k, FieldElement::MODULUS.limb(3), carry);
     let a3 = a4 + carry;
-    let k = x.c3.wrapping_mul(y.c0).wrapping_add(a0).wrapping_mul(M64);
-    let (a0, carry) = mac(a0, x.c3, y.c0, 0);
-    let (a1, carry) = mac(a1, x.c3, y.c1, carry);
-    let (a2, carry) = mac(a2, x.c3, y.c2, carry);
-    let (a3, carry) = mac(a3, x.c3, y.c3, carry);
+    let k = x
+        .limb(3)
+        .wrapping_mul(y.limb(0))
+        .wrapping_add(a0)
+        .wrapping_mul(M64);
+    let (a0, carry) = mac(a0, x.limb(3), y.limb(0), 0);
+    let (a1, carry) = mac(a1, x.limb(3), y.limb(1), carry);
+    let (a2, carry) = mac(a2, x.limb(3), y.limb(2), carry);
+    let (a3, carry) = mac(a3, x.limb(3), y.limb(3), carry);
     let a4 = carry;
-    let (_a, carry) = mac(a0, k, FieldElement::MODULUS.c0, 0);
-    let (a0, carry) = mac(a1, k, FieldElement::MODULUS.c1, carry);
-    let (a1, carry) = mac(a2, k, FieldElement::MODULUS.c2, carry);
-    let (a2, carry) = mac(a3, k, FieldElement::MODULUS.c3, carry);
+    let (_a, carry) = mac(a0, k, FieldElement::MODULUS.limb(0), 0);
+    let (a0, carry) = mac(a1, k, FieldElement::MODULUS.limb(1), carry);
+    let (a1, carry) = mac(a2, k, FieldElement::MODULUS.limb(2), carry);
+    let (a2, carry) = mac(a3, k, FieldElement::MODULUS.limb(3), carry);
     let a3 = a4 + carry;
 
     // Final reduction

@@ -2,7 +2,7 @@
 #![allow(clippy::trivially_copy_pass_by_ref)]
 
 use criterion::{black_box, Bencher};
-use ecc::{private_to_public, sign, verify};
+use zkp_elliptic_curve_crypto::{private_to_public, sign, verify};
 use zkp_macros_decl::{field_element, u256h};
 use zkp_primefield::FieldElement;
 use zkp_u256::U256;

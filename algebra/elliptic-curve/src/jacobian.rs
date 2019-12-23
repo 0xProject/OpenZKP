@@ -23,6 +23,7 @@ impl Jacobian {
         z: FieldElement::ZERO,
     };
 
+    #[must_use]
     pub fn on_curve(&self) -> bool {
         // TODO: Compute without inverting Z
         Affine::from(self).on_curve()
@@ -50,6 +51,7 @@ impl Jacobian {
         self.y.neg_assign();
     }
 
+    #[must_use]
     pub fn double(&self) -> Self {
         let mut r = self.clone();
         r.double_assign();
@@ -57,6 +59,7 @@ impl Jacobian {
     }
 
     // Multiply Affine point using Jacobian accumulator
+    #[must_use]
     pub fn mul(p: &Affine, scalar: &U256) -> Self {
         let mut r = Self::from(p);
         for i in (0..scalar.msb()).rev() {

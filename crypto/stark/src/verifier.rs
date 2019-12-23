@@ -297,7 +297,7 @@ pub fn verify(constraints: &Constraints, proof: &Proof) -> Result<()> {
     // Folded fri values from the previous layer
     let mut fri_folds: BTreeMap<usize, FieldElement> = BTreeMap::new();
 
-    let mut previous_indices = queries.to_vec().clone();
+    let mut previous_indices = queries.to_vec();
     let mut step = 1;
     let mut len = eval_domain_size;
     for (k, commitment) in fri_commitments.iter().enumerate() {
@@ -447,10 +447,13 @@ fn get_indices(num: usize, bits: u32, proof: &mut VerifierChannel) -> Vec<usize>
     let mut query_indices = Vec::with_capacity(num + 3);
     while query_indices.len() < num {
         let val: U256 = proof.get_random();
-        query_indices.push(((val.clone() >> (0x100 - 0x040)).c0 & (2_u64.pow(bits) - 1)) as usize);
-        query_indices.push(((val.clone() >> (0x100 - 0x080)).c0 & (2_u64.pow(bits) - 1)) as usize);
-        query_indices.push(((val.clone() >> (0x100 - 0x0C0)).c0 & (2_u64.pow(bits) - 1)) as usize);
-        query_indices.push((val.c0 & (2_u64.pow(bits) - 1)) as usize);
+        query_indices
+            .push(((val.clone() >> (0x100 - 0x040)).limb(0) & (2_u64.pow(bits) - 1)) as usize);
+        query_indices
+            .push(((val.clone() >> (0x100 - 0x080)).limb(0) & (2_u64.pow(bits) - 1)) as usize);
+        query_indices
+            .push(((val.clone() >> (0x100 - 0x0C0)).limb(0) & (2_u64.pow(bits) - 1)) as usize);
+        query_indices.push((val.limb(0) & (2_u64.pow(bits) - 1)) as usize);
     }
     query_indices.truncate(num);
     (&mut query_indices).sort_unstable();

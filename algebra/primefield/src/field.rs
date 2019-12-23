@@ -30,7 +30,7 @@ impl FieldElement {
     pub const ONE: Self = Self::from_montgomery(R1);
     pub const ZERO: Self = Self::from_montgomery(U256::ZERO);
 
-    pub const fn from_u256_const(n: &U256) -> Self {
+    pub fn from_u256_const(n: &U256) -> Self {
         Self(to_montgomery_const(n))
     }
 
@@ -161,7 +161,10 @@ impl fmt::Debug for FieldElement {
         write!(
             f,
             "field_element!(\"{:016x}{:016x}{:016x}{:016x}\")",
-            n.c3, n.c2, n.c1, n.c0
+            n.limb(3),
+            n.limb(2),
+            n.limb(1),
+            n.limb(0)
         )
     }
 }
@@ -341,6 +344,8 @@ macro_rules! field_h {
 
 // Quickcheck needs pass by value
 #[allow(clippy::needless_pass_by_value)]
+// We allow these in tests for readability/ease of editing
+#[allow(clippy::redundant_clone)]
 #[cfg(test)]
 mod tests {
     use super::*;

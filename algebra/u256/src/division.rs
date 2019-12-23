@@ -244,12 +244,12 @@ mod tests {
         let a = u256h!("6f1480e63854afa41868b9a7d418e9c64edef514135f5899e72530a3d4e91ea3");
         let b = u256h!("3ba5ddaec5090ef0b87126f34ee28533ffb08af4108f9aeaa62b65900d2a62bb");
         let r = a.clone() - &b;
-        let mut numerator = [a.c0, a.c1, a.c2, a.c3, 0];
-        let mut divisor = [b.c0, b.c1, b.c2, b.c3];
+        let mut numerator = [a.limb(0), a.limb(1), a.limb(2), a.limb(3), 0];
+        let mut divisor = [b.limb(0), b.limb(1), b.limb(2), b.limb(3)];
         divrem_nbym(&mut numerator, &mut divisor);
         let remainder = &numerator[0..4];
         let quotient = numerator[4];
-        assert_eq!(remainder, [r.c0, r.c1, r.c2, r.c3]);
+        assert_eq!(remainder, [r.limb(0), r.limb(1), r.limb(2), r.limb(3)]);
         assert_eq!(quotient, 1);
     }
 
@@ -258,8 +258,8 @@ mod tests {
         // TODO: Add remainder
         let d1 = d1 | (1 << 63);
         let n = U256::from_limbs(d0, d1, 0, 0) * &U256::from(q);
-        debug_assert!(n.c3 == 0);
-        let qhat = div_3by2(&[n.c0, n.c1, n.c2], &[d0, d1]);
+        debug_assert!(n.limb(3) == 0);
+        let qhat = div_3by2(&[n.limb(0), n.limb(1), n.limb(2)], &[d0, d1]);
         qhat == q
     }
 }
