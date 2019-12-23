@@ -18,7 +18,7 @@ fn is_quadratic_residue(a: &FieldElement) -> bool {
 // These two constants are chosen so that 1 + SIGNIFICAND << BINARY_EXPONENT ==
 // MODULUS.
 const BINARY_EXPONENT: usize = 3 * 4 * 16;
-const SIGNIFICAND: U256 = U256::from_limbs(0x0800_0000_0000_0011_u64, 0, 0, 0);
+const SIGNIFICAND: U256 = U256::from_limbs([0x0800_0000_0000_0011_u64, 0, 0, 0]);
 // The starting value of c in the Tonelli Shanks algorithm. We are using 3, a
 // generator, as the quadratic nonresidue the algorithm requires.
 const INITIAL_C: FieldElement = FieldElement::from_montgomery(u256h!(

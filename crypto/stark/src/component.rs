@@ -472,7 +472,7 @@ mod tests {
     /// Generates an arbitrary field element
     fn arb_field_element() -> impl Strategy<Value = FieldElement> {
         (any::<u64>(), any::<u64>(), any::<u64>(), any::<u64>())
-            .prop_map(move |(a, b, c, d)| FieldElement::from(U256::from_limbs(a, b, c, d)))
+            .prop_map(move |(a, b, c, d)| FieldElement::from(U256::from_limbs([a, b, c, d])))
     }
 
     /// Generates an arbitrary component of given size

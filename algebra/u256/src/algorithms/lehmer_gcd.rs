@@ -31,7 +31,7 @@ impl Matrix {
 // We shadow variables for readability.
 #[allow(clippy::shadow_unrelated)]
 fn mat_mul(a: &mut U256, b: &mut U256, (q00, q01, q10, q11): (u64, u64, u64, u64)) {
-    use crate::utils::{mac, msb};
+    use crate::algorithms::limb_operations::{mac, msb};
     let (ai, ac) = mac( 0, q00, a.limb(0), 0);
     let (ai, ab) = msb(ai, q01, b.limb(0), 0);
     let (bi, bc) = mac( 0, q11, b.limb(0), 0);

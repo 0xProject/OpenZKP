@@ -10,7 +10,7 @@ use rand::{
 /// Draw from a uniform distribution over all values.
 impl Distribution<U256> for Standard {
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> U256 {
-        U256::from_limbs(rng.gen(), rng.gen(), rng.gen(), rng.gen())
+        U256::from_limbs([rng.gen(), rng.gen(), rng.gen(), rng.gen()])
     }
 }
 

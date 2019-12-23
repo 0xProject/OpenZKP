@@ -48,19 +48,22 @@
 // TODO: Toggle based on stable/nightly
 // #![allow(clippy::missing_errors_doc)]
 
-mod binops;
+mod additive;
+pub mod algorithms;
+mod binary;
+mod conversion;
 mod division;
-mod gcd;
+mod encoding;
+mod functions;
+mod multiplicative;
 #[cfg(feature = "use_rand")]
 mod rand;
 mod u256;
 
-// TODO: This seems out of scope for U256 to export.
-pub mod utils;
+// TODO: Create a BinaryRing trait that represents numbers modulo some power of
+// two.
 
 pub use crate::u256::U256;
 
-// TODO: Make member functions of U256?
-pub use gcd::{gcd, gcd_extended};
 #[cfg(not(feature = "std"))]
 extern crate no_std_compat as std;

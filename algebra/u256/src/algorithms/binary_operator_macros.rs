@@ -5,6 +5,7 @@ macro_rules! commutative_binop {
         // &mut <op>= value
         // Note: a value is wasted
         impl $inplace<$type> for $type {
+            #[inline(always)] // Simple wrapper in hot path
             fn $inplace_fn(&mut self, rhs: Self) {
                 self.$inplace_fn(&rhs)
             }
@@ -15,6 +16,7 @@ macro_rules! commutative_binop {
         impl $trait<$type> for $type {
             type Output = Self;
 
+            #[inline(always)] // Simple wrapper in hot path
             fn $trait_fn(self, rhs: Self) -> Self {
                 self.$trait_fn(&rhs)
             }
@@ -24,6 +26,7 @@ macro_rules! commutative_binop {
         impl $trait<&$type> for $type {
             type Output = Self;
 
+            #[inline(always)] // Simple wrapper in hot path
             fn $trait_fn(mut self, rhs: &Self) -> Self {
                 self.$inplace_fn(rhs);
                 self
@@ -34,6 +37,7 @@ macro_rules! commutative_binop {
         impl $trait<$type> for &$type {
             type Output = $type;
 
+            #[inline(always)] // Simple wrapper in hot path
             fn $trait_fn(self, rhs: $type) -> $type {
                 rhs.$trait_fn(self)
             }
@@ -44,6 +48,7 @@ macro_rules! commutative_binop {
         impl $trait<&$type> for &$type {
             type Output = $type;
 
+            #[inline(always)] // Simple wrapper in hot path
             fn $trait_fn(self, rhs: &$type) -> $type {
                 self.clone().$trait_fn(rhs)
             }
@@ -59,6 +64,7 @@ macro_rules! noncommutative_binop {
         // &mut <op>= value
         // Note: a value is wasted
         impl $inplace<$type> for $type {
+            #[inline(always)] // Simple wrapper in hot path
             fn $inplace_fn(&mut self, rhs: Self) {
                 self.$inplace_fn(&rhs)
             }
@@ -69,6 +75,7 @@ macro_rules! noncommutative_binop {
         impl $trait<$type> for $type {
             type Output = Self;
 
+            #[inline(always)] // Simple wrapper in hot path
             fn $trait_fn(self, rhs: Self) -> Self {
                 self.$trait_fn(&rhs)
             }
@@ -78,6 +85,7 @@ macro_rules! noncommutative_binop {
         impl $trait<&$type> for $type {
             type Output = Self;
 
+            #[inline(always)] // Simple wrapper in hot path
             fn $trait_fn(mut self, rhs: &Self) -> Self {
                 self.$inplace_fn(rhs);
                 self
@@ -89,6 +97,7 @@ macro_rules! noncommutative_binop {
         impl $trait<$type> for &$type {
             type Output = $type;
 
+            #[inline(always)] // Simple wrapper in hot path
             fn $trait_fn(self, rhs: $type) -> $type {
                 // TODO: Use places-reversed version of in-place operator instead.
                 self.clone().$trait_fn(rhs)
@@ -100,6 +109,7 @@ macro_rules! noncommutative_binop {
         impl $trait<&$type> for &$type {
             type Output = $type;
 
+            #[inline(always)] // Simple wrapper in hot path
             fn $trait_fn(self, rhs: &$type) -> $type {
                 self.clone().$trait_fn(rhs)
             }

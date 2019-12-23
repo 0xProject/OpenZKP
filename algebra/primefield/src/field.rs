@@ -1,10 +1,10 @@
-use crate::{montgomery::*, square_root::square_root};
+use crate::square_root::square_root;
 use std::{
     ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign},
     prelude::v1::*,
 };
 use zkp_macros_decl::u256h;
-use zkp_u256::{commutative_binop, noncommutative_binop, U256};
+use zkp_u256::{algorithms::montgomery::*, commutative_binop, noncommutative_binop, U256};
 // TODO: Implement Serde
 #[cfg(feature = "std")]
 use std::fmt;
@@ -62,6 +62,7 @@ impl FieldElement {
         inv_redc(&self.0).map(Self)
     }
 
+    #[inline(always)]
     pub fn double(&self) -> Self {
         // TODO: Optimize
         self.clone() + self
@@ -72,6 +73,7 @@ impl FieldElement {
         self.clone() + self + self
     }
 
+    #[inline(always)]
     pub fn square(&self) -> Self {
         Self::from_montgomery(sqr_redc(&self.0))
     }
@@ -80,6 +82,7 @@ impl FieldElement {
         square_root(self)
     }
 
+    #[inline(always)]
     pub fn neg_assign(&mut self) {
         *self = self.neg()
     }
@@ -276,12 +279,14 @@ impl From<&FieldElement> for U256 {
 impl Neg for &FieldElement {
     type Output = FieldElement;
 
+    #[inline(always)]
     fn neg(self) -> Self::Output {
         FieldElement::ZERO - self
     }
 }
 
 impl AddAssign<&FieldElement> for FieldElement {
+    #[inline(always)]
     fn add_assign(&mut self, rhs: &Self) {
         self.0 += &rhs.0;
         if self.0 >= Self::MODULUS {
@@ -291,6 +296,7 @@ impl AddAssign<&FieldElement> for FieldElement {
 }
 
 impl SubAssign<&FieldElement> for FieldElement {
+    #[inline(always)]
     fn sub_assign(&mut self, rhs: &Self) {
         if self.0 < rhs.0 {
             self.0 += &Self::MODULUS;
@@ -300,8 +306,9 @@ impl SubAssign<&FieldElement> for FieldElement {
 }
 
 impl MulAssign<&FieldElement> for FieldElement {
+    #[inline(always)]
     fn mul_assign(&mut self, rhs: &Self) {
-        self.0 = mul_redc(&self.0, &rhs.0);
+        self.0 = mul_redc_inlined(&self.0, &rhs.0);
     }
 }
 
