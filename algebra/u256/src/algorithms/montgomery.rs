@@ -92,7 +92,7 @@ pub fn to_montgomery_const(x: &U256) -> U256 {
     let (a2, carry) = adc(a2, borrow * MODULUS.limb(2), carry);
     let (a3, _) = adc(a3, borrow * MODULUS.limb(3), carry);
     // Return the now reduced result
-    U256::from_limbs(a0, a1, a2, a3)
+    U256::from_limbs([a0, a1, a2, a3])
 }
 
 // We rebind variables for readability
@@ -126,7 +126,7 @@ pub fn redc(lo: &U256, hi: &U256) -> U256 {
     let (a7, _) = adc(hi.limb(3), carry2, carry);
 
     // Final reduction
-    let mut r = U256::from_limbs(a4, a5, a6, a7);
+    let mut r = U256::from_limbs([a4, a5, a6, a7]);
     if r >= MODULUS {
         r -= &MODULUS;
     }
@@ -197,7 +197,7 @@ pub fn mul_redc(x: &U256, y: &U256) -> U256 {
     let a3 = a4 + carry;
 
     // Final reduction
-    let mut r = U256::from_limbs(a0, a1, a2, a3);
+    let mut r = U256::from_limbs([a0, a1, a2, a3]);
     if r >= MODULUS {
         r -= &MODULUS;
     }

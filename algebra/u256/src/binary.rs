@@ -245,36 +245,36 @@ mod tests {
 
     #[test]
     fn test_shl() {
-        let mut n = U256::from_limbs(
+        let mut n = U256::from_limbs([
             0x9050e39a8638969f,
             0xd7cc21c004c428d1,
             0x9026e34ec8fb83ac,
             0x03d4679634263e15,
-        );
-        let e = U256::from_limbs(
+        ]);
+        let e = U256::from_limbs([
             0xcd431c4b4f800000,
             0xe002621468c82871,
             0xa7647dc1d66be610,
             0xcb1a131f0ac81371,
-        );
+        ]);
         n <<= 23;
         assert_eq!(n, e);
     }
 
     #[test]
     fn test_shr() {
-        let mut n = U256::from_limbs(
+        let mut n = U256::from_limbs([
             0xbe1897b996367829,
             0x24c4cd2cacd2e3be,
             0xa0a61c4de933a54e,
             0x059e0db9d96add73,
-        );
-        let e = U256::from_limbs(
+        ]);
+        let e = U256::from_limbs([
             0xa5c77d7c312f732c,
             0x674a9c49899a5959,
             0xd5bae7414c389bd2,
             0x0000000b3c1b73b2,
-        );
+        ]);
         n >>= 23;
         assert_eq!(n, e);
     }

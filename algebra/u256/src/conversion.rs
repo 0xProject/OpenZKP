@@ -3,12 +3,12 @@ use std::{prelude::v1::*, u64};
 
 impl U256 {
     pub fn from_bytes_be(n: &[u8; 32]) -> Self {
-        Self::from_limbs(
+        Self::from_limbs([
             u64::from_be_bytes([n[24], n[25], n[26], n[27], n[28], n[29], n[30], n[31]]),
             u64::from_be_bytes([n[16], n[17], n[18], n[19], n[20], n[21], n[22], n[23]]),
             u64::from_be_bytes([n[8], n[9], n[10], n[11], n[12], n[13], n[14], n[15]]),
             u64::from_be_bytes([n[0], n[1], n[2], n[3], n[4], n[5], n[6], n[7]]),
-        )
+        ])
     }
 
     pub fn to_bytes_be(&self) -> [u8; 32] {
@@ -30,7 +30,7 @@ macro_rules! impl_from_uint {
             // $type could be u64, which triggers the lint.
             #[allow(trivial_numeric_casts)]
             fn from(n: $type) -> Self {
-                Self::from_limbs(n as u64, 0, 0, 0)
+                Self::from_limbs([n as u64, 0, 0, 0])
             }
         }
     };
@@ -46,7 +46,7 @@ impl From<u128> for U256 {
     fn from(n: u128) -> Self {
         // We want truncation here
         #[allow(clippy::cast_possible_truncation)]
-        Self::from_limbs(n as u64, (n >> 64) as u64, 0, 0)
+        Self::from_limbs([n as u64, (n >> 64) as u64, 0, 0])
     }
 }
 
@@ -59,14 +59,14 @@ macro_rules! impl_from_int {
             #[allow(clippy::cast_possible_truncation)]
             fn from(n: $t) -> Self {
                 if n >= 0 {
-                    Self::from_limbs(n as u64, 0, 0, 0)
+                    Self::from_limbs([n as u64, 0, 0, 0])
                 } else {
-                    Self::from_limbs(
+                    Self::from_limbs([
                         n as u64,
                         u64::max_value(),
                         u64::max_value(),
                         u64::max_value(),
-                    )
+                    ])
                 }
             }
         }
@@ -86,14 +86,14 @@ impl From<i128> for U256 {
     #[allow(clippy::cast_possible_truncation)]
     fn from(n: i128) -> Self {
         if n >= 0 {
-            Self::from_limbs(n as u64, (n >> 64) as u64, 0, 0)
+            Self::from_limbs([n as u64, (n >> 64) as u64, 0, 0])
         } else {
-            Self::from_limbs(
+            Self::from_limbs([
                 n as u64,
                 (n >> 64) as u64,
                 u64::max_value(),
                 u64::max_value(),
-            )
+            ])
         }
     }
 }

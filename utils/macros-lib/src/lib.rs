@@ -213,7 +213,7 @@ pub fn u256h(input: TokenStream) -> TokenStream {
         // TODO: Ideally we'd locally import U256 here and
         // use $crate::U256 here, but this leads to a circular
         // dependency.
-        Ok(quote! { U256::from_limbs(#c0, #c1, #c2, #c3) })
+        Ok(quote! { U256::from_limbs([#c0, #c1, #c2, #c3]) })
     })()
     .unwrap_or_else(|err: syn::Error| err.to_compile_error())
 }
@@ -230,7 +230,7 @@ pub fn field_element(input: TokenStream) -> TokenStream {
         let c2 = Literal::u64_suffixed(c2);
         let c3 = Literal::u64_suffixed(c3);
 
-        Ok(quote! { FieldElement::from_montgomery(U256::from_limbs(#c0, #c1, #c2, #c3)) })
+        Ok(quote! { FieldElement::from_montgomery(U256::from_limbs([#c0, #c1, #c2, #c3])) })
     })()
     .unwrap_or_else(|err: syn::Error| err.to_compile_error())
 }
@@ -288,12 +288,12 @@ mod test {
     fn u256h_positive() {
         assert_eq!(
             u256h(quote! {""}).to_string(),
-            quote! {U256::from_limbs(0u64, 0u64, 0u64, 0u64)}.to_string()
+            quote! {U256::from_limbs([0u64, 0u64, 0u64, 0u64])}.to_string()
         );
         assert_eq!(
             u256h(quote! {"0000000000000004000000000000000300000000000000020000000000000001"})
                 .to_string(),
-            quote! {U256::from_limbs(1u64, 2u64, 3u64, 4u64)}.to_string()
+            quote! {U256::from_limbs([1u64, 2u64, 3u64, 4u64])}.to_string()
         );
     }
 
@@ -302,14 +302,14 @@ mod test {
         assert_eq!(
             field_element(quote! {""}).to_string(),
             quote! {FieldElement::from_montgomery(
-                U256::from_limbs(0u64, 0u64, 0u64, 0u64)
+                U256::from_limbs([0u64, 0u64, 0u64, 0u64])
             )}
             .to_string()
         );
         assert_eq!(
             field_element(quote! {"01"}).to_string(),
             quote! {FieldElement::from_montgomery(
-                U256::from_limbs(18446744073709551585u64 , 18446744073709551615u64 , 18446744073709551615u64 , 576460752303422960u64)
+                U256::from_limbs([18446744073709551585u64 , 18446744073709551615u64 , 18446744073709551615u64 , 576460752303422960u64])
             )}
             .to_string()
         );

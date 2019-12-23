@@ -25,7 +25,7 @@ impl U256 {
             let (q2, r) = div_2_1(self.limb(2), r, rhs);
             let (q1, r) = div_2_1(self.limb(1), r, rhs);
             let (q0, r) = div_2_1(self.limb(0), r, rhs);
-            Some((Self::from_limbs(q0, q1, q2, q3), r))
+            Some((Self::from_limbs([q0, q1, q2, q3]), r))
         }
     }
 
@@ -41,28 +41,28 @@ impl U256 {
                 rhs.limb(3),
             ]);
             Some((
-                Self::from_limbs(numerator[4], 0, 0, 0),
-                Self::from_limbs(numerator[0], numerator[1], numerator[2], numerator[3]),
+                Self::from_limbs([numerator[4], 0, 0, 0]),
+                Self::from_limbs([numerator[0], numerator[1], numerator[2], numerator[3]]),
             ))
         } else if rhs.limb(2) > 0 {
             // divrem_nby3
             divrem_nbym(&mut numerator, &mut [rhs.limb(0), rhs.limb(1), rhs.limb(2)]);
             Some((
-                Self::from_limbs(numerator[3], numerator[4], 0, 0),
-                Self::from_limbs(numerator[0], numerator[1], numerator[2], 0),
+                Self::from_limbs([numerator[3], numerator[4], 0, 0]),
+                Self::from_limbs([numerator[0], numerator[1], numerator[2], 0]),
             ))
         } else if rhs.limb(1) > 0 {
             // divrem_nby2
             divrem_nbym(&mut numerator, &mut [rhs.limb(0), rhs.limb(1)]);
             Some((
-                Self::from_limbs(numerator[2], numerator[3], numerator[4], 0),
-                Self::from_limbs(numerator[0], numerator[1], 0, 0),
+                Self::from_limbs([numerator[2], numerator[3], numerator[4], 0]),
+                Self::from_limbs([numerator[0], numerator[1], 0, 0]),
             ))
         } else if rhs.limb(0) > 0 {
             let remainder = divrem_nby1(&mut numerator, rhs.limb(0));
             Some((
-                Self::from_limbs(numerator[0], numerator[1], numerator[2], numerator[3]),
-                Self::from_limbs(remainder, 0, 0, 0),
+                Self::from_limbs([numerator[0], numerator[1], numerator[2], numerator[3]]),
+                Self::from_limbs([remainder, 0, 0, 0]),
             ))
         } else {
             None
@@ -126,51 +126,51 @@ mod tests {
 
     #[test]
     fn test_invmod256() {
-        let a = U256::from_limbs(
+        let a = U256::from_limbs([
             0xf80aa815a36a7e47,
             0x090be90cfa96712a,
             0xf52ec0a4083d2c14,
             0x05405dfd1d1c1a97,
-        );
-        let e = U256::from_limbs(
+        ]);
+        let e = U256::from_limbs([
             0xf0a9a0091b3bcb77,
             0x42d3eba6084ca0de,
             0x60d848b6513392d7,
             0xdf45026654d086d6,
-        );
+        ]);
         let r = a.invmod256().unwrap();
         assert_eq!(r, e);
     }
 
     #[test]
     fn test_invmod_small() {
-        let n = U256::from_limbs(271, 0, 0, 0);
-        let m = U256::from_limbs(383, 0, 0, 0);
-        let i = U256::from_limbs(106, 0, 0, 0);
+        let n = U256::from_limbs([271, 0, 0, 0]);
+        let m = U256::from_limbs([383, 0, 0, 0]);
+        let i = U256::from_limbs([106, 0, 0, 0]);
         let r = n.invmod(&m).unwrap();
         assert_eq!(i, r);
     }
 
     #[test]
     fn test_invmod() {
-        let m = U256::from_limbs(
+        let m = U256::from_limbs([
             0x0000000000000001,
             0x0000000000000000,
             0x0000000000000000,
             0x0800000000000011,
-        );
-        let n = U256::from_limbs(
+        ]);
+        let n = U256::from_limbs([
             0x1717f47973471ed5,
             0xe106229070982941,
             0xd82120c54277c73e,
             0x07717a21e77894e8,
-        );
-        let i = U256::from_limbs(
+        ]);
+        let i = U256::from_limbs([
             0xbda5eaad406f66d1,
             0xfac4d8e66130d944,
             0x97c88939cbce8317,
             0x001752ce51d19c97,
-        );
+        ]);
         let r = n.invmod(&m).unwrap();
         assert_eq!(i, r);
     }

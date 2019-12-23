@@ -8,12 +8,12 @@ impl U256 {
     #[allow(clippy::use_self)]
     pub fn from_decimal_str(s: &str) -> Result<Self, ParseError> {
         // ceil(2^256 / 10)
-        let max10: Self = Self::from_limbs(
+        let max10: Self = Self::from_limbs([
             0x9999_9999_9999_999a_u64,
             0x9999_9999_9999_9999_u64,
             0x9999_9999_9999_9999_u64,
             0x1999_9999_9999_9999_u64,
-        );
+        ]);
         if s.is_empty() {
             return Err(ParseError::Empty);
         }

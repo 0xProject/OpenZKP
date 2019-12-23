@@ -257,7 +257,7 @@ mod tests {
     fn div_3by2_correct(q: u64, d0: u64, d1: u64) -> bool {
         // TODO: Add remainder
         let d1 = d1 | (1 << 63);
-        let n = U256::from_limbs(d0, d1, 0, 0) * &U256::from(q);
+        let n = U256::from_limbs([d0, d1, 0, 0]) * &U256::from(q);
         debug_assert!(n.limb(3) == 0);
         let qhat = div_3by2(&[n.limb(0), n.limb(1), n.limb(2)], &[d0, d1]);
         qhat == q

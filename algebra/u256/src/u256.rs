@@ -6,22 +6,23 @@ pub struct U256([u64; 4]);
 // TODO: impl core::iter::Step so we have ranges
 
 impl U256 {
-    pub const MAX: Self = Self::from_limbs(
+    pub const MAX: Self = Self::from_limbs([
         u64::max_value(),
         u64::max_value(),
         u64::max_value(),
         u64::max_value(),
-    );
-    pub const ONE: Self = Self::from_limbs(1, 0, 0, 0);
-    pub const ZERO: Self = Self::from_limbs(0, 0, 0, 0);
+    ]);
+    pub const ONE: Self = Self::from_limbs([1, 0, 0, 0]);
+    pub const ZERO: Self = Self::from_limbs([0, 0, 0, 0]);
 
-    pub const fn from_limbs(c0: u64, c1: u64, c2: u64, c3: u64) -> Self {
-        Self([c0, c1, c2, c3])
+    pub const fn from_limbs(limbs: [u64; 4]) -> Self {
+        Self(limbs)
     }
 
     // It's important that this gets inlined, because `index` is nearly always
     // a compile time constant, which means the range check will get optimized
     // away.
+    // TODO: Make const fn
     #[inline(always)]
     pub fn limb(&self, index: usize) -> u64 {
         self.0.get(index).cloned().unwrap_or_default()
@@ -76,12 +77,12 @@ use quickcheck::{Arbitrary, Gen};
 #[cfg(any(test, feature = "quickcheck"))]
 impl Arbitrary for U256 {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
-        Self::from_limbs(
+        Self::from_limbs([
             u64::arbitrary(g),
             u64::arbitrary(g),
             u64::arbitrary(g),
             u64::arbitrary(g),
-        )
+        ])
     }
 }
 
