@@ -56,6 +56,7 @@ mod add;
 mod rand;
 mod u256;
 mod binary;
+mod conversion;
 
 // TODO: This seems out of scope for U256 to export.
 pub mod utils;
