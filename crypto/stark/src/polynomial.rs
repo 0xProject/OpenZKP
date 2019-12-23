@@ -3,12 +3,14 @@
 #[cfg(feature = "std")]
 use rayon::prelude::*;
 use std::prelude::v1::*;
+use zkp_macros_decl::field_element;
 use zkp_mmap_vec::MmapVec;
 #[cfg(feature = "std")]
 use zkp_primefield::fft::{fft_cofactor_permuted_out, permute_index};
 use zkp_primefield::FieldElement;
+use zkp_u256::U256;
 
-#[derive(PartialEq, Clone)]
+#[derive(Clone)]
 pub struct DensePolynomial(MmapVec<FieldElement>);
 
 // We normally don't want to spill thousands of coefficients in the logs.
@@ -18,6 +20,15 @@ impl std::fmt::Debug for DensePolynomial {
         write!(fmt, "DensePolynomial(degree = {:?})", self.degree())
     }
 }
+
+impl PartialEq for DensePolynomial {
+    fn eq(&self, other: &Self) -> bool {
+        // Check equality with evaluation
+        let x = field_element!("754ed488ec9208d1b552bb254c0890042078a9e1f7e36072ebff1bf4e193d11b");
+        self.evaluate(&x) == other.evaluate(&x)
+    }
+}
+impl Eq for DensePolynomial {}
 
 impl DensePolynomial {
     pub fn from_mmap_vec(coefficients: MmapVec<FieldElement>) -> Self {

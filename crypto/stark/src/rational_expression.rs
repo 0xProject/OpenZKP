@@ -1,14 +1,19 @@
 use crate::polynomial::DensePolynomial;
+#[cfg(feature = "std")]
+use std::collections::HashMap;
 use std::{
     collections::BTreeSet,
+    hash::{Hash, Hasher},
     iter::Sum,
     ops::{Add, Div, Mul, Sub},
     prelude::v1::*,
 };
+use zkp_macros_decl::field_element;
 use zkp_primefield::FieldElement;
+use zkp_u256::U256;
 
 // TODO: Rename to algebraic expression
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub enum RationalExpression {
     X,
@@ -291,6 +296,159 @@ impl RationalExpression {
             Add(a, b) | Mul(a, b) => {
                 a.trace_arguments_impl(s);
                 b.trace_arguments_impl(s);
+            }
+        }
+    }
+
+    #[cfg(feature = "std")]
+    pub fn soldity_encode(&self, memory_layout: &HashMap<Self, String>) -> String {
+        use RationalExpression::*;
+
+        #[allow(clippy::match_same_arms)]
+        match self {
+            X => "mload(0)".to_owned(),
+            Constant(_) if memory_layout.contains_key(self) => {
+                memory_layout.get(self).unwrap().clone()
+            }
+            Constant(c) => format!("0x{}", U256::from(c).to_string()),
+            Trace(..) | Polynomial(..) => memory_layout.get(self).unwrap().clone(),
+            Add(a, b) => {
+                format!(
+                    "addmod({}, {}, PRIME)",
+                    a.soldity_encode(memory_layout),
+                    b.soldity_encode(memory_layout)
+                )
+            }
+            Neg(a) => format!("sub(PRIME , {})", a.soldity_encode(memory_layout)),
+            Mul(a, b) => {
+                format!(
+                    "mulmod({}, {}, PRIME)",
+                    a.soldity_encode(memory_layout),
+                    b.soldity_encode(memory_layout)
+                )
+            }
+            Inv(_) => memory_layout.get(self).unwrap().clone(),
+            Exp(a, e) => {
+                match e {
+                    0 => "0x01".to_owned(),
+                    1 => a.soldity_encode(memory_layout),
+                    _ => {
+                        // TODO - Check the gas to see what the real breaking point should be
+                        if *e < 10 {
+                            format!(
+                                "small_expmod({}, {}, PRIME)",
+                                a.soldity_encode(memory_layout),
+                                e.to_string()
+                            )
+                        } else {
+                            format!(
+                                "expmod({}, {}, PRIME)",
+                                a.soldity_encode(memory_layout),
+                                e.to_string()
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // TODO - DRY this by writing a generic search over subtypes
+    #[cfg(feature = "std")]
+    pub fn trace_search(&self) -> HashMap<Self, bool> {
+        use RationalExpression::*;
+
+        match self {
+            X | Constant(..) => HashMap::new(),
+            Trace(..) => [(self.clone(), true)].iter().cloned().collect(),
+            Add(a, b) | Mul(a, b) => {
+                let mut first = a.trace_search();
+                first.extend(b.trace_search());
+                first
+            }
+            Polynomial(_, a) | Inv(a) | Exp(a, _) | Neg(a) => a.trace_search(),
+        }
+    }
+
+    #[cfg(feature = "std")]
+    pub fn inv_search(&self) -> HashMap<Self, bool> {
+        use RationalExpression::*;
+
+        match self {
+            X | Constant(_) | Trace(..) => HashMap::new(),
+            Add(a, b) | Mul(a, b) => {
+                let mut first = a.inv_search();
+                first.extend(b.inv_search());
+                first
+            }
+            Inv(_) => [(self.clone(), true)].iter().cloned().collect(),
+            Polynomial(_, a) | Exp(a, _) | Neg(a) => a.inv_search(),
+        }
+    }
+
+    #[cfg(feature = "std")]
+    pub fn periodic_search(&self) -> HashMap<Self, bool> {
+        use RationalExpression::*;
+
+        match self {
+            X | Constant(_) | Trace(..) => HashMap::new(),
+            Polynomial(..) => [(self.clone(), true)].iter().cloned().collect(),
+            Add(a, b) | Mul(a, b) => {
+                let mut first = a.periodic_search();
+                first.extend(b.periodic_search());
+                first
+            }
+            Inv(a) | Exp(a, _) | Neg(a) => a.periodic_search(),
+        }
+    }
+}
+
+#[allow(clippy::derive_hash_xor_eq)]
+impl Hash for RationalExpression {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        use RationalExpression::*;
+        match self {
+            X => {
+                "x".hash(state);
+            }
+            Constant(c) => {
+                c.hash(state);
+            }
+            &Trace(i, j) => {
+                "trace".hash(state);
+                i.hash(state);
+                j.hash(state);
+            }
+            Polynomial(p, a) => {
+                "poly".hash(state);
+                let x = field_element!(
+                    "754ed488ec9208d1c552bb254c0890042078a9e1f7e36072ebff1bf4e193d11b"
+                );
+                (p.evaluate(&x)).hash(state);
+                a.hash(state);
+            }
+            Add(a, b) => {
+                "add".hash(state);
+                a.hash(state);
+                b.hash(state);
+            }
+            Neg(a) => {
+                "neg".hash(state);
+                a.hash(state);
+            }
+            Mul(a, b) => {
+                "mul".hash(state);
+                a.hash(state);
+                b.hash(state);
+            }
+            Inv(a) => {
+                "inv".hash(state);
+                a.hash(state);
+            }
+            Exp(a, e) => {
+                "exp".hash(state);
+                a.hash(state);
+                e.hash(state);
             }
         }
     }

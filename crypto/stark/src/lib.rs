@@ -63,6 +63,8 @@ mod constraint_check;
 #[cfg(feature = "prover")]
 mod prover;
 #[cfg(feature = "prover")]
+pub mod solidity_encode;
+#[cfg(feature = "prover")]
 mod trace_table;
 
 // TODO: Have unconditional Debug trait on all types
