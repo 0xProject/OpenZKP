@@ -313,8 +313,8 @@ fn lehmer_double(mut r0: U256, mut r1: U256) -> Matrix {
     // OPT: Can we reuse the shifted variables here?
     lehmer_update(&mut r0, &mut r1, &q);
     let s = r0.leading_zeros();
-    let r0s = r0.clone() << s;
-    let r1s = r1.clone() << s;
+    let r0s = r0 << s;
+    let r1s = r1 << s;
     let qn = lehmer_loop(r0s.limb(3), r1s.limb(3));
 
     // Multiply matrices qn * q

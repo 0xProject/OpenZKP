@@ -101,7 +101,7 @@ impl DensePolynomial {
     /// Divide out a point and add the scaled result to target.
     ///
     /// target += c * (P(X) - P(z)) / (X - z)
-    /// See: https://en.wikipedia.org/wiki/Synthetic_division
+    /// See: <https://en.wikipedia.org/wiki/Synthetic_division>
     pub fn divide_out_point_into(&self, z: &FieldElement, c: &FieldElement, target: &mut Self) {
         let mut remainder = FieldElement::ZERO;
         for (coefficient, target) in self.0.iter().rev().zip(target.0.iter_mut().rev()) {

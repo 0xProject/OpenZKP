@@ -8,10 +8,12 @@ use std::fmt;
 pub struct Hash([u8; 32]);
 
 impl Hash {
+    #[must_use]
     pub fn new(bytes: [u8; 32]) -> Self {
         Self(bytes)
     }
 
+    #[must_use]
     pub fn as_bytes(&self) -> &[u8] {
         &self.0
     }

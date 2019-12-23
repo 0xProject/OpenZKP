@@ -297,7 +297,7 @@ pub fn verify(constraints: &Constraints, proof: &Proof) -> Result<()> {
     // Folded fri values from the previous layer
     let mut fri_folds: BTreeMap<usize, FieldElement> = BTreeMap::new();
 
-    let mut previous_indices = queries.to_vec().clone();
+    let mut previous_indices = queries.to_vec();
     let mut step = 1;
     let mut len = eval_domain_size;
     for (k, commitment) in fri_commitments.iter().enumerate() {

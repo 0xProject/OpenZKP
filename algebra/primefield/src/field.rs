@@ -344,6 +344,8 @@ macro_rules! field_h {
 
 // Quickcheck needs pass by value
 #[allow(clippy::needless_pass_by_value)]
+// We allow these in tests for readability/ease of editing
+#[allow(clippy::redundant_clone)]
 #[cfg(test)]
 mod tests {
     use super::*;

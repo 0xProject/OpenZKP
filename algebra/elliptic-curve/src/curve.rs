@@ -16,10 +16,12 @@ pub enum Affine {
 impl Affine {
     pub const ZERO: Self = Self::Zero;
 
+    #[must_use]
     pub fn new(x: FieldElement, y: FieldElement) -> Self {
         Self::Point { x, y }
     }
 
+    #[must_use]
     pub fn on_curve(&self) -> bool {
         match self {
             Self::Zero => true,
@@ -31,6 +33,7 @@ impl Affine {
         *self = self.double();
     }
 
+    #[must_use]
     pub fn double(&self) -> Self {
         match self {
             Self::Zero => Self::Zero,
@@ -192,10 +195,10 @@ impl Arbitrary for Affine {
     }
 }
 
-// TODO: Use u256h literals here.
-#[allow(clippy::unreadable_literal)]
 // Quickcheck needs pass by value
 #[allow(clippy::needless_pass_by_value)]
+// We allow these in tests for readability/ease of editing
+#[allow(clippy::redundant_clone)]
 #[cfg(test)]
 mod tests {
     use super::*;

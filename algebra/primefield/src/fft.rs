@@ -137,6 +137,8 @@ fn fft_permuted_root(root: &FieldElement, coefficients: &mut [FieldElement]) {
 
 // Quickcheck needs pass by value
 #[allow(clippy::needless_pass_by_value)]
+// We don't care about this in tests
+#[allow(clippy::redundant_clone)]
 #[cfg(test)]
 mod tests {
     use super::*;

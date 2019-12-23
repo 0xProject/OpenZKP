@@ -109,6 +109,9 @@ pub(crate) fn non_adjacent_form(mut scalar: U256, window: usize) -> [i16; 257] {
 // See https://doc-internal.dalek.rs/curve25519_dalek/traits/trait.VartimeMultiscalarMul.html
 // Signs are explicitly handled
 #[allow(clippy::cast_sign_loss)]
+#[must_use]
+// TODO: [refactor] [beginner] [small] rewrite
+#[allow(clippy::comparison_chain)]
 pub fn mul(p: &Affine, scalar: &U256) -> Jacobian {
     // Precomputed odd multiples
     let mut naf_table: [Jacobian; 8] = Default::default();
@@ -134,6 +137,9 @@ pub fn mul(p: &Affine, scalar: &U256) -> Jacobian {
 
 // Signs are explicitly handled
 #[allow(clippy::cast_sign_loss)]
+#[must_use]
+// TODO: [refactor] [beginner] [small] rewrite
+#[allow(clippy::comparison_chain)]
 pub fn double_mul(point_a: &Affine, scalar_a: U256, point_b: &Affine, scalar_b: U256) -> Jacobian {
     // Precomputed odd multiples
     let mut naf_table_a: [Jacobian; 8] = Default::default();
@@ -168,6 +174,9 @@ pub fn double_mul(point_a: &Affine, scalar_a: U256, point_b: &Affine, scalar_b: 
 
 // Signs are explicitly handled
 #[allow(clippy::cast_sign_loss)]
+// TODO: [refactor] [beginner] [small] rewrite
+#[allow(clippy::comparison_chain)]
+#[must_use]
 pub fn base_mul(naf_table: &[Affine], s: U256) -> Jacobian {
     // Get SNAF
     let snaf_expansion = non_adjacent_form(s, 7);
@@ -191,6 +200,9 @@ pub fn base_mul(naf_table: &[Affine], s: U256) -> Jacobian {
 #[allow(clippy::cast_sign_loss)]
 // Rebind naf_table after affine batch conversion
 #[allow(clippy::shadow_unrelated)]
+// TODO: [refactor] [beginner] [small] rewrite
+#[allow(clippy::comparison_chain)]
+#[must_use]
 pub fn double_base_mul(
     naf_table_a: &[Affine],
     scalar_a: U256,
@@ -235,8 +247,6 @@ pub fn double_base_mul(
 
 // TODO: https://github.com/dalek-cryptography/curve25519-dalek/blob/8b2742cb9dae6a365915021ac7474227d610f09a/src/backend/vector/scalar_mul/vartime_double_base.rs
 
-// TODO: Replace literals with u256h!
-#[allow(clippy::unreadable_literal)]
 #[cfg(test)]
 mod tests {
     use super::*;

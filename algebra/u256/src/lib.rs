@@ -38,6 +38,14 @@
 #![cfg_attr(feature = "std", warn(missing_debug_implementations,))]
 // rand_xoshiro v0.4.0 is required for a zkp-stark example and v0.3.1 for criterion
 #![allow(clippy::multiple_crate_versions)]
+// TODO: Add `must_use` where relevant
+#![allow(clippy::must_use_candidate)]
+// All `#[inline(always)]` attributes are carefully considered and benchmarked.
+// Performance is an important goal of this library.
+// TODO: Provide two versions of hot functions `_inlined` and plain.
+#![allow(clippy::inline_always)]
+// TODO: Document errors
+#![allow(clippy::missing_errors_doc)]
 
 mod binops;
 mod division;
