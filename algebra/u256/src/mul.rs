@@ -254,6 +254,12 @@ impl Mul<&U256> for u128 {
     }
 }
 
+impl core::iter::Product for U256 {
+    fn product<I: Iterator<Item = U256>>(iter: I) -> Self {
+        iter.fold(Self::ONE, Mul::mul)
+    }
+}
+
 // TODO: Replace literals with u256h!
 #[allow(clippy::unreadable_literal)]
 // Quickcheck requires pass by value
