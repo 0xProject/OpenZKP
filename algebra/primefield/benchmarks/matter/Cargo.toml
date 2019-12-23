@@ -12,4 +12,4 @@ rand = "0.4.0"
 
 [features]
 default = ["std"]
-std= []
+std = []

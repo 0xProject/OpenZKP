@@ -39,6 +39,8 @@
 // rand_xoshiro v0.4.0 is required for a zkp-stark example and v0.3.1 for criterion
 #![allow(clippy::multiple_crate_versions)]
 
+#[macro_use]
+use ff;
 pub use ff::Field;
 use ff::*;
 use serde::{Deserialize, Serialize};
