@@ -164,7 +164,7 @@ pub fn proth_redc_inline<M: Parameters>(lo: &U256, hi: &U256) -> U256 {
     let (a2, carry) = sbb(0, a2, carry);
     let (a3, hcarry) = mac(a3, a0, m3, carry);
     let (a3, carry) = sbb(0, a3, 0);
-    let (a4, hcarry) = mac(a4, a1, m3, hcarry, carry);
+    let (a4, hcarry) = macc(a4, a1, m3, hcarry, carry);
     let (a5, hcarry) = mac(a5, a2, m3, hcarry);
     let (a6, hcarry) = mac(a6, a3, m3, hcarry);
     let (a7, _carry) = adc(a7, 0, hcarry);
@@ -185,61 +185,52 @@ pub fn mul_redc<M: Parameters>(x: &U256, y: &U256) -> U256 {
 #[allow(clippy::shadow_unrelated)]
 #[inline(always)]
 pub fn mul_redc_inline<M: Parameters>(x: &U256, y: &U256) -> U256 {
-    let (lo, hi) = x.mul_full_inline(y);
-    return proth_redc_inline::<M>(&lo, &hi);
-    // return proth_mul_redc_inline::<M>(x, y);
+    //let (lo, hi) = x.mul_full_inline(y);
+    //return proth_redc_inline::<M>(&lo, &hi);
+    //return proth_mul_redc_inline::<M>(x, y);
 
     let x = x.as_limbs();
     let modulus = M::MODULUS.as_limbs();
 
-    let k = x[0].wrapping_mul(y.limb(0)).wrapping_mul(M::M64);
     let (a0, carry) = mac(0, x[0], y.limb(0), 0);
     let (a1, carry) = mac(0, x[0], y.limb(1), carry);
     let (a2, carry) = mac(0, x[0], y.limb(2), carry);
     let (a3, carry) = mac(0, x[0], y.limb(3), carry);
     let a4 = carry;
+    let k = a0.wrapping_mul(M::M64);
     let (_a, carry) = mac(a0, k, modulus[0], 0);
     let (a0, carry) = mac(a1, k, modulus[1], carry);
     let (a1, carry) = mac(a2, k, modulus[2], carry);
     let (a2, carry) = mac(a3, k, modulus[3], carry);
     let a3 = a4 + carry;
-    let k = x[1]
-        .wrapping_mul(y.limb(0))
-        .wrapping_add(a0)
-        .wrapping_mul(M::M64);
     let (a0, carry) = mac(a0, x[1], y.limb(0), 0);
     let (a1, carry) = mac(a1, x[1], y.limb(1), carry);
     let (a2, carry) = mac(a2, x[1], y.limb(2), carry);
     let (a3, carry) = mac(a3, x[1], y.limb(3), carry);
     let a4 = carry;
+    let k = a0.wrapping_mul(M::M64);
     let (_a, carry) = mac(a0, k, modulus[0], 0);
     let (a0, carry) = mac(a1, k, modulus[1], carry);
     let (a1, carry) = mac(a2, k, modulus[2], carry);
     let (a2, carry) = mac(a3, k, modulus[3], carry);
     let a3 = a4 + carry;
-    let k = x[2]
-        .wrapping_mul(y.limb(0))
-        .wrapping_add(a0)
-        .wrapping_mul(M::M64);
     let (a0, carry) = mac(a0, x[2], y.limb(0), 0);
     let (a1, carry) = mac(a1, x[2], y.limb(1), carry);
     let (a2, carry) = mac(a2, x[2], y.limb(2), carry);
     let (a3, carry) = mac(a3, x[2], y.limb(3), carry);
     let a4 = carry;
+    let k = a0.wrapping_mul(M::M64);
     let (_a, carry) = mac(a0, k, modulus[0], 0);
     let (a0, carry) = mac(a1, k, modulus[1], carry);
     let (a1, carry) = mac(a2, k, modulus[2], carry);
     let (a2, carry) = mac(a3, k, modulus[3], carry);
     let a3 = a4 + carry;
-    let k = x[3]
-        .wrapping_mul(y.limb(0))
-        .wrapping_add(a0)
-        .wrapping_mul(M::M64);
     let (a0, carry) = mac(a0, x[3], y.limb(0), 0);
     let (a1, carry) = mac(a1, x[3], y.limb(1), carry);
     let (a2, carry) = mac(a2, x[3], y.limb(2), carry);
     let (a3, carry) = mac(a3, x[3], y.limb(3), carry);
     let a4 = carry;
+    let k = a0.wrapping_mul(M::M64);
     let (_a, carry) = mac(a0, k, modulus[0], 0);
     let (a0, carry) = mac(a1, k, modulus[1], carry);
     let (a1, carry) = mac(a2, k, modulus[2], carry);
@@ -267,17 +258,19 @@ pub fn proth_mul_redc_inline<M: Parameters>(x: &U256, y: &U256) -> U256 {
 
     let x = x.as_limbs();
     let y = y.as_limbs();
-
-    let k = x[0].wrapping_mul(y[0]).wrapping_neg();
+    
     let (a0, carry) = mac(0, x[0], y[0], 0);
     let (a1, carry) = mac(0, x[0], y[1], carry);
     let (a2, carry) = mac(0, x[0], y[2], carry);
     let (a3, carry) = mac(0, x[0], y[3], carry);
     let a4 = carry;
+
+    let k = a0.wrapping_neg();
     let (_a, carry) = adc(a0, k, 0);
     let (a0, carry) = adc(a1, 0, carry);
     let (a1, carry) = adc(a2, 0, carry);
     let (a2, carry) = mac(a3, k, m3, carry);
+
     let a3 = a4 + carry;
     let k = x[1]
         .wrapping_mul(y[0])
