@@ -134,6 +134,36 @@ pub fn redc_inline<M: Parameters>(lo: &U256, hi: &U256) -> U256 {
     r
 }
 
+pub fn proth_redc<M: Parameters>(lo: &U256, hi: &U256) -> U256 {
+    proth_redc_inline::<M>(lo, hi)
+}
+
+// See https://hackmd.io/7PFyv-itRBa0a0nYCAklmA?both
+#[inline(always)]
+pub fn proth_redc_inline<M: Parameters>(lo: &U256, hi: &U256) -> U256 {
+    let modulus = M::MODULUS.as_limbs();
+    let m3 = modulus[3];
+    assert_eq!(modulus[0], 1);
+    assert_eq!(modulus[1], 0);
+    assert_eq!(modulus[2], 0);
+    assert_eq!(M::M64, u64::max_value());
+
+    // TODO: Handle zero limbs
+    let (a3, carry) = mac(lo.limb(3), lo.limb(0).wrapping_neg(), m3, 1);
+    let (a4, carry) = mac(hi.limb(0), !lo.limb(1), m3, carry + 1);
+    let (a5, carry) = mac(hi.limb(1), !lo.limb(2), m3, carry);
+    let (a6, carry) = mac(hi.limb(2), a3.wrapping_neg(), m3, carry);
+    let (a7, _carry) = adc(hi.limb(3), 0, carry);
+
+    // Final reduction
+    let mut r = U256::from_limbs([a4, a5, a6, a7]);
+    if r >= M::MODULUS {
+        r -= &M::MODULUS;
+    }
+    r
+}
+
+
 pub fn mul_redc<M: Parameters>(x: &U256, y: &U256) -> U256 {
     mul_redc_inline::<M>(x, y)
 }
@@ -241,12 +271,13 @@ pub fn from_montgomery<M: Parameters>(n: &U256) -> U256 {
 
 #[inline(always)]
 pub fn mulx(a: &U256, b: &U256) -> U256 {
-    const ZERO: u64 = 0;
-    const MODULUS_0: u64 = 1;
-    const MODULUS_1: u64 = 0;
-    const MODULUS_2: u64 = 0;
-    const MODULUS_3: u64 = 0x0800000000000011;
-    const M64: u64 = 0xffff_ffff_ffff_ffff;
+    const ZERO: u64 = 0; // $3
+    const MODULUS_0: u64 = 1; // $4
+    const MODULUS_1: u64 = 0; // $5
+    const MODULUS_2: u64 = 0; // $6
+    const MODULUS_3: u64 = 0x0800000000000011; // $7
+    const M64: u64 = 0xffff_ffff_ffff_ffff; // -1 $8
+    // TODO: Optimize for special primes where the above values hold
     let a = a.as_limbs();
     let b = b.as_limbs();
     let mut result: [u64; 4] = [0,0,0,0];
@@ -399,6 +430,7 @@ mod tests {
         const R2: U256 = u256h!("07ffd4ab5e008810ffffffffff6f800000000001330ffffffffffd737e000401");
         const R3: U256 = u256h!("038e5f79873c0a6df47d84f8363000187545706677ffcc06cc7177d1406df18e");
     }
+
     #[test]
     fn test_mulx() {
         let a = u256h!("0548c135e26faa9c977fb2eda057b54b2e0baa9a77a0be7c80278f4f03462d4c");
@@ -413,6 +445,14 @@ mod tests {
         let b = u256h!("024385f6bebc1c496e09955db534ef4b1eaff9a78e27d4093cfa8f7c8f886f6b");
         let c = u256h!("012e440f0965e7029c218b64f1010006b5c4ba8b1497c4174a32fec025c197bc");
         assert_eq!(redc::<PrimeField>(&a, &b), c);
+    }
+
+    #[test]
+    fn test_proth_redc() {
+        let a = u256h!("0548c135e26faa9c977fb2eda057b54b2e0baa9a77a0be7c80278f4f03462d4c");
+        let b = u256h!("024385f6bebc1c496e09955db534ef4b1eaff9a78e27d4093cfa8f7c8f886f6b");
+        let c = u256h!("012e440f0965e7029c218b64f1010006b5c4ba8b1497c4174a32fec025c197bc");
+        assert_eq!(proth_redc::<PrimeField>(&a, &b), c);
     }
 
     #[test]
