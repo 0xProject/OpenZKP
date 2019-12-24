@@ -264,8 +264,7 @@ pub fn proth_mul_redc_inline<M: Parameters>(x: &U256, y: &U256) -> U256 {
     let (a2, carry) = mac(0, x[0], y[2], carry);
     let (a3, carry) = mac(0, x[0], y[3], carry);
     let a4 = carry;
-    let k = a0.wrapping_neg();
-    let (_a, carry) = adc(a0, k, 0);
+    let (k, carry) = sbb(0, a0, 0);
     let (a0, carry) = adc(a1, 0, carry);
     let (a1, carry) = adc(a2, 0, carry);
     let (a2, carry) = mac(a3, k, m3, carry);
@@ -275,8 +274,7 @@ pub fn proth_mul_redc_inline<M: Parameters>(x: &U256, y: &U256) -> U256 {
     let (a2, carry) = mac(a2, x[1], y[2], carry);
     let (a3, carry) = mac(a3, x[1], y[3], carry);
     let a4 = carry;
-    let k = a0.wrapping_neg();
-    let (_a, carry) = adc(a0, k, 0);
+    let (k, carry) = sbb(0, a0, 0);
     let (a0, carry) = adc(a1, 0, carry);
     let (a1, carry) = adc(a2, 0, carry);
     let (a2, carry) = mac(a3, k, m3, carry);
@@ -286,8 +284,7 @@ pub fn proth_mul_redc_inline<M: Parameters>(x: &U256, y: &U256) -> U256 {
     let (a2, carry) = mac(a2, x[2], y[2], carry);
     let (a3, carry) = mac(a3, x[2], y[3], carry);
     let a4 = carry;
-    let k = a0.wrapping_neg();
-    let (_a, carry) = adc(a0, k, 0);
+    let (k, carry) = sbb(0, a0, 0);
     let (a0, carry) = adc(a1, 0, carry);
     let (a1, carry) = adc(a2, 0, carry);
     let (a2, carry) = mac(a3, k, m3, carry);
@@ -297,8 +294,7 @@ pub fn proth_mul_redc_inline<M: Parameters>(x: &U256, y: &U256) -> U256 {
     let (a2, carry) = mac(a2, x[3], y[2], carry);
     let (a3, carry) = mac(a3, x[3], y[3], carry);
     let a4 = carry;
-    let k = a0.wrapping_neg();
-    let (_a, carry) = adc(a0, k, 0);
+    let (k, carry) = sbb(0, a0, 0);
     let (a0, carry) = adc(a1, 0, carry);
     let (a1, carry) = adc(a2, 0, carry);
     let (a2, carry) = mac(a3, k, modulus[3], carry);
