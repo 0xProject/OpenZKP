@@ -187,7 +187,7 @@ pub fn mul_redc<M: Parameters>(x: &U256, y: &U256) -> U256 {
 pub fn mul_redc_inline<M: Parameters>(x: &U256, y: &U256) -> U256 {
     //let (lo, hi) = x.mul_full_inline(y);
     //return proth_redc_inline::<M>(&lo, &hi);
-    //return proth_mul_redc_inline::<M>(x, y);
+    return proth_mul_redc_inline::<M>(x, y);
 
     let x = x.as_limbs();
     let modulus = M::MODULUS.as_limbs();
@@ -264,51 +264,40 @@ pub fn proth_mul_redc_inline<M: Parameters>(x: &U256, y: &U256) -> U256 {
     let (a2, carry) = mac(0, x[0], y[2], carry);
     let (a3, carry) = mac(0, x[0], y[3], carry);
     let a4 = carry;
-
     let k = a0.wrapping_neg();
     let (_a, carry) = adc(a0, k, 0);
     let (a0, carry) = adc(a1, 0, carry);
     let (a1, carry) = adc(a2, 0, carry);
     let (a2, carry) = mac(a3, k, m3, carry);
-
     let a3 = a4 + carry;
-    let k = x[1]
-        .wrapping_mul(y[0])
-        .wrapping_add(a0)
-        .wrapping_neg();
     let (a0, carry) = mac(a0, x[1], y[0], 0);
     let (a1, carry) = mac(a1, x[1], y[1], carry);
     let (a2, carry) = mac(a2, x[1], y[2], carry);
     let (a3, carry) = mac(a3, x[1], y[3], carry);
     let a4 = carry;
+    let k = a0.wrapping_neg();
     let (_a, carry) = adc(a0, k, 0);
     let (a0, carry) = adc(a1, 0, carry);
     let (a1, carry) = adc(a2, 0, carry);
     let (a2, carry) = mac(a3, k, m3, carry);
     let a3 = a4 + carry;
-    let k = x[2]
-        .wrapping_mul(y[0])
-        .wrapping_add(a0)
-        .wrapping_neg();
     let (a0, carry) = mac(a0, x[2], y[0], 0);
     let (a1, carry) = mac(a1, x[2], y[1], carry);
     let (a2, carry) = mac(a2, x[2], y[2], carry);
     let (a3, carry) = mac(a3, x[2], y[3], carry);
     let a4 = carry;
+    let k = a0.wrapping_neg();
     let (_a, carry) = adc(a0, k, 0);
     let (a0, carry) = adc(a1, 0, carry);
     let (a1, carry) = adc(a2, 0, carry);
     let (a2, carry) = mac(a3, k, m3, carry);
     let a3 = a4 + carry;
-    let k = x[3]
-        .wrapping_mul(y[0])
-        .wrapping_add(a0)
-        .wrapping_neg();
     let (a0, carry) = mac(a0, x[3], y[0], 0);
     let (a1, carry) = mac(a1, x[3], y[1], carry);
     let (a2, carry) = mac(a2, x[3], y[2], carry);
     let (a3, carry) = mac(a3, x[3], y[3], carry);
     let a4 = carry;
+    let k = a0.wrapping_neg();
     let (_a, carry) = adc(a0, k, 0);
     let (a0, carry) = adc(a1, 0, carry);
     let (a1, carry) = adc(a2, 0, carry);
