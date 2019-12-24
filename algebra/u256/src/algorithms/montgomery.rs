@@ -162,24 +162,21 @@ pub fn proth_redc_inline<M: Parameters>(lo: &U256, hi: &U256) -> U256 {
     let hcarry = 0;
 
     let (ui, scarry) = sbb(0, a0, 0);
-    let (a1, lcarry) = adc(a1, scarry, 0);
     let (a3, hcarry) = mac(a3, ui, m3, hcarry);
 
-    let (ui, scarry) = sbb(0, a1, 0);
-    let (a2, lcarry) = adc(a2, scarry, lcarry);
+    let (ui, scarry) = sbb(0, a1, scarry);
     let (a4, hcarry) = mac(a4, ui, m3, hcarry);
 
-    let (ui, scarry) = sbb(0, a2, 0);
-    let (a3, lcarry) = adc(a3, scarry, lcarry);
+    let (ui, scarry) = sbb(0, a2, scarry);
     let (a5, hcarry) = mac(a5, ui, m3, hcarry);
 
-    let (ui, scarry) = sbb(0, a3, 0);
-    let (a4, lcarry) = adc(a4, scarry, lcarry);
+    let (ui, scarry) = sbb(0, a3, scarry);
     let (a6, hcarry) = mac(a6, ui, m3, hcarry);
 
-    let (a5, lcarry) = adc(a5, 0, lcarry);
-    let (a6, lcarry) = adc(a6, 0, lcarry);
-    let (a7, _lcarry) = adc(a7, hcarry, lcarry);
+    let (a4, scarry) = adc(a4, 0, scarry);
+    let (a5, scarry) = adc(a5, 0, scarry);
+    let (a6, scarry) = adc(a6, 0, scarry);
+    let (a7, _carry) = adc(a7, hcarry, scarry);
 
     // Final reduction
     let mut r = U256::from_limbs([a4, a5, a6, a7]);
