@@ -139,6 +139,8 @@ pub fn proth_redc<M: Parameters>(lo: &U256, hi: &U256) -> U256 {
 }
 
 // See https://hackmd.io/7PFyv-itRBa0a0nYCAklmA?both
+// This is algorithm 14.32 optimized for the facts that
+//   m_0 = 1. m_1 =0, m_2 = 0, m' = -1
 #[inline(always)]
 pub fn proth_redc_inline<M: Parameters>(lo: &U256, hi: &U256) -> U256 {
     let modulus = M::MODULUS.as_limbs();
@@ -163,7 +165,6 @@ pub fn proth_redc_inline<M: Parameters>(lo: &U256, hi: &U256) -> U256 {
     r
 }
 
-
 pub fn mul_redc<M: Parameters>(x: &U256, y: &U256) -> U256 {
     mul_redc_inline::<M>(x, y)
 }
@@ -172,7 +173,10 @@ pub fn mul_redc<M: Parameters>(x: &U256, y: &U256) -> U256 {
 #[allow(clippy::shadow_unrelated)]
 #[inline(always)]
 pub fn mul_redc_inline<M: Parameters>(x: &U256, y: &U256) -> U256 {
-    return mulx(x, y);
+    let (lo, hi) = x.mul_full_inline(y);
+    return proth_redc_inline::<M>(&lo, &hi);
+
+
     let x = x.as_limbs();
     let modulus = M::MODULUS.as_limbs();
 

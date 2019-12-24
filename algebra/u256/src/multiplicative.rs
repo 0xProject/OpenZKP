@@ -14,9 +14,14 @@ use std::{
 // Multiplicative operations: Mul, square, mulmod, pow, etc. routines
 
 impl U256 {
+    pub fn mul_full(&self, rhs: &Self) -> (Self, Self) {
+        self.mul_full_inline(rhs)
+    }
+
     // We shadow carry for readability
     #[allow(clippy::shadow_unrelated)]
-    pub fn mul_full(&self, rhs: &Self) -> (Self, Self) {
+    #[inline(always)]
+    pub fn mul_full_inline(&self, rhs: &Self) -> (Self, Self) {
         let (r0, carry) = mac(0, self.limb(0), rhs.limb(0), 0);
         let (r1, carry) = mac(0, self.limb(0), rhs.limb(1), carry);
         let (r2, carry) = mac(0, self.limb(0), rhs.limb(2), carry);
