@@ -185,8 +185,8 @@ pub fn mul_redc<M: Parameters>(x: &U256, y: &U256) -> U256 {
 #[allow(clippy::shadow_unrelated)]
 #[inline(always)]
 pub fn mul_redc_inline<M: Parameters>(x: &U256, y: &U256) -> U256 {
-    //let (lo, hi) = x.mul_full_inline(y);
-    //return proth_redc_inline::<M>(&lo, &hi);
+    // let (lo, hi) = x.mul_full_inline(y);
+    // return proth_redc_inline::<M>(&lo, &hi);
     return proth_mul_redc_inline::<M>(x, y);
 
     let x = x.as_limbs();
@@ -258,13 +258,12 @@ pub fn proth_mul_redc_inline<M: Parameters>(x: &U256, y: &U256) -> U256 {
 
     let x = x.as_limbs();
     let y = y.as_limbs();
-    
+
     let (a0, carry) = mac(0, x[0], y[0], 0);
     let (a1, carry) = mac(0, x[0], y[1], carry);
     let (a2, carry) = mac(0, x[0], y[2], carry);
     let (a3, carry) = mac(0, x[0], y[3], carry);
     let a4 = carry;
-
     let (k, carry) = sbb(0, a0, 0);
     let (a3, hcarry) = mac(a3, k, m3, 0);
     let (a1, carry) = mac(a1, x[1], y[0], carry);
@@ -272,7 +271,6 @@ pub fn proth_mul_redc_inline<M: Parameters>(x: &U256, y: &U256) -> U256 {
     let (a3, carry) = mac(a3, x[1], y[2], carry);
     let (a4, carry) = macc(a4, x[1], y[3], carry, hcarry);
     let a5 = carry;
-
     let (k, carry) = sbb(0, a1, 0);
     let (a4, hcarry) = mac(a4, k, m3, 0);
     let (a2, carry) = mac(a2, x[2], y[0], carry);
@@ -280,7 +278,6 @@ pub fn proth_mul_redc_inline<M: Parameters>(x: &U256, y: &U256) -> U256 {
     let (a4, carry) = mac(a4, x[2], y[2], carry);
     let (a5, carry) = macc(a5, x[2], y[3], carry, hcarry);
     let a6 = carry;
-
     let (k, carry) = sbb(0, a2, 0);
     let (a5, hcarry) = mac(a5, k, m3, 0);
     let (a3, carry) = mac(a3, x[3], y[0], carry);
@@ -288,7 +285,6 @@ pub fn proth_mul_redc_inline<M: Parameters>(x: &U256, y: &U256) -> U256 {
     let (a5, carry) = mac(a5, x[3], y[2], carry);
     let (a6, carry) = macc(a6, x[3], y[3], carry, hcarry);
     let a7 = carry;
-
     let (k, carry) = sbb(0, a3, 0);
     let (a4, carry) = adc(a4, 0, carry);
     let (a5, carry) = adc(a5, 0, carry);
@@ -342,10 +338,10 @@ pub fn mulx(a: &U256, b: &U256) -> U256 {
     const MODULUS_2: u64 = 0; // $6
     const MODULUS_3: u64 = 0x0800000000000011; // $7
     const M64: u64 = 0xffff_ffff_ffff_ffff; // -1 $8
-    // TODO: Optimize for special primes where the above values hold
+                                            // TODO: Optimize for special primes where the above values hold
     let a = a.as_limbs();
     let b = b.as_limbs();
-    let mut result: [u64; 4] = [0,0,0,0];
+    let mut result: [u64; 4] = [0, 0, 0, 0];
     // MULX dst_high, dst_low, src_b (src_a = %rdx)
     // src_b can be register or memory, not immediate
     unsafe {
@@ -469,7 +465,7 @@ pub fn mulx(a: &U256, b: &U256) -> U256 {
             movq %r14, 16($0)
             movq %r15, 24($0)
             "
-            : 
+            :
             : "r"(&result), "r"(a), "r"(b),
               "m"(ZERO), "m"(MODULUS_0), "m"(MODULUS_1), "m"(MODULUS_2), "m"(MODULUS_3), "m"(M64)
             : "rdx", "rdi", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15", "cc", "memory"

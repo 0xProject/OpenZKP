@@ -25,7 +25,8 @@ pub const fn mac(a: u64, b: u64, c: u64, carry: u64) -> (u64, u64) {
     (ret as u64, (ret >> 64) as u64)
 }
 
-/// Compute a + (b * c) + carry0 + carry1, returning the result and the new carry over.
+/// Compute a + (b * c) + carry0 + carry1, returning the result and the new
+/// carry over.
 // TODO: Is it safe to have two carries here?
 #[inline(always)]
 pub const fn macc(a: u64, b: u64, c: u64, carry0: u64, carry1: u64) -> (u64, u64) {
