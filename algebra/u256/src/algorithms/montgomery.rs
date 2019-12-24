@@ -162,9 +162,9 @@ pub fn proth_redc_inline<M: Parameters>(lo: &U256, hi: &U256) -> U256 {
     let (a0, carry) = sbb(0, a0, 0);
     let (a1, carry) = sbb(0, a1, carry);
     let (a2, carry) = sbb(0, a2, carry);
-    let (a3, hcarry) = mac(a3, a0, m3, 0);
-    let (a3, carry) = sbb(0, a3, carry);
-    let (a4, hcarry) = macc(a4, a1, m3, hcarry, carry);
+    let (a3, hcarry) = mac(a3, a0, m3, carry);
+    let (a3, carry) = sbb(0, a3, 0);
+    let (a4, hcarry) = mac(a4, a1, m3, hcarry, carry);
     let (a5, hcarry) = mac(a5, a2, m3, hcarry);
     let (a6, hcarry) = mac(a6, a3, m3, hcarry);
     let (a7, _carry) = adc(a7, 0, hcarry);
