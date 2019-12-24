@@ -1,5 +1,5 @@
 use crate::{
-    algorithms::limb_operations::{adc, mac, sbb},
+    algorithms::limb_operations::{adc, mac, macc, sbb},
     U256,
 };
 
@@ -159,24 +159,15 @@ pub fn proth_redc_inline<M: Parameters>(lo: &U256, hi: &U256) -> U256 {
     let a6 = hi.limb(2);
     let a7 = hi.limb(3);
 
-    let hcarry = 0;
-
-    let (ui, scarry) = sbb(0, a0, 0);
-    let (a3, hcarry) = mac(a3, ui, m3, hcarry);
-
-    let (ui, scarry) = sbb(0, a1, scarry);
-    let (a4, hcarry) = mac(a4, ui, m3, hcarry);
-
-    let (ui, scarry) = sbb(0, a2, scarry);
-    let (a5, hcarry) = mac(a5, ui, m3, hcarry);
-
-    let (ui, scarry) = sbb(0, a3, scarry);
-    let (a6, hcarry) = mac(a6, ui, m3, hcarry);
-
-    let (a4, scarry) = adc(a4, 0, scarry);
-    let (a5, scarry) = adc(a5, 0, scarry);
-    let (a6, scarry) = adc(a6, 0, scarry);
-    let (a7, _carry) = adc(a7, hcarry, scarry);
+    let (a0, carry) = sbb(0, a0, 0);
+    let (a1, carry) = sbb(0, a1, carry);
+    let (a2, carry) = sbb(0, a2, carry);
+    let (a3, hcarry) = mac(a3, a0, m3, 0);
+    let (a3, carry) = sbb(0, a3, carry);
+    let (a4, hcarry) = macc(a4, a1, m3, hcarry, carry);
+    let (a5, hcarry) = mac(a5, a2, m3, hcarry);
+    let (a6, hcarry) = mac(a6, a3, m3, hcarry);
+    let (a7, _carry) = adc(a7, 0, hcarry);
 
     // Final reduction
     let mut r = U256::from_limbs([a4, a5, a6, a7]);
