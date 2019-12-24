@@ -292,7 +292,7 @@ pub fn proth_mul_redc_inline<M: Parameters>(x: &U256, y: &U256) -> U256 {
     let (k, carry) = sbb(0, a3, 0);
     let (a4, carry) = adc(a4, 0, carry);
     let (a5, carry) = adc(a5, 0, carry);
-    let (a6, carry) = mac(a6, k, modulus[3], carry);
+    let (a6, carry) = mac(a6, k, m3, carry);
     let a7 = a7 + carry;
 
     // Final reduction
