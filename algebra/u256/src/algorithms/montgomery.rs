@@ -161,23 +161,19 @@ pub fn proth_redc_inline<M: Parameters>(lo: &U256, hi: &U256) -> U256 {
 
     let hcarry = 0;
 
-    let ui = a0.wrapping_neg();
-    let (_a0, scarry) = adc(a0, ui, 0);
+    let (ui, scarry) = sbb(0, a0, 0);
     let (a1, lcarry) = adc(a1, scarry, 0);
     let (a3, hcarry) = mac(a3, ui, m3, hcarry);
 
-    let ui = a1.wrapping_neg();
-    let (_a1, scarry) = adc(a1, ui, 0);
+    let (ui, scarry) = sbb(0, a1, 0);
     let (a2, lcarry) = adc(a2, scarry, lcarry);
     let (a4, hcarry) = mac(a4, ui, m3, hcarry);
 
-    let ui = a2.wrapping_neg();
-    let (_a2, scarry) = adc(a2, ui, 0);
+    let (ui, scarry) = sbb(0, a2, 0);
     let (a3, lcarry) = adc(a3, scarry, lcarry);
     let (a5, hcarry) = mac(a5, ui, m3, hcarry);
 
-    let ui = a3.wrapping_neg();
-    let (_a3, scarry) = adc(a3, ui, 0);
+    let (ui, scarry) = sbb(0, a3, 0);
     let (a4, lcarry) = adc(a4, scarry, lcarry);
     let (a6, hcarry) = mac(a6, ui, m3, hcarry);
 
@@ -201,9 +197,9 @@ pub fn mul_redc<M: Parameters>(x: &U256, y: &U256) -> U256 {
 #[allow(clippy::shadow_unrelated)]
 #[inline(always)]
 pub fn mul_redc_inline<M: Parameters>(x: &U256, y: &U256) -> U256 {
-    //let (lo, hi) = x.mul_full_inline(y);
-    //return proth_redc_inline::<M>(&lo, &hi);
-    return proth_mul_redc_inline::<M>(x, y);
+    let (lo, hi) = x.mul_full_inline(y);
+    return proth_redc_inline::<M>(&lo, &hi);
+    // return proth_mul_redc_inline::<M>(x, y);
 
     let x = x.as_limbs();
     let modulus = M::MODULUS.as_limbs();
