@@ -266,36 +266,27 @@ pub fn proth_mul_redc_inline<M: Parameters>(x: &U256, y: &U256) -> U256 {
     let a4 = carry;
 
     let (k, carry) = sbb(0, a0, 0);
-    let (a1, carry) = adc(a1, 0, carry);
-    let (a2, carry) = adc(a2, 0, carry);
-    let (a3, carry) = mac(a3, k, m3, carry);
-    let a4 = a4 + carry;
-    let (a1, carry) = mac(a1, x[1], y[0], 0);
+    let (a3, hcarry) = mac(a3, k, m3, 0);
+    let (a1, carry) = mac(a1, x[1], y[0], carry);
     let (a2, carry) = mac(a2, x[1], y[1], carry);
     let (a3, carry) = mac(a3, x[1], y[2], carry);
-    let (a4, carry) = mac(a4, x[1], y[3], carry);
+    let (a4, carry) = macc(a4, x[1], y[3], carry, hcarry);
     let a5 = carry;
 
     let (k, carry) = sbb(0, a1, 0);
-    let (a2, carry) = adc(a2, 0, carry);
-    let (a3, carry) = adc(a3, 0, carry);
-    let (a4, carry) = mac(a4, k, m3, carry);
-    let a5 = a5 + carry;
-    let (a2, carry) = mac(a2, x[2], y[0], 0);
+    let (a4, hcarry) = mac(a4, k, m3, 0);
+    let (a2, carry) = mac(a2, x[2], y[0], carry);
     let (a3, carry) = mac(a3, x[2], y[1], carry);
     let (a4, carry) = mac(a4, x[2], y[2], carry);
-    let (a5, carry) = mac(a5, x[2], y[3], carry);
+    let (a5, carry) = macc(a5, x[2], y[3], carry, hcarry);
     let a6 = carry;
 
     let (k, carry) = sbb(0, a2, 0);
-    let (a3, carry) = adc(a3, 0, carry);
-    let (a4, carry) = adc(a4, 0, carry);
-    let (a5, carry) = mac(a5, k, m3, carry);
-    let a6 = a6 + carry;
-    let (a3, carry) = mac(a3, x[3], y[0], 0);
+    let (a5, hcarry) = mac(a5, k, m3, 0);
+    let (a3, carry) = mac(a3, x[3], y[0], carry);
     let (a4, carry) = mac(a4, x[3], y[1], carry);
     let (a5, carry) = mac(a5, x[3], y[2], carry);
-    let (a6, carry) = mac(a6, x[3], y[3], carry);
+    let (a6, carry) = macc(a6, x[3], y[3], carry, hcarry);
     let a7 = carry;
 
     let (k, carry) = sbb(0, a3, 0);
