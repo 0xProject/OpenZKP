@@ -150,12 +150,38 @@ pub fn proth_redc_inline<M: Parameters>(lo: &U256, hi: &U256) -> U256 {
     assert_eq!(modulus[2], 0);
     assert_eq!(M::M64, u64::max_value());
 
-    // TODO: Handle zero limbs
-    let (a3, carry) = mac(lo.limb(3), lo.limb(0).wrapping_neg(), m3, 1);
-    let (a4, carry) = mac(hi.limb(0), !lo.limb(1), m3, carry + 1);
-    let (a5, carry) = mac(hi.limb(1), !lo.limb(2), m3, carry);
-    let (a6, carry) = mac(hi.limb(2), a3.wrapping_neg(), m3, carry);
-    let (a7, _carry) = adc(hi.limb(3), 0, carry);
+    let a0 = lo.limb(0);
+    let a1 = lo.limb(1);
+    let a2 = lo.limb(2);
+    let a3 = lo.limb(3);
+    let a4 = hi.limb(0);
+    let a5 = hi.limb(1);
+    let a6 = hi.limb(2);
+    let a7 = hi.limb(3);
+
+    let lcarry = 0;
+    let hcarry = 0;
+
+    let ui = a0.wrapping_neg();
+    let (_a0, lcarry) = adc(a0, ui, lcarry);
+    let (a3, hcarry) = mac(a3, ui, m3, hcarry);
+
+    let ui = a1.wrapping_add(lcarry).wrapping_neg();
+    let (_a1, lcarry) = adc(a1, ui, lcarry);
+    let (a4, hcarry) = mac(a4, ui, m3, hcarry);
+
+    let ui = a2.wrapping_add(lcarry).wrapping_neg();
+    let (_a2, lcarry) = adc(a2, ui, lcarry);
+    let (a5, hcarry) = mac(a5, ui, m3, hcarry);
+
+    let ui = a3.wrapping_add(lcarry).wrapping_neg();
+    let (_a3, lcarry) = adc(a3, ui, lcarry);
+    let (a6, hcarry) = mac(a6, ui, m3, hcarry);
+
+    let (a4, lcarry) = adc(a4, 0, lcarry);
+    let (a5, lcarry) = adc(a5, 0, lcarry);
+    let (a6, lcarry) = adc(a6, 0, lcarry);
+    let (a7, _hcarry) = adc(a7, lcarry, hcarry);
 
     // Final reduction
     let mut r = U256::from_limbs([a4, a5, a6, a7]);
