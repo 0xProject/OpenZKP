@@ -264,44 +264,48 @@ pub fn proth_mul_redc_inline<M: Parameters>(x: &U256, y: &U256) -> U256 {
     let (a2, carry) = mac(0, x[0], y[2], carry);
     let (a3, carry) = mac(0, x[0], y[3], carry);
     let a4 = carry;
+
     let (k, carry) = sbb(0, a0, 0);
-    let (a0, carry) = adc(a1, 0, carry);
-    let (a1, carry) = adc(a2, 0, carry);
-    let (a2, carry) = mac(a3, k, m3, carry);
-    let a3 = a4 + carry;
-    let (a0, carry) = mac(a0, x[1], y[0], 0);
-    let (a1, carry) = mac(a1, x[1], y[1], carry);
-    let (a2, carry) = mac(a2, x[1], y[2], carry);
-    let (a3, carry) = mac(a3, x[1], y[3], carry);
-    let a4 = carry;
-    let (k, carry) = sbb(0, a0, 0);
-    let (a0, carry) = adc(a1, 0, carry);
-    let (a1, carry) = adc(a2, 0, carry);
-    let (a2, carry) = mac(a3, k, m3, carry);
-    let a3 = a4 + carry;
-    let (a0, carry) = mac(a0, x[2], y[0], 0);
-    let (a1, carry) = mac(a1, x[2], y[1], carry);
-    let (a2, carry) = mac(a2, x[2], y[2], carry);
-    let (a3, carry) = mac(a3, x[2], y[3], carry);
-    let a4 = carry;
-    let (k, carry) = sbb(0, a0, 0);
-    let (a0, carry) = adc(a1, 0, carry);
-    let (a1, carry) = adc(a2, 0, carry);
-    let (a2, carry) = mac(a3, k, m3, carry);
-    let a3 = a4 + carry;
-    let (a0, carry) = mac(a0, x[3], y[0], 0);
-    let (a1, carry) = mac(a1, x[3], y[1], carry);
-    let (a2, carry) = mac(a2, x[3], y[2], carry);
-    let (a3, carry) = mac(a3, x[3], y[3], carry);
-    let a4 = carry;
-    let (k, carry) = sbb(0, a0, 0);
-    let (a0, carry) = adc(a1, 0, carry);
-    let (a1, carry) = adc(a2, 0, carry);
-    let (a2, carry) = mac(a3, k, modulus[3], carry);
-    let a3 = a4 + carry;
+    let (a1, carry) = adc(a1, 0, carry);
+    let (a2, carry) = adc(a2, 0, carry);
+    let (a3, carry) = mac(a3, k, m3, carry);
+    let a4 = a4 + carry;
+    let (a1, carry) = mac(a1, x[1], y[0], 0);
+    let (a2, carry) = mac(a2, x[1], y[1], carry);
+    let (a3, carry) = mac(a3, x[1], y[2], carry);
+    let (a4, carry) = mac(a4, x[1], y[3], carry);
+    let a5 = carry;
+
+    let (k, carry) = sbb(0, a1, 0);
+    let (a2, carry) = adc(a2, 0, carry);
+    let (a3, carry) = adc(a3, 0, carry);
+    let (a4, carry) = mac(a4, k, m3, carry);
+    let a5 = a5 + carry;
+    let (a2, carry) = mac(a2, x[2], y[0], 0);
+    let (a3, carry) = mac(a3, x[2], y[1], carry);
+    let (a4, carry) = mac(a4, x[2], y[2], carry);
+    let (a5, carry) = mac(a5, x[2], y[3], carry);
+    let a6 = carry;
+
+    let (k, carry) = sbb(0, a2, 0);
+    let (a3, carry) = adc(a3, 0, carry);
+    let (a4, carry) = adc(a4, 0, carry);
+    let (a5, carry) = mac(a5, k, m3, carry);
+    let a6 = a6 + carry;
+    let (a3, carry) = mac(a3, x[3], y[0], 0);
+    let (a4, carry) = mac(a4, x[3], y[1], carry);
+    let (a5, carry) = mac(a5, x[3], y[2], carry);
+    let (a6, carry) = mac(a6, x[3], y[3], carry);
+    let a7 = carry;
+
+    let (k, carry) = sbb(0, a3, 0);
+    let (a4, carry) = adc(a4, 0, carry);
+    let (a5, carry) = adc(a5, 0, carry);
+    let (a6, carry) = mac(a6, k, modulus[3], carry);
+    let a7 = a7 + carry;
 
     // Final reduction
-    let mut r = U256::from_limbs([a0, a1, a2, a3]);
+    let mut r = U256::from_limbs([a4, a5, a6, a7]);
     if r >= M::MODULUS {
         r -= &M::MODULUS;
     }
