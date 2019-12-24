@@ -159,28 +159,46 @@ pub fn proth_redc_inline<M: Parameters>(lo: &U256, hi: &U256) -> U256 {
     let a6 = hi.limb(2);
     let a7 = hi.limb(3);
 
-    let lcarry = 0;
     let hcarry = 0;
 
     let ui = a0.wrapping_neg();
-    let (_a0, lcarry) = adc(a0, ui, lcarry);
-    let (a3, hcarry) = mac(a3, ui, m3, hcarry);
-
-    let ui = a1.wrapping_add(lcarry).wrapping_neg();
-    let (_a1, lcarry) = adc(a1, ui, lcarry);
-    let (a4, hcarry) = mac(a4, ui, m3, hcarry);
-
-    let ui = a2.wrapping_add(lcarry).wrapping_neg();
-    let (_a2, lcarry) = adc(a2, ui, lcarry);
-    let (a5, hcarry) = mac(a5, ui, m3, hcarry);
-
-    let ui = a3.wrapping_add(lcarry).wrapping_neg();
-    let (_a3, lcarry) = adc(a3, ui, lcarry);
-    let (a6, hcarry) = mac(a6, ui, m3, hcarry);
-
+    let (_a0, lcarry) = adc(a0, ui, 0);
+    let (a1, lcarry) = adc(a1, 0, lcarry);
+    let (a2, lcarry) = adc(a2, 0, lcarry);
+    let (a3, lcarry) = adc(a3, 0, lcarry);
     let (a4, lcarry) = adc(a4, 0, lcarry);
     let (a5, lcarry) = adc(a5, 0, lcarry);
     let (a6, lcarry) = adc(a6, 0, lcarry);
+    let (a7, _lcarry) = adc(a7, 0, lcarry);
+    let (a3, hcarry) = mac(a3, ui, m3, hcarry);
+
+    let ui = a1.wrapping_neg();
+    let (_a1, lcarry) = adc(a1, ui, 0);
+    let (a2, lcarry) = adc(a2, 0, lcarry);
+    let (a3, lcarry) = adc(a3, 0, lcarry);
+    let (a4, lcarry) = adc(a4, 0, lcarry);
+    let (a5, lcarry) = adc(a5, 0, lcarry);
+    let (a6, lcarry) = adc(a6, 0, lcarry);
+    let (a7, _lcarry) = adc(a7, 0, lcarry);
+    let (a4, hcarry) = mac(a4, ui, m3, hcarry);
+
+    let ui = a2.wrapping_neg();
+    let (_a2, lcarry) = adc(a2, ui, 0);
+    let (a3, lcarry) = adc(a3, 0, lcarry);
+    let (a4, lcarry) = adc(a4, 0, lcarry);
+    let (a5, lcarry) = adc(a5, 0, lcarry);
+    let (a6, lcarry) = adc(a6, 0, lcarry);
+    let (a7, _lcarry) = adc(a7, 0, lcarry);
+    let (a5, hcarry) = mac(a5, ui, m3, hcarry);
+
+    let ui = a3.wrapping_neg();
+    let (_a3, lcarry) = adc(a3, ui, 0);
+    let (a4, lcarry) = adc(a4, 0, lcarry);
+    let (a5, lcarry) = adc(a5, 0, lcarry);
+    let (a6, lcarry) = adc(a6, 0, lcarry);
+    let (a7, _lcarry) = adc(a7, 0, lcarry);
+    let (a6, hcarry) = mac(a6, ui, m3, hcarry);
+
     let (a7, _hcarry) = adc(a7, lcarry, hcarry);
 
     // Final reduction
