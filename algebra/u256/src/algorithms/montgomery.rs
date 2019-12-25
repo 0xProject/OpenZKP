@@ -2,6 +2,7 @@ use crate::{
     algorithms::limb_operations::{adc, mac, macc, sbb},
     U256,
 };
+use std::mem::MaybeUninit;
 
 // TODO: const-compute from modulus
 pub trait Parameters {
@@ -152,24 +153,18 @@ pub fn proth_redc_inline<M: Parameters>(lo: &U256, hi: &U256) -> U256 {
     assert_eq!(modulus[2], 0);
     assert_eq!(M::M64, u64::max_value());
 
-    let a0 = lo.limb(0);
-    let a1 = lo.limb(1);
-    let a2 = lo.limb(2);
-    let a3 = lo.limb(3);
-    let a4 = hi.limb(0);
-    let a5 = hi.limb(1);
-    let a6 = hi.limb(2);
-    let a7 = hi.limb(3);
+    let lo = lo.as_limbs();
+    let hi = hi.as_limbs();
 
-    let (a0, carry) = sbb(0, a0, 0);
-    let (a1, carry) = sbb(0, a1, carry);
-    let (a2, carry) = sbb(0, a2, carry);
-    let (a3, hcarry) = mac(a3, a0, m3, carry);
+    let (a0, carry) = sbb(0, lo[0], 0);
+    let (a1, carry) = sbb(0, lo[1], carry);
+    let (a2, carry) = sbb(0, lo[2], carry);
+    let (a3, hcarry) = mac(lo[3], a0, m3, carry);
     let (a3, carry) = sbb(0, a3, 0);
-    let (a4, hcarry) = macc(a4, a1, m3, hcarry, carry);
-    let (a5, hcarry) = mac(a5, a2, m3, hcarry);
-    let (a6, hcarry) = mac(a6, a3, m3, hcarry);
-    let (a7, _carry) = adc(a7, 0, hcarry);
+    let (a4, hcarry) = macc(hi[0], a1, m3, hcarry, carry);
+    let (a5, hcarry) = mac(hi[1], a2, m3, hcarry);
+    let (a6, hcarry) = mac(hi[2], a3, m3, hcarry);
+    let (a7, _carry) = adc(hi[3], 0, hcarry);
 
     // Final reduction
     let mut r = U256::from_limbs([a4, a5, a6, a7]);
@@ -180,30 +175,35 @@ pub fn proth_redc_inline<M: Parameters>(lo: &U256, hi: &U256) -> U256 {
 }
 
 #[inline(always)]
+pub fn proth_redc_asm() {
+    
+}
+
+
+#[inline(always)]
 pub fn full_mul_asm(x: &U256, y: &U256) -> (U256, U256) {
     let x = x.as_limbs();
     let y = y.as_limbs();
     const ZERO: u64 = 0;
 
-    // OPT: Leave uninitialized
-    let lo = [0_u64; 4];
-    let hi = [0_u64; 4];
+    let mut lo = MaybeUninit::<[u64; 4]>::uninit();
+    let mut hi = MaybeUninit::<[u64; 4]>::uninit();
 
     unsafe { asm!(r"
-        xor %rax, %rax              // CF, OF cleared
+        xor %rax, %rax               // CF, OF cleared
 
         // Set x[0] * y
         // [lo[0] r8 r9 r10 r11]
-        mov  0($2), %rdx            // x[0]
-        mulx 0($3), %rax, %r8       // * y[0]
-        mov  %rax, 0($0)            // Store lowest limb
-        mulx 8($3), %rax, %r9       // * y[1]
+        mov  0($2), %rdx             // x[0]
+        mulx 0($3), %rax, %r8        // * y[0]
+        mov  %rax, 0($0)             // Store lowest limb
+        mulx 8($3), %rax, %r9        // * y[1]
         adcx %rax, %r8
-        mulx 16($3), %rax, %r10     // * y[2]
+        mulx 16($3), %rax, %r10      // * y[2]
         adcx %rax, %r9
-        mulx 24($3), %rax, %r11     // * y[3]
+        mulx 24($3), %rax, %r11      // * y[3]
         adcx %rax, %r10
-        adcx $4, %r11               // No carry, CF cleared
+        adcx $4, %r11                // No carry, CF cleared
 
         // Add x[1] * y
         // [lo[1] r9 r10 r11 r8]
@@ -266,9 +266,11 @@ pub fn full_mul_asm(x: &U256, y: &U256) -> (U256, U256) {
         mov %r10, 24($1)
         "
         :
-        : "r"(&lo), "r"(&hi), "r"(x), "r"(y), "m"(ZERO)
+        : "r"(lo.as_mut_ptr()), "r"(hi.as_mut_ptr()), "r"(x), "r"(y), "m"(ZERO)
         : "rax", "rbx", "rdx", "r8", "r9", "r10", "r11", "cc", "memory"
     )}
+    let lo = unsafe { lo.assume_init() };
+    let hi = unsafe { hi.assume_init() };
 
     (U256::from_limbs(lo), U256::from_limbs(hi))
 }
