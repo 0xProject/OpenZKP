@@ -139,6 +139,8 @@ pub fn proth_redc<M: Parameters>(lo: &U256, hi: &U256) -> U256 {
 }
 
 // See https://hackmd.io/7PFyv-itRBa0a0nYCAklmA?both
+// See https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/modmul_no_precomp.pdf
+// See https://pdfs.semanticscholar.org/c751/a321dd430ebbcfb4dcce1f86f88256e0af5a.pdf
 // This is algorithm 14.32 optimized for the facts that
 //   m_0 = 1. m_1 =0, m_2 = 0, m' = -1
 #[inline(always)]
@@ -177,6 +179,100 @@ pub fn proth_redc_inline<M: Parameters>(lo: &U256, hi: &U256) -> U256 {
     r
 }
 
+#[inline(always)]
+pub fn full_mul_asm(x: &U256, y: &U256) -> (U256, U256) {
+    let x = x.as_limbs();
+    let y = y.as_limbs();
+    const ZERO: u64 = 0;
+
+    // OPT: Leave uninitialized
+    let lo = [0_u64; 4];
+    let hi = [0_u64; 4];
+
+    unsafe { asm!(r"
+        xor %rax, %rax              // CF, OF cleared
+
+        // Set x[0] * y
+        // [lo[0] r8 r9 r10 r11]
+        mov  0($2), %rdx            // x[0]
+        mulx 0($3), %rax, %r8       // * y[0]
+        mov  %rax, 0($0)            // Store lowest limb
+        mulx 8($3), %rax, %r9       // * y[1]
+        adcx %rax, %r8
+        mulx 16($3), %rax, %r10     // * y[2]
+        adcx %rax, %r9
+        mulx 24($3), %rax, %r11     // * y[3]
+        adcx %rax, %r10
+        adcx $4, %r11               // No carry, CF cleared
+
+        // Add x[1] * y
+        // [lo[1] r9 r10 r11 r8]
+        mov  8($2), %rdx             // x[1]
+        mulx 0($3), %rax, %rbx       // * y[0]
+        adcx %rax, %r8
+        adox %rbx, %r9
+        mov  %r8, 8($0)              // Store and free r8
+        mulx 8($3), %rax, %rbx       // * y[1]
+        adcx %rax, %r9
+        adox %rbx, %r10
+        mulx 16($3), %rax, %rbx      // * y[2]
+        adcx %rax, %r10
+        adox %rbx, %r11
+        mulx 24($3), %rax, %r8       // * y[3]
+        adcx %rax, %r11
+        adox $4, %r8                 // No carry, OF cleared
+        adcx $4, %r8                 // No carry, CF cleared
+
+        // Add x[2] * y
+        // [lo[2] r10 r11 r8 r9]
+        mov  16($2), %rdx            // x[2]
+        mulx 0($3), %rax, %rbx       // * y[0]
+        adcx %rax, %r9
+        adox %rbx, %r10
+        mov  %r9, 16($0)             // Store and free r9
+        mulx 8($3), %rax, %rbx       // * y[1]
+        adcx %rax, %r10
+        adox %rbx, %r11
+        mulx 16($3), %rax, %rbx      // * y[2]
+        adcx %rax, %r11
+        adox %rbx, %r8
+        mulx 24($3), %rax, %r9       // * y[3]
+        adcx %rax, %r8
+        adox $4, %r9                 // No carry, OF cleared
+        adcx $4, %r9                 // No carry, CF cleared
+
+        // Add x[3] * y
+        // [lo[3] r11 r8 r9 r10]
+        mov  24($2), %rdx            // x[3]
+        mulx 0($3), %rax, %rbx       // * y[0]
+        adcx %rax, %r10
+        adox %rbx, %r11
+        mov  %r10, 24($0)            // Store and free r9
+        mulx 8($3), %rax, %rbx       // * y[1]
+        adcx %rax, %r11
+        adox %rbx, %r8
+        mulx 16($3), %rax, %rbx      // * y[2]
+        adcx %rax, %r8
+        adox %rbx, %r9
+        mulx 24($3), %rax, %r10      // * y[3]
+        adcx %rax, %r9
+        adox $4, %r10                // No carry, OF cleared
+        adcx $4, %r10                // No carry, CF cleared
+
+        // Store high limbs
+        mov %r11, 0($1)
+        mov %r8, 8($1)
+        mov %r9, 16($1)
+        mov %r10, 24($1)
+        "
+        :
+        : "r"(&lo), "r"(&hi), "r"(x), "r"(y), "m"(ZERO)
+        : "rax", "rbx", "rdx", "r8", "r9", "r10", "r11", "cc", "memory"
+    )}
+
+    (U256::from_limbs(lo), U256::from_limbs(hi))
+}
+
 pub fn mul_redc<M: Parameters>(x: &U256, y: &U256) -> U256 {
     mul_redc_inline::<M>(x, y)
 }
@@ -185,9 +281,9 @@ pub fn mul_redc<M: Parameters>(x: &U256, y: &U256) -> U256 {
 #[allow(clippy::shadow_unrelated)]
 #[inline(always)]
 pub fn mul_redc_inline<M: Parameters>(x: &U256, y: &U256) -> U256 {
-    // let (lo, hi) = x.mul_full_inline(y);
-    // return proth_redc_inline::<M>(&lo, &hi);
-    return proth_mul_redc_inline::<M>(x, y);
+    let (lo, hi) = full_mul_asm(x, y);
+    return proth_redc_inline::<M>(&lo, &hi);
+    // return proth_mul_redc_asm::<M>(x, y);
 
     let x = x.as_limbs();
     let modulus = M::MODULUS.as_limbs();
@@ -299,6 +395,61 @@ pub fn proth_mul_redc_inline<M: Parameters>(x: &U256, y: &U256) -> U256 {
     r
 }
 
+// We rebind variables for readability
+#[allow(clippy::shadow_unrelated)]
+#[inline(always)]
+pub fn proth_mul_redc_asm<M: Parameters>(x: &U256, y: &U256) -> U256 {
+    let modulus = M::MODULUS.as_limbs();
+    let m3 = modulus[3];
+    assert_eq!(modulus[0], 1);
+    assert_eq!(modulus[1], 0);
+    assert_eq!(modulus[2], 0);
+    assert_eq!(M::M64, u64::max_value());
+
+    let x = x.as_limbs();
+    let y = y.as_limbs();
+
+    let (a0, carry) = mac(0, x[0], y[0], 0);
+    let (a1, carry) = mac(0, x[0], y[1], carry);
+    let (a2, carry) = mac(0, x[0], y[2], carry);
+    let (a3, carry) = mac(0, x[0], y[3], carry);
+    let a4 = carry;
+    let (k, carry) = sbb(0, a0, 0);
+    let (a3, hcarry) = mac(a3, k, m3, 0);
+    let (a1, carry) = mac(a1, x[1], y[0], carry);
+    let (a2, carry) = mac(a2, x[1], y[1], carry);
+    let (a3, carry) = mac(a3, x[1], y[2], carry);
+    let (a4, carry) = macc(a4, x[1], y[3], carry, hcarry);
+    let a5 = carry;    
+    let (k, carry) = sbb(0, a1, 0);
+    let (a4, hcarry) = mac(a4, k, m3, 0);
+    let (a2, carry) = mac(a2, x[2], y[0], carry);
+    let (a3, carry) = mac(a3, x[2], y[1], carry);
+    let (a4, carry) = mac(a4, x[2], y[2], carry);
+    let (a5, carry) = macc(a5, x[2], y[3], carry, hcarry);
+    let a6 = carry;
+    let (k, carry) = sbb(0, a2, 0);
+    let (a5, hcarry) = mac(a5, k, m3, 0);
+    let (a3, carry) = mac(a3, x[3], y[0], carry);
+    let (a4, carry) = mac(a4, x[3], y[1], carry);
+    let (a5, carry) = mac(a5, x[3], y[2], carry);
+    let (a6, carry) = macc(a6, x[3], y[3], carry, hcarry);
+    let a7 = carry;
+    let (k, carry) = sbb(0, a3, 0);
+    let (a4, carry) = adc(a4, 0, carry);
+    let (a5, carry) = adc(a5, 0, carry);
+    let (a6, carry) = mac(a6, k, m3, carry);
+    let a7 = a7 + carry;
+
+    // Final reduction
+    let mut r = U256::from_limbs([a4, a5, a6, a7]);
+    if r >= M::MODULUS {
+        r -= &M::MODULUS;
+    }
+    r
+}
+
+
 pub fn sqr_redc<M: Parameters>(a: &U256) -> U256 {
     sqr_redc_inline::<M>(a)
 }
@@ -329,6 +480,11 @@ pub fn from_montgomery<M: Parameters>(n: &U256) -> U256 {
 // https://llvm.org/docs/LangRef.html#inline-assembler-expressions
 // https://www.intel.com/content/dam/www/public/us/en/documents/white-papers/large-integer-squaring-ia-paper.pdf
 // https://github.com/AztecProtocol/barretenberg/blob/master/src/barretenberg/fields/asm_macros.hpp
+
+
+// LEA amd INC can add without affecting flags.
+// NOT INC  can be used for a carry free NEG
+// NEG sets CF and clobbers OF.
 
 #[inline(always)]
 pub fn mulx(a: &U256, b: &U256) -> U256 {
