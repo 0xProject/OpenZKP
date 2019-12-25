@@ -201,28 +201,27 @@ pub fn proth_redc_asm<M: Parameters>(lo: &U256, hi: &U256) -> U256 {
         sbb 8($1), %r9
         sbb 16($1), %r10
         // Remaining CF is for lo[3]
-        
-        // Clear OF (by adding zero+OF to zero)
-        xor %rax, %rax
-        adox 0, %rax
 
-        // Add m3 * [k0 k1 k2] to [lo[3]+CF hi[0] hi[1]] and store in [r8 r11 r9 r10, r12]
+        // Clear OF (by adding zero+OF to zero)
+        mov  $$0, %rax             // Note: we can't use xor here
+        adox %rax, %rax
+
+        // Add m3 * [k0 k1 k2] to [lo[3]+CF hi[0] hi[1] hi[2] hi[3]] and store in [r8 r11 r9 r10, r12]
         mulx %r8, %r8, %r11
         adcx 24($1), %r8
+        adox 0($2), %r11
         mulx %r9, %rax, %r9
-        adcx %rax, %r8
-        adox 0($2), %r9
+        adcx %rax, %r11
+        adox 8($2), %r9
         mulx %r10, %rax, %r10
         adcx %rax, %r9
-        adox 8($2), %r10
+        adox 16($2), %r10
         adcx $3, %r10
-
-        // Write carries to r12
-        adox $3, %r12
+        adox 24($2), %r12
         adcx $3, %r12
 
         // Compute k3, CF is for r11
-        neg %r8
+        neg  %r8
         adcx $3, %r11
         adcx $3, %r9
 
@@ -230,10 +229,6 @@ pub fn proth_redc_asm<M: Parameters>(lo: &U256, hi: &U256) -> U256 {
         mulx %r8, %rax, %rbx
         adcx %rax, %r10
         adcx %rbx, %r12                    // No carry, CF = 0
-
-        // Add [hi[2] hi[3]] to [r10 r12]
-        adcx 16($2), %r10
-        adcx 24($2), %r12
 
         // Store result
         mov %r11, 0($0)
@@ -360,7 +355,7 @@ pub fn mul_redc<M: Parameters>(x: &U256, y: &U256) -> U256 {
 #[inline(always)]
 pub fn mul_redc_inline<M: Parameters>(x: &U256, y: &U256) -> U256 {
     let (lo, hi) = full_mul_asm(x, y);
-    //return proth_redc_inline::<M>(&lo, &hi);
+    // return proth_redc_inline::<M>(&lo, &hi);
     return proth_redc_asm::<M>(&lo, &hi);
     // return proth_mul_redc_asm::<M>(x, y);
 
