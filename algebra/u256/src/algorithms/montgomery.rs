@@ -175,17 +175,93 @@ pub fn proth_redc_inline<M: Parameters>(lo: &U256, hi: &U256) -> U256 {
 }
 
 #[inline(always)]
-pub fn proth_redc_asm() {
+pub fn proth_redc_asm<M: Parameters>(lo: &U256, hi: &U256) -> U256 {
+    const ZERO: u64 = 0;
+    assert_eq!(M::MODULUS.as_limbs()[0], 1);
+    assert_eq!(M::MODULUS.as_limbs()[1], 0);
+    assert_eq!(M::MODULUS.as_limbs()[2], 0);
+    assert_eq!(M::M64, u64::max_value());
     
+    // TODO: Make modulus[3] a runtime variable (since this is low overhead)
+    let modulus = M::MODULUS.as_limbs();
+    let lo = lo.as_limbs();
+    let hi = hi.as_limbs();
+    let mut result = MaybeUninit::<[u64; 4]>::uninit();
+
+    unsafe { asm!(r"
+        // RDX contains M3 and we keep it there the whole time.
+        // OPT: Use operand constraints to put it there.
+        mov $4, %rdx
+
+        // [r8, r9, r10, CF] = -[lo[0] lo[1] lo[2]]
+        mov 0($1), %r8
+        xor %r9, %r9
+        xor %r10, %r10
+        neg %r8
+        sbb 8($1), %r9
+        sbb 16($1), %r10
+        // Remaining CF is for lo[3]
+        
+        // Clear OF (by adding zero+OF to zero)
+        xor %rax, %rax
+        adox 0, %rax
+
+        // Add m3 * [k0 k1 k2] to [lo[3]+CF hi[0] hi[1]] and store in [r8 r11 r9 r10, r12]
+        mulx %r8, %r8, %r11
+        adcx 24($1), %r8
+        mulx %r9, %rax, %r9
+        adcx %rax, %r8
+        adox 0($2), %r9
+        mulx %r10, %rax, %r10
+        adcx %rax, %r9
+        adox 8($2), %r10
+        adcx $3, %r10
+
+        // Write carries to r12
+        adox $3, %r12
+        adcx $3, %r12
+
+        // Compute k3, CF is for r11
+        neg %r8
+        adcx $3, %r11
+        adcx $3, %r9
+
+        // Add m3 * k3 to [r10 r12]
+        mulx %r8, %rax, %rbx
+        adcx %rax, %r10
+        adcx %rbx, %r12                    // No carry, CF = 0
+
+        // Add [hi[2] hi[3]] to [r10 r12]
+        adcx 16($2), %r10
+        adcx 24($2), %r12
+
+        // Store result
+        mov %r11, 0($0)
+        mov %r9, 8($0)
+        mov %r10, 16($0)
+        mov %r12, 24($0)
+
+        "
+        :
+        : "r"(result.as_mut_ptr()), "r"(lo), "r"(hi), "m"(ZERO), "m"(modulus[3])
+        : "rax", "rbx", "rdx", "r8", "r9", "r10", "r11", "r12", "cc", "memory"
+    )}
+    let result = unsafe { result.assume_init() };
+
+    // Final reduction
+    let mut r = U256::from_limbs(result);
+    if r >= M::MODULUS {
+        r -= &M::MODULUS;
+    }
+    r
 }
 
 
 #[inline(always)]
 pub fn full_mul_asm(x: &U256, y: &U256) -> (U256, U256) {
+    const ZERO: u64 = 0;
     let x = x.as_limbs();
     let y = y.as_limbs();
-    const ZERO: u64 = 0;
-
     let mut lo = MaybeUninit::<[u64; 4]>::uninit();
     let mut hi = MaybeUninit::<[u64; 4]>::uninit();
 
@@ -284,7 +360,8 @@ pub fn mul_redc<M: Parameters>(x: &U256, y: &U256) -> U256 {
 #[inline(always)]
 pub fn mul_redc_inline<M: Parameters>(x: &U256, y: &U256) -> U256 {
     let (lo, hi) = full_mul_asm(x, y);
-    return proth_redc_inline::<M>(&lo, &hi);
+    //return proth_redc_inline::<M>(&lo, &hi);
+    return proth_redc_asm::<M>(&lo, &hi);
     // return proth_mul_redc_asm::<M>(x, y);
 
     let x = x.as_limbs();
