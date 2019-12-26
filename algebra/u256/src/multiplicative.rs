@@ -14,6 +14,16 @@ use std::{
 // Multiplicative operations: Mul, square, mulmod, pow, etc. routines
 
 impl U256 {
+    pub fn sqr(&self) -> Self {
+        self.sqr_inline()
+    }
+
+    #[inline(always)]
+    pub fn sqr_inline(&self) -> Self {
+        let (lo, _hi) = self.sqr_full_inline();
+        lo
+    }
+
     pub fn mul_full(&self, rhs: &Self) -> (Self, Self) {
         self.mul_full_inline(rhs)
     }
