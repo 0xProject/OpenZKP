@@ -54,7 +54,7 @@ harness = false
 required-features = ["bench"]
 
 [features]
-default = [ "std", "prover", "examples" ]
+default = [ "std", "inline", "prover", "examples" ]
 std = [
     "zkp-macros-decl/std",
     "zkp-mmap-vec/std",
@@ -69,6 +69,11 @@ std = [
     "log/std",
     "rayon",
     "hex",
+]
+inline = [
+    "zkp-u256/inline",
+    "zkp-primefield/inline",
+    "zkp-elliptic-curve/inline",
 ]
 test = [
     "zkp-u256/test",

@@ -4,6 +4,11 @@ use crate::{
     U256,
 };
 
+// See https://hackmd.io/7PFyv-itRBa0a0nYCAklmA?both
+// See https://eprint.iacr.org/2012/309.pdf
+// See https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/modmul_no_precomp.pdf
+// See https://pdfs.semanticscholar.org/c751/a321dd430ebbcfb4dcce1f86f88256e0af5a.pdf
+
 // TODO: Make const fn
 pub(crate) fn is_proth<M: Parameters>() -> bool {
     let modulus = M::MODULUS.as_limbs();
@@ -14,9 +19,6 @@ pub fn redc(m3: u64, lo: &U256, hi: &U256) -> U256 {
     redc_inline(m3, lo, hi)
 }
 
-// See https://hackmd.io/7PFyv-itRBa0a0nYCAklmA?both
-// See https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/modmul_no_precomp.pdf
-// See https://pdfs.semanticscholar.org/c751/a321dd430ebbcfb4dcce1f86f88256e0af5a.pdf
 // This is algorithm 14.32 optimized for the facts that
 //   m_0 = 1. m_1 =0, m_2 = 0, m' = -1
 // We rebind variables for readability
