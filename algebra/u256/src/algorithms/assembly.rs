@@ -183,7 +183,8 @@ pub fn mul_redc<M: Parameters>(a: &U256, b: &U256) -> U256 {
 
     let a = a.as_limbs();
     let b = b.as_limbs();
-    let mut result: [u64; 4] = [0, 0, 0, 0];
+    let mut result = MaybeUninit::<[u64; 4]>::uninit();
+    
     // MULX dst_high, dst_low, src_b (src_a = %rdx)
     // src_b can be register or memory, not immediate
     unsafe {
@@ -310,10 +311,11 @@ pub fn mul_redc<M: Parameters>(a: &U256, b: &U256) -> U256 {
             movq %r15, 24($0)
             "
             :
-            : "r"(&result), "r"(a), "r"(b),
+            : "r"(result.as_mut_ptr()), "r"(a), "r"(b),
               "m"(ZERO), "m"(M::MODULUS.limb(0)), "m"(M::MODULUS.limb(1)), "m"(M::MODULUS.limb(2)), "m"(M::MODULUS.limb(3)), "m"(M::M64)
             : "rdx", "rdi", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15", "cc", "memory"
         );
     }
+    let result = unsafe { result.assume_init() };
     U256::from_limbs(result)
 }
