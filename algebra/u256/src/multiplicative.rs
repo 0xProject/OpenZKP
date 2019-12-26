@@ -15,6 +15,17 @@ use std::{
 
 impl U256 {
     #[cfg_attr(feature = "inline", inline(always))]
+    pub fn sqr(&self) -> Self {
+        self.sqr_inline()
+    }
+
+    #[inline(always)]
+    pub fn sqr_inline(&self) -> Self {
+        let (lo, _hi) = self.sqr_full_inline();
+        lo
+    }
+
+    #[cfg_attr(feature = "inline", inline(always))]
     pub fn mul_full(&self, rhs: &Self) -> (Self, Self) {
         self.mul_full_inline(rhs)
     }
