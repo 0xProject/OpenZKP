@@ -317,5 +317,11 @@ pub fn mul_redc<M: Parameters>(a: &U256, b: &U256) -> U256 {
         );
     }
     let result = unsafe { result.assume_init() };
-    U256::from_limbs(result)
+
+    // TODO: Does it need a final reduction?
+    let mut r = U256::from_limbs(result);
+    if r >= M::MODULUS {
+        r -= &M::MODULUS;
+    }
+    r
 }
