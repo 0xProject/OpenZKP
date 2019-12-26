@@ -173,6 +173,8 @@ pub(crate) fn mul_redc_inline<M: Parameters>(x: &U256, y: &U256) -> U256 {
     r
 }
 
+// Quickcheck requires pass-by-value
+#[allow(clippy::needless_pass_by_value)]
 #[cfg(test)]
 mod tests {
     use super::*;

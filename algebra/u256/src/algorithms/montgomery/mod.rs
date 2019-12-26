@@ -1,7 +1,7 @@
 use crate::U256;
 
 mod generic;
-mod proth;
+pub mod proth;
 
 // TODO: const-compute from modulus
 pub trait Parameters {
@@ -24,8 +24,6 @@ pub trait Parameters {
 /// Slow but compile time constant version of `to_montgomery`.
 pub use generic::to_montgomery_const;
 
-pub use proth::{proth_mul_redc, proth_mul_redc_inline, proth_redc, proth_redc_inline};
-
 #[allow(clippy::module_name_repetitions)]
 pub fn to_montgomery<M: Parameters>(n: &U256) -> U256 {
     mul_redc::<M>(n, &M::R2)
@@ -45,7 +43,7 @@ pub fn redc_inline<M: Parameters>(lo: &U256, hi: &U256) -> U256 {
     // Select the best algorithm, the branch should be resolved compile time.
     // TODO: Make compile time constant.
     if proth::is_proth::<M>() {
-        proth::redc_inline::<M>(lo, hi)
+        proth::redc_inline(M::MODULUS.limb(3), lo, hi)
     } else {
         generic::redc_inline::<M>(lo, hi)
     }
@@ -58,7 +56,7 @@ pub fn mul_redc<M: Parameters>(x: &U256, y: &U256) -> U256 {
 #[inline(always)]
 pub fn mul_redc_inline<M: Parameters>(x: &U256, y: &U256) -> U256 {
     if proth::is_proth::<M>() {
-        proth::mul_redc_inline::<M>(x, y)
+        proth::mul_redc_inline(M::MODULUS.limb(3), x, y)
     } else {
         generic::mul_redc_inline::<M>(x, y)
     }
@@ -91,11 +89,11 @@ mod tests {
 
     struct PrimeField();
 
+    // TODO: Non Proth example
     impl Parameters for PrimeField {
         const M64: u64 = 0xffff_ffff_ffff_ffff;
         const MODULUS: U256 =
             u256h!("0800000000000011000000000000000000000000000000000000000000000001");
-        // = -1
         const R1: U256 = u256h!("07fffffffffffdf0ffffffffffffffffffffffffffffffffffffffffffffffe1");
         const R2: U256 = u256h!("07ffd4ab5e008810ffffffffff6f800000000001330ffffffffffd737e000401");
         const R3: U256 = u256h!("038e5f79873c0a6df47d84f8363000187545706677ffcc06cc7177d1406df18e");
