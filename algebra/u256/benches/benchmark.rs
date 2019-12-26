@@ -3,18 +3,32 @@ use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use zkp_macros_decl::u256h;
 use zkp_u256::U256;
 
-fn u256_add(crit: &mut Criterion) {
+fn add(crit: &mut Criterion) {
     let a = u256h!("01c9e043b135fa21471cec503f1181884ef3d9c2cb44b6a3531bb3056443bc99");
     let b = u256h!("04742d726d4800e1015941bf06591cd139bd034f968ab8a225f92cbba85e5776");
-    crit.bench_function("U256 add", move |bench| {
+    crit.bench_function("add", move |bench| {
         bench.iter(|| black_box(&a).clone() + black_box(&b))
     });
 }
 
-fn u256_mul(crit: &mut Criterion) {
+fn sqr(crit: &mut Criterion) {
+    let a = u256h!("01c9e043b135fa21471cec503f1181884ef3d9c2cb44b6a3531bb3056443bc99");
+    crit.bench_function("sqr", move |bench| {
+        bench.iter(|| black_box(&a).sqr_inline())
+    });
+}
+
+fn sqr_full(crit: &mut Criterion) {
+    let a = u256h!("01c9e043b135fa21471cec503f1181884ef3d9c2cb44b6a3531bb3056443bc99");
+    crit.bench_function("sqr full", move |bench| {
+        bench.iter(|| black_box(&a).sqr_full_inline())
+    });
+}
+
+fn mul(crit: &mut Criterion) {
     let a = u256h!("01c9e043b135fa21471cec503f1181884ef3d9c2cb44b6a3531bb3056443bc99");
     let b = u256h!("04742d726d4800e1015941bf06591cd139bd034f968ab8a225f92cbba85e5776");
-    crit.bench_function("U256 mul", move |bench| {
+    crit.bench_function("mul", move |bench| {
         bench.iter(|| black_box(&a).clone() * black_box(&b))
     });
 }
