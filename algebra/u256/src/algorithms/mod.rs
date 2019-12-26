@@ -3,6 +3,7 @@ mod knuth_division;
 mod lehmer_gcd;
 pub mod limb_operations;
 pub mod montgomery;
+pub(crate) mod assembly;
 
 pub use knuth_division::{divrem_nby1, divrem_nbym};
 pub(crate) use lehmer_gcd::inv_mod;

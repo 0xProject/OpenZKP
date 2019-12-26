@@ -117,6 +117,8 @@ pub(crate) fn redc_inline<M: Parameters>(lo: &U256, hi: &U256) -> U256 {
 #[allow(clippy::shadow_unrelated)]
 #[inline(always)]
 pub(crate) fn mul_redc_inline<M: Parameters>(x: &U256, y: &U256) -> U256 {
+    crate::algorithms::assembly::mul_redc::<M>(x, y)
+    /*
     let x = x.as_limbs();
     let modulus = M::MODULUS.as_limbs();
 
@@ -171,6 +173,7 @@ pub(crate) fn mul_redc_inline<M: Parameters>(x: &U256, y: &U256) -> U256 {
         r -= &M::MODULUS;
     }
     r
+    */
 }
 
 // Quickcheck requires pass-by-value

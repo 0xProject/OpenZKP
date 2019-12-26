@@ -1,4 +1,5 @@
 use crate::U256;
+use crate::algorithms::montgomery::Parameters;
 use std::mem::MaybeUninit;
 
 // TODO: Square asm
@@ -98,19 +99,12 @@ pub fn full_mul_asm(x: &U256, y: &U256) -> (U256, U256) {
 }
 
 #[inline(always)]
-pub fn proth_redc_asm<M: Parameters>(lo: &U256, hi: &U256) -> U256 {
+pub fn proth_redc_asm(m3: u64, lo: &U256, hi: &U256) -> U256 {
+    // TODO: Fix carry bug
     const ZERO: u64 = 0;
-    assert_eq!(M::MODULUS.as_limbs()[0], 1);
-    assert_eq!(M::MODULUS.as_limbs()[1], 0);
-    assert_eq!(M::MODULUS.as_limbs()[2], 0);
-    assert_eq!(M::M64, u64::max_value());
-    
-    // TODO: Make modulus[3] a runtime variable (since this is low overhead)
-    let modulus = M::MODULUS.as_limbs();
     let lo = lo.as_limbs();
     let hi = hi.as_limbs();
     let mut result = MaybeUninit::<[u64; 4]>::uninit();
-
     unsafe { asm!(r"
         // RDX contains M3 and we keep it there the whole time.
         // OPT: Use operand constraints to put it there.
@@ -161,15 +155,15 @@ pub fn proth_redc_asm<M: Parameters>(lo: &U256, hi: &U256) -> U256 {
 
         "
         :
-        : "r"(result.as_mut_ptr()), "r"(lo), "r"(hi), "m"(ZERO), "m"(modulus[3])
+        : "r"(result.as_mut_ptr()), "r"(lo), "r"(hi), "m"(ZERO), "m"(m3)
         : "rax", "rbx", "rdx", "r8", "r9", "r10", "r11", "r12", "cc", "memory"
     )}
     let result = unsafe { result.assume_init() };
 
     // Final reduction
     let mut r = U256::from_limbs(result);
-    if r >= M::MODULUS {
-        r -= &M::MODULUS;
+    if r >= U256::from_limbs([1, 0, 0, m3]) {
+        r -= U256::from_limbs([1, 0, 0, m3]);
     }
     r
 }
@@ -184,14 +178,9 @@ pub fn proth_redc_asm<M: Parameters>(lo: &U256, hi: &U256) -> U256 {
 // NEG sets CF and clobbers OF.
 
 #[inline(always)]
-pub fn mul_redc(a: &U256, b: &U256) -> U256 {
+pub fn mul_redc<M: Parameters>(a: &U256, b: &U256) -> U256 {
     const ZERO: u64 = 0; // $3
-    const MODULUS_0: u64 = 1; // $4
-    const MODULUS_1: u64 = 0; // $5
-    const MODULUS_2: u64 = 0; // $6
-    const MODULUS_3: u64 = 0x0800000000000011; // $7
-    const M64: u64 = 0xffff_ffff_ffff_ffff; // -1 $8
-                                            // TODO: Optimize for special primes where the above values hold
+
     let a = a.as_limbs();
     let b = b.as_limbs();
     let mut result: [u64; 4] = [0, 0, 0, 0];
@@ -322,7 +311,7 @@ pub fn mul_redc(a: &U256, b: &U256) -> U256 {
             "
             :
             : "r"(&result), "r"(a), "r"(b),
-              "m"(ZERO), "m"(MODULUS_0), "m"(MODULUS_1), "m"(MODULUS_2), "m"(MODULUS_3), "m"(M64)
+              "m"(ZERO), "m"(M::MODULUS.limb(0)), "m"(M::MODULUS.limb(1)), "m"(M::MODULUS.limb(2)), "m"(M::MODULUS.limb(3)), "m"(M::M64)
             : "rdx", "rdi", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15", "cc", "memory"
         );
     }
