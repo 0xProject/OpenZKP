@@ -1,8 +1,81 @@
+#![allow(unsafe_code)]
 use crate::U256;
 use crate::algorithms::montgomery::Parameters;
 use std::mem::MaybeUninit;
 
+// For instruction timings and through puts
+// See <https://gmplib.org/~tege/x86-timing.pdf>
+
+// For examples using mulx/adcx
+// See <https://www.intel.com/content/dam/www/public/us/en/documents/white-papers/large-integer-squaring-ia-paper.pdf>
+// See <https://www.intel.com/content/dam/www/public/us/en/documents/white-papers/ia-large-integer-arithmetic-paper.pdf>
+// See <https://gmplib.org/repo/gmp/file/tip/mpn/x86_64/mulx/adx/addmul_1.asm>
+// See <https://github.com/microsoft/SymCrypt/blob/master/lib/amd64/fdef_mulx.asm>
+
+
 // TODO: Square asm
+// TODO: Mul-add
+
+#[inline(always)]
+pub fn mul_asm(x: &U256, y: &U256) -> U256 {
+    let x = x.as_limbs();
+    let y = y.as_limbs();
+    let mut r = MaybeUninit::<[u64; 4]>::uninit();
+    unsafe { asm!(r"
+        xor %rax, %rax               // CF, OF cleared
+
+        // Set x[0] * y
+        // [lo[0] r8 r9 r10 r11]
+        mov  0($1), %rdx             // x[0]
+        mulx 0($2), %rax, %r8        // * y[0]
+        mov  %rax, 0($0)             // Store lowest limb
+        mulx 8($2), %rax, %r9        // * y[1]
+        adcx %rax, %r8
+        mulx 16($2), %rax, %r10      // * y[2]
+        adcx %rax, %r9
+        mulx 24($2), %rax, %r11      // * y[3]
+        adcx %rax, %r10
+        xor %r11, %r11
+
+        // Add x[1] * y
+        // [lo[1] r9 r10 r11]
+        mov  8($1), %rdx             // x[1]
+        mulx 0($2), %rax, %rbx       // * y[0]
+        adcx %rax, %r8
+        adox %rbx, %r9
+        mov  %r8, 8($0)              // Store and free r8
+        mulx 8($2), %rax, %rbx       // * y[1]
+        adcx %rax, %r9
+        adox %rbx, %r10
+        mulx 16($2), %rax, %r11      // * y[2]
+        adcx %rax, %r10
+        xor %r11, %r11
+
+        // Add x[2] * y
+        // [lo[2] r10 r11]
+        mov  16($1), %rdx            // x[2]
+        mulx 0($2), %rax, %rbx       // * y[0]
+        adcx %rax, %r9
+        adox %rbx, %r10
+        mov  %r9, 16($0)             // Store and free r9
+        mulx 8($2), %rax, %r11       // * y[1]
+        adcx %rax, %r10
+        xor %r11, %r11
+
+        // Add x[3] * y
+        // [lo[3] r11]
+        mov  24($1), %rdx            // x[3]
+        mulx 0($2), %rax, %r11       // * y[0]
+        adcx %rax, %r10
+        mov  %r10, 24($0)            // Store and free r9
+        "
+        :
+        : "r"(r.as_mut_ptr()), "r"(x), "r"(y)
+        : "rax", "rbx", "rdx", "r8", "r9", "r10", "r11", "cc", "memory"
+    )}
+    let r = unsafe { r.assume_init() };
+    U256::from_limbs(r)
+}
 
 #[inline(always)]
 pub fn full_mul_asm(x: &U256, y: &U256) -> (U256, U256) {
@@ -153,19 +226,30 @@ pub fn proth_redc_asm(m3: u64, lo: &U256, hi: &U256) -> U256 {
         mov %r10, 16($0)
         mov %r12, 24($0)
 
+        // Result can be up to 2 * modulus
+        // We need to conditionally subtract one modulus.
+        // This step takes 1.1ns or about 22% of total time.
+        // We could leave it out, but that complicates the function signature.
+
+        // Reduce result
+        sub $$1, %r11
+        sbb $$0, %r9
+        sbb $$0, %r10
+        sbb %rdx, %r12
+
+        // Conditionally store reduced result if CF=1
+        cmovcq 0($0), %r11
+        cmovcq 8($0), %r9
+        cmovcq 16($0), %r10
+        cmovcq 24($0), %r11
+
         "
         :
         : "r"(result.as_mut_ptr()), "r"(lo), "r"(hi), "m"(ZERO), "m"(m3)
         : "rax", "rbx", "rdx", "r8", "r9", "r10", "r11", "r12", "cc", "memory"
     )}
     let result = unsafe { result.assume_init() };
-
-    // Final reduction
-    let mut r = U256::from_limbs(result);
-    if r >= U256::from_limbs([1, 0, 0, m3]) {
-        r -= U256::from_limbs([1, 0, 0, m3]);
-    }
-    r
+    U256::from_limbs(result)
 }
 
 // https://doc.rust-lang.org/1.12.0/book/inline-assembly.html

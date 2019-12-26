@@ -24,6 +24,18 @@ impl U256 {
         let (lo, _hi) = self.sqr_full_inline();
         lo
     }
+    
+    /*
+    #[cfg_attr(feature = "inline", inline(always))]
+    pub fn mul(&self, rhs: &Self) -> Self {
+        self.mul_inline(rhs)
+    }
+
+    #[inline(always)]
+    pub fn mul_inline(&self, rhs: &Self) -> Self {
+        todo!()
+    }
+    */
 
     #[cfg_attr(feature = "inline", inline(always))]
     pub fn mul_full(&self, rhs: &Self) -> (Self, Self) {
