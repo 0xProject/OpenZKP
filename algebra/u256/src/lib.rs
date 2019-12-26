@@ -48,6 +48,9 @@
 // TODO: Toggle based on stable/nightly
 // #![allow(clippy::missing_errors_doc)]
 
+// Some routines have assembly optimized versions available for some
+// architectures #![cfg_attr(feature = "asm", feature(asm))]
+
 mod additive;
 pub mod algorithms;
 mod binary;

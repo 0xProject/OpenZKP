@@ -55,6 +55,7 @@ std = [
 use_rand = [
     "rand"
 ]
+asm = []
 
 # Allow math in docs
 [package.metadata.docs.rs]

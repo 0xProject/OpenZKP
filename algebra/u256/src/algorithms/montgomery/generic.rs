@@ -1,25 +1,8 @@
+use super::Parameters;
 use crate::{
     algorithms::limb_operations::{adc, mac, sbb},
     U256,
 };
-
-// TODO: const-compute from modulus
-pub trait Parameters {
-    /// The modulus to implement in Montgomery form
-    const MODULUS: U256;
-
-    /// M64 = -MODULUS^(-1) mod 2^64
-    const M64: u64;
-
-    // R1 = 2^256 mod MODULUS
-    const R1: U256;
-
-    // R2 = 2^512 mod MODULUS
-    const R2: U256;
-
-    // R3 = 2^768 mod MODULUS
-    const R3: U256;
-}
 
 // We rebind variables for readability
 #[allow(clippy::shadow_unrelated)]
@@ -90,14 +73,10 @@ pub const fn to_montgomery_const(x: &U256, modulus: &U256, m64: u64, r2: &U256) 
     U256::from_limbs([a0, a1, a2, a3])
 }
 
-pub fn redc<M: Parameters>(lo: &U256, hi: &U256) -> U256 {
-    redc_inline::<M>(lo, hi)
-}
-
 // We rebind variables for readability
 #[allow(clippy::shadow_unrelated)]
 #[inline(always)]
-pub fn redc_inline<M: Parameters>(lo: &U256, hi: &U256) -> U256 {
+pub(crate) fn redc_inline<M: Parameters>(lo: &U256, hi: &U256) -> U256 {
     let modulus = M::MODULUS.as_limbs();
     // Algorithm 14.32 from Handbook of Applied Cryptography.
     // TODO: Optimize for the specific values of M64 and MODULUS.
@@ -134,65 +113,52 @@ pub fn redc_inline<M: Parameters>(lo: &U256, hi: &U256) -> U256 {
     r
 }
 
-pub fn mul_redc<M: Parameters>(x: &U256, y: &U256) -> U256 {
-    mul_redc_inline::<M>(x, y)
-}
-
 // We rebind variables for readability
 #[allow(clippy::shadow_unrelated)]
 #[inline(always)]
-pub fn mul_redc_inline<M: Parameters>(x: &U256, y: &U256) -> U256 {
+pub(crate) fn mul_redc_inline<M: Parameters>(x: &U256, y: &U256) -> U256 {
     let x = x.as_limbs();
     let modulus = M::MODULUS.as_limbs();
 
-    let k = x[0].wrapping_mul(y.limb(0)).wrapping_mul(M::M64);
     let (a0, carry) = mac(0, x[0], y.limb(0), 0);
     let (a1, carry) = mac(0, x[0], y.limb(1), carry);
     let (a2, carry) = mac(0, x[0], y.limb(2), carry);
     let (a3, carry) = mac(0, x[0], y.limb(3), carry);
     let a4 = carry;
+    let k = a0.wrapping_mul(M::M64);
     let (_a, carry) = mac(a0, k, modulus[0], 0);
     let (a0, carry) = mac(a1, k, modulus[1], carry);
     let (a1, carry) = mac(a2, k, modulus[2], carry);
     let (a2, carry) = mac(a3, k, modulus[3], carry);
     let a3 = a4 + carry;
-    let k = x[1]
-        .wrapping_mul(y.limb(0))
-        .wrapping_add(a0)
-        .wrapping_mul(M::M64);
     let (a0, carry) = mac(a0, x[1], y.limb(0), 0);
     let (a1, carry) = mac(a1, x[1], y.limb(1), carry);
     let (a2, carry) = mac(a2, x[1], y.limb(2), carry);
     let (a3, carry) = mac(a3, x[1], y.limb(3), carry);
     let a4 = carry;
+    let k = a0.wrapping_mul(M::M64);
     let (_a, carry) = mac(a0, k, modulus[0], 0);
     let (a0, carry) = mac(a1, k, modulus[1], carry);
     let (a1, carry) = mac(a2, k, modulus[2], carry);
     let (a2, carry) = mac(a3, k, modulus[3], carry);
     let a3 = a4 + carry;
-    let k = x[2]
-        .wrapping_mul(y.limb(0))
-        .wrapping_add(a0)
-        .wrapping_mul(M::M64);
     let (a0, carry) = mac(a0, x[2], y.limb(0), 0);
     let (a1, carry) = mac(a1, x[2], y.limb(1), carry);
     let (a2, carry) = mac(a2, x[2], y.limb(2), carry);
     let (a3, carry) = mac(a3, x[2], y.limb(3), carry);
     let a4 = carry;
+    let k = a0.wrapping_mul(M::M64);
     let (_a, carry) = mac(a0, k, modulus[0], 0);
     let (a0, carry) = mac(a1, k, modulus[1], carry);
     let (a1, carry) = mac(a2, k, modulus[2], carry);
     let (a2, carry) = mac(a3, k, modulus[3], carry);
     let a3 = a4 + carry;
-    let k = x[3]
-        .wrapping_mul(y.limb(0))
-        .wrapping_add(a0)
-        .wrapping_mul(M::M64);
     let (a0, carry) = mac(a0, x[3], y.limb(0), 0);
     let (a1, carry) = mac(a1, x[3], y.limb(1), carry);
     let (a2, carry) = mac(a2, x[3], y.limb(2), carry);
     let (a3, carry) = mac(a3, x[3], y.limb(3), carry);
     let a4 = carry;
+    let k = a0.wrapping_mul(M::M64);
     let (_a, carry) = mac(a0, k, modulus[0], 0);
     let (a0, carry) = mac(a1, k, modulus[1], carry);
     let (a1, carry) = mac(a2, k, modulus[2], carry);
@@ -207,32 +173,8 @@ pub fn mul_redc_inline<M: Parameters>(x: &U256, y: &U256) -> U256 {
     r
 }
 
-pub fn sqr_redc<M: Parameters>(a: &U256) -> U256 {
-    sqr_redc_inline::<M>(a)
-}
-
-pub fn sqr_redc_inline<M: Parameters>(a: &U256) -> U256 {
-    let (lo, hi) = a.sqr_full_inline();
-    redc_inline::<M>(&lo, &hi)
-}
-
-pub fn inv_redc<M: Parameters>(n: &U256) -> Option<U256> {
-    // OPT: Fold mul into GCD computation by starting with (0, R3) instead
-    // of (0, 1).
-    n.invmod(&M::MODULUS)
-        .map(|ni| mul_redc_inline::<M>(&ni, &M::R3))
-}
-
-#[allow(clippy::module_name_repetitions)]
-pub fn to_montgomery<M: Parameters>(n: &U256) -> U256 {
-    mul_redc::<M>(n, &M::R2)
-}
-
-#[allow(clippy::module_name_repetitions)]
-pub fn from_montgomery<M: Parameters>(n: &U256) -> U256 {
-    redc::<M>(n, &U256::ZERO)
-}
-
+// Quickcheck requires pass-by-value
+#[allow(clippy::needless_pass_by_value)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -241,6 +183,8 @@ mod tests {
 
     struct PrimeField();
 
+    // TODO: Non-proth prime
+    // TODO: Test for small and big primes
     impl Parameters for PrimeField {
         const M64: u64 = 0xffff_ffff_ffff_ffff;
         const MODULUS: U256 =
@@ -251,12 +195,20 @@ mod tests {
         const R3: U256 = u256h!("038e5f79873c0a6df47d84f8363000187545706677ffcc06cc7177d1406df18e");
     }
 
+    #[quickcheck]
+    fn test_to_montgomery_const_consistent(n: U256) {
+        let result =
+            to_montgomery_const(&n, &PrimeField::MODULUS, PrimeField::M64, &PrimeField::R2);
+        let expected = mul_redc_inline::<PrimeField>(&n, &PrimeField::R2);
+        assert_eq!(result, expected);
+    }
+
     #[test]
     fn test_redc() {
         let a = u256h!("0548c135e26faa9c977fb2eda057b54b2e0baa9a77a0be7c80278f4f03462d4c");
         let b = u256h!("024385f6bebc1c496e09955db534ef4b1eaff9a78e27d4093cfa8f7c8f886f6b");
         let c = u256h!("012e440f0965e7029c218b64f1010006b5c4ba8b1497c4174a32fec025c197bc");
-        assert_eq!(redc::<PrimeField>(&a, &b), c);
+        assert_eq!(redc_inline::<PrimeField>(&a, &b), c);
     }
 
     #[test]
@@ -264,12 +216,6 @@ mod tests {
         let a = u256h!("0548c135e26faa9c977fb2eda057b54b2e0baa9a77a0be7c80278f4f03462d4c");
         let b = u256h!("024385f6bebc1c496e09955db534ef4b1eaff9a78e27d4093cfa8f7c8f886f6b");
         let c = u256h!("012b854fc6321976d374ad069cfdec8bb7b2bd184259dae8f530cbb28f0805b4");
-        assert_eq!(mul_redc::<PrimeField>(&a, &b), c);
-    }
-
-    #[quickcheck]
-    fn test_to_from(mut n: U256) -> bool {
-        n %= PrimeField::MODULUS;
-        from_montgomery::<PrimeField>(&to_montgomery::<PrimeField>(&n)) == n
+        assert_eq!(mul_redc_inline::<PrimeField>(&a, &b), c);
     }
 }
