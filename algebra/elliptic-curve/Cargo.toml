@@ -36,13 +36,20 @@ harness = false
 required-features = ["bench"]
 
 [features]
-default = [ "std" ]
+default = [
+    "std",
+    "inline",
+]
 std = [
     "zkp-macros-decl/std",
     "zkp-u256/std",
     "zkp-primefield/std",
     "no-std-compat/std",
     "itertools/use_std",
+]
+inline = [
+    "zkp-u256/inline",
+    "zkp-primefield/inline"
 ]
 test = [
     "quickcheck",

@@ -93,12 +93,14 @@ impl U256 {
     }
 
     // Computes the inverse modulo a given modulus
+    #[inline(always)]
     pub fn invmod(&self, modulus: &Self) -> Option<Self> {
         inv_mod(modulus, self)
     }
 }
 
 impl DivAssign<&U256> for U256 {
+    #[inline(always)]
     fn div_assign(&mut self, rhs: &Self) {
         let (q, _r) = self.divrem(rhs).unwrap();
         *self = q;
@@ -106,6 +108,7 @@ impl DivAssign<&U256> for U256 {
 }
 
 impl RemAssign<&U256> for U256 {
+    #[inline(always)]
     fn rem_assign(&mut self, rhs: &Self) {
         let (_q, r) = self.divrem(rhs).unwrap();
         *self = r;

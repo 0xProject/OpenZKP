@@ -3,6 +3,9 @@ use crate::U256;
 mod generic;
 pub mod proth;
 
+// TODO: Special algorithms for Solinas and Crandall primes
+// <https://en.wikipedia.org/wiki/Solinas_prime>
+
 // TODO: const-compute from modulus
 pub trait Parameters {
     /// The modulus to implement in Montgomery form

@@ -35,7 +35,10 @@ harness = false
 required-features = ["bench"]
 
 [features]
-default = ["std"] # Default to using the std
+default = [
+    "std",
+    "inline"
+]
 bench = [
     "test",
     "criterion"
@@ -56,6 +59,7 @@ use_rand = [
     "rand"
 ]
 asm = []
+inline = []
 
 # Allow math in docs
 [package.metadata.docs.rs]

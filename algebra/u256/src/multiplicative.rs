@@ -14,6 +14,7 @@ use std::{
 // Multiplicative operations: Mul, square, mulmod, pow, etc. routines
 
 impl U256 {
+    #[cfg_attr(feature = "inline", inline(always))]
     pub fn sqr(&self) -> Self {
         self.sqr_inline()
     }
@@ -24,6 +25,7 @@ impl U256 {
         lo
     }
 
+    #[cfg_attr(feature = "inline", inline(always))]
     pub fn mul_full(&self, rhs: &Self) -> (Self, Self) {
         self.mul_full_inline(rhs)
     }
@@ -54,6 +56,7 @@ impl U256 {
         )
     }
 
+    #[cfg_attr(feature = "inline", inline(always))]
     pub fn sqr_full(&self) -> (Self, Self) {
         self.sqr_full_inline()
     }
@@ -151,6 +154,7 @@ impl U256 {
 impl MulAssign<&U256> for U256 {
     // We shadow carry for readability
     #[allow(clippy::shadow_unrelated)]
+    #[cfg_attr(feature = "inline", inline(always))]
     fn mul_assign(&mut self, rhs: &Self) {
         let (r0, carry) = mac(0, self.limb(0), rhs.limb(0), 0);
         let (r1, carry) = mac(0, self.limb(0), rhs.limb(1), carry);
@@ -172,6 +176,7 @@ impl MulAssign<&U256> for U256 {
 commutative_binop!(U256, Mul, mul, MulAssign, mul_assign);
 
 impl MulAssign<u64> for U256 {
+    #[cfg_attr(feature = "inline", inline(always))]
     fn mul_assign(&mut self, rhs: u64) {
         let (r0, carry) = mac(0, self.limb(0), rhs, 0);
         let (r1, carry) = mac(0, self.limb(1), rhs, carry);
@@ -187,6 +192,7 @@ impl MulAssign<u64> for U256 {
 impl Mul<u64> for U256 {
     type Output = Self;
 
+    #[inline(always)]
     fn mul(mut self, rhs: u64) -> Self {
         self.mul_assign(rhs);
         self
@@ -196,6 +202,7 @@ impl Mul<u64> for U256 {
 impl Mul<u64> for &U256 {
     type Output = U256;
 
+    #[inline(always)]
     fn mul(self, rhs: u64) -> U256 {
         self.clone().mul(rhs)
     }
@@ -204,6 +211,7 @@ impl Mul<u64> for &U256 {
 impl Mul<U256> for u64 {
     type Output = U256;
 
+    #[inline(always)]
     fn mul(self, rhs: U256) -> U256 {
         rhs.mul(self)
     }
@@ -212,6 +220,7 @@ impl Mul<U256> for u64 {
 impl Mul<&U256> for u64 {
     type Output = U256;
 
+    #[inline(always)]
     fn mul(self, rhs: &U256) -> U256 {
         rhs.mul(self)
     }
@@ -222,6 +231,7 @@ impl MulAssign<u128> for U256 {
     #[allow(clippy::suspicious_op_assign_impl)]
     // Carry gets re-used for readability
     #[allow(clippy::shadow_unrelated)]
+    #[cfg_attr(feature = "inline", inline(always))]
     fn mul_assign(&mut self, rhs: u128) {
         // We want the truncation here
         #[allow(clippy::cast_possible_truncation)]
@@ -243,6 +253,7 @@ impl MulAssign<u128> for U256 {
 impl Mul<u128> for U256 {
     type Output = Self;
 
+    #[inline(always)]
     fn mul(mut self, rhs: u128) -> Self {
         self.mul_assign(rhs);
         self
@@ -252,6 +263,7 @@ impl Mul<u128> for U256 {
 impl Mul<u128> for &U256 {
     type Output = U256;
 
+    #[inline(always)]
     fn mul(self, rhs: u128) -> U256 {
         self.clone().mul(rhs)
     }
@@ -260,6 +272,7 @@ impl Mul<u128> for &U256 {
 impl Mul<U256> for u128 {
     type Output = U256;
 
+    #[inline(always)]
     fn mul(self, rhs: U256) -> U256 {
         rhs.mul(self)
     }
@@ -268,6 +281,7 @@ impl Mul<U256> for u128 {
 impl Mul<&U256> for u128 {
     type Output = U256;
 
+    #[inline(always)]
     fn mul(self, rhs: &U256) -> U256 {
         rhs.mul(self)
     }
