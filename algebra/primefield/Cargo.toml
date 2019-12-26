@@ -38,7 +38,10 @@ harness = false
 required-features = ["bench"]
 
 [features]
-default = [ "std" ]
+default = [
+    "std",
+    "inline"
+]
 bench = [
     "criterion",
     "zkp-criterion-utils",
@@ -62,6 +65,9 @@ std = [
 use_rand = [
     "rand",
     "zkp-u256/use_rand",
+]
+inline = [
+    "zkp-u256/inline",
 ]
 
 # Allow math in docs

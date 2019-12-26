@@ -6,22 +6,27 @@ use std::{
 };
 
 impl U256 {
+    #[inline(always)]
     pub fn is_even(&self) -> bool {
         self.limb(0) & 1 == 0
     }
 
+    #[inline(always)]
     pub fn is_odd(&self) -> bool {
         self.limb(0) & 1 == 1
     }
 
+    #[inline(always)]
     pub fn bits(&self) -> usize {
         256 - self.leading_zeros()
     }
 
+    #[inline(always)]
     pub fn msb(&self) -> usize {
         255 - self.leading_zeros()
     }
 
+    #[cfg_attr(feature = "inline", inline(always))]
     pub fn bit(&self, i: usize) -> bool {
         if i < 64 {
             self.limb(0) >> i & 1 == 1
@@ -36,6 +41,7 @@ impl U256 {
         }
     }
 
+    #[cfg_attr(feature = "inline", inline(always))]
     pub fn leading_zeros(&self) -> usize {
         if self.limb(3) > 0 {
             self.limb(3).leading_zeros() as usize
@@ -50,6 +56,7 @@ impl U256 {
         }
     }
 
+    #[cfg_attr(feature = "inline", inline(always))]
     pub fn trailing_zeros(&self) -> usize {
         if self.limb(0) > 0 {
             self.limb(0).trailing_zeros() as usize
@@ -69,12 +76,14 @@ impl U256 {
 impl BitAnd<u64> for &U256 {
     type Output = u64;
 
+    #[inline(always)]
     fn bitand(self, rhs: u64) -> u64 {
         self.limb(0) & rhs
     }
 }
 
 impl BitAndAssign<&U256> for U256 {
+    #[cfg_attr(feature = "inline", inline(always))]
     fn bitand_assign(&mut self, rhs: &Self) {
         self.set_limb(0, self.limb(0) & rhs.limb(0));
         self.set_limb(1, self.limb(1) & rhs.limb(1));
@@ -84,6 +93,7 @@ impl BitAndAssign<&U256> for U256 {
 }
 
 impl ShlAssign<usize> for U256 {
+    #[cfg_attr(feature = "inline", inline(always))]
     fn shl_assign(&mut self, rhs: usize) {
         // Note: If RHS is a compile time constant then inlining will allow
         // the branches to be optimized away.
@@ -152,6 +162,7 @@ impl ShlAssign<usize> for U256 {
 impl Shl<usize> for U256 {
     type Output = Self;
 
+    #[inline(always)]
     fn shl(mut self, rhs: usize) -> Self {
         self <<= rhs;
         self
@@ -159,6 +170,7 @@ impl Shl<usize> for U256 {
 }
 
 impl ShrAssign<usize> for U256 {
+    #[cfg_attr(feature = "inline", inline(always))]
     fn shr_assign(&mut self, rhs: usize) {
         // Note: If RHS is a compile time constant then inlining will allow
         // the branches to be optimized away.
@@ -226,6 +238,7 @@ impl ShrAssign<usize> for U256 {
 impl Shr<usize> for U256 {
     type Output = Self;
 
+    #[inline(always)]
     fn shr(mut self, rhs: usize) -> Self {
         self >>= rhs;
         self

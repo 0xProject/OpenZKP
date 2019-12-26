@@ -62,14 +62,17 @@ impl FieldElement {
         &self.0
     }
 
+    #[inline(always)]
     pub fn is_zero(&self) -> bool {
         self.0 == U256::ZERO
     }
 
+    #[inline(always)]
     pub fn is_one(&self) -> bool {
         self.0 == Self::R1
     }
 
+    #[inline(always)]
     pub fn inv(&self) -> Option<Self> {
         inv_redc::<Self>(&self.0).map(Self)
     }
@@ -80,16 +83,18 @@ impl FieldElement {
         self.clone() + self
     }
 
+    #[inline(always)]
     pub fn triple(&self) -> Self {
         // TODO: Optimize
         self.clone() + self + self
     }
 
-    #[inline(always)]
+    #[cfg_attr(feature = "inline", inline(always))]
     pub fn square(&self) -> Self {
         Self::from_montgomery(sqr_redc_inline::<Self>(&self.0))
     }
 
+    #[inline(always)]
     pub fn square_root(&self) -> Option<Self> {
         square_root(self)
     }
@@ -187,6 +192,7 @@ impl fmt::Debug for FieldElement {
 macro_rules! impl_from_uint {
     ($t:ty) => {
         impl From<$t> for FieldElement {
+            #[inline(always)]
             fn from(n: $t) -> Self {
                 U256::from(n).into()
             }
@@ -204,6 +210,7 @@ impl_from_uint!(usize);
 macro_rules! impl_from_int {
     ($t:ty) => {
         impl From<$t> for FieldElement {
+            #[cfg_attr(feature = "inline", inline(always))]
             fn from(n: $t) -> Self {
                 if n >= 0 {
                     U256::from(n).into()
@@ -227,6 +234,7 @@ impl_from_int!(isize);
 // does a non-trivial `from_montgomery` conversion.
 macro_rules! to_uint {
     ($fname:ident, $uname:ident, $type:ty) => {
+        #[inline(always)]
         pub fn $fname(&self) -> $type {
             U256::from(self).$uname()
         }
@@ -235,6 +243,7 @@ macro_rules! to_uint {
 
 macro_rules! to_int {
     ($fname:ident, $uname:ident, $type:ty) => {
+        #[cfg_attr(feature = "inline", inline(always))]
         pub fn $fname(&self) -> $type {
             let n = U256::from(self);
             let half = Self::MODULUS >> 1;
@@ -265,24 +274,28 @@ impl FieldElement {
 }
 
 impl From<U256> for FieldElement {
+    #[inline(always)]
     fn from(n: U256) -> Self {
         (&n).into()
     }
 }
 
 impl From<&U256> for FieldElement {
+    #[inline(always)]
     fn from(n: &U256) -> Self {
         Self::from_montgomery(to_montgomery::<Self>(n))
     }
 }
 
 impl From<FieldElement> for U256 {
+    #[inline(always)]
     fn from(n: FieldElement) -> Self {
         (&n).into()
     }
 }
 
 impl From<&FieldElement> for U256 {
+    #[inline(always)]
     fn from(n: &FieldElement) -> Self {
         from_montgomery::<FieldElement>(n.as_montgomery())
     }
@@ -298,7 +311,7 @@ impl Neg for &FieldElement {
 }
 
 impl AddAssign<&FieldElement> for FieldElement {
-    #[inline(always)]
+    #[cfg_attr(feature = "inline", inline(always))]
     fn add_assign(&mut self, rhs: &Self) {
         self.0 += &rhs.0;
         if self.0 >= Self::MODULUS {
@@ -308,7 +321,7 @@ impl AddAssign<&FieldElement> for FieldElement {
 }
 
 impl SubAssign<&FieldElement> for FieldElement {
-    #[inline(always)]
+    #[cfg_attr(feature = "inline", inline(always))]
     fn sub_assign(&mut self, rhs: &Self) {
         if self.0 < rhs.0 {
             self.0 += &Self::MODULUS;
@@ -318,7 +331,7 @@ impl SubAssign<&FieldElement> for FieldElement {
 }
 
 impl MulAssign<&FieldElement> for FieldElement {
-    #[inline(always)]
+    #[cfg_attr(feature = "inline", inline(always))]
     fn mul_assign(&mut self, rhs: &Self) {
         self.0 = mul_redc_inline::<Self>(&self.0, &rhs.0);
     }
@@ -348,6 +361,7 @@ use quickcheck::{Arbitrary, Gen};
 
 #[cfg(any(test, feature = "quickcheck"))]
 impl Arbitrary for FieldElement {
+    #[inline(always)]
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         // TODO: Generate 0, 1, p/2 and -1
         Self::from_montgomery(U256::arbitrary(g) % Self::MODULUS)
