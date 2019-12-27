@@ -59,6 +59,9 @@ pub fn mul_redc(m3: u64, x: &U256, y: &U256) -> U256 {
 #[allow(clippy::shadow_unrelated)]
 #[inline(always)]
 pub fn mul_redc_inline(m3: u64, x: &U256, y: &U256) -> U256 {
+    let (lo, hi) = crate::algorithms::assembly::full_mul_asm(x, y);
+    return redc_inline(m3, &lo, &hi);
+
     let x = x.as_limbs();
     let y = y.as_limbs();
 
