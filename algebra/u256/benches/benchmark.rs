@@ -154,6 +154,16 @@ fn montgomery_proth_redc(crit: &mut Criterion) {
     });
 }
 
+
+fn montgomery_proth_redc_asm(crit: &mut Criterion) {
+    const M3: u64 = 0x0800_0000_0000_0011;
+    let a = u256h!("01c9e043b135fa21471cec503f1181884ef3d9c2cb44b6a3531bb3056443bc99");
+    let b = u256h!("04742d726d4800e1015941bf06591cd139bd034f968ab8a225f92cbba85e5776");
+    crit.bench_function("proth redc asm", move |bench| {
+        bench.iter(|| assembly::proth_redc_asm(M3, black_box(&a), black_box(&b)))
+    });
+}
+
 fn montgomery_proth_mul_redc(crit: &mut Criterion) {
     let a = u256h!("01c9e043b135fa21471cec503f1181884ef3d9c2cb44b6a3531bb3056443bc99");
     let b = u256h!("04742d726d4800e1015941bf06591cd139bd034f968ab8a225f92cbba85e5776");
@@ -179,6 +189,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     montgomery_redc(c);
     montgomery_mul_redc(c);
     montgomery_proth_redc(c);
+    montgomery_proth_redc_asm(c);
     montgomery_proth_mul_redc(c);
 }
 

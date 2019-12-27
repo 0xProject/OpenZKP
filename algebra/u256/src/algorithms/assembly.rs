@@ -196,9 +196,11 @@ pub fn proth_redc_asm(m3: u64, lo: &U256, hi: &U256) -> U256 {
         mov  $$0, %rax             // Note: we can't use xor here
         adox %rax, %rax
 
-        // Add m3 * [k0 k1 k2] to [lo[3]+CF hi[0] hi[1] hi[2] hi[3]] and store in [r8 r11 r9 r10, r12]
+        // Add m3 * [k0 k1 k2] to [lo[3]+CF hi[0] hi[1] hi[2] hi[3]]
+        // and store in [r8 r11 r9 r10, r12]
         mulx %r8, %r8, %r11
         adcx 24($1), %r8
+        mov %r12, 24($0)
         adox 0($2), %r11
         mulx %r9, %rax, %r9
         adcx %rax, %r11
@@ -207,6 +209,7 @@ pub fn proth_redc_asm(m3: u64, lo: &U256, hi: &U256) -> U256 {
         adcx %rax, %r9
         adox 16($2), %r10
         adcx $3, %r10
+        mov $3, %r12
         adox 24($2), %r12
         adcx $3, %r12
 
@@ -242,7 +245,6 @@ pub fn proth_redc_asm(m3: u64, lo: &U256, hi: &U256) -> U256 {
         cmovcq 8($0), %r9
         cmovcq 16($0), %r10
         cmovcq 24($0), %r11
-
         "
         :
         : "r"(result.as_mut_ptr()), "r"(lo), "r"(hi), "m"(ZERO), "m"(m3)
@@ -408,4 +410,20 @@ pub fn mul_redc<M: Parameters>(a: &U256, b: &U256) -> U256 {
         r -= &M::MODULUS;
     }
     r
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use zkp_macros_decl::u256h;
+
+    const M3: u64 = 0x0800_0000_0000_0011;
+
+    #[test]
+    fn test_proth_redc() {
+        let a = u256h!("0548c135e26faa9c977fb2eda057b54b2e0baa9a77a0be7c80278f4f03462d4c");
+        let b = u256h!("024385f6bebc1c496e09955db534ef4b1eaff9a78e27d4093cfa8f7c8f886f6b");
+        let c = crate::algorithms::montgomery::proth::redc(M3, &a, &b);
+        assert_eq!(proth_redc_asm(M3, &a, &b), c);
+    }
 }
