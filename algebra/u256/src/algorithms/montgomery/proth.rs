@@ -40,11 +40,15 @@ pub fn redc_inline(m3: u64, lo: &U256, hi: &U256) -> U256 {
     let (a7, _carry) = adc(hi[3], 0, carry1);
 
     // Final reduction
-    let mut r = U256::from_limbs([a4, a5, a6, a7]);
-    if r >= U256::from_limbs([1, 0, 0, m3]) {
-        r -= U256::from_limbs([1, 0, 0, m3]);
+    let (r0, carry) = sbb(a4, 1, 0);
+    let (r1, carry) = sbb(a5, 0, carry);
+    let (r2, carry) = sbb(a6, 0, carry);
+    let (r3, carry) = sbb(a7, m3, carry);
+    if carry != 0 {
+        U256::from_limbs([a4, a5, a6, a7])
+    } else {
+        U256::from_limbs([r0, r1, r2, r3])
     }
-    r
 }
 
 pub fn mul_redc(m3: u64, x: &U256, y: &U256) -> U256 {
