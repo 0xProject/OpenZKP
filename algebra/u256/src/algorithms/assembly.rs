@@ -223,32 +223,37 @@ pub fn proth_redc_asm(m3: u64, lo: &U256, hi: &U256) -> U256 {
         adcx %rax, %r10
         adcx %rbx, %r12                    // No carry, CF = 0
 
-        // Store result
-        mov %r11, 0($0)
-        mov %r9, 8($0)
-        mov %r10, 16($0)
-        mov %r12, 24($0)
-
         // Result can be up to 2 * modulus
         // We need to conditionally subtract one modulus.
         // This step takes 1.1ns or about 22% of total time.
         // We could leave it out, but that complicates the function signature.
 
         // Reduce result
-        sub $$1, %r11
-        sbb $$0, %r9
-        sbb $$0, %r10
-        sbb %rdx, %r12
+        mov %r11, %rax
+        mov %r9, %rbx
+        mov %r10, %r13
+        mov %r12, %r14
+
+        sub $$1, %rax
+        sbb $$0, %rbx
+        sbb $$0, %r13
+        sbb %rdx, %r14
 
         // Conditionally store reduced result if CF=1
-        cmovcq 0($0), %r11
-        cmovcq 8($0), %r9
-        cmovcq 16($0), %r10
-        cmovcq 24($0), %r11
+        cmovnc %rax, %r11
+        cmovnc %rbx, %r9
+        cmovnc %r13, %r10
+        cmovnc %r14, %r12
+
+        // Store result
+        mov %r11, 0($0)
+        mov %r9, 8($0)
+        mov %r10, 16($0)
+        mov %r12, 24($0)
         "
         :
         : "r"(result.as_mut_ptr()), "r"(lo), "r"(hi), "m"(ZERO), "m"(m3)
-        : "rax", "rbx", "rdx", "r8", "r9", "r10", "r11", "r12", "cc", "memory"
+        : "rax", "rbx", "rdx", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "cc", "memory"
     )}
     let result = unsafe { result.assume_init() };
     U256::from_limbs(result)
