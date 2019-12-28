@@ -62,6 +62,7 @@ mod multiplicative;
 #[cfg(feature = "use_rand")]
 mod rand;
 mod u256;
+mod traits;
 
 // TODO: Create a BinaryRing trait that represents numbers modulo some power of
 // two.
