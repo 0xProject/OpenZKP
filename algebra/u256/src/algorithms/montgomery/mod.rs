@@ -39,10 +39,9 @@ pub fn from_montgomery<M: Parameters>(n: &U256) -> U256 {
 
 /// Combined to_montgomery, multiplication, and from_montgomery
 pub fn mulmod<M: Parameters>(a: &U256, b: &U256) -> U256 {
+    // TODO: Is this faster than barret reduction?
     let a = mul_redc_inline::<M>(a, &M::R2);
-    let b = mul_redc_inline::<M>(b, &M::R2);
-    let r = mul_redc_inline::<M>(&a, &b);
-    redc_inline::<M>(&r, &U256::ZERO)
+    mul_redc_inline::<M>(&a, &b)
 }
 
 pub fn redc<M: Parameters>(lo: &U256, hi: &U256) -> U256 {
