@@ -70,5 +70,7 @@ mod u256_traits;
 
 pub use crate::u256::U256;
 
+pub use crate::traits::{Binary, BinaryRing};
+
 #[cfg(not(feature = "std"))]
 extern crate no_std_compat as std;

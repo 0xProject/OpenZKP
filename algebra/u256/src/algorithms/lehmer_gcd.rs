@@ -1,4 +1,4 @@
-use crate::u256::U256;
+use crate::{u256::U256, Binary};
 use crunchy::unroll;
 
 /// Lehmer update matrix

@@ -125,9 +125,13 @@ impl ToPrimitive for U256 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::traits::{Binary, BinaryAssignRef};
     use num_traits::{NumAssign, NumAssignRef, NumRef, RefNum};
 
     // Assert that U256 implements a number of traits
-    trait TraitBounds: NumAssign + NumAssignRef + NumRef + RefNum<Self> {}
+    trait TraitBounds:
+        NumAssign + NumAssignRef + NumRef + RefNum<Self> + Binary + BinaryAssignRef
+    {
+    }
     impl TraitBounds for U256 {}
 }

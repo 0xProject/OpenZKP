@@ -6,7 +6,9 @@ pub mod proth;
 // TODO: Special algorithms for Solinas and Crandall primes
 // <https://en.wikipedia.org/wiki/Solinas_prime>
 
-// TODO: const-compute from modulus
+// TODO: Provide methods to compute parameters from Modulus
+// tricks from <https://medium.com/wicketh/mathemagic-512-bit-division-in-solidity-afa55870a65>
+// can help here. Extra credit: make it a `const fn`.
 pub trait Parameters {
     /// The modulus to implement in Montgomery form
     const MODULUS: U256;

@@ -2,7 +2,7 @@ use crate::{curve::Affine, jacobian::Jacobian};
 use itertools::izip;
 use std::prelude::v1::*;
 use zkp_primefield::FieldElement;
-use zkp_u256::U256;
+use zkp_u256::{Binary, U256};
 
 pub(crate) fn window_table(p: &Affine, naf: &mut [Jacobian]) {
     // naf = P, 3P, 5P, ... 15P

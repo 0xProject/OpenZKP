@@ -17,27 +17,37 @@ pub trait Binary:
     // TODO: What about adding some bit get/set functions?
     // TODO: What about adding digit/limb get/set functions?
 
-    fn count_ones(self) -> u32;
-    fn count_zeros(self) -> u32;
-    fn leading_zeros(self) -> u32;
-    fn trailing_zeros(self) -> u32;
-    fn rotate_left(self, n: u32) -> Self;
-    fn rotate_right(self, n: u32) -> Self;
-    // TODO: Keep these?
-    // fn signed_shl(self, n: u32) -> Self;
-    // fn signed_shr(self, n: u32) -> Self;
-    // fn unsigned_shl(self, n: u32) -> Self;
-    // fn unsigned_shr(self, n: u32) -> Self;
-    fn swap_bytes(self) -> Self;
+    fn count_ones(&self) -> usize;
+    fn count_zeros(&self) -> usize;
+    fn leading_zeros(&self) -> usize;
+    fn trailing_zeros(&self) -> usize;
 
-    // TODO: What about these
-    fn from_be(x: Self) -> Self;
-    fn from_le(x: Self) -> Self;
-    fn to_be(self) -> Self;
-    fn to_le(self) -> Self;
+    fn rotate_left(&self, n: usize) -> Self;
+    fn rotate_right(&self, n: usize) -> Self;
 }
 
-pub trait BinaryAssign:
-    Sized + BitAndAssign + BitOrAssign + BitXorAssign + ShlAssign<usize> + ShrAssign<usize>
+pub trait BinaryOps<Rhs = Self, Output = Self>:
+    Not<Output = Output>
+    + BitAnd<Rhs, Output = Output>
+    + BitOr<Rhs, Output = Output>
+    + BitXor<Rhs, Output = Output>
 {
 }
+
+pub trait BinaryAssignOps<Rhs = Self>:
+    BitAndAssign<Rhs> + BitOrAssign<Rhs> + BitXorAssign<Rhs> + ShlAssign<usize> + ShrAssign<usize>
+{
+}
+
+impl<T, Rhs> BinaryAssignOps<Rhs> for T where
+    T: BitAndAssign<Rhs>
+        + BitOrAssign<Rhs>
+        + BitXorAssign<Rhs>
+        + ShlAssign<usize>
+        + ShrAssign<usize>
+{
+}
+
+pub trait BinaryAssignRef: for<'r> BinaryAssignOps<&'r Self> {}
+
+impl<T> BinaryAssignRef for T where T: for<'r> BinaryAssignOps<&'r T> {}

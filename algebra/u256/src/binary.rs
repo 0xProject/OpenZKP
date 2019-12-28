@@ -1,9 +1,74 @@
-use crate::{commutative_binop, U256};
+use crate::{
+    commutative_binop,
+    traits::{Binary, BinaryAssignRef},
+    U256,
+};
 use std::{
-    ops::{BitAnd, BitAndAssign, Shl, ShlAssign, Shr, ShrAssign},
+    ops::{
+        BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not, Shl, ShlAssign, Shr,
+        ShrAssign,
+    },
     prelude::v1::*,
     u64,
 };
+
+impl Binary for U256 {
+    #[cfg_attr(feature = "inline", inline(always))]
+    fn count_ones(&self) -> usize {
+        (self.limb(0).count_ones()
+            + self.limb(1).count_ones()
+            + self.limb(2).count_ones()
+            + self.limb(3).count_ones()) as usize
+    }
+
+    #[cfg_attr(feature = "inline", inline(always))]
+    fn count_zeros(&self) -> usize {
+        (self.limb(0).count_zeros()
+            + self.limb(1).count_zeros()
+            + self.limb(2).count_zeros()
+            + self.limb(3).count_zeros()) as usize
+    }
+
+    #[cfg_attr(feature = "inline", inline(always))]
+    fn leading_zeros(&self) -> usize {
+        if self.limb(3) > 0 {
+            self.limb(3).leading_zeros() as usize
+        } else if self.limb(2) > 0 {
+            64 + self.limb(2).leading_zeros() as usize
+        } else if self.limb(1) > 0 {
+            128 + self.limb(1).leading_zeros() as usize
+        } else if self.limb(0) > 0 {
+            192 + self.limb(0).leading_zeros() as usize
+        } else {
+            256
+        }
+    }
+
+    #[cfg_attr(feature = "inline", inline(always))]
+    fn trailing_zeros(&self) -> usize {
+        if self.limb(0) > 0 {
+            self.limb(0).trailing_zeros() as usize
+        } else if self.limb(1) > 0 {
+            64 + self.limb(1).trailing_zeros() as usize
+        } else if self.limb(2) > 0 {
+            128 + self.limb(2).trailing_zeros() as usize
+        } else if self.limb(3) > 0 {
+            192 + self.limb(3).trailing_zeros() as usize
+        } else {
+            256
+        }
+    }
+
+    #[cfg_attr(feature = "inline", inline(always))]
+    fn rotate_left(&self, n: usize) -> Self {
+        todo!()
+    }
+
+    #[cfg_attr(feature = "inline", inline(always))]
+    fn rotate_right(&self, n: usize) -> Self {
+        todo!()
+    }
+}
 
 impl U256 {
     #[inline(always)]
@@ -40,36 +105,6 @@ impl U256 {
             false
         }
     }
-
-    #[cfg_attr(feature = "inline", inline(always))]
-    pub fn leading_zeros(&self) -> usize {
-        if self.limb(3) > 0 {
-            self.limb(3).leading_zeros() as usize
-        } else if self.limb(2) > 0 {
-            64 + self.limb(2).leading_zeros() as usize
-        } else if self.limb(1) > 0 {
-            128 + self.limb(1).leading_zeros() as usize
-        } else if self.limb(0) > 0 {
-            192 + self.limb(0).leading_zeros() as usize
-        } else {
-            256
-        }
-    }
-
-    #[cfg_attr(feature = "inline", inline(always))]
-    pub fn trailing_zeros(&self) -> usize {
-        if self.limb(0) > 0 {
-            self.limb(0).trailing_zeros() as usize
-        } else if self.limb(1) > 0 {
-            64 + self.limb(1).trailing_zeros() as usize
-        } else if self.limb(2) > 0 {
-            128 + self.limb(2).trailing_zeros() as usize
-        } else if self.limb(3) > 0 {
-            192 + self.limb(3).trailing_zeros() as usize
-        } else {
-            256
-        }
-    }
 }
 
 // Useful for checking divisability by small powers of two
@@ -82,6 +117,19 @@ impl BitAnd<u64> for &U256 {
     }
 }
 
+impl Not for U256 {
+    type Output = Self;
+
+    #[cfg_attr(feature = "inline", inline(always))]
+    fn not(mut self) -> Self {
+        self.set_limb(0, !self.limb(0));
+        self.set_limb(1, !self.limb(1));
+        self.set_limb(2, !self.limb(2));
+        self.set_limb(3, !self.limb(3));
+        self
+    }
+}
+
 impl BitAndAssign<&U256> for U256 {
     #[cfg_attr(feature = "inline", inline(always))]
     fn bitand_assign(&mut self, rhs: &Self) {
@@ -89,6 +137,26 @@ impl BitAndAssign<&U256> for U256 {
         self.set_limb(1, self.limb(1) & rhs.limb(1));
         self.set_limb(2, self.limb(2) & rhs.limb(2));
         self.set_limb(3, self.limb(3) & rhs.limb(3));
+    }
+}
+
+impl BitOrAssign<&U256> for U256 {
+    #[cfg_attr(feature = "inline", inline(always))]
+    fn bitor_assign(&mut self, rhs: &Self) {
+        self.set_limb(0, self.limb(0) | rhs.limb(0));
+        self.set_limb(1, self.limb(1) | rhs.limb(1));
+        self.set_limb(2, self.limb(2) | rhs.limb(2));
+        self.set_limb(3, self.limb(3) | rhs.limb(3));
+    }
+}
+
+impl BitXorAssign<&U256> for U256 {
+    #[cfg_attr(feature = "inline", inline(always))]
+    fn bitxor_assign(&mut self, rhs: &Self) {
+        self.set_limb(0, self.limb(0) ^ rhs.limb(0));
+        self.set_limb(1, self.limb(1) ^ rhs.limb(1));
+        self.set_limb(2, self.limb(2) ^ rhs.limb(2));
+        self.set_limb(3, self.limb(3) ^ rhs.limb(3));
     }
 }
 
@@ -246,7 +314,8 @@ impl Shr<usize> for U256 {
 }
 
 commutative_binop!(U256, BitAnd, bitand, BitAndAssign, bitand_assign);
-// TODO: BitNot, BitOr, BitXor
+commutative_binop!(U256, BitOr, bitor, BitOrAssign, bitor_assign);
+commutative_binop!(U256, BitXor, bitxor, BitXorAssign, bitxor_assign);
 
 // TODO: Replace literals with u256h!
 #[allow(clippy::unreadable_literal)]

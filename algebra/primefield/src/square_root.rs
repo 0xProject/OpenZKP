@@ -59,6 +59,7 @@ fn tonelli_shanks(a: &FieldElement) -> FieldElement {
 mod tests {
     use super::*;
     use quickcheck_macros::quickcheck;
+    use zkp_u256::Binary;
 
     #[test]
     fn binary_exponent_is_correct() {
