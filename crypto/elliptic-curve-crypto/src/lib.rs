@@ -47,9 +47,9 @@ use lazy_static::*;
 use std::prelude::v1::*;
 use tiny_keccak::sha3_256;
 use zkp_elliptic_curve::{
-    base_mul, double_base_mul, window_table_affine, Affine, GENERATOR, ORDER,
+    base_mul, double_base_mul, window_table_affine, Affine, GENERATOR, ORDER, Order
 };
-use zkp_u256::U256;
+use zkp_u256::{U256, algorithms::montgomery::mulmod};
 
 #[cfg(not(feature = "std"))]
 extern crate no_std_compat as std;
@@ -68,7 +68,7 @@ pub fn private_to_public(private_key: &U256) -> Affine {
 }
 
 fn divmod(a: &U256, b: &U256) -> Option<U256> {
-    b.invmod(&ORDER).map(|bi| a.mulmod(&bi, &ORDER))
+    b.invmod(&ORDER).map(|bi| mulmod::<Order>(a, &bi))
 }
 
 // TODO (SECURITY): The signatures are malleable in s -> MODULUS - s.
@@ -93,7 +93,7 @@ pub fn sign(msg_hash: &U256, private_key: &U256) -> (U256, U256) {
                 if r == U256::ZERO || r.bits() > 251 {
                     continue;
                 }
-                match divmod(&k, &(msg_hash + r.mulmod(private_key, &ORDER))) {
+                match divmod(&k, &(msg_hash + mulmod::<Order>(&r, private_key))) {
                     None => continue,
                     Some(w) => return (r, w),
                 }
@@ -113,9 +113,9 @@ pub fn verify(msg_hash: &U256, r: &U256, w: &U256, public_key: &Affine) -> bool 
 
     match Affine::from(&double_base_mul(
         &*GENERATOR_TABLE,
-        msg_hash.mulmod(&w, &ORDER),
+        mulmod::<Order>(msg_hash, w),
         &public_key,
-        r.mulmod(&w, &ORDER),
+        mulmod::<Order>(r, w)
     )) {
         Affine::Zero => false,
         Affine::Point { x, .. } => U256::from(x) == *r,
