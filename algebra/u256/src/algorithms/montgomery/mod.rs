@@ -37,6 +37,22 @@ pub fn from_montgomery<M: Parameters>(n: &U256) -> U256 {
     redc::<M>(n, &U256::ZERO)
 }
 
+/// Multiply two numbers in non-Montgomery form.
+///
+/// Combined `to_montgomery`, `mul_redc`, and `from_montgomery`.
+///
+/// Normally this would require four `mul_redc` operations, but two
+/// of them cancel out, making this an efficient way to do a single
+/// modular multiplication.
+///
+/// # Requirements
+/// Inputs are required to be reduced modulo `M::MODULUS`.
+pub fn mulmod<M: Parameters>(a: &U256, b: &U256) -> U256 {
+    // TODO: Is this faster than barret reduction?
+    let am = mul_redc_inline::<M>(a, &M::R2);
+    mul_redc_inline::<M>(&am, &b)
+}
+
 pub fn redc<M: Parameters>(lo: &U256, hi: &U256) -> U256 {
     redc_inline::<M>(lo, hi)
 }
@@ -84,6 +100,8 @@ pub fn inv_redc<M: Parameters>(n: &U256) -> Option<U256> {
         .map(|ni| mul_redc_inline::<M>(&ni, &M::R3))
 }
 
+// Quickcheck requires pass-by-value
+#[allow(clippy::needless_pass_by_value)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -122,5 +140,12 @@ mod tests {
     fn test_to_from(mut n: U256) -> bool {
         n %= PrimeField::MODULUS;
         from_montgomery::<PrimeField>(&to_montgomery::<PrimeField>(&n)) == n
+    }
+
+    #[quickcheck]
+    fn test_mulmod(a: U256, b: U256) -> bool {
+        let r = mulmod::<PrimeField>(&a, &b);
+        let e = a.mulmod(&b, &PrimeField::MODULUS);
+        r == e
     }
 }

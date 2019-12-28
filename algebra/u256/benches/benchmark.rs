@@ -2,14 +2,14 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use zkp_macros_decl::u256h;
 use zkp_u256::{
-    algorithms::montgomery::{mul_redc_inline, redc_inline, Parameters},
+    algorithms::montgomery::{mul_redc_inline, mulmod as mont_mulmod, redc_inline, Parameters},
     U256,
 };
 
 struct Generic();
 
 impl Parameters for Generic {
-    const M64: u64 = 0x4494_c3b3_1742_19cf;
+    const M64: u64 = 0xbb6b_3c4c_e8bd_e631;
     const MODULUS: U256 =
         u256h!("0800000000000010ffffffffffffffffb781126dcae7b2321e66a241adc64d2f");
     const R1: U256 = u256h!("07fffffffffffdf10000000000000008c75ec4b46df16bee51925a0bf4fca74f");
@@ -137,6 +137,14 @@ fn montgomery_mul_redc(crit: &mut Criterion) {
     });
 }
 
+fn montgomery_mulmod(crit: &mut Criterion) {
+    let a = u256h!("01c9e043b135fa21471cec503f1181884ef3d9c2cb44b6a3531bb3056443bc99");
+    let b = u256h!("04742d726d4800e1015941bf06591cd139bd034f968ab8a225f92cbba85e5776");
+    crit.bench_function("mont mulmod", move |bench| {
+        bench.iter(|| mont_mulmod::<Generic>(black_box(&a), black_box(&b)))
+    });
+}
+
 fn montgomery_proth_redc(crit: &mut Criterion) {
     let a = u256h!("01c9e043b135fa21471cec503f1181884ef3d9c2cb44b6a3531bb3056443bc99");
     let b = u256h!("04742d726d4800e1015941bf06591cd139bd034f968ab8a225f92cbba85e5776");
@@ -150,6 +158,14 @@ fn montgomery_proth_mul_redc(crit: &mut Criterion) {
     let b = u256h!("04742d726d4800e1015941bf06591cd139bd034f968ab8a225f92cbba85e5776");
     crit.bench_function("proth mul redc", move |bench| {
         bench.iter(|| mul_redc_inline::<Proth>(black_box(&a), black_box(&b)))
+    });
+}
+
+fn montgomery_proth_mulmod(crit: &mut Criterion) {
+    let a = u256h!("01c9e043b135fa21471cec503f1181884ef3d9c2cb44b6a3531bb3056443bc99");
+    let b = u256h!("04742d726d4800e1015941bf06591cd139bd034f968ab8a225f92cbba85e5776");
+    crit.bench_function("proth mont mulmod", move |bench| {
+        bench.iter(|| mont_mulmod::<Proth>(black_box(&a), black_box(&b)))
     });
 }
 
@@ -168,8 +184,10 @@ fn criterion_benchmark(c: &mut Criterion) {
     mulmod(c);
     montgomery_redc(c);
     montgomery_mul_redc(c);
+    montgomery_mulmod(c);
     montgomery_proth_redc(c);
     montgomery_proth_mul_redc(c);
+    montgomery_proth_mulmod(c);
 }
 
 criterion_group!(benches, criterion_benchmark);
