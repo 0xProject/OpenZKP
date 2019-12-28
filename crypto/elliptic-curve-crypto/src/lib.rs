@@ -74,6 +74,8 @@ fn divmod(a: &U256, b: &U256) -> Option<U256> {
 // TODO (SECURITY): The signatures are malleable in s -> MODULUS - s.
 pub fn sign(msg_hash: &U256, private_key: &U256) -> (U256, U256) {
     assert!(msg_hash.bits() <= 251);
+    let private_key_mod = private_key % ORDER;
+    let msg_hash_mod = msg_hash % ORDER;
     for i in 0..1000 {
         let k = U256::from_bytes_be(&sha3_256(
             &[
@@ -93,7 +95,12 @@ pub fn sign(msg_hash: &U256, private_key: &U256) -> (U256, U256) {
                 if r == U256::ZERO || r.bits() > 251 {
                     continue;
                 }
-                match divmod(&k, &(msg_hash + mulmod::<Order>(&r, private_key))) {
+                let mut s = mulmod::<Order>(&r, &private_key_mod);
+                s += &msg_hash_mod;
+                if s >= ORDER {
+                    s -= ORDER;
+                }
+                match divmod(&k, &s) {
                     None => continue,
                     Some(w) => return (r, w),
                 }

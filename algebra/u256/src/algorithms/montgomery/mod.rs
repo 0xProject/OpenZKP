@@ -44,10 +44,13 @@ pub fn from_montgomery<M: Parameters>(n: &U256) -> U256 {
 /// Normally this would require four `mul_redc` operations, but two
 /// of them cancel out, making this an efficient way to do a single
 /// modular multiplication.
+/// 
+/// # Requirements
+/// Inputs are required to be reduced modulo `M::MODULUS`.
 pub fn mulmod<M: Parameters>(a: &U256, b: &U256) -> U256 {
     // TODO: Is this faster than barret reduction?
-    let a = mul_redc_inline::<M>(a, &M::R2);
-    mul_redc_inline::<M>(&a, &b)
+    let am = mul_redc_inline::<M>(a, &M::R2);
+    mul_redc_inline::<M>(&am, &b)
 }
 
 pub fn redc<M: Parameters>(lo: &U256, hi: &U256) -> U256 {
