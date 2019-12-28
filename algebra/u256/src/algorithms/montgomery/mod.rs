@@ -37,6 +37,14 @@ pub fn from_montgomery<M: Parameters>(n: &U256) -> U256 {
     redc::<M>(n, &U256::ZERO)
 }
 
+/// Combined to_montgomery, multiplication, and from_montgomery
+pub fn mulmod<M: Parameters>(a: &U256, b: &U256) -> U256 {
+    let a = mul_redc_inline::<M>(a, &M::R2);
+    let b = mul_redc_inline::<M>(b, &M::R2);
+    let r = mul_redc_inline::<M>(&a, &b);
+    redc_inline::<M>(&r, &U256::ZERO)
+}
+
 pub fn redc<M: Parameters>(lo: &U256, hi: &U256) -> U256 {
     redc_inline::<M>(lo, hi)
 }
@@ -84,6 +92,8 @@ pub fn inv_redc<M: Parameters>(n: &U256) -> Option<U256> {
         .map(|ni| mul_redc_inline::<M>(&ni, &M::R3))
 }
 
+// Quickcheck requires pass-by-value
+#[allow(clippy::needless_pass_by_value)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -122,5 +132,12 @@ mod tests {
     fn test_to_from(mut n: U256) -> bool {
         n %= PrimeField::MODULUS;
         from_montgomery::<PrimeField>(&to_montgomery::<PrimeField>(&n)) == n
+    }
+
+    #[quickcheck]
+    fn test_mulmod(a: U256, b: U256) -> bool {
+        let r = mulmod::<PrimeField>(&a, &b);
+        let e = a.mulmod(&b, &PrimeField::MODULUS);
+        r == e
     }
 }
