@@ -1,5 +1,7 @@
-use num_traits::{Bounded, Zero, One, Inv, MulAdd, MulAddAssign, Pow, Num, Unsigned};
 use crate::U256;
+use num_traits::{
+    Bounded, FromPrimitive, Inv, MulAdd, MulAddAssign, Num, One, Pow, ToPrimitive, Unsigned, Zero,
+};
 
 impl Bounded for U256 {
     #[inline(always)]
@@ -86,6 +88,39 @@ impl Num for U256 {
 }
 
 impl Unsigned for U256 {}
+
+impl FromPrimitive for U256 {
+    #[inline(always)]
+    fn from_i64(n: i64) -> Option<Self> {
+        Some(U256::from(n))
+    }
+
+    #[inline(always)]
+    fn from_u64(n: u64) -> Option<Self> {
+        Some(U256::from(n))
+    }
+
+    // TODO: fn from_u128
+    // TODO: fn from_i128
+}
+
+impl ToPrimitive for U256 {
+    fn to_u64(&self) -> Option<u64> {
+        todo!()
+        // if self <= u64::max_value() {
+        // Some(self.limb(0))
+        // } else {
+        // None
+        // }
+    }
+
+    #[inline(always)]
+    fn to_i64(&self) -> Option<i64> {
+        todo!()
+    }
+
+    // TODO: to_i128, to_u128
+}
 
 #[cfg(test)]
 mod tests {
