@@ -47,9 +47,9 @@ use lazy_static::*;
 use std::prelude::v1::*;
 use tiny_keccak::sha3_256;
 use zkp_elliptic_curve::{
-    base_mul, double_base_mul, window_table_affine, Affine, GENERATOR, ORDER, Order
+    base_mul, double_base_mul, window_table_affine, Affine, Order, GENERATOR, ORDER,
 };
-use zkp_u256::{U256, algorithms::montgomery::mulmod};
+use zkp_u256::{algorithms::montgomery::mulmod, U256};
 
 #[cfg(not(feature = "std"))]
 extern crate no_std_compat as std;
@@ -115,7 +115,7 @@ pub fn verify(msg_hash: &U256, r: &U256, w: &U256, public_key: &Affine) -> bool 
         &*GENERATOR_TABLE,
         mulmod::<Order>(msg_hash, w),
         &public_key,
-        mulmod::<Order>(r, w)
+        mulmod::<Order>(r, w),
     )) {
         Affine::Zero => false,
         Affine::Point { x, .. } => U256::from(x) == *r,

@@ -56,7 +56,7 @@ pub use wnaf::{base_mul, double_base_mul, double_mul, mul, window_table_affine};
 
 use zkp_macros_decl::u256h;
 use zkp_primefield::FieldElement;
-use zkp_u256::{U256, algorithms::montgomery::Parameters};
+use zkp_u256::{algorithms::montgomery::Parameters, U256};
 
 // Curve parameters
 
@@ -70,6 +70,7 @@ pub const BETA: FieldElement = FieldElement::from_montgomery(u256h!(
 
 pub const ORDER: U256 = u256h!("0800000000000010ffffffffffffffffb781126dcae7b2321e66a241adc64d2f");
 
+#[cfg_attr(feature = "std", derive(Debug))]
 pub struct Order();
 
 impl Parameters for Order {
@@ -80,7 +81,6 @@ impl Parameters for Order {
     const R2: U256 = u256h!("07d9e57c2333766ebaf0ab4cf78bbabb509cf64d14ce60b96021b3f1ea1c688d");
     const R3: U256 = u256h!("01b2ba88ca1fe18a1f0d9dedfedfda501da2136eb8b3f20e81147668fddd0429");
 }
-
 
 // x = 0x01ef15c18599971b7beced415a40f0c7deacfd9b0d1819e03d723d8bc943cfca
 // y = 0x005668060aa49730b7be4801df46ec62de53ecd11abe43a32873000c36e8dc1f

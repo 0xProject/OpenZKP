@@ -92,6 +92,8 @@ impl U256 {
         )
     }
 
+    /// Note: if `modulus` is a constant, it is faster to use
+    /// `montgomery::mulmod` with precomputed parameters.
     pub fn mulmod(&self, rhs: &Self, modulus: &Self) -> Self {
         let (lo, hi) = self.mul_full(rhs);
         let mut numerator = [

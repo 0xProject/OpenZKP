@@ -2,7 +2,7 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use zkp_macros_decl::u256h;
 use zkp_u256::{
-    algorithms::montgomery::{mulmod as mont_mulmod, mul_redc_inline, redc_inline, Parameters},
+    algorithms::montgomery::{mul_redc_inline, mulmod as mont_mulmod, redc_inline, Parameters},
     U256,
 };
 
