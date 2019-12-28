@@ -61,48 +61,6 @@ pub fn mul_redc(m3: u64, x: &U256, y: &U256) -> U256 {
 pub fn mul_redc_inline(m3: u64, x: &U256, y: &U256) -> U256 {
     let (lo, hi) = crate::algorithms::assembly::full_mul_asm(x, y);
     return redc_inline(m3, &lo, &hi);
-
-    let x = x.as_limbs();
-    let y = y.as_limbs();
-
-    let (a0, carry) = mac(0, x[0], y[0], 0);
-    let (a1, carry) = mac(0, x[0], y[1], carry);
-    let (a2, carry) = mac(0, x[0], y[2], carry);
-    let (a3, carry) = mac(0, x[0], y[3], carry);
-    let a4 = carry;
-    let (k, carry) = sbb(0, a0, 0);
-    let (a3, carry1) = mac(a3, k, m3, 0);
-    let (a1, carry) = mac(a1, x[1], y[0], carry);
-    let (a2, carry) = mac(a2, x[1], y[1], carry);
-    let (a3, carry) = mac(a3, x[1], y[2], carry);
-    let (a4, carry) = macc(a4, x[1], y[3], carry, carry1);
-    let a5 = carry;
-    let (k, carry) = sbb(0, a1, 0);
-    let (a4, carry1) = mac(a4, k, m3, 0);
-    let (a2, carry) = mac(a2, x[2], y[0], carry);
-    let (a3, carry) = mac(a3, x[2], y[1], carry);
-    let (a4, carry) = mac(a4, x[2], y[2], carry);
-    let (a5, carry) = macc(a5, x[2], y[3], carry, carry1);
-    let a6 = carry;
-    let (k, carry) = sbb(0, a2, 0);
-    let (a5, carry1) = mac(a5, k, m3, 0);
-    let (a3, carry) = mac(a3, x[3], y[0], carry);
-    let (a4, carry) = mac(a4, x[3], y[1], carry);
-    let (a5, carry) = mac(a5, x[3], y[2], carry);
-    let (a6, carry) = macc(a6, x[3], y[3], carry, carry1);
-    let a7 = carry;
-    let (k, carry) = sbb(0, a3, 0);
-    let (a4, carry) = adc(a4, 0, carry);
-    let (a5, carry) = adc(a5, 0, carry);
-    let (a6, carry) = mac(a6, k, m3, carry);
-    let a7 = a7 + carry;
-
-    // Final reduction
-    let mut r = U256::from_limbs([a4, a5, a6, a7]);
-    if r >= U256::from_limbs([1, 0, 0, m3]) {
-        r -= U256::from_limbs([1, 0, 0, m3]);
-    }
-    r
 }
 
 // Quickcheck requires pass-by-value
