@@ -38,13 +38,13 @@ pub fn from_montgomery<M: Parameters>(n: &U256) -> U256 {
 }
 
 /// Multiply two numbers in non-Montgomery form.
-/// 
+///
 /// Combined `to_montgomery`, `mul_redc`, and `from_montgomery`.
-/// 
+///
 /// Normally this would require four `mul_redc` operations, but two
 /// of them cancel out, making this an efficient way to do a single
 /// modular multiplication.
-/// 
+///
 /// # Requirements
 /// Inputs are required to be reduced modulo `M::MODULUS`.
 pub fn mulmod<M: Parameters>(a: &U256, b: &U256) -> U256 {
