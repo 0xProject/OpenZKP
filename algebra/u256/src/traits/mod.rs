@@ -60,7 +60,8 @@ pub trait MulInline<Rhs>: Sized {
         self.mul_full_inline(rhs).0
     }
 
-    // Non-inline version
+    // Optionally-inline version
+    #[cfg_attr(feature = "inline", inline(always))]
     fn mul_full(&self, rhs: Rhs) -> (Self, Self::High) {
         self.mul_full_inline(rhs)
     }
