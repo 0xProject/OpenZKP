@@ -3,7 +3,7 @@ use crate::{
         divrem_nby1, divrem_nbym,
         limb_operations::{adc, mac},
     },
-    commutative_binop, U256,
+    commutative_binop, MulInline, SquareInline, U256,
 };
 use std::{
     ops::{Mul, MulAssign},
@@ -13,18 +13,42 @@ use std::{
 
 // Multiplicative operations: Mul, square, mulmod, pow, etc. routines
 
-impl U256 {
-    #[cfg_attr(feature = "inline", inline(always))]
-    pub fn sqr(&self) -> Self {
-        self.sqr_inline()
-    }
-
+impl SquareInline for U256 {
     #[inline(always)]
-    pub fn sqr_inline(&self) -> Self {
-        let (lo, _hi) = self.sqr_full_inline();
-        lo
+    // We shadow carry for readability
+    #[allow(clippy::shadow_unrelated)]
+    fn square_full_inline(&self) -> (U256, U256) {
+        let (r1, carry) = mac(0, self.limb(0), self.limb(1), 0);
+        let (r2, carry) = mac(0, self.limb(0), self.limb(2), carry);
+        let (r3, r4) = mac(0, self.limb(0), self.limb(3), carry);
+        let (r3, carry) = mac(r3, self.limb(1), self.limb(2), 0);
+        let (r4, r5) = mac(r4, self.limb(1), self.limb(3), carry);
+        let (r5, r6) = mac(r5, self.limb(2), self.limb(3), 0);
+        let r7 = r6 >> 63;
+        let r6 = (r6 << 1) | (r5 >> 63);
+        let r5 = (r5 << 1) | (r4 >> 63);
+        let r4 = (r4 << 1) | (r3 >> 63);
+        let r3 = (r3 << 1) | (r2 >> 63);
+        let r2 = (r2 << 1) | (r1 >> 63);
+        let r1 = r1 << 1;
+        let (r0, carry) = mac(0, self.limb(0), self.limb(0), 0);
+        let (r1, carry) = adc(r1, 0, carry);
+        let (r2, carry) = mac(r2, self.limb(1), self.limb(1), carry);
+        let (r3, carry) = adc(r3, 0, carry);
+        let (r4, carry) = mac(r4, self.limb(2), self.limb(2), carry);
+        let (r5, carry) = adc(r5, 0, carry);
+        let (r6, carry) = mac(r6, self.limb(3), self.limb(3), carry);
+        let (r7, _) = adc(r7, 0, carry);
+        (
+            Self::from_limbs([r0, r1, r2, r3]),
+            Self::from_limbs([r4, r5, r6, r7]),
+        )
     }
 
+    // OPT: Optimized square_inline, but check if it beats the compiler
+}
+
+impl U256 {
     #[cfg_attr(feature = "inline", inline(always))]
     pub fn mul_full(&self, rhs: &Self) -> (Self, Self) {
         self.mul_full_inline(rhs)
@@ -50,42 +74,6 @@ impl U256 {
         let (r4, carry) = mac(r4, self.limb(3), rhs.limb(1), carry);
         let (r5, carry) = mac(r5, self.limb(3), rhs.limb(2), carry);
         let (r6, r7) = mac(r6, self.limb(3), rhs.limb(3), carry);
-        (
-            Self::from_limbs([r0, r1, r2, r3]),
-            Self::from_limbs([r4, r5, r6, r7]),
-        )
-    }
-
-    #[cfg_attr(feature = "inline", inline(always))]
-    pub fn sqr_full(&self) -> (Self, Self) {
-        self.sqr_full_inline()
-    }
-
-    // We shadow carry for readability
-    #[allow(clippy::shadow_unrelated)]
-    #[inline(always)]
-    pub fn sqr_full_inline(&self) -> (Self, Self) {
-        let (r1, carry) = mac(0, self.limb(0), self.limb(1), 0);
-        let (r2, carry) = mac(0, self.limb(0), self.limb(2), carry);
-        let (r3, r4) = mac(0, self.limb(0), self.limb(3), carry);
-        let (r3, carry) = mac(r3, self.limb(1), self.limb(2), 0);
-        let (r4, r5) = mac(r4, self.limb(1), self.limb(3), carry);
-        let (r5, r6) = mac(r5, self.limb(2), self.limb(3), 0);
-        let r7 = r6 >> 63;
-        let r6 = (r6 << 1) | (r5 >> 63);
-        let r5 = (r5 << 1) | (r4 >> 63);
-        let r4 = (r4 << 1) | (r3 >> 63);
-        let r3 = (r3 << 1) | (r2 >> 63);
-        let r2 = (r2 << 1) | (r1 >> 63);
-        let r1 = r1 << 1;
-        let (r0, carry) = mac(0, self.limb(0), self.limb(0), 0);
-        let (r1, carry) = adc(r1, 0, carry);
-        let (r2, carry) = mac(r2, self.limb(1), self.limb(1), carry);
-        let (r3, carry) = adc(r3, 0, carry);
-        let (r4, carry) = mac(r4, self.limb(2), self.limb(2), carry);
-        let (r5, carry) = adc(r5, 0, carry);
-        let (r6, carry) = mac(r6, self.limb(3), self.limb(3), carry);
-        let (r7, _) = adc(r7, 0, carry);
         (
             Self::from_limbs([r0, r1, r2, r3]),
             Self::from_limbs([r4, r5, r6, r7]),
@@ -398,6 +386,6 @@ mod tests {
 
     #[quickcheck]
     fn square(a: U256) -> bool {
-        a.sqr_full() == a.mul_full(&a)
+        a.square_full() == a.mul_full(&a)
     }
 }

@@ -1,4 +1,4 @@
-use crate::{InvMod, U256};
+use crate::{InvMod, SquareInline, U256};
 
 mod generic;
 pub mod proth;
@@ -89,7 +89,7 @@ pub fn sqr_redc<M: Parameters>(a: &U256) -> U256 {
 
 #[inline(always)]
 pub fn sqr_redc_inline<M: Parameters>(a: &U256) -> U256 {
-    let (lo, hi) = a.sqr_full_inline();
+    let (lo, hi) = a.square_full_inline();
     redc_inline::<M>(&lo, &hi)
 }
 
