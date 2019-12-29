@@ -178,6 +178,7 @@ pub(crate) fn mul_redc_inline<M: Parameters>(x: &U256, y: &U256) -> U256 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::MontgomeryParameters;
     use quickcheck_macros::quickcheck;
     use zkp_macros_decl::u256h;
 
@@ -185,7 +186,7 @@ mod tests {
 
     // TODO: Non-proth prime
     // TODO: Test for small and big primes
-    impl Parameters for PrimeField {
+    impl MontgomeryParameters<U256> for PrimeField {
         const M64: u64 = 0xffff_ffff_ffff_ffff;
         const MODULUS: U256 =
             u256h!("0800000000000011000000000000000000000000000000000000000000000001");

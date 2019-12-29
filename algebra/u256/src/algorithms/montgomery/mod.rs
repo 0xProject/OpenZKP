@@ -1,4 +1,4 @@
-use crate::{InvMod, SquareInline, U256};
+use crate::{InvMod, MontgomeryParameters, SquareInline, U256};
 
 mod generic;
 pub mod proth;
@@ -9,22 +9,8 @@ pub mod proth;
 // TODO: Provide methods to compute parameters from Modulus
 // tricks from <https://medium.com/wicketh/mathemagic-512-bit-division-in-solidity-afa55870a65>
 // can help here. Extra credit: make it a `const fn`.
-pub trait Parameters {
-    /// The modulus to implement in Montgomery form
-    const MODULUS: U256;
-
-    /// M64 = -MODULUS^(-1) mod 2^64
-    const M64: u64;
-
-    // R1 = 2^256 mod MODULUS
-    const R1: U256;
-
-    // R2 = 2^512 mod MODULUS
-    const R2: U256;
-
-    // R3 = 2^768 mod MODULUS
-    const R3: U256;
-}
+pub trait Parameters: MontgomeryParameters<U256> {}
+impl<T: MontgomeryParameters<U256>> Parameters for T {}
 
 /// Slow but compile time constant version of `to_montgomery`.
 pub use generic::to_montgomery_const;
@@ -107,13 +93,14 @@ pub fn inv_redc<M: Parameters>(n: &U256) -> Option<U256> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::MontgomeryParameters;
     use quickcheck_macros::quickcheck;
     use zkp_macros_decl::u256h;
 
     struct PrimeField();
 
     // TODO: Non Proth example
-    impl Parameters for PrimeField {
+    impl MontgomeryParameters<U256> for PrimeField {
         const M64: u64 = 0xffff_ffff_ffff_ffff;
         const MODULUS: U256 =
             u256h!("0800000000000011000000000000000000000000000000000000000000000001");

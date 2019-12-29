@@ -1,4 +1,5 @@
 mod binary;
+use crate::Zero;
 
 pub trait SubFromAssign<Rhs = Self> {
     fn sub_from_assign(&mut self, rhs: Rhs);
@@ -70,6 +71,53 @@ pub trait MulInline<Rhs>: Sized {
 }
 
 // TODO: Automatically derive Mul<..> traits. Maybe also MulAssign<..>
+
+pub trait MontgomeryParameters<T: Sized> {
+    /// The modulus to implement in Montgomery form
+    const MODULUS: T;
+
+    /// M64 = -MODULUS^(-1) mod 2^64
+    const M64: u64;
+
+    // R1 = 2^256 mod MODULUS
+    const R1: T;
+
+    // R2 = 2^512 mod MODULUS
+    const R2: T;
+
+    // R3 = 2^768 mod MODULUS
+    const R3: T;
+}
+
+pub trait Montgomery: Zero {
+    fn to_montgomery<M: MontgomeryParameters<Self>>(&self) -> Self {
+        self.mul_redc::<M>(&M::R2)
+    }
+
+    fn from_montgomery<M: MontgomeryParameters<Self>>(&self) -> Self {
+        // Use inline version to propagate the zeros
+        Self::redc_inline::<M>(&Self::zero(), self)
+    }
+
+    /// **Note.** Implementers *must* add the `#[inline(always)]` attribute
+    fn redc_inline<M: MontgomeryParameters<Self>>(lo: &Self, hi: &Self) -> Self;
+
+    /// **Note.** Implementers *must* add the `#[inline(always)]` attribute
+    fn square_redc_inline<M: MontgomeryParameters<Self>>(&self) -> Self;
+
+    /// **Note.** Implementers *must* add the `#[inline(always)]` attribute
+    fn mul_redc_inline<M: MontgomeryParameters<Self>>(&self, rhs: &Self) -> Self;
+
+    fn inv_redc<M: MontgomeryParameters<Self>>(&self) -> Option<Self>;
+
+    fn square_redc<M: MontgomeryParameters<Self>>(&self) -> Self {
+        self.square_redc_inline::<M>()
+    }
+
+    fn mul_redc<M: MontgomeryParameters<Self>>(&self, rhs: &Self) -> Self {
+        self.mul_redc_inline::<M>(rhs)
+    }
+}
 
 // TODO: Mega-trait for binary rings like U256 that PrimeField can use
 

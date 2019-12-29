@@ -4,7 +4,10 @@ use std::{
     prelude::v1::*,
 };
 use zkp_macros_decl::u256h;
-use zkp_u256::{algorithms::montgomery::*, commutative_binop, noncommutative_binop, DivRem, U256};
+use zkp_u256::{
+    algorithms::montgomery::*, commutative_binop, noncommutative_binop, DivRem,
+    MontgomeryParameters, U256,
+};
 // TODO: Implement Serde
 #[cfg(feature = "std")]
 use std::fmt;
@@ -14,17 +17,17 @@ use std::fmt;
 #[derive(PartialEq, Eq, Clone, Hash)]
 pub struct FieldElement(U256);
 
-impl Parameters for FieldElement {
+impl MontgomeryParameters<U256> for FieldElement {
     const M64: u64 = 0xffff_ffff_ffff_ffff;
     const MODULUS: U256 =
         u256h!("0800000000000011000000000000000000000000000000000000000000000001");
-    // = -1
     const R1: U256 = u256h!("07fffffffffffdf0ffffffffffffffffffffffffffffffffffffffffffffffe1");
     const R2: U256 = u256h!("07ffd4ab5e008810ffffffffff6f800000000001330ffffffffffd737e000401");
     const R3: U256 = u256h!("038e5f79873c0a6df47d84f8363000187545706677ffcc06cc7177d1406df18e");
 }
 
 impl FieldElement {
+    // 3, in montgomery form.
     pub const GENERATOR: Self = Self::from_montgomery(u256h!(
         "07fffffffffff9b0ffffffffffffffffffffffffffffffffffffffffffffffa1"
     ));
@@ -33,7 +36,6 @@ impl FieldElement {
     /// Equal to (1 << 59) | (1 << 4) | 1.
     pub const MODULUS: U256 =
         u256h!("0800000000000011000000000000000000000000000000000000000000000001");
-    // 3, in montgomery form.
     pub const NEGATIVE_ONE: Self = Self::from_montgomery(u256h!(
         "0000000000000220000000000000000000000000000000000000000000000020"
     ));

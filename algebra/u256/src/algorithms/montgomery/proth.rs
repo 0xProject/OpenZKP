@@ -102,6 +102,7 @@ pub fn mul_redc_inline(m3: u64, x: &U256, y: &U256) -> U256 {
 #[cfg(test)]
 mod tests {
     use super::{super::generic, *};
+    use crate::MontgomeryParameters;
     use quickcheck_macros::quickcheck;
     use zkp_macros_decl::u256h;
 
@@ -109,7 +110,7 @@ mod tests {
 
     const M3: u64 = 0x0800_0000_0000_0011;
 
-    impl Parameters for PrimeField {
+    impl MontgomeryParameters<U256> for PrimeField {
         const M64: u64 = 0xffff_ffff_ffff_ffff;
         const MODULUS: U256 = U256::from_limbs([1, 0, 0, M3]);
         const R1: U256 = u256h!("07fffffffffffdf0ffffffffffffffffffffffffffffffffffffffffffffffe1");

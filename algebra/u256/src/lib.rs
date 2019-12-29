@@ -71,7 +71,8 @@ mod u256_traits;
 pub use crate::u256::U256;
 
 pub use crate::traits::{
-    Binary, BinaryRing, DivRem, InvMod, Montgomery, MulInline, SquareInline, GCD,
+    Binary, BinaryRing, DivRem, InvMod, Montgomery, MontgomeryParameters, MulInline, SquareInline,
+    GCD,
 };
 pub use num_traits::{Bounded, Inv, MulAdd, MulAddAssign, One, Pow, Zero};
 
