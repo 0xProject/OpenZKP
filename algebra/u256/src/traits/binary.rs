@@ -59,6 +59,10 @@ impl<T, Rhs> BinaryAssignOps<Rhs> for T where
 {
 }
 
+// Does not compile without lifetime annotations
+#[allow(single_use_lifetimes)]
 pub trait BinaryAssignRef: for<'r> BinaryAssignOps<&'r Self> {}
 
+// Does not compile without lifetime annotations
+#[allow(single_use_lifetimes)]
 impl<T> BinaryAssignRef for T where T: for<'r> BinaryAssignOps<&'r T> {}

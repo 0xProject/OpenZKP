@@ -58,17 +58,6 @@ impl MulAddAssign<&U256, &U256> for U256 {
     }
 }
 
-/// Ring inversion.
-// TODO: Make custom trait that adds `fn is_unit(&self) -> bool`.
-// TODO: Implement Inv for u8..u128
-impl Inv for &U256 {
-    type Output = Option<U256>;
-
-    fn inv(self) -> Self::Output {
-        self.invmod256()
-    }
-}
-
 // TODO: Other flavours of exponent
 impl Pow<u64> for &U256 {
     type Output = U256;

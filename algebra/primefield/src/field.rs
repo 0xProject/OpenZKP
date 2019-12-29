@@ -4,7 +4,7 @@ use std::{
     prelude::v1::*,
 };
 use zkp_macros_decl::u256h;
-use zkp_u256::{algorithms::montgomery::*, commutative_binop, noncommutative_binop, U256};
+use zkp_u256::{algorithms::montgomery::*, commutative_binop, noncommutative_binop, U256, DivRem};
 // TODO: Implement Serde
 #[cfg(feature = "std")]
 use std::fmt;
@@ -125,7 +125,7 @@ impl FieldElement {
         if n.is_zero() {
             return Some(Self::ONE);
         }
-        let (q, rem) = (Self::MODULUS - U256::ONE).divrem(&n).unwrap();
+        let (q, rem) = (Self::MODULUS - U256::ONE).div_rem(&n).unwrap();
         if rem != U256::ZERO {
             return None;
         }
