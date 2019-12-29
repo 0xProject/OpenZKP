@@ -49,7 +49,7 @@ use tiny_keccak::sha3_256;
 use zkp_elliptic_curve::{
     base_mul, double_base_mul, window_table_affine, Affine, Order, GENERATOR, ORDER,
 };
-use zkp_u256::{algorithms::montgomery::mulmod, Binary, U256};
+use zkp_u256::{algorithms::montgomery::mulmod, Binary, InvMod, U256};
 
 #[cfg(not(feature = "std"))]
 extern crate no_std_compat as std;
@@ -68,7 +68,7 @@ pub fn private_to_public(private_key: &U256) -> Affine {
 }
 
 fn divmod(a: &U256, b: &U256) -> Option<U256> {
-    b.invmod(&ORDER).map(|bi| mulmod::<Order>(a, &bi))
+    b.inv_mod(&ORDER).map(|bi| mulmod::<Order>(a, &bi))
 }
 
 // TODO (SECURITY): The signatures are malleable in s -> MODULUS - s.

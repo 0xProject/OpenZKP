@@ -1,4 +1,4 @@
-use crate::U256;
+use crate::{InvMod, U256};
 
 mod generic;
 pub mod proth;
@@ -98,7 +98,7 @@ pub fn sqr_redc_inline<M: Parameters>(a: &U256) -> U256 {
 pub fn inv_redc<M: Parameters>(n: &U256) -> Option<U256> {
     // OPT: Fold mul into GCD computation by starting with (0, R3) instead
     // of (0, 1).
-    n.invmod(&M::MODULUS)
+    n.inv_mod(&M::MODULUS)
         .map(|ni| mul_redc_inline::<M>(&ni, &M::R3))
 }
 

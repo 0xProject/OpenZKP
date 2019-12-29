@@ -4,7 +4,7 @@ use std::{
     prelude::v1::*,
 };
 use zkp_macros_decl::u256h;
-use zkp_u256::{algorithms::montgomery::*, commutative_binop, noncommutative_binop, U256, DivRem};
+use zkp_u256::{algorithms::montgomery::*, commutative_binop, noncommutative_binop, DivRem, U256};
 // TODO: Implement Serde
 #[cfg(feature = "std")]
 use std::fmt;

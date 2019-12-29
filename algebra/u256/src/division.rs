@@ -1,23 +1,22 @@
 use crate::{
     algorithms::{divrem_nby1, divrem_nbym, inv_mod, limb_operations::div_2_1},
-    noncommutative_binop, Binary, U256, DivRem
+    noncommutative_binop, Binary, DivRem, InvMod, U256,
 };
+use num_traits::Inv;
 use std::{
     num::Wrapping,
     ops::{Div, DivAssign, Rem, RemAssign},
     prelude::v1::*,
     u64,
 };
-use num_traits::Inv;
 
 // Division like routines: Integer division/remaindering, Ring
 // division/inversion Modular inversions/divisions.
 
-impl U256 {
-
-    // Computes the inverse modulo a given modulus
+impl InvMod for U256 {
+    /// Computes the inverse modulo a given modulus
     #[inline(always)]
-    pub fn invmod(&self, modulus: &Self) -> Option<Self> {
+    fn inv_mod(&self, modulus: &Self) -> Option<Self> {
         inv_mod(modulus, self)
     }
 }
@@ -170,7 +169,7 @@ mod tests {
         let n = U256::from_limbs([271, 0, 0, 0]);
         let m = U256::from_limbs([383, 0, 0, 0]);
         let i = U256::from_limbs([106, 0, 0, 0]);
-        let r = n.invmod(&m).unwrap();
+        let r = n.inv_mod(&m).unwrap();
         assert_eq!(i, r);
     }
 
@@ -194,7 +193,7 @@ mod tests {
             0x97c88939cbce8317,
             0x001752ce51d19c97,
         ]);
-        let r = n.invmod(&m).unwrap();
+        let r = n.inv_mod(&m).unwrap();
         assert_eq!(i, r);
     }
 
