@@ -1,6 +1,6 @@
 use crate::{
     algorithms::{gcd, gcd_extended, montgomery},
-    Montgomery, MontgomeryParameters, GCD, U256, SquareInline, InvMod
+    InvMod, Montgomery, MontgomeryParameters, SquareInline, GCD, U256,
 };
 
 impl GCD for U256 {

@@ -52,7 +52,7 @@
 // architectures #![cfg_attr(feature = "asm", feature(asm))]
 
 mod additive;
-pub mod algorithms;
+pub(crate) mod algorithms;
 mod binary;
 mod conversion;
 mod division;
@@ -68,12 +68,13 @@ mod u256_traits;
 // TODO: Create a BinaryRing trait that represents numbers modulo some power of
 // two.
 
-pub use crate::u256::U256;
+pub use u256::U256;
 
-pub use crate::traits::{
+pub use traits::{
     Binary, BinaryRing, DivRem, InvMod, Montgomery, MontgomeryParameters, MulInline, SquareInline,
     GCD,
 };
+pub use algorithms::montgomery::{to_montgomery_const};
 pub use num_traits::{Bounded, Inv, MulAdd, MulAddAssign, One, Pow, Zero};
 
 #[cfg(not(feature = "std"))]

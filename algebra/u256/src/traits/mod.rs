@@ -96,7 +96,7 @@ pub trait Montgomery: Zero {
 
     fn from_montgomery<M: MontgomeryParameters<Self>>(&self) -> Self {
         // Use inline version to propagate the zeros
-        Self::redc_inline::<M>(&Self::zero(), self)
+        Self::redc_inline::<M>(self, &Self::zero())
     }
 
     /// **Note.** Implementers *must* add the `#[inline(always)]` attribute
@@ -116,6 +116,12 @@ pub trait Montgomery: Zero {
 
     fn mul_redc<M: MontgomeryParameters<Self>>(&self, rhs: &Self) -> Self {
         self.mul_redc_inline::<M>(rhs)
+    }
+
+    fn mul_mod<M: MontgomeryParameters<Self>>(&self, rhs: &Self) -> Self {
+        // OPT: Is this better than Barret reduction?
+        let mont = Self::mul_redc_inline::<M>(self, &M::R2);
+        Self::mul_redc_inline::<M>(&mont, rhs)
     }
 }
 

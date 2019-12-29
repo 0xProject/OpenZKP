@@ -4,9 +4,9 @@ use std::{
     prelude::v1::*,
 };
 use zkp_macros_decl::u256h;
-use zkp_u256::{
-    algorithms::montgomery::*, commutative_binop, noncommutative_binop, DivRem,
-    MontgomeryParameters, U256,
+use  zkp_u256::{
+    commutative_binop, noncommutative_binop, DivRem,
+    MontgomeryParameters, U256, Montgomery, to_montgomery_const
 };
 // TODO: Implement Serde
 #[cfg(feature = "std")]
@@ -76,7 +76,7 @@ impl FieldElement {
 
     #[inline(always)]
     pub fn inv(&self) -> Option<Self> {
-        inv_redc::<Self>(&self.0).map(Self)
+        self.0.inv_redc::<Self>().map(Self)
     }
 
     #[inline(always)]
@@ -93,7 +93,7 @@ impl FieldElement {
 
     #[cfg_attr(feature = "inline", inline(always))]
     pub fn square(&self) -> Self {
-        Self::from_montgomery(sqr_redc_inline::<Self>(&self.0))
+        Self(self.0.square_redc_inline::<Self>())
     }
 
     #[inline(always)]
@@ -285,7 +285,7 @@ impl From<U256> for FieldElement {
 impl From<&U256> for FieldElement {
     #[inline(always)]
     fn from(n: &U256) -> Self {
-        Self::from_montgomery(to_montgomery::<Self>(n))
+        Self(n.to_montgomery::<Self>())
     }
 }
 
@@ -299,7 +299,7 @@ impl From<FieldElement> for U256 {
 impl From<&FieldElement> for U256 {
     #[inline(always)]
     fn from(n: &FieldElement) -> Self {
-        from_montgomery::<FieldElement>(n.as_montgomery())
+        n.0.from_montgomery::<FieldElement>() 
     }
 }
 
@@ -335,7 +335,7 @@ impl SubAssign<&FieldElement> for FieldElement {
 impl MulAssign<&FieldElement> for FieldElement {
     #[cfg_attr(feature = "inline", inline(always))]
     fn mul_assign(&mut self, rhs: &Self) {
-        self.0 = mul_redc_inline::<Self>(&self.0, &rhs.0);
+        self.0 = self.0.mul_redc_inline::<Self>(&rhs.0);
     }
 }
 
