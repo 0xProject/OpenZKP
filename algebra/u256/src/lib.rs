@@ -70,7 +70,10 @@ mod u256_traits;
 
 pub use crate::u256::U256;
 
-pub use crate::traits::{Binary, BinaryRing, DivRem, InvMod, MulInline, SquareInline, GCD};
+pub use crate::traits::{
+    Binary, BinaryRing, DivRem, InvMod, Montgomery, MulInline, SquareInline, GCD,
+};
+pub use num_traits::{Bounded, Inv, MulAdd, MulAddAssign, One, Pow, Zero};
 
 #[cfg(not(feature = "std"))]
 extern crate no_std_compat as std;

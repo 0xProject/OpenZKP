@@ -10,7 +10,7 @@ use std::{
 };
 
 // Additive operations: Add, Sub
-// TODO: SubFrom
+// TODO: SubFrom, AddInline, SubInline
 
 impl AddAssign<&U256> for U256 {
     // This is a small function that appears often in hot paths.

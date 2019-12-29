@@ -192,25 +192,6 @@ impl U256 {
             panic!(); // TODO: return Option<>
         }
     }
-
-    pub fn pow(&self, exponent: u64) -> Option<Self> {
-        if self.is_zero() && (exponent == 0) {
-            None
-        } else {
-            let mut result = Self::ONE;
-            let mut remaining_exponent = exponent;
-            let mut square = self.clone();
-            while remaining_exponent > 0 {
-                if remaining_exponent % 2 == 1 {
-                    result *= &square;
-                }
-                remaining_exponent >>= 1;
-                // OPT - eliminate .clone()
-                square *= square.clone();
-            }
-            Some(result)
-        }
-    }
 }
 
 impl MulAssign<&U256> for U256 {

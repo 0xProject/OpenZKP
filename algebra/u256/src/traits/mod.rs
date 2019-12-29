@@ -45,6 +45,8 @@ pub trait SquareInline: Sized {
     fn square(&self) -> Self {
         self.square_inline()
     }
+
+    // TODO: Square_assign
 }
 
 pub trait MulInline<Rhs>: Sized {
