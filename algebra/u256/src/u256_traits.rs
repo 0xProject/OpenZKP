@@ -58,16 +58,6 @@ impl MulAddAssign<&U256, &U256> for U256 {
     }
 }
 
-// TODO: Other flavours of exponent
-impl Pow<u64> for &U256 {
-    type Output = U256;
-
-    fn pow(self, exponent: u64) -> Self::Output {
-        // TODO
-        self.pow(exponent).unwrap()
-    }
-}
-
 impl Num for U256 {
     type FromStrRadixErr = ();
 

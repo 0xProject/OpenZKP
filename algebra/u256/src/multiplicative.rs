@@ -5,6 +5,7 @@ use crate::{
     },
     commutative_binop, MulInline, SquareInline, U256,
 };
+use num_traits::Pow;
 use std::{
     ops::{Mul, MulAssign},
     prelude::v1::*,
@@ -78,8 +79,8 @@ impl MulInline<u128> for U256 {
         let (r3, carry) = mac(r3, self.limb(2), hi, carry);
         let (r4, r5) = mac(r4, self.limb(3), hi, carry);
         (
-            Self::from_limbs([r0, r1, r2, r3]), 
-            ((r5 as u128) << 64) | (r4 as u128)
+            Self::from_limbs([r0, r1, r2, r3]),
+            ((r5 as u128) << 64) | (r4 as u128),
         )
     }
 }
@@ -128,6 +129,25 @@ impl MulInline<&U256> for U256 {
         let (r3, _) = mac(r3, self.limb(2), rhs.limb(1), carry);
         let (r3, _) = mac(r3, self.limb(3), rhs.limb(0), 0);
         Self::from_limbs([r0, r1, r2, r3])
+    }
+}
+
+// TODO: U256 exponent
+impl Pow<u64> for &U256 {
+    type Output = U256;
+
+    fn pow(self, rhs: u64) -> U256 {
+        let mut result = U256::ONE;
+        let mut remaining_exponent = rhs;
+        let mut square = self.clone();
+        while remaining_exponent > 0 {
+            if remaining_exponent % 2 == 1 {
+                result = result.mul_inline(&square);
+            }
+            remaining_exponent >>= 1;
+            square = square.square_inline();
+        }
+        result
     }
 }
 
