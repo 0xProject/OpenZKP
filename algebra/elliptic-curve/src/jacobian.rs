@@ -4,7 +4,7 @@ use std::{
     prelude::v1::*,
 };
 use zkp_primefield::FieldElement;
-use zkp_u256::{commutative_binop, noncommutative_binop, U256};
+use zkp_u256::{commutative_binop, noncommutative_binop, Binary, U256};
 
 // See http://www.hyperelliptic.org/EFD/g1p/auto-shortw-jacobian.html
 

@@ -121,6 +121,7 @@ macro_rules! curve_operations {
             type Output = $type;
 
             fn mul(self, scalar: &U256) -> $type {
+                use zkp_u256::Binary;
                 // OPT: Use WNAF
                 let mut r = self.clone();
                 for i in (0..scalar.msb()).rev() {

@@ -192,7 +192,7 @@ mod tests {
     use super::*;
     use quickcheck_macros::quickcheck;
     use zkp_macros_decl::hex;
-    use zkp_u256::U256;
+    use zkp_u256::{Pow, U256};
 
     #[test]
     fn test_explicit_values() {
@@ -272,7 +272,7 @@ mod tests {
         let num_leaves = 1_usize << depth;
         let indices: Vec<_> = indices.iter().map(|&i| i % num_leaves).collect();
         let leaves: Vec<_> = (0..num_leaves)
-            .map(|i| (&seed + U256::from(i)).pow(3).unwrap())
+            .map(|i| (&seed + U256::from(i)).pow(3))
             .collect();
 
         // Build the tree

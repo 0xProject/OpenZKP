@@ -1,9 +1,9 @@
-use super::Parameters;
 use crate::{
     algorithms::limb_operations::{adc, mac, sbb},
-    U256,
+    MontgomeryParameters, U256,
 };
 
+/// Slow but compile time constant version of `to_montgomery`.
 // We rebind variables for readability
 #[allow(clippy::shadow_unrelated)]
 pub const fn to_montgomery_const(x: &U256, modulus: &U256, m64: u64, r2: &U256) -> U256 {
@@ -76,7 +76,7 @@ pub const fn to_montgomery_const(x: &U256, modulus: &U256, m64: u64, r2: &U256) 
 // We rebind variables for readability
 #[allow(clippy::shadow_unrelated)]
 #[inline(always)]
-pub(crate) fn redc_inline<M: Parameters>(lo: &U256, hi: &U256) -> U256 {
+pub(crate) fn redc_inline<M: MontgomeryParameters<U256>>(lo: &U256, hi: &U256) -> U256 {
     let modulus = M::MODULUS.as_limbs();
     // Algorithm 14.32 from Handbook of Applied Cryptography.
     // TODO: Optimize for the specific values of M64 and MODULUS.
@@ -116,7 +116,7 @@ pub(crate) fn redc_inline<M: Parameters>(lo: &U256, hi: &U256) -> U256 {
 // We rebind variables for readability
 #[allow(clippy::shadow_unrelated)]
 #[inline(always)]
-pub(crate) fn mul_redc_inline<M: Parameters>(x: &U256, y: &U256) -> U256 {
+pub(crate) fn mul_redc_inline<M: MontgomeryParameters<U256>>(x: &U256, y: &U256) -> U256 {
     let x = x.as_limbs();
     let modulus = M::MODULUS.as_limbs();
 
@@ -178,6 +178,7 @@ pub(crate) fn mul_redc_inline<M: Parameters>(x: &U256, y: &U256) -> U256 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::MontgomeryParameters;
     use quickcheck_macros::quickcheck;
     use zkp_macros_decl::u256h;
 
@@ -185,7 +186,7 @@ mod tests {
 
     // TODO: Non-proth prime
     // TODO: Test for small and big primes
-    impl Parameters for PrimeField {
+    impl MontgomeryParameters<U256> for PrimeField {
         const M64: u64 = 0xffff_ffff_ffff_ffff;
         const MODULUS: U256 =
             u256h!("0800000000000011000000000000000000000000000000000000000000000001");

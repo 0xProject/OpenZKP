@@ -4,7 +4,10 @@ use std::{
     prelude::v1::*,
 };
 use zkp_macros_decl::u256h;
-use zkp_u256::{algorithms::montgomery::*, commutative_binop, noncommutative_binop, U256};
+use zkp_u256::{
+    commutative_binop, noncommutative_binop, to_montgomery_const, DivRem, Montgomery,
+    MontgomeryParameters, U256,
+};
 // TODO: Implement Serde
 #[cfg(feature = "std")]
 use std::fmt;
@@ -14,17 +17,17 @@ use std::fmt;
 #[derive(PartialEq, Eq, Clone, Hash)]
 pub struct FieldElement(U256);
 
-impl Parameters for FieldElement {
+impl MontgomeryParameters<U256> for FieldElement {
     const M64: u64 = 0xffff_ffff_ffff_ffff;
     const MODULUS: U256 =
         u256h!("0800000000000011000000000000000000000000000000000000000000000001");
-    // = -1
     const R1: U256 = u256h!("07fffffffffffdf0ffffffffffffffffffffffffffffffffffffffffffffffe1");
     const R2: U256 = u256h!("07ffd4ab5e008810ffffffffff6f800000000001330ffffffffffd737e000401");
     const R3: U256 = u256h!("038e5f79873c0a6df47d84f8363000187545706677ffcc06cc7177d1406df18e");
 }
 
 impl FieldElement {
+    // 3, in montgomery form.
     pub const GENERATOR: Self = Self::from_montgomery(u256h!(
         "07fffffffffff9b0ffffffffffffffffffffffffffffffffffffffffffffffa1"
     ));
@@ -33,7 +36,6 @@ impl FieldElement {
     /// Equal to (1 << 59) | (1 << 4) | 1.
     pub const MODULUS: U256 =
         u256h!("0800000000000011000000000000000000000000000000000000000000000001");
-    // 3, in montgomery form.
     pub const NEGATIVE_ONE: Self = Self::from_montgomery(u256h!(
         "0000000000000220000000000000000000000000000000000000000000000020"
     ));
@@ -74,7 +76,7 @@ impl FieldElement {
 
     #[inline(always)]
     pub fn inv(&self) -> Option<Self> {
-        inv_redc::<Self>(&self.0).map(Self)
+        self.0.inv_redc::<Self>().map(Self)
     }
 
     #[inline(always)]
@@ -91,7 +93,7 @@ impl FieldElement {
 
     #[cfg_attr(feature = "inline", inline(always))]
     pub fn square(&self) -> Self {
-        Self::from_montgomery(sqr_redc_inline::<Self>(&self.0))
+        Self(self.0.square_redc_inline::<Self>())
     }
 
     #[inline(always)]
@@ -110,7 +112,7 @@ impl FieldElement {
         let mut square = self.clone();
         let mut remaining_exponent = exponent;
         while !remaining_exponent.is_zero() {
-            if remaining_exponent.is_odd() {
+            if &remaining_exponent & 1_u64 == 1_u64 {
                 result *= &square;
             }
             remaining_exponent >>= 1;
@@ -125,7 +127,7 @@ impl FieldElement {
         if n.is_zero() {
             return Some(Self::ONE);
         }
-        let (q, rem) = (Self::MODULUS - U256::ONE).divrem(&n).unwrap();
+        let (q, rem) = (Self::MODULUS - U256::ONE).div_rem(&n).unwrap();
         if rem != U256::ZERO {
             return None;
         }
@@ -283,7 +285,7 @@ impl From<U256> for FieldElement {
 impl From<&U256> for FieldElement {
     #[inline(always)]
     fn from(n: &U256) -> Self {
-        Self::from_montgomery(to_montgomery::<Self>(n))
+        Self(n.to_montgomery::<Self>())
     }
 }
 
@@ -297,7 +299,7 @@ impl From<FieldElement> for U256 {
 impl From<&FieldElement> for U256 {
     #[inline(always)]
     fn from(n: &FieldElement) -> Self {
-        from_montgomery::<FieldElement>(n.as_montgomery())
+        n.0.from_montgomery::<FieldElement>()
     }
 }
 
@@ -333,7 +335,7 @@ impl SubAssign<&FieldElement> for FieldElement {
 impl MulAssign<&FieldElement> for FieldElement {
     #[cfg_attr(feature = "inline", inline(always))]
     fn mul_assign(&mut self, rhs: &Self) {
-        self.0 = mul_redc_inline::<Self>(&self.0, &rhs.0);
+        self.0 = self.0.mul_redc_inline::<Self>(&rhs.0);
     }
 }
 

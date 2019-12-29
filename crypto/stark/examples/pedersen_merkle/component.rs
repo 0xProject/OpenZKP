@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use zkp_elliptic_curve::Affine;
 use zkp_primefield::FieldElement;
 use zkp_stark::{compose_vertical, Component, DensePolynomial, RationalExpression, TraceTable};
-use zkp_u256::U256;
+use zkp_u256::{Binary, U256};
 
 // TODO: Clean up redundant clones
 #[allow(clippy::redundant_clone)]

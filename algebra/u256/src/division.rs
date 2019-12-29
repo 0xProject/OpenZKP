@@ -1,7 +1,8 @@
 use crate::{
-    algorithms::{divrem_nby1, divrem_nbym, inv_mod, limb_operations::div_2_1},
-    noncommutative_binop, U256,
+    algorithms::{div_2_1, divrem_nby1, divrem_nbym, inv_mod},
+    noncommutative_binop, Binary, DivRem, InvMod, U256,
 };
+use num_traits::Inv;
 use std::{
     num::Wrapping,
     ops::{Div, DivAssign, Rem, RemAssign},
@@ -12,10 +13,21 @@ use std::{
 // Division like routines: Integer division/remaindering, Ring
 // division/inversion Modular inversions/divisions.
 
-impl U256 {
+impl InvMod for U256 {
+    /// Computes the inverse modulo a given modulus
+    #[inline(always)]
+    fn inv_mod(&self, modulus: &Self) -> Option<Self> {
+        inv_mod(modulus, self)
+    }
+}
+
+impl DivRem<u64> for &U256 {
+    type Quotient = U256;
+    type Remainder = u64;
+
     // Short division
     // TODO: Can be computed in-place
-    pub fn divrem_u64(&self, rhs: u64) -> Option<(Self, u64)> {
+    fn div_rem(self, rhs: u64) -> Option<(U256, u64)> {
         if rhs == 0 {
             None
         } else {
@@ -25,12 +37,18 @@ impl U256 {
             let (q2, r) = div_2_1(self.limb(2), r, rhs);
             let (q1, r) = div_2_1(self.limb(1), r, rhs);
             let (q0, r) = div_2_1(self.limb(0), r, rhs);
-            Some((Self::from_limbs([q0, q1, q2, q3]), r))
+            Some((U256::from_limbs([q0, q1, q2, q3]), r))
         }
     }
+}
 
-    // Long division
-    pub fn divrem(&self, rhs: &Self) -> Option<(Self, Self)> {
+impl<'a> DivRem<&'a U256> for &'a U256 {
+    type Quotient = U256;
+    type Remainder = U256;
+
+    // Short division
+    // TODO: Can be computed in-place
+    fn div_rem(self, rhs: Self) -> Option<(U256, U256)> {
         let mut numerator = [self.limb(0), self.limb(1), self.limb(2), self.limb(3), 0];
         if rhs.limb(3) > 0 {
             // divrem_nby4
@@ -41,39 +59,44 @@ impl U256 {
                 rhs.limb(3),
             ]);
             Some((
-                Self::from_limbs([numerator[4], 0, 0, 0]),
-                Self::from_limbs([numerator[0], numerator[1], numerator[2], numerator[3]]),
+                U256::from_limbs([numerator[4], 0, 0, 0]),
+                U256::from_limbs([numerator[0], numerator[1], numerator[2], numerator[3]]),
             ))
         } else if rhs.limb(2) > 0 {
             // divrem_nby3
             divrem_nbym(&mut numerator, &mut [rhs.limb(0), rhs.limb(1), rhs.limb(2)]);
             Some((
-                Self::from_limbs([numerator[3], numerator[4], 0, 0]),
-                Self::from_limbs([numerator[0], numerator[1], numerator[2], 0]),
+                U256::from_limbs([numerator[3], numerator[4], 0, 0]),
+                U256::from_limbs([numerator[0], numerator[1], numerator[2], 0]),
             ))
         } else if rhs.limb(1) > 0 {
             // divrem_nby2
             divrem_nbym(&mut numerator, &mut [rhs.limb(0), rhs.limb(1)]);
             Some((
-                Self::from_limbs([numerator[2], numerator[3], numerator[4], 0]),
-                Self::from_limbs([numerator[0], numerator[1], 0, 0]),
+                U256::from_limbs([numerator[2], numerator[3], numerator[4], 0]),
+                U256::from_limbs([numerator[0], numerator[1], 0, 0]),
             ))
         } else if rhs.limb(0) > 0 {
             let remainder = divrem_nby1(&mut numerator, rhs.limb(0));
             Some((
-                Self::from_limbs([numerator[0], numerator[1], numerator[2], numerator[3]]),
-                Self::from_limbs([remainder, 0, 0, 0]),
+                U256::from_limbs([numerator[0], numerator[1], numerator[2], numerator[3]]),
+                U256::from_limbs([remainder, 0, 0, 0]),
             ))
         } else {
             None
         }
     }
+}
 
-    // Computes the inverse modulo 2^256
-    pub fn invmod256(&self) -> Option<Self> {
-        if self.is_even() {
-            None
-        } else {
+/// Ring inversion.
+// TODO: Make custom trait that adds `fn is_unit(&self) -> bool`.
+// TODO: Implement Inv for u8..u128
+impl Inv for &U256 {
+    type Output = Option<U256>;
+
+    /// Computes the inverse modulo 2^256
+    fn inv(self) -> Self::Output {
+        if self.bit(0) {
             // Invert using Hensel lifted Newton-Rhapson iteration
             // See: https://arxiv.org/abs/1303.0328
             // r[2] = 3 * self XOR 2 mod 2^4
@@ -86,23 +109,19 @@ impl U256 {
             r *= Wrapping(2) - c * r; // mod 2^64
             let mut r = Wrapping(u128::from(r.0));
             r *= Wrapping(2) - Wrapping(self.as_u128()) * r; // mod 2^128
-            let mut r = Self::from(r.0);
-            r *= &(Self::from(2_u64) - &(r.clone() * self)); // mod 2^256
+            let mut r = U256::from(r.0);
+            r *= &(U256::from(2_u64) - &(r.clone() * self)); // mod 2^256
             Some(r)
+        } else {
+            None
         }
-    }
-
-    // Computes the inverse modulo a given modulus
-    #[inline(always)]
-    pub fn invmod(&self, modulus: &Self) -> Option<Self> {
-        inv_mod(modulus, self)
     }
 }
 
 impl DivAssign<&U256> for U256 {
     #[inline(always)]
     fn div_assign(&mut self, rhs: &Self) {
-        let (q, _r) = self.divrem(rhs).unwrap();
+        let (q, _r) = self.div_rem(rhs).unwrap();
         *self = q;
     }
 }
@@ -110,7 +129,7 @@ impl DivAssign<&U256> for U256 {
 impl RemAssign<&U256> for U256 {
     #[inline(always)]
     fn rem_assign(&mut self, rhs: &Self) {
-        let (_q, r) = self.divrem(rhs).unwrap();
+        let (_q, r) = self.div_rem(rhs).unwrap();
         *self = r;
     }
 }
@@ -141,7 +160,7 @@ mod tests {
             0x60d848b6513392d7,
             0xdf45026654d086d6,
         ]);
-        let r = a.invmod256().unwrap();
+        let r = a.inv().unwrap();
         assert_eq!(r, e);
     }
 
@@ -150,7 +169,7 @@ mod tests {
         let n = U256::from_limbs([271, 0, 0, 0]);
         let m = U256::from_limbs([383, 0, 0, 0]);
         let i = U256::from_limbs([106, 0, 0, 0]);
-        let r = n.invmod(&m).unwrap();
+        let r = n.inv_mod(&m).unwrap();
         assert_eq!(i, r);
     }
 
@@ -174,13 +193,13 @@ mod tests {
             0x97c88939cbce8317,
             0x001752ce51d19c97,
         ]);
-        let r = n.invmod(&m).unwrap();
+        let r = n.inv_mod(&m).unwrap();
         assert_eq!(i, r);
     }
 
     #[quickcheck]
     fn test_divrem_u64(a: U256, b: u64) -> bool {
-        match a.divrem_u64(b) {
+        match a.div_rem(b) {
             None => b == 0,
             Some((q, r)) => r < b && q * &U256::from(b) + &U256::from(r) == a,
         }
@@ -188,7 +207,7 @@ mod tests {
 
     #[quickcheck]
     fn test_divrem(a: U256, b: U256) -> bool {
-        match a.divrem(&b) {
+        match a.div_rem(&b) {
             None => b == U256::ZERO,
             Some((q, r)) => r < b && q * &b + &r == a,
         }
@@ -196,7 +215,7 @@ mod tests {
 
     #[quickcheck]
     fn invmod256(a: U256) -> bool {
-        match a.invmod256() {
+        match a.inv() {
             None => true,
             Some(i) => a * &i == U256::ONE,
         }
