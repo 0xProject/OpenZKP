@@ -1,8 +1,4 @@
-use crate::{
-    commutative_binop,
-    traits::{Binary, BinaryAssignRef},
-    U256,
-};
+use crate::{commutative_binop, traits::Binary, U256};
 use std::{
     ops::{
         BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not, Shl, ShlAssign, Shr,
@@ -75,12 +71,12 @@ impl Binary for U256 {
     }
 
     #[cfg_attr(feature = "inline", inline(always))]
-    fn rotate_left(&self, n: usize) -> Self {
+    fn rotate_left(&self, _n: usize) -> Self {
         todo!()
     }
 
     #[cfg_attr(feature = "inline", inline(always))]
-    fn rotate_right(&self, n: usize) -> Self {
+    fn rotate_right(&self, _n: usize) -> Self {
         todo!()
     }
 }

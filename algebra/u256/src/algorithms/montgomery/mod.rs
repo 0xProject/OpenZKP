@@ -1,52 +1,17 @@
-use crate::{InvMod, MontgomeryParameters, SquareInline, U256};
+use crate::{MontgomeryParameters, SquareInline, U256};
 
 mod generic;
-pub mod proth;
+mod proth;
 
 // TODO: Special algorithms for Solinas and Crandall primes
 // <https://en.wikipedia.org/wiki/Solinas_prime>
 
-// TODO: Provide methods to compute parameters from Modulus
-// tricks from <https://medium.com/wicketh/mathemagic-512-bit-division-in-solidity-afa55870a65>
-// can help here. Extra credit: make it a `const fn`.
-pub trait Parameters: MontgomeryParameters<U256> {}
-impl<T: MontgomeryParameters<U256>> Parameters for T {}
-
-/// Slow but compile time constant version of `to_montgomery`.
+// False positive, we re-export the function.
+#[allow(unreachable_pub)]
 pub use generic::to_montgomery_const;
 
-#[allow(clippy::module_name_repetitions)]
-pub fn to_montgomery<M: Parameters>(n: &U256) -> U256 {
-    mul_redc::<M>(n, &M::R2)
-}
-
-#[allow(clippy::module_name_repetitions)]
-pub fn from_montgomery<M: Parameters>(n: &U256) -> U256 {
-    redc::<M>(n, &U256::ZERO)
-}
-
-/// Multiply two numbers in non-Montgomery form.
-///
-/// Combined `to_montgomery`, `mul_redc`, and `from_montgomery`.
-///
-/// Normally this would require four `mul_redc` operations, but two
-/// of them cancel out, making this an efficient way to do a single
-/// modular multiplication.
-///
-/// # Requirements
-/// Inputs are required to be reduced modulo `M::MODULUS`.
-pub fn mulmod<M: Parameters>(a: &U256, b: &U256) -> U256 {
-    // TODO: Is this faster than barret reduction?
-    let am = mul_redc_inline::<M>(a, &M::R2);
-    mul_redc_inline::<M>(&am, &b)
-}
-
-pub fn redc<M: Parameters>(lo: &U256, hi: &U256) -> U256 {
-    redc_inline::<M>(lo, hi)
-}
-
 #[inline(always)]
-pub fn redc_inline<M: Parameters>(lo: &U256, hi: &U256) -> U256 {
+pub(crate) fn redc_inline<M: MontgomeryParameters<U256>>(lo: &U256, hi: &U256) -> U256 {
     // Select the best algorithm, the branch should be resolved compile time.
     // TODO: Make compile time constant.
     if proth::is_proth::<M>() {
@@ -56,36 +21,20 @@ pub fn redc_inline<M: Parameters>(lo: &U256, hi: &U256) -> U256 {
     }
 }
 
-pub fn mul_redc<M: Parameters>(x: &U256, y: &U256) -> U256 {
-    mul_redc_inline::<M>(x, y)
+#[inline(always)]
+pub(crate) fn square_redc_inline<M: MontgomeryParameters<U256>>(x: &U256) -> U256 {
+    // OPT: Dedicated implementations, optimized for special primes
+    let (lo, hi) = x.square_full_inline();
+    redc_inline::<M>(&lo, &hi)
 }
 
 #[inline(always)]
-pub fn mul_redc_inline<M: Parameters>(x: &U256, y: &U256) -> U256 {
+pub(crate) fn mul_redc_inline<M: MontgomeryParameters<U256>>(x: &U256, y: &U256) -> U256 {
     if proth::is_proth::<M>() {
         proth::mul_redc_inline(M::MODULUS.limb(3), x, y)
     } else {
         generic::mul_redc_inline::<M>(x, y)
     }
-}
-
-pub fn sqr_redc<M: Parameters>(a: &U256) -> U256 {
-    sqr_redc_inline::<M>(a)
-}
-
-#[inline(always)]
-pub fn sqr_redc_inline<M: Parameters>(a: &U256) -> U256 {
-    let (lo, hi) = a.square_full_inline();
-    redc_inline::<M>(&lo, &hi)
-}
-
-/// There is no inline version since the call overhead is small (inversion is
-/// slow).
-pub fn inv_redc<M: Parameters>(n: &U256) -> Option<U256> {
-    // OPT: Fold mul into GCD computation by starting with (0, R3) instead
-    // of (0, 1).
-    n.inv_mod(&M::MODULUS)
-        .map(|ni| mul_redc_inline::<M>(&ni, &M::R3))
 }
 
 // Quickcheck requires pass-by-value
@@ -94,7 +43,6 @@ pub fn inv_redc<M: Parameters>(n: &U256) -> Option<U256> {
 mod tests {
     use super::*;
     use crate::MontgomeryParameters;
-    use quickcheck_macros::quickcheck;
     use zkp_macros_decl::u256h;
 
     struct PrimeField();
@@ -114,7 +62,7 @@ mod tests {
         let a = u256h!("0548c135e26faa9c977fb2eda057b54b2e0baa9a77a0be7c80278f4f03462d4c");
         let b = u256h!("024385f6bebc1c496e09955db534ef4b1eaff9a78e27d4093cfa8f7c8f886f6b");
         let c = u256h!("012e440f0965e7029c218b64f1010006b5c4ba8b1497c4174a32fec025c197bc");
-        assert_eq!(redc::<PrimeField>(&a, &b), c);
+        assert_eq!(redc_inline::<PrimeField>(&a, &b), c);
     }
 
     #[test]
@@ -122,19 +70,20 @@ mod tests {
         let a = u256h!("0548c135e26faa9c977fb2eda057b54b2e0baa9a77a0be7c80278f4f03462d4c");
         let b = u256h!("024385f6bebc1c496e09955db534ef4b1eaff9a78e27d4093cfa8f7c8f886f6b");
         let c = u256h!("012b854fc6321976d374ad069cfdec8bb7b2bd184259dae8f530cbb28f0805b4");
-        assert_eq!(mul_redc::<PrimeField>(&a, &b), c);
+        assert_eq!(mul_redc_inline::<PrimeField>(&a, &b), c);
     }
 
-    #[quickcheck]
-    fn test_to_from(mut n: U256) -> bool {
-        n %= PrimeField::MODULUS;
-        from_montgomery::<PrimeField>(&to_montgomery::<PrimeField>(&n)) == n
-    }
-
-    #[quickcheck]
-    fn test_mulmod(a: U256, b: U256) -> bool {
-        let r = mulmod::<PrimeField>(&a, &b);
-        let e = a.mulmod(&b, &PrimeField::MODULUS);
-        r == e
-    }
+    // TODO
+    // #[quickcheck]
+    // fn test_to_from(mut n: U256) -> bool {
+    // n %= PrimeField::MODULUS;
+    // from_montgomery::<PrimeField>(&to_montgomery::<PrimeField>(&n)) == n
+    // }
+    //
+    // #[quickcheck]
+    // fn test_mulmod(a: U256, b: U256) -> bool {
+    // let r = mulmod::<PrimeField>(&a, &b);
+    // let e = a.mulmod(&b, &PrimeField::MODULUS);
+    // r == e
+    // }
 }

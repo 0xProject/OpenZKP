@@ -1,41 +1,41 @@
 use crate::U256;
 use num_traits::{
-    Bounded, FromPrimitive, Inv, MulAdd, MulAddAssign, Num, One, Pow, ToPrimitive, Unsigned, Zero,
+    Bounded, FromPrimitive, MulAdd, MulAddAssign, Num, One, ToPrimitive, Unsigned, Zero,
 };
 
 impl Bounded for U256 {
     #[inline(always)]
     fn min_value() -> Self {
-        U256::ZERO
+        Self::ZERO
     }
 
     #[inline(always)]
     fn max_value() -> Self {
-        U256::MAX
+        Self::MAX
     }
 }
 
 impl Zero for U256 {
     #[inline(always)]
     fn zero() -> Self {
-        U256::ZERO
+        Self::ZERO
     }
 
     #[inline(always)]
     fn is_zero(&self) -> bool {
-        self == &U256::ZERO
+        self == &Self::ZERO
     }
 }
 
 impl One for U256 {
     #[inline(always)]
     fn one() -> Self {
-        U256::ONE
+        Self::ONE
     }
 
     #[inline(always)]
     fn is_one(&self) -> bool {
-        self == &U256::ONE
+        self == &Self::ONE
     }
 }
 
@@ -61,7 +61,7 @@ impl MulAddAssign<&U256, &U256> for U256 {
 impl Num for U256 {
     type FromStrRadixErr = ();
 
-    fn from_str_radix(str: &str, radix: u32) -> Result<Self, Self::FromStrRadixErr> {
+    fn from_str_radix(_str: &str, _radix: u32) -> Result<Self, Self::FromStrRadixErr> {
         todo!()
     }
 }
@@ -71,12 +71,12 @@ impl Unsigned for U256 {}
 impl FromPrimitive for U256 {
     #[inline(always)]
     fn from_i64(n: i64) -> Option<Self> {
-        Some(U256::from(n))
+        Some(Self::from(n))
     }
 
     #[inline(always)]
     fn from_u64(n: u64) -> Option<Self> {
-        Some(U256::from(n))
+        Some(Self::from(n))
     }
 
     // TODO: fn from_u128

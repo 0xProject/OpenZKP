@@ -4,9 +4,9 @@ use std::{
     prelude::v1::*,
 };
 use zkp_macros_decl::u256h;
-use  zkp_u256::{
-    commutative_binop, noncommutative_binop, DivRem,
-    MontgomeryParameters, U256, Montgomery, to_montgomery_const
+use zkp_u256::{
+    commutative_binop, noncommutative_binop, to_montgomery_const, DivRem, Montgomery,
+    MontgomeryParameters, U256,
 };
 // TODO: Implement Serde
 #[cfg(feature = "std")]
@@ -299,7 +299,7 @@ impl From<FieldElement> for U256 {
 impl From<&FieldElement> for U256 {
     #[inline(always)]
     fn from(n: &FieldElement) -> Self {
-        n.0.from_montgomery::<FieldElement>() 
+        n.0.from_montgomery::<FieldElement>()
     }
 }
 

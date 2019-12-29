@@ -1,6 +1,6 @@
 use crate::{
-    algorithms::{gcd, gcd_extended, montgomery},
-    InvMod, Montgomery, MontgomeryParameters, SquareInline, GCD, U256,
+    algorithms::{gcd, gcd_extended, mul_redc_inline, redc_inline, square_redc_inline},
+    InvMod, Montgomery, MontgomeryParameters, GCD, U256,
 };
 
 impl GCD for U256 {
@@ -15,21 +15,24 @@ impl GCD for U256 {
     }
 }
 
+// TODO: Provide methods to compute parameters from Modulus
+// tricks from <https://medium.com/wicketh/mathemagic-512-bit-division-in-solidity-afa55870a65>
+// can help here. Extra credit: make it a `const fn`.
+
 impl Montgomery for U256 {
     #[inline(always)]
     fn redc_inline<M: MontgomeryParameters<U256>>(lo: &Self, hi: &Self) -> Self {
-        montgomery::redc_inline::<M>(lo, hi)
+        redc_inline::<M>(lo, hi)
     }
 
     #[inline(always)]
     fn square_redc_inline<M: MontgomeryParameters<U256>>(&self) -> Self {
-        let (lo, hi) = self.square_full_inline();
-        Self::redc_inline::<M>(&lo, &hi)
+        square_redc_inline::<M>(self)
     }
 
     #[inline(always)]
     fn mul_redc_inline<M: MontgomeryParameters<U256>>(&self, rhs: &Self) -> Self {
-        montgomery::mul_redc_inline::<M>(self, rhs)
+        mul_redc_inline::<M>(self, rhs)
     }
 
     // Inline to reduce to `inv_mod` + `mul_redc`

@@ -2,7 +2,7 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use zkp_macros_decl::u256h;
 use zkp_u256::{
-    U256, Montgomery, MontgomeryParameters, SquareInline, MulInline, Inv, InvMod, DivRem
+    DivRem, Inv, InvMod, Montgomery, MontgomeryParameters, MulInline, SquareInline, U256,
 };
 
 struct Generic();
@@ -90,9 +90,7 @@ fn mul_full(crit: &mut Criterion) {
 
 fn invmod256(crit: &mut Criterion) {
     let n = u256h!("07717a21e77894e8d82120c54277c73ee1062290709829411717f47973471ed5");
-    crit.bench_function("invmod256", move |bench| {
-        bench.iter(|| black_box(&n).inv())
-    });
+    crit.bench_function("invmod256", move |bench| bench.iter(|| black_box(&n).inv()));
 }
 
 fn invmod(crit: &mut Criterion) {

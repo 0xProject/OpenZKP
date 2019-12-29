@@ -331,7 +331,7 @@ fn lehmer_double(mut r0: U256, mut r1: U256) -> Matrix {
 //// Lehmer's GCD algorithms.
 /// See `gcd_extended` for documentation. This version maintains
 /// full precission cofactors.
-pub fn gcd(mut r0: U256, mut r1: U256) -> U256 {
+pub(crate) fn gcd(mut r0: U256, mut r1: U256) -> U256 {
     if r1 > r0 {
         core::mem::swap(&mut r0, &mut r1);
     }
@@ -371,7 +371,7 @@ pub fn gcd(mut r0: U256, mut r1: U256) -> U256 {
 /// <https://gmplib.org/repo/gmp-6.1/file/tip/mpn/generic/gcdext_lehmer.c#l146>
 // Importing as `gcd_extended` is more readable than `gcd::extended`.
 #[allow(clippy::module_name_repetitions)]
-pub fn gcd_extended(mut r0: U256, mut r1: U256) -> (U256, U256, U256, bool) {
+pub(crate) fn gcd_extended(mut r0: U256, mut r1: U256) -> (U256, U256, U256, bool) {
     let swapped = r1 > r0;
     if swapped {
         core::mem::swap(&mut r0, &mut r1);

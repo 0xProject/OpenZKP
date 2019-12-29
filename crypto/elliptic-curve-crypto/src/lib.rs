@@ -49,7 +49,7 @@ use tiny_keccak::sha3_256;
 use zkp_elliptic_curve::{
     base_mul, double_base_mul, window_table_affine, Affine, Order, GENERATOR, ORDER,
 };
-use zkp_u256::{Montgomery, Binary, InvMod, U256};
+use zkp_u256::{Binary, InvMod, Montgomery, U256};
 
 #[cfg(not(feature = "std"))]
 extern crate no_std_compat as std;

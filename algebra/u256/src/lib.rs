@@ -70,12 +70,14 @@ mod u256_traits;
 
 pub use u256::U256;
 
-pub use traits::{
-    Binary, BinaryRing, DivRem, InvMod, Montgomery, MontgomeryParameters, MulInline, SquareInline,
-    GCD,
+pub use algorithms::{
+    adc, div_2_1, divrem_nby1, divrem_nbym, mac, macc, msb, sbb, to_montgomery_const,
 };
-pub use algorithms::montgomery::{to_montgomery_const};
 pub use num_traits::{Bounded, Inv, MulAdd, MulAddAssign, One, Pow, Zero};
+pub use traits::{
+    Binary, BinaryAssignRef, BinaryOps, BinaryRing, DivRem, InvMod, Montgomery,
+    MontgomeryParameters, MulInline, SquareInline, SubFromAssign, GCD,
+};
 
 #[cfg(not(feature = "std"))]
 extern crate no_std_compat as std;

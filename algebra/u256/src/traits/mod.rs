@@ -72,6 +72,8 @@ pub trait MulInline<Rhs>: Sized {
 
 // TODO: Automatically derive Mul<..> traits. Maybe also MulAssign<..>
 
+// `T` can not have interior mutability.
+#[allow(clippy::declare_interior_mutable_const)]
 pub trait MontgomeryParameters<T: Sized> {
     /// The modulus to implement in Montgomery form
     const MODULUS: T;
@@ -91,6 +93,8 @@ pub trait MontgomeryParameters<T: Sized> {
 
 pub trait Montgomery: Zero {
     fn to_montgomery<M: MontgomeryParameters<Self>>(&self) -> Self {
+        // `Self` should not have interior mutability.
+        #[allow(clippy::borrow_interior_mutable_const)]
         self.mul_redc::<M>(&M::R2)
     }
 
@@ -118,8 +122,21 @@ pub trait Montgomery: Zero {
         self.mul_redc_inline::<M>(rhs)
     }
 
+    /// Multiply two numbers in non-Montgomery form.
+    ///
+    /// Combined `to_montgomery`, `mul_redc`, and `from_montgomery`.
+    ///
+    /// Normally this would require four `mul_redc` operations, but two
+    /// of them cancel out, making this an efficient way to do a single
+    /// modular multiplication.
+    ///
+    /// # Requirements
+    /// Inputs are required to be reduced modulo `M::MODULUS`.
     fn mul_mod<M: MontgomeryParameters<Self>>(&self, rhs: &Self) -> Self {
         // OPT: Is this better than Barret reduction?
+        // We want to borrow `&M::R2` as const. `Self` should not have interior
+        // mutability.
+        #[allow(clippy::borrow_interior_mutable_const)]
         let mont = Self::mul_redc_inline::<M>(self, &M::R2);
         Self::mul_redc_inline::<M>(&mont, rhs)
     }
@@ -127,7 +144,9 @@ pub trait Montgomery: Zero {
 
 // TODO: Mega-trait for binary rings like U256 that PrimeField can use
 
-pub use binary::{Binary, BinaryAssignRef};
+// False positive, we re-export the trait.
+#[allow(unreachable_pub)]
+pub use binary::{Binary, BinaryAssignRef, BinaryOps};
 
 pub trait BinaryRing: Binary {}
 

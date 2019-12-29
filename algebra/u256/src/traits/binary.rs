@@ -1,3 +1,5 @@
+// TODO
+#![allow(clippy::module_name_repetitions)]
 use std::ops::{
     BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not, Shl, ShlAssign, Shr,
     ShrAssign,

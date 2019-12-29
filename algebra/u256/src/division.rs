@@ -1,5 +1,5 @@
 use crate::{
-    algorithms::{divrem_nby1, divrem_nbym, inv_mod, limb_operations::div_2_1},
+    algorithms::{div_2_1, divrem_nby1, divrem_nbym, inv_mod},
     noncommutative_binop, Binary, DivRem, InvMod, U256,
 };
 use num_traits::Inv;
@@ -96,9 +96,7 @@ impl Inv for &U256 {
 
     /// Computes the inverse modulo 2^256
     fn inv(self) -> Self::Output {
-        if !self.bit(0) {
-            None
-        } else {
+        if self.bit(0) {
             // Invert using Hensel lifted Newton-Rhapson iteration
             // See: https://arxiv.org/abs/1303.0328
             // r[2] = 3 * self XOR 2 mod 2^4
@@ -114,6 +112,8 @@ impl Inv for &U256 {
             let mut r = U256::from(r.0);
             r *= &(U256::from(2_u64) - &(r.clone() * self)); // mod 2^256
             Some(r)
+        } else {
+            None
         }
     }
 }
