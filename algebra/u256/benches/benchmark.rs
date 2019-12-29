@@ -2,13 +2,12 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use zkp_macros_decl::u256h;
 use zkp_u256::{
-    algorithms::montgomery::{mul_redc_inline, mulmod as mont_mulmod, redc_inline, Parameters},
-    U256,
+    U256, Montgomery, MontgomeryParameters, SquareInline, MulInline, Inv, InvMod, DivRem
 };
 
 struct Generic();
 
-impl Parameters for Generic {
+impl MontgomeryParameters<U256> for Generic {
     const M64: u64 = 0xbb6b_3c4c_e8bd_e631;
     const MODULUS: U256 =
         u256h!("0800000000000010ffffffffffffffffb781126dcae7b2321e66a241adc64d2f");
@@ -19,7 +18,7 @@ impl Parameters for Generic {
 
 struct Proth();
 
-impl Parameters for Proth {
+impl MontgomeryParameters<U256> for Proth {
     const M64: u64 = 0xffff_ffff_ffff_ffff;
     const MODULUS: U256 =
         u256h!("0800000000000011000000000000000000000000000000000000000000000001");
@@ -62,14 +61,14 @@ fn sub(crit: &mut Criterion) {
 fn sqr(crit: &mut Criterion) {
     let a = u256h!("01c9e043b135fa21471cec503f1181884ef3d9c2cb44b6a3531bb3056443bc99");
     crit.bench_function("sqr", move |bench| {
-        bench.iter(|| black_box(&a).sqr_inline())
+        bench.iter(|| black_box(&a).square_inline())
     });
 }
 
 fn sqr_full(crit: &mut Criterion) {
     let a = u256h!("01c9e043b135fa21471cec503f1181884ef3d9c2cb44b6a3531bb3056443bc99");
     crit.bench_function("sqr full", move |bench| {
-        bench.iter(|| black_box(&a).sqr_full_inline())
+        bench.iter(|| black_box(&a).square_full_inline())
     });
 }
 
@@ -92,7 +91,7 @@ fn mul_full(crit: &mut Criterion) {
 fn invmod256(crit: &mut Criterion) {
     let n = u256h!("07717a21e77894e8d82120c54277c73ee1062290709829411717f47973471ed5");
     crit.bench_function("invmod256", move |bench| {
-        bench.iter(|| black_box(&n).invmod256())
+        bench.iter(|| black_box(&n).inv())
     });
 }
 
@@ -100,7 +99,7 @@ fn invmod(crit: &mut Criterion) {
     let m = u256h!("0800000000000011000000000000000000000000000000000000000000000001");
     let n = u256h!("07717a21e77894e8d82120c54277c73ee1062290709829411717f47973471ed5");
     crit.bench_function("invmod", move |bench| {
-        bench.iter(|| black_box(&n).invmod(black_box(&m)))
+        bench.iter(|| black_box(&n).inv_mod(black_box(&m)))
     });
 }
 
@@ -108,7 +107,7 @@ fn divrem(crit: &mut Criterion) {
     let a = u256h!("01c9e043b135fa21471cec503f1181884ef3d9c2cb44b6a3531bb3056443bc99");
     let b = u256h!("0800000000000011000000000000000000000000000000000000000000000001");
     crit.bench_function("divrem", move |bench| {
-        bench.iter(|| black_box(black_box(&a).divrem(black_box(&b))))
+        bench.iter(|| black_box(black_box(&a).div_rem(black_box(&b))))
     });
 }
 
@@ -125,7 +124,7 @@ fn montgomery_redc(crit: &mut Criterion) {
     let a = u256h!("01c9e043b135fa21471cec503f1181884ef3d9c2cb44b6a3531bb3056443bc99");
     let b = u256h!("04742d726d4800e1015941bf06591cd139bd034f968ab8a225f92cbba85e5776");
     crit.bench_function("redc", move |bench| {
-        bench.iter(|| redc_inline::<Generic>(black_box(&a), black_box(&b)))
+        bench.iter(|| U256::redc_inline::<Generic>(black_box(&a), black_box(&b)))
     });
 }
 
@@ -133,7 +132,7 @@ fn montgomery_mul_redc(crit: &mut Criterion) {
     let a = u256h!("01c9e043b135fa21471cec503f1181884ef3d9c2cb44b6a3531bb3056443bc99");
     let b = u256h!("04742d726d4800e1015941bf06591cd139bd034f968ab8a225f92cbba85e5776");
     crit.bench_function("mul redc", move |bench| {
-        bench.iter(|| mul_redc_inline::<Generic>(black_box(&a), black_box(&b)))
+        bench.iter(|| black_box(&a).mul_redc_inline::<Generic>(black_box(&b)))
     });
 }
 
@@ -141,7 +140,7 @@ fn montgomery_mulmod(crit: &mut Criterion) {
     let a = u256h!("01c9e043b135fa21471cec503f1181884ef3d9c2cb44b6a3531bb3056443bc99");
     let b = u256h!("04742d726d4800e1015941bf06591cd139bd034f968ab8a225f92cbba85e5776");
     crit.bench_function("mont mulmod", move |bench| {
-        bench.iter(|| mont_mulmod::<Generic>(black_box(&a), black_box(&b)))
+        bench.iter(|| black_box(&a).mul_mod::<Generic>(black_box(&b)))
     });
 }
 
@@ -149,7 +148,7 @@ fn montgomery_proth_redc(crit: &mut Criterion) {
     let a = u256h!("01c9e043b135fa21471cec503f1181884ef3d9c2cb44b6a3531bb3056443bc99");
     let b = u256h!("04742d726d4800e1015941bf06591cd139bd034f968ab8a225f92cbba85e5776");
     crit.bench_function("proth redc", move |bench| {
-        bench.iter(|| redc_inline::<Proth>(black_box(&a), black_box(&b)))
+        bench.iter(|| U256::redc_inline::<Proth>(black_box(&a), black_box(&b)))
     });
 }
 
@@ -157,7 +156,7 @@ fn montgomery_proth_mul_redc(crit: &mut Criterion) {
     let a = u256h!("01c9e043b135fa21471cec503f1181884ef3d9c2cb44b6a3531bb3056443bc99");
     let b = u256h!("04742d726d4800e1015941bf06591cd139bd034f968ab8a225f92cbba85e5776");
     crit.bench_function("proth mul redc", move |bench| {
-        bench.iter(|| mul_redc_inline::<Proth>(black_box(&a), black_box(&b)))
+        bench.iter(|| black_box(&a).mul_redc_inline::<Proth>(black_box(&b)))
     });
 }
 
@@ -165,7 +164,7 @@ fn montgomery_proth_mulmod(crit: &mut Criterion) {
     let a = u256h!("01c9e043b135fa21471cec503f1181884ef3d9c2cb44b6a3531bb3056443bc99");
     let b = u256h!("04742d726d4800e1015941bf06591cd139bd034f968ab8a225f92cbba85e5776");
     crit.bench_function("proth mont mulmod", move |bench| {
-        bench.iter(|| mont_mulmod::<Proth>(black_box(&a), black_box(&b)))
+        bench.iter(|| black_box(&a).mul_mod::<Proth>(black_box(&b)))
     });
 }
 
