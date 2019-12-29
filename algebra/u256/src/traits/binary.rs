@@ -17,6 +17,8 @@ pub trait Binary:
     // TODO: What about adding some bit get/set functions?
     // TODO: What about adding digit/limb get/set functions?
 
+    fn bit(&self, i: usize) -> bool;
+
     fn count_ones(&self) -> usize;
     fn count_zeros(&self) -> usize;
     fn leading_zeros(&self) -> usize;
@@ -24,6 +26,15 @@ pub trait Binary:
 
     fn rotate_left(&self, n: usize) -> Self;
     fn rotate_right(&self, n: usize) -> Self;
+
+    // TODO: Deprecate these
+    fn bits(&self) -> usize {
+        256 - self.leading_zeros()
+    }
+
+    fn msb(&self) -> usize {
+        255 - self.leading_zeros()
+    }
 }
 
 pub trait BinaryOps<Rhs = Self, Output = Self>:

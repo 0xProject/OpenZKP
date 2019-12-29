@@ -14,6 +14,21 @@ use std::{
 
 impl Binary for U256 {
     #[cfg_attr(feature = "inline", inline(always))]
+    fn bit(&self, i: usize) -> bool {
+        if i < 64 {
+            self.limb(0) >> i & 1 == 1
+        } else if i < 128 {
+            self.limb(1) >> (i - 64) & 1 == 1
+        } else if i < 192 {
+            self.limb(2) >> (i - 128) & 1 == 1
+        } else if i < 256 {
+            self.limb(3) >> (i - 192) & 1 == 1
+        } else {
+            false
+        }
+    }
+
+    #[cfg_attr(feature = "inline", inline(always))]
     fn count_ones(&self) -> usize {
         (self.limb(0).count_ones()
             + self.limb(1).count_ones()
@@ -67,43 +82,6 @@ impl Binary for U256 {
     #[cfg_attr(feature = "inline", inline(always))]
     fn rotate_right(&self, n: usize) -> Self {
         todo!()
-    }
-}
-
-impl U256 {
-    #[inline(always)]
-    pub fn is_even(&self) -> bool {
-        self.limb(0) & 1 == 0
-    }
-
-    #[inline(always)]
-    pub fn is_odd(&self) -> bool {
-        self.limb(0) & 1 == 1
-    }
-
-    #[inline(always)]
-    pub fn bits(&self) -> usize {
-        256 - self.leading_zeros()
-    }
-
-    #[inline(always)]
-    pub fn msb(&self) -> usize {
-        255 - self.leading_zeros()
-    }
-
-    #[cfg_attr(feature = "inline", inline(always))]
-    pub fn bit(&self, i: usize) -> bool {
-        if i < 64 {
-            self.limb(0) >> i & 1 == 1
-        } else if i < 128 {
-            self.limb(1) >> (i - 64) & 1 == 1
-        } else if i < 192 {
-            self.limb(2) >> (i - 128) & 1 == 1
-        } else if i < 256 {
-            self.limb(3) >> (i - 192) & 1 == 1
-        } else {
-            false
-        }
     }
 }
 

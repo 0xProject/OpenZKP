@@ -1,6 +1,8 @@
 use crate::{
     algorithms::limb_operations::{adc, sbb},
-    commutative_binop, noncommutative_binop, U256,
+    commutative_binop, noncommutative_binop,
+    traits::SubFromAssign,
+    U256,
 };
 use std::{
     ops::{Add, AddAssign, Sub, SubAssign},
@@ -29,9 +31,25 @@ impl SubAssign<&U256> for U256 {
     // This is a small function that appears often in hot paths.
     #[cfg_attr(feature = "inline", inline(always))]
     fn sub_assign(&mut self, rhs: &Self) {
+        // TODO: Implement using Sub
         let (c0, borrow) = sbb(self.limb(0), rhs.limb(0), 0);
         let (c1, borrow) = sbb(self.limb(1), rhs.limb(1), borrow);
         let (c2, borrow) = sbb(self.limb(2), rhs.limb(2), borrow);
+        let (c3, _) = sbb(self.limb(3), rhs.limb(3), borrow);
+        self.set_limb(0, c0);
+        self.set_limb(1, c1);
+        self.set_limb(2, c2);
+        self.set_limb(3, c3);
+    }
+}
+
+impl SubFromAssign<&U256> for U256 {
+    // This is a small function that appears often in hot paths.
+    #[cfg_attr(feature = "inline", inline(always))]
+    fn sub_from_assign(&mut self, rhs: &Self) {
+        let (c0, borrow) = sbb(rhs.limb(0), self.limb(0), 0);
+        let (c1, borrow) = sbb(rhs.limb(1), self.limb(1), borrow);
+        let (c2, borrow) = sbb(rhs.limb(2), self.limb(2), borrow);
         let (c3, _) = sbb(self.limb(3), rhs.limb(3), borrow);
         self.set_limb(0, c0);
         self.set_limb(1, c1);

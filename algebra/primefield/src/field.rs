@@ -110,7 +110,7 @@ impl FieldElement {
         let mut square = self.clone();
         let mut remaining_exponent = exponent;
         while !remaining_exponent.is_zero() {
-            if remaining_exponent.is_odd() {
+            if &remaining_exponent & 1_u64 == 1_u64 {
                 result *= &square;
             }
             remaining_exponent >>= 1;

@@ -293,8 +293,9 @@ fn lehmer_loop(a0: u64, mut a1: u64) -> Matrix {
 #[allow(clippy::shadow_unrelated)]
 fn lehmer_double(mut r0: U256, mut r1: U256) -> Matrix {
     debug_assert!(r0 >= r1);
-    if r0.bits() < 64 {
-        debug_assert!(r1.bits() < 64);
+    if r0.leading_zeros() >= 192 {
+        // OPT: Rewrite using to_u64 -> Option
+        debug_assert!(r1.leading_zeros() >= 192);
         debug_assert!(r0.limb(0) >= r1.limb(0));
         return lehmer_small(r0.limb(0), r1.limb(0));
     }

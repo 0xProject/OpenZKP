@@ -1,6 +1,6 @@
 use crate::{
     algorithms::{divrem_nby1, divrem_nbym, inv_mod, limb_operations::div_2_1},
-    noncommutative_binop, U256,
+    noncommutative_binop, Binary, U256,
 };
 use std::{
     num::Wrapping,
@@ -71,7 +71,7 @@ impl U256 {
 
     // Computes the inverse modulo 2^256
     pub fn invmod256(&self) -> Option<Self> {
-        if self.is_even() {
+        if !self.bit(0) {
             None
         } else {
             // Invert using Hensel lifted Newton-Rhapson iteration
