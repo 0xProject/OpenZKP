@@ -76,7 +76,7 @@ pub use algorithms::{
 pub use num_traits::{Bounded, Inv, MulAdd, MulAddAssign, One, Pow, Zero};
 pub use traits::{
     Binary, BinaryAssignRef, BinaryOps, BinaryRing, DivRem, InvMod, Montgomery,
-    MontgomeryParameters, MulInline, SquareInline, SubFromAssign, GCD,
+    MontgomeryParameters, MulInline, SquareInline, SubFromAssign, GCD,SquareFullInline, MulFullInline
 };
 
 #[cfg(not(feature = "std"))]

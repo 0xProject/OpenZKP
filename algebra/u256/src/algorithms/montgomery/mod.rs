@@ -1,4 +1,4 @@
-use crate::{MontgomeryParameters, SquareInline, U256};
+use crate::{MontgomeryParameters, SquareFullInline, U256};
 
 mod generic;
 mod proth;

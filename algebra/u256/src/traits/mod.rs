@@ -1,5 +1,6 @@
 mod binary;
 use crate::Zero;
+use std::ops::{Mul, MulAssign};
 
 pub trait SubFromAssign<Rhs = Self> {
     fn sub_from_assign(&mut self, rhs: Rhs);
@@ -9,7 +10,7 @@ pub trait DivRem<Rhs> {
     type Quotient;
     type Remainder;
 
-    fn div_rem(self, rhs: Rhs) -> Option<(Self::Quotient, Self::Remainder)>;
+    fn div_rem(&self, rhs: Rhs) -> Option<(Self::Quotient, Self::Remainder)>;
 }
 
 pub trait InvMod: Sized {
@@ -26,13 +27,35 @@ pub trait GCD: Sized {
 
 pub trait SquareInline: Sized {
     /// **Note.** Implementers *must* add the `#[inline(always)]` attribute
+    // Default implementation to be overridden
+    fn square_inline(&self) -> Self;
+
+    #[inline(always)]
+    fn square_assign_inline(&mut self) {
+        *self = self.square_inline()
+    }
+
+    // Optionally-inline version
+    #[cfg_attr(feature = "inline", inline(always))]
+    fn square(&self) -> Self {
+        self.square_inline()
+    }
+
+    #[cfg_attr(feature = "inline", inline(always))]
+    fn square_assign(&mut self) {
+        self.square_assign_inline()
+    }
+}
+
+pub trait SquareFullInline: Sized {
+    /// **Note.** Implementers *must* add the `#[inline(always)]` attribute
     fn square_full_inline(&self) -> (Self, Self);
 
-    /// **Note.** Implementers *must* add the `#[inline(always)]` attribute
-    // Default implementation to be overridden
     #[inline(always)]
-    fn square_inline(&self) -> Self {
-        self.square_full_inline().0
+    fn square_full_assign_inline(&mut self) -> Self {
+        let (lo, hi) = self.square_full_inline();
+        *self = lo;
+        hi
     }
 
     // Optionally-inline version
@@ -43,29 +66,61 @@ pub trait SquareInline: Sized {
 
     // Optionally-inline version
     #[cfg_attr(feature = "inline", inline(always))]
-    fn square(&self) -> Self {
-        self.square_inline()
+    fn square_full_assign(&mut self) -> Self {
+        self.square_full_assign_inline()
     }
-
-    // TODO: Square_assign
 }
 
 pub trait MulInline<Rhs>: Sized {
+    /// **Note.** Implementers *must* add the `#[inline(always)]` attribute
+    fn mul_inline(&self, rhs: Rhs) -> Self;
+
+    /// **Note.** Implementers *must* add the `#[inline(always)]` attribute
+    /// By default it redirects to the non-assigned version
+    #[inline(always)]
+    fn mul_assign_inline(&mut self, rhs: Rhs) {
+        *self = self.mul_inline(rhs)
+    }
+
+    // Optionally-inline version
+    #[cfg_attr(feature = "inline", inline(always))]
+    fn mul(&self, rhs: Rhs) -> Self {
+        self.mul_inline(rhs)
+    }
+
+    // Optionally-inline version
+    #[cfg_attr(feature = "inline", inline(always))]
+    fn mul_assign(&mut self, rhs: Rhs) {
+        self.mul_assign_inline(rhs)
+    }
+}
+
+// Std::ops implementations redirect to mul or mul_assign from MulInline
+
+pub trait MulFullInline<Rhs>: Sized {
     type High;
 
     /// **Note.** Implementers *must* add the `#[inline(always)]` attribute
     fn mul_full_inline(&self, rhs: Rhs) -> (Self, Self::High);
 
+
     /// **Note.** Implementers *must* add the `#[inline(always)]` attribute
-    // Default implementation to be overridden
     #[inline(always)]
-    fn mul_inline(&self, rhs: Rhs) -> Self {
-        self.mul_full_inline(rhs).0
+    fn mul_full_assign_inline(&mut self, rhs: Rhs) -> Self::High {
+        let (lo, hi) = self.mul_full_inline(rhs);
+        *self = lo;
+        hi
     }
 
     // Optionally-inline version
     #[cfg_attr(feature = "inline", inline(always))]
     fn mul_full(&self, rhs: Rhs) -> (Self, Self::High) {
+        self.mul_full_inline(rhs)
+    }
+
+    // Optionally-inline version
+    #[cfg_attr(feature = "inline", inline(always))]
+    fn mul_full_assign(&self, rhs: Rhs) -> (Self, Self::High) {
         self.mul_full_inline(rhs)
     }
 }
