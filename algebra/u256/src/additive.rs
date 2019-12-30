@@ -1,4 +1,4 @@
-use crate::{adc, commutative_binop, noncommutative_binop, sbb, traits::SubFromAssign, U256};
+use crate::{adc, commutative_binop, noncommutative_binop, sbb, AddFullInline, AddInline, U256, assign_ops_from_trait, self_ops_from_trait};
 use std::{
     ops::{Add, AddAssign, Sub, SubAssign},
     prelude::v1::*,
@@ -7,6 +7,33 @@ use std::{
 // Additive operations: Add, Sub
 // TODO: SubFrom, AddInline, SubInline
 
+impl AddFullInline<&U256> for U256 {
+    type High = u64;
+
+    #[inline(always)]
+    fn add_full_inline(&self, rhs: &Self) -> (Self, Self::High) {
+        let (c0, carry) = adc(self.limb(0), rhs.limb(0), 0);
+        let (c1, carry) = adc(self.limb(1), rhs.limb(1), carry);
+        let (c2, carry) = adc(self.limb(2), rhs.limb(2), carry);
+        let (c3, carry) = adc(self.limb(3), rhs.limb(3), carry);
+        (
+            U256::from_limbs([c0, c1, c2, c3]),
+            carry,
+        )
+    }
+}
+
+impl AddInline<&U256> for U256 {
+    #[inline(always)]
+    fn add_inline(&self, rhs: &Self) -> Self {
+        self.add_full_inline(rhs).0
+    }
+}
+
+assign_ops_from_trait!(U256, U256, AddAssign, add_assign, AddInline, add_assign);
+self_ops_from_trait!(U256, Add, add, AddInline, add, add_assign);
+
+/*
 impl AddAssign<&U256> for U256 {
     // This is a small function that appears often in hot paths.
     #[cfg_attr(feature = "inline", inline(always))]
@@ -21,6 +48,8 @@ impl AddAssign<&U256> for U256 {
         self.set_limb(3, c3);
     }
 }
+commutative_binop!(U256, Add, add, AddAssign, add_assign);
+*/
 
 impl SubAssign<&U256> for U256 {
     // This is a small function that appears often in hot paths.
@@ -38,6 +67,7 @@ impl SubAssign<&U256> for U256 {
     }
 }
 
+/*
 impl SubFromAssign<&U256> for U256 {
     // This is a small function that appears often in hot paths.
     #[cfg_attr(feature = "inline", inline(always))]
@@ -52,8 +82,8 @@ impl SubFromAssign<&U256> for U256 {
         self.set_limb(3, c3);
     }
 }
+*/
 
-commutative_binop!(U256, Add, add, AddAssign, add_assign);
 noncommutative_binop!(U256, Sub, sub, SubAssign, sub_assign);
 
 impl core::iter::Sum for U256 {

@@ -1,28 +1,56 @@
 mod binary;
 use crate::Zero;
-use std::ops::{Mul, MulAssign};
 
-pub trait SubFromAssign<Rhs = Self> {
-    fn sub_from_assign(&mut self, rhs: Rhs);
+pub trait AddInline<Rhs = Self>: Sized {
+    /// **Note.** Implementers *must* add the `#[inline(always)]` attribute
+    fn add_inline(&self, rhs: Rhs) -> Self;
+
+    /// **Note.** Implementers *must* add the `#[inline(always)]` attribute
+    /// By default it redirects to the non-assigned version
+    #[inline(always)]
+    fn add_assign_inline(&mut self, rhs: Rhs) {
+        *self = self.add_inline(rhs)
+    }
+
+    // Optionally-inline version
+    #[cfg_attr(feature = "inline", inline(always))]
+    fn add(&self, rhs: Rhs) -> Self {
+        self.add_inline(rhs)
+    }
+
+    // Optionally-inline version
+    #[cfg_attr(feature = "inline", inline(always))]
+    fn add_assign(&mut self, rhs: Rhs) {
+        self.add_assign_inline(rhs)
+    }
 }
 
-pub trait DivRem<Rhs> {
-    type Quotient;
-    type Remainder;
+pub trait AddFullInline<Rhs = Self>: Sized {
+    type High;
 
-    fn div_rem(&self, rhs: Rhs) -> Option<(Self::Quotient, Self::Remainder)>;
-}
+    /// **Note.** Implementers *must* add the `#[inline(always)]` attribute
+    fn add_full_inline(&self, rhs: Rhs) -> (Self, Self::High);
 
-pub trait InvMod: Sized {
-    fn inv_mod(&self, modulus: &Self) -> Option<Self>;
-}
+    /// **Note.** Implementers *must* add the `#[inline(always)]` attribute
+    /// By default it redirects to the non-assigned version
+    #[inline(always)]
+    fn add_full_assign_inline(&mut self, rhs: Rhs) -> Self::High {
+        let (lo, hi) = self.add_full_inline(rhs);
+        *self = lo;
+        hi
+    }
 
-pub trait GCD: Sized {
-    fn gcd(a: &Self, b: &Self) -> Self;
+    // Optionally-inline version
+    #[cfg_attr(feature = "inline", inline(always))]
+    fn add_full(&self, rhs: Rhs) -> (Self, Self::High) {
+        self.add_full_inline(rhs)
+    }
 
-    fn gcd_extended(a: &Self, b: &Self) -> (Self, Self, Self, bool);
-
-    // TODO: LCM
+    // Optionally-inline version
+    #[cfg_attr(feature = "inline", inline(always))]
+    fn add_full_assign(&mut self, rhs: Rhs) -> Self::High {
+        self.add_full_assign_inline(rhs)
+    }
 }
 
 pub trait SquareInline: Sized {
@@ -95,8 +123,6 @@ pub trait MulInline<Rhs>: Sized {
     }
 }
 
-// Std::ops implementations redirect to mul or mul_assign from MulInline
-
 pub trait MulFullInline<Rhs>: Sized {
     type High;
 
@@ -123,6 +149,25 @@ pub trait MulFullInline<Rhs>: Sized {
     fn mul_full_assign(&self, rhs: Rhs) -> (Self, Self::High) {
         self.mul_full_inline(rhs)
     }
+}
+
+pub trait DivRem<Rhs> {
+    type Quotient;
+    type Remainder;
+
+    fn div_rem(&self, rhs: Rhs) -> Option<(Self::Quotient, Self::Remainder)>;
+}
+
+pub trait InvMod: Sized {
+    fn inv_mod(&self, modulus: &Self) -> Option<Self>;
+}
+
+pub trait GCD: Sized {
+    fn gcd(a: &Self, b: &Self) -> Self;
+
+    fn gcd_extended(a: &Self, b: &Self) -> (Self, Self, Self, bool);
+
+    // TODO: LCM
 }
 
 // TODO: Automatically derive Mul<..> traits. Maybe also MulAssign<..>

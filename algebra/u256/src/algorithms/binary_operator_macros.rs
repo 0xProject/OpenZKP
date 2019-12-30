@@ -116,3 +116,69 @@ macro_rules! noncommutative_binop {
         }
     };
 }
+
+/// Implement assignment operator using OpInline trait.
+#[macro_export]
+macro_rules! assign_ops_from_trait {
+    ($type:ident, $rhs:ident, $op_trait:ident, $op_fn:ident, $trait:ident, $trait_assign_fn:ident) => {
+        impl $op_trait<$rhs> for $type {
+            #[inline(always)] // Simple wrapper in hot path
+            fn $op_fn(&mut self, rhs: $rhs) {
+                <$type as $trait<&$rhs>>::$trait_assign_fn(self, &rhs)
+            }
+        }
+
+        impl $op_trait<&$rhs> for $type {
+            #[inline(always)] // Simple wrapper in hot path
+            fn $op_fn(&mut self, rhs: &$rhs) {
+                <$type as $trait<&$rhs>>::$trait_assign_fn(self, rhs)
+            }
+        }
+    }
+}
+
+/// Implement infix operator using OpInline trait, preferring _assign versions
+/// where possible.
+#[macro_export]
+macro_rules! self_ops_from_trait {
+    ($type:ident, $op_trait:ident, $op_fn:ident, $trait:ident, $trait_fn:ident, $trait_assign_fn:ident) => {
+        impl $op_trait<&$type> for &$type {
+            type Output = $type;
+
+            #[inline(always)] // Simple wrapper in hot path
+            fn $op_fn(self, rhs: &$type) -> $type {
+                <$type as $trait<&$type>>::$trait_fn(self, rhs)
+            }
+        }
+
+        impl $op_trait<&$type> for $type {
+            type Output = $type;
+
+            #[inline(always)] // Simple wrapper in hot path
+            fn $op_fn(mut self, rhs: &$type) -> $type {
+                <$type as $trait<&$type>>::$trait_assign_fn(&mut self, rhs);
+                self
+            }
+        }
+
+        impl $op_trait<$type> for &$type {
+            type Output = $type;
+
+            #[inline(always)] // Simple wrapper in hot path
+            fn $op_fn(self, mut rhs: $type) -> $type {
+                <$type as $trait<&$type>>::$trait_assign_fn(&mut rhs, self);
+                rhs
+            }
+        }
+
+        impl $op_trait<$type> for $type {
+            type Output = $type;
+
+            #[inline(always)] // Simple wrapper in hot path
+            fn $op_fn(mut self, rhs: $type) -> $type {
+                <$type as $trait<&$type>>::$trait_assign_fn(&mut self, &rhs);
+                self
+            }
+        }
+    }
+}

@@ -1,5 +1,6 @@
 use crate::{
     algorithms::{adc, divrem_nby1, divrem_nbym, mac},
+    assign_ops_from_trait, self_ops_from_trait,
     commutative_binop, MulInline, SquareInline, U256, SquareFullInline, MulFullInline
 };
 use num_traits::Pow;
@@ -91,59 +92,8 @@ impl MulInline<&U256> for U256 {
     }
 }
 
-impl MulAssign<&Self> for U256 {
-    #[inline(always)]
-    fn mul_assign(&mut self, rhs: &Self) {
-        <Self as MulInline<&Self>>::mul_assign(self, rhs);
-    }
-}
-
-impl MulAssign<Self> for U256 {
-    #[inline(always)]
-    fn mul_assign(&mut self, rhs: Self) {
-        <Self as MulInline<&Self>>::mul_assign(self, &rhs);
-    }
-}
-
-impl Mul<Self> for &U256 {
-    type Output = U256;
-
-    #[inline(always)]
-    fn mul(self, rhs: Self) -> Self::Output {
-        <U256 as MulInline<&U256>>::mul(self, rhs)
-    }
-}
-
-impl Mul<U256> for &U256 {
-    type Output = U256;
-
-    #[inline(always)]
-    fn mul(self, mut rhs: U256) -> Self::Output {
-        <U256 as MulInline<&U256>>::mul_assign(&mut rhs, self);
-        rhs
-    }
-}
-
-impl Mul<Self> for U256 {
-    type Output = Self;
-
-    #[inline(always)]
-    fn mul(mut self, rhs: Self) -> Self::Output {
-        <U256 as MulInline<&U256>>::mul_assign(&mut self, &rhs);
-        self
-    }
-}
-
-impl Mul<&Self> for U256 {
-    type Output = Self;
-
-    #[inline(always)]
-    fn mul(mut self, rhs: &Self) -> Self::Output {
-        <U256 as MulInline<&U256>>::mul_assign(&mut self, rhs);
-        self
-    }
-}
-
+assign_ops_from_trait!(U256, U256, MulAssign, mul_assign, MulInline, mul_assign);
+self_ops_from_trait!(U256, Mul, mul, MulInline, mul, mul_assign);
 
 impl MulFullInline<&U256> for U256 {
     type High = Self;
@@ -236,8 +186,6 @@ impl U256 {
         }
     }
 }
-
-
 
 impl MulAssign<u64> for U256 {
     #[cfg_attr(feature = "inline", inline(always))]
