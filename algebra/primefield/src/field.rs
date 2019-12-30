@@ -1,23 +1,69 @@
 use crate::square_root::square_root;
 use std::{
-    ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign},
+    marker::PhantomData,
+    ops::{Add, AddAssign, BitAnd, Div, DivAssign, Mul, MulAssign, Neg, ShrAssign, Sub, SubAssign},
     prelude::v1::*,
 };
 use zkp_macros_decl::u256h;
 use zkp_u256::{
     commutative_binop, noncommutative_binop, to_montgomery_const, DivRem, Montgomery,
-    MontgomeryParameters, U256,
+    MontgomeryParameters, One, Pow, Zero, U256, Binary
 };
 // TODO: Implement Serde
 #[cfg(feature = "std")]
 use std::fmt;
 
-// TODO: Reconsider type name
+/// Requirements for the base unsigned integer type
+pub trait FieldUInt:
+    PartialEq
+    + Zero
+    + One
+    + Montgomery
+    + for<'a> DivRem<&'a Self, Quotient = Self, Remainder = Self>
+    + DivRem<u64, Quotient = Self, Remainder = u64>
+    + ShrAssign<usize>
+{
+}
+
+impl<T> FieldUInt for T where
+    T: PartialEq
+        + Zero
+        + One
+        + Montgomery
+        + for<'a> DivRem<&'a Self, Quotient = Self, Remainder = Self>
+        + DivRem<u64, Quotient = Self, Remainder = u64>
+        + ShrAssign<usize>
+{
+}
+
+/// Required constant parameters for the prime field
+pub trait FieldParameters<UInt>: MontgomeryParameters<UInt>
+where
+    UInt: FieldUInt,
+{
+    const GENERATOR: UInt;
+    const ORDER: UInt;
+}
+
+/// A finite field.
+///
+/// The order `Parameters::MODULUS` must be prime. Internally, values are
+/// represented in Montgomery form for faster multiplications.
 #[allow(clippy::module_name_repetitions)]
 #[derive(PartialEq, Eq, Clone, Hash)]
-pub struct FieldElement(U256);
+pub struct Field<UInt, Parameters>
+where
+    UInt: FieldUInt,
+    Parameters: FieldParameters<UInt>,
+{
+    uint:        UInt,
+    _parameters: PhantomData<Parameters>,
+}
 
-impl MontgomeryParameters<U256> for FieldElement {
+#[derive(PartialEq, Eq, Clone, Hash)]
+struct StarkFieldParameters();
+
+impl MontgomeryParameters<U256> for StarkFieldParameters {
     const M64: u64 = 0xffff_ffff_ffff_ffff;
     const MODULUS: U256 =
         u256h!("0800000000000011000000000000000000000000000000000000000000000001");
@@ -26,57 +72,70 @@ impl MontgomeryParameters<U256> for FieldElement {
     const R3: U256 = u256h!("038e5f79873c0a6df47d84f8363000187545706677ffcc06cc7177d1406df18e");
 }
 
-impl FieldElement {
-    // 3, in montgomery form.
-    pub const GENERATOR: Self = Self::from_montgomery(u256h!(
-        "07fffffffffff9b0ffffffffffffffffffffffffffffffffffffffffffffffa1"
-    ));
-    /// Prime modulus of the field.
+impl FieldParameters<U256> for StarkFieldParameters {
+    /// 3, in montgomery form.
+    const GENERATOR: U256 =
+        u256h!("07fffffffffff9b0ffffffffffffffffffffffffffffffffffffffffffffffa1");
     ///
-    /// Equal to (1 << 59) | (1 << 4) | 1.
-    pub const MODULUS: U256 =
-        u256h!("0800000000000011000000000000000000000000000000000000000000000001");
-    pub const NEGATIVE_ONE: Self = Self::from_montgomery(u256h!(
-        "0000000000000220000000000000000000000000000000000000000000000020"
-    ));
-    pub const ONE: Self = Self::from_montgomery(Self::R1);
-    pub const ZERO: Self = Self::from_montgomery(U256::ZERO);
+    const ORDER: U256 = u256h!("0800000000000011000000000000000000000000000000000000000000000000");
+}
 
-    pub fn from_u256_const(n: &U256) -> Self {
-        Self(to_montgomery_const(n, &Self::MODULUS, Self::M64, &Self::R2))
-    }
+pub type FieldElement = Field<U256, StarkFieldParameters>;
+
+impl<UInt, Parameters> Field<UInt, Parameters>
+where
+    UInt: FieldUInt,
+    Parameters: FieldParameters<UInt>,
+{
+    pub const GENERATOR: Self = Self::from_montgomery(Parameters::GENERATOR);
+    pub const MODULUS: UInt = Parameters::MODULUS;
+    pub const ONE: Self = Self::from_montgomery(Parameters::R1);
+    pub const ZERO: Self = Self::from_montgomery(UInt::zero());
+
+    /// Creates a constant value from a `Base` constant.
+    ///
+    /// It does compile-time conversion to Montgomery form.
+    // TODO: Fix
+    // pub const fn from_uint_const(uint: &UInt) -> Self {
+    // Self::from_montgomery(to_montgomery_const(
+    // uint,
+    // &Parameters::MODULUS,
+    // Parameters::M64,
+    // &Parameters::R2,
+    // ))
+    // }
 
     #[inline(always)]
-    pub const fn from_montgomery(n: U256) -> Self {
+    pub const fn from_montgomery(uint: UInt) -> Self {
         // TODO: Uncomment assertion when support in `const fn` is enabled.
         // See https://github.com/rust-lang/rust/issues/57563
         // debug_assert!(n < Self::MODULUS);
-        Self(n)
+        Self {
+            uint,
+            _parameters: PhantomData,
+        }
     }
 
-    #[cfg(feature = "std")]
-    pub fn from_hex_str(s: &str) -> Self {
-        Self::from(U256::from_hex_str(s))
-    }
+    // #[cfg(feature = "std")]
+    // pub fn from_hex_str(s: &str) -> Self {
+    // Self::from(UInt::from_hex_str(s))
+    // }
 
     #[inline(always)]
-    pub fn as_montgomery(&self) -> &U256 {
-        &self.0
+    pub fn as_montgomery(&self) -> &UInt {
+        &self.uint
     }
 
     #[inline(always)]
     pub fn is_zero(&self) -> bool {
-        self.0 == U256::ZERO
-    }
-
-    #[inline(always)]
-    pub fn is_one(&self) -> bool {
-        self.0 == Self::R1
+        self.uint == UInt::zero()
     }
 
     #[inline(always)]
     pub fn inv(&self) -> Option<Self> {
-        self.0.inv_redc::<Self>().map(Self)
+        self.uint
+            .inv_redc::<Parameters>()
+            .map(Self::from_montgomery)
     }
 
     #[inline(always)]
@@ -93,45 +152,73 @@ impl FieldElement {
 
     #[cfg_attr(feature = "inline", inline(always))]
     pub fn square(&self) -> Self {
-        Self(self.0.square_redc_inline::<Self>())
+        Self::from_montgomery(self.as_montgomery().square_redc_inline::<Parameters>())
     }
 
-    #[inline(always)]
-    pub fn square_root(&self) -> Option<Self> {
-        square_root(self)
-    }
+    // TODO
+    // #[inline(always)]
+    // pub fn square_root(&self) -> Option<Self> {
+    // square_root(self)
+    // }
 
     #[inline(always)]
     pub fn neg_assign(&mut self) {
         *self = self.neg()
     }
 
-    pub fn pow<T: Into<U256>>(&self, exponent: T) -> Self {
-        let exponent: U256 = exponent.into();
-        let mut result = Self::ONE;
-        let mut square = self.clone();
-        let mut remaining_exponent = exponent;
-        while !remaining_exponent.is_zero() {
-            if &remaining_exponent & 1_u64 == 1_u64 {
-                result *= &square;
-            }
-            remaining_exponent >>= 1;
-            square = square.square();
-        }
-        result
-    }
-
     // OPT: replace this with a constant array of roots of unity.
-    pub fn root<T: Into<U256>>(n: T) -> Option<Self> {
-        let n: U256 = n.into();
-        if n.is_zero() {
-            return Some(Self::ONE);
+    // TODO: version with abstracted order
+    pub fn root(order: usize) -> Option<Self> {
+        // TODO: div_rem trait
+        if let Some((q, rem)) = Parameters::ORDER.div_rem(order as u64) {
+            if rem.is_zero() {
+                Some(Self::GENERATOR.pow(&q))
+            } else {
+                None
+            }
+        } else {
+            Some(Self::ONE)
         }
-        let (q, rem) = (Self::MODULUS - U256::ONE).div_rem(&n).unwrap();
-        if rem != U256::ZERO {
-            return None;
+    }
+}
+
+impl<UInt, Parameters, Exponent> Pow<&Exponent> for &Field<UInt, Parameters>
+where
+    UInt: FieldUInt,
+    Parameters: FieldParameters<UInt>,
+    Exponent: Binary,
+{
+    type Output = Field<UInt, Parameters>;
+
+    fn pow(self, exponent: &Exponent) -> Self::Output {
+        if let Some(msb) = exponent.most_significant_bit() {
+            let mut result = Self::Output::ONE;
+            let mut square = self.clone();
+            for i in (0..=msb) {
+                if exponent.bit(i) {
+                    result *= &square;
+                }
+                if !i.is_zero() {
+                    square = &square.square();
+                }
+            }
+            result
+        } else {
+            // exponent = 0
+            Self::Output::ONE
         }
-        Some(Self::GENERATOR.pow(q))
+    }
+}
+
+impl<UInt, Parameters> Pow<usize> for &Field<UInt, Parameters>
+where
+    UInt: FieldUInt,
+    Parameters: FieldParameters<UInt>
+{
+    type Output = Field<UInt, Parameters>;
+
+    fn pow(self, exponent: usize) -> Self::Output {
+        self.pow(&exponent)
     }
 }
 
@@ -303,22 +390,94 @@ impl From<&FieldElement> for U256 {
     }
 }
 
-impl Neg for &FieldElement {
-    type Output = FieldElement;
+impl<UInt, Parameters> Neg for &Field<UInt, Parameters>
+where
+    UInt: FieldUInt,
+    Parameters: FieldParameters<UInt>,
+{
+    type Output = Field<UInt, Parameters>;
 
-    #[inline(always)]
+    #[cfg_attr(feature = "inline", inline(always))]
     fn neg(self) -> Self::Output {
-        FieldElement::ZERO - self
+        Self::Output::from_montgomery(Parameters::MODULUS - self.as_montgomery())
     }
 }
 
-impl AddAssign<&FieldElement> for FieldElement {
+impl<UInt, Parameters> AddAssign<&Self> for Field<UInt, Parameters>
+where
+    UInt: FieldUInt,
+    Parameters: FieldParameters<UInt>,
+{
     #[cfg_attr(feature = "inline", inline(always))]
     fn add_assign(&mut self, rhs: &Self) {
-        self.0 += &rhs.0;
-        if self.0 >= Self::MODULUS {
-            self.0 -= &Self::MODULUS;
+        self.uint += &rhs.uint;
+        if self.uint >= Self::MODULUS {
+            self.uint -= &Self::MODULUS;
         }
+    }
+}
+
+impl<UInt, Parameters> AddAssign<Self> for Field<UInt, Parameters>
+where
+    UInt: FieldUInt,
+    Parameters: FieldParameters<UInt>,
+{
+    #[inline(always)]
+    fn add_assign(&mut self, rhs: Self) {
+        self.add_assign(&rhs);
+    }
+}
+
+impl<UInt, Parameters> Add<&Self> for Field<UInt, Parameters>
+where
+    UInt: FieldUInt,
+    Parameters: FieldParameters<UInt>,
+{
+    type Output = Self;
+
+    #[inline(always)]
+    fn add(self, rhs: &Self) -> Self {
+        self.add_assign(rhs);
+        self
+    }
+}
+
+impl<UInt, Parameters> Add<Self> for Field<UInt, Parameters>
+where
+    UInt: FieldUInt,
+    Parameters: FieldParameters<UInt>,
+{
+    type Output = Self;
+
+    #[inline(always)]
+    fn add(self, rhs: Self) -> Self {
+        self.add(&rhs)
+    }
+}
+
+impl<UInt, Parameters> Add<Self> for &Field<UInt, Parameters>
+where
+    UInt: FieldUInt,
+    Parameters: FieldParameters<UInt>,
+{
+    type Output = Field<UInt, Parameters>;
+
+    #[inline(always)]
+    fn add(self, rhs: Self) -> Self::Output {
+        self.clone().add(rhs)
+    }
+}
+
+impl<UInt, Parameters> Add<Field<UInt, Parameters>> for &Field<UInt, Parameters>
+where
+    UInt: FieldUInt,
+    Parameters: FieldParameters<UInt>,
+{
+    type Output = Field<UInt, Parameters>;
+
+    #[inline(always)]
+    fn add(self, rhs: Field<UInt, Parameters>) -> Self::Output {
+        rhs.add(self)
     }
 }
 
@@ -353,7 +512,7 @@ impl core::iter::Product for FieldElement {
 
 // TODO: Implement Sum, Successors, ... for FieldElement.
 
-commutative_binop!(FieldElement, Add, add, AddAssign, add_assign);
+// commutative_binop!(FieldElement, Add, add, AddAssign, add_assign);
 commutative_binop!(FieldElement, Mul, mul, MulAssign, mul_assign);
 noncommutative_binop!(FieldElement, Sub, sub, SubAssign, sub_assign);
 noncommutative_binop!(FieldElement, Div, div, DivAssign, div_assign);
