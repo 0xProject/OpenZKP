@@ -99,6 +99,8 @@ pub use prover::{prove, Error as ProverError};
 pub use trace_table::TraceTable;
 #[cfg(feature = "prover")]
 pub use traits::Provable;
+#[cfg(feature = "prover")]
+pub use solidity_encode::autogen;
 
 #[cfg(test)]
 mod tests {
