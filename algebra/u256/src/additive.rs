@@ -1,11 +1,14 @@
-use crate::{adc, commutative_binop, noncommutative_binop, sbb, AddFullInline, AddInline, U256, assign_ops_from_trait, self_ops_from_trait, SubInline, SubFullInline, SubFromInline,noncommutative_self_ops_from_trait, SubFromFullInline};
+use crate::{
+    adc, assign_ops_from_trait, noncommutative_self_ops_from_trait, sbb, self_ops_from_trait,
+    AddFullInline, AddInline, NegInline, SubFromFullInline, SubFromInline, SubFullInline,
+    SubInline, U256,
+};
 use std::{
     ops::{Add, AddAssign, Sub, SubAssign},
     prelude::v1::*,
 };
 
 // Additive operations: Add, Sub
-// TODO: SubFrom, AddInline, SubInline
 
 impl AddFullInline<&U256> for U256 {
     type High = u64;
@@ -16,10 +19,7 @@ impl AddFullInline<&U256> for U256 {
         let (c1, carry) = adc(self.limb(1), rhs.limb(1), carry);
         let (c2, carry) = adc(self.limb(2), rhs.limb(2), carry);
         let (c3, carry) = adc(self.limb(3), rhs.limb(3), carry);
-        (
-            U256::from_limbs([c0, c1, c2, c3]),
-            carry,
-        )
+        (U256::from_limbs([c0, c1, c2, c3]), carry)
     }
 }
 
@@ -42,10 +42,7 @@ impl SubFullInline<&U256> for U256 {
         let (c1, borrow) = sbb(self.limb(1), rhs.limb(1), borrow);
         let (c2, borrow) = sbb(self.limb(2), rhs.limb(2), borrow);
         let (c3, borrow) = sbb(self.limb(3), rhs.limb(3), borrow);
-        (
-            U256::from_limbs([c0, c1, c2, c3]),
-            borrow,
-        )
+        (U256::from_limbs([c0, c1, c2, c3]), borrow)
     }
 }
 
@@ -73,7 +70,14 @@ impl SubFromFullInline<&U256> for U256 {
 impl SubFromInline<&U256> for U256 {
     #[inline(always)]
     fn sub_from_assign_inline(&mut self, rhs: &U256) {
-        self.sub_from_full_assign_inline(rhs);
+        let _hi = self.sub_from_full_assign_inline(rhs);
+    }
+}
+
+impl NegInline for U256 {
+    #[inline(always)]
+    fn neg_inline(&self) -> Self {
+        U256::ZERO.sub_inline(self)
     }
 }
 

@@ -1,10 +1,10 @@
 // TODO
 #![allow(clippy::module_name_repetitions)]
+use num_traits::PrimInt;
 use std::ops::{
     BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not, Shl, ShlAssign, Shr,
     ShrAssign,
 };
-use num_traits::PrimInt;
 
 /// This is a subset of `num_traits::PrimInt`
 // TODO: Submit upstream PR
@@ -64,7 +64,6 @@ impl<T: PrimInt> Binary for T {
 
     fn leading_zeros(&self) -> usize {
         <T as PrimInt>::leading_zeros(*self) as usize
-
     }
 
     fn trailing_zeros(&self) -> usize {

@@ -6,8 +6,8 @@ use std::{
 };
 use zkp_macros_decl::u256h;
 use zkp_u256::{
-    commutative_binop, noncommutative_binop, to_montgomery_const, DivRem, Montgomery,
-    MontgomeryParameters, One, Pow, Zero, U256, Binary
+    commutative_binop, noncommutative_binop, to_montgomery_const, Binary, DivRem, Montgomery,
+    MontgomeryParameters, One, Pow, Zero, U256,
 };
 // TODO: Implement Serde
 #[cfg(feature = "std")]
@@ -213,7 +213,7 @@ where
 impl<UInt, Parameters> Pow<usize> for &Field<UInt, Parameters>
 where
     UInt: FieldUInt,
-    Parameters: FieldParameters<UInt>
+    Parameters: FieldParameters<UInt>,
 {
     type Output = Field<UInt, Parameters>;
 

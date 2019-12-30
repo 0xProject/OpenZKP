@@ -1,6 +1,8 @@
 mod binary;
 use crate::Zero;
 
+// TODO: Similar OpInline tratis for BitAnd, BitOr, BitXor, ...
+
 pub trait AddInline<Rhs = Self>: Sized {
     /// **Note.** Implementers *must* add the `#[inline(always)]` attribute
     fn add_inline(&self, rhs: Rhs) -> Self;
@@ -50,6 +52,30 @@ pub trait AddFullInline<Rhs = Self>: Sized {
     #[cfg_attr(feature = "inline", inline(always))]
     fn add_full_assign(&mut self, rhs: Rhs) -> Self::High {
         self.add_full_assign_inline(rhs)
+    }
+}
+
+pub trait NegInline: Sized {
+    /// **Note.** Implementers *must* add the `#[inline(always)]` attribute
+    fn neg_inline(&self) -> Self;
+
+    /// **Note.** Implementers *must* add the `#[inline(always)]` attribute
+    /// By default it redirects to the non-assigned version
+    #[inline(always)]
+    fn neg_assign_inline(&mut self) {
+        *self = self.neg_inline()
+    }
+
+    // Optionally-inline version
+    #[cfg_attr(feature = "inline", inline(always))]
+    fn neg(&self) -> Self {
+        self.neg_inline()
+    }
+
+    // Optionally-inline version
+    #[cfg_attr(feature = "inline", inline(always))]
+    fn neg_assign(&mut self) {
+        self.neg_assign_inline()
     }
 }
 
@@ -204,7 +230,6 @@ pub trait MulFullInline<Rhs>: Sized {
 
     /// **Note.** Implementers *must* add the `#[inline(always)]` attribute
     fn mul_full_inline(&self, rhs: Rhs) -> (Self, Self::High);
-
 
     /// **Note.** Implementers *must* add the `#[inline(always)]` attribute
     #[inline(always)]

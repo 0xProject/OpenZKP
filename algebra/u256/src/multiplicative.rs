@@ -1,7 +1,7 @@
 use crate::{
     algorithms::{adc, divrem_nby1, divrem_nbym, mac},
-    assign_ops_from_trait, self_ops_from_trait,
-    commutative_binop, MulInline, SquareInline, U256, SquareFullInline, MulFullInline
+    assign_ops_from_trait, self_ops_from_trait, MulFullInline, MulInline, SquareFullInline,
+    SquareInline, U256,
 };
 use num_traits::Pow;
 use std::{
@@ -51,7 +51,6 @@ impl SquareInline for U256 {
         self.square_full_inline().0
     }
 }
-
 
 impl MulInline<u64> for U256 {
     #[inline(always)]
