@@ -53,6 +53,82 @@ pub trait AddFullInline<Rhs = Self>: Sized {
     }
 }
 
+pub trait SubInline<Rhs = Self>: Sized {
+    /// **Note.** Implementers *must* add the `#[inline(always)]` attribute
+    fn sub_inline(&self, rhs: Rhs) -> Self;
+
+    /// **Note.** Implementers *must* add the `#[inline(always)]` attribute
+    /// By default it redirects to the non-assigned version
+    #[inline(always)]
+    fn sub_assign_inline(&mut self, rhs: Rhs) {
+        *self = self.sub_inline(rhs)
+    }
+
+    // Optionally-inline version
+    #[cfg_attr(feature = "inline", inline(always))]
+    fn sub(&self, rhs: Rhs) -> Self {
+        self.sub_inline(rhs)
+    }
+
+    // Optionally-inline version
+    #[cfg_attr(feature = "inline", inline(always))]
+    fn sub_assign(&mut self, rhs: Rhs) {
+        self.sub_assign_inline(rhs)
+    }
+}
+
+pub trait SubFullInline<Rhs = Self>: Sized {
+    type High;
+
+    /// **Note.** Implementers *must* add the `#[inline(always)]` attribute
+    fn sub_full_inline(&self, rhs: Rhs) -> (Self, Self::High);
+
+    /// **Note.** Implementers *must* add the `#[inline(always)]` attribute
+    /// By default it redirects to the non-assigned version
+    #[inline(always)]
+    fn sub_full_assign_inline(&mut self, rhs: Rhs) -> Self::High {
+        let (lo, hi) = self.sub_full_inline(rhs);
+        *self = lo;
+        hi
+    }
+
+    // Optionally-inline version
+    #[cfg_attr(feature = "inline", inline(always))]
+    fn sub_full(&self, rhs: Rhs) -> (Self, Self::High) {
+        self.sub_full_inline(rhs)
+    }
+
+    // Optionally-inline version
+    #[cfg_attr(feature = "inline", inline(always))]
+    fn sub_full_assign(&mut self, rhs: Rhs) -> Self::High {
+        self.sub_full_assign_inline(rhs)
+    }
+}
+
+pub trait SubFromInline<Rhs = Self> {
+    /// **Note.** Implementers *must* add the `#[inline(always)]` attribute
+    fn sub_from_assign_inline(&mut self, rhs: Rhs);
+
+    // Optionally-inline version
+    #[cfg_attr(feature = "inline", inline(always))]
+    fn sub_from_assign(&mut self, rhs: Rhs) {
+        self.sub_from_assign_inline(rhs)
+    }
+}
+
+pub trait SubFromFullInline<Rhs = Self> {
+    type High;
+
+    /// **Note.** Implementers *must* add the `#[inline(always)]` attribute
+    fn sub_from_full_assign_inline(&mut self, rhs: Rhs) -> Self::High;
+
+    // Optionally-inline version
+    #[cfg_attr(feature = "inline", inline(always))]
+    fn sub_from_full_assign(&mut self, rhs: Rhs) -> Self::High {
+        self.sub_from_full_assign_inline(rhs)
+    }
+}
+
 pub trait SquareInline: Sized {
     /// **Note.** Implementers *must* add the `#[inline(always)]` attribute
     // Default implementation to be overridden
