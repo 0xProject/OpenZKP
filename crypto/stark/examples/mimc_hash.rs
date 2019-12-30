@@ -3,8 +3,8 @@ use std::time::Instant;
 use zkp_macros_decl::field_element;
 use zkp_primefield::{fft::ifft, FieldElement};
 use zkp_stark::{
-    solidity_encode::autogen, Constraints, DensePolynomial, Provable,
-    RationalExpression, TraceTable, Verifiable,
+    solidity_encode::autogen, Constraints, DensePolynomial, Provable, RationalExpression,
+    TraceTable, Verifiable,
 };
 use zkp_u256::U256;
 
