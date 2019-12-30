@@ -219,7 +219,7 @@ pub fn verify(constraints: &Constraints, proof: &Proof) -> Result<()> {
         fri_size >>= x;
         // TODO: When is x equal to zero?
         let eval_point = if x == 0 {
-            FieldElement::ONE
+            FieldElement::one()
         } else {
             channel.get_random()
         };
@@ -432,8 +432,8 @@ fn oods_value_from_constraint_values(
     constraint_values: &[FieldElement],
     oods_point: &FieldElement,
 ) -> FieldElement {
-    let mut result = FieldElement::ZERO;
-    let mut power = FieldElement::ONE;
+    let mut result = FieldElement::zero();
+    let mut power = FieldElement::one();
     for value in constraint_values {
         result += value * &power;
         power *= oods_point;
@@ -517,7 +517,7 @@ fn out_of_domain_element(
         None => return Err(Error::RootUnavailable),
     };
     let g = omega.pow(blowup);
-    let mut r = FieldElement::ZERO;
+    let mut r = FieldElement::zero();
 
     for ((coefficient, value), (i, j)) in oods_coefficients
         .iter()

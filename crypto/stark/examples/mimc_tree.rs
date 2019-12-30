@@ -251,7 +251,7 @@ fn mimc_loop(
     execution_increment: usize,
 ) -> FieldElement {
     let mut left = x.clone();
-    let mut right = FieldElement::ZERO;
+    let mut right = FieldElement::zero();
 
     for i in 0..128 {
         trace[(i + execution_increment, 0)] = left.clone();
@@ -302,7 +302,7 @@ fn mimc_path(x: &FieldElement, path: &[FieldElement], is_left: &[bool]) -> Field
 // Note we weaken the hash to fit the table by running the second loop 127 times
 fn mimc_hash(x: &FieldElement, y: &FieldElement) -> FieldElement {
     let mut left = x.clone();
-    let mut right = FieldElement::ZERO;
+    let mut right = FieldElement::zero();
     for item in K_COEF.iter() {
         let new_left = (left.clone()).pow(U256::from(3))
             + FieldElement::from(3) * &Q * &left * (&right.pow(2))
@@ -335,9 +335,9 @@ fn main() {
     }
     let is_left: Vec<bool> = (0..path.len()).map(|x| x % 2 != 0).collect();
     let start_left = if is_left[0] {
-        FieldElement::ONE
+        FieldElement::one()
     } else {
-        FieldElement::ZERO
+        FieldElement::zero()
     };
     let root = mimc_path(&element, &path, &is_left);
     let start = Instant::now();

@@ -222,7 +222,7 @@ impl Provable<()> for Claim {
         let mut trace = TraceTable::new(256, 2);
 
         let mut left = self.before_x.clone();
-        let mut right = FieldElement::ZERO;
+        let mut right = FieldElement::zero();
 
         for i in 0..128 {
             trace[(i, 0)] = left.clone();
@@ -258,7 +258,7 @@ impl Provable<()> for Claim {
 
 fn mimc(x: &FieldElement, y: &FieldElement) -> FieldElement {
     let mut left = x.clone();
-    let mut right = FieldElement::ZERO;
+    let mut right = FieldElement::zero();
     for item in K_COEF.iter() {
         let new_left = (left.clone()).pow(U256::from(3))
             + FieldElement::from(3) * &Q * &left * (&right.pow(2))

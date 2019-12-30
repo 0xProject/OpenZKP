@@ -556,7 +556,7 @@ mod tests {
                 // Spotcheck to make sure constraints constraint the table
                 let row = row % component.trace.num_rows();
                 let col = col % component.trace.num_columns();
-                component.trace[(row, col)] += FieldElement::ONE;
+                component.trace[(row, col)] += FieldElement::one();
                 assert!(!component.check());
             }
         }

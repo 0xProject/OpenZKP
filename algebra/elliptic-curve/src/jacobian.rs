@@ -3,7 +3,7 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
     prelude::v1::*,
 };
-use zkp_primefield::FieldElement;
+use zkp_primefield::{FieldElement, NegInline, One, SquareInline, Zero};
 use zkp_u256::{commutative_binop, noncommutative_binop, Binary, U256};
 
 // See http://www.hyperelliptic.org/EFD/g1p/auto-shortw-jacobian.html
@@ -18,9 +18,9 @@ pub struct Jacobian {
 
 impl Jacobian {
     pub const ZERO: Self = Self {
-        x: FieldElement::ONE,
-        y: FieldElement::ONE,
-        z: FieldElement::ZERO,
+        x: FieldElement::one(),
+        y: FieldElement::one(),
+        z: FieldElement::zero(),
     };
 
     #[must_use]
@@ -30,11 +30,11 @@ impl Jacobian {
     }
 
     pub fn double_assign(&mut self) {
-        if self.y == FieldElement::ZERO {
+        if self.y == FieldElement::zero() {
             *self = Self::ZERO;
             return;
         }
-        // OPT: Special case z == FieldElement::ONE?
+        // OPT: Special case z == FieldElement::one()?
         // See http://www.hyperelliptic.org/EFD/g1p/auto-shortw-jacobian.html#doubling-dbl-2007-bl
         let xx = self.x.square();
         let yy = self.y.square();
@@ -62,7 +62,7 @@ impl Jacobian {
     #[must_use]
     pub fn mul(p: &Affine, scalar: &U256) -> Self {
         let mut r = Self::from(p);
-        for i in (0..scalar.msb()).rev() {
+        for i in (0..scalar.most_significant_bit().unwrap_or_default()).rev() {
             r.double_assign();
             if scalar.bit(i) {
                 r += p;
@@ -93,7 +93,7 @@ impl From<&Affine> for Jacobian {
                 Self {
                     x: x.clone(),
                     y: y.clone(),
-                    z: FieldElement::ONE,
+                    z: FieldElement::one(),
                 }
             }
         }
@@ -108,7 +108,7 @@ impl From<Affine> for Jacobian {
                 Self {
                     x,
                     y,
-                    z: FieldElement::ONE,
+                    z: FieldElement::one(),
                 }
             }
         }
@@ -147,15 +147,15 @@ impl AddAssign<&Jacobian> for Jacobian {
     // We need multiplications to implement addition
     #[allow(clippy::suspicious_op_assign_impl)]
     fn add_assign(&mut self, rhs: &Self) {
-        if rhs.z == FieldElement::ZERO {
+        if rhs.z == FieldElement::zero() {
             return;
         }
-        if self.z == FieldElement::ZERO {
+        if self.z == FieldElement::zero() {
             // OPT: In non-assign move add, take rhs.
             *self = rhs.clone();
             return;
         }
-        // OPT: Special case z == FieldElement::ONE?
+        // OPT: Special case z == FieldElement::one()?
         // See http://www.hyperelliptic.org/EFD/g1p/auto-shortw-jacobian.html#addition-add-2007-bl
         let z1z1 = self.z.square();
         let z2z2 = rhs.z.square();
@@ -190,13 +190,13 @@ impl AddAssign<&Affine> for Jacobian {
         match rhs {
             Affine::Zero => { /* Do nothing */ }
             Affine::Point { x, y } => {
-                if self.z == FieldElement::ZERO {
+                if self.z == FieldElement::zero() {
                     self.x = x.clone();
                     self.y = y.clone();
-                    self.z = FieldElement::ONE;
+                    self.z = FieldElement::one();
                     return;
                 }
-                // OPT: Special case z == FieldElement::ONE?
+                // OPT: Special case z == FieldElement::one()?
                 // See http://www.hyperelliptic.org/EFD/g1p/auto-shortw-jacobian.html#addition-madd-2007-bl
                 let z1z1 = self.z.square();
                 let u2 = x * &z1z1;

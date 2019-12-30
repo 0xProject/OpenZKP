@@ -1,7 +1,7 @@
 use crate::{curve::Affine, jacobian::Jacobian};
 use itertools::izip;
 use std::prelude::v1::*;
-use zkp_primefield::FieldElement;
+use zkp_primefield::{FieldElement, One, SquareInline, Zero};
 use zkp_u256::{Binary, U256};
 
 pub(crate) fn window_table(p: &Affine, naf: &mut [Jacobian]) {
@@ -30,10 +30,10 @@ pub(crate) fn batch_convert(jacobians: &[Jacobian], affines: &mut [Affine]) {
     debug_assert!(jacobians.len() == affines.len());
 
     // Intermediate values
-    let mut vals = vec![FieldElement::ONE; jacobians.len()];
+    let mut vals = vec![FieldElement::one(); jacobians.len()];
 
     // Accumulate all z values
-    let mut acc = FieldElement::ONE;
+    let mut acc = FieldElement::one();
     // OPT: Check if `izip!` has overhead
     for (jac, val) in izip!(jacobians.iter(), vals.iter_mut()) {
         // TODO: Handle zeros

@@ -23,7 +23,7 @@ impl TraceTable {
     pub fn new(trace_length: usize, num_columns: usize) -> Self {
         let mut values: MmapVec<FieldElement> = MmapVec::with_capacity(trace_length * num_columns);
         for _ in 0..(trace_length * num_columns) {
-            values.push(FieldElement::ZERO);
+            values.push(FieldElement::zero());
         }
         Self {
             trace_length,

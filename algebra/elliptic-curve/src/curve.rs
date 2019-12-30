@@ -3,7 +3,7 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
     prelude::v1::*,
 };
-use zkp_primefield::FieldElement;
+use zkp_primefield::{FieldElement, NegInline, One, Zero};
 use zkp_u256::{commutative_binop, noncommutative_binop, U256};
 
 #[derive(PartialEq, Eq, Clone)]
@@ -73,7 +73,7 @@ impl Neg for &Affine {
             Affine::Point { x, y } => {
                 Affine::Point {
                     x: x.clone(),
-                    y: y.neg(),
+                    y: -y,
                 }
             }
         }
@@ -124,7 +124,7 @@ macro_rules! curve_operations {
                 use zkp_u256::Binary;
                 // OPT: Use WNAF
                 let mut r = self.clone();
-                for i in (0..scalar.msb()).rev() {
+                for i in (0..scalar.most_significant_bit().unwrap_or_default()).rev() {
                     r.double_assign();
                     if scalar.bit(i) {
                         r += self;

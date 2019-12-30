@@ -88,7 +88,7 @@ pub fn ifft_permuted(x: &mut [FieldElement]) {
     let inverse_root = FieldElement::root(x.len())
         .expect("No root of unity for input length")
         .inv()
-        .expect("No inverse for FieldElement::ZERO");
+        .expect("No inverse for FieldElement::zero()");
     let inverse_length = FieldElement::from(x.len())
         .inv()
         .expect("No inverse length for empty list");

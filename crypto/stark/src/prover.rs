@@ -564,7 +564,7 @@ fn get_constraint_polynomials(
     // Evaluate on the coset trace table
     info!("Evaluate on the coset trace table");
     let mut result: MmapVec<FieldElement> = MmapVec::with_capacity(coset_size);
-    result.resize(coset_size, FieldElement::ZERO);
+    result.resize(coset_size, FieldElement::zero());
     let values = &mut result;
     values
         .par_chunks_mut(CHUNK_SIZE)
@@ -583,8 +583,11 @@ fn get_constraint_polynomials(
     ifft_permuted(values);
     permute(values);
     // OPT: Merge with even-odd separation loop.
-    for (f, y) in geometric_series(&FieldElement::ONE, &FieldElement::GENERATOR.inv().unwrap())
-        .zip(values.iter_mut())
+    for (f, y) in geometric_series(
+        &FieldElement::one(),
+        &FieldElement::GENERATOR.inv().unwrap(),
+    )
+    .zip(values.iter_mut())
     {
         // Shift out the generator from the evaluation domain.
         *y *= &f;
@@ -594,7 +597,7 @@ fn get_constraint_polynomials(
     let mut constraint_polynomials: Vec<MmapVec<FieldElement>> =
         vec![MmapVec::with_capacity(trace_length); eval_degree];
     let (coefficients, zeros) = values.split_at(eval_degree * trace_length);
-    assert!(zeros.iter().all(|z| z == &FieldElement::ZERO));
+    assert!(zeros.iter().all(|z| z == &FieldElement::zero()));
     for chunk in coefficients.chunks_exact(eval_degree) {
         for (i, coefficient) in chunk.iter().enumerate() {
             constraint_polynomials[i].push(coefficient.clone());
@@ -675,7 +678,7 @@ fn perform_fri_layering(
             .inv()
             .unwrap();
         let mut x_inv = MmapVec::with_capacity(n / 2);
-        let mut accumulator = FieldElement::ONE;
+        let mut accumulator = FieldElement::one();
         for _ in 0..n / 2 {
             x_inv.push(accumulator.clone());
             accumulator *= &root_inv;

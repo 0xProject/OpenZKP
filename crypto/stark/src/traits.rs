@@ -88,7 +88,7 @@ pub(crate) mod tests {
         }
 
         fn index_value(&self) -> FieldElement {
-            let mut state = (FieldElement::ONE, self.initial_value.clone());
+            let mut state = (FieldElement::one(), self.initial_value.clone());
             for _ in 0..self.index {
                 state = (state.1.pow(self.exponent), state.0 + state.1);
             }
@@ -193,13 +193,13 @@ pub(crate) mod tests {
         }
 
         fn index_value(&self) -> FieldElement {
-            let mut values = vec![FieldElement::ZERO; self.index];
+            let mut values = vec![FieldElement::zero(); self.index];
             for (i, initial_value) in self.initial_values.iter().enumerate() {
                 values[i] = initial_value.clone();
             }
             let order = self.initial_values.len();
             for i in order..self.index {
-                let mut next_value = FieldElement::ZERO;
+                let mut next_value = FieldElement::zero();
                 for ((value, coefficient), &exponent) in values[i - order..]
                     .iter()
                     .zip(&self.coefficients)
@@ -262,7 +262,7 @@ pub(crate) mod tests {
             let mut constraints: Vec<RationalExpression> =
                 vec![(Trace(0, 0) - (&self.value).into()) * on_row(self.index - 1)];
 
-            let mut recurrance_constraint = Constant(FieldElement::ZERO);
+            let mut recurrance_constraint = Constant(FieldElement::zero());
             for (i, (coefficient, exponent)) in
                 self.coefficients.iter().zip(&self.exponents).enumerate()
             {
@@ -291,7 +291,7 @@ pub(crate) mod tests {
             }
             let order = witness.initial_values.len();
             for i in order..self.trace_length() {
-                let mut next_value = FieldElement::ZERO;
+                let mut next_value = FieldElement::zero();
                 for (j, (coefficient, &exponent)) in
                     self.coefficients.iter().zip(&self.exponents).enumerate()
                 {

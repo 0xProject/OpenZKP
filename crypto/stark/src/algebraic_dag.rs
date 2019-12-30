@@ -14,22 +14,22 @@ const CHUNK_SIZE: usize = 16;
 // HACK: FieldElement does not implement Copy, so we need to explicitly
 // instantiate
 const CHUNK_INIT: [FieldElement; CHUNK_SIZE] = [
-    FieldElement::ZERO,
-    FieldElement::ZERO,
-    FieldElement::ZERO,
-    FieldElement::ZERO,
-    FieldElement::ZERO,
-    FieldElement::ZERO,
-    FieldElement::ZERO,
-    FieldElement::ZERO,
-    FieldElement::ZERO,
-    FieldElement::ZERO,
-    FieldElement::ZERO,
-    FieldElement::ZERO,
-    FieldElement::ZERO,
-    FieldElement::ZERO,
-    FieldElement::ZERO,
-    FieldElement::ZERO,
+    FieldElement::zero(),
+    FieldElement::zero(),
+    FieldElement::zero(),
+    FieldElement::zero(),
+    FieldElement::zero(),
+    FieldElement::zero(),
+    FieldElement::zero(),
+    FieldElement::zero(),
+    FieldElement::zero(),
+    FieldElement::zero(),
+    FieldElement::zero(),
+    FieldElement::zero(),
+    FieldElement::zero(),
+    FieldElement::zero(),
+    FieldElement::zero(),
+    FieldElement::zero(),
 ];
 
 /// Maximum size of a periodic lookup table.
@@ -302,8 +302,8 @@ impl AlgebraicGraph {
             // Recognize expressions evaluating to zero or one. Simplify other
             // expressions.
             let operation = match hash {
-                FieldElement::ZERO => Operation::Constant(FieldElement::ZERO),
-                FieldElement::ONE => Operation::Constant(FieldElement::ONE),
+                FieldElement::zero() => Operation::Constant(FieldElement::zero()),
+                FieldElement::one() => Operation::Constant(FieldElement::one()),
                 _ => self.simplify(operation),
             };
 
@@ -315,7 +315,7 @@ impl AlgebraicGraph {
                 hash,
                 period,
                 values: CHUNK_INIT,
-                note: FieldElement::ZERO,
+                note: FieldElement::zero(),
             });
             Index(index)
         }
@@ -590,10 +590,10 @@ mod tests {
     #[test]
     fn test_hash_coset_zero() {
         // hash(Coset(0, _)) = 0
-        assert_eq!(coset_hash(FieldElement::ZERO, 1), FieldElement::ZERO);
-        assert_eq!(coset_hash(FieldElement::ZERO, 2), FieldElement::ZERO);
-        assert_eq!(coset_hash(FieldElement::ZERO, 512), FieldElement::ZERO);
-        assert_eq!(coset_hash(FieldElement::ZERO, 1024), FieldElement::ZERO);
+        assert_eq!(coset_hash(FieldElement::zero(), 1), FieldElement::zero());
+        assert_eq!(coset_hash(FieldElement::zero(), 2), FieldElement::zero());
+        assert_eq!(coset_hash(FieldElement::zero(), 512), FieldElement::zero());
+        assert_eq!(coset_hash(FieldElement::zero(), 1024), FieldElement::zero());
     }
 
     #[test]
@@ -605,8 +605,8 @@ mod tests {
             let index = dag.op(Op::Coset(c.clone(), 1));
             assert_eq!(dag[index].hash, c * factor);
         }
-        test(FieldElement::ZERO);
-        test(FieldElement::ONE);
+        test(FieldElement::zero());
+        test(FieldElement::one());
         test(FieldElement::GENERATOR);
         test(field_element!(
             "022550177068302c52659dbd983cf622984f1f2a7fb2277003a64c7ecf96edaf"

@@ -48,7 +48,7 @@ impl DensePolynomial {
     pub fn zeros(size: usize) -> Self {
         assert!(size.is_power_of_two());
         let mut vec = MmapVec::with_capacity(size);
-        vec.resize(size, FieldElement::ZERO);
+        vec.resize(size, FieldElement::zero());
         Self(vec)
     }
 
@@ -70,14 +70,14 @@ impl DensePolynomial {
     // more correctly left undefined or sometimes assigned `-1` or `-∞`.
     pub fn degree(&self) -> usize {
         let mut degree = self.len() - 1;
-        while self.0[degree] == FieldElement::ZERO && degree > 0 {
+        while self.0[degree] == FieldElement::zero() && degree > 0 {
             degree -= 1;
         }
         degree
     }
 
     pub fn evaluate(&self, x: &FieldElement) -> FieldElement {
-        let mut result = FieldElement::ZERO;
+        let mut result = FieldElement::zero();
         for coefficient in self.0.iter().rev() {
             result *= x;
             result += coefficient;
@@ -114,7 +114,7 @@ impl DensePolynomial {
     /// target += c * (P(X) - P(z)) / (X - z)
     /// See: <https://en.wikipedia.org/wiki/Synthetic_division>
     pub fn divide_out_point_into(&self, z: &FieldElement, c: &FieldElement, target: &mut Self) {
-        let mut remainder = FieldElement::ZERO;
+        let mut remainder = FieldElement::zero();
         for (coefficient, target) in self.0.iter().rev().zip(target.0.iter_mut().rev()) {
             *target += c * &remainder;
             remainder *= z;
@@ -131,7 +131,7 @@ impl Arbitrary for DensePolynomial {
         let mut coefficients = Vec::<FieldElement>::arbitrary(g);
         let length = coefficients.len();
         coefficients.extend_from_slice(&vec![
-            FieldElement::ZERO;
+            FieldElement::zero();
             length.next_power_of_two() - length
         ]);
         assert!(coefficients.len().is_power_of_two());
