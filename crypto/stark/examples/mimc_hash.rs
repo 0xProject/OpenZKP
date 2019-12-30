@@ -3,8 +3,8 @@ use std::time::Instant;
 use zkp_macros_decl::field_element;
 use zkp_primefield::{fft::ifft, FieldElement};
 use zkp_stark::{
-    solidity_encode::autogen_constraint_poly, Constraints, DensePolynomial, Provable,
-    RationalExpression, TraceTable, Verifiable,
+    solidity_encode::autogen, Constraints, DensePolynomial, Provable, RationalExpression,
+    TraceTable, Verifiable,
 };
 use zkp_u256::U256;
 
@@ -203,7 +203,7 @@ impl Verifiable for Claim {
 
         let public = vec![&const_before_x, &const_before_y, &const_after];
 
-        match autogen_constraint_poly(
+        match autogen(
             trace_length,
             public.as_slice(),
             expressions.as_slice(),
