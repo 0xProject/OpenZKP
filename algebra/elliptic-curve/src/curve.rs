@@ -38,10 +38,10 @@ impl Affine {
         match self {
             Self::Zero => Self::Zero,
             Self::Point { x, y } => {
-                if *y == FieldElement::ZERO {
+                if *y == FieldElement::zero() {
                     Self::Zero
                 } else {
-                    let m = ((x + x + x) * x + FieldElement::ONE) / (y + y);
+                    let m = ((x + x + x) * x + FieldElement::one()) / (y + y);
                     let nx = &m * &m - x - x;
                     let ny = m * (x - &nx) - y;
                     Self::Point { x: nx, y: ny }

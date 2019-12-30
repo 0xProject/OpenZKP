@@ -1,5 +1,6 @@
 use crate::FieldElement;
 use std::prelude::v1::*;
+use crate::{Pow, One};
 
 #[derive(Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "std", derive(Debug))]
@@ -57,7 +58,7 @@ pub fn geometric_series(base: &FieldElement, step: &FieldElement) -> GeometricSe
 pub fn root_series(order: usize) -> GeometricSeries {
     let root = FieldElement::root(order).expect("No root found of given order.");
     GeometricSeries {
-        current: FieldElement::ONE,
+        current: FieldElement::one(),
         step:    root,
         length:  order,
     }

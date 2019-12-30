@@ -1,4 +1,4 @@
-use crate::field::FieldElement;
+use crate::{field::FieldElement, One, Pow, SquareInline, Zero};
 use zkp_macros_decl::u256h;
 use zkp_u256::U256;
 
@@ -12,18 +12,14 @@ pub(crate) fn square_root(a: &FieldElement) -> Option<FieldElement> {
 
 // Returns the result of (a/p) != -1, where (a/p) is the Legendre symbol.
 fn is_quadratic_residue(a: &FieldElement) -> bool {
-    a.pow(FieldElement::MODULUS >> 1) != FieldElement::NEGATIVE_ONE
+    a.pow(&(FieldElement::MODULUS >> 1)) != -FieldElement::one()
 }
 
 // These two constants are chosen so that 1 + SIGNIFICAND << BINARY_EXPONENT ==
 // MODULUS.
+// TODO: Provide as constant parameters
 const BINARY_EXPONENT: usize = 3 * 4 * 16;
 const SIGNIFICAND: U256 = U256::from_limbs([0x0800_0000_0000_0011_u64, 0, 0, 0]);
-// The starting value of c in the Tonelli Shanks algorithm. We are using 3, a
-// generator, as the quadratic nonresidue the algorithm requires.
-const INITIAL_C: FieldElement = FieldElement::from_montgomery(u256h!(
-    "07222e32c47afc260a35c5be60505574aaada25731fe3be94106bccd64a2bdd8"
-));
 
 // What about using algorithm 3.39 instead?
 fn tonelli_shanks(a: &FieldElement) -> FieldElement {
@@ -33,17 +29,21 @@ fn tonelli_shanks(a: &FieldElement) -> FieldElement {
     debug_assert!(&FieldElement::MODULUS & 7_u64 == 1);
 
     if a.is_zero() {
-        return FieldElement::ZERO;
+        return FieldElement::zero();
     }
 
-    let mut c: FieldElement = INITIAL_C;
+    // The starting value of c in the Tonelli Shanks algorithm. We are using the
+    // prefered generator, as the quadratic nonresidue the algorithm requires.
+    // TODO: Provide as a constant parameter
+    let mut c: FieldElement = FieldElement::generator().pow(SIGNIFICAND);
+
     // OPT: Raising a to a fixed power is a good candidate for an addition chain.
-    let mut root: FieldElement = a.pow((SIGNIFICAND + U256::ONE) >> 1);
+    let mut root: FieldElement = a.pow(&((SIGNIFICAND + U256::ONE) >> 1));
 
     for i in 1..BINARY_EXPONENT {
         // OPT: Precompute the inverse of a.
-        if (root.square() / a).pow(U256::ONE << (BINARY_EXPONENT - i - 1))
-            == FieldElement::NEGATIVE_ONE
+        if (root.square() / a).pow(&(U256::ONE << (BINARY_EXPONENT - i - 1)))
+            == -FieldElement::one()
         {
             root *= &c;
         }
@@ -79,7 +79,7 @@ mod tests {
 
     #[test]
     fn initial_c_is_correct() {
-        assert_eq!(INITIAL_C, FieldElement::GENERATOR.pow(SIGNIFICAND));
+        assert_eq!(INITIAL_C, FieldElement::generator().pow(SIGNIFICAND));
     }
 
     #[quickcheck]
@@ -98,13 +98,16 @@ mod tests {
     #[test]
     fn square_root_of_zero() {
         assert_eq!(
-            square_root(&FieldElement::ZERO).unwrap(),
-            FieldElement::ZERO
+            square_root(&FieldElement::zero()).unwrap(),
+            FieldElement::zero()
         );
     }
 
     #[test]
     fn square_root_of_one() {
-        assert_eq!(square_root(&FieldElement::ONE).unwrap(), FieldElement::ONE);
+        assert_eq!(
+            square_root(&FieldElement::one()).unwrap(),
+            FieldElement::one()
+        );
     }
 }

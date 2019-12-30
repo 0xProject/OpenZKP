@@ -4,7 +4,7 @@ use crate::{
     SubInline, U256,
 };
 use std::{
-    ops::{Add, AddAssign, Sub, SubAssign},
+    ops::{Add, AddAssign, Sub, SubAssign, Neg},
     prelude::v1::*,
 };
 
@@ -78,6 +78,24 @@ impl NegInline for U256 {
     #[inline(always)]
     fn neg_inline(&self) -> Self {
         U256::ZERO.sub_inline(self)
+    }
+}
+
+impl Neg for U256{
+    type Output = Self;
+
+    #[inline(always)]
+    fn neg(self) -> Self::Output {
+        <Self as NegInline>::neg(&self)
+    }
+}
+
+impl Neg for &U256{
+    type Output = U256;
+
+    #[inline(always)]
+    fn neg(self) -> Self::Output {
+        <U256 as NegInline>::neg(self)
     }
 }
 

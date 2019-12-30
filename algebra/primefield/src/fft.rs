@@ -1,6 +1,6 @@
 // We want these functions to be called `fft`
 #![allow(clippy::module_name_repetitions)]
-use crate::{FieldElement, Pow};
+use crate::{FieldElement, One, Pow, Zero};
 use std::prelude::v1::*;
 
 // TODO: Create a dedicated type for permuted vectors
@@ -63,7 +63,7 @@ pub fn fft_cofactor_permuted_out(
     out: &mut [FieldElement],
 ) {
     // TODO: Use geometric_series
-    let mut c = FieldElement::ONE;
+    let mut c = FieldElement::one();
     for (x, out) in x.iter().zip(out.iter_mut()) {
         *out = x * &c;
         c *= cofactor;
@@ -74,7 +74,7 @@ pub fn fft_cofactor_permuted_out(
 /// In-place permuted FFT with a cofactor.
 pub fn fft_cofactor_permuted(cofactor: &FieldElement, x: &mut [FieldElement]) {
     // TODO: Use geometric_series
-    let mut c = FieldElement::ONE;
+    let mut c = FieldElement::one();
     for element in x.iter_mut() {
         *element *= &c;
         c *= cofactor;
@@ -112,10 +112,10 @@ pub fn ifft_permuted(x: &mut [FieldElement]) {
 fn fft_permuted_root(root: &FieldElement, coefficients: &mut [FieldElement]) {
     let n_elements = coefficients.len();
     debug_assert!(n_elements.is_power_of_two());
-    debug_assert_eq!(root.pow(n_elements), FieldElement::ONE);
+    debug_assert_eq!(root.pow(n_elements), FieldElement::one());
     for layer in 0..n_elements.trailing_zeros() {
         let n_blocks = 1_usize << layer;
-        let mut twiddle_factor = FieldElement::ONE;
+        let mut twiddle_factor = FieldElement::one();
         // OPT: In place combined update like gcd::mat_mul.
         let block_size = n_elements >> (layer + 1);
         let twiddle_factor_update = root.pow(block_size);
@@ -152,10 +152,10 @@ mod tests {
     fn reference_fft(x: &[FieldElement]) -> Vec<FieldElement> {
         let root = FieldElement::root(x.len()).unwrap();
         let mut result = Vec::with_capacity(x.len());
-        let mut root_i = FieldElement::ONE;
+        let mut root_i = FieldElement::one();
         for _ in 0..x.len() {
-            let mut sum = FieldElement::ZERO;
-            let mut root_ij = FieldElement::ONE;
+            let mut sum = FieldElement::zero();
+            let mut root_ij = FieldElement::one();
             for xj in x {
                 sum += xj * &root_ij;
                 root_ij *= &root_i;
