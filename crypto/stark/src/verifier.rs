@@ -6,7 +6,9 @@ use std::error;
 use std::{collections::BTreeMap, fmt, prelude::v1::*};
 use zkp_hash::Hash;
 use zkp_merkle_tree::{Commitment, Error as MerkleError, Proof as MerkleProof};
-use zkp_primefield::{fft, geometric_series::root_series, FieldElement};
+use zkp_primefield::{
+    fft, geometric_series::root_series, FieldElement, Inv, One, Pow, Root, SquareInline, Zero,
+};
 use zkp_u256::U256;
 
 type Result<T> = std::result::Result<T, Error>;
@@ -511,7 +513,7 @@ fn out_of_domain_element(
         .iter()
         .map(|i| FieldElement::from_montgomery(i.clone()))
         .collect();
-    let x_transform = x_cord * FieldElement::GENERATOR;
+    let x_transform = x_cord * FieldElement::generator();
     let omega = match FieldElement::root(eval_domain_size) {
         Some(x) => x,
         None => return Err(Error::RootUnavailable),
@@ -524,7 +526,8 @@ fn out_of_domain_element(
         .zip(oods_values)
         .zip(trace_arguments)
     {
-        r += coefficient * (&poly_points[*i] - value) / (&x_transform - g.pow(*j) * oods_point);
+        r += coefficient * (&poly_points[*i] - value)
+            / (&x_transform - g.pow(*j).unwrap() * oods_point);
     }
 
     for (i, constraint_oods_value) in constraint_oods_values.iter().enumerate() {

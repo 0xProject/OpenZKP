@@ -3,7 +3,7 @@ use env_logger;
 use log::info;
 use std::{env, time::Instant};
 use zkp_macros_decl::field_element;
-use zkp_primefield::FieldElement;
+use zkp_primefield::{FieldElement, Root};
 use zkp_stark::{prove, verify, Constraints, Provable, RationalExpression, TraceTable, Verifiable};
 use zkp_u256::U256;
 

@@ -1,6 +1,6 @@
 // We want these functions to be called `fft`
 #![allow(clippy::module_name_repetitions)]
-use crate::{FieldElement, Inv, One, Pow, Root, Zero};
+use crate::{FieldElement, Inv, One, Pow, Root};
 use std::prelude::v1::*;
 
 // TODO: Create a dedicated type for permuted vectors
@@ -142,6 +142,7 @@ fn fft_permuted_root(root: &FieldElement, coefficients: &mut [FieldElement]) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::Zero;
     use quickcheck_macros::quickcheck;
     use zkp_macros_decl::u256h;
     use zkp_u256::U256;

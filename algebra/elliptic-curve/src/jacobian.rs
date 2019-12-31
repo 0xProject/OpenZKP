@@ -3,7 +3,8 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
     prelude::v1::*,
 };
-use zkp_primefield::{FieldElement, NegInline, One, SquareInline, Zero};
+use zkp_macros_decl::field_element;
+use zkp_primefield::{FieldElement, Inv, NegInline, One, SquareInline, Zero};
 use zkp_u256::{commutative_binop, noncommutative_binop, Binary, U256};
 
 // See http://www.hyperelliptic.org/EFD/g1p/auto-shortw-jacobian.html
@@ -18,9 +19,9 @@ pub struct Jacobian {
 
 impl Jacobian {
     pub const ZERO: Self = Self {
-        x: FieldElement::one(),
-        y: FieldElement::one(),
-        z: FieldElement::zero(),
+        x: field_element!("01"),
+        y: field_element!("01"),
+        z: field_element!("00"),
     };
 
     #[must_use]

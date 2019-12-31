@@ -37,7 +37,7 @@ impl DivRem<u64> for U256 {
             let (q2, r) = div_2_1(self.limb(2), r, rhs);
             let (q1, r) = div_2_1(self.limb(1), r, rhs);
             let (q0, r) = div_2_1(self.limb(0), r, rhs);
-            Some((U256::from_limbs([q0, q1, q2, q3]), r))
+            Some((Self::from_limbs([q0, q1, q2, q3]), r))
         }
     }
 }

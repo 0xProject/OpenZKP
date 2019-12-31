@@ -9,7 +9,7 @@ use itertools::Itertools;
 use log::info;
 use std::collections::HashMap;
 use zkp_elliptic_curve::Affine;
-use zkp_primefield::FieldElement;
+use zkp_primefield::{FieldElement, One, Pow, Root, Zero};
 use zkp_stark::{compose_vertical, Component, DensePolynomial, RationalExpression, TraceTable};
 use zkp_u256::{Binary, U256};
 
@@ -61,7 +61,7 @@ pub fn tree_layer(leaf: &FieldElement, direction: bool, sibling: &FieldElement) 
 
     // Repeating patterns
     let omega = FieldElement::root(256).unwrap();
-    let omega_i = |i| Constant(omega.pow(i));
+    let omega_i = |i: usize| Constant(omega.pow(i));
     let row = |i| X - omega_i(i);
     let all_rows = || X.pow(256) - 1.into();
     let on_no_hash_rows = |a: RationalExpression| a / row(255);

@@ -3,6 +3,7 @@ use crate::constraint_check::{check_constraints, check_specific_constraint};
 #[cfg(feature = "prover")]
 use crate::{prove, ProverError, TraceTable};
 use crate::{verify, Constraints, Proof, VerifierError};
+use zkp_primefield::{FieldElement, Inv, One, Pow, Root, Zero};
 
 pub trait Verifiable {
     fn constraints(&self) -> Constraints;

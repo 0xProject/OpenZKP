@@ -5,7 +5,7 @@ use std::{
     cmp::Ordering, collections::HashMap, error::Error, fs::File, io::prelude::*, path::Path,
     prelude::v1::*,
 };
-use zkp_primefield::FieldElement;
+use zkp_primefield::{FieldElement, Inv, One, Pow, Root, SquareInline, Zero};
 use zkp_u256::U256;
 
 // Contains the offsets from the context data array pointer to the named values
@@ -591,7 +591,7 @@ pub fn autogen_oods(
                         "        context[batch_inverse_chunk*i + {} + mm_batch_inverse_in] = \
                          fsub(x, fmul(oods_point, 0x{}));",
                         counter,
-                        U256::from(generator.pow(*j))
+                        U256::from(generator.pow(*j).unwrap())
                     )?;
                     index_to_offset.insert(j, counter * 32);
                     counter += 1;

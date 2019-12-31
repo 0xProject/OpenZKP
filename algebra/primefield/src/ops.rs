@@ -1,8 +1,5 @@
 use crate::{Field, FieldParameters, FieldUInt};
-use std::{
-    ops::{Add, AddAssign, BitAnd, Div, DivAssign, Mul, MulAssign, Neg, ShrAssign, Sub, SubAssign},
-    prelude::v1::*,
-};
+use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 use zkp_u256::{AddInline, Inv, MulInline, NegInline, SubInline};
 
 macro_rules! assign_ops_from_trait {

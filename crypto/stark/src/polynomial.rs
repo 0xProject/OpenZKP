@@ -7,7 +7,7 @@ use zkp_macros_decl::field_element;
 use zkp_mmap_vec::MmapVec;
 #[cfg(feature = "std")]
 use zkp_primefield::fft::{fft_cofactor_permuted_out, permute_index};
-use zkp_primefield::FieldElement;
+use zkp_primefield::{FieldElement, Inv, One, Pow, Root, SquareInline, Zero};
 use zkp_u256::U256;
 
 #[derive(Clone)]
@@ -87,8 +87,8 @@ impl DensePolynomial {
 
     #[cfg(feature = "std")]
     pub fn low_degree_extension(&self, blowup: usize) -> MmapVec<FieldElement> {
-        // TODO: shift polynomial by FieldElement::GENERATOR outside of this function.
-        const SHIFT_FACTOR: FieldElement = FieldElement::GENERATOR;
+        // TODO: shift polynomial by FieldElement::generator() outside of this function.
+        const SHIFT_FACTOR: FieldElement = field_element!("03");
         let length = self.len() * blowup;
         let generator =
             FieldElement::root(length).expect("No generator for extended_domain_length.");

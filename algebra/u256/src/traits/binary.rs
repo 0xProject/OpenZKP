@@ -47,35 +47,39 @@ pub trait Binary:
 impl<T: PrimInt> Binary for T {
     #[inline(always)]
     fn num_bits() -> usize {
-        T::zero().count_zeros() as usize
+        Self::zero().count_zeros() as usize
     }
 
     fn bit(&self, i: usize) -> bool {
-        (*self >> i) & T::one() == T::one()
+        (*self >> i) & Self::one() == Self::one()
     }
 
     fn count_ones(&self) -> usize {
-        <T as PrimInt>::count_ones(*self) as usize
+        <Self as PrimInt>::count_ones(*self) as usize
     }
 
     fn count_zeros(&self) -> usize {
-        <T as PrimInt>::count_zeros(*self) as usize
+        <Self as PrimInt>::count_zeros(*self) as usize
     }
 
     fn leading_zeros(&self) -> usize {
-        <T as PrimInt>::leading_zeros(*self) as usize
+        <Self as PrimInt>::leading_zeros(*self) as usize
     }
 
     fn trailing_zeros(&self) -> usize {
-        <T as PrimInt>::trailing_zeros(*self) as usize
+        <Self as PrimInt>::trailing_zeros(*self) as usize
     }
 
     fn rotate_left(&self, n: usize) -> Self {
-        <T as PrimInt>::rotate_left(*self, n as u32)
+        // Std `rotate_left` uses `u32` instead of `usize`
+        #[allow(clippy::cast_possible_truncation)]
+        <Self as PrimInt>::rotate_left(*self, n as u32)
     }
 
     fn rotate_right(&self, n: usize) -> Self {
-        <T as PrimInt>::rotate_right(*self, n as u32)
+        // Std `rotate_left` uses `u32` instead of `usize`
+        #[allow(clippy::cast_possible_truncation)]
+        <Self as PrimInt>::rotate_right(*self, n as u32)
     }
 }
 

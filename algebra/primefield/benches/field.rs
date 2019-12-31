@@ -47,7 +47,7 @@ fn field_sqrt(crit: &mut Criterion) {
     ));
     crit.bench_function("Field square root", move |bench| {
         bench.iter(|| {
-            black_box(black_box(&a));
+            black_box(black_box(&a).square_root());
         })
     });
 }

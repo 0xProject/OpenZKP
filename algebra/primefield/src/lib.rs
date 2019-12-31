@@ -51,7 +51,6 @@ pub mod geometric_series;
 mod ops;
 #[cfg(feature = "use_rand")]
 mod rand;
-mod square_root;
 mod traits;
 
 pub use field::{FieldElement, StarkFieldParameters};

@@ -1,8 +1,9 @@
 use crate::{
-    constraint_check::check_constraints, primefield::FieldElement, Constraints, Provable,
-    RationalExpression, TraceTable, Verifiable,
+    constraint_check::check_constraints, Constraints, Provable, RationalExpression, TraceTable,
+    Verifiable,
 };
 use std::{collections::HashMap, convert::TryFrom};
+use zkp_primefield::{FieldElement, Inv, One, Pow, Root, Zero};
 
 // TODO: Introduce prover/verifier distinction
 
@@ -184,7 +185,8 @@ pub fn shift(a: Component, amount: isize) -> Component {
     let mut result = Component::empty(a.trace.num_rows(), a.trace.num_columns());
     let factor = FieldElement::root(a.trace.num_rows())
         .expect("No generator for trace length")
-        .pow(-amount);
+        .pow(-amount)
+        .unwrap(); // Root can not be zero
     a.project_into(
         &mut result,
         |i, j| ((i + amount_abs) % a.trace.num_rows(), j),

@@ -1,7 +1,7 @@
 #![allow(clippy::possible_missing_comma)]
 use std::time::Instant;
 use zkp_macros_decl::field_element;
-use zkp_primefield::{fft::ifft, FieldElement};
+use zkp_primefield::{fft::ifft, FieldElement, One, Pow, Root, SquareInline, Zero};
 use zkp_stark::{
     Constraints, DensePolynomial, Provable, RationalExpression, TraceTable, Verifiable,
 };
@@ -256,11 +256,10 @@ fn mimc_loop(
     for i in 0..128 {
         trace[(i + execution_increment, 0)] = left.clone();
         trace[(i + execution_increment, 1)] = right.clone();
-        let new_left = (left.clone()).pow(U256::from(3))
-            + FieldElement::from(3) * &Q * &left * (&right.pow(2))
+        let new_left = (left.clone()).pow(3_usize)
+            + FieldElement::from(3) * &Q * &left * (&right.square())
             + &K_COEF[i];
-        let new_right =
-            FieldElement::from(3) * (&left.pow(U256::from(2))) + &Q * (&right.pow(U256::from(3)));
+        let new_right = FieldElement::from(3) * (&left.square()) + &Q * (&right.pow(3_usize));
         left = new_left;
         right = new_right;
     }
@@ -275,11 +274,10 @@ fn mimc_loop(
             return left;
         }
 
-        let new_left = (left.clone()).pow(U256::from(3))
-            + FieldElement::from(3) * &Q * &left * (&right.pow(2))
+        let new_left = (left.clone()).pow(3_usize)
+            + FieldElement::from(3) * &Q * &left * (&right.square())
             + &K_COEF[i];
-        let new_right =
-            FieldElement::from(3) * (&left.pow(U256::from(2))) + &Q * (&right.pow(U256::from(3)));
+        let new_right = FieldElement::from(3) * (&left.square()) + &Q * (&right.pow(3_usize));
         left = new_left;
         right = new_right;
     }
@@ -304,22 +302,20 @@ fn mimc_hash(x: &FieldElement, y: &FieldElement) -> FieldElement {
     let mut left = x.clone();
     let mut right = FieldElement::zero();
     for item in K_COEF.iter() {
-        let new_left = (left.clone()).pow(U256::from(3))
-            + FieldElement::from(3) * &Q * &left * (&right.pow(2))
+        let new_left = (left.clone()).pow(3_usize)
+            + FieldElement::from(3) * &Q * &left * (&right.square())
             + item;
-        let new_right =
-            FieldElement::from(3) * (&left.pow(U256::from(2))) + &Q * (&right.pow(U256::from(3)));
+        let new_right = FieldElement::from(3) * left.square() + &Q * (&right.pow(3_usize));
         left = new_left;
         right = new_right;
     }
     left = y.clone();
 
     for item in K_COEF.iter().take(127) {
-        let new_left = (left.clone()).pow(U256::from(3))
-            + FieldElement::from(3) * &Q * &left * (&right.pow(2))
+        let new_left = (left.clone()).pow(3_usize)
+            + FieldElement::from(3) * &Q * &left * (&right.square())
             + item;
-        let new_right =
-            FieldElement::from(3) * (&left.pow(U256::from(2))) + &Q * (&right.pow(U256::from(3)));
+        let new_right = FieldElement::from(3) * left.square() + &Q * (&right.pow(3_usize));
         left = new_left;
         right = new_right;
     }

@@ -1,6 +1,6 @@
 use crate::{constraints::*, trace_table::*};
 use std::convert::TryInto;
-use zkp_primefield::FieldElement;
+use zkp_primefield::{FieldElement, Inv, One, Pow, Root, Zero};
 
 #[allow(clippy::doc_markdown)]
 /// # Check a set of constraints on a trace table

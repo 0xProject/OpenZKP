@@ -1,5 +1,10 @@
-use crate::{square_root::square_root, Root, SquareRoot};
-use std::{marker::PhantomData, ops::Shr, prelude::v1::*};
+use crate::{Root, SquareRoot};
+use std::{
+    hash::{Hash, Hasher},
+    marker::PhantomData,
+    ops::Shr,
+    prelude::v1::*,
+};
 use zkp_macros_decl::u256h;
 use zkp_u256::{
     to_montgomery_const, AddInline, Binary, DivRem, Inv, Montgomery, MontgomeryParameters,
@@ -10,6 +15,10 @@ use zkp_u256::{
 use std::fmt;
 
 /// Requirements for the base unsigned integer type
+// TODO: Fix naming
+#[allow(clippy::module_name_repetitions)]
+// Lint has a false positive here
+#[allow(single_use_lifetimes)]
 pub trait FieldUInt:
     Clone
     + PartialEq
@@ -22,6 +31,8 @@ pub trait FieldUInt:
 {
 }
 
+// Lint has a false positive here
+#[allow(single_use_lifetimes)]
 impl<T> FieldUInt for T where
     T: Clone
         + PartialEq
@@ -37,6 +48,10 @@ impl<T> FieldUInt for T where
 /// Required constant parameters for the prime field
 // TODO: Make these and Tonelly-Shanks parameters optional and enable
 // functionality when implemented.
+// TODO: Fix naming
+#[allow(clippy::module_name_repetitions)]
+// UInt can not have interior mutability
+#[allow(clippy::declare_interior_mutable_const)]
 pub trait FieldParameters<UInt>: MontgomeryParameters<UInt>
 where
     UInt: FieldUInt,
@@ -50,7 +65,7 @@ where
 /// The order `Parameters::MODULUS` must be prime. Internally, values are
 /// represented in Montgomery form for faster multiplications.
 #[allow(clippy::module_name_repetitions)]
-#[derive(Hash)]
+// Derive fails for Clone, PartialEq, Eq, Hash
 pub struct Field<UInt, Parameters>
 where
     UInt: FieldUInt,
@@ -59,9 +74,6 @@ where
     uint:        UInt,
     _parameters: PhantomData<Parameters>,
 }
-
-#[derive(PartialEq, Eq, Clone, Hash)]
-pub struct StarkFieldParameters();
 
 impl<UInt, Parameters> Clone for Field<UInt, Parameters>
 where
@@ -90,6 +102,20 @@ where
 {
 }
 
+/// Implements [`Hash`] when `UInt` does.
+impl<UInt, Parameters> Hash for Field<UInt, Parameters>
+where
+    UInt: FieldUInt + Hash,
+    Parameters: FieldParameters<UInt>,
+{
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.as_montgomery().hash::<H>(state)
+    }
+}
+
+#[derive(PartialEq, Eq, Clone, Hash)]
+pub struct StarkFieldParameters();
+
 impl MontgomeryParameters<U256> for StarkFieldParameters {
     const M64: u64 = 0xffff_ffff_ffff_ffff;
     const MODULUS: U256 =
@@ -107,12 +133,11 @@ impl FieldParameters<U256> for StarkFieldParameters {
     const ORDER: U256 = u256h!("0800000000000011000000000000000000000000000000000000000000000000");
 }
 
+// TODO: Fix naming
+#[allow(clippy::module_name_repetitions)]
 pub type FieldElement = Field<U256, StarkFieldParameters>;
 
 impl FieldElement {
-    const ONE: FieldElement = Self::from_uint_const(&U256::ONE);
-    const ZERO: FieldElement = Self::from_uint_const(&U256::ZERO);
-
     /// Creates a constant value from a `U256` constant in Montgomery form.
     // TODO: Make member of `Field` after <https://github.com/rust-lang/rust/issues/57563>
     pub const fn from_montgomery_const(uint: U256) -> Self {
@@ -325,6 +350,24 @@ where
     }
 }
 
+impl<UInt, Parameters> Pow<isize> for &Field<UInt, Parameters>
+where
+    UInt: FieldUInt,
+    Parameters: FieldParameters<UInt>,
+{
+    type Output = Option<Field<UInt, Parameters>>;
+
+    fn pow(self, exponent: isize) -> Self::Output {
+        let negative = exponent < 0;
+        let abs = exponent.abs() as usize;
+        if negative {
+            self.inv().map(|n| n.pow(&abs))
+        } else {
+            Some(self.pow(&abs))
+        }
+    }
+}
+
 impl<UInt, Parameters, Exponent> Pow<&Exponent> for &Field<UInt, Parameters>
 where
     UInt: FieldUInt,
@@ -337,7 +380,7 @@ where
         if let Some(msb) = exponent.most_significant_bit() {
             let mut result = Self::Output::one();
             let mut square = self.clone();
-            for i in (0..=msb) {
+            for i in 0..=msb {
                 if exponent.bit(i) {
                     result *= &square;
                 }
@@ -374,6 +417,8 @@ where
 }
 
 // TODO: Generalize over order type
+// Lint has a false positive here
+#[allow(single_use_lifetimes)]
 impl<UInt, Parameters> Root<&UInt> for Field<UInt, Parameters>
 where
     UInt: FieldUInt + Binary + for<'a> DivRem<&'a UInt, Quotient = UInt, Remainder = UInt>,
@@ -795,17 +840,17 @@ mod tests {
 
     #[quickcheck]
     fn pow_0(a: FieldElement) -> bool {
-        a.pow(0) == FieldElement::one()
+        a.pow(0_usize) == FieldElement::one()
     }
 
     #[quickcheck]
     fn pow_1(a: FieldElement) -> bool {
-        a.pow(1) == a
+        a.pow(1_usize) == a
     }
 
     #[quickcheck]
     fn pow_2(a: FieldElement) -> bool {
-        a.pow(2) == &a * &a
+        a.pow(2_usize) == &a * &a
     }
 
     #[quickcheck]
