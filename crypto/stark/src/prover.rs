@@ -801,16 +801,13 @@ fn decommit_fri_layers_and_trees(
             .map(|x| x / coset_size)
             .dedup()
             .collect();
-        dbg!(&new_indices);
 
         for i in &new_indices {
             // TODO: Write entire tree.leaf(i)
             for j in 0..coset_size {
                 let n = i * coset_size + j;
                 match previous_indices.binary_search(&n) {
-                    Ok(_) => {
-                        dbg!(&tree.leaves().layer[n]);
-                    }
+                    Ok(_) => (),
                     _ => proof.write(&tree.leaves().layer[n]),
                 };
             }

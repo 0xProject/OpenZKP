@@ -250,7 +250,6 @@ pub fn verify(constraints: &Constraints, proof: &Proof) -> Result<()> {
         eval_domain_size.trailing_zeros(),
         &mut channel,
     );
-    dbg!(&queries);
 
     // Get values and check decommitment of low degree extension
     let lde_values: Vec<(usize, Vec<U256>)> = queries
@@ -536,7 +535,6 @@ fn out_of_domain_element(
             * (constraint_oods_value - &oods_values[trace_arguments.len() + i])
             / (&x_transform - oods_point.pow(constraint_oods_values.len()));
     }
-    dbg!(x_cord, &r);
     Ok(r)
 }
 
