@@ -5,14 +5,12 @@ use std::{
     ops::Shr,
     prelude::v1::*,
 };
-use zkp_macros_decl::u256h;
 use zkp_u256::{
-    to_montgomery_const, AddInline, Binary, DivRem, Inv, Montgomery, MontgomeryParameters,
-    MulInline, NegInline, One, Pow, SquareInline, SubInline, Zero, U256,
+    AddInline, Binary, DivRem, Inv, Montgomery, MontgomeryParameters, MulInline, NegInline, One,
+    Pow, SquareInline, SubInline, Zero,
 };
 // TODO: Implement Serde
 #[cfg(feature = "std")]
-use std::fmt;
 
 /// Requirements for the base unsigned integer type
 // TODO: Fix naming
@@ -71,8 +69,92 @@ where
     UInt: FieldUInt,
     Parameters: FieldParameters<UInt>,
 {
-    uint:        UInt,
-    _parameters: PhantomData<Parameters>,
+    // TODO: un-pub. They are pub so FieldElement can have const-fn constructors.usize
+    pub(crate) uint:        UInt,
+    pub(crate) _parameters: PhantomData<Parameters>,
+}
+
+impl<UInt, Parameters> Field<UInt, Parameters>
+where
+    UInt: FieldUInt,
+    Parameters: FieldParameters<UInt>,
+{
+    // UInt can not have interior mutability
+    #[allow(clippy::declare_interior_mutable_const)]
+    pub const MODULUS: UInt = Parameters::MODULUS;
+
+    #[inline(always)]
+    pub fn modulus() -> UInt {
+        Parameters::MODULUS
+    }
+
+    /// The multiplicative order of the field.
+    ///
+    /// Equal to `modulus() - 1` for prime fields.
+    #[inline(always)]
+    pub fn order() -> UInt {
+        Parameters::ORDER
+    }
+
+    #[inline(always)]
+    pub fn generator() -> Self {
+        Self::from_montgomery(Parameters::GENERATOR)
+    }
+
+    #[inline(always)]
+    pub fn as_montgomery(&self) -> &UInt {
+        debug_assert!(&self.uint < &Self::modulus());
+        &self.uint
+    }
+
+    /// Construct from `UInt` in Montgomery form.
+    ///
+    /// This is a trivial function.
+    // TODO: Make `const fn` after <https://github.com/rust-lang/rust/issues/57563>
+    #[inline(always)]
+    pub fn from_montgomery(uint: UInt) -> Self {
+        debug_assert!(&uint < &Self::modulus());
+        // TODO: Uncomment assertion when support in `const fn` is enabled.
+        // See https://github.com/rust-lang/rust/issues/57563
+        // debug_assert!(n < Self::MODULUS);
+        Self {
+            uint,
+            _parameters: PhantomData,
+        }
+    }
+
+    // TODO: from_radix_str
+    // #[cfg(feature = "std")]
+    // pub fn from_hex_str(s: &str) -> Self {
+    // Self::from(UInt::from_hex_str(s))
+    // }
+
+    /// Convert to `UInt`.
+    #[inline(always)] // Simple wrapper for `from_montgomery`
+    pub fn to_uint(&self) -> UInt {
+        debug_assert!(&self.uint < &Self::modulus());
+        UInt::from_montgomery::<Parameters>(self.as_montgomery())
+    }
+
+    /// Construct from `UInt`
+    ///
+    /// It does the montgomery conversion.
+    pub fn from_uint(uint: &UInt) -> Self {
+        debug_assert!(uint < &Self::modulus());
+        Self::from_montgomery(uint.to_montgomery::<Parameters>())
+    }
+
+    #[inline(always)]
+    pub fn double(&self) -> Self {
+        // TODO: Optimize
+        self.clone() + self
+    }
+
+    #[inline(always)]
+    pub fn triple(&self) -> Self {
+        // TODO: Optimize
+        self.clone() + self + self
+    }
 }
 
 impl<UInt, Parameters> Clone for Field<UInt, Parameters>
@@ -110,123 +192,6 @@ where
 {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.as_montgomery().hash::<H>(state)
-    }
-}
-
-#[derive(PartialEq, Eq, Clone, Debug, Hash)]
-pub struct StarkFieldParameters();
-
-impl MontgomeryParameters<U256> for StarkFieldParameters {
-    const M64: u64 = 0xffff_ffff_ffff_ffff;
-    const MODULUS: U256 =
-        u256h!("0800000000000011000000000000000000000000000000000000000000000001");
-    const R1: U256 = u256h!("07fffffffffffdf0ffffffffffffffffffffffffffffffffffffffffffffffe1");
-    const R2: U256 = u256h!("07ffd4ab5e008810ffffffffff6f800000000001330ffffffffffd737e000401");
-    const R3: U256 = u256h!("038e5f79873c0a6df47d84f8363000187545706677ffcc06cc7177d1406df18e");
-}
-
-impl FieldParameters<U256> for StarkFieldParameters {
-    /// 3, in montgomery form.
-    const GENERATOR: U256 =
-        u256h!("07fffffffffff9b0ffffffffffffffffffffffffffffffffffffffffffffffa1");
-    ///
-    const ORDER: U256 = u256h!("0800000000000011000000000000000000000000000000000000000000000000");
-}
-
-// TODO: Fix naming
-#[allow(clippy::module_name_repetitions)]
-pub type FieldElement = Field<U256, StarkFieldParameters>;
-
-impl FieldElement {
-    /// Creates a constant value from a `U256` constant in Montgomery form.
-    // TODO: Make member of `Field` after <https://github.com/rust-lang/rust/issues/57563>
-    pub const fn from_montgomery_const(uint: U256) -> Self {
-        Self {
-            uint,
-            _parameters: PhantomData,
-        }
-    }
-
-    /// Creates a constant value from a `U256` constant.
-    ///
-    /// It does compile-time conversion to Montgomery form.
-    // TODO: Make member of `Field` after <https://github.com/rust-lang/rust/issues/57563>
-    pub const fn from_uint_const(n: &U256) -> Self {
-        let uint = to_montgomery_const(
-            n,
-            &StarkFieldParameters::MODULUS,
-            StarkFieldParameters::M64,
-            &StarkFieldParameters::R2,
-        );
-        Self {
-            uint,
-            _parameters: PhantomData,
-        }
-    }
-}
-
-impl<UInt, Parameters> Field<UInt, Parameters>
-where
-    UInt: FieldUInt,
-    Parameters: FieldParameters<UInt>,
-{
-    // UInt can not have interior mutability
-    #[allow(clippy::declare_interior_mutable_const)]
-    pub const MODULUS: UInt = Parameters::MODULUS;
-
-    #[inline(always)]
-    pub fn modulus() -> UInt {
-        Parameters::MODULUS
-    }
-
-    /// The multiplicative order of the field.
-    ///
-    /// Equal to `modulus() - 1` for prime fields.
-    #[inline(always)]
-    pub fn order() -> UInt {
-        Parameters::ORDER
-    }
-
-    #[inline(always)]
-    pub fn generator() -> Self {
-        Self::from_montgomery(Parameters::GENERATOR)
-    }
-
-    // TODO: Make `const fn` after <https://github.com/rust-lang/rust/issues/57563>
-    #[inline(always)]
-    pub fn from_montgomery(uint: UInt) -> Self {
-        debug_assert!(&uint < &Self::modulus());
-        // TODO: Uncomment assertion when support in `const fn` is enabled.
-        // See https://github.com/rust-lang/rust/issues/57563
-        // debug_assert!(n < Self::MODULUS);
-        Self {
-            uint,
-            _parameters: PhantomData,
-        }
-    }
-
-    // TODO: from_radix_str
-    // #[cfg(feature = "std")]
-    // pub fn from_hex_str(s: &str) -> Self {
-    // Self::from(UInt::from_hex_str(s))
-    // }
-
-    #[inline(always)]
-    pub fn as_montgomery(&self) -> &UInt {
-        debug_assert!(&self.uint < &Self::modulus());
-        &self.uint
-    }
-
-    #[inline(always)]
-    pub fn double(&self) -> Self {
-        // TODO: Optimize
-        self.clone() + self
-    }
-
-    #[inline(always)]
-    pub fn triple(&self) -> Self {
-        // TODO: Optimize
-        self.clone() + self + self
     }
 }
 
@@ -504,202 +469,6 @@ where
     }
 }
 
-pub fn invert_batch_src_dst(source: &[FieldElement], destination: &mut [FieldElement]) {
-    assert_eq!(source.len(), destination.len());
-    let mut accumulator = FieldElement::one();
-    for i in 0..source.len() {
-        destination[i] = accumulator.clone();
-        accumulator *= &source[i];
-    }
-    accumulator = accumulator.inv().unwrap();
-    for i in (0..source.len()).rev() {
-        destination[i] *= &accumulator;
-        accumulator *= &source[i];
-    }
-}
-
-pub fn invert_batch(to_be_inverted: &[FieldElement]) -> Vec<FieldElement> {
-    if to_be_inverted.is_empty() {
-        return Vec::new();
-    }
-    let n = to_be_inverted.len();
-    let mut inverses = cumulative_product(to_be_inverted);
-
-    // TODO: Enforce check to prevent uninvertable elements.
-    let mut inverse = inverses[n - 1].inv().unwrap();
-    for i in (1..n).rev() {
-        inverses[i] = &inverses[i - 1] * &inverse;
-        inverse *= &to_be_inverted[i];
-    }
-    inverses[0] = inverse;
-    inverses
-}
-
-fn cumulative_product(elements: &[FieldElement]) -> Vec<FieldElement> {
-    elements
-        .iter()
-        .scan(FieldElement::one(), |running_product, x| {
-            *running_product *= x;
-            Some(running_product.clone())
-        })
-        .collect()
-}
-
-#[cfg(feature = "std")]
-impl fmt::Debug for FieldElement {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let n = U256::from(self);
-        write!(
-            f,
-            "field_element!(\"{:016x}{:016x}{:016x}{:016x}\")",
-            n.limb(3),
-            n.limb(2),
-            n.limb(1),
-            n.limb(0)
-        )
-    }
-}
-
-macro_rules! impl_from_uint {
-    ($t:ty) => {
-        impl From<$t> for FieldElement {
-            #[inline(always)]
-            fn from(n: $t) -> Self {
-                U256::from(n).into()
-            }
-        }
-    };
-}
-
-impl_from_uint!(u8);
-impl_from_uint!(u16);
-impl_from_uint!(u32);
-impl_from_uint!(u64);
-impl_from_uint!(u128);
-impl_from_uint!(usize);
-
-macro_rules! impl_from_int {
-    ($t:ty) => {
-        impl From<$t> for FieldElement {
-            #[cfg_attr(feature = "inline", inline(always))]
-            fn from(n: $t) -> Self {
-                if n >= 0 {
-                    U256::from(n).into()
-                } else {
-                    -Self::from(U256::from(-n))
-                }
-            }
-        }
-    };
-}
-
-impl_from_int!(i8);
-impl_from_int!(i16);
-impl_from_int!(i32);
-impl_from_int!(i64);
-impl_from_int!(i128);
-impl_from_int!(isize);
-
-// The FieldElement versions are called `to_` and not `as_` like their
-// U256 counterparts. This is because a `U256::from` is performed which
-// does a non-trivial `from_montgomery` conversion.
-macro_rules! to_uint {
-    ($fname:ident, $uname:ident, $type:ty) => {
-        #[inline(always)]
-        pub fn $fname(&self) -> $type {
-            U256::from(self).$uname()
-        }
-    };
-}
-
-macro_rules! to_int {
-    ($fname:ident, $uname:ident, $type:ty) => {
-        #[cfg_attr(feature = "inline", inline(always))]
-        pub fn $fname(&self) -> $type {
-            let n = U256::from(self);
-            let half = Self::MODULUS >> 1;
-            if n < half {
-                n.$uname()
-            } else {
-                (n - Self::MODULUS).$uname()
-            }
-        }
-    };
-}
-
-// We don't want newlines between the macro invocations.
-#[rustfmt::skip]
-impl FieldElement {
-    to_uint!(to_u8, as_u8, u8);
-    to_uint!(to_u16, as_u16, u16);
-    to_uint!(to_u32, as_u32, u32);
-    to_uint!(to_u64, as_u64, u64);
-    to_uint!(to_u128, as_u128, u128);
-    to_uint!(to_usize, as_usize, usize);
-    to_int!(to_i8, as_i8, i8);
-    to_int!(to_i16, as_i16, i16);
-    to_int!(to_i32, as_i32, i32);
-    to_int!(to_i64, as_i64, i64);
-    to_int!(to_i128, as_i128, i128);
-    to_int!(to_isize, as_isize, isize);
-}
-
-impl From<U256> for FieldElement {
-    #[inline(always)]
-    fn from(n: U256) -> Self {
-        (&n).into()
-    }
-}
-
-impl From<&U256> for FieldElement {
-    #[inline(always)]
-    fn from(n: &U256) -> Self {
-        Self::from_montgomery(n.to_montgomery::<StarkFieldParameters>())
-    }
-}
-
-impl From<FieldElement> for U256 {
-    #[inline(always)]
-    fn from(n: FieldElement) -> Self {
-        (&n).into()
-    }
-}
-
-impl From<&FieldElement> for U256 {
-    #[inline(always)]
-    fn from(n: &FieldElement) -> Self {
-        n.as_montgomery().from_montgomery::<StarkFieldParameters>()
-    }
-}
-
-impl core::iter::Product for FieldElement {
-    fn product<I: Iterator<Item = FieldElement>>(iter: I) -> Self {
-        use std::ops::Mul;
-        iter.fold(Self::one(), Mul::mul)
-    }
-}
-
-// TODO: Implement Sum, Successors, ... for FieldElement.
-
-#[cfg(any(test, feature = "quickcheck"))]
-use quickcheck::{Arbitrary, Gen};
-
-#[cfg(any(test, feature = "quickcheck"))]
-impl Arbitrary for FieldElement {
-    #[inline(always)]
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
-        // TODO: Generate 0, 1, p/2 and -1
-        Self::from_montgomery(U256::arbitrary(g) % Self::MODULUS)
-    }
-}
-
-#[allow(unused_macros)]
-macro_rules! field_h {
-    (- $e:expr) => {
-        field_h!($e).neg()
-    };
-}
-
 // Quickcheck needs pass by value
 #[allow(clippy::needless_pass_by_value)]
 // We allow these in tests for readability/ease of editing
@@ -707,9 +476,11 @@ macro_rules! field_h {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::FieldElement;
     use itertools::repeat_n;
     use quickcheck_macros::quickcheck;
-    use zkp_macros_decl::field_element;
+    use zkp_macros_decl::{field_element, u256h};
+    use zkp_u256::U256;
 
     #[test]
     fn test_literal() {
@@ -781,19 +552,6 @@ mod tests {
         ));
         assert_eq!(a / b, c);
     }
-
-    #[quickcheck]
-    fn test_batch_inv(x: Vec<FieldElement>) -> bool {
-        if x.iter().any(FieldElement::is_zero) {
-            true
-        } else {
-            invert_batch(x.as_slice())
-                .iter()
-                .zip(x.iter())
-                .all(|(a_inv, a)| *a_inv == a.inv().unwrap())
-        }
-    }
-
     #[quickcheck]
     fn from_as_isize(n: isize) -> bool {
         FieldElement::from(n).to_isize() == n

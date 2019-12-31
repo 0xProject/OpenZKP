@@ -47,18 +47,23 @@
 
 pub mod fft;
 mod field;
+mod field_element;
 pub mod geometric_series;
 mod ops;
+mod proth_field;
 #[cfg(feature = "use_rand")]
 mod rand;
 mod traits;
 
-pub use field::{FieldElement, StarkFieldParameters};
-
+// Generic field implementation
 pub use field::{Field, FieldParameters, FieldUInt};
+pub use zkp_u256::MontgomeryParameters;
 
-// TODO: Make member functions of FieldElement?
-pub use field::{invert_batch, invert_batch_src_dst};
+// The smallest 252-bit Proth field
+pub use proth_field::{FieldElement, Parameters};
+
+// TODO: Make part of Field
+pub use field_element::{invert_batch, invert_batch_src_dst};
 
 // Re-exports dependencies that are part of the public interface
 pub use zkp_u256 as u256;
