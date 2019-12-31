@@ -419,7 +419,7 @@ impl Hash for RationalExpression {
                 i.hash(state);
                 j.hash(state);
             }
-            Polynomial(p, a) => {
+            Polynomial(p, _) => {
                 "poly".hash(state);
                 let x = field_element!(
                     "754ed488ec9208d1c552bb254c0890042078a9e1f7e36072ebff1bf4e193d11b"
