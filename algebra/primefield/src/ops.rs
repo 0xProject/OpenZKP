@@ -1,3 +1,6 @@
+// Using `Self` makes things less readable here.
+#![allow(clippy::use_self)]
+
 use crate::{Field, FieldParameters, FieldUInt};
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 use zkp_u256::{AddInline, Inv, MulInline, NegInline, SubInline};
@@ -208,6 +211,8 @@ where
 {
     type Output = Field<UInt, Parameters>;
 
+    // Division suspiciously requires multiplication
+    #[allow(clippy::suspicious_arithmetic_impl)]
     #[inline(always)]
     fn div(self, rhs: Self) -> Self::Output {
         self * rhs.inv().expect("Division by zero")
@@ -221,6 +226,8 @@ where
 {
     type Output = Field<UInt, Parameters>;
 
+    // Division suspiciously requires multiplication
+    #[allow(clippy::suspicious_arithmetic_impl)]
     #[inline(always)]
     fn div(self, rhs: Self::Output) -> Self::Output {
         self * rhs.inv().expect("Division by zero")
@@ -234,6 +241,8 @@ where
 {
     type Output = Field<UInt, Parameters>;
 
+    // Division suspiciously requires multiplication
+    #[allow(clippy::suspicious_arithmetic_impl)]
     #[inline(always)]
     fn div(self, rhs: &Self::Output) -> Self::Output {
         self * rhs.inv().expect("Division by zero")
@@ -247,6 +256,8 @@ where
 {
     type Output = Field<UInt, Parameters>;
 
+    // Division suspiciously requires multiplication
+    #[allow(clippy::suspicious_arithmetic_impl)]
     #[inline(always)]
     fn div(self, rhs: Self::Output) -> Self::Output {
         self * rhs.inv().expect("Division by zero")

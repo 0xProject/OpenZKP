@@ -170,7 +170,22 @@ where
     UInt: FieldUInt,
     Parameters: FieldParameters<UInt>,
 {
+    // UInt can not have interior mutability
+    #[allow(clippy::declare_interior_mutable_const)]
     pub const MODULUS: UInt = Parameters::MODULUS;
+
+    #[inline(always)]
+    pub fn modulus() -> UInt {
+        Parameters::MODULUS
+    }
+
+    /// The multiplicative order of the field.
+    ///
+    /// Equal to `modulus() - 1` for prime fields.
+    #[inline(always)]
+    pub fn order() -> UInt {
+        Parameters::ORDER
+    }
 
     #[inline(always)]
     pub fn generator() -> Self {
@@ -180,7 +195,7 @@ where
     // TODO: Make `const fn` after <https://github.com/rust-lang/rust/issues/57563>
     #[inline(always)]
     pub fn from_montgomery(uint: UInt) -> Self {
-        debug_assert!(&uint < &Parameters::MODULUS);
+        debug_assert!(&uint < &Self::modulus());
         // TODO: Uncomment assertion when support in `const fn` is enabled.
         // See https://github.com/rust-lang/rust/issues/57563
         // debug_assert!(n < Self::MODULUS);
@@ -198,7 +213,7 @@ where
 
     #[inline(always)]
     pub fn as_montgomery(&self) -> &UInt {
-        debug_assert!(&self.uint < &Parameters::MODULUS);
+        debug_assert!(&self.uint < &Self::modulus());
         &self.uint
     }
 
@@ -241,6 +256,8 @@ where
         Self::from_montgomery(Parameters::R1)
     }
 
+    // UInt should not have interior mutability
+    #[allow(clippy::borrow_interior_mutable_const)]
     #[inline(always)]
     fn is_one(&self) -> bool {
         self.as_montgomery() == &Parameters::R1
@@ -255,10 +272,10 @@ where
     #[inline(always)]
     fn add_inline(&self, rhs: &Self) -> Self {
         let mut result = self.as_montgomery().add_inline(rhs.as_montgomery());
-        if result >= Self::MODULUS {
-            result.sub_assign_inline(&Self::MODULUS);
+        if result >= Self::modulus() {
+            result.sub_assign_inline(&Self::modulus());
         }
-        debug_assert!(&result < &Parameters::MODULUS);
+        debug_assert!(&result < &Self::modulus());
         Self::from_montgomery(result)
     }
 }
@@ -275,7 +292,7 @@ where
         let borrow = rhs > lhs;
         let mut result = lhs.sub_inline(rhs);
         if borrow {
-            result.add_assign_inline(&Self::MODULUS);
+            result.add_assign_inline(&Self::modulus());
         }
         Self::from_montgomery(result)
     }
@@ -291,7 +308,7 @@ where
         if self.is_zero() {
             Self::zero()
         } else {
-            Self::from_montgomery(Self::MODULUS.sub_inline(self.as_montgomery()))
+            Self::from_montgomery(Self::modulus().sub_inline(self.as_montgomery()))
         }
     }
 }
@@ -402,7 +419,7 @@ where
     // OPT: replace this with a constant array of roots of unity.
     fn root(order: usize) -> Option<Self> {
         let order = order as u64;
-        if let Some((q, rem)) = Parameters::ORDER.div_rem(order) {
+        if let Some((q, rem)) = Self::order().div_rem(order) {
             if rem.is_zero() {
                 Some(Self::generator().pow(&q))
             } else {
@@ -424,7 +441,7 @@ where
 {
     // OPT: replace this with a constant array of roots of unity.
     fn root(order: &UInt) -> Option<Self> {
-        if let Some((q, rem)) = Parameters::ORDER.div_rem(order) {
+        if let Some((q, rem)) = Self::order().div_rem(order) {
             if rem.is_zero() {
                 Some(Self::generator().pow(&q))
             } else {
@@ -458,8 +475,8 @@ where
 
         // TODO: Provide as a constant parameter?
         // Factor order as `signifcant` * 2 ^ `trailing_zeros`
-        let trailing_zeros = Parameters::ORDER.trailing_zeros();
-        let signifcant = Parameters::ORDER >> trailing_zeros;
+        let trailing_zeros = Self::order().trailing_zeros();
+        let signifcant = Self::order() >> trailing_zeros;
         // The starting value of c in the Tonelli Shanks algorithm. We are using the
         // prefered generator, as the quadratic nonresidue the algorithm requires.
         let c_start = Self::generator().pow(&signifcant);
