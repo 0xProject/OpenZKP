@@ -393,19 +393,54 @@ where
     }
 }
 
-// TODO: Generalize over order type
 impl<UInt, Parameters> SquareRoot for Field<UInt, Parameters>
 where
     UInt: FieldUInt + Binary + Shr<usize, Output = UInt>,
     Parameters: FieldParameters<UInt>,
 {
     fn is_quadratic_residue(&self) -> bool {
-        // TODO: const HALF_MODULUS
         self.pow(&(Self::MODULUS >> 1_usize)) != -Self::one()
     }
 
+    // Tonelli-Shanks square root algorithm for prime fields
+    // See 'Handbook of Applied Cryptography' algorithm 3.34
+    // OPT: Use algorithm 3.39 for Proth primes.
     fn square_root(&self) -> Option<Self> {
-        todo!()
+        if self.is_zero() {
+            return Some(Self::zero());
+        }
+        if !self.is_quadratic_residue() {
+            return None;
+        }
+
+        // TODO: Provide as a constant parameter?
+        // Factor order as `signifcant` * 2 ^ `trailing_zeros`
+        let trailing_zeros = Parameters::ORDER.trailing_zeros();
+        let signifcant = Parameters::ORDER >> trailing_zeros;
+        // The starting value of c in the Tonelli Shanks algorithm. We are using the
+        // prefered generator, as the quadratic nonresidue the algorithm requires.
+        let c_start = Self::generator().pow(&signifcant);
+
+        // This algorithm is still correct when the following assertion fails. However,
+        // more efficient algorithms exist when MODULUS % 4 == 3 or MODULUS % 8 == 5
+        // (3.36 and 3.37 in HAC).
+        // debug_assert!(&FieldElement::MODULUS & 7_u64 == 1);
+
+        // OPT: Raising a to a fixed power is a good candidate for an addition chain.
+        let mut root = self.pow(&((signifcant + UInt::one()) >> 1));
+        let mut c = c_start;
+        let inverse = self.inv().unwrap(); // Zero case is handled above
+
+        for i in 1..trailing_zeros {
+            if (root.square() * &inverse).pow(&(UInt::one() << (trailing_zeros - i - 1)))
+                == -Self::one()
+            {
+                root *= &c;
+            }
+            // OPT: Create lookup table for squares of c.
+            c.square_assign();
+        }
+        Some(root)
     }
 }
 
@@ -783,33 +818,39 @@ mod tests {
         a.pow(&FieldElement::MODULUS) == a
     }
 
+    #[quickcheck]
+    fn square_root(a: FieldElement) -> bool {
+        let s = a.square();
+        let r = s.square_root().unwrap();
+        r == a || r == -a
+    }
+
     #[test]
     fn zeroth_root_of_unity() {
         assert_eq!(FieldElement::root(0).unwrap(), FieldElement::one());
     }
 
-    // TODO
-    // #[test]
-    // fn roots_of_unity_squared() {
-    // let powers_of_two = (0..193).map(|n| U256::ONE << n);
-    // let roots_of_unity: Vec<_> = powers_of_two
-    // .clone()
-    // .map(|n| FieldElement::root(n).unwrap())
-    // .collect();
-    //
-    // for (smaller_root, larger_root) in
-    // roots_of_unity[1..].iter().zip(roots_of_unity.as_slice()) {
-    // assert_eq!(smaller_root.square(), *larger_root);
-    // assert!(!smaller_root.is_one());
-    // }
-    // }
+    #[test]
+    fn roots_of_unity_squared() {
+        let powers_of_two = (0..193).map(|n| U256::ONE << n);
+        let roots_of_unity: Vec<_> = powers_of_two
+            .clone()
+            .map(|n| FieldElement::root(&n).unwrap())
+            .collect();
 
-    // #[test]
-    // fn root_of_unity_definition() {
-    //     let powers_of_two = (0..193).map(|n| U256::ONE << n);
-    //     for n in powers_of_two {
-    //         let root_of_unity = FieldElement::root(n.clone()).unwrap();
-    //         assert_eq!(root_of_unity.pow(n), FieldElement::one());
-    //     }
-    // }
+        for (smaller_root, larger_root) in roots_of_unity[1..].iter().zip(roots_of_unity.as_slice())
+        {
+            assert_eq!(smaller_root.square(), *larger_root);
+            assert!(!smaller_root.is_one());
+        }
+    }
+
+    #[test]
+    fn root_of_unity_definition() {
+        let powers_of_two = (0..193).map(|n| U256::ONE << n);
+        for n in powers_of_two {
+            let root_of_unity = FieldElement::root(&n).unwrap();
+            assert_eq!(root_of_unity.pow(&n), FieldElement::one());
+        }
+    }
 }
