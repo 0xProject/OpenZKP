@@ -315,6 +315,10 @@ pub trait Montgomery: Zero {
 
     fn inv_redc<M: MontgomeryParameters<Self>>(&self) -> Option<Self>;
 
+    fn redc<M: MontgomeryParameters<Self>>(lo: &Self, hi: &Self) -> Self {
+        Self::redc_inline::<M>(lo, hi)
+    }
+
     fn square_redc<M: MontgomeryParameters<Self>>(&self) -> Self {
         self.square_redc_inline::<M>()
     }

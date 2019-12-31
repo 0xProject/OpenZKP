@@ -6,8 +6,7 @@ use rand::{
 
 /// Draw from a uniform distribution over all values.
 ///
-/// Requires `UInt` to implement
-/// [`rand::distributions::uniform::SampleUniform`].
+/// Requires `UInt` to implement [`SampleUniform`].
 impl<UInt, Parameters> Distribution<Field<UInt, Parameters>> for Standard
 where
     UInt: FieldUInt + SampleUniform,

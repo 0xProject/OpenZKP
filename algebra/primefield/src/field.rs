@@ -58,10 +58,18 @@ where
     const ORDER: UInt;
 }
 
-/// A finite field.
+/// A finite field of prime order.
 ///
 /// The order `Parameters::MODULUS` must be prime. Internally, values are
 /// represented in Montgomery form for faster multiplications.
+///
+/// At a minimum `UInt` should implement [`Clone`], [`PartialEq`],
+/// [`PartialOrd`], [`Zero`], [`One`], [`AddInline`]`<&Self>`,
+/// [`SubInline`]`<&Self>` and [`Montgomery`].
+///
+/// For [`Root`] it should also implment [`Binary`] and [`DivRem`]. For
+/// [`SquareRoot`] it requires [`Binary`]  and [`Shr`]`<usize>`. For rand
+/// support it requires [`rand::distributions::uniform::SampleUniform`].
 #[allow(clippy::module_name_repetitions)]
 // Derive fails for Clone, PartialEq, Eq, Hash
 pub struct Field<UInt, Parameters>
@@ -142,6 +150,13 @@ where
     pub fn from_uint(uint: &UInt) -> Self {
         debug_assert!(uint < &Self::modulus());
         Self::from_montgomery(uint.to_montgomery::<Parameters>())
+    }
+
+    /// Reduce and construct from `UInt`
+    pub fn from_uint_reduce(uint: &UInt) -> Self {
+        let uint = UInt::redc_inline::<Parameters>(uint, &UInt::zero());
+        let uint = uint.mul_redc_inline::<Parameters>(&Parameters::R3);
+        Self::from_montgomery(uint)
     }
 
     #[inline(always)]
@@ -496,7 +511,6 @@ mod tests {
 
     #[test]
     fn minus_zero_equals_zero() {
-        dbg!(field_element!("00").as_montgomery());
         assert!(FieldElement::zero().is_zero());
         assert!(field_element!("00").is_zero());
         assert_eq!(FieldElement::zero(), FieldElement::zero());

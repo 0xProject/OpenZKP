@@ -154,7 +154,7 @@ impl From<U256> for FieldElement {
 impl From<&U256> for FieldElement {
     #[inline(always)]
     fn from(n: &U256) -> Self {
-        Self::from_uint(n)
+        Self::from_uint_reduce(n)
     }
 }
 
