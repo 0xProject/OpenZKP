@@ -1,20 +1,12 @@
+use crate::{Field, FieldParameters, FieldUInt};
 use std::{
     ops::{Add, AddAssign, BitAnd, Div, DivAssign, Mul, MulAssign, Neg, ShrAssign, Sub, SubAssign},
     prelude::v1::*,
 };
-use zkp_u256::{
-    AddInline, SubInline, MulInline, NegInline
-};
-use crate::{FieldUInt, FieldParameters, Field};
+use zkp_u256::{AddInline, Inv, MulInline, NegInline, SubInline};
 
 macro_rules! assign_ops_from_trait {
-    (
-        $rhs:ident,
-        $op_trait:ident,
-        $op_fn:ident,
-        $trait:ident,
-        $trait_assign_fn:ident
-    ) => {
+    ($rhs:ident, $op_trait:ident, $op_fn:ident, $trait:ident, $trait_assign_fn:ident) => {
         impl<UInt, Parameters> $op_trait<$rhs> for Field<UInt, Parameters>
         where
             UInt: FieldUInt,
@@ -40,13 +32,7 @@ macro_rules! assign_ops_from_trait {
 }
 
 macro_rules! self_ops_from_trait {
-    (
-        $op_trait:ident,
-        $op_fn:ident,
-        $trait:ident,
-        $trait_fn:ident,
-        $trait_assign_fn:ident
-    ) => {
+    ($op_trait:ident, $op_fn:ident, $trait:ident, $trait_fn:ident, $trait_assign_fn:ident) => {
         impl<UInt, Parameters> $op_trait<&Field<UInt, Parameters>> for &Field<UInt, Parameters>
         where
             UInt: FieldUInt,
@@ -105,13 +91,7 @@ macro_rules! self_ops_from_trait {
 }
 
 macro_rules! noncommutative_self_ops_from_trait {
-    (
-        $op_trait:ident,
-        $op_fn:ident,
-        $trait:ident,
-        $trait_fn:ident,
-        $trait_assign_fn:ident
-    ) => {
+    ($op_trait:ident, $op_fn:ident, $trait:ident, $trait_fn:ident, $trait_assign_fn:ident) => {
         impl<UInt, Parameters> $op_trait<&Field<UInt, Parameters>> for &Field<UInt, Parameters>
         where
             UInt: FieldUInt,
@@ -202,7 +182,6 @@ where
         <Self::Output as NegInline>::neg(self)
     }
 }
-
 
 impl<UInt, Parameters> DivAssign<&Self> for Field<UInt, Parameters>
 where

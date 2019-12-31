@@ -1,6 +1,6 @@
 // We want these functions to be called `fft`
 #![allow(clippy::module_name_repetitions)]
-use crate::{FieldElement, One, Pow, Zero};
+use crate::{FieldElement, Inv, One, Pow, Root, Zero};
 use std::prelude::v1::*;
 
 // TODO: Create a dedicated type for permuted vectors

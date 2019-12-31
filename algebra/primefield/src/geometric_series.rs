@@ -1,6 +1,5 @@
-use crate::FieldElement;
+use crate::{FieldElement, One, Pow, Root};
 use std::prelude::v1::*;
-use crate::{Pow, One};
 
 #[derive(Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "std", derive(Debug))]

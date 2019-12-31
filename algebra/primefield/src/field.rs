@@ -1,14 +1,9 @@
-use crate::square_root::square_root;
-use std::{
-    marker::PhantomData,
-    ops::{DivAssign, ShrAssign},
-    prelude::v1::*,
-};
+use crate::{square_root::square_root, Root};
+use std::{marker::PhantomData, ops::ShrAssign, prelude::v1::*};
 use zkp_macros_decl::u256h;
 use zkp_u256::{
-    commutative_binop, noncommutative_binop, to_montgomery_const, AddInline, Binary, DivRem, Inv,
-    Montgomery, MontgomeryParameters, MulInline, NegInline, One, Pow, SquareInline, SubInline,
-    Zero, U256,
+    to_montgomery_const, AddInline, Binary, DivRem, Inv, Montgomery, MontgomeryParameters,
+    MulInline, NegInline, One, Pow, SquareInline, SubInline, Zero, U256,
 };
 // TODO: Implement Serde
 #[cfg(feature = "std")]
@@ -21,12 +16,9 @@ pub trait FieldUInt:
     + PartialOrd
     + Zero
     + One
-    + Montgomery
     + for<'a> AddInline<&'a Self>
     + for<'a> SubInline<&'a Self>
-    + for<'a> DivRem<&'a Self, Quotient = Self, Remainder = Self>
-    + DivRem<u64, Quotient = Self, Remainder = u64>
-    + ShrAssign<usize>
+    + Montgomery
 {
 }
 
@@ -36,12 +28,9 @@ impl<T> FieldUInt for T where
         + PartialOrd
         + Zero
         + One
-        + Montgomery
         + for<'a> AddInline<&'a T>
         + for<'a> SubInline<&'a T>
-        + for<'a> DivRem<&'a Self, Quotient = Self, Remainder = Self>
-        + DivRem<u64, Quotient = Self, Remainder = u64>
-        + ShrAssign<usize>
+        + Montgomery
 {
 }
 
@@ -104,6 +93,9 @@ impl FieldParameters<U256> for StarkFieldParameters {
 pub type FieldElement = Field<U256, StarkFieldParameters>;
 
 impl FieldElement {
+    const ONE: FieldElement = Self::from_uint_const(&U256::ONE);
+    const ZERO: FieldElement = Self::from_uint_const(&U256::ZERO);
+
     /// Creates a constant value from a `U256` constant in Montgomery form.
     // TODO: Make member of `Field` after <https://github.com/rust-lang/rust/issues/57563>
     pub const fn from_montgomery_const(uint: U256) -> Self {
@@ -166,18 +158,6 @@ where
     }
 
     #[inline(always)]
-    pub fn is_zero(&self) -> bool {
-        self.uint == UInt::zero()
-    }
-
-    #[inline(always)]
-    pub fn inv(&self) -> Option<Self> {
-        self.uint
-            .inv_redc::<Parameters>()
-            .map(Self::from_montgomery)
-    }
-
-    #[inline(always)]
     pub fn double(&self) -> Self {
         // TODO: Optimize
         self.clone() + self
@@ -194,22 +174,6 @@ where
     // pub fn square_root(&self) -> Option<Self> {
     // square_root(self)
     // }
-
-    // OPT: replace this with a constant array of roots of unity.
-    // TODO: version with abstracted order
-    pub fn root(order: usize) -> Option<Self> {
-        None
-        // TODO: div_rem trait
-        // if let Some((q, rem)) = Parameters::ORDER.div_rem(order as u64) {
-        // if rem.is_zero() {
-        // Some(Self::GENERATOR.pow(&q))
-        // } else {
-        // None
-        // }
-        // } else {
-        // Some(Self::ONE)
-        // }
-    }
 }
 
 impl<UInt, Parameters> Zero for Field<UInt, Parameters>
@@ -284,7 +248,11 @@ where
 {
     #[inline(always)]
     fn neg_inline(&self) -> Self {
-        Self::from_montgomery(Self::MODULUS.sub_inline(self.as_montgomery()))
+        if self.is_zero() {
+            Self::zero()
+        } else {
+            Self::from_montgomery(Self::MODULUS.sub_inline(self.as_montgomery()))
+        }
     }
 }
 
@@ -328,6 +296,18 @@ where
     }
 }
 
+impl<UInt, Parameters> Pow<usize> for &Field<UInt, Parameters>
+where
+    UInt: FieldUInt,
+    Parameters: FieldParameters<UInt>,
+{
+    type Output = Field<UInt, Parameters>;
+
+    fn pow(self, exponent: usize) -> Self::Output {
+        self.pow(&exponent)
+    }
+}
+
 impl<UInt, Parameters, Exponent> Pow<&Exponent> for &Field<UInt, Parameters>
 where
     UInt: FieldUInt,
@@ -339,12 +319,12 @@ where
     fn pow(self, exponent: &Exponent) -> Self::Output {
         if let Some(msb) = exponent.most_significant_bit() {
             let mut result = Self::Output::one();
-            let mut square: Self::Output = self.clone();
+            let mut square = self.clone();
             for i in (0..=msb) {
                 if exponent.bit(i) {
                     result *= &square;
                 }
-                if !i.is_zero() {
+                if i < msb {
                     square.square_assign();
                 }
             }
@@ -356,15 +336,43 @@ where
     }
 }
 
-impl<UInt, Parameters> Pow<usize> for &Field<UInt, Parameters>
+impl<UInt, Parameters> Root<usize> for Field<UInt, Parameters>
 where
-    UInt: FieldUInt,
+    UInt: FieldUInt + Binary + DivRem<u64, Quotient = UInt, Remainder = u64>,
     Parameters: FieldParameters<UInt>,
 {
-    type Output = Field<UInt, Parameters>;
+    // OPT: replace this with a constant array of roots of unity.
+    fn root(order: usize) -> Option<Self> {
+        let order = order as u64;
+        if let Some((q, rem)) = Parameters::ORDER.div_rem(order) {
+            if rem.is_zero() {
+                Some(Self::generator().pow(&q))
+            } else {
+                None
+            }
+        } else {
+            Some(Self::one())
+        }
+    }
+}
 
-    fn pow(self, exponent: usize) -> Self::Output {
-        self.pow(&exponent)
+// TODO: Generalize over order type
+impl<UInt, Parameters> Root<&UInt> for Field<UInt, Parameters>
+where
+    UInt: FieldUInt + Binary + for<'a> DivRem<&'a UInt, Quotient = UInt, Remainder = UInt>,
+    Parameters: FieldParameters<UInt>,
+{
+    // OPT: replace this with a constant array of roots of unity.
+    fn root(order: &UInt) -> Option<Self> {
+        if let Some((q, rem)) = Parameters::ORDER.div_rem(order) {
+            if rem.is_zero() {
+                Some(Self::generator().pow(&q))
+            } else {
+                None
+            }
+        } else {
+            Some(Self::one())
+        }
     }
 }
 
@@ -713,6 +721,11 @@ mod tests {
     }
 
     #[quickcheck]
+    fn square(a: FieldElement) -> bool {
+        a.square() == &a * &a
+    }
+
+    #[quickcheck]
     fn pow_0(a: FieldElement) -> bool {
         a.pow(0) == FieldElement::one()
     }
@@ -724,7 +737,7 @@ mod tests {
 
     #[quickcheck]
     fn pow_2(a: FieldElement) -> bool {
-        a.pow(2) == a.square()
+        a.pow(2) == &a * &a
     }
 
     #[quickcheck]

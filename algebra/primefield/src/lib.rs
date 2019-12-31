@@ -52,6 +52,7 @@ mod ops;
 #[cfg(feature = "use_rand")]
 mod rand;
 mod square_root;
+mod traits;
 
 pub use field::{FieldElement, StarkFieldParameters};
 
@@ -63,7 +64,10 @@ pub use field::{invert_batch, invert_batch_src_dst};
 // Re-exports dependencies that are part of the public interface
 pub use zkp_u256 as u256;
 
-pub use zkp_u256::{AddInline, MulInline, NegInline, One, Pow, SquareInline, SubInline, Zero};
+// Export and re-export traits
+// TODO: Create a prelude module that contains all the useful ones
+pub use traits::Root;
+pub use zkp_u256::{AddInline, Inv, MulInline, NegInline, One, Pow, SquareInline, SubInline, Zero};
 
 // Std/no-std imports
 #[cfg(not(feature = "std"))]
