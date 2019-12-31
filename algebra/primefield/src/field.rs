@@ -189,6 +189,7 @@ where
         }
     }
 
+    // TODO: from_radix_str
     // #[cfg(feature = "std")]
     // pub fn from_hex_str(s: &str) -> Self {
     // Self::from(UInt::from_hex_str(s))
@@ -210,12 +211,6 @@ where
         // TODO: Optimize
         self.clone() + self + self
     }
-
-    // TODO
-    // #[inline(always)]
-    // pub fn square_root(&self) -> Option<Self> {
-    // square_root(self)
-    // }
 }
 
 impl<UInt, Parameters> Zero for Field<UInt, Parameters>
@@ -274,7 +269,7 @@ where
     fn sub_inline(&self, rhs: &Self) -> Self {
         let lhs = self.as_montgomery();
         let rhs = rhs.as_montgomery();
-        let borrow = rhs >= lhs;
+        let borrow = rhs > lhs;
         let mut result = lhs.sub_inline(rhs);
         if borrow {
             result.add_assign_inline(&Self::MODULUS);
@@ -710,6 +705,10 @@ mod tests {
 
     #[test]
     fn minus_zero_equals_zero() {
+        dbg!(field_element!("00").as_montgomery());
+        assert!(FieldElement::zero().is_zero());
+        assert!(field_element!("00").is_zero());
+        assert_eq!(FieldElement::zero(), FieldElement::zero());
         assert_eq!(-FieldElement::zero(), FieldElement::zero());
     }
 

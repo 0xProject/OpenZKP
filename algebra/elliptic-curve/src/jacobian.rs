@@ -31,7 +31,7 @@ impl Jacobian {
     }
 
     pub fn double_assign(&mut self) {
-        if self.y == FieldElement::zero() {
+        if self.y.is_zero() {
             *self = Self::ZERO;
             return;
         }
@@ -148,10 +148,10 @@ impl AddAssign<&Jacobian> for Jacobian {
     // We need multiplications to implement addition
     #[allow(clippy::suspicious_op_assign_impl)]
     fn add_assign(&mut self, rhs: &Self) {
-        if rhs.z == FieldElement::zero() {
+        if rhs.z.is_zero() {
             return;
         }
-        if self.z == FieldElement::zero() {
+        if self.z.is_zero() {
             // OPT: In non-assign move add, take rhs.
             *self = rhs.clone();
             return;
@@ -166,9 +166,9 @@ impl AddAssign<&Jacobian> for Jacobian {
         let s2 = &rhs.y * &self.z * &z1z1;
         if u1 == u2 {
             return if s1 == s2 {
-                self.double_assign()
+                self.double_assign();
             } else {
-                *self = Self::ZERO
+                *self = Self::ZERO;
             };
         }
         let h = u2 - &u1;
