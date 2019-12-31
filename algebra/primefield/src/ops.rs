@@ -125,8 +125,7 @@ macro_rules! noncommutative_self_ops_from_trait {
 
             #[inline(always)] // Simple wrapper in hot path
             fn $op_fn(self, rhs: Self::Output) -> Self::Output {
-                <Self::Output as $trait<&Self::Output>>::$trait_fn(self, &rhs);
-                rhs
+                <Self::Output as $trait<&Self::Output>>::$trait_fn(self, &rhs)
             }
         }
 
