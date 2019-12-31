@@ -424,8 +424,9 @@ impl Hash for RationalExpression {
                 let x = field_element!(
                     "754ed488ec9208d1c552bb254c0890042078a9e1f7e36072ebff1bf4e193d11b"
                 );
+                // Note - We don't hash in the a because we can deploy the same contract for
+                // identical dense poly, for true equality we need to hash a into it.
                 (p.evaluate(&x)).hash(state);
-                a.hash(state);
             }
             Add(a, b) => {
                 "add".hash(state);
