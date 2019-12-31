@@ -4,7 +4,7 @@ use crate::{
 use std::{cmp::min, ops::Neg, prelude::v1::*};
 use tiny_keccak::Keccak;
 use zkp_macros_decl::field_element;
-use zkp_primefield::{invert_batch_src_dst, FieldElement, Inv, One, Pow, Root, SquareInline, Zero};
+use zkp_primefield::{invert_batch_src_dst, FieldElement, Inv, One, Pow, Root, Zero};
 use zkp_u256::U256;
 
 /// Number of values to calculate at once.
@@ -302,9 +302,8 @@ impl AlgebraicGraph {
         } else {
             // Recognize expressions evaluating to zero or one. Simplify other
             // expressions.
-            // OPT: Add more constants?
-            const ZERO: FieldElement = field_element!("00");
-            const ONE: FieldElement = field_element!("01");
+            // OPT: Add more constants? Maybe evaluate in two points to detect all
+            // constants?
             let operation = match &hash {
                 h if h.is_zero() => Operation::Constant(FieldElement::zero()),
                 h if h.is_one() => Operation::Constant(FieldElement::one()),

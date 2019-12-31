@@ -1,6 +1,6 @@
 use crate::{constraints::*, trace_table::*};
 use std::convert::TryInto;
-use zkp_primefield::{FieldElement, Inv, One, Pow, Root, Zero};
+use zkp_primefield::{FieldElement, One, Pow, Root};
 
 #[allow(clippy::doc_markdown)]
 /// # Check a set of constraints on a trace table
@@ -103,6 +103,7 @@ mod tests {
     use super::*;
     use crate::{traits::tests::Recurrance, Provable, Verifiable};
     use zkp_macros_decl::field_element;
+    use zkp_primefield::Zero;
     use zkp_u256::U256;
 
     #[test]

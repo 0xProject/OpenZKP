@@ -113,7 +113,7 @@ where
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Hash)]
+#[derive(PartialEq, Eq, Clone, Debug, Hash)]
 pub struct StarkFieldParameters();
 
 impl MontgomeryParameters<U256> for StarkFieldParameters {
@@ -180,6 +180,7 @@ where
     // TODO: Make `const fn` after <https://github.com/rust-lang/rust/issues/57563>
     #[inline(always)]
     pub fn from_montgomery(uint: UInt) -> Self {
+        debug_assert!(&uint < &Parameters::MODULUS);
         // TODO: Uncomment assertion when support in `const fn` is enabled.
         // See https://github.com/rust-lang/rust/issues/57563
         // debug_assert!(n < Self::MODULUS);
@@ -197,6 +198,7 @@ where
 
     #[inline(always)]
     pub fn as_montgomery(&self) -> &UInt {
+        debug_assert!(&self.uint < &Parameters::MODULUS);
         &self.uint
     }
 
@@ -256,6 +258,7 @@ where
         if result >= Self::MODULUS {
             result.sub_assign_inline(&Self::MODULUS);
         }
+        debug_assert!(&result < &Parameters::MODULUS);
         Self::from_montgomery(result)
     }
 }
@@ -854,6 +857,9 @@ mod tests {
 
     #[quickcheck]
     fn pow_n(a: FieldElement, n: usize) -> bool {
+        if n > 512 {
+            return true;
+        }
         a.pow(n) == repeat_n(a, n).product()
     }
 

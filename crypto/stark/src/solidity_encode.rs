@@ -5,7 +5,7 @@ use std::{
     cmp::Ordering, collections::HashMap, error::Error, fs::File, io::prelude::*, path::Path,
     prelude::v1::*,
 };
-use zkp_primefield::{FieldElement, Inv, One, Pow, Root, SquareInline, Zero};
+use zkp_primefield::{FieldElement, Pow, Root};
 use zkp_u256::U256;
 
 // Contains the offsets from the context data array pointer to the named values

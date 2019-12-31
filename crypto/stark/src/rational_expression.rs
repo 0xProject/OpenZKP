@@ -9,7 +9,7 @@ use std::{
     prelude::v1::*,
 };
 use zkp_macros_decl::field_element;
-use zkp_primefield::{FieldElement, Inv, One, Pow, Root, Zero};
+use zkp_primefield::{FieldElement, Inv, One, Pow, Zero};
 use zkp_u256::U256;
 
 // TODO: Rename to algebraic expression

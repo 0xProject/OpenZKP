@@ -3,7 +3,7 @@ use crate::{
     Verifiable,
 };
 use std::{collections::HashMap, convert::TryFrom};
-use zkp_primefield::{FieldElement, Inv, One, Pow, Root, Zero};
+use zkp_primefield::{FieldElement, Pow, Root};
 
 // TODO: Introduce prover/verifier distinction
 
@@ -447,7 +447,7 @@ mod tests {
     use super::*;
     use proptest::prelude::*;
     use zkp_macros_decl::field_element;
-    use zkp_primefield::u256::U256;
+    use zkp_primefield::{u256::U256, One};
 
     /// Generates an arbitrary permutation on n numbers
     fn arb_permutation(n: usize) -> impl Strategy<Value = Vec<usize>> {
@@ -710,7 +710,8 @@ mod tests {
             // TODO: Make prove and verify support empty/tiny traces correctly
             prop_assume!(component.trace.num_rows() >= 2);
             prop_assume!(component.trace.num_columns() >= 1);
-            let proof = component.prove(()).unwrap();
+            let proof = component.prove(());
+            let proof = proof.expect("Expected proof");
             component.verify(&proof).unwrap();
         }
     }

@@ -723,7 +723,7 @@ fn perform_fri_layering(
                 )
             }
             2 => {
-                let coefficient_2 = coefficient.pow(2_usize);
+                let coefficient_2 = coefficient.square();
                 next_layer.extend(
                     layer
                         .tuples()
@@ -801,13 +801,16 @@ fn decommit_fri_layers_and_trees(
             .map(|x| x / coset_size)
             .dedup()
             .collect();
+        dbg!(&new_indices);
 
         for i in &new_indices {
             // TODO: Write entire tree.leaf(i)
             for j in 0..coset_size {
                 let n = i * coset_size + j;
                 match previous_indices.binary_search(&n) {
-                    Ok(_) => (),
+                    Ok(_) => {
+                        dbg!(&tree.leaves().layer[n]);
+                    }
                     _ => proof.write(&tree.leaves().layer[n]),
                 };
             }
@@ -870,6 +873,7 @@ mod tests {
 
     #[test]
     fn fib_test_1024_python_witness() {
+        crate::tests::init();
         let recurrance = Recurrance {
             index:         1000,
             initial_value: field_element!("cafebabe"),

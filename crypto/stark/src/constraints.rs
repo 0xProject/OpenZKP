@@ -1,7 +1,7 @@
 use crate::rational_expression::RationalExpression;
 use itertools::Itertools;
 use std::{collections::BTreeSet, fmt, prelude::v1::*};
-use zkp_primefield::{FieldElement, Inv, One, Pow, Root, SquareInline, Zero};
+use zkp_primefield::{FieldElement, Root};
 
 #[derive(Clone, Debug)]
 pub enum Error {

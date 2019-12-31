@@ -3,7 +3,6 @@ use crate::constraint_check::{check_constraints, check_specific_constraint};
 #[cfg(feature = "prover")]
 use crate::{prove, ProverError, TraceTable};
 use crate::{verify, Constraints, Proof, VerifierError};
-use zkp_primefield::{FieldElement, Inv, One, Pow, Root, Zero};
 
 pub trait Verifiable {
     fn constraints(&self) -> Constraints;
@@ -47,7 +46,7 @@ pub(crate) mod tests {
     use crate::RationalExpression;
     use quickcheck::{Arbitrary, Gen};
     use std::convert::TryInto;
-    use zkp_primefield::FieldElement;
+    use zkp_primefield::{FieldElement, One, Pow, Root, Zero};
 
     // False positives on the Latex math.
     #[allow(clippy::doc_markdown)]

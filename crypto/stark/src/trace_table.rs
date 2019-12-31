@@ -7,7 +7,7 @@ use std::{
 use zkp_mmap_vec::MmapVec;
 use zkp_primefield::{
     fft::{ifft_permuted, permute},
-    FieldElement, Inv, One, Pow, Root, Zero,
+    FieldElement, Root, Zero,
 };
 
 #[derive(Clone, PartialEq)]

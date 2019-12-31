@@ -7,7 +7,7 @@ use std::{collections::BTreeMap, fmt, prelude::v1::*};
 use zkp_hash::Hash;
 use zkp_merkle_tree::{Commitment, Error as MerkleError, Proof as MerkleProof};
 use zkp_primefield::{
-    fft, geometric_series::root_series, FieldElement, Inv, One, Pow, Root, SquareInline, Zero,
+    fft, geometric_series::root_series, FieldElement, One, Pow, Root, SquareInline, Zero,
 };
 use zkp_u256::U256;
 
@@ -250,6 +250,7 @@ pub fn verify(constraints: &Constraints, proof: &Proof) -> Result<()> {
         eval_domain_size.trailing_zeros(),
         &mut channel,
     );
+    dbg!(&queries);
 
     // Get values and check decommitment of low degree extension
     let lde_values: Vec<(usize, Vec<U256>)> = queries
@@ -535,6 +536,7 @@ fn out_of_domain_element(
             * (constraint_oods_value - &oods_values[trace_arguments.len() + i])
             / (&x_transform - oods_point.pow(constraint_oods_values.len()));
     }
+    dbg!(x_cord, &r);
     Ok(r)
 }
 
