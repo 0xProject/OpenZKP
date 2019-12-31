@@ -1,4 +1,4 @@
-use crate::{field::FieldElement, One, Pow, SquareInline, Zero};
+use crate::{field::FieldElement, One, Pow, SquareInline, SquareRoot, Zero};
 use zkp_macros_decl::u256h;
 use zkp_u256::U256;
 

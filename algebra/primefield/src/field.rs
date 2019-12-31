@@ -1,5 +1,5 @@
-use crate::{square_root::square_root, Root};
-use std::{marker::PhantomData, ops::ShrAssign, prelude::v1::*};
+use crate::{square_root::square_root, Root, SquareRoot};
+use std::{marker::PhantomData, ops::Shr, prelude::v1::*};
 use zkp_macros_decl::u256h;
 use zkp_u256::{
     to_montgomery_const, AddInline, Binary, DivRem, Inv, Montgomery, MontgomeryParameters,
@@ -50,7 +50,7 @@ where
 /// The order `Parameters::MODULUS` must be prime. Internally, values are
 /// represented in Montgomery form for faster multiplications.
 #[allow(clippy::module_name_repetitions)]
-#[derive(PartialEq, Eq, Hash)]
+#[derive(Hash)]
 pub struct Field<UInt, Parameters>
 where
     UInt: FieldUInt,
@@ -71,6 +71,23 @@ where
     fn clone(&self) -> Self {
         Self::from_montgomery(self.as_montgomery().clone())
     }
+}
+
+impl<UInt, Parameters> PartialEq for Field<UInt, Parameters>
+where
+    UInt: FieldUInt,
+    Parameters: FieldParameters<UInt>,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.as_montgomery() == other.as_montgomery()
+    }
+}
+
+impl<UInt, Parameters> Eq for Field<UInt, Parameters>
+where
+    UInt: FieldUInt,
+    Parameters: FieldParameters<UInt>,
+{
 }
 
 impl MontgomeryParameters<U256> for StarkFieldParameters {
@@ -373,6 +390,22 @@ where
         } else {
             Some(Self::one())
         }
+    }
+}
+
+// TODO: Generalize over order type
+impl<UInt, Parameters> SquareRoot for Field<UInt, Parameters>
+where
+    UInt: FieldUInt + Binary + Shr<usize, Output = UInt>,
+    Parameters: FieldParameters<UInt>,
+{
+    fn is_quadratic_residue(&self) -> bool {
+        // TODO: const HALF_MODULUS
+        self.pow(&(Self::MODULUS >> 1_usize)) != -Self::one()
+    }
+
+    fn square_root(&self) -> Option<Self> {
+        todo!()
     }
 }
 

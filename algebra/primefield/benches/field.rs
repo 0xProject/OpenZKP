@@ -1,7 +1,7 @@
 #![warn(clippy::all)]
 use criterion::{black_box, criterion_group, Criterion};
 use zkp_macros_decl::u256h;
-use zkp_primefield::FieldElement;
+use zkp_primefield::{FieldElement, Inv, SquareRoot};
 use zkp_u256::U256;
 
 fn field_add(crit: &mut Criterion) {
