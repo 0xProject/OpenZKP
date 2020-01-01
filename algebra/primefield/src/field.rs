@@ -1,4 +1,4 @@
-use crate::{Root, SquareRoot};
+use crate::{FieldUInt, Root, SquareRoot};
 use std::{
     hash::{Hash, Hasher},
     marker::PhantomData,
@@ -6,42 +6,11 @@ use std::{
     prelude::v1::*,
 };
 use zkp_u256::{
-    AddInline, Binary, DivRem, Inv, Montgomery, MontgomeryParameters, MulInline, NegInline, One,
-    Pow, SquareInline, SubInline, Zero,
+    AddInline, Binary, DivRem, Inv, MontgomeryParameters, MulInline, NegInline, One, Pow,
+    SquareInline, SubInline, Zero,
 };
 // TODO: Implement Serde
 #[cfg(feature = "std")]
-
-/// Requirements for the base unsigned integer type
-// TODO: Fix naming
-#[allow(clippy::module_name_repetitions)]
-// Lint has a false positive here
-#[allow(single_use_lifetimes)]
-pub trait FieldUInt:
-    Clone
-    + PartialEq
-    + PartialOrd
-    + Zero
-    + One
-    + for<'a> AddInline<&'a Self>
-    + for<'a> SubInline<&'a Self>
-    + Montgomery
-{
-}
-
-// Lint has a false positive here
-#[allow(single_use_lifetimes)]
-impl<T> FieldUInt for T where
-    T: Clone
-        + PartialEq
-        + PartialOrd
-        + Zero
-        + One
-        + for<'a> AddInline<&'a T>
-        + for<'a> SubInline<&'a T>
-        + Montgomery
-{
-}
 
 /// Required constant parameters for the prime field
 // TODO: Make these and Tonelly-Shanks parameters optional and enable
