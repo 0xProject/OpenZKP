@@ -1,7 +1,6 @@
 use crate::{Root, SquareRoot, UInt as FieldUInt};
 use std::{
     hash::{Hash, Hasher},
-    iter::Product,
     marker::PhantomData,
     ops::Shr,
     prelude::v1::*,
@@ -37,7 +36,9 @@ where
 ///
 /// For [`Root`] it should also implment [`Binary`] and [`DivRem`]. For
 /// [`SquareRoot`] it requires [`Binary`]  and [`Shr`]`<usize>`. For rand
-/// support it requires [`rand::distributions::uniform::SampleUniform`].
+/// support it requires [`rand::distributions::uniform::SampleUniform`]. For
+/// `quickcheck` support `Parameters` needs to be `'static + Send` (which it
+/// really should anyway).
 // Derive fails for Clone, PartialEq, Eq, Hash
 pub struct PrimeField<UInt, Parameters>
 where

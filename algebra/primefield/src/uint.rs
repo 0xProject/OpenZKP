@@ -1,8 +1,7 @@
 // False positives, see <https://github.com/rust-lang/rust/issues/55058>
 #![allow(single_use_lifetimes)]
 
-use crate::{AddInline, Inv, MulInline, One, Pow, SquareInline, SubInline, Zero};
-use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
+use crate::{AddInline, One, SubInline, Zero};
 use zkp_u256::Montgomery;
 
 /// Requirements for the base unsigned integer type

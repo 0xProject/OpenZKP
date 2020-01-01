@@ -53,6 +53,8 @@ mod prime_field;
 mod proth_field;
 #[cfg(feature = "use_rand")]
 mod rand;
+#[cfg(any(test, feature = "quickcheck"))]
+mod test;
 mod traits;
 mod uint;
 

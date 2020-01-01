@@ -171,26 +171,6 @@ impl From<&FieldElement> for U256 {
         n.to_uint()
     }
 }
-
-#[cfg(any(test, feature = "quickcheck"))]
-use quickcheck::{Arbitrary, Gen};
-
-#[cfg(any(test, feature = "quickcheck"))]
-impl Arbitrary for FieldElement {
-    #[inline(always)]
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
-        // TODO: Generate 0, 1, p/2 and -1
-        Self::from_montgomery(U256::arbitrary(g) % Self::MODULUS)
-    }
-}
-
-#[allow(unused_macros)]
-macro_rules! field_h {
-    (- $e:expr) => {
-        field_h!($e).neg()
-    };
-}
-
 // Quickcheck needs pass by value
 #[allow(clippy::needless_pass_by_value)]
 #[cfg(test)]
