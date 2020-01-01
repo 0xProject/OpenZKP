@@ -74,7 +74,7 @@ pub use zkp_u256 as u256;
 pub use traits::{FieldLike, RefFieldLike, Root, SquareRoot};
 pub use zkp_u256::{AddInline, Inv, MulInline, NegInline, One, Pow, SquareInline, SubInline, Zero};
 
-pub use uint::FieldUInt;
+pub use uint::UInt;
 
 // Std/no-std imports
 #[cfg(not(feature = "std"))]

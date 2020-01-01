@@ -10,7 +10,7 @@ use zkp_u256::Montgomery;
 #[allow(clippy::module_name_repetitions)]
 // Lint has a false positive here
 #[allow(single_use_lifetimes)]
-pub trait FieldUInt:
+pub trait UInt:
     Clone
     + PartialEq
     + PartialOrd
@@ -24,7 +24,7 @@ pub trait FieldUInt:
 
 // Lint has a false positive here
 #[allow(single_use_lifetimes)]
-impl<T> FieldUInt for T where
+impl<T> UInt for T where
     T: Clone
         + PartialEq
         + PartialOrd

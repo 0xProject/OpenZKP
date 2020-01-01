@@ -1,4 +1,4 @@
-use crate::{FieldUInt, Root, SquareRoot};
+use crate::{Root, SquareRoot, UInt as FieldUInt};
 use std::{
     hash::{Hash, Hasher},
     marker::PhantomData,

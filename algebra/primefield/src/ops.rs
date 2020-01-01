@@ -1,7 +1,7 @@
 // Using `Self` makes things less readable here.
 #![allow(clippy::use_self)]
 
-use crate::{FieldParameters, FieldUInt, PrimeField};
+use crate::{FieldParameters, PrimeField, UInt as FieldUInt};
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 use zkp_u256::{AddInline, Inv, MulInline, NegInline, SubInline};
 

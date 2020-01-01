@@ -1,4 +1,4 @@
-use crate::{FieldParameters, FieldUInt, PrimeField};
+use crate::{FieldParameters, PrimeField, UInt as FieldUInt};
 use rand::{
     distributions::{uniform::SampleUniform, Distribution, Standard, Uniform},
     Rng,
