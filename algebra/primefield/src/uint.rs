@@ -21,9 +21,6 @@ pub trait UInt:
     + Montgomery
 {
 }
-
-// Lint has a false positive here
-#[allow(single_use_lifetimes)]
 impl<T> UInt for T where
     T: Clone
         + PartialEq

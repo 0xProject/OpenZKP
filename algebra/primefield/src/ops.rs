@@ -1,8 +1,11 @@
 // Using `Self` makes things less readable here.
 #![allow(clippy::use_self)]
 
-use crate::{FieldParameters, PrimeField, UInt as FieldUInt};
-use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
+use crate::{FieldParameters, One, PrimeField, UInt as FieldUInt, Zero};
+use std::{
+    iter::{Product, Sum},
+    ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign},
+};
 use zkp_u256::{AddInline, Inv, MulInline, NegInline, SubInline};
 
 macro_rules! assign_ops_from_trait {
@@ -269,5 +272,45 @@ where
     #[inline(always)]
     fn div(self, rhs: Self::Output) -> Self::Output {
         self * rhs.inv().expect("Division by zero")
+    }
+}
+
+impl<UInt, Parameters> Sum<Self> for PrimeField<UInt, Parameters>
+where
+    UInt: FieldUInt,
+    Parameters: FieldParameters<UInt>,
+{
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        iter.fold(Self::zero(), Add::add)
+    }
+}
+
+impl<'a, UInt, Parameters> Sum<&'a Self> for PrimeField<UInt, Parameters>
+where
+    UInt: FieldUInt,
+    Parameters: FieldParameters<UInt>,
+{
+    fn sum<I: Iterator<Item = &'a Self>>(iter: I) -> Self {
+        iter.fold(Self::zero(), |a, b| a + b)
+    }
+}
+
+impl<UInt, Parameters> Product<Self> for PrimeField<UInt, Parameters>
+where
+    UInt: FieldUInt,
+    Parameters: FieldParameters<UInt>,
+{
+    fn product<I: Iterator<Item = Self>>(iter: I) -> Self {
+        iter.fold(Self::one(), Mul::mul)
+    }
+}
+
+impl<'a, UInt, Parameters> Product<&'a Self> for PrimeField<UInt, Parameters>
+where
+    UInt: FieldUInt,
+    Parameters: FieldParameters<UInt>,
+{
+    fn product<I: Iterator<Item = &'a Self>>(iter: I) -> Self {
+        iter.fold(Self::one(), |a, b| a * b)
     }
 }

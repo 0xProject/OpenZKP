@@ -46,10 +46,10 @@
 #![allow(clippy::inline_always)]
 
 pub mod fft;
-mod field;
 mod field_element;
 pub mod geometric_series;
 mod ops;
+mod prime_field;
 mod proth_field;
 #[cfg(feature = "use_rand")]
 mod rand;
@@ -57,7 +57,7 @@ mod traits;
 mod uint;
 
 // Generic field implementation
-pub use field::{FieldParameters, PrimeField};
+pub use prime_field::{FieldParameters, PrimeField};
 pub use zkp_u256::MontgomeryParameters;
 
 // The smallest 252-bit Proth field

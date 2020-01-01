@@ -172,15 +172,6 @@ impl From<&FieldElement> for U256 {
     }
 }
 
-impl core::iter::Product for FieldElement {
-    fn product<I: Iterator<Item = FieldElement>>(iter: I) -> Self {
-        use std::ops::Mul;
-        iter.fold(Self::one(), Mul::mul)
-    }
-}
-
-// TODO: Implement Sum, Successors, ... for FieldElement.
-
 #[cfg(any(test, feature = "quickcheck"))]
 use quickcheck::{Arbitrary, Gen};
 

@@ -1,6 +1,7 @@
 use crate::{Root, SquareRoot, UInt as FieldUInt};
 use std::{
     hash::{Hash, Hasher},
+    iter::Product,
     marker::PhantomData,
     ops::Shr,
     prelude::v1::*,
@@ -9,8 +10,6 @@ use zkp_u256::{
     AddInline, Binary, DivRem, Inv, MontgomeryParameters, MulInline, NegInline, One, Pow,
     SquareInline, SubInline, Zero,
 };
-// TODO: Implement Serde
-#[cfg(feature = "std")]
 
 /// Required constant parameters for the prime field
 // TODO: Make these and Tonelly-Shanks parameters optional and enable
@@ -39,16 +38,15 @@ where
 /// For [`Root`] it should also implment [`Binary`] and [`DivRem`]. For
 /// [`SquareRoot`] it requires [`Binary`]  and [`Shr`]`<usize>`. For rand
 /// support it requires [`rand::distributions::uniform::SampleUniform`].
-#[allow(clippy::module_name_repetitions)]
 // Derive fails for Clone, PartialEq, Eq, Hash
 pub struct PrimeField<UInt, Parameters>
 where
     UInt: FieldUInt,
     Parameters: FieldParameters<UInt>,
 {
-    // TODO: un-pub. They are pub so FieldElement can have const-fn constructors.usize
-    pub(crate) uint:        UInt,
-    pub(crate) _parameters: PhantomData<Parameters>,
+    // TODO: un-pub. They are pub so FieldElement can have const-fn constructors.
+    pub uint:        UInt,
+    pub _parameters: PhantomData<Parameters>,
 }
 
 impl<UInt, Parameters> PrimeField<UInt, Parameters>
