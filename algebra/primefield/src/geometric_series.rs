@@ -1,17 +1,34 @@
-use crate::{FieldElement, One, Pow, Root};
+use crate::{FieldElement, FieldLike, One, Pow, Root};
 use std::prelude::v1::*;
 
 #[derive(Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "std", derive(Debug))]
-pub struct GeometricSeries {
-    current: FieldElement,
-    step:    FieldElement,
+pub struct GeometricIter<Field>
+where
+    Field: FieldLike,
+    for<'a> &'a Field: Pow<usize, Output = Field>,
+    for<'a> &'a Field: std::ops::Mul<Field, Output = Field>,
+    for<'a, 'b> &'a Field: std::ops::Mul<&'b Field, Output = Field>,
+{
+    current: Field,
+    step:    Field,
     length:  usize,
 }
 
-impl GeometricSeries {
-    pub fn at(&self, index: usize) -> FieldElement {
+impl<Field> GeometricIter<Field>
+where
+    Field: FieldLike,
+    for<'a> &'a Field: Pow<usize, Output = Field>,
+    for<'a> &'a Field: std::ops::Mul<Field, Output = Field>,
+    for<'a, 'b> &'a Field: std::ops::Mul<&'b Field, Output = Field>,
+{
+    pub fn at(&self, index: usize) -> Field {
         &self.current * self.step.pow(index)
+    }
+
+    pub fn skip(mut self, n: usize) -> Self {
+        self.current *= self.step.pow(n);
+        self
     }
 
     /// Transform the series
@@ -23,8 +40,14 @@ impl GeometricSeries {
     }
 }
 
-impl Iterator for GeometricSeries {
-    type Item = FieldElement;
+impl<Field> Iterator for GeometricIter<Field>
+where
+    Field: FieldLike,
+    for<'a> &'a Field: Pow<usize, Output = Field>,
+    for<'a> &'a Field: std::ops::Mul<Field, Output = Field>,
+    for<'a, 'b> &'a Field: std::ops::Mul<&'b Field, Output = Field>,
+{
+    type Item = Field;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.length == 0 {
@@ -46,21 +69,30 @@ impl Iterator for GeometricSeries {
 // TODO: Implement multiplication for GeometricSeries x GeometricSeries and
 // GeometricSeries x FieldElement.
 
-pub fn geometric_series(base: &FieldElement, step: &FieldElement) -> GeometricSeries {
-    GeometricSeries {
+pub fn geometric_series<Field>(base: &Field, step: &Field) -> GeometricIter<Field>
+where
+    Field: FieldLike,
+    for<'a> &'a Field: Pow<usize, Output = Field>,
+    for<'a> &'a Field: std::ops::Mul<Field, Output = Field>,
+    for<'a, 'b> &'a Field: std::ops::Mul<&'b Field, Output = Field>,
+{
+    GeometricIter {
         current: base.clone(),
         step:    step.clone(),
         length:  usize::max_value(),
     }
 }
 
-pub fn root_series(order: usize) -> GeometricSeries {
-    let root = FieldElement::root(order).expect("No root found of given order.");
-    GeometricSeries {
-        current: FieldElement::one(),
-        step:    root,
-        length:  order,
-    }
+pub fn root_series<Field>(order: usize) -> GeometricIter<Field>
+where
+    Field: FieldLike,
+    Field: Root<usize>,
+    for<'a> &'a Field: Pow<usize, Output = Field>,
+    for<'a> &'a Field: std::ops::Mul<Field, Output = Field>,
+    for<'a, 'b> &'a Field: std::ops::Mul<&'b Field, Output = Field>,
+{
+    let root = Field::root(order).expect("No root found of given order.");
+    geometric_series(&Field::one(), &root)
 }
 
 #[cfg(test)]

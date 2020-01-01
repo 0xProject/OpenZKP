@@ -3,7 +3,7 @@ use crate::Zero;
 
 // TODO: Similar OpInline tratis for BitAnd, BitOr, BitXor, ...
 
-pub trait AddInline<Rhs = Self>: Sized {
+pub trait AddInline<Rhs>: Sized {
     /// **Note.** Implementers *must* add the `#[inline(always)]` attribute
     fn add_inline(&self, rhs: Rhs) -> Self;
 
@@ -27,7 +27,7 @@ pub trait AddInline<Rhs = Self>: Sized {
     }
 }
 
-pub trait AddFullInline<Rhs = Self>: Sized {
+pub trait AddFullInline<Rhs>: Sized {
     type High;
 
     /// **Note.** Implementers *must* add the `#[inline(always)]` attribute
@@ -79,7 +79,7 @@ pub trait NegInline: Sized {
     }
 }
 
-pub trait SubInline<Rhs = Self>: Sized {
+pub trait SubInline<Rhs>: Sized {
     /// **Note.** Implementers *must* add the `#[inline(always)]` attribute
     fn sub_inline(&self, rhs: Rhs) -> Self;
 
@@ -103,7 +103,7 @@ pub trait SubInline<Rhs = Self>: Sized {
     }
 }
 
-pub trait SubFullInline<Rhs = Self>: Sized {
+pub trait SubFullInline<Rhs>: Sized {
     type High;
 
     /// **Note.** Implementers *must* add the `#[inline(always)]` attribute
@@ -131,7 +131,7 @@ pub trait SubFullInline<Rhs = Self>: Sized {
     }
 }
 
-pub trait SubFromInline<Rhs = Self> {
+pub trait SubFromInline<Rhs> {
     /// **Note.** Implementers *must* add the `#[inline(always)]` attribute
     fn sub_from_assign_inline(&mut self, rhs: Rhs);
 
@@ -142,7 +142,7 @@ pub trait SubFromInline<Rhs = Self> {
     }
 }
 
-pub trait SubFromFullInline<Rhs = Self> {
+pub trait SubFromFullInline<Rhs> {
     type High;
 
     /// **Note.** Implementers *must* add the `#[inline(always)]` attribute

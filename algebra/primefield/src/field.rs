@@ -497,6 +497,11 @@ mod tests {
     use zkp_macros_decl::{field_element, u256h};
     use zkp_u256::U256;
 
+    // Field is FieldLike
+    fn test_field_like() {
+        // let n: FieldLike
+    }
+
     #[test]
     fn test_literal() {
         const SMALL: FieldElement = field_element!("0F");
