@@ -56,7 +56,7 @@ mod rand;
 mod traits;
 
 // Generic field implementation
-pub use field::{Field, FieldParameters, FieldUInt};
+pub use field::{FieldParameters, FieldUInt, PrimeField};
 pub use zkp_u256::MontgomeryParameters;
 
 // The smallest 252-bit Proth field

@@ -72,7 +72,7 @@ where
 /// support it requires [`rand::distributions::uniform::SampleUniform`].
 #[allow(clippy::module_name_repetitions)]
 // Derive fails for Clone, PartialEq, Eq, Hash
-pub struct Field<UInt, Parameters>
+pub struct PrimeField<UInt, Parameters>
 where
     UInt: FieldUInt,
     Parameters: FieldParameters<UInt>,
@@ -82,7 +82,7 @@ where
     pub(crate) _parameters: PhantomData<Parameters>,
 }
 
-impl<UInt, Parameters> Field<UInt, Parameters>
+impl<UInt, Parameters> PrimeField<UInt, Parameters>
 where
     UInt: FieldUInt,
     Parameters: FieldParameters<UInt>,
@@ -172,7 +172,7 @@ where
     }
 }
 
-impl<UInt, Parameters> Clone for Field<UInt, Parameters>
+impl<UInt, Parameters> Clone for PrimeField<UInt, Parameters>
 where
     UInt: FieldUInt,
     Parameters: FieldParameters<UInt>,
@@ -182,7 +182,7 @@ where
     }
 }
 
-impl<UInt, Parameters> PartialEq for Field<UInt, Parameters>
+impl<UInt, Parameters> PartialEq for PrimeField<UInt, Parameters>
 where
     UInt: FieldUInt,
     Parameters: FieldParameters<UInt>,
@@ -192,7 +192,7 @@ where
     }
 }
 
-impl<UInt, Parameters> Eq for Field<UInt, Parameters>
+impl<UInt, Parameters> Eq for PrimeField<UInt, Parameters>
 where
     UInt: FieldUInt,
     Parameters: FieldParameters<UInt>,
@@ -200,7 +200,7 @@ where
 }
 
 /// Implements [`Hash`] when `UInt` does.
-impl<UInt, Parameters> Hash for Field<UInt, Parameters>
+impl<UInt, Parameters> Hash for PrimeField<UInt, Parameters>
 where
     UInt: FieldUInt + Hash,
     Parameters: FieldParameters<UInt>,
@@ -210,7 +210,7 @@ where
     }
 }
 
-impl<UInt, Parameters> Zero for Field<UInt, Parameters>
+impl<UInt, Parameters> Zero for PrimeField<UInt, Parameters>
 where
     UInt: FieldUInt,
     Parameters: FieldParameters<UInt>,
@@ -226,7 +226,7 @@ where
     }
 }
 
-impl<UInt, Parameters> One for Field<UInt, Parameters>
+impl<UInt, Parameters> One for PrimeField<UInt, Parameters>
 where
     UInt: FieldUInt,
     Parameters: FieldParameters<UInt>,
@@ -244,7 +244,7 @@ where
     }
 }
 
-impl<UInt, Parameters> AddInline<&Self> for Field<UInt, Parameters>
+impl<UInt, Parameters> AddInline<&Self> for PrimeField<UInt, Parameters>
 where
     UInt: FieldUInt,
     Parameters: FieldParameters<UInt>,
@@ -260,7 +260,7 @@ where
     }
 }
 
-impl<UInt, Parameters> SubInline<&Self> for Field<UInt, Parameters>
+impl<UInt, Parameters> SubInline<&Self> for PrimeField<UInt, Parameters>
 where
     UInt: FieldUInt,
     Parameters: FieldParameters<UInt>,
@@ -278,7 +278,7 @@ where
     }
 }
 
-impl<UInt, Parameters> NegInline for Field<UInt, Parameters>
+impl<UInt, Parameters> NegInline for PrimeField<UInt, Parameters>
 where
     UInt: FieldUInt,
     Parameters: FieldParameters<UInt>,
@@ -293,7 +293,7 @@ where
     }
 }
 
-impl<UInt, Parameters> SquareInline for Field<UInt, Parameters>
+impl<UInt, Parameters> SquareInline for PrimeField<UInt, Parameters>
 where
     UInt: FieldUInt,
     Parameters: FieldParameters<UInt>,
@@ -304,7 +304,7 @@ where
     }
 }
 
-impl<UInt, Parameters> MulInline<&Self> for Field<UInt, Parameters>
+impl<UInt, Parameters> MulInline<&Self> for PrimeField<UInt, Parameters>
 where
     UInt: FieldUInt,
     Parameters: FieldParameters<UInt>,
@@ -318,39 +318,39 @@ where
     }
 }
 
-impl<UInt, Parameters> Inv for &Field<UInt, Parameters>
+impl<UInt, Parameters> Inv for &PrimeField<UInt, Parameters>
 where
     UInt: FieldUInt,
     Parameters: FieldParameters<UInt>,
 {
-    type Output = Option<Field<UInt, Parameters>>;
+    type Output = Option<PrimeField<UInt, Parameters>>;
 
     #[inline(always)] // Simple wrapper
     fn inv(self) -> Self::Output {
         self.as_montgomery()
             .inv_redc::<Parameters>()
-            .map(Field::<UInt, Parameters>::from_montgomery)
+            .map(PrimeField::<UInt, Parameters>::from_montgomery)
     }
 }
 
-impl<UInt, Parameters> Pow<usize> for &Field<UInt, Parameters>
+impl<UInt, Parameters> Pow<usize> for &PrimeField<UInt, Parameters>
 where
     UInt: FieldUInt,
     Parameters: FieldParameters<UInt>,
 {
-    type Output = Field<UInt, Parameters>;
+    type Output = PrimeField<UInt, Parameters>;
 
     fn pow(self, exponent: usize) -> Self::Output {
         self.pow(&exponent)
     }
 }
 
-impl<UInt, Parameters> Pow<isize> for &Field<UInt, Parameters>
+impl<UInt, Parameters> Pow<isize> for &PrimeField<UInt, Parameters>
 where
     UInt: FieldUInt,
     Parameters: FieldParameters<UInt>,
 {
-    type Output = Option<Field<UInt, Parameters>>;
+    type Output = Option<PrimeField<UInt, Parameters>>;
 
     fn pow(self, exponent: isize) -> Self::Output {
         let negative = exponent < 0;
@@ -363,13 +363,13 @@ where
     }
 }
 
-impl<UInt, Parameters, Exponent> Pow<&Exponent> for &Field<UInt, Parameters>
+impl<UInt, Parameters, Exponent> Pow<&Exponent> for &PrimeField<UInt, Parameters>
 where
     UInt: FieldUInt,
     Parameters: FieldParameters<UInt>,
     Exponent: Binary,
 {
-    type Output = Field<UInt, Parameters>;
+    type Output = PrimeField<UInt, Parameters>;
 
     fn pow(self, exponent: &Exponent) -> Self::Output {
         if let Some(msb) = exponent.most_significant_bit() {
@@ -391,7 +391,7 @@ where
     }
 }
 
-impl<UInt, Parameters> Root<usize> for Field<UInt, Parameters>
+impl<UInt, Parameters> Root<usize> for PrimeField<UInt, Parameters>
 where
     UInt: FieldUInt + Binary + DivRem<u64, Quotient = UInt, Remainder = u64>,
     Parameters: FieldParameters<UInt>,
@@ -414,7 +414,7 @@ where
 // TODO: Generalize over order type
 // Lint has a false positive here
 #[allow(single_use_lifetimes)]
-impl<UInt, Parameters> Root<&UInt> for Field<UInt, Parameters>
+impl<UInt, Parameters> Root<&UInt> for PrimeField<UInt, Parameters>
 where
     UInt: FieldUInt + Binary + for<'a> DivRem<&'a UInt, Quotient = UInt, Remainder = UInt>,
     Parameters: FieldParameters<UInt>,
@@ -433,7 +433,7 @@ where
     }
 }
 
-impl<UInt, Parameters> SquareRoot for Field<UInt, Parameters>
+impl<UInt, Parameters> SquareRoot for PrimeField<UInt, Parameters>
 where
     UInt: FieldUInt + Binary + Shr<usize, Output = UInt>,
     Parameters: FieldParameters<UInt>,

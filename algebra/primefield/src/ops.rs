@@ -1,31 +1,31 @@
 // Using `Self` makes things less readable here.
 #![allow(clippy::use_self)]
 
-use crate::{Field, FieldParameters, FieldUInt};
+use crate::{FieldParameters, FieldUInt, PrimeField};
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 use zkp_u256::{AddInline, Inv, MulInline, NegInline, SubInline};
 
 macro_rules! assign_ops_from_trait {
     ($rhs:ident, $op_trait:ident, $op_fn:ident, $trait:ident, $trait_assign_fn:ident) => {
-        impl<UInt, Parameters> $op_trait<$rhs> for Field<UInt, Parameters>
+        impl<UInt, Parameters> $op_trait<$rhs> for PrimeField<UInt, Parameters>
         where
             UInt: FieldUInt,
             Parameters: FieldParameters<UInt>,
         {
             #[inline(always)] // Simple wrapper in hot path
             fn $op_fn(&mut self, rhs: $rhs) {
-                <Field<UInt, Parameters> as $trait<&$rhs>>::$trait_assign_fn(self, &rhs)
+                <PrimeField<UInt, Parameters> as $trait<&$rhs>>::$trait_assign_fn(self, &rhs)
             }
         }
 
-        impl<UInt, Parameters> $op_trait<&$rhs> for Field<UInt, Parameters>
+        impl<UInt, Parameters> $op_trait<&$rhs> for PrimeField<UInt, Parameters>
         where
             UInt: FieldUInt,
             Parameters: FieldParameters<UInt>,
         {
             #[inline(always)] // Simple wrapper in hot path
             fn $op_fn(&mut self, rhs: &$rhs) {
-                <Field<UInt, Parameters> as $trait<&$rhs>>::$trait_assign_fn(self, rhs)
+                <PrimeField<UInt, Parameters> as $trait<&$rhs>>::$trait_assign_fn(self, rhs)
             }
         }
     };
@@ -33,12 +33,13 @@ macro_rules! assign_ops_from_trait {
 
 macro_rules! self_ops_from_trait {
     ($op_trait:ident, $op_fn:ident, $trait:ident, $trait_fn:ident, $trait_assign_fn:ident) => {
-        impl<UInt, Parameters> $op_trait<&Field<UInt, Parameters>> for &Field<UInt, Parameters>
+        impl<UInt, Parameters> $op_trait<&PrimeField<UInt, Parameters>>
+            for &PrimeField<UInt, Parameters>
         where
             UInt: FieldUInt,
             Parameters: FieldParameters<UInt>,
         {
-            type Output = Field<UInt, Parameters>;
+            type Output = PrimeField<UInt, Parameters>;
 
             #[inline(always)] // Simple wrapper in hot path
             fn $op_fn(self, rhs: &Self::Output) -> Self::Output {
@@ -46,12 +47,13 @@ macro_rules! self_ops_from_trait {
             }
         }
 
-        impl<UInt, Parameters> $op_trait<&Field<UInt, Parameters>> for Field<UInt, Parameters>
+        impl<UInt, Parameters> $op_trait<&PrimeField<UInt, Parameters>>
+            for PrimeField<UInt, Parameters>
         where
             UInt: FieldUInt,
             Parameters: FieldParameters<UInt>,
         {
-            type Output = Field<UInt, Parameters>;
+            type Output = PrimeField<UInt, Parameters>;
 
             #[inline(always)] // Simple wrapper in hot path
             fn $op_fn(mut self, rhs: &Self::Output) -> Self::Output {
@@ -60,12 +62,13 @@ macro_rules! self_ops_from_trait {
             }
         }
 
-        impl<UInt, Parameters> $op_trait<Field<UInt, Parameters>> for &Field<UInt, Parameters>
+        impl<UInt, Parameters> $op_trait<PrimeField<UInt, Parameters>>
+            for &PrimeField<UInt, Parameters>
         where
             UInt: FieldUInt,
             Parameters: FieldParameters<UInt>,
         {
-            type Output = Field<UInt, Parameters>;
+            type Output = PrimeField<UInt, Parameters>;
 
             #[inline(always)] // Simple wrapper in hot path
             fn $op_fn(self, mut rhs: Self::Output) -> Self::Output {
@@ -74,12 +77,13 @@ macro_rules! self_ops_from_trait {
             }
         }
 
-        impl<UInt, Parameters> $op_trait<Field<UInt, Parameters>> for Field<UInt, Parameters>
+        impl<UInt, Parameters> $op_trait<PrimeField<UInt, Parameters>>
+            for PrimeField<UInt, Parameters>
         where
             UInt: FieldUInt,
             Parameters: FieldParameters<UInt>,
         {
-            type Output = Field<UInt, Parameters>;
+            type Output = PrimeField<UInt, Parameters>;
 
             #[inline(always)] // Simple wrapper in hot path
             fn $op_fn(mut self, rhs: Self::Output) -> Self::Output {
@@ -92,12 +96,13 @@ macro_rules! self_ops_from_trait {
 
 macro_rules! noncommutative_self_ops_from_trait {
     ($op_trait:ident, $op_fn:ident, $trait:ident, $trait_fn:ident, $trait_assign_fn:ident) => {
-        impl<UInt, Parameters> $op_trait<&Field<UInt, Parameters>> for &Field<UInt, Parameters>
+        impl<UInt, Parameters> $op_trait<&PrimeField<UInt, Parameters>>
+            for &PrimeField<UInt, Parameters>
         where
             UInt: FieldUInt,
             Parameters: FieldParameters<UInt>,
         {
-            type Output = Field<UInt, Parameters>;
+            type Output = PrimeField<UInt, Parameters>;
 
             #[inline(always)] // Simple wrapper in hot path
             fn $op_fn(self, rhs: &Self::Output) -> Self::Output {
@@ -105,12 +110,13 @@ macro_rules! noncommutative_self_ops_from_trait {
             }
         }
 
-        impl<UInt, Parameters> $op_trait<&Field<UInt, Parameters>> for Field<UInt, Parameters>
+        impl<UInt, Parameters> $op_trait<&PrimeField<UInt, Parameters>>
+            for PrimeField<UInt, Parameters>
         where
             UInt: FieldUInt,
             Parameters: FieldParameters<UInt>,
         {
-            type Output = Field<UInt, Parameters>;
+            type Output = PrimeField<UInt, Parameters>;
 
             #[inline(always)] // Simple wrapper in hot path
             fn $op_fn(mut self, rhs: &Self::Output) -> Self::Output {
@@ -119,12 +125,13 @@ macro_rules! noncommutative_self_ops_from_trait {
             }
         }
 
-        impl<UInt, Parameters> $op_trait<Field<UInt, Parameters>> for &Field<UInt, Parameters>
+        impl<UInt, Parameters> $op_trait<PrimeField<UInt, Parameters>>
+            for &PrimeField<UInt, Parameters>
         where
             UInt: FieldUInt,
             Parameters: FieldParameters<UInt>,
         {
-            type Output = Field<UInt, Parameters>;
+            type Output = PrimeField<UInt, Parameters>;
 
             #[inline(always)] // Simple wrapper in hot path
             fn $op_fn(self, rhs: Self::Output) -> Self::Output {
@@ -132,12 +139,13 @@ macro_rules! noncommutative_self_ops_from_trait {
             }
         }
 
-        impl<UInt, Parameters> $op_trait<Field<UInt, Parameters>> for Field<UInt, Parameters>
+        impl<UInt, Parameters> $op_trait<PrimeField<UInt, Parameters>>
+            for PrimeField<UInt, Parameters>
         where
             UInt: FieldUInt,
             Parameters: FieldParameters<UInt>,
         {
-            type Output = Field<UInt, Parameters>;
+            type Output = PrimeField<UInt, Parameters>;
 
             #[inline(always)] // Simple wrapper in hot path
             fn $op_fn(mut self, rhs: Self::Output) -> Self::Output {
@@ -155,12 +163,12 @@ self_ops_from_trait!(Add, add, AddInline, add, add_assign);
 noncommutative_self_ops_from_trait!(Sub, sub, SubInline, sub, sub_assign);
 self_ops_from_trait!(Mul, mul, MulInline, mul, mul_assign);
 
-impl<UInt, Parameters> Neg for Field<UInt, Parameters>
+impl<UInt, Parameters> Neg for PrimeField<UInt, Parameters>
 where
     UInt: FieldUInt,
     Parameters: FieldParameters<UInt>,
 {
-    type Output = Field<UInt, Parameters>;
+    type Output = PrimeField<UInt, Parameters>;
 
     #[inline(always)]
     fn neg(mut self) -> Self::Output {
@@ -169,12 +177,12 @@ where
     }
 }
 
-impl<UInt, Parameters> Neg for &Field<UInt, Parameters>
+impl<UInt, Parameters> Neg for &PrimeField<UInt, Parameters>
 where
     UInt: FieldUInt,
     Parameters: FieldParameters<UInt>,
 {
-    type Output = Field<UInt, Parameters>;
+    type Output = PrimeField<UInt, Parameters>;
 
     #[inline(always)]
     fn neg(self) -> Self::Output {
@@ -182,7 +190,7 @@ where
     }
 }
 
-impl<UInt, Parameters> DivAssign<&Self> for Field<UInt, Parameters>
+impl<UInt, Parameters> DivAssign<&Self> for PrimeField<UInt, Parameters>
 where
     UInt: FieldUInt,
     Parameters: FieldParameters<UInt>,
@@ -193,7 +201,7 @@ where
     }
 }
 
-impl<UInt, Parameters> DivAssign<Self> for Field<UInt, Parameters>
+impl<UInt, Parameters> DivAssign<Self> for PrimeField<UInt, Parameters>
 where
     UInt: FieldUInt,
     Parameters: FieldParameters<UInt>,
@@ -204,12 +212,12 @@ where
     }
 }
 
-impl<UInt, Parameters> Div<&Field<UInt, Parameters>> for &Field<UInt, Parameters>
+impl<UInt, Parameters> Div<&PrimeField<UInt, Parameters>> for &PrimeField<UInt, Parameters>
 where
     UInt: FieldUInt,
     Parameters: FieldParameters<UInt>,
 {
-    type Output = Field<UInt, Parameters>;
+    type Output = PrimeField<UInt, Parameters>;
 
     // Division suspiciously requires multiplication
     #[allow(clippy::suspicious_arithmetic_impl)]
@@ -219,12 +227,12 @@ where
     }
 }
 
-impl<UInt, Parameters> Div<Field<UInt, Parameters>> for &Field<UInt, Parameters>
+impl<UInt, Parameters> Div<PrimeField<UInt, Parameters>> for &PrimeField<UInt, Parameters>
 where
     UInt: FieldUInt,
     Parameters: FieldParameters<UInt>,
 {
-    type Output = Field<UInt, Parameters>;
+    type Output = PrimeField<UInt, Parameters>;
 
     // Division suspiciously requires multiplication
     #[allow(clippy::suspicious_arithmetic_impl)]
@@ -234,12 +242,12 @@ where
     }
 }
 
-impl<UInt, Parameters> Div<&Field<UInt, Parameters>> for Field<UInt, Parameters>
+impl<UInt, Parameters> Div<&PrimeField<UInt, Parameters>> for PrimeField<UInt, Parameters>
 where
     UInt: FieldUInt,
     Parameters: FieldParameters<UInt>,
 {
-    type Output = Field<UInt, Parameters>;
+    type Output = PrimeField<UInt, Parameters>;
 
     // Division suspiciously requires multiplication
     #[allow(clippy::suspicious_arithmetic_impl)]
@@ -249,12 +257,12 @@ where
     }
 }
 
-impl<UInt, Parameters> Div<Field<UInt, Parameters>> for Field<UInt, Parameters>
+impl<UInt, Parameters> Div<PrimeField<UInt, Parameters>> for PrimeField<UInt, Parameters>
 where
     UInt: FieldUInt,
     Parameters: FieldParameters<UInt>,
 {
-    type Output = Field<UInt, Parameters>;
+    type Output = PrimeField<UInt, Parameters>;
 
     // Division suspiciously requires multiplication
     #[allow(clippy::suspicious_arithmetic_impl)]

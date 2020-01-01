@@ -1,11 +1,11 @@
-use crate::{Field, FieldParameters, MontgomeryParameters};
+use crate::{FieldParameters, MontgomeryParameters, PrimeField};
 use std::marker::PhantomData;
 use zkp_macros_decl::u256h;
 use zkp_u256::{to_montgomery_const, U256};
 
 // TODO: Fix naming
 #[allow(clippy::module_name_repetitions)]
-pub type FieldElement = Field<U256, Parameters>;
+pub type FieldElement = PrimeField<U256, Parameters>;
 
 #[derive(PartialEq, Eq, Clone, Debug, Hash)]
 pub struct Parameters();
