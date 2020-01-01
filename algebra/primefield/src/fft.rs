@@ -1,6 +1,6 @@
 // We want these functions to be called `fft`
 #![allow(clippy::module_name_repetitions)]
-use crate::{FieldElement, Inv, One, Pow, Root};
+use crate::{FieldElement, FieldLike, Inv, One, Pow, RefFieldLike, Root};
 use std::prelude::v1::*;
 
 // TODO: Create a dedicated type for permuted vectors
@@ -35,7 +35,11 @@ pub fn permute<T>(v: &mut [T]) {
 }
 
 /// Out-of-place FFT with non-permuted result.
-pub fn fft(a: &[FieldElement]) -> Vec<FieldElement> {
+pub fn fft<Field>(a: &[Field]) -> Vec<Field>
+where
+    Field: FieldLike + From<usize> + std::fmt::Debug,
+    for<'a> &'a Field: RefFieldLike<Field>,
+{
     let mut result = a.to_owned();
     fft_permuted(&mut result);
     permute(&mut result);
@@ -43,7 +47,11 @@ pub fn fft(a: &[FieldElement]) -> Vec<FieldElement> {
 }
 
 /// Out-of-place inverse FFT with non-permuted result.
-pub fn ifft(a: &[FieldElement]) -> Vec<FieldElement> {
+pub fn ifft<Field>(a: &[Field]) -> Vec<Field>
+where
+    Field: FieldLike + From<usize> + std::fmt::Debug,
+    for<'a> &'a Field: RefFieldLike<Field>,
+{
     let mut result = a.to_owned();
     ifft_permuted(&mut result);
     permute(&mut result);
@@ -51,19 +59,23 @@ pub fn ifft(a: &[FieldElement]) -> Vec<FieldElement> {
 }
 
 /// In-place permuted FFT.
-pub fn fft_permuted(x: &mut [FieldElement]) {
-    let root = FieldElement::root(x.len()).expect("No root of unity for input length");
+pub fn fft_permuted<Field>(x: &mut [Field])
+where
+    Field: FieldLike + From<usize> + std::fmt::Debug,
+    for<'a> &'a Field: RefFieldLike<Field>,
+{
+    let root = Field::root(x.len()).expect("No root of unity for input length");
     fft_permuted_root(&root, x);
 }
 
 /// Out-of-place permuted FFT with a cofactor.
-pub fn fft_cofactor_permuted_out(
-    cofactor: &FieldElement,
-    x: &[FieldElement],
-    out: &mut [FieldElement],
-) {
+pub fn fft_cofactor_permuted_out<Field>(cofactor: &Field, x: &[Field], out: &mut [Field])
+where
+    Field: FieldLike + From<usize> + std::fmt::Debug,
+    for<'a> &'a Field: RefFieldLike<Field>,
+{
     // TODO: Use geometric_series
-    let mut c = FieldElement::one();
+    let mut c = Field::one();
     for (x, out) in x.iter().zip(out.iter_mut()) {
         *out = x * &c;
         c *= cofactor;
@@ -72,9 +84,13 @@ pub fn fft_cofactor_permuted_out(
 }
 
 /// In-place permuted FFT with a cofactor.
-pub fn fft_cofactor_permuted(cofactor: &FieldElement, x: &mut [FieldElement]) {
+pub fn fft_cofactor_permuted<Field>(cofactor: &Field, x: &mut [Field])
+where
+    Field: FieldLike + From<usize> + std::fmt::Debug,
+    for<'a> &'a Field: RefFieldLike<Field>,
+{
     // TODO: Use geometric_series
-    let mut c = FieldElement::one();
+    let mut c = Field::one();
     for element in x.iter_mut() {
         *element *= &c;
         c *= cofactor;
@@ -83,13 +99,17 @@ pub fn fft_cofactor_permuted(cofactor: &FieldElement, x: &mut [FieldElement]) {
 }
 
 /// In-place permuted inverse FFT with cofactor.
-pub fn ifft_permuted(x: &mut [FieldElement]) {
+pub fn ifft_permuted<Field>(x: &mut [Field])
+where
+    Field: FieldLike + From<usize> + std::fmt::Debug,
+    for<'a> &'a Field: RefFieldLike<Field>,
+{
     // OPT: make inv_root function.
-    let inverse_root = FieldElement::root(x.len())
+    let inverse_root = Field::root(x.len())
         .expect("No root of unity for input length")
         .inv()
-        .expect("No inverse for FieldElement::zero()");
-    let inverse_length = FieldElement::from(x.len())
+        .expect("No inverse for Field::zero()");
+    let inverse_length = Field::from(x.len())
         .inv()
         .expect("No inverse length for empty list");
     fft_permuted_root(&inverse_root, x);
@@ -109,13 +129,17 @@ pub fn ifft_permuted(x: &mut [FieldElement]) {
 // See https://en.wikipedia.org/wiki/Split-radix_FFT_algorithm
 // See http://www.fftw.org/newsplit.pdf
 
-fn fft_permuted_root(root: &FieldElement, coefficients: &mut [FieldElement]) {
+fn fft_permuted_root<Field>(root: &Field, coefficients: &mut [Field])
+where
+    Field: FieldLike + std::fmt::Debug,
+    for<'a> &'a Field: RefFieldLike<Field>,
+{
     let n_elements = coefficients.len();
     debug_assert!(n_elements.is_power_of_two());
-    debug_assert_eq!(root.pow(n_elements), FieldElement::one());
+    debug_assert_eq!(root.pow(n_elements), Field::one());
     for layer in 0..n_elements.trailing_zeros() {
         let n_blocks = 1_usize << layer;
-        let mut twiddle_factor = FieldElement::one();
+        let mut twiddle_factor = Field::one();
         // OPT: In place combined update like gcd::mat_mul.
         let block_size = n_elements >> (layer + 1);
         let twiddle_factor_update = root.pow(block_size);

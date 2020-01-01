@@ -1,7 +1,7 @@
 // False positives, see <https://github.com/rust-lang/rust/issues/55058>
 #![allow(single_use_lifetimes)]
 
-use crate::{AddInline, MulInline, One, Pow, SquareInline, SubInline, Zero};
+use crate::{AddInline, Inv, MulInline, One, Pow, SquareInline, SubInline, Zero};
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
 
 /// Trait for types implementing field operations
@@ -31,6 +31,7 @@ impl<T, Rhs> FieldAssignOps<Rhs> for T where
 {
 }
 
+/// Trait containing operations provided by [`crate::Field`].
 pub trait FieldLike:
     Sized
     + Clone
@@ -49,7 +50,6 @@ pub trait FieldLike:
     + Root<usize>
 {
 }
-
 impl<T> FieldLike for T where
     Self: Sized
         + Clone
@@ -69,13 +69,19 @@ impl<T> FieldLike for T where
 {
 }
 
+// TODO: Custom by-reference traits for Pow and Inv
 pub trait RefFieldLike<Base>:
-    Pow<usize, Output = Base> + FieldOps<Base, Base> + for<'r> FieldOps<&'r Base, Base>
+    Inv<Output = Option<Base>>
+    + Pow<usize, Output = Base>
+    + FieldOps<Base, Base>
+    + for<'r> FieldOps<&'r Base, Base>
 {
 }
-
 impl<Base> RefFieldLike<Base> for &Base where
-    Self: Pow<usize, Output = Base> + FieldOps<Base, Base> + for<'b> FieldOps<&'b Base, Base>
+    Self: Inv<Output = Option<Base>>
+        + Pow<usize, Output = Base>
+        + FieldOps<Base, Base>
+        + for<'b> FieldOps<&'b Base, Base>
 {
 }
 
