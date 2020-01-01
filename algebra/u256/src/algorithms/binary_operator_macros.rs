@@ -45,11 +45,11 @@ macro_rules! commutative_binop {
 
         // Reference <op> reference
         // Note: a clone is necessary
-        impl<'a, 'b> $trait<&'b $type> for &'a $type {
+        impl $trait<&$type> for &$type {
             type Output = $type;
 
             #[inline(always)] // Simple wrapper in hot path
-            fn $trait_fn(self, rhs: &'b $type) -> $type {
+            fn $trait_fn(self, rhs: &$type) -> $type {
                 self.clone().$trait_fn(rhs)
             }
         }
@@ -106,11 +106,11 @@ macro_rules! noncommutative_binop {
 
         // Reference <op> reference
         // Note: a clone is necessary
-        impl<'a, 'b> $trait<&'b $type> for &'a $type {
+        impl $trait<&$type> for &$type {
             type Output = $type;
 
             #[inline(always)] // Simple wrapper in hot path
-            fn $trait_fn(self, rhs: &'b $type) -> $type {
+            fn $trait_fn(self, rhs: &$type) -> $type {
                 self.clone().$trait_fn(rhs)
             }
         }
@@ -156,11 +156,11 @@ macro_rules! self_ops_from_trait {
         $trait_fn:ident,
         $trait_assign_fn:ident
     ) => {
-        impl<'a, 'b> $op_trait<&'b $type> for &'a $type {
+        impl $op_trait<&$type> for &$type {
             type Output = $type;
 
             #[inline(always)] // Simple wrapper in hot path
-            fn $op_fn(self, rhs: &'b $type) -> $type {
+            fn $op_fn(self, rhs: &$type) -> $type {
                 <$type as $trait<&$type>>::$trait_fn(self, rhs)
             }
         }
@@ -209,11 +209,11 @@ macro_rules! noncommutative_self_ops_from_trait {
         $trait_fn:ident,
         $trait_assign_fn:ident
     ) => {
-        impl<'a, 'b> $op_trait<&'b $type> for &'a $type {
+        impl $op_trait<&$type> for &$type {
             type Output = $type;
 
             #[inline(always)] // Simple wrapper in hot path
-            fn $op_fn(self, rhs: &'b $type) -> $type {
+            fn $op_fn(self, rhs: &$type) -> $type {
                 <$type as $trait<&$type>>::$trait_fn(self, rhs)
             }
         }

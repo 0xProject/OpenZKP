@@ -33,8 +33,7 @@ macro_rules! assign_ops_from_trait {
 
 macro_rules! self_ops_from_trait {
     ($op_trait:ident, $op_fn:ident, $trait:ident, $trait_fn:ident, $trait_assign_fn:ident) => {
-        impl<'a, 'b, UInt, Parameters> $op_trait<&'b Field<UInt, Parameters>>
-            for &'a Field<UInt, Parameters>
+        impl<UInt, Parameters> $op_trait<&Field<UInt, Parameters>> for &Field<UInt, Parameters>
         where
             UInt: FieldUInt,
             Parameters: FieldParameters<UInt>,
@@ -42,7 +41,7 @@ macro_rules! self_ops_from_trait {
             type Output = Field<UInt, Parameters>;
 
             #[inline(always)] // Simple wrapper in hot path
-            fn $op_fn(self, rhs: &'b Self::Output) -> Self::Output {
+            fn $op_fn(self, rhs: &Self::Output) -> Self::Output {
                 <Self::Output as $trait<&Self::Output>>::$trait_fn(self, rhs)
             }
         }
@@ -93,8 +92,7 @@ macro_rules! self_ops_from_trait {
 
 macro_rules! noncommutative_self_ops_from_trait {
     ($op_trait:ident, $op_fn:ident, $trait:ident, $trait_fn:ident, $trait_assign_fn:ident) => {
-        impl<'a, 'b, UInt, Parameters> $op_trait<&'b Field<UInt, Parameters>>
-            for &'a Field<UInt, Parameters>
+        impl<UInt, Parameters> $op_trait<&Field<UInt, Parameters>> for &Field<UInt, Parameters>
         where
             UInt: FieldUInt,
             Parameters: FieldParameters<UInt>,
@@ -102,7 +100,7 @@ macro_rules! noncommutative_self_ops_from_trait {
             type Output = Field<UInt, Parameters>;
 
             #[inline(always)] // Simple wrapper in hot path
-            fn $op_fn(self, rhs: &'b Self::Output) -> Self::Output {
+            fn $op_fn(self, rhs: &Self::Output) -> Self::Output {
                 <Self::Output as $trait<&Self::Output>>::$trait_fn(self, rhs)
             }
         }
@@ -206,7 +204,7 @@ where
     }
 }
 
-impl<'a, 'b, UInt, Parameters> Div<&'b Field<UInt, Parameters>> for &'a Field<UInt, Parameters>
+impl<UInt, Parameters> Div<&Field<UInt, Parameters>> for &Field<UInt, Parameters>
 where
     UInt: FieldUInt,
     Parameters: FieldParameters<UInt>,
@@ -216,7 +214,7 @@ where
     // Division suspiciously requires multiplication
     #[allow(clippy::suspicious_arithmetic_impl)]
     #[inline(always)]
-    fn div(self, rhs: &'b Self::Output) -> Self::Output {
+    fn div(self, rhs: &Self::Output) -> Self::Output {
         self * rhs.inv().expect("Division by zero")
     }
 }

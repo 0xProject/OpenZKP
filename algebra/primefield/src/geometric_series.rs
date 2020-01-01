@@ -1,4 +1,7 @@
-use crate::{FieldElement, FieldLike, One, Pow, Root};
+// False positives, see <https://github.com/rust-lang/rust/issues/55058>
+#![allow(single_use_lifetimes)]
+
+use crate::{FieldLike, Pow, RefFieldLike};
 use std::{cmp::min, prelude::v1::*};
 
 #[derive(Clone, PartialEq, Eq)]
@@ -6,9 +9,7 @@ use std::{cmp::min, prelude::v1::*};
 pub struct GeometricIter<Field>
 where
     Field: FieldLike,
-    for<'a> &'a Field: Pow<usize, Output = Field>,
-    for<'a> &'a Field: std::ops::Mul<Field, Output = Field>,
-    for<'a, 'b> &'a Field: std::ops::Mul<&'b Field, Output = Field>,
+    for<'a> &'a Field: RefFieldLike<Field>,
 {
     current: Field,
     step:    Field,
@@ -18,9 +19,7 @@ where
 impl<Field> GeometricIter<Field>
 where
     Field: FieldLike,
-    for<'a> &'a Field: Pow<usize, Output = Field>,
-    for<'a> &'a Field: std::ops::Mul<Field, Output = Field>,
-    for<'a, 'b> &'a Field: std::ops::Mul<&'b Field, Output = Field>,
+    for<'a> &'a Field: RefFieldLike<Field>,
 {
     pub fn at(&self, index: usize) -> Field {
         &self.current * self.step.pow(index)
@@ -49,9 +48,7 @@ where
 impl<Field> Iterator for GeometricIter<Field>
 where
     Field: FieldLike,
-    for<'a> &'a Field: Pow<usize, Output = Field>,
-    for<'a> &'a Field: std::ops::Mul<Field, Output = Field>,
-    for<'a, 'b> &'a Field: std::ops::Mul<&'b Field, Output = Field>,
+    for<'a> &'a Field: RefFieldLike<Field>,
 {
     type Item = Field;
 
@@ -78,9 +75,7 @@ where
 pub fn geometric_series<Field>(base: &Field, step: &Field) -> GeometricIter<Field>
 where
     Field: FieldLike,
-    for<'a> &'a Field: Pow<usize, Output = Field>,
-    for<'a> &'a Field: std::ops::Mul<Field, Output = Field>,
-    for<'a, 'b> &'a Field: std::ops::Mul<&'b Field, Output = Field>,
+    for<'a> &'a Field: RefFieldLike<Field>,
 {
     GeometricIter {
         current: base.clone(),
@@ -92,10 +87,7 @@ where
 pub fn root_series<Field>(order: usize) -> GeometricIter<Field>
 where
     Field: FieldLike,
-    Field: Root<usize>,
-    for<'a> &'a Field: Pow<usize, Output = Field>,
-    for<'a> &'a Field: std::ops::Mul<Field, Output = Field>,
-    for<'a, 'b> &'a Field: std::ops::Mul<&'b Field, Output = Field>,
+    for<'a> &'a Field: RefFieldLike<Field>,
 {
     let root = Field::root(order).expect("No root found of given order.");
     geometric_series(&Field::one(), &root).take(order)
@@ -104,6 +96,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::FieldElement;
     use zkp_macros_decl::field_element;
     use zkp_u256::U256;
 

@@ -1,5 +1,7 @@
+// False positives, see <https://github.com/rust-lang/rust/issues/55058>
+#![allow(single_use_lifetimes)]
+
 use crate::{AddInline, MulInline, One, Pow, SquareInline, SubInline, Zero};
-use num_traits::Num;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
 
 /// Trait for types implementing field operations
@@ -20,12 +22,6 @@ impl<T, Rhs, Output> FieldOps<Rhs, Output> for T where
 {
 }
 
-pub trait FieldOpsRef: Sized + for<'r> FieldOps<&'r Self> {}
-impl<T> FieldOpsRef for T where T: Sized + for<'r> FieldOps<&'r T> {}
-
-pub trait RefFieldOps<Base>: Sized + for<'r> FieldOps<&'r Base, Base> {}
-impl<T, Base> RefFieldOps<Base> for T where T: Sized + for<'r> FieldOps<&'r Base, Base> {}
-
 pub trait FieldAssignOps<Rhs = Self>:
     AddAssign<Rhs> + SubAssign<Rhs> + MulAssign<Rhs> + DivAssign<Rhs>
 {
@@ -34,9 +30,6 @@ impl<T, Rhs> FieldAssignOps<Rhs> for T where
     T: AddAssign<Rhs> + SubAssign<Rhs> + MulAssign<Rhs> + DivAssign<Rhs>
 {
 }
-
-pub trait FieldAssignOpsRef: for<'r> FieldAssignOps<&'r Self> {}
-impl<T> FieldAssignOpsRef for T where T: for<'r> FieldAssignOps<&'r T> {}
 
 pub trait FieldLike:
     Sized
@@ -50,17 +43,15 @@ pub trait FieldLike:
     + SquareInline
     + for<'a> MulInline<&'a Self>
     + FieldOps
-    + FieldOpsRef
+    + for<'a> FieldOps<&'a Self>
     + FieldAssignOps
-    + FieldAssignOpsRef
-where
-    for<'a> &'a Self: Pow<usize, Output = Self>,
+    + for<'a> FieldAssignOps<&'a Self>
+    + Root<usize>
 {
 }
 
-impl<T> FieldLike for T
-where
-    T: Sized
+impl<T> FieldLike for T where
+    Self: Sized
         + Clone
         + PartialEq
         + Eq
@@ -71,10 +62,20 @@ where
         + SquareInline
         + for<'a> MulInline<&'a Self>
         + FieldOps
-        + FieldOpsRef
+        + for<'a> FieldOps<&'a Self>
         + FieldAssignOps
-        + FieldAssignOpsRef,
-    for<'a> &'a T: Pow<usize, Output = Self>,
+        + for<'a> FieldAssignOps<&'a Self>
+        + Root<usize>
+{
+}
+
+pub trait RefFieldLike<Base>:
+    Pow<usize, Output = Base> + FieldOps<Base, Base> + for<'r> FieldOps<&'r Base, Base>
+{
+}
+
+impl<Base> RefFieldLike<Base> for &Base where
+    Self: Pow<usize, Output = Base> + FieldOps<Base, Base> + for<'b> FieldOps<&'b Base, Base>
 {
 }
 
