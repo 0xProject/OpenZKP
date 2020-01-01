@@ -1,5 +1,5 @@
 use crate::{FieldElement, FieldLike, One, Pow, Root};
-use std::prelude::v1::*;
+use std::{cmp::min, prelude::v1::*};
 
 #[derive(Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "std", derive(Debug))]
@@ -28,6 +28,12 @@ where
 
     pub fn skip(mut self, n: usize) -> Self {
         self.current *= self.step.pow(n);
+        self.length -= n;
+        self
+    }
+
+    pub fn take(mut self, n: usize) -> Self {
+        self.length = min(self.length, n);
         self
     }
 
@@ -92,7 +98,7 @@ where
     for<'a, 'b> &'a Field: std::ops::Mul<&'b Field, Output = Field>,
 {
     let root = Field::root(order).expect("No root found of given order.");
-    geometric_series(&Field::one(), &root)
+    geometric_series(&Field::one(), &root).take(order)
 }
 
 #[cfg(test)]
