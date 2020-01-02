@@ -1,5 +1,5 @@
 use crate::{FieldParameters, PrimeField, UInt as FieldUInt};
-use num_traits::{Unsigned, Zero};
+use num_traits::ToPrimitive;
 use std::{convert::From, ops::Neg};
 use zkp_u256::U256;
 
@@ -68,5 +68,33 @@ where
         } else {
             Self::from_uint_reduce(&abs.into())
         }
+    }
+}
+
+impl<UInt, Parameters> ToPrimitive for PrimeField<UInt, Parameters>
+where
+    UInt: FieldUInt + ToPrimitive + std::ops::Shr<usize, Output = UInt>,
+    Parameters: FieldParameters<UInt>,
+{
+    fn to_u128(&self) -> Option<u128> {
+        self.to_uint().to_u128()
+    }
+
+    fn to_i128(&self) -> Option<i128> {
+        let mut val = self.to_uint();
+        if val < (Parameters::MODULUS >> 1) {
+            val.to_i128()
+        } else {
+            let val = Parameters::MODULUS.sub(&val);
+            val.to_i128().and_then(i128::checked_neg)
+        }
+    }
+
+    fn to_u64(&self) -> Option<u64> {
+        self.to_u128().as_ref().and_then(ToPrimitive::to_u64)
+    }
+
+    fn to_i64(&self) -> Option<i64> {
+        self.to_i128().as_ref().and_then(ToPrimitive::to_i64)
     }
 }

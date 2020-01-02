@@ -461,6 +461,7 @@ mod tests {
     use super::*;
     use crate::FieldElement;
     use itertools::repeat_n;
+    use num_traits::ToPrimitive;
     use quickcheck_macros::quickcheck;
     use zkp_macros_decl::{field_element, u256h};
     use zkp_u256::U256;
@@ -541,12 +542,12 @@ mod tests {
     }
     #[quickcheck]
     fn from_as_isize(n: isize) -> bool {
-        FieldElement::from(n).to_isize() == n
+        FieldElement::from(n).to_isize().unwrap() == n
     }
 
     #[quickcheck]
     fn from_as_i128(n: i128) -> bool {
-        FieldElement::from(n).to_i128() == n
+        FieldElement::from(n).to_i128().unwrap() == n
     }
 
     #[quickcheck]
