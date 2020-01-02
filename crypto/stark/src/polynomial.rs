@@ -7,7 +7,9 @@ use zkp_macros_decl::field_element;
 use zkp_mmap_vec::MmapVec;
 #[cfg(feature = "std")]
 use zkp_primefield::fft::{fft_cofactor_permuted_out, permute_index};
-use zkp_primefield::{FieldElement, Pow, Root, Zero};
+use zkp_primefield::{FieldElement, Zero};
+#[cfg(feature = "std")]
+use zkp_primefield::{Pow, Root};
 use zkp_u256::U256;
 
 #[derive(Clone)]
