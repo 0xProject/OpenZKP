@@ -47,7 +47,6 @@
 
 mod convert;
 pub mod fft;
-mod field_element;
 pub mod geometric_series;
 mod invert_batch;
 mod ops;

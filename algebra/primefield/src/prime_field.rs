@@ -1,4 +1,6 @@
 use crate::{Root, SquareRoot, UInt as FieldUInt};
+#[cfg(feature = "std")]
+use std::fmt;
 use std::{
     hash::{Hash, Hasher},
     marker::PhantomData,
@@ -175,6 +177,17 @@ where
 {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.as_montgomery().hash::<H>(state)
+    }
+}
+
+#[cfg(feature = "std")]
+impl<UInt, Parameters> fmt::Debug for PrimeField<UInt, Parameters>
+where
+    UInt: FieldUInt + fmt::Debug,
+    Parameters: FieldParameters<UInt>,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "field_element!(\"{:?}\")", self.to_uint())
     }
 }
 
