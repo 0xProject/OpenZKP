@@ -60,11 +60,11 @@ mod traits;
 mod uint;
 
 // Generic field implementation
-pub use prime_field::{FieldParameters, PrimeField};
+pub use prime_field::{Parameters, PrimeField};
 pub use zkp_u256::MontgomeryParameters;
 
 // The smallest 252-bit Proth field
-pub use proth_field::{FieldElement, Parameters};
+pub use proth_field::FieldElement;
 
 pub use invert_batch::{invert_batch, invert_batch_src_dst};
 

@@ -73,7 +73,9 @@ pub const ORDER: U256 = u256h!("0800000000000010ffffffffffffffffb781126dcae7b232
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct Order();
 
-impl MontgomeryParameters<U256> for Order {
+impl MontgomeryParameters for Order {
+    type UInt = U256;
+
     const M64: u64 = 0xbb6b_3c4c_e8bd_e631;
     const MODULUS: U256 =
         u256h!("0800000000000010ffffffffffffffffb781126dcae7b2321e66a241adc64d2f");

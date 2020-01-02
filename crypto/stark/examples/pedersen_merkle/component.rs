@@ -2,7 +2,8 @@ use super::{
     inputs::{Claim, Witness},
     pedersen_points::{PEDERSEN_POINTS, SHIFT_POINT},
     periodic_columns::{
-        LEFT_X_COEFFICIENTS, LEFT_Y_COEFFICIENTS, RIGHT_X_COEFFICIENTS, RIGHT_Y_COEFFICIENTS,
+        LEFT_X_COEFFICIENTS_REF, LEFT_Y_COEFFICIENTS_REF, RIGHT_X_COEFFICIENTS_REF,
+        RIGHT_Y_COEFFICIENTS_REF,
     },
 };
 use itertools::Itertools;
@@ -54,10 +55,10 @@ pub fn tree_layer(leaf: &FieldElement, direction: bool, sibling: &FieldElement) 
 
     // Periodic columns
     let periodic = |coefficients| Polynomial(DensePolynomial::new(coefficients), Box::new(X));
-    let periodic_left_x = periodic(&LEFT_X_COEFFICIENTS);
-    let periodic_left_y = periodic(&LEFT_Y_COEFFICIENTS);
-    let periodic_right_x = periodic(&RIGHT_X_COEFFICIENTS);
-    let periodic_right_y = periodic(&RIGHT_Y_COEFFICIENTS);
+    let periodic_left_x = periodic(LEFT_X_COEFFICIENTS_REF);
+    let periodic_left_y = periodic(LEFT_Y_COEFFICIENTS_REF);
+    let periodic_right_x = periodic(RIGHT_X_COEFFICIENTS_REF);
+    let periodic_right_y = periodic(RIGHT_Y_COEFFICIENTS_REF);
 
     // Repeating patterns
     let omega = FieldElement::root(256).unwrap();

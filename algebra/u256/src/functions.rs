@@ -21,23 +21,23 @@ impl GCD for U256 {
 
 impl Montgomery for U256 {
     #[inline(always)]
-    fn redc_inline<M: MontgomeryParameters<U256>>(lo: &Self, hi: &Self) -> Self {
+    fn redc_inline<M: MontgomeryParameters<UInt = U256>>(lo: &Self, hi: &Self) -> Self {
         redc_inline::<M>(lo, hi)
     }
 
     #[inline(always)]
-    fn square_redc_inline<M: MontgomeryParameters<U256>>(&self) -> Self {
+    fn square_redc_inline<M: MontgomeryParameters<UInt = U256>>(&self) -> Self {
         square_redc_inline::<M>(self)
     }
 
     #[inline(always)]
-    fn mul_redc_inline<M: MontgomeryParameters<U256>>(&self, rhs: &Self) -> Self {
+    fn mul_redc_inline<M: MontgomeryParameters<UInt = U256>>(&self, rhs: &Self) -> Self {
         mul_redc_inline::<M>(self, rhs)
     }
 
     // Inline to reduce to `inv_mod` + `mul_redc`
     #[inline(always)]
-    fn inv_redc<M: MontgomeryParameters<U256>>(&self) -> Option<Self> {
+    fn inv_redc<M: MontgomeryParameters<UInt = U256>>(&self) -> Option<Self> {
         self.inv_mod(&M::MODULUS).map(|ni| ni.mul_redc::<M>(&M::R3))
     }
 }

@@ -275,55 +275,57 @@ pub trait GCD: Sized {
 
 // `T` can not have interior mutability.
 #[allow(clippy::declare_interior_mutable_const)]
-pub trait MontgomeryParameters<T: Sized> {
+pub trait MontgomeryParameters: 'static + Send + Sync + Sized {
+    type UInt;
+
     /// The modulus to implement in Montgomery form
-    const MODULUS: T;
+    const MODULUS: Self::UInt;
 
     /// M64 = -MODULUS^(-1) mod 2^64
     const M64: u64;
 
     // R1 = 2^256 mod MODULUS
-    const R1: T;
+    const R1: Self::UInt;
 
     // R2 = 2^512 mod MODULUS
-    const R2: T;
+    const R2: Self::UInt;
 
     // R3 = 2^768 mod MODULUS
-    const R3: T;
+    const R3: Self::UInt;
 }
 
 pub trait Montgomery: Zero {
-    fn to_montgomery<M: MontgomeryParameters<Self>>(&self) -> Self {
+    fn to_montgomery<M: MontgomeryParameters<UInt = Self>>(&self) -> Self {
         // `Self` should not have interior mutability.
         #[allow(clippy::borrow_interior_mutable_const)]
         self.mul_redc::<M>(&M::R2)
     }
 
-    fn from_montgomery<M: MontgomeryParameters<Self>>(&self) -> Self {
+    fn from_montgomery<M: MontgomeryParameters<UInt = Self>>(&self) -> Self {
         // Use inline version to propagate the zeros
         Self::redc_inline::<M>(self, &Self::zero())
     }
 
     /// **Note.** Implementers *must* add the `#[inline(always)]` attribute
-    fn redc_inline<M: MontgomeryParameters<Self>>(lo: &Self, hi: &Self) -> Self;
+    fn redc_inline<M: MontgomeryParameters<UInt = Self>>(lo: &Self, hi: &Self) -> Self;
 
     /// **Note.** Implementers *must* add the `#[inline(always)]` attribute
-    fn square_redc_inline<M: MontgomeryParameters<Self>>(&self) -> Self;
+    fn square_redc_inline<M: MontgomeryParameters<UInt = Self>>(&self) -> Self;
 
     /// **Note.** Implementers *must* add the `#[inline(always)]` attribute
-    fn mul_redc_inline<M: MontgomeryParameters<Self>>(&self, rhs: &Self) -> Self;
+    fn mul_redc_inline<M: MontgomeryParameters<UInt = Self>>(&self, rhs: &Self) -> Self;
 
-    fn inv_redc<M: MontgomeryParameters<Self>>(&self) -> Option<Self>;
+    fn inv_redc<M: MontgomeryParameters<UInt = Self>>(&self) -> Option<Self>;
 
-    fn redc<M: MontgomeryParameters<Self>>(lo: &Self, hi: &Self) -> Self {
+    fn redc<M: MontgomeryParameters<UInt = Self>>(lo: &Self, hi: &Self) -> Self {
         Self::redc_inline::<M>(lo, hi)
     }
 
-    fn square_redc<M: MontgomeryParameters<Self>>(&self) -> Self {
+    fn square_redc<M: MontgomeryParameters<UInt = Self>>(&self) -> Self {
         self.square_redc_inline::<M>()
     }
 
-    fn mul_redc<M: MontgomeryParameters<Self>>(&self, rhs: &Self) -> Self {
+    fn mul_redc<M: MontgomeryParameters<UInt = Self>>(&self, rhs: &Self) -> Self {
         self.mul_redc_inline::<M>(rhs)
     }
 
@@ -337,7 +339,7 @@ pub trait Montgomery: Zero {
     ///
     /// # Requirements
     /// Inputs are required to be reduced modulo `M::MODULUS`.
-    fn mul_mod<M: MontgomeryParameters<Self>>(&self, rhs: &Self) -> Self {
+    fn mul_mod<M: MontgomeryParameters<UInt = Self>>(&self, rhs: &Self) -> Self {
         // OPT: Is this better than Barret reduction?
         // We want to borrow `&M::R2` as const. `Self` should not have interior
         // mutability.

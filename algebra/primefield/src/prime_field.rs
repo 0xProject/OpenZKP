@@ -8,24 +8,9 @@ use std::{
     prelude::v1::*,
 };
 use zkp_u256::{
-    AddInline, Binary, DivRem, Inv, MontgomeryParameters, MulInline, NegInline, One, Pow,
-    SquareInline, SubInline, Zero,
+    AddInline, Binary, DivRem, Inv, Montgomery as _, MontgomeryParameters, MulInline, NegInline,
+    One, Pow, SquareInline, SubInline, Zero,
 };
-
-/// Required constant parameters for the prime field
-// TODO: Make these and Tonelly-Shanks parameters optional and enable
-// functionality when implemented.
-// TODO: Fix naming
-#[allow(clippy::module_name_repetitions)]
-// UInt can not have interior mutability
-#[allow(clippy::declare_interior_mutable_const)]
-pub trait FieldParameters<UInt>: MontgomeryParameters<UInt>
-where
-    UInt: FieldUInt,
-{
-    const GENERATOR: UInt;
-    const ORDER: UInt;
-}
 
 /// A finite field of prime order.
 ///
@@ -42,45 +27,82 @@ where
 /// `quickcheck` support `Parameters` needs to be `'static + Send` (which it
 /// really should anyway).
 // Derive fails for Clone, PartialEq, Eq, Hash
-pub struct PrimeField<UInt, Parameters>
-where
-    UInt: FieldUInt,
-    Parameters: FieldParameters<UInt>,
-{
+pub struct PrimeField<P: Parameters> {
     // TODO: un-pub. They are pub so FieldElement can have const-fn constructors.
-    pub uint:        UInt,
-    pub _parameters: PhantomData<Parameters>,
+    pub uint:        P::UInt,
+    pub _parameters: PhantomData<P>,
 }
 
-impl<UInt, Parameters> PrimeField<UInt, Parameters>
-where
-    UInt: FieldUInt,
-    Parameters: FieldParameters<UInt>,
-{
+/// Required constant parameters for the prime field
+// TODO: Fix naming
+#[allow(clippy::module_name_repetitions)]
+// UInt can not have interior mutability
+#[allow(clippy::declare_interior_mutable_const)]
+// HACK: Ideally we'd use MontgomeryParameters<UInt: FieldUInt>
+// See <https://github.com/rust-lang/rust/issues/52662>
+pub trait Parameters: 'static + Send + Sync + Sized {
+    type UInt: FieldUInt;
+
+    /// The modulus to implement in Montgomery form
+    const MODULUS: Self::UInt;
+
+    /// M64 = -MODULUS^(-1) mod 2^64
+    const M64: u64;
+
+    // R1 = 2^256 mod MODULUS
+    const R1: Self::UInt;
+
+    // R2 = 2^512 mod MODULUS
+    const R2: Self::UInt;
+
+    // R3 = 2^768 mod MODULUS
+    const R3: Self::UInt;
+
+    // Generator and quadratic non-residue
+    const GENERATOR: Self::UInt;
+
+    // Multiplicative order: Modulus - 1
+    const ORDER: Self::UInt;
+}
+
+// Derive `MontgomeryParameters` from `Parameters` as `Montgomery<P:
+// Parameters>`
+struct Montgomery<P: Parameters>(PhantomData<P>);
+impl<P: Parameters> MontgomeryParameters for Montgomery<P> {
+    type UInt = P::UInt;
+
+    const M64: u64 = P::M64;
+    const MODULUS: Self::UInt = P::MODULUS;
+    const R1: Self::UInt = P::R1;
+    const R2: Self::UInt = P::R2;
+    const R3: Self::UInt = P::R3;
+}
+
+impl<P: Parameters> PrimeField<P> {
     // UInt can not have interior mutability
     #[allow(clippy::declare_interior_mutable_const)]
-    pub const MODULUS: UInt = Parameters::MODULUS;
+    pub const MODULUS: P::UInt = P::MODULUS;
 
     #[inline(always)]
-    pub fn modulus() -> UInt {
-        Parameters::MODULUS
+    pub fn modulus() -> P::UInt {
+        P::MODULUS
     }
 
     /// The multiplicative order of the field.
     ///
     /// Equal to `modulus() - 1` for prime fields.
     #[inline(always)]
-    pub fn order() -> UInt {
-        Parameters::ORDER
+    pub fn order() -> P::UInt {
+        P::ORDER
     }
 
     #[inline(always)]
     pub fn generator() -> Self {
-        Self::from_montgomery(Parameters::GENERATOR)
+        Self::from_montgomery(P::GENERATOR)
     }
 
     #[inline(always)]
-    pub fn as_montgomery(&self) -> &UInt {
+    pub fn as_montgomery(&self) -> &P::UInt {
         debug_assert!(&self.uint < &Self::modulus());
         &self.uint
     }
@@ -90,7 +112,7 @@ where
     /// This is a trivial function.
     // TODO: Make `const fn` after <https://github.com/rust-lang/rust/issues/57563>
     #[inline(always)]
-    pub fn from_montgomery(uint: UInt) -> Self {
+    pub fn from_montgomery(uint: P::UInt) -> Self {
         debug_assert!(&uint < &Self::modulus());
         // TODO: Uncomment assertion when support in `const fn` is enabled.
         // See https://github.com/rust-lang/rust/issues/57563
@@ -109,25 +131,25 @@ where
 
     /// Convert to `UInt`.
     #[inline(always)] // Simple wrapper for `from_montgomery`
-    pub fn to_uint(&self) -> UInt {
+    pub fn to_uint(&self) -> P::UInt {
         debug_assert!(&self.uint < &Self::modulus());
-        UInt::from_montgomery::<Parameters>(self.as_montgomery())
+        P::UInt::from_montgomery::<Montgomery<P>>(self.as_montgomery())
     }
 
     /// Construct from `UInt`
     ///
     /// It does the montgomery conversion.
-    pub fn from_uint(uint: &UInt) -> Self {
+    pub fn from_uint(uint: &P::UInt) -> Self {
         debug_assert!(uint < &Self::modulus());
-        Self::from_montgomery(uint.to_montgomery::<Parameters>())
+        Self::from_montgomery(uint.to_montgomery::<Montgomery<P>>())
     }
 
     /// Reduce and construct from `UInt`
-    pub fn from_uint_reduce(uint: &UInt) -> Self {
-        let uint = UInt::redc_inline::<Parameters>(uint, &UInt::zero());
+    pub fn from_uint_reduce(uint: &P::UInt) -> Self {
+        let uint = P::UInt::redc_inline::<Montgomery<P>>(uint, &P::UInt::zero());
         // UInt should not have interior mutability
         #[allow(clippy::borrow_interior_mutable_const)]
-        let uint = uint.mul_redc_inline::<Parameters>(&Parameters::R3);
+        let uint = uint.mul_redc_inline::<Montgomery<P>>(&P::R3);
         Self::from_montgomery(uint)
     }
 
@@ -144,38 +166,25 @@ where
     }
 }
 
-impl<UInt, Parameters> Clone for PrimeField<UInt, Parameters>
-where
-    UInt: FieldUInt,
-    Parameters: FieldParameters<UInt>,
-{
+impl<P: Parameters> Clone for PrimeField<P> {
     fn clone(&self) -> Self {
         Self::from_montgomery(self.as_montgomery().clone())
     }
 }
 
-impl<UInt, Parameters> PartialEq for PrimeField<UInt, Parameters>
-where
-    UInt: FieldUInt,
-    Parameters: FieldParameters<UInt>,
-{
+impl<P: Parameters> PartialEq for PrimeField<P> {
     fn eq(&self, other: &Self) -> bool {
         self.as_montgomery() == other.as_montgomery()
     }
 }
 
-impl<UInt, Parameters> Eq for PrimeField<UInt, Parameters>
-where
-    UInt: FieldUInt,
-    Parameters: FieldParameters<UInt>,
-{
-}
+impl<P: Parameters> Eq for PrimeField<P> {}
 
 /// Implements [`Hash`] when `UInt` does.
-impl<UInt, Parameters> Hash for PrimeField<UInt, Parameters>
+impl<U, P> Hash for PrimeField<P>
 where
-    UInt: FieldUInt + Hash,
-    Parameters: FieldParameters<UInt>,
+    U: FieldUInt + Hash,
+    P: Parameters<UInt = U>,
 {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.as_montgomery().hash::<H>(state)
@@ -183,24 +192,20 @@ where
 }
 
 #[cfg(feature = "std")]
-impl<UInt, Parameters> fmt::Debug for PrimeField<UInt, Parameters>
+impl<U, P> fmt::Debug for PrimeField<P>
 where
-    UInt: FieldUInt + fmt::Debug,
-    Parameters: FieldParameters<UInt>,
+    U: FieldUInt + fmt::Debug,
+    P: Parameters<UInt = U>,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "field_element!(\"{:?}\")", self.to_uint())
     }
 }
 
-impl<UInt, Parameters> Zero for PrimeField<UInt, Parameters>
-where
-    UInt: FieldUInt,
-    Parameters: FieldParameters<UInt>,
-{
+impl<P: Parameters> Zero for PrimeField<P> {
     #[inline(always)]
     fn zero() -> Self {
-        Self::from_montgomery(UInt::zero())
+        Self::from_montgomery(P::UInt::zero())
     }
 
     #[inline(always)]
@@ -209,29 +214,21 @@ where
     }
 }
 
-impl<UInt, Parameters> One for PrimeField<UInt, Parameters>
-where
-    UInt: FieldUInt,
-    Parameters: FieldParameters<UInt>,
-{
+impl<P: Parameters> One for PrimeField<P> {
     #[inline(always)]
     fn one() -> Self {
-        Self::from_montgomery(Parameters::R1)
+        Self::from_montgomery(P::R1)
     }
 
     // UInt should not have interior mutability
     #[allow(clippy::borrow_interior_mutable_const)]
     #[inline(always)]
     fn is_one(&self) -> bool {
-        self.as_montgomery() == &Parameters::R1
+        self.as_montgomery() == &P::R1
     }
 }
 
-impl<UInt, Parameters> AddInline<&Self> for PrimeField<UInt, Parameters>
-where
-    UInt: FieldUInt,
-    Parameters: FieldParameters<UInt>,
-{
+impl<P: Parameters> AddInline<&Self> for PrimeField<P> {
     #[inline(always)]
     fn add_inline(&self, rhs: &Self) -> Self {
         let mut result = self.as_montgomery().add_inline(rhs.as_montgomery());
@@ -243,11 +240,7 @@ where
     }
 }
 
-impl<UInt, Parameters> SubInline<&Self> for PrimeField<UInt, Parameters>
-where
-    UInt: FieldUInt,
-    Parameters: FieldParameters<UInt>,
-{
+impl<P: Parameters> SubInline<&Self> for PrimeField<P> {
     #[inline(always)]
     fn sub_inline(&self, rhs: &Self) -> Self {
         let lhs = self.as_montgomery();
@@ -261,11 +254,7 @@ where
     }
 }
 
-impl<UInt, Parameters> NegInline for PrimeField<UInt, Parameters>
-where
-    UInt: FieldUInt,
-    Parameters: FieldParameters<UInt>,
-{
+impl<P: Parameters> NegInline for PrimeField<P> {
     #[inline(always)]
     fn neg_inline(&self) -> Self {
         if self.is_zero() {
@@ -276,64 +265,44 @@ where
     }
 }
 
-impl<UInt, Parameters> SquareInline for PrimeField<UInt, Parameters>
-where
-    UInt: FieldUInt,
-    Parameters: FieldParameters<UInt>,
-{
+impl<P: Parameters> SquareInline for PrimeField<P> {
     #[inline(always)]
     fn square_inline(&self) -> Self {
-        Self::from_montgomery(self.as_montgomery().square_redc_inline::<Parameters>())
+        Self::from_montgomery(self.as_montgomery().square_redc_inline::<Montgomery<P>>())
     }
 }
 
-impl<UInt, Parameters> MulInline<&Self> for PrimeField<UInt, Parameters>
-where
-    UInt: FieldUInt,
-    Parameters: FieldParameters<UInt>,
-{
+impl<P: Parameters> MulInline<&Self> for PrimeField<P> {
     #[inline(always)]
     fn mul_inline(&self, rhs: &Self) -> Self {
         Self::from_montgomery(
             self.as_montgomery()
-                .mul_redc_inline::<Parameters>(rhs.as_montgomery()),
+                .mul_redc_inline::<Montgomery<P>>(rhs.as_montgomery()),
         )
     }
 }
 
-impl<UInt, Parameters> Inv for &PrimeField<UInt, Parameters>
-where
-    UInt: FieldUInt,
-    Parameters: FieldParameters<UInt>,
-{
-    type Output = Option<PrimeField<UInt, Parameters>>;
+impl<P: Parameters> Inv for &PrimeField<P> {
+    type Output = Option<PrimeField<P>>;
 
     #[inline(always)] // Simple wrapper
     fn inv(self) -> Self::Output {
         self.as_montgomery()
-            .inv_redc::<Parameters>()
-            .map(PrimeField::<UInt, Parameters>::from_montgomery)
+            .inv_redc::<Montgomery<P>>()
+            .map(PrimeField::<P>::from_montgomery)
     }
 }
 
-impl<UInt, Parameters> Pow<usize> for &PrimeField<UInt, Parameters>
-where
-    UInt: FieldUInt,
-    Parameters: FieldParameters<UInt>,
-{
-    type Output = PrimeField<UInt, Parameters>;
+impl<P: Parameters> Pow<usize> for &PrimeField<P> {
+    type Output = PrimeField<P>;
 
     fn pow(self, exponent: usize) -> Self::Output {
         self.pow(&exponent)
     }
 }
 
-impl<UInt, Parameters> Pow<isize> for &PrimeField<UInt, Parameters>
-where
-    UInt: FieldUInt,
-    Parameters: FieldParameters<UInt>,
-{
-    type Output = Option<PrimeField<UInt, Parameters>>;
+impl<P: Parameters> Pow<isize> for &PrimeField<P> {
+    type Output = Option<PrimeField<P>>;
 
     fn pow(self, exponent: isize) -> Self::Output {
         let negative = exponent < 0;
@@ -346,13 +315,11 @@ where
     }
 }
 
-impl<UInt, Parameters, Exponent> Pow<&Exponent> for &PrimeField<UInt, Parameters>
+impl<P: Parameters, Exponent> Pow<&Exponent> for &PrimeField<P>
 where
-    UInt: FieldUInt,
-    Parameters: FieldParameters<UInt>,
     Exponent: Binary,
 {
-    type Output = PrimeField<UInt, Parameters>;
+    type Output = PrimeField<P>;
 
     fn pow(self, exponent: &Exponent) -> Self::Output {
         if let Some(msb) = exponent.most_significant_bit() {
@@ -374,10 +341,10 @@ where
     }
 }
 
-impl<UInt, Parameters> Root<usize> for PrimeField<UInt, Parameters>
+impl<U, P> Root<usize> for PrimeField<P>
 where
-    UInt: FieldUInt + Binary + DivRem<u64, Quotient = UInt, Remainder = u64>,
-    Parameters: FieldParameters<UInt>,
+    U: FieldUInt + Binary + DivRem<u64, Quotient = U, Remainder = u64>,
+    P: Parameters<UInt = U>,
 {
     // OPT: replace this with a constant array of roots of unity.
     fn root(order: usize) -> Option<Self> {
@@ -397,13 +364,13 @@ where
 // TODO: Generalize over order type
 // Lint has a false positive here
 #[allow(single_use_lifetimes)]
-impl<UInt, Parameters> Root<&UInt> for PrimeField<UInt, Parameters>
+impl<U, P> Root<&U> for PrimeField<P>
 where
-    UInt: FieldUInt + Binary + for<'a> DivRem<&'a UInt, Quotient = UInt, Remainder = UInt>,
-    Parameters: FieldParameters<UInt>,
+    U: FieldUInt + Binary + for<'a> DivRem<&'a U, Quotient = U, Remainder = U>,
+    P: Parameters<UInt = U>,
 {
     // OPT: replace this with a constant array of roots of unity.
-    fn root(order: &UInt) -> Option<Self> {
+    fn root(order: &P::UInt) -> Option<Self> {
         if let Some((q, rem)) = Self::order().div_rem(order) {
             if rem.is_zero() {
                 Some(Self::generator().pow(&q))
@@ -416,10 +383,10 @@ where
     }
 }
 
-impl<UInt, Parameters> SquareRoot for PrimeField<UInt, Parameters>
+impl<U, P> SquareRoot for PrimeField<P>
 where
-    UInt: FieldUInt + Binary + Shr<usize, Output = UInt>,
-    Parameters: FieldParameters<UInt>,
+    U: FieldUInt + Binary + Shr<usize, Output = U>,
+    P: Parameters<UInt = U>,
 {
     fn is_quadratic_residue(&self) -> bool {
         self.pow(&(Self::MODULUS >> 1_usize)) != -Self::one()
@@ -450,12 +417,12 @@ where
         // debug_assert!(&FieldElement::MODULUS & 7_u64 == 1);
 
         // OPT: Raising a to a fixed power is a good candidate for an addition chain.
-        let mut root = self.pow(&((signifcant + UInt::one()) >> 1));
+        let mut root = self.pow(&((signifcant + P::UInt::one()) >> 1));
         let mut c = c_start;
         let inverse = self.inv().unwrap(); // Zero case is handled above
 
         for i in 1..trailing_zeros {
-            if (root.square() * &inverse).pow(&(UInt::one() << (trailing_zeros - i - 1)))
+            if (root.square() * &inverse).pow(&(P::UInt::one() << (trailing_zeros - i - 1)))
                 == -Self::one()
             {
                 root *= &c;

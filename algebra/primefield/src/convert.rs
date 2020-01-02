@@ -1,4 +1,4 @@
-use crate::{FieldParameters, PrimeField, UInt as FieldUInt};
+use crate::{Parameters, PrimeField, UInt};
 use num_traits::ToPrimitive;
 use std::convert::From;
 use zkp_u256::U256;
@@ -54,10 +54,10 @@ maybe_signed!(isize);
 // `Unsigned` traits. but this leads to conflicting implementations and is
 // currently unsupported by Rust. We solve this using the `MaybeSigned` trait.
 
-impl<UInt, Parameters, Other> From<Other> for PrimeField<UInt, Parameters>
+impl<U, P, Other> From<Other> for PrimeField<P>
 where
-    UInt: FieldUInt + From<Other>,
-    Parameters: FieldParameters<UInt>,
+    U: UInt + From<Other>,
+    P: Parameters<UInt = U>,
     Other: MaybeSigned,
 {
     #[cfg_attr(feature = "inline", inline(always))]
@@ -71,10 +71,10 @@ where
     }
 }
 
-impl<UInt, Parameters> ToPrimitive for PrimeField<UInt, Parameters>
+impl<U, P> ToPrimitive for PrimeField<P>
 where
-    UInt: FieldUInt + ToPrimitive + std::ops::Shr<usize, Output = UInt>,
-    Parameters: FieldParameters<UInt>,
+    U: UInt + ToPrimitive + std::ops::Shr<usize, Output = U>,
+    P: Parameters<UInt = U>,
 {
     fn to_u128(&self) -> Option<u128> {
         self.to_uint().to_u128()
@@ -82,12 +82,12 @@ where
 
     fn to_i128(&self) -> Option<i128> {
         let val = self.to_uint();
-        if val < (Parameters::MODULUS >> 1) {
+        if val < (P::MODULUS >> 1) {
             val.to_i128()
         } else {
             // UInt should not have interior mutability
             #[allow(clippy::borrow_interior_mutable_const)]
-            let val = Parameters::MODULUS.sub(&val);
+            let val = P::MODULUS.sub(&val);
             val.to_i128().and_then(i128::checked_neg)
         }
     }

@@ -11,7 +11,7 @@ mod proth;
 pub use generic::to_montgomery_const;
 
 #[inline(always)]
-pub(crate) fn redc_inline<M: MontgomeryParameters<U256>>(lo: &U256, hi: &U256) -> U256 {
+pub(crate) fn redc_inline<M: MontgomeryParameters<UInt = U256>>(lo: &U256, hi: &U256) -> U256 {
     // Select the best algorithm, the branch should be resolved compile time.
     // TODO: Make compile time constant.
     if proth::is_proth::<M>() {
@@ -22,14 +22,14 @@ pub(crate) fn redc_inline<M: MontgomeryParameters<U256>>(lo: &U256, hi: &U256) -
 }
 
 #[inline(always)]
-pub(crate) fn square_redc_inline<M: MontgomeryParameters<U256>>(x: &U256) -> U256 {
+pub(crate) fn square_redc_inline<M: MontgomeryParameters<UInt = U256>>(x: &U256) -> U256 {
     // OPT: Dedicated implementations, optimized for special primes
     let (lo, hi) = x.square_full_inline();
     redc_inline::<M>(&lo, &hi)
 }
 
 #[inline(always)]
-pub(crate) fn mul_redc_inline<M: MontgomeryParameters<U256>>(x: &U256, y: &U256) -> U256 {
+pub(crate) fn mul_redc_inline<M: MontgomeryParameters<UInt = U256>>(x: &U256, y: &U256) -> U256 {
     if proth::is_proth::<M>() {
         proth::mul_redc_inline(M::MODULUS.limb(3), x, y)
     } else {
@@ -48,7 +48,9 @@ mod tests {
     struct PrimeField();
 
     // TODO: Non Proth example
-    impl MontgomeryParameters<U256> for PrimeField {
+    impl MontgomeryParameters for PrimeField {
+        type UInt = U256;
+
         const M64: u64 = 0xffff_ffff_ffff_ffff;
         const MODULUS: U256 =
             u256h!("0800000000000011000000000000000000000000000000000000000000000001");
