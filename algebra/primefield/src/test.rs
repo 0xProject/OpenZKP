@@ -1,14 +1,14 @@
-use crate::{FieldParameters, PrimeField, UInt as FieldUInt};
+use crate::{Parameters, PrimeField, UInt};
 use quickcheck::{Arbitrary, Gen};
 
-impl<UInt, Parameters> Arbitrary for PrimeField<UInt, Parameters>
+impl<U, P> Arbitrary for PrimeField<P>
 where
-    UInt: FieldUInt + Arbitrary,
-    Parameters: 'static + Send + FieldParameters<UInt>,
+    U: UInt + Arbitrary,
+    P: Parameters<UInt = U>,
 {
     #[inline(always)]
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
-        Self::from_uint_reduce(&UInt::arbitrary(g))
+        Self::from_uint_reduce(&U::arbitrary(g))
     }
 }
 

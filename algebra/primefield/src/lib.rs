@@ -46,27 +46,27 @@
 #![allow(clippy::inline_always)]
 
 mod convert;
-pub mod fft;
-pub mod geometric_series;
-mod invert_batch;
+// pub mod fft;
+// pub mod geometric_series;
+// mod invert_batch;
 mod ops;
 mod prime_field;
 mod proth_field;
-#[cfg(feature = "use_rand")]
-mod rand;
+// #[cfg(feature = "use_rand")]
+// mod rand;
 #[cfg(any(test, feature = "quickcheck"))]
 mod test;
 mod traits;
 mod uint;
 
 // Generic field implementation
-pub use prime_field::{FieldParameters, PrimeField};
+pub use prime_field::{Parameters, PrimeField};
 pub use zkp_u256::MontgomeryParameters;
 
 // The smallest 252-bit Proth field
-pub use proth_field::{FieldElement, Parameters};
+pub use proth_field::FieldElement;
 
-pub use invert_batch::{invert_batch, invert_batch_src_dst};
+// pub use invert_batch::{invert_batch, invert_batch_src_dst};
 
 // Re-exports dependencies that are part of the public interface
 pub use zkp_u256 as u256;
