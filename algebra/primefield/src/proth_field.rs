@@ -53,14 +53,14 @@ impl FieldElement {
 // TODO: Find a way to create generic implementations of these
 impl From<FieldElement> for U256 {
     #[inline(always)]
-    fn from(other: FieldElement) -> U256 {
+    fn from(other: FieldElement) -> Self {
         other.to_uint()
     }
 }
 
 impl From<&FieldElement> for U256 {
     #[inline(always)]
-    fn from(other: &FieldElement) -> U256 {
+    fn from(other: &FieldElement) -> Self {
         other.to_uint()
     }
 }

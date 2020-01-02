@@ -1,6 +1,6 @@
 use crate::{FieldParameters, PrimeField, UInt as FieldUInt};
 use num_traits::ToPrimitive;
-use std::{convert::From, ops::Neg};
+use std::convert::From;
 use zkp_u256::U256;
 
 // TODO: Move upstream to `num_traits`
@@ -81,10 +81,12 @@ where
     }
 
     fn to_i128(&self) -> Option<i128> {
-        let mut val = self.to_uint();
+        let val = self.to_uint();
         if val < (Parameters::MODULUS >> 1) {
             val.to_i128()
         } else {
+            // UInt should not have interior mutability
+            #[allow(clippy::borrow_interior_mutable_const)]
             let val = Parameters::MODULUS.sub(&val);
             val.to_i128().and_then(i128::checked_neg)
         }

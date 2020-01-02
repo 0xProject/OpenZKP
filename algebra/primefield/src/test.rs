@@ -1,4 +1,4 @@
-use crate::{FieldParameters, One, PrimeField, UInt as FieldUInt, Zero};
+use crate::{FieldParameters, PrimeField, UInt as FieldUInt};
 use quickcheck::{Arbitrary, Gen};
 
 impl<UInt, Parameters> Arbitrary for PrimeField<UInt, Parameters>

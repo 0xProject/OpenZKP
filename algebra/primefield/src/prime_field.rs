@@ -125,6 +125,8 @@ where
     /// Reduce and construct from `UInt`
     pub fn from_uint_reduce(uint: &UInt) -> Self {
         let uint = UInt::redc_inline::<Parameters>(uint, &UInt::zero());
+        // UInt should not have interior mutability
+        #[allow(clippy::borrow_interior_mutable_const)]
         let uint = uint.mul_redc_inline::<Parameters>(&Parameters::R3);
         Self::from_montgomery(uint)
     }
@@ -478,11 +480,6 @@ mod tests {
     use quickcheck_macros::quickcheck;
     use zkp_macros_decl::{field_element, u256h};
     use zkp_u256::U256;
-
-    // Field is FieldLike
-    fn test_field_like() {
-        // let n: FieldLike
-    }
 
     #[test]
     fn test_literal() {

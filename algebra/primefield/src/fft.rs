@@ -1,6 +1,8 @@
 // We want these functions to be called `fft`
 #![allow(clippy::module_name_repetitions)]
-use crate::{FieldElement, FieldLike, Inv, One, Pow, RefFieldLike, Root};
+// Many false positives from trait bounds
+#![allow(single_use_lifetimes)]
+use crate::{FieldLike, Inv, Pow, RefFieldLike};
 use std::prelude::v1::*;
 
 // TODO: Create a dedicated type for permuted vectors
@@ -166,7 +168,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Zero;
+    use crate::{FieldElement, One, Root, Zero};
     use quickcheck_macros::quickcheck;
     use zkp_macros_decl::u256h;
     use zkp_u256::U256;

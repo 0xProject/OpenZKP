@@ -85,7 +85,9 @@ impl FromPrimitive for U256 {
 
 impl ToPrimitive for U256 {
     fn to_u128(&self) -> Option<u128> {
-        if self < &Self::from_limbs([0, 0, 1, 0]) {
+        if *self < Self::from_limbs([0, 0, 1, 0]) {
+            // Casting u64 to u128 is safe
+            #[allow(clippy::cast_lossless)]
             Some((self.limb(0) as u128) | ((self.limb(1) as u128) << 64))
         } else {
             None

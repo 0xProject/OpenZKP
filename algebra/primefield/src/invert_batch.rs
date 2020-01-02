@@ -1,5 +1,7 @@
 // We want these functions to be called `invert_batch`
 #![allow(clippy::module_name_repetitions)]
+// Many false positives from trait bounds
+#![allow(single_use_lifetimes)]
 use crate::{FieldLike, Inv, RefFieldLike};
 use std::prelude::v1::*;
 
