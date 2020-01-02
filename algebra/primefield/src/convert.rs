@@ -23,7 +23,7 @@ macro_rules! maybe_unsigned {
 macro_rules! maybe_signed {
     ($type:ident) => {
         impl MaybeSigned for $type {
-            #[inline(always)]
+            #[cfg_attr(feature = "inline", inline(always))]
             fn as_sign_abs(self) -> (bool, Self) {
                 if self >= 0 {
                     (false, self)
@@ -60,7 +60,7 @@ where
     Parameters: FieldParameters<UInt>,
     Other: MaybeSigned,
 {
-    #[inline(always)]
+    #[cfg_attr(feature = "inline", inline(always))]
     fn from(other: Other) -> Self {
         let (sign, abs) = other.as_sign_abs();
         if sign {

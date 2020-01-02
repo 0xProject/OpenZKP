@@ -1,49 +1,8 @@
-use crate::{FieldElement, Inv, One};
+use crate::{FieldElement, Inv, One, Zero};
 use std::fmt;
 use zkp_u256::U256;
 
 // TODO: Generalize all of these
-
-pub fn invert_batch_src_dst(source: &[FieldElement], destination: &mut [FieldElement]) {
-    assert_eq!(source.len(), destination.len());
-    let mut accumulator = FieldElement::one();
-    for i in 0..source.len() {
-        destination[i] = accumulator.clone();
-        accumulator *= &source[i];
-    }
-    accumulator = accumulator.inv().unwrap();
-    for i in (0..source.len()).rev() {
-        destination[i] *= &accumulator;
-        accumulator *= &source[i];
-    }
-}
-
-pub fn invert_batch(to_be_inverted: &[FieldElement]) -> Vec<FieldElement> {
-    if to_be_inverted.is_empty() {
-        return Vec::new();
-    }
-    let n = to_be_inverted.len();
-    let mut inverses = cumulative_product(to_be_inverted);
-
-    // TODO: Enforce check to prevent uninvertable elements.
-    let mut inverse = inverses[n - 1].inv().unwrap();
-    for i in (1..n).rev() {
-        inverses[i] = &inverses[i - 1] * &inverse;
-        inverse *= &to_be_inverted[i];
-    }
-    inverses[0] = inverse;
-    inverses
-}
-
-fn cumulative_product(elements: &[FieldElement]) -> Vec<FieldElement> {
-    elements
-        .iter()
-        .scan(FieldElement::one(), |running_product, x| {
-            *running_product *= x;
-            Some(running_product.clone())
-        })
-        .collect()
-}
 
 #[cfg(feature = "std")]
 impl fmt::Debug for FieldElement {
@@ -102,38 +61,4 @@ impl FieldElement {
     to_int!(to_i64, as_i64, i64);
     to_int!(to_i128, as_i128, i128);
     to_int!(to_isize, as_isize, isize);
-}
-
-impl From<FieldElement> for U256 {
-    #[inline(always)]
-    fn from(n: FieldElement) -> Self {
-        (&n).into()
-    }
-}
-
-impl From<&FieldElement> for U256 {
-    #[inline(always)]
-    fn from(n: &FieldElement) -> Self {
-        n.to_uint()
-    }
-}
-// Quickcheck needs pass by value
-#[allow(clippy::needless_pass_by_value)]
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::{FieldElement, Zero};
-    use quickcheck_macros::quickcheck;
-
-    #[quickcheck]
-    fn test_batch_inv(x: Vec<FieldElement>) -> bool {
-        if x.iter().any(FieldElement::is_zero) {
-            true
-        } else {
-            invert_batch(x.as_slice())
-                .iter()
-                .zip(x.iter())
-                .all(|(a_inv, a)| *a_inv == a.inv().unwrap())
-        }
-    }
 }

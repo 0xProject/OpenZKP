@@ -49,3 +49,18 @@ impl FieldElement {
         }
     }
 }
+
+// TODO: Find a way to create generic implementations of these
+impl From<FieldElement> for U256 {
+    #[inline(always)]
+    fn from(other: FieldElement) -> U256 {
+        other.to_uint()
+    }
+}
+
+impl From<&FieldElement> for U256 {
+    #[inline(always)]
+    fn from(other: &FieldElement) -> U256 {
+        other.to_uint()
+    }
+}
