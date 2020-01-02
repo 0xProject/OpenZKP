@@ -45,6 +45,7 @@
 // TODO: Provide two versions of hot functions `_inlined` and plain.
 #![allow(clippy::inline_always)]
 
+mod convert;
 pub mod fft;
 mod field_element;
 pub mod geometric_series;

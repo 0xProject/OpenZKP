@@ -60,46 +60,6 @@ impl fmt::Debug for FieldElement {
     }
 }
 
-macro_rules! impl_from_uint {
-    ($t:ty) => {
-        impl From<$t> for FieldElement {
-            #[inline(always)]
-            fn from(n: $t) -> Self {
-                U256::from(n).into()
-            }
-        }
-    };
-}
-
-impl_from_uint!(u8);
-impl_from_uint!(u16);
-impl_from_uint!(u32);
-impl_from_uint!(u64);
-impl_from_uint!(u128);
-impl_from_uint!(usize);
-
-macro_rules! impl_from_int {
-    ($t:ty) => {
-        impl From<$t> for FieldElement {
-            #[cfg_attr(feature = "inline", inline(always))]
-            fn from(n: $t) -> Self {
-                if n >= 0 {
-                    U256::from(n).into()
-                } else {
-                    -Self::from(U256::from(-n))
-                }
-            }
-        }
-    };
-}
-
-impl_from_int!(i8);
-impl_from_int!(i16);
-impl_from_int!(i32);
-impl_from_int!(i64);
-impl_from_int!(i128);
-impl_from_int!(isize);
-
 // The FieldElement versions are called `to_` and not `as_` like their
 // U256 counterparts. This is because a `U256::from` is performed which
 // does a non-trivial `from_montgomery` conversion.
@@ -142,20 +102,6 @@ impl FieldElement {
     to_int!(to_i64, as_i64, i64);
     to_int!(to_i128, as_i128, i128);
     to_int!(to_isize, as_isize, isize);
-}
-
-impl From<U256> for FieldElement {
-    #[inline(always)]
-    fn from(n: U256) -> Self {
-        (&n).into()
-    }
-}
-
-impl From<&U256> for FieldElement {
-    #[inline(always)]
-    fn from(n: &U256) -> Self {
-        Self::from_uint_reduce(n)
-    }
 }
 
 impl From<FieldElement> for U256 {
