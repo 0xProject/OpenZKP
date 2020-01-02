@@ -1,6 +1,7 @@
 use crate::{
     algorithms::{adc, divrem_nby1, divrem_nbym, mac},
-    commutative_binop, MulInline, SquareInline, U256,
+    assign_ops_from_trait, self_ops_from_trait, MulFullInline, MulInline, SquareFullInline,
+    SquareInline, U256,
 };
 use num_traits::Pow;
 use std::{
@@ -11,7 +12,7 @@ use std::{
 
 // Multiplicative operations: Mul, square, mulmod, pow, etc. routines
 
-impl SquareInline for U256 {
+impl SquareFullInline for U256 {
     // We shadow carry for readability
     #[allow(clippy::shadow_unrelated)]
     #[inline(always)]
@@ -42,11 +43,23 @@ impl SquareInline for U256 {
             Self::from_limbs([r4, r5, r6, r7]),
         )
     }
+}
 
-    // OPT: Optimized square_inline, but check if it beats the compiler
+impl SquareInline for U256 {
+    #[inline(always)]
+    fn square_inline(&self) -> Self {
+        self.square_full_inline().0
+    }
 }
 
 impl MulInline<u64> for U256 {
+    #[inline(always)]
+    fn mul_inline(&self, rhs: u64) -> Self {
+        self.mul_full_inline(rhs).0
+    }
+}
+
+impl MulFullInline<u64> for U256 {
     type High = u64;
 
     #[inline(always)]
@@ -59,34 +72,29 @@ impl MulInline<u64> for U256 {
     }
 }
 
-impl MulInline<u128> for U256 {
-    type High = u128;
-
+impl MulInline<&U256> for U256 {
     // We shadow carry for readability
     #[allow(clippy::shadow_unrelated)]
     #[inline(always)]
-    fn mul_full_inline(&self, rhs: u128) -> (Self, u128) {
-        // We want the truncation here
-        #[allow(clippy::cast_possible_truncation)]
-        let (lo, hi) = (rhs as u64, (rhs >> 64) as u64);
-        let (r0, carry) = mac(0, self.limb(0), lo, 0);
-        let (r1, carry) = mac(0, self.limb(1), lo, carry);
-        let (r2, carry) = mac(0, self.limb(2), lo, carry);
-        let (r3, r4) = mac(0, self.limb(3), lo, carry);
-        let (r1, carry) = mac(r1, self.limb(0), hi, 0);
-        let (r2, carry) = mac(r2, self.limb(1), hi, carry);
-        let (r3, carry) = mac(r3, self.limb(2), hi, carry);
-        let (r4, r5) = mac(r4, self.limb(3), hi, carry);
-        // Casting `u64` to `u128` is safe
-        #[allow(clippy::cast_lossless)]
-        (
-            Self::from_limbs([r0, r1, r2, r3]),
-            ((r5 as u128) << 64) | (r4 as u128),
-        )
+    fn mul_inline(&self, rhs: &Self) -> Self {
+        let (r0, carry) = mac(0, self.limb(0), rhs.limb(0), 0);
+        let (r1, carry) = mac(0, self.limb(0), rhs.limb(1), carry);
+        let (r2, carry) = mac(0, self.limb(0), rhs.limb(2), carry);
+        let (r3, _) = mac(0, self.limb(0), rhs.limb(3), carry);
+        let (r1, carry) = mac(r1, self.limb(1), rhs.limb(0), 0);
+        let (r2, carry) = mac(r2, self.limb(1), rhs.limb(1), carry);
+        let (r3, _) = mac(r3, self.limb(1), rhs.limb(2), carry);
+        let (r2, carry) = mac(r2, self.limb(2), rhs.limb(0), 0);
+        let (r3, _) = mac(r3, self.limb(2), rhs.limb(1), carry);
+        let (r3, _) = mac(r3, self.limb(3), rhs.limb(0), 0);
+        Self::from_limbs([r0, r1, r2, r3])
     }
 }
 
-impl MulInline<&U256> for U256 {
+assign_ops_from_trait!(U256, U256, MulAssign, mul_assign, MulInline, mul_assign);
+self_ops_from_trait!(U256, Mul, mul, MulInline, mul, mul_assign);
+
+impl MulFullInline<&U256> for U256 {
     type High = Self;
 
     // We shadow carry for readability
@@ -114,23 +122,6 @@ impl MulInline<&U256> for U256 {
             Self::from_limbs([r4, r5, r6, r7]),
         )
     }
-
-    // We shadow carry for readability
-    #[allow(clippy::shadow_unrelated)]
-    #[inline(always)]
-    fn mul_inline(&self, rhs: &Self) -> Self {
-        let (r0, carry) = mac(0, self.limb(0), rhs.limb(0), 0);
-        let (r1, carry) = mac(0, self.limb(0), rhs.limb(1), carry);
-        let (r2, carry) = mac(0, self.limb(0), rhs.limb(2), carry);
-        let (r3, _) = mac(0, self.limb(0), rhs.limb(3), carry);
-        let (r1, carry) = mac(r1, self.limb(1), rhs.limb(0), 0);
-        let (r2, carry) = mac(r2, self.limb(1), rhs.limb(1), carry);
-        let (r3, _) = mac(r3, self.limb(1), rhs.limb(2), carry);
-        let (r2, carry) = mac(r2, self.limb(2), rhs.limb(0), 0);
-        let (r3, _) = mac(r3, self.limb(2), rhs.limb(1), carry);
-        let (r3, _) = mac(r3, self.limb(3), rhs.limb(0), 0);
-        Self::from_limbs([r0, r1, r2, r3])
-    }
 }
 
 // TODO: U256 exponent
@@ -146,7 +137,7 @@ impl Pow<u64> for &U256 {
                 result = result.mul_inline(&square);
             }
             remaining_exponent >>= 1;
-            square = square.square_inline();
+            square.square_assign_inline();
         }
         result
     }
@@ -195,17 +186,6 @@ impl U256 {
     }
 }
 
-impl MulAssign<&U256> for U256 {
-    // We shadow carry for readability
-    #[allow(clippy::shadow_unrelated)]
-    #[cfg_attr(feature = "inline", inline(always))]
-    fn mul_assign(&mut self, rhs: &Self) {
-        *self = self.mul_inline(rhs);
-    }
-}
-
-commutative_binop!(U256, Mul, mul, MulAssign, mul_assign);
-
 impl MulAssign<u64> for U256 {
     #[cfg_attr(feature = "inline", inline(always))]
     fn mul_assign(&mut self, rhs: u64) {
@@ -232,14 +212,6 @@ impl Mul<u64> for &U256 {
     }
 }
 
-impl MulAssign<u128> for U256 {
-    #[cfg_attr(feature = "inline", inline(always))]
-    fn mul_assign(&mut self, rhs: u128) {
-        let result = self.mul_inline(rhs);
-        *self = result;
-    }
-}
-
 impl Mul<U256> for u64 {
     type Output = U256;
 
@@ -255,43 +227,6 @@ impl Mul<&U256> for u64 {
     #[cfg_attr(feature = "inline", inline(always))]
     fn mul(self, rhs: &U256) -> U256 {
         rhs.mul_inline(self)
-    }
-}
-
-impl Mul<u128> for U256 {
-    type Output = Self;
-
-    #[inline(always)]
-    fn mul(mut self, rhs: u128) -> Self {
-        self.mul_assign(rhs);
-        self
-    }
-}
-
-impl Mul<u128> for &U256 {
-    type Output = U256;
-
-    #[inline(always)]
-    fn mul(self, rhs: u128) -> U256 {
-        self.clone().mul(rhs)
-    }
-}
-
-impl Mul<U256> for u128 {
-    type Output = U256;
-
-    #[inline(always)]
-    fn mul(self, rhs: U256) -> U256 {
-        rhs.mul(self)
-    }
-}
-
-impl Mul<&U256> for u128 {
-    type Output = U256;
-
-    #[inline(always)]
-    fn mul(self, rhs: &U256) -> U256 {
-        rhs.mul(self)
     }
 }
 

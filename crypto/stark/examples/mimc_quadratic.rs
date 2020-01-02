@@ -1,6 +1,6 @@
 use std::time::Instant;
 use zkp_macros_decl::field_element;
-use zkp_primefield::{fft::ifft, FieldElement};
+use zkp_primefield::{fft::ifft, FieldElement, Pow, Root, SquareInline};
 use zkp_stark::{
     Constraints, DensePolynomial, Provable, RationalExpression, TraceTable, Verifiable,
 };
@@ -93,7 +93,7 @@ impl Provable<()> for Claim {
 fn mimc(start: &FieldElement) -> FieldElement {
     let mut prev = start.clone();
     for i in 1..ROUNDS {
-        prev = prev.pow(3) + &K_COEF[(i - 1) % 16];
+        prev = prev.pow(3_usize) + &K_COEF[(i - 1) % 16];
     }
     prev
 }

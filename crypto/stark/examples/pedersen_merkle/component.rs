@@ -9,7 +9,7 @@ use itertools::Itertools;
 use log::info;
 use std::collections::HashMap;
 use zkp_elliptic_curve::Affine;
-use zkp_primefield::FieldElement;
+use zkp_primefield::{FieldElement, One, Pow, Root, Zero};
 use zkp_stark::{compose_vertical, Component, DensePolynomial, RationalExpression, TraceTable};
 use zkp_u256::{Binary, U256};
 
@@ -61,7 +61,7 @@ pub fn tree_layer(leaf: &FieldElement, direction: bool, sibling: &FieldElement) 
 
     // Repeating patterns
     let omega = FieldElement::root(256).unwrap();
-    let omega_i = |i| Constant(omega.pow(i));
+    let omega_i = |i: usize| Constant(omega.pow(i));
     let row = |i| X - omega_i(i);
     let all_rows = || X.pow(256) - 1.into();
     let on_no_hash_rows = |a: RationalExpression| a / row(255);
@@ -90,10 +90,10 @@ pub fn tree_layer(leaf: &FieldElement, direction: bool, sibling: &FieldElement) 
                 - Trace(1, 1) * (Trace(6, 0) - Trace(2, 1)),
         ),
         on_hash_loop_rows(
-            (Constant(FieldElement::ONE) - left_bit.clone()) * (Trace(6, 0) - Trace(2, 1)),
+            (Constant(FieldElement::one()) - left_bit.clone()) * (Trace(6, 0) - Trace(2, 1)),
         ),
         on_hash_loop_rows(
-            (Constant(FieldElement::ONE) - left_bit.clone()) * (Trace(7, 0) - Trace(3, 1)),
+            (Constant(FieldElement::one()) - left_bit.clone()) * (Trace(7, 0) - Trace(3, 1)),
         ),
         on_fe_end_rows(Trace(0, 0)),
         on_no_hash_rows(Trace(0, 0)),
@@ -111,10 +111,10 @@ pub fn tree_layer(leaf: &FieldElement, direction: bool, sibling: &FieldElement) 
                 - Trace(5, 1) * (Trace(2, 1) - Trace(6, 1)),
         ),
         on_hash_loop_rows(
-            (Constant(FieldElement::ONE) - right_bit.clone()) * (Trace(2, 1) - Trace(6, 1)),
+            (Constant(FieldElement::one()) - right_bit.clone()) * (Trace(2, 1) - Trace(6, 1)),
         ),
         on_hash_loop_rows(
-            (Constant(FieldElement::ONE) - right_bit.clone()) * (Trace(3, 1) - Trace(7, 1)),
+            (Constant(FieldElement::one()) - right_bit.clone()) * (Trace(3, 1) - Trace(7, 1)),
         ),
         on_fe_end_rows(Trace(4, 0)),
         on_no_hash_rows(Trace(4, 0)),
@@ -256,10 +256,10 @@ impl Default for Subrow {
     fn default() -> Self {
         Self {
             source: U256::ZERO,
-            slope:  FieldElement::ZERO,
+            slope:  FieldElement::zero(),
             point:  Affine::Point {
-                x: FieldElement::ZERO,
-                y: FieldElement::ZERO,
+                x: FieldElement::zero(),
+                y: FieldElement::zero(),
             },
         }
     }

@@ -115,7 +115,7 @@ mod test {
         let message_hash = u256h!("01921ce52df68f0185ade7572776513304bdd4a07faf6cf28cefc65a86fc496c");
         let public_affine = ecc::private_to_public(&private_key);
         let public = match public_affine.clone() {
-            Affine::Zero => (FieldElement::ZERO, FieldElement::ZERO),
+            Affine::Zero => (FieldElement::zero(), FieldElement::zero()),
             Affine::Point { x, y } => (x, y),
         };
 
@@ -127,11 +127,11 @@ mod test {
         let first_expected_affine = elliptic_curve::GENERATOR * u_1;
         let second_expected_affine = public_affine * u_2;
         let first_expected = match first_expected_affine.clone() {
-            Affine::Zero => (FieldElement::ZERO, FieldElement::ZERO),
+            Affine::Zero => (FieldElement::zero(), FieldElement::zero()),
             Affine::Point { x, y } => (x, y),
         };
         let second_expected = match second_expected_affine.clone() {
-            Affine::Zero => (FieldElement::ZERO, FieldElement::ZERO),
+            Affine::Zero => (FieldElement::zero(), FieldElement::zero()),
             Affine::Point { x, y } => (x, y),
         };
 
@@ -168,7 +168,7 @@ mod test {
         let message_hash = u256h!("01921ce52df68f0185ade7572776513304bdd4a07faf6cf28cefc65a86fc496c");
         let public_affine = ecc::private_to_public(&private_key);
         let public = match public_affine.clone() {
-            Affine::Zero => (FieldElement::ZERO, FieldElement::ZERO),
+            Affine::Zero => (FieldElement::zero(), FieldElement::zero()),
             Affine::Point { x, y } => (x, y),
         };
 

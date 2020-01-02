@@ -7,7 +7,9 @@ use zkp_macros_decl::field_element;
 use zkp_mmap_vec::MmapVec;
 #[cfg(feature = "std")]
 use zkp_primefield::fft::{fft_cofactor_permuted_out, permute_index};
-use zkp_primefield::FieldElement;
+use zkp_primefield::{FieldElement, Zero};
+#[cfg(feature = "std")]
+use zkp_primefield::{Pow, Root};
 use zkp_u256::U256;
 
 #[derive(Clone)]
@@ -48,7 +50,7 @@ impl DensePolynomial {
     pub fn zeros(size: usize) -> Self {
         assert!(size.is_power_of_two());
         let mut vec = MmapVec::with_capacity(size);
-        vec.resize(size, FieldElement::ZERO);
+        vec.resize(size, FieldElement::zero());
         Self(vec)
     }
 
@@ -70,14 +72,14 @@ impl DensePolynomial {
     // more correctly left undefined or sometimes assigned `-1` or `-∞`.
     pub fn degree(&self) -> usize {
         let mut degree = self.len() - 1;
-        while self.0[degree] == FieldElement::ZERO && degree > 0 {
+        while self.0[degree] == FieldElement::zero() && degree > 0 {
             degree -= 1;
         }
         degree
     }
 
     pub fn evaluate(&self, x: &FieldElement) -> FieldElement {
-        let mut result = FieldElement::ZERO;
+        let mut result = FieldElement::zero();
         for coefficient in self.0.iter().rev() {
             result *= x;
             result += coefficient;
@@ -87,8 +89,9 @@ impl DensePolynomial {
 
     #[cfg(feature = "std")]
     pub fn low_degree_extension(&self, blowup: usize) -> MmapVec<FieldElement> {
-        // TODO: shift polynomial by FieldElement::GENERATOR outside of this function.
-        const SHIFT_FACTOR: FieldElement = FieldElement::GENERATOR;
+        // TODO: shift polynomial by FieldElement::generator() outside of this function.
+        // TODO: Parameterize cofactor
+        let shift_factor: FieldElement = FieldElement::generator();
         let length = self.len() * blowup;
         let generator =
             FieldElement::root(length).expect("No generator for extended_domain_length.");
@@ -103,7 +106,7 @@ impl DensePolynomial {
             .par_chunks_mut(self.len())
             .enumerate()
             .for_each(|(i, slice)| {
-                let cofactor = &SHIFT_FACTOR * generator.pow(permute_index(blowup, i));
+                let cofactor = &shift_factor * generator.pow(permute_index(blowup, i));
                 fft_cofactor_permuted_out(&cofactor, &self.coefficients(), slice);
             });
         result
@@ -114,7 +117,7 @@ impl DensePolynomial {
     /// target += c * (P(X) - P(z)) / (X - z)
     /// See: <https://en.wikipedia.org/wiki/Synthetic_division>
     pub fn divide_out_point_into(&self, z: &FieldElement, c: &FieldElement, target: &mut Self) {
-        let mut remainder = FieldElement::ZERO;
+        let mut remainder = FieldElement::zero();
         for (coefficient, target) in self.0.iter().rev().zip(target.0.iter_mut().rev()) {
             *target += c * &remainder;
             remainder *= z;
@@ -131,7 +134,7 @@ impl Arbitrary for DensePolynomial {
         let mut coefficients = Vec::<FieldElement>::arbitrary(g);
         let length = coefficients.len();
         coefficients.extend_from_slice(&vec![
-            FieldElement::ZERO;
+            FieldElement::zero();
             length.next_power_of_two() - length
         ]);
         assert!(coefficients.len().is_power_of_two());

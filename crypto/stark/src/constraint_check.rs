@@ -1,6 +1,6 @@
 use crate::{constraints::*, trace_table::*};
 use std::convert::TryInto;
-use zkp_primefield::FieldElement;
+use zkp_primefield::{FieldElement, One, Pow, Root};
 
 #[allow(clippy::doc_markdown)]
 /// # Check a set of constraints on a trace table
@@ -36,7 +36,7 @@ pub fn check_constraints(
     table: &TraceTable,
 ) -> Result<(), (usize, usize)> {
     let trace_generator = FieldElement::root(table.num_rows()).unwrap();
-    let mut current_root = FieldElement::ONE;
+    let mut current_root = FieldElement::one();
     let len = table.num_rows();
 
     for row in 0..len {
@@ -73,7 +73,7 @@ pub(crate) fn check_specific_constraint(
     let trace_generator = FieldElement::root(table.num_rows()).unwrap();
     let x;
     if row == 0 {
-        x = FieldElement::ONE;
+        x = FieldElement::one();
     } else {
         x = trace_generator.pow(row - 1)
     }
@@ -103,6 +103,7 @@ mod tests {
     use super::*;
     use crate::{traits::tests::Recurrance, Provable, Verifiable};
     use zkp_macros_decl::field_element;
+    use zkp_primefield::Zero;
     use zkp_u256::U256;
 
     #[test]
@@ -122,7 +123,7 @@ mod tests {
         constraints.num_queries = 20;
         constraints.fri_layout = vec![3, 2];
         assert_eq!(check_constraints(&constraints, &trace), Ok(()));
-        trace[(800, 0)] = FieldElement::ZERO;
+        trace[(800, 0)] = FieldElement::zero();
         assert_eq!(check_constraints(&constraints, &trace), Err((799, 0)));
     }
 
@@ -146,7 +147,7 @@ mod tests {
             check_specific_constraint(&constraints, &trace, 1000, 1),
             true
         );
-        trace[(0, 0)] = FieldElement::ZERO;
+        trace[(0, 0)] = FieldElement::zero();
         assert_eq!(check_specific_constraint(&constraints, &trace, 0, 2), false);
     }
 }

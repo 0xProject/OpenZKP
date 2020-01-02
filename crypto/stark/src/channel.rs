@@ -369,14 +369,14 @@ mod tests {
                     "0389a47fe0e1e5f9c05d8dcb27b069b67b1c7ec61a5c0a3f54d81aea83d2c8f0"
                 )),
                 FieldElement::from_montgomery(u256h!(
-                    "129ab47fe0e1a5f9c05d8dcb27b069b67b1c7ec61a5c0a3f54d81aea83d2c8f0"
+                    "029ab47fe0e1a5f9c05d8dcb27b069b67b1c7ec61a5c0a3f54d81aea83d2c8f0"
                 )),
             ]
             .as_slice(),
         );
         assert_eq!(
             source.coin.digest,
-            hex!("a748ff89e2c4322afb061ef3321e207b3fe32c35f181de0809300995dd9b92fd")
+            hex!("586b2c12cd444cfe29932fcb167fc0be2e575a8d68e4a41d35de8602b0aea929")
         );
     }
 
@@ -396,7 +396,7 @@ mod tests {
                 "0389a47fe0e1e5f9c05d8dcb27b069b67b1c7ec61a5c0a3f54d81aea83d2c8f0"
             )),
             FieldElement::from_montgomery(u256h!(
-                "129ab47fe0e1a5f9c05d8dcb27b069b67b1c7ec61a5c0a3f54d81aea83d2c8f0"
+                "029ab47fe0e1a5f9c05d8dcb27b069b67b1c7ec61a5c0a3f54d81aea83d2c8f0"
             )),
         ];
         source.write(written_field_element_vec.as_slice());
@@ -431,7 +431,7 @@ mod tests {
         assert_eq!(field_element_vec_test, written_field_element_vec);
         assert_eq!(
             verifier.coin.digest,
-            hex!("a748ff89e2c4322afb061ef3321e207b3fe32c35f181de0809300995dd9b92fd")
+            hex!("586b2c12cd444cfe29932fcb167fc0be2e575a8d68e4a41d35de8602b0aea929")
         );
         let bit_int_vec_test: Vec<U256> = verifier.replay_many(2);
         assert_eq!(bit_int_vec_test, written_big_int_vec);

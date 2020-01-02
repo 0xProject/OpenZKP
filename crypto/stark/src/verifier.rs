@@ -6,7 +6,9 @@ use std::error;
 use std::{collections::BTreeMap, fmt, prelude::v1::*};
 use zkp_hash::Hash;
 use zkp_merkle_tree::{Commitment, Error as MerkleError, Proof as MerkleProof};
-use zkp_primefield::{fft, geometric_series::root_series, FieldElement};
+use zkp_primefield::{
+    fft, geometric_series::root_series, FieldElement, One, Pow, Root, SquareInline, Zero,
+};
 use zkp_u256::U256;
 
 type Result<T> = std::result::Result<T, Error>;
@@ -219,7 +221,7 @@ pub fn verify(constraints: &Constraints, proof: &Proof) -> Result<()> {
         fri_size >>= x;
         // TODO: When is x equal to zero?
         let eval_point = if x == 0 {
-            FieldElement::ONE
+            FieldElement::one()
         } else {
             channel.get_random()
         };
@@ -432,8 +434,8 @@ fn oods_value_from_constraint_values(
     constraint_values: &[FieldElement],
     oods_point: &FieldElement,
 ) -> FieldElement {
-    let mut result = FieldElement::ZERO;
-    let mut power = FieldElement::ONE;
+    let mut result = FieldElement::zero();
+    let mut power = FieldElement::one();
     for value in constraint_values {
         result += value * &power;
         power *= oods_point;
@@ -511,20 +513,21 @@ fn out_of_domain_element(
         .iter()
         .map(|i| FieldElement::from_montgomery(i.clone()))
         .collect();
-    let x_transform = x_cord * FieldElement::GENERATOR;
+    let x_transform = x_cord * FieldElement::generator();
     let omega = match FieldElement::root(eval_domain_size) {
         Some(x) => x,
         None => return Err(Error::RootUnavailable),
     };
     let g = omega.pow(blowup);
-    let mut r = FieldElement::ZERO;
+    let mut r = FieldElement::zero();
 
     for ((coefficient, value), (i, j)) in oods_coefficients
         .iter()
         .zip(oods_values)
         .zip(trace_arguments)
     {
-        r += coefficient * (&poly_points[*i] - value) / (&x_transform - g.pow(*j) * oods_point);
+        r += coefficient * (&poly_points[*i] - value)
+            / (&x_transform - g.pow(*j).unwrap() * oods_point);
     }
 
     for (i, constraint_oods_value) in constraint_oods_values.iter().enumerate() {

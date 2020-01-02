@@ -9,7 +9,7 @@ use std::{
     prelude::v1::*,
 };
 use zkp_macros_decl::field_element;
-use zkp_primefield::FieldElement;
+use zkp_primefield::{FieldElement, Inv, One, Pow, Zero};
 use zkp_u256::U256;
 
 // TODO: Rename to algebraic expression
@@ -193,7 +193,7 @@ impl RationalExpression {
                 if is_ok {
                     (p.evaluate(&res), true)
                 } else {
-                    (FieldElement::ONE, false)
+                    (FieldElement::one(), false)
                 }
             }
             Add(a, b) => {
@@ -202,7 +202,7 @@ impl RationalExpression {
                 if a_ok && b_ok {
                     (res_a + res_b, true)
                 } else {
-                    (FieldElement::ONE, false)
+                    (FieldElement::one(), false)
                 }
             }
             Neg(a) => {
@@ -217,27 +217,27 @@ impl RationalExpression {
                 if a_ok && b_ok {
                     (res_a * res_b, true)
                 } else if a_ok && !b_ok {
-                    if res_a == FieldElement::ZERO {
-                        (FieldElement::ZERO, true)
+                    if res_a == FieldElement::zero() {
+                        (FieldElement::zero(), true)
                     } else {
-                        (FieldElement::ONE, false)
+                        (FieldElement::one(), false)
                     }
                 } else if !a_ok && b_ok {
-                    if res_b == FieldElement::ZERO {
-                        (FieldElement::ZERO, true)
+                    if res_b == FieldElement::zero() {
+                        (FieldElement::zero(), true)
                     } else {
-                        (FieldElement::ONE, false)
+                        (FieldElement::one(), false)
                     }
                 } else {
-                    (FieldElement::ONE, false)
+                    (FieldElement::one(), false)
                 }
             }
             // TODO - This behavior is suspect
             Inv(a) => {
                 let (res_a, a_ok) = a.clone().check(x, trace);
                 if a_ok {
-                    if res_a == FieldElement::ZERO {
-                        (FieldElement::ONE, false)
+                    if res_a == FieldElement::zero() {
+                        (FieldElement::one(), false)
                     } else {
                         (res_a, true)
                     }
@@ -245,7 +245,7 @@ impl RationalExpression {
                     match *(a.clone()) {
                         Inv(b) => b.check(x, trace),
                         // TODO - Fully enumerate all checks
-                        _ => (FieldElement::ONE, false),
+                        _ => (FieldElement::one(), false),
                     }
                 }
             }
@@ -254,7 +254,7 @@ impl RationalExpression {
                 if a_ok {
                     (res_a.pow(*e), true)
                 } else {
-                    (FieldElement::ONE, false)
+                    (FieldElement::one(), false)
                 }
             }
         }

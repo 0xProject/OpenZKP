@@ -2,7 +2,8 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use zkp_macros_decl::u256h;
 use zkp_u256::{
-    DivRem, Inv, InvMod, Montgomery, MontgomeryParameters, MulInline, SquareInline, U256,
+    DivRem, Inv, InvMod, Montgomery, MontgomeryParameters, MulFullInline, SquareFullInline,
+    SquareInline, U256,
 };
 
 struct Generic();

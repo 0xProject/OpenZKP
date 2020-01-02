@@ -15,7 +15,7 @@ use zkp_mmap_vec::MmapVec;
 use zkp_primefield::{
     fft::{ifft_permuted, permute, permute_index},
     geometric_series::geometric_series,
-    FieldElement,
+    FieldElement, Inv, One, Pow, Root, SquareInline, Zero,
 };
 use zkp_u256::U256;
 
@@ -551,7 +551,7 @@ fn get_constraint_polynomials(
     info!("Combine rational expressions");
     let combined_constraints = constraints.combine(constraint_coefficients);
     let mut dag = AlgebraicGraph::new(
-        &FieldElement::GENERATOR,
+        &FieldElement::generator(),
         trace_coset.num_rows(),
         eval_degree,
     );
@@ -564,7 +564,7 @@ fn get_constraint_polynomials(
     // Evaluate on the coset trace table
     info!("Evaluate on the coset trace table");
     let mut result: MmapVec<FieldElement> = MmapVec::with_capacity(coset_size);
-    result.resize(coset_size, FieldElement::ZERO);
+    result.resize(coset_size, FieldElement::zero());
     let values = &mut result;
     values
         .par_chunks_mut(CHUNK_SIZE)
@@ -583,8 +583,11 @@ fn get_constraint_polynomials(
     ifft_permuted(values);
     permute(values);
     // OPT: Merge with even-odd separation loop.
-    for (f, y) in geometric_series(&FieldElement::ONE, &FieldElement::GENERATOR.inv().unwrap())
-        .zip(values.iter_mut())
+    for (f, y) in geometric_series(
+        &FieldElement::one(),
+        &FieldElement::generator().inv().unwrap(),
+    )
+    .zip(values.iter_mut())
     {
         // Shift out the generator from the evaluation domain.
         *y *= &f;
@@ -594,7 +597,7 @@ fn get_constraint_polynomials(
     let mut constraint_polynomials: Vec<MmapVec<FieldElement>> =
         vec![MmapVec::with_capacity(trace_length); eval_degree];
     let (coefficients, zeros) = values.split_at(eval_degree * trace_length);
-    assert!(zeros.iter().all(|z| z == &FieldElement::ZERO));
+    assert!(zeros.iter().all(|z| z == &FieldElement::zero()));
     for chunk in coefficients.chunks_exact(eval_degree) {
         for (i, coefficient) in chunk.iter().enumerate() {
             constraint_polynomials[i].push(coefficient.clone());
@@ -620,7 +623,8 @@ fn oods_combine(
     // Write point evaluations to proof
     // OPT: Parallelization
     for (column, offset) in trace_arguments {
-        proof.write(&trace_polynomials[*column].evaluate(&(&oods_point * &g.pow(*offset))));
+        proof
+            .write(&trace_polynomials[*column].evaluate(&(&oods_point * &g.pow(*offset).unwrap())));
     }
 
     let oods_point_pow = oods_point.pow(constraint_polynomials.len());
@@ -636,7 +640,7 @@ fn oods_combine(
     let mut combined_polynomial = DensePolynomial::zeros(trace_length);
     for ((column, offset), coefficient) in trace_arguments.iter().zip(&trace_coefficients) {
         trace_polynomials[*column].divide_out_point_into(
-            &(&oods_point * &g.pow(*offset)),
+            &(&oods_point * g.pow(*offset).unwrap()),
             coefficient,
             &mut combined_polynomial,
         );
@@ -675,7 +679,7 @@ fn perform_fri_layering(
             .inv()
             .unwrap();
         let mut x_inv = MmapVec::with_capacity(n / 2);
-        let mut accumulator = FieldElement::ONE;
+        let mut accumulator = FieldElement::one();
         for _ in 0..n / 2 {
             x_inv.push(accumulator.clone());
             accumulator *= &root_inv;
@@ -719,7 +723,7 @@ fn perform_fri_layering(
                 )
             }
             2 => {
-                let coefficient_2 = coefficient.pow(2);
+                let coefficient_2 = coefficient.square();
                 next_layer.extend(
                     layer
                         .tuples()
@@ -866,6 +870,7 @@ mod tests {
 
     #[test]
     fn fib_test_1024_python_witness() {
+        crate::tests::init();
         let recurrance = Recurrance {
             index:         1000,
             initial_value: field_element!("cafebabe"),
@@ -938,7 +943,7 @@ mod tests {
             field_element!("0393a32b34832dbad650df250f673d7c5edd09f076fc314a3e5a42f0606082e1");
         let g = field_element!("0659d83946a03edd72406af6711825f5653d9e35dc125289a206c054ec89c4f1");
         let eval_domain_size = trace_len * constraints.blowup;
-        let gen = FieldElement::GENERATOR;
+        let gen = FieldElement::generator();
 
         // Second check that the trace table function is working.
         let trace = claim.trace(&witness);
@@ -949,7 +954,7 @@ mod tests {
 
         let TPn = trace.interpolate();
         // Checks that the trace table polynomial interpolation is working
-        assert_eq!(TPn[0].evaluate(&g.pow(1000)), trace[(1000, 0)]);
+        assert_eq!(TPn[0].evaluate(&g.pow(1000_usize)), trace[(1000, 0)]);
 
         let LDEn = PolyLDE(
             TPn.par_iter()
@@ -1052,7 +1057,7 @@ mod tests {
         // Checks that our out of domain evaluated constraints calculated right
         let trace_generator = FieldElement::root(eval_domain_size).unwrap();
         assert_eq!(
-            CO.evaluate(&(FieldElement::GENERATOR * trace_generator.pow(4321))),
+            CO.evaluate(&(FieldElement::generator() * trace_generator.pow(4321_usize))),
             field_element!("03c6b730c58b55f44bbf3cb7ea82b2e6a0a8b23558e908b5466dfe42e821ee96")
         );
 
