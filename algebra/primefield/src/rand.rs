@@ -1,4 +1,4 @@
-use crate::{FieldParameters, PrimeField, UInt as FieldUInt};
+use crate::{Parameters, PrimeField, UInt};
 use rand::{
     distributions::{uniform::SampleUniform, Distribution, Standard, Uniform},
     Rng,
@@ -7,13 +7,13 @@ use rand::{
 /// Draw from a uniform distribution over all values.
 ///
 /// Requires `UInt` to implement [`SampleUniform`].
-impl<UInt, Parameters> Distribution<PrimeField<UInt, Parameters>> for Standard
+impl<U, P> Distribution<PrimeField<P>> for Standard
 where
-    UInt: FieldUInt + SampleUniform,
-    Parameters: FieldParameters<UInt>,
+    U: UInt + SampleUniform,
+    P: Parameters<UInt = U>,
 {
-    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> PrimeField<UInt, Parameters> {
-        let uniform = Uniform::new(UInt::zero(), Parameters::MODULUS);
-        PrimeField::<UInt, Parameters>::from_montgomery(uniform.sample(rng))
+    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> PrimeField<P> {
+        let uniform = Uniform::new(U::zero(), P::MODULUS);
+        PrimeField::<P>::from_montgomery(uniform.sample(rng))
     }
 }
