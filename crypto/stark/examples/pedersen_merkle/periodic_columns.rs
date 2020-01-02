@@ -2,6 +2,8 @@ use zkp_macros_decl::field_element;
 use zkp_primefield::FieldElement;
 use zkp_u256::U256;
 
+pub(crate) const LEFT_X_COEFFICIENTS_REF: &[FieldElement; 256] = &LEFT_X_COEFFICIENTS;
+#[allow(dead_code)] // False positive
 pub(crate) const LEFT_X_COEFFICIENTS: [FieldElement; 256] = [
     field_element!("00a74f2a70da4ea3723cabd2acc55d03f9ff6d0e7acef0fc63263b12c10dd837"),
     field_element!("00ed021e66d670608d65fa55597c3da99e143e17bc34a01dd32b352a028ec839"),
@@ -260,6 +262,7 @@ pub(crate) const LEFT_X_COEFFICIENTS: [FieldElement; 256] = [
     field_element!("02f93968825da5ca78e673678d6425e9aee29ff219ec7eca75cbde5773cea1a0"),
     field_element!("03766419edb980788fffaf2bfc82ff62f78778f1a1b91e172c1520bbf534f085"),
 ];
+pub(crate) const LEFT_Y_COEFFICIENTS_REF: &[FieldElement; 256] = &LEFT_Y_COEFFICIENTS;
 pub(crate) const LEFT_Y_COEFFICIENTS: [FieldElement; 256] = [
     field_element!("022b14b55b21a19104eb60a5c9ad06bbff2018993780280dc89306a2affbc0e2"),
     field_element!("0591b6ce9e114999202e5f289beee0d4f9dc09d232560588d500d118f8881347"),
@@ -518,6 +521,7 @@ pub(crate) const LEFT_Y_COEFFICIENTS: [FieldElement; 256] = [
     field_element!("01d0aafe2191714d6adeba6bb8b4bb98acc27d06950bf03f85249c3a7a925f8a"),
     field_element!("008e17a355fb39c4b0ebb4ff0756200225a5f0eb374ecc865a94279c46a5188f"),
 ];
+pub(crate) const RIGHT_X_COEFFICIENTS_REF: &[FieldElement; 256] = &RIGHT_X_COEFFICIENTS;
 pub(crate) const RIGHT_X_COEFFICIENTS: [FieldElement; 256] = [
     field_element!("06f603035259d287960449386b86d4a1855050363e0828841729992cf0548ae7"),
     field_element!("07dc36046cac3352a4cc274322967b84313e4abb45d1e8fa62600a70ed3feb3f"),
@@ -776,6 +780,7 @@ pub(crate) const RIGHT_X_COEFFICIENTS: [FieldElement; 256] = [
     field_element!("01fc441e8a221dc1b25fa7a84e8580b57b3a2a64ffa6e22febc08389314f39a6"),
     field_element!("00b15a7e779b467a99c59cf9f8a1c263f076058c1586b2c5179aa6e1c8ecbac9"),
 ];
+pub(crate) const RIGHT_Y_COEFFICIENTS_REF: &[FieldElement; 256] = &RIGHT_Y_COEFFICIENTS;
 pub(crate) const RIGHT_Y_COEFFICIENTS: [FieldElement; 256] = [
     field_element!("02ab33c443dc0f34064ab867477563092df9cbd56b14b519c3a6b8fc98de01c8"),
     field_element!("030d20a6e56a93adaea7c76e57fe7ddd5aa61db719df20f450247aea39209a30"),

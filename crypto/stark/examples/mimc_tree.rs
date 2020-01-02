@@ -187,15 +187,12 @@ impl Verifiable for Claim {
 
         Constraints::from_expressions((trace_length, 2), seed, vec![
             ((Exp(Trace(0, 0).into(), 3)
-                + Constant(3.into())
-                    * Constant(Q.clone())
-                    * Trace(0, 0)
-                    * Exp(Trace(1, 0).into(), 2)
+                + Constant(3.into()) * Constant(Q) * Trace(0, 0) * Exp(Trace(1, 0).into(), 2)
                 + k_coef)
                 - Trace(0, 1))
                 * on_loop_rows(128),
             (Constant(3.into()) * Exp(Trace(0, 0).into(), 2)
-                + Constant(Q.clone()) * Exp(Trace(1, 0).into(), 3)
+                + Constant(Q) * Exp(Trace(1, 0).into(), 3)
                 - Trace(1, 1))
                 * on_loop_rows(256),
             // Boundary constraints

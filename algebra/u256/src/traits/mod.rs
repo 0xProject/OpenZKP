@@ -273,8 +273,8 @@ pub trait GCD: Sized {
 
 // TODO: Automatically derive Mul<..> traits. Maybe also MulAssign<..>
 
-//// `T` can not have interior mutability.
-//#[allow(clippy::declare_interior_mutable_const)]
+// `T` can not have interior mutability.
+#[allow(clippy::declare_interior_mutable_const)]
 pub trait MontgomeryParameters: 'static + Send + Sync + Sized {
     type UInt;
 
