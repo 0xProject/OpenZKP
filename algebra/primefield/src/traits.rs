@@ -85,8 +85,7 @@ impl<Base> RefFieldLike<Base> for &Base where
 {
 }
 
-/// Primitive roots of unity
-// TODO: Rename primitive_root ?
+/// Primitive order-th root of unity
 pub trait Root<Order>: Sized {
     fn root(order: Order) -> Option<Self>;
 }
