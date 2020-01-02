@@ -7,7 +7,8 @@ use super::{
 };
 use elliptic_curve::Affine;
 use openstark::{
-    solidity_encode::autogen_constraint_poly, Constraints, DensePolynomial, RationalExpression,
+    solidity_encode::{autogen, autogen_constraint_poly},
+    Constraints, DensePolynomial, RationalExpression,
 };
 use primefield::FieldElement;
 use std::{prelude::v1::*, vec};
@@ -131,7 +132,7 @@ pub fn get_pedersen_merkle_constraints(claim: &Claim) -> Constraints {
 
     let public = vec![&path_len_const, &root_const, &leaf_const];
 
-    match autogen_constraint_poly(
+    match autogen(
         trace_length,
         public.as_slice(),
         expressions.as_slice(),

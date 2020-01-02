@@ -45,7 +45,7 @@ pub fn autogen_periodic(
     index: usize,
     name: &str,
 ) -> Result<(), std::io::Error> {
-    let name = format!("{}.sol", name);
+    let name = format!("contracts/{}.sol", name);
     let path = Path::new(&name);
     let display = path.display();
     let mut file = match File::create(&path) {
@@ -82,7 +82,7 @@ contract perodic{} {{
     Ok(())
 }
 
-pub fn autogen_constraint_poly(
+pub fn autogen(
     trace_len: usize,
     public: &[&RationalExpression],
     constraints: &[RationalExpression],
@@ -99,7 +99,7 @@ pub fn autogen_constraint_poly(
         periodic.extend(exp.periodic_search());
     }
 
-    let path = Path::new("ConstraintPoly.sol");
+    let path = Path::new("contracts/ConstraintPoly.sol");
     let display = path.display();
     let mut file = match File::create(&path) {
         Err(why) => panic!("couldn't create {}: {}", display, why.description()),
@@ -201,7 +201,7 @@ pub fn autogen_memory_layout(
     ctx.fri_values = 56;
 
     let max_query_size = 22;
-    let path = Path::new("MemoryMap.sol");
+    let path = Path::new("contracts/MemoryMap.sol");
     let display = path.display();
     let mut file = match File::create(&path) {
         Err(why) => panic!("couldn't create {}: {}", display, why.description()),
@@ -551,7 +551,7 @@ pub fn autogen_oods(
     degree_bound: usize,
     ctx: &ContextArray,
 ) -> Result<(), std::io::Error> {
-    let path = Path::new("Odds.sol");
+    let path = Path::new("contracts/Odds.sol");
     let display = path.display();
     let mut file = match File::create(&path) {
         Err(why) => panic!("couldn't create {}: {}", display, why.description()),
