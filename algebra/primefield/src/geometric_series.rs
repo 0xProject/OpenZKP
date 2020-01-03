@@ -9,6 +9,7 @@ use std::{cmp::min, prelude::v1::*};
 pub struct GeometricIter<Field>
 where
     Field: FieldLike,
+    for<'a> &'a Field: RefFieldLike<Field>,
 {
     current: Field,
     step:    Field,
@@ -18,6 +19,7 @@ where
 impl<Field> GeometricIter<Field>
 where
     Field: FieldLike,
+    for<'a> &'a Field: RefFieldLike<Field>,
 {
     pub fn at(&self, index: usize) -> Field {
         &self.current * self.step.pow(index)

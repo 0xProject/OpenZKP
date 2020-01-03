@@ -44,6 +44,8 @@
 // Performance is an important goal of this library.
 // TODO: Provide two versions of hot functions `_inlined` and plain.
 #![allow(clippy::inline_always)]
+#![feature(associated_type_bounds)]
+#![feature(associated_type_defaults)]
 
 mod convert;
 pub mod fft;

@@ -31,7 +31,15 @@ impl<T, Rhs> FieldAssignOps<Rhs> for T where
 {
 }
 
+trait Dummy<'a, Q: 'a>: Sized {
+    type Ref: RefFieldLike<Self> = &'a Q;
+}
+
 /// Trait containing operations provided by [`crate::Field`].
+// Hack:
+// See <https://github.com/rust-lang/rust/issues/20671>
+// See <https://github.com/rust-lang/rfcs/pull/2089>
+// See <https://github.com/rust-lang/rust/pull/65192>
 pub trait FieldLike:
     Sized
     + Clone
@@ -48,6 +56,7 @@ pub trait FieldLike:
     + FieldAssignOps
     + for<'a> FieldAssignOps<&'a Self>
     + Root<usize>
+    + for<'a> Dummy<'a, Self>
 {
 }
 impl<T> FieldLike for T where
@@ -66,6 +75,7 @@ impl<T> FieldLike for T where
         + FieldAssignOps
         + for<'a> FieldAssignOps<&'a Self>
         + Root<usize>
+        + for<'a> Dummy<'a, Self>
 {
 }
 
@@ -74,14 +84,14 @@ pub trait RefFieldLike<Base>:
     Inv<Output = Option<Base>>
     + Pow<usize, Output = Base>
     + FieldOps<Base, Base>
-    + for<'r> FieldOps<&'r Base, Base>
+    + for<'a> FieldOps<&'a Base, Base>
 {
 }
 impl<Base> RefFieldLike<Base> for &Base where
     Self: Inv<Output = Option<Base>>
         + Pow<usize, Output = Base>
         + FieldOps<Base, Base>
-        + for<'b> FieldOps<&'b Base, Base>
+        + for<'a> FieldOps<&'a Base, Base>
 {
 }
 

@@ -40,7 +40,6 @@ pub fn permute<T>(v: &mut [T]) {
 pub fn fft<Field>(a: &[Field]) -> Vec<Field>
 where
     Field: FieldLike + From<usize> + std::fmt::Debug,
-    for<'a> &'a Field: RefFieldLike<Field>,
 {
     let mut result = a.to_owned();
     fft_permuted(&mut result);
@@ -64,7 +63,6 @@ where
 pub fn fft_permuted<Field>(x: &mut [Field])
 where
     Field: FieldLike + From<usize> + std::fmt::Debug,
-    for<'a> &'a Field: RefFieldLike<Field>,
 {
     let root = Field::root(x.len()).expect("No root of unity for input length");
     fft_permuted_root(&root, x);
@@ -74,7 +72,6 @@ where
 pub fn fft_cofactor_permuted_out<Field>(cofactor: &Field, x: &[Field], out: &mut [Field])
 where
     Field: FieldLike + From<usize> + std::fmt::Debug,
-    for<'a> &'a Field: RefFieldLike<Field>,
 {
     // TODO: Use geometric_series
     let mut c = Field::one();
@@ -89,7 +86,6 @@ where
 pub fn fft_cofactor_permuted<Field>(cofactor: &Field, x: &mut [Field])
 where
     Field: FieldLike + From<usize> + std::fmt::Debug,
-    for<'a> &'a Field: RefFieldLike<Field>,
 {
     // TODO: Use geometric_series
     let mut c = Field::one();
@@ -104,7 +100,6 @@ where
 pub fn ifft_permuted<Field>(x: &mut [Field])
 where
     Field: FieldLike + From<usize> + std::fmt::Debug,
-    for<'a> &'a Field: RefFieldLike<Field>,
 {
     // OPT: make inv_root function.
     let inverse_root = Field::root(x.len())
@@ -134,7 +129,6 @@ where
 fn fft_permuted_root<Field>(root: &Field, coefficients: &mut [Field])
 where
     Field: FieldLike + std::fmt::Debug,
-    for<'a> &'a Field: RefFieldLike<Field>,
 {
     let n_elements = coefficients.len();
     debug_assert!(n_elements.is_power_of_two());
