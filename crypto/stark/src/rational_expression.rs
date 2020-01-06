@@ -306,7 +306,7 @@ impl RationalExpression {
 
         #[allow(clippy::match_same_arms)]
         match self {
-            X => "mload(0)".to_owned(),
+            X => "mload(0x0)".to_owned(),
             Constant(_) if memory_layout.contains_key(self) => {
                 memory_layout.get(self).unwrap().clone()
             }
@@ -419,13 +419,14 @@ impl Hash for RationalExpression {
                 i.hash(state);
                 j.hash(state);
             }
-            Polynomial(p, a) => {
+            Polynomial(p, _) => {
                 "poly".hash(state);
                 let x = field_element!(
                     "754ed488ec9208d1c552bb254c0890042078a9e1f7e36072ebff1bf4e193d11b"
                 );
+                // Note - We don't hash in the a because we can deploy the same contract for
+                // identical dense poly, for true equality we need to hash a into it.
                 (p.evaluate(&x)).hash(state);
-                a.hash(state);
             }
             Add(a, b) => {
                 "add".hash(state);

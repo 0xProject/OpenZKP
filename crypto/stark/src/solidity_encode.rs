@@ -53,10 +53,12 @@ pub fn autogen_periodic(
         Ok(file) => file,
     };
 
+    println!("{}: {:?}", index, periodic);
+
     if let RationalExpression::Polynomial(poly, _) = periodic {
         writeln!(
             &mut file,
-            "pragma solidity ^0.5.2;
+            "pragma solidity ^0.5.11;
 
 contract perodic{} {{
     function evaluate(uint x) external pure returns (uint y){{
@@ -209,7 +211,7 @@ pub fn autogen_memory_layout(
     };
     writeln!(
         &mut file,
-        "pragma solidity ^0.5.0;
+        "pragma solidity ^0.5.11;
 
     contract MemoryMap {{
         /*
@@ -409,7 +411,7 @@ pub fn setup_call_memory(
         if flag {
             held.extend(
                 format!(
-                    "        mstore({},expmod(mload(0), {}, PRIME))\n",
+                    "        mstore({},expmod(mload(0x0), {}, PRIME))\n",
                     index * 32,
                     degree
                 )
@@ -425,13 +427,16 @@ pub fn setup_call_memory(
 
     writeln!(
         file,
-        "pragma solidity ^0.5.2;
+        "pragma solidity ^0.5.11;
 
 contract OodsPoly {{
     function() external {{
           uint256 res;
           assembly {{
-            let PRIME := 0x800000000000011000000000000000000000000000000000000000000000001
+            PRIME := 0x800000000000011000000000000000000000000000000000000000000000001
+            // NOTE - If compilation hits a stack depth error on variable PRIME,
+            // then uncomment the following line and globally replace PRIME with mload({})
+            // mstore({}, 0x800000000000011000000000000000000000000000000000000000000000001)
             // Copy input from calldata to memory.
             calldatacopy(0x0, 0x0, /*input_data_size*/ {})
 
@@ -463,6 +468,8 @@ contract OodsPoly {{
                        res := mulmod(res, x, prime)
                 }}
             }}",
+        (index + inverses.len() + 6) * 32,
+        (index + inverses.len() + 6) * 32,
         in_data_size * 32,
         (index + inverses.len()) * 32
     )?;
@@ -560,7 +567,19 @@ pub fn autogen_oods(
 
     writeln!(
         &mut file,
-        "  function oods_prepare_inverses(uint256[] memory context) internal pure {{
+        "pragma solidity ^0.5.11;
+
+        import \"./MemoryMap.sol\";
+        import \"./StarkParameters.sol\";
+        
+        contract Oods is MemoryMap, StarkParameters {{
+          // For each query point we want to invert (2 + n_rows_in_mask) items:
+          //  The query point itself (x).
+          //  The denominator for the constraint polynomial (x-z^constraint_degree)
+          //  [(x-(g^row_number)z) for row_number in mask].
+          uint256 constant internal batch_inverse_chunk = (2 + n_rows_in_mask);
+          uint256 constant internal batch_inverse_size = max_n_queries * batch_inverse_chunk;
+          function oods_prepare_inverses(uint256[] memory context) internal pure {{
         uint trace_generator = 0x{};
         uint oods_point = context[mm_oods_point];
         for (uint i = 0; i < context[mm_n_unique_queries]; i ++) {{
@@ -624,7 +643,7 @@ pub fn autogen_oods(
         "}}
 
     uint carried = 1;
-    for (uint i = 0; i < context[mm_n_unique_queries]*4; i ++) {{
+    for (uint i = 0; i < context[mm_n_unique_queries]*batch_inverse_chunk; i ++) {{
         carried = fmul(carried, context[mm_batch_inverse_in+i]);
         context[mm_batch_inverse_out+i] = carried;
     }}
@@ -765,21 +784,22 @@ pub fn autogen_oods(
         &mut file,
         "              // Advance the composition_query_responses by the the amount we've read \
          (0x20 * constraint_degree).
-    composition_query_responses := add(composition_query_responses, {})
+      composition_query_responses := add(composition_query_responses, {})
 
-    // Append the sum of the trace boundary constraints to the fri_values array.
-    // Note that we need to add the sum of the composition boundary constraints to those
-    // values before running fri.
-    mstore(fri_values, res)
+      // Append the sum of the trace boundary constraints to the fri_values array.
+      // Note that we need to add the sum of the composition boundary constraints to those
+      // values before running fri.
+      mstore(fri_values, res)
 
-    // Append the fri_inv_point of the current query to the fri_inv_points array.
-    mstore(fri_inv_points, mload(add(denominators_ptr, {})))
-    fri_inv_points := add(fri_inv_points, 0x20)
+      // Append the fri_inv_point of the current query to the fri_inv_points array.
+      mstore(fri_inv_points, mload(add(denominators_ptr, {})))
+      fri_inv_points := add(fri_inv_points, 0x20)
 
-    // Advance denominators_ptr by chunk size (0x20 * (2+n_rows_in_mask)).
-    denominators_ptr := add(denominators_ptr, {})
-}}
-}}
+      // Advance denominators_ptr by chunk size (0x20 * (2+n_rows_in_mask)).
+      denominators_ptr := add(denominators_ptr, {})
+      }}
+    }}
+  }}
 }}",
         degree_bound * 32,
         (index_to_offset.len() + 1) * 32,
