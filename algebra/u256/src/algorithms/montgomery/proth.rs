@@ -9,7 +9,7 @@ use crate::{
 // See https://pdfs.semanticscholar.org/c751/a321dd430ebbcfb4dcce1f86f88256e0af5a.pdf
 
 // TODO: Make const fn
-pub(crate) fn is_proth<M: MontgomeryParameters<U256>>() -> bool {
+pub(crate) fn is_proth<M: MontgomeryParameters<UInt = U256>>() -> bool {
     let modulus = M::MODULUS.as_limbs();
     modulus[0] == 1 && modulus[1] == 0 && modulus[2] == 0
 }
@@ -101,7 +101,9 @@ mod tests {
 
     const M3: u64 = 0x0800_0000_0000_0011;
 
-    impl MontgomeryParameters<U256> for PrimeField {
+    impl MontgomeryParameters for PrimeField {
+        type UInt = U256;
+
         const M64: u64 = 0xffff_ffff_ffff_ffff;
         const MODULUS: U256 = U256::from_limbs([1, 0, 0, M3]);
         const R1: U256 = u256h!("07fffffffffffdf0ffffffffffffffffffffffffffffffffffffffffffffffe1");

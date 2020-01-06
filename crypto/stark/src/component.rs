@@ -1,8 +1,9 @@
 use crate::{
-    constraint_check::check_constraints, primefield::FieldElement, Constraints, Provable,
-    RationalExpression, TraceTable, Verifiable,
+    constraint_check::check_constraints, Constraints, Provable, RationalExpression, TraceTable,
+    Verifiable,
 };
 use std::{collections::HashMap, convert::TryFrom};
+use zkp_primefield::{FieldElement, Pow, Root};
 
 // TODO: Introduce prover/verifier distinction
 
@@ -184,7 +185,8 @@ pub fn shift(a: Component, amount: isize) -> Component {
     let mut result = Component::empty(a.trace.num_rows(), a.trace.num_columns());
     let factor = FieldElement::root(a.trace.num_rows())
         .expect("No generator for trace length")
-        .pow(-amount);
+        .pow(-amount)
+        .unwrap(); // Root can not be zero
     a.project_into(
         &mut result,
         |i, j| ((i + amount_abs) % a.trace.num_rows(), j),
@@ -445,7 +447,7 @@ mod tests {
     use super::*;
     use proptest::prelude::*;
     use zkp_macros_decl::field_element;
-    use zkp_primefield::u256::U256;
+    use zkp_primefield::{u256::U256, One};
 
     /// Generates an arbitrary permutation on n numbers
     fn arb_permutation(n: usize) -> impl Strategy<Value = Vec<usize>> {
@@ -470,6 +472,7 @@ mod tests {
     }
 
     /// Generates an arbitrary field element
+    // TODO: Rejection sample
     fn arb_field_element() -> impl Strategy<Value = FieldElement> {
         (any::<u64>(), any::<u64>(), any::<u64>(), any::<u64>())
             .prop_map(move |(a, b, c, d)| FieldElement::from(U256::from_limbs([a, b, c, d])))
@@ -556,7 +559,7 @@ mod tests {
                 // Spotcheck to make sure constraints constraint the table
                 let row = row % component.trace.num_rows();
                 let col = col % component.trace.num_columns();
-                component.trace[(row, col)] += FieldElement::ONE;
+                component.trace[(row, col)] += FieldElement::one();
                 assert!(!component.check());
             }
         }
@@ -708,7 +711,8 @@ mod tests {
             // TODO: Make prove and verify support empty/tiny traces correctly
             prop_assume!(component.trace.num_rows() >= 2);
             prop_assume!(component.trace.num_columns() >= 1);
-            let proof = component.prove(()).unwrap();
+            let proof = component.prove(());
+            let proof = proof.expect("Expected proof");
             component.verify(&proof).unwrap();
         }
     }

@@ -9,6 +9,11 @@ use std::{
 };
 
 impl Binary for U256 {
+    #[inline(always)]
+    fn num_bits() -> usize {
+        256
+    }
+
     #[cfg_attr(feature = "inline", inline(always))]
     fn bit(&self, i: usize) -> bool {
         if i < 64 {

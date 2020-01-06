@@ -1,6 +1,6 @@
 use std::time::Instant;
 use zkp_macros_decl::field_element;
-use zkp_primefield::{fft::ifft, FieldElement};
+use zkp_primefield::{fft::ifft, FieldElement, Pow, Root};
 use zkp_stark::{
     Constraints, DensePolynomial, Provable, RationalExpression, TraceTable, Verifiable,
 };

@@ -21,13 +21,13 @@ impl InvMod for U256 {
     }
 }
 
-impl DivRem<u64> for &U256 {
-    type Quotient = U256;
+impl DivRem<u64> for U256 {
+    type Quotient = Self;
     type Remainder = u64;
 
     // Short division
     // TODO: Can be computed in-place
-    fn div_rem(self, rhs: u64) -> Option<(U256, u64)> {
+    fn div_rem(&self, rhs: u64) -> Option<(Self, u64)> {
         if rhs == 0 {
             None
         } else {
@@ -37,18 +37,18 @@ impl DivRem<u64> for &U256 {
             let (q2, r) = div_2_1(self.limb(2), r, rhs);
             let (q1, r) = div_2_1(self.limb(1), r, rhs);
             let (q0, r) = div_2_1(self.limb(0), r, rhs);
-            Some((U256::from_limbs([q0, q1, q2, q3]), r))
+            Some((Self::from_limbs([q0, q1, q2, q3]), r))
         }
     }
 }
 
-impl<'a> DivRem<&'a U256> for &'a U256 {
-    type Quotient = U256;
-    type Remainder = U256;
+impl DivRem<&Self> for U256 {
+    type Quotient = Self;
+    type Remainder = Self;
 
     // Short division
     // TODO: Can be computed in-place
-    fn div_rem(self, rhs: Self) -> Option<(U256, U256)> {
+    fn div_rem(&self, rhs: &Self) -> Option<(Self, Self)> {
         let mut numerator = [self.limb(0), self.limb(1), self.limb(2), self.limb(3), 0];
         if rhs.limb(3) > 0 {
             // divrem_nby4
@@ -59,28 +59,28 @@ impl<'a> DivRem<&'a U256> for &'a U256 {
                 rhs.limb(3),
             ]);
             Some((
-                U256::from_limbs([numerator[4], 0, 0, 0]),
-                U256::from_limbs([numerator[0], numerator[1], numerator[2], numerator[3]]),
+                Self::from_limbs([numerator[4], 0, 0, 0]),
+                Self::from_limbs([numerator[0], numerator[1], numerator[2], numerator[3]]),
             ))
         } else if rhs.limb(2) > 0 {
             // divrem_nby3
             divrem_nbym(&mut numerator, &mut [rhs.limb(0), rhs.limb(1), rhs.limb(2)]);
             Some((
-                U256::from_limbs([numerator[3], numerator[4], 0, 0]),
-                U256::from_limbs([numerator[0], numerator[1], numerator[2], 0]),
+                Self::from_limbs([numerator[3], numerator[4], 0, 0]),
+                Self::from_limbs([numerator[0], numerator[1], numerator[2], 0]),
             ))
         } else if rhs.limb(1) > 0 {
             // divrem_nby2
             divrem_nbym(&mut numerator, &mut [rhs.limb(0), rhs.limb(1)]);
             Some((
-                U256::from_limbs([numerator[2], numerator[3], numerator[4], 0]),
-                U256::from_limbs([numerator[0], numerator[1], 0, 0]),
+                Self::from_limbs([numerator[2], numerator[3], numerator[4], 0]),
+                Self::from_limbs([numerator[0], numerator[1], 0, 0]),
             ))
         } else if rhs.limb(0) > 0 {
             let remainder = divrem_nby1(&mut numerator, rhs.limb(0));
             Some((
-                U256::from_limbs([numerator[0], numerator[1], numerator[2], numerator[3]]),
-                U256::from_limbs([remainder, 0, 0, 0]),
+                Self::from_limbs([numerator[0], numerator[1], numerator[2], numerator[3]]),
+                Self::from_limbs([remainder, 0, 0, 0]),
             ))
         } else {
             None

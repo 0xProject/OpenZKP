@@ -76,7 +76,7 @@ pub const fn to_montgomery_const(x: &U256, modulus: &U256, m64: u64, r2: &U256) 
 // We rebind variables for readability
 #[allow(clippy::shadow_unrelated)]
 #[inline(always)]
-pub(crate) fn redc_inline<M: MontgomeryParameters<U256>>(lo: &U256, hi: &U256) -> U256 {
+pub(crate) fn redc_inline<M: MontgomeryParameters<UInt = U256>>(lo: &U256, hi: &U256) -> U256 {
     let modulus = M::MODULUS.as_limbs();
     // Algorithm 14.32 from Handbook of Applied Cryptography.
     // TODO: Optimize for the specific values of M64 and MODULUS.
@@ -116,7 +116,7 @@ pub(crate) fn redc_inline<M: MontgomeryParameters<U256>>(lo: &U256, hi: &U256) -
 // We rebind variables for readability
 #[allow(clippy::shadow_unrelated)]
 #[inline(always)]
-pub(crate) fn mul_redc_inline<M: MontgomeryParameters<U256>>(x: &U256, y: &U256) -> U256 {
+pub(crate) fn mul_redc_inline<M: MontgomeryParameters<UInt = U256>>(x: &U256, y: &U256) -> U256 {
     let x = x.as_limbs();
     let modulus = M::MODULUS.as_limbs();
 
@@ -186,7 +186,9 @@ mod tests {
 
     // TODO: Non-proth prime
     // TODO: Test for small and big primes
-    impl MontgomeryParameters<U256> for PrimeField {
+    impl MontgomeryParameters for PrimeField {
+        type UInt = U256;
+
         const M64: u64 = 0xffff_ffff_ffff_ffff;
         const MODULUS: U256 =
             u256h!("0800000000000011000000000000000000000000000000000000000000000001");

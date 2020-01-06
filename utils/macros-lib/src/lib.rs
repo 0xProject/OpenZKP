@@ -230,7 +230,7 @@ pub fn field_element(input: TokenStream) -> TokenStream {
         let c2 = Literal::u64_suffixed(c2);
         let c3 = Literal::u64_suffixed(c3);
 
-        Ok(quote! { FieldElement::from_montgomery(U256::from_limbs([#c0, #c1, #c2, #c3])) })
+        Ok(quote! { FieldElement::from_montgomery_const(U256::from_limbs([#c0, #c1, #c2, #c3])) })
     })()
     .unwrap_or_else(|err: syn::Error| err.to_compile_error())
 }
@@ -301,14 +301,14 @@ mod test {
     fn field_element_positive() {
         assert_eq!(
             field_element(quote! {""}).to_string(),
-            quote! {FieldElement::from_montgomery(
+            quote! {FieldElement::from_montgomery_const(
                 U256::from_limbs([0u64, 0u64, 0u64, 0u64])
             )}
             .to_string()
         );
         assert_eq!(
             field_element(quote! {"01"}).to_string(),
-            quote! {FieldElement::from_montgomery(
+            quote! {FieldElement::from_montgomery_const(
                 U256::from_limbs([18446744073709551585u64 , 18446744073709551615u64 , 18446744073709551615u64 , 576460752303422960u64])
             )}
             .to_string()

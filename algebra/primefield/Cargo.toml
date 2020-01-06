@@ -17,6 +17,7 @@ edition = "2018"
 [dependencies]
 zkp-macros-decl = { version = "0.1.0", path = "../../utils/macros-decl",  default_features = false }
 zkp-u256 =  { version = "0.1.0", path = "../u256", default_features = false }
+num-traits = { version = "0.2.10", default_features = false }
 rand = { version = "0.7.2", optional = true }
 
 no-std-compat = { version = "0.1.0", features = [ "alloc" ] }
@@ -57,6 +58,7 @@ std = [
     "no-std-compat/std",
     "itertools/use_std",
     "crunchy/std",
+    "num-traits/std",
     "hex",
 ]
 # HACK: Cargo does not allow features with the same name as dependencies.
