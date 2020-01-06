@@ -306,7 +306,7 @@ impl RationalExpression {
 
         #[allow(clippy::match_same_arms)]
         match self {
-            X => "mload(0)".to_owned(),
+            X => "mload(0x0)".to_owned(),
             Constant(_) if memory_layout.contains_key(self) => {
                 memory_layout.get(self).unwrap().clone()
             }
