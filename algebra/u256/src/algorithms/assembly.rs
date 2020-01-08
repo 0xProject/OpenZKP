@@ -1,6 +1,8 @@
 #![allow(unsafe_code)]
-use crate::U256;
-use crate::algorithms::montgomery::Parameters;
+use crate::{
+    algorithms::{limb_operations::mac, montgomery::Parameters},
+    U256,
+};
 use std::mem::MaybeUninit;
 
 // For instruction timings and through puts
@@ -12,6 +14,139 @@ use std::mem::MaybeUninit;
 // See <https://gmplib.org/repo/gmp/file/tip/mpn/x86_64/mulx/adx/addmul_1.asm>
 // See <https://github.com/microsoft/SymCrypt/blob/master/lib/amd64/fdef_mulx.asm>
 
+// <https://web.archive.org/web/20181104011912/https://locklessinc.com/articles/gcc_asm/>
+
+// Computes r[0..5] = a * b[0..4]
+// Uses MULX
+#[inline(always)]
+#[cfg(all(target_arch = "x86_64", target_feature = "adx"))]
+pub fn mul_1_asm(a: u64, b0: u64, b1: u64, b2: u64, b3: u64) -> (u64, u64, u64, u64, u64) {
+    const ZERO: u64 = 0;
+    let r0: u64;
+    let r1: u64;
+    let r2: u64;
+    let r3: u64;
+    let r4: u64;
+    let _lo: u64;
+    unsafe {
+        asm!(r"
+        mov $7, %rdx          // Load a in RDX
+        xor $4, $4            // r4 = CF = OF 0
+
+        mulx $8, $0, $1       // (r0, r1) = a * b0
+        mulx $9, $5, $2       // (lo, r2) = a * b1
+        adcx $5, $1           // r1 += lo + CF (carry in CF)
+
+        mulx $10, $5, $3      // (lo, r3) = a * b2
+        adcx $5, $2           // r2 += lo + CF (carry in CF)
+
+        mulx $11, $5, $4      // (lo, r4) = a * b3
+        adcx $5, $3           // r3 += lo + CF (carry in CF)
+        adcx $11, $4          // r4 += 0 + CF (no carry, CF = 0)
+        "
+        : // Output constraints
+            "=&r"(r0),   // $0 r0..4 are in register
+            "=&r"(r1),   // $1
+            "=&r"(r2),   // $2
+            "=&r"(r3),   // $3
+            "=&r"(r4)    // $4
+            "=&r"(_lo)   // $5 Temporary values can be in any register
+        : // Input constraints
+            "rm"(a),    // $6 a must be in RDX for MULX to work
+            "rm"(b0),   // $7 Second operand can be register or memory
+            "rm"(b1),   // $8 Second operand can be register or memory
+            "rm"(b2),   // $9 Second operand can be register or memory
+            "rm"(b3),   // $10 Second operand can be register or memory
+            "rm"(ZERO)  // $11
+        : // Clobbers
+           "rdx",
+           "cc"
+        )
+    }
+    (r0, r1, r2, r3, r4)
+}
+
+// Computes r[0..4] += a * b[0..4], returns carry
+// Uses MULX and ADCX/ADOX carry chain
+#[inline(always)]
+#[cfg(all(target_arch = "x86_64", target_feature = "adx"))]
+pub fn mul_add_1_asm(
+    r0: &mut u64,
+    r1: &mut u64,
+    r2: &mut u64,
+    r3: &mut u64,
+    a: u64,
+    b0: u64,
+    b1: u64,
+    b2: u64,
+    b3: u64,
+) -> u64 {
+    let _lo: u64;
+    let _hi: u64;
+    let r4: u64;
+    unsafe {
+        asm!(r"
+        mov $7, %rdx          // Load a in RDX
+        xor $4, $4            // r4 = CF = OF 0
+
+        mulx $8, $5, $6       // a * b0
+        adcx $5, $0           // r0 += lo + CF (carry in CF)
+        adox $6, $1           // r1 += hi + OF (carry in OF)
+
+        mulx $9, $5, $6       // a * b1
+        adcx $5, $1           // r1 += lo + CF (carry in CF)
+        adox $6, $2           // r2 += hi + OF (carry in OF)
+
+        mulx $10, $5, $6      // a * b2
+        adcx $5, $2           // r2 += lo + CF (carry in CF)
+        adox $6, $3           // r3 += hi + OF (carry in OF)
+
+        mulx $11, $5, $6      // a * b3
+        adcx $5, $3           // r3 += lo + CF (carry in CF)
+        adcx $4, $4           // r4 += CF (no carry, CF = 0)
+        adox $6, $4           // r4 += hi + OF (no carry, OF = 0)
+        "
+        : // Output constraints
+            "+r"(*r0),   // $0 r0..3 are in register and modified in place
+            "+r"(*r1),   // $1
+            "+r"(*r2),   // $2
+            "+r"(*r3),   // $3
+            "=&r"(r4)    // $4 r4 is output to a register
+            "=&r"(_lo),  // $5 Temporary values can be in any register
+            "=&r"(_hi)   // $6
+        : // Input constraints
+            "rm"(a),    // $7 a must be in RDX for MULX to work
+            "rm"(b0),   // $8 Second operand can be register or memory
+            "rm"(b1),   // $9 Second operand can be register or memory
+            "rm"(b2),   // $10 Second operand can be register or memory
+            "rm"(b3)    // $11 Second operand can be register or memory
+        : // Clobbers
+           "rdx",
+           "cc"
+        )
+    }
+    r4
+}
+
+#[inline(always)]
+pub fn full_mul_asm2(x: &U256, y: &U256) -> (U256, U256) {
+    let x = x.as_limbs();
+    let y = y.as_limbs();
+    let (r0, mut r1, mut r2, mut r3, mut r4) = mul_1_asm(x[0], y[0], y[1], y[2], y[3]);
+    let mut r5 = mul_add_1_asm(
+        &mut r1, &mut r2, &mut r3, &mut r4, x[1], y[0], y[1], y[2], y[3],
+    );
+    let mut r6 = mul_add_1_asm(
+        &mut r2, &mut r3, &mut r4, &mut r5, x[2], y[0], y[1], y[2], y[3],
+    );
+    let r7 = mul_add_1_asm(
+        &mut r3, &mut r4, &mut r5, &mut r6, x[3], y[0], y[1], y[2], y[3],
+    );
+    (
+        U256::from_limbs([r0, r1, r2, r3]),
+        U256::from_limbs([r4, r5, r6, r7]),
+    )
+}
 
 // TODO: Square asm
 // TODO: Mul-add
@@ -21,7 +156,8 @@ pub fn mul_asm(x: &U256, y: &U256) -> U256 {
     let x = x.as_limbs();
     let y = y.as_limbs();
     let mut r = MaybeUninit::<[u64; 4]>::uninit();
-    unsafe { asm!(r"
+    unsafe {
+        asm!(r"
         xor %rax, %rax               // CF, OF cleared
 
         // Set x[0] * y
@@ -69,10 +205,11 @@ pub fn mul_asm(x: &U256, y: &U256) -> U256 {
         adcx %rax, %r10
         mov  %r10, 24($0)            // Store and free r9
         "
-        :
-        : "r"(r.as_mut_ptr()), "r"(x), "r"(y)
-        : "rax", "rbx", "rdx", "r8", "r9", "r10", "r11", "cc", "memory"
-    )}
+            :
+            : "r"(r.as_mut_ptr()), "r"(x), "r"(y)
+            : "rax", "rbx", "rdx", "r8", "r9", "r10", "r11", "cc", "memory"
+        )
+    }
     let r = unsafe { r.assume_init() };
     U256::from_limbs(r)
 }
@@ -85,7 +222,8 @@ pub fn full_mul_asm(x: &U256, y: &U256) -> (U256, U256) {
     let mut lo = MaybeUninit::<[u64; 4]>::uninit();
     let mut hi = MaybeUninit::<[u64; 4]>::uninit();
 
-    unsafe { asm!(r"
+    unsafe {
+        asm!(r"
         xor %rax, %rax               // CF, OF cleared
 
         // Set x[0] * y
@@ -161,10 +299,11 @@ pub fn full_mul_asm(x: &U256, y: &U256) -> (U256, U256) {
         mov %r9, 16($1)
         mov %r10, 24($1)
         "
-        :
-        : "r"(lo.as_mut_ptr()), "r"(hi.as_mut_ptr()), "r"(x), "r"(y), "m"(ZERO)
-        : "rax", "rbx", "rdx", "r8", "r9", "r10", "r11", "cc", "memory"
-    )}
+            :
+            : "r"(lo.as_mut_ptr()), "r"(hi.as_mut_ptr()), "r"(x), "r"(y), "m"(ZERO)
+            : "rax", "rbx", "rdx", "r8", "r9", "r10", "r11", "cc", "memory"
+        )
+    }
     let lo = unsafe { lo.assume_init() };
     let hi = unsafe { hi.assume_init() };
 
@@ -178,7 +317,8 @@ pub fn proth_redc_asm(m3: u64, lo: &U256, hi: &U256) -> U256 {
     let lo = lo.as_limbs();
     let hi = hi.as_limbs();
     let mut result = MaybeUninit::<[u64; 4]>::uninit();
-    unsafe { asm!(r"
+    unsafe {
+        asm!(r"
         // RDX contains M3 and we keep it there the whole time.
         // OPT: Use operand constraints to put it there.
         mov $4, %rdx
@@ -251,10 +391,11 @@ pub fn proth_redc_asm(m3: u64, lo: &U256, hi: &U256) -> U256 {
         mov %r10, 16($0)
         mov %r12, 24($0)
         "
-        :
-        : "r"(result.as_mut_ptr()), "r"(lo), "r"(hi), "m"(ZERO), "m"(m3)
-        : "rax", "rbx", "rdx", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "cc", "memory"
-    )}
+            :
+            : "r"(result.as_mut_ptr()), "r"(lo), "r"(hi), "m"(ZERO), "m"(m3)
+            : "rax", "rbx", "rdx", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "cc", "memory"
+        )
+    }
     let result = unsafe { result.assume_init() };
     U256::from_limbs(result)
 }
@@ -262,7 +403,7 @@ pub fn proth_redc_asm(m3: u64, lo: &U256, hi: &U256) -> U256 {
 // https://doc.rust-lang.org/1.12.0/book/inline-assembly.html
 // https://llvm.org/docs/LangRef.html#inline-assembler-expressions
 // https://www.intel.com/content/dam/www/public/us/en/documents/white-papers/large-integer-squaring-ia-paper.pdf
-// 
+//
 
 // LEA amd INC can add without affecting flags.
 // NOT INC  can be used for a carry free NEG
@@ -275,7 +416,6 @@ pub fn mul_redc<M: Parameters>(a: &U256, b: &U256) -> U256 {
     let a = a.as_limbs();
     let b = b.as_limbs();
     let mut result = MaybeUninit::<[u64; 4]>::uninit();
-    
     // MULX dst_high, dst_low, src_b (src_a = %rdx)
     // src_b can be register or memory, not immediate
     unsafe {
