@@ -15,14 +15,15 @@ use std::mem::MaybeUninit;
 // See <https://github.com/microsoft/SymCrypt/blob/master/lib/amd64/fdef_mulx.asm>
 
 // <https://web.archive.org/web/20181104011912/https://locklessinc.com/articles/gcc_asm/>
-// <https://releases.llvm.org/5.0.0/docs/LangRef.html#inline-assembler-expressions>
+// <https://releases.llvm.org/9.0.0/docs/LangRef.html#inline-assembler-expressions>
+// NOTE: LLVM currently always takes `m` when offered `rm`, but this seems fine
+// for our use case.
 
 // Computes r[0..5] = a * b[0..4]
 // Uses MULX
 #[inline(always)]
 #[cfg(all(target_arch = "x86_64", target_feature = "adx"))]
 pub fn mul_1_asm(a: u64, b0: u64, b1: u64, b2: u64, b3: u64) -> (u64, u64, u64, u64, u64) {
-    const ZERO: u64 = 0;
     let r0: u64;
     let r1: u64;
     let r2: u64;
@@ -31,18 +32,17 @@ pub fn mul_1_asm(a: u64, b0: u64, b1: u64, b2: u64, b3: u64) -> (u64, u64, u64, 
     let _lo: u64;
     unsafe {
         asm!(r"
-        xor $4, $4            // r4 = CF = OF 0
+        mulx $7, $0, $1      // (r0, r1) = a * b0
 
-        mulx $7, $0, $1       // (r0, r1) = a * b0
-        mulx $8, $5, $2       // (lo, r2) = a * b1
-        adcx $5, $1           // r1 += lo + CF (carry in CF)
+        mulx $8, $5, $2      // (lo, r2) = a * b1
+        add $5, $1           // r1 += lo (carry in CF)
 
         mulx $9, $5, $3      // (lo, r3) = a * b2
-        adcx $5, $2           // r2 += lo + CF (carry in CF)
+        adc $5, $2           // r2 += lo + CF (carry in CF)
 
-        mulx $10, $5, $4      // (lo, r4) = a * b3
-        adcx $5, $3           // r3 += lo + CF (carry in CF)
-        adcx $11, $4          // r4 += 0 + CF (no carry, CF = 0)
+        mulx $10, $5, $4     // (lo, r4) = a * b3
+        adc $5, $3           // r3 += lo + CF (carry in CF)
+        adc $11, $4          // r4 += 0 + CF (no carry, CF to 0)
         "
         : // Output constraints
             "=&r"(r0),   // $0 r0..4 are in registers
@@ -57,10 +57,9 @@ pub fn mul_1_asm(a: u64, b0: u64, b1: u64, b2: u64, b3: u64) -> (u64, u64, u64, 
             "rm"(b1),   // $8
             "rm"(b2),   // $9
             "rm"(b3),   // $10
-            "rm"(ZERO)  // $11
+            "i"(0)      // $11 Immediate zero
         : // Clobbers
-           "rdx",
-           "cc"
+           "cc"         // Flags
         )
     }
     (r0, r1, r2, r3, r4)
@@ -120,8 +119,7 @@ pub fn mul_add_1_asm(
             "rm"(b2),   // $10 Second operand can be register or memory
             "rm"(b3)    // $11 Second operand can be register or memory
         : // Clobbers
-           "rdx",
-           "cc"
+           "cc"         // Flags
         )
     }
     r4
