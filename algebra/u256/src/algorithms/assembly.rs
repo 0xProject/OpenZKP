@@ -15,6 +15,7 @@ use std::mem::MaybeUninit;
 // See <https://github.com/microsoft/SymCrypt/blob/master/lib/amd64/fdef_mulx.asm>
 
 // <https://web.archive.org/web/20181104011912/https://locklessinc.com/articles/gcc_asm/>
+// <https://releases.llvm.org/5.0.0/docs/LangRef.html#inline-assembler-expressions>
 
 // Computes r[0..5] = a * b[0..4]
 // Uses MULX
@@ -30,7 +31,6 @@ pub fn mul_1_asm(a: u64, b0: u64, b1: u64, b2: u64, b3: u64) -> (u64, u64, u64, 
     let _lo: u64;
     unsafe {
         asm!(r"
-        mov $6, %rdx          // Load a in RDX
         xor $4, $4            // r4 = CF = OF 0
 
         mulx $7, $0, $1       // (r0, r1) = a * b0
@@ -46,16 +46,13 @@ pub fn mul_1_asm(a: u64, b0: u64, b1: u64, b2: u64, b3: u64) -> (u64, u64, u64, 
         "
         : // Output constraints
             "=&r"(r0),   // $0 r0..4 are in registers
-                         // TODO: We specify `=&` for no overlap,
-                         // but actually some can be safely overlapped.
             "=&r"(r1),   // $1
             "=&r"(r2),   // $2
             "=&r"(r3),   // $3
             "=&r"(r4)    // $4
             "=&r"(_lo)   // $5 Temporary values can be in any register
         : // Input constraints
-            "rm"(a),    // $6 a must be in RDX for MULX to work
-                        // but 'd' constraint fails, so we MOV
+            "{rdx}"(a), // $6 a must be in RDX for MULX to work
             "rm"(b0),   // $7 b0..b3 can be register or memory
             "rm"(b1),   // $8
             "rm"(b2),   // $9
@@ -89,7 +86,6 @@ pub fn mul_add_1_asm(
     let r4: u64;
     unsafe {
         asm!(r"
-        mov $7, %rdx          // Load a in RDX
         xor $4, $4            // r4 = CF = OF 0
 
         mulx $8, $5, $6       // a * b0
@@ -118,7 +114,7 @@ pub fn mul_add_1_asm(
             "=&r"(_lo),  // $5 Temporary values can be in any register
             "=&r"(_hi)   // $6
         : // Input constraints
-            "rm"(a),    // $7 a must be in RDX for MULX to work
+            "{rdx}"(a), // $7 a must be in RDX for MULX to work
             "rm"(b0),   // $8 Second operand can be register or memory
             "rm"(b1),   // $9 Second operand can be register or memory
             "rm"(b2),   // $10 Second operand can be register or memory
