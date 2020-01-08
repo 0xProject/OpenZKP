@@ -30,22 +30,24 @@ pub fn mul_1_asm(a: u64, b0: u64, b1: u64, b2: u64, b3: u64) -> (u64, u64, u64, 
     let _lo: u64;
     unsafe {
         asm!(r"
-        mov $7, %rdx          // Load a in RDX
+        mov $6, %rdx          // Load a in RDX
         xor $4, $4            // r4 = CF = OF 0
 
-        mulx $8, $0, $1       // (r0, r1) = a * b0
-        mulx $9, $5, $2       // (lo, r2) = a * b1
+        mulx $7, $0, $1       // (r0, r1) = a * b0
+        mulx $8, $5, $2       // (lo, r2) = a * b1
         adcx $5, $1           // r1 += lo + CF (carry in CF)
 
-        mulx $10, $5, $3      // (lo, r3) = a * b2
+        mulx $9, $5, $3      // (lo, r3) = a * b2
         adcx $5, $2           // r2 += lo + CF (carry in CF)
 
-        mulx $11, $5, $4      // (lo, r4) = a * b3
+        mulx $10, $5, $4      // (lo, r4) = a * b3
         adcx $5, $3           // r3 += lo + CF (carry in CF)
         adcx $11, $4          // r4 += 0 + CF (no carry, CF = 0)
         "
         : // Output constraints
-            "=&r"(r0),   // $0 r0..4 are in register
+            "=&r"(r0),   // $0 r0..4 are in registers
+                         // TODO: We specify `=&` for no overlap,
+                         // but actually some can be safely overlapped.
             "=&r"(r1),   // $1
             "=&r"(r2),   // $2
             "=&r"(r3),   // $3
@@ -53,10 +55,11 @@ pub fn mul_1_asm(a: u64, b0: u64, b1: u64, b2: u64, b3: u64) -> (u64, u64, u64, 
             "=&r"(_lo)   // $5 Temporary values can be in any register
         : // Input constraints
             "rm"(a),    // $6 a must be in RDX for MULX to work
-            "rm"(b0),   // $7 Second operand can be register or memory
-            "rm"(b1),   // $8 Second operand can be register or memory
-            "rm"(b2),   // $9 Second operand can be register or memory
-            "rm"(b3),   // $10 Second operand can be register or memory
+                        // but 'd' constraint fails, so we MOV
+            "rm"(b0),   // $7 b0..b3 can be register or memory
+            "rm"(b1),   // $8
+            "rm"(b2),   // $9
+            "rm"(b3),   // $10
             "rm"(ZERO)  // $11
         : // Clobbers
            "rdx",
