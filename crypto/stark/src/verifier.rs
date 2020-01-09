@@ -316,8 +316,7 @@ pub fn verify(constraints: &Constraints, proof: &Proof) -> Result<()> {
                             &trace_value_coefficients,
                             &combined_constraints_values,
                             &combined_constraints_coefficients,
-                            eval_domain_size,
-                            constraints.blowup,
+                            trace_length,
                             &constraints.trace_arguments(),
                         )?);
                     }
@@ -487,16 +486,15 @@ fn out_of_domain_element(
     trace_value_coefficients: &[FieldElement],
     combined_constraints_values: &[FieldElement],
     combined_constraints_coefficients: &[FieldElement],
-    eval_domain_size: usize,
-    blowup: usize,
+    trace_length: usize,
     trace_arguments: &[(usize, isize)],
 ) -> Result<FieldElement> {
     let x_transform = x_cord * FieldElement::generator();
-    let omega = match FieldElement::root(eval_domain_size) {
+    let trace_generator = match FieldElement::root(trace_length) {
         Some(x) => x,
         None => return Err(Error::RootUnavailable),
     };
-    let g = omega.pow(blowup);
+
     let mut r = FieldElement::zero();
 
     for ((coefficient, value), (i, j)) in trace_value_coefficients
@@ -505,7 +503,7 @@ fn out_of_domain_element(
         .zip(trace_arguments)
     {
         r += coefficient * (&poly_points[*i] - value)
-            / (&x_transform - g.pow(*j).unwrap() * oods_point);
+            / (&x_transform - trace_generator.pow(*j).unwrap() * oods_point);
     }
 
     for (i, constraint_oods_value) in constraint_oods_values.iter().enumerate() {
