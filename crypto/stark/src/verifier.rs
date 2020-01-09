@@ -312,12 +312,11 @@ pub fn verify(constraints: &Constraints, proof: &Proof) -> Result<()> {
                             &constraint_values[z].1,
                             &eval_x[z_reverse],
                             &oods_point,
-                            &trace_values,
+                            &trace_map,
                             &trace_value_coefficients,
                             &combined_constraints_values,
                             &combined_constraints_coefficients,
                             trace_length,
-                            &constraints.trace_arguments(),
                         )?);
                     }
                 } else {
@@ -482,12 +481,11 @@ fn out_of_domain_element(
     constraint_oods_values: &[FieldElement],
     x_cord: &FieldElement,
     oods_point: &FieldElement,
-    trace_values: &[FieldElement],
+    trace_map: &BTreeMap<(usize, isize), FieldElement>,
     trace_value_coefficients: &[FieldElement],
     combined_constraints_values: &[FieldElement],
     combined_constraints_coefficients: &[FieldElement],
     trace_length: usize,
-    trace_arguments: &[(usize, isize)],
 ) -> Result<FieldElement> {
     let x_transform = x_cord * FieldElement::generator();
     let trace_generator = match FieldElement::root(trace_length) {
@@ -497,11 +495,7 @@ fn out_of_domain_element(
 
     let mut r = FieldElement::zero();
 
-    for ((coefficient, value), (i, j)) in trace_value_coefficients
-        .iter()
-        .zip(trace_values)
-        .zip(trace_arguments)
-    {
+    for (coefficient, ((i, j), value)) in trace_value_coefficients.iter().zip(trace_map) {
         r += coefficient * (&poly_points[*i] - value)
             / (&x_transform - trace_generator.pow(*j).unwrap() * oods_point);
     }
