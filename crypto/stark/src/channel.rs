@@ -104,6 +104,9 @@ impl VerifierChannel {
         self.proof_index == self.proof.len()
     }
 
+    // This differs from Replayable::<FieldElement>::replay_many in that it only
+    // updates the public coin once, with the contents of the entire layer, instead
+    // of onces for each FieldElement in the layer.
     pub(crate) fn replay_fri_layer(&mut self, size: usize) -> Vec<FieldElement> {
         let start_index = self.proof_index;
         self.proof_index += 32 * size;
