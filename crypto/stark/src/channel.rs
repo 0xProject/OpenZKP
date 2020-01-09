@@ -1,7 +1,7 @@
 // TODO: Naming?
 #![allow(clippy::module_name_repetitions)]
 use crate::proof_of_work;
-use std::prelude::v1::*;
+use std::{convert::TryInto, prelude::v1::*};
 use tiny_keccak::Keccak;
 use zkp_hash::Hash;
 use zkp_macros_decl::u256h;
@@ -102,6 +102,35 @@ impl VerifierChannel {
 
     pub(crate) fn at_end(self) -> bool {
         self.proof_index == self.proof.len()
+    }
+
+    // This differs from Replayable::<FieldElement>::replay_many in that it only
+    // updates the public coin once, with the contents of the entire layer, instead
+    // of onces for each FieldElement in the layer.
+    pub(crate) fn replay_fri_layer(&mut self, size: usize) -> Vec<FieldElement> {
+        let start_index = self.proof_index;
+        self.proof_index += 32 * size;
+        let layer_contents = &self.proof[start_index..self.proof_index];
+
+        self.coin.write(layer_contents);
+
+        layer_contents
+            .chunks_exact(32)
+            .map(|bytes| {
+                FieldElement::from_montgomery(U256::from_bytes_be(bytes.try_into().unwrap()))
+            })
+            .collect()
+    }
+
+    fn read_32_bytes(&mut self) -> [u8; 32] {
+        let mut holder = [0_u8; 32];
+        let from = self.proof_index;
+        let to = from + 32;
+        self.proof_index = to;
+        // OPT: Use arrayref crate or similar to avoid copy
+        holder.copy_from_slice(&self.proof[from..to]);
+        self.coin.write(&holder[..]);
+        holder
     }
 }
 
@@ -264,48 +293,22 @@ impl Writable<U256> for ProverChannel {
 
 impl Replayable<Hash> for VerifierChannel {
     fn replay(&mut self) -> Hash {
-        let hash: [u8; 32] = self.replay();
+        let hash: [u8; 32] = self.read_32_bytes();
         Hash::new(hash)
-    }
-}
-
-impl Replayable<[u8; 32]> for VerifierChannel {
-    fn replay(&mut self) -> [u8; 32] {
-        let mut holder = [0_u8; 32];
-        let from = self.proof_index;
-        let to = from + 32;
-        self.proof_index = to;
-        // OPT: Use arrayref crate or similar to avoid copy
-        holder.copy_from_slice(&self.proof[from..to]);
-        self.coin.write(&holder[..]);
-        holder
     }
 }
 
 impl Replayable<U256> for VerifierChannel {
     fn replay(&mut self) -> U256 {
-        U256::from_bytes_be(&Replayable::replay(self))
+        let big_endian_bytes: [u8; 32] = self.read_32_bytes();
+        U256::from_bytes_be(&big_endian_bytes)
     }
 }
 
 impl Replayable<FieldElement> for VerifierChannel {
     fn replay(&mut self) -> FieldElement {
-        FieldElement::from_montgomery(Replayable::replay(self))
-    }
-
-    fn replay_many(&mut self, len: usize) -> Vec<FieldElement> {
-        let start_index = self.proof_index;
-        let mut ret = Vec::with_capacity(len);
-        for _ in 0..len {
-            let mut holder = [0_u8; 32];
-            let from = self.proof_index;
-            let to = from + 32;
-            self.proof_index = to;
-            holder.copy_from_slice(&self.proof[from..to]);
-            ret.push(FieldElement::from_montgomery(U256::from_bytes_be(&holder)));
-        }
-        self.coin.write(&self.proof[start_index..self.proof_index]);
-        ret
+        let montgomery_modulus: U256 = self.replay();
+        FieldElement::from_montgomery(montgomery_modulus)
     }
 }
 
@@ -409,7 +412,7 @@ mod tests {
 
         let mut verifier = VerifierChannel::new(source.proof.clone());
         verifier.initialize(&hex!("0123456789abcded"));
-        let bytes_test: [u8; 32] = verifier.replay();
+        let bytes_test: [u8; 32] = verifier.read_32_bytes();
         assert_eq!(bytes_test, rand_bytes);
         assert_eq!(
             verifier.coin.digest,
@@ -427,7 +430,7 @@ mod tests {
             verifier.coin.digest,
             hex!("34a12938f047c34da72b5949434950fa2b24220270fd26e6f64b6eb5e86c6626")
         );
-        let field_element_vec_test: Vec<FieldElement> = verifier.replay_many(2);
+        let field_element_vec_test: Vec<FieldElement> = verifier.replay_fri_layer(2);
         assert_eq!(field_element_vec_test, written_field_element_vec);
         assert_eq!(
             verifier.coin.digest,
@@ -440,7 +443,6 @@ mod tests {
 
     #[test]
     fn test_challenge_seed_from_channel() {
-        use crate::channel::*;
         let mut rand_source = ProverChannel::new();
         rand_source.initialize(&hex!("0123456789abcded"));
         // Verify that reading challenges does not depend on public coin counter.
