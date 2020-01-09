@@ -183,39 +183,36 @@ pub fn verify(constraints: &Constraints, proof: &Proof) -> Result<()> {
 
     // Get the low degree root commitment, and constraint root commitment
     // TODO: Make it work as channel.read()
-    let low_degree_extension_root = Replayable::<Hash>::replay(&mut channel);
+    let low_degree_extension_root: Hash = channel.replay();
     let lde_commitment = Commitment::from_size_hash(eval_domain_size, &low_degree_extension_root)?;
-    let mut constraint_coefficients: Vec<FieldElement> =
-        Vec::with_capacity(constraints.trace_arguments().len());
-    for _ in 0..constraints.len() {
-        constraint_coefficients.push(channel.get_random());
-        constraint_coefficients.push(channel.get_random());
-    }
-    let constraint_evaluated_root = Replayable::<Hash>::replay(&mut channel);
+    let constraint_coefficients = channel.get_coefficients(2 * constraints.len());
+
+    let constraint_evaluated_root: Hash = channel.replay();
     let constraint_commitment =
         Commitment::from_size_hash(eval_domain_size, &constraint_evaluated_root)?;
 
     // Get the oods information from the proof and random
     let oods_point: FieldElement = channel.get_random();
+
+    let trace_arguments = constraints.trace_arguments();
+    let trace_values: Vec<FieldElement> = channel.replay_many(trace_arguments.len());
+    let claimed_trace_map: BTreeMap<(usize, isize), FieldElement> = trace_arguments
+        .into_iter()
+        .zip(trace_values.iter().cloned())
+        .collect();
+
     let constraints_trace_degree = constraints.degree().next_power_of_two();
-    let mut oods_values: Vec<FieldElement> =
-        Vec::with_capacity(constraints.trace_arguments().len() + constraints_trace_degree);
-    for _ in 0..(constraints.trace_arguments().len() + constraints_trace_degree) {
-        oods_values.push(Replayable::<FieldElement>::replay(&mut channel));
-    }
-    let mut oods_coefficients: Vec<FieldElement> = Vec::with_capacity(oods_values.len());
-    for _ in &oods_values {
-        oods_coefficients.push(channel.get_random());
-    }
+    let claimed_constraint_values: Vec<FieldElement> =
+        channel.replay_many(constraints_trace_degree);
+
+    let oods_coefficients =
+        channel.get_coefficients(claimed_trace_map.len() + claimed_constraint_values.len());
 
     let mut fri_commitments: Vec<Commitment> = Vec::with_capacity(constraints.fri_layout.len() + 1);
     let mut eval_points: Vec<FieldElement> = Vec::with_capacity(constraints.fri_layout.len() + 1);
     let mut fri_size = eval_domain_size >> constraints.fri_layout[0];
     // Get first fri root:
-    fri_commitments.push(Commitment::from_size_hash(
-        fri_size,
-        &Replayable::<Hash>::replay(&mut channel),
-    )?);
+    fri_commitments.push(Commitment::from_size_hash(fri_size, &channel.replay())?);
     // Get fri roots and eval points from the channel random
     for &x in constraints.fri_layout.iter().skip(1) {
         fri_size >>= x;
@@ -226,10 +223,7 @@ pub fn verify(constraints: &Constraints, proof: &Proof) -> Result<()> {
             channel.get_random()
         };
         eval_points.push(eval_point);
-        fri_commitments.push(Commitment::from_size_hash(
-            fri_size,
-            &Replayable::<Hash>::replay(&mut channel),
-        )?);
+        fri_commitments.push(Commitment::from_size_hash(fri_size, &channel.replay())?);
     }
     // Gets the last layer and the polynomial coefficients
     eval_points.push(channel.get_random());
@@ -238,7 +232,7 @@ pub fn verify(constraints: &Constraints, proof: &Proof) -> Result<()> {
     // Gets the proof of work from the proof.
     let pow_seed: proof_of_work::ChallengeSeed = channel.get_random();
     let pow_challenge = pow_seed.with_difficulty(constraints.pow_bits);
-    let pow_response = Replayable::<proof_of_work::Response>::replay(&mut channel);
+    let pow_response: proof_of_work::Response = channel.replay();
     if !pow_challenge.verify(pow_response) {
         return Err(Error::InvalidPoW);
     }
@@ -251,15 +245,12 @@ pub fn verify(constraints: &Constraints, proof: &Proof) -> Result<()> {
     );
 
     // Get values and check decommitment of low degree extension
-    let lde_values: Vec<(usize, Vec<U256>)> = queries
+    let lde_values: Vec<(usize, Vec<FieldElement>)> = queries
         .iter()
-        .map(|&index| {
-            let held = Replayable::<U256>::replay_many(&mut channel, trace_cols);
-            (index, held)
-        })
+        .map(|&index| (index, channel.replay_fri_layer(trace_cols)))
         .collect();
     let lde_proof_length = lde_commitment.proof_size(&queries)?;
-    let lde_hashes = Replayable::<Hash>::replay_many(&mut channel, lde_proof_length);
+    let lde_hashes: Vec<Hash> = channel.replay_many(lde_proof_length);
     let lde_proof = MerkleProof::from_hashes(&lde_commitment, &queries, &lde_hashes)?;
     // Note - we could express this a merkle error instead but this adds specificity
     if lde_proof.verify(&lde_values).is_err() {
@@ -275,8 +266,7 @@ pub fn verify(constraints: &Constraints, proof: &Proof) -> Result<()> {
         ));
     }
     let constraint_proof_length = constraint_commitment.proof_size(&queries)?;
-    let constraint_hashes: Vec<Hash> =
-        Replayable::<Hash>::replay_many(&mut channel, constraint_proof_length);
+    let constraint_hashes: Vec<Hash> = channel.replay_many(constraint_proof_length);
     let constraint_proof =
         MerkleProof::from_hashes(&constraint_commitment, &queries, &constraint_hashes)?;
     // Note - we could express this a merkle error instead but this adds specificity
@@ -318,19 +308,18 @@ pub fn verify(constraints: &Constraints, proof: &Proof) -> Result<()> {
                     } else {
                         let z_reverse = fft::permute_index(eval_domain_size, queries[z]);
                         coset.push(out_of_domain_element(
-                            lde_values[z].1.as_slice(),
-                            &constraint_values[z].1,
                             &eval_x[z_reverse],
+                            &lde_values[z].1,
+                            &constraint_values[z].1,
                             &oods_point,
-                            oods_values.as_slice(),
-                            oods_coefficients.as_slice(),
-                            eval_domain_size,
-                            constraints.blowup,
-                            &constraints.trace_arguments(),
+                            &claimed_trace_map,
+                            &claimed_constraint_values,
+                            &oods_coefficients,
+                            trace_length,
                         )?);
                     }
                 } else {
-                    coset.push(Replayable::<FieldElement>::replay(&mut channel));
+                    coset.push(channel.replay());
                 }
             }
             fri_layer_values.push((*i, coset));
@@ -352,7 +341,7 @@ pub fn verify(constraints: &Constraints, proof: &Proof) -> Result<()> {
         }
 
         let merkle_proof_length = commitment.proof_size(&fri_indices)?;
-        let merkle_hashes = Replayable::<Hash>::replay_many(&mut channel, merkle_proof_length);
+        let merkle_hashes: Vec<Hash> = channel.replay_many(merkle_proof_length);
         let merkle_proof = MerkleProof::from_hashes(commitment, &fri_indices, &merkle_hashes)?;
         fri_folds = layer_folds;
 
@@ -394,23 +383,12 @@ pub fn verify(constraints: &Constraints, proof: &Proof) -> Result<()> {
         }
     }
 
-    let trace_arguments = constraints.trace_arguments();
-
-    let (trace_values, constraint_values) = oods_values.split_at(trace_arguments.len());
-
-    assert_eq!(trace_values.len(), trace_arguments.len());
-
-    let mut trace_map = BTreeMap::new();
-    for (argument, value) in trace_arguments.iter().zip(trace_values) {
-        let _ = trace_map.insert(*argument, value.clone());
-    }
-
     if oods_value_from_trace_values(
         &constraints,
         &constraint_coefficients,
-        &trace_map,
+        &claimed_trace_map,
         &oods_point,
-    ) != oods_value_from_constraint_values(&constraint_values, &oods_point)
+    ) != oods_value_from_constraint_values(&claimed_constraint_values, &oods_point)
     {
         return Err(Error::OodsMismatch);
     }
@@ -498,43 +476,41 @@ fn fri_single_fold(
 
 #[allow(clippy::too_many_arguments)]
 fn out_of_domain_element(
-    poly_points_u: &[U256],
-    constraint_oods_values: &[FieldElement],
-    x_cord: &FieldElement,
+    query_x: &FieldElement,
+    query_trace_values: &[FieldElement],
+    query_constraint_values: &[FieldElement],
     oods_point: &FieldElement,
-    oods_values: &[FieldElement],
+    oods_trace_map: &BTreeMap<(usize, isize), FieldElement>,
+    oods_constraint_values: &[FieldElement],
     oods_coefficients: &[FieldElement],
-    eval_domain_size: usize,
-    blowup: usize,
-    trace_arguments: &[(usize, isize)],
+    trace_length: usize,
 ) -> Result<FieldElement> {
-    let poly_points: Vec<FieldElement> = poly_points_u
-        .iter()
-        .map(|i| FieldElement::from_montgomery(i.clone()))
-        .collect();
-    let x_transform = x_cord * FieldElement::generator();
-    let omega = match FieldElement::root(eval_domain_size) {
+    let shifted_x = query_x * FieldElement::generator();
+    let trace_generator = match FieldElement::root(trace_length) {
         Some(x) => x,
         None => return Err(Error::RootUnavailable),
     };
-    let g = omega.pow(blowup);
-    let mut r = FieldElement::zero();
 
-    for ((coefficient, value), (i, j)) in oods_coefficients
+    let trace_terms = oods_trace_map
         .iter()
-        .zip(oods_values)
-        .zip(trace_arguments)
-    {
-        r += coefficient * (&poly_points[*i] - value)
-            / (&x_transform - g.pow(*j).unwrap() * oods_point);
-    }
+        .map(|((column_index, offset), oods_value)| {
+            (&query_trace_values[*column_index] - oods_value)
+                / (&shifted_x - trace_generator.pow(*offset).unwrap() * oods_point)
+        });
 
-    for (i, constraint_oods_value) in constraint_oods_values.iter().enumerate() {
-        r += &oods_coefficients[trace_arguments.len() + i]
-            * (constraint_oods_value - &oods_values[trace_arguments.len() + i])
-            / (&x_transform - oods_point.pow(constraint_oods_values.len()));
-    }
-    Ok(r)
+    let constraints_trace_degree = query_constraint_values.len();
+    let combined_constraints_terms = query_constraint_values
+        .iter()
+        .zip(oods_constraint_values)
+        .map(|(query_value, oods_value)| {
+            (query_value - oods_value) / (&shifted_x - oods_point.pow(constraints_trace_degree))
+        });
+
+    Ok(trace_terms
+        .chain(combined_constraints_terms)
+        .zip(oods_coefficients)
+        .map(|(coeffient, term)| coeffient * term)
+        .sum())
 }
 
 #[cfg(feature = "std")]

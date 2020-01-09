@@ -90,6 +90,10 @@ impl VerifierChannel {
         self.proof_index == self.proof.len()
     }
 
+    pub(crate) fn get_coefficients(&mut self, n: usize) -> Vec<FieldElement> {
+        (0..n).map(|_| self.get_random()).collect()
+    }
+
     // This differs from Replayable::<FieldElement>::replay_many in that it only
     // updates the public coin once, with the contents of the entire layer, instead
     // of onces for each FieldElement in the layer.
