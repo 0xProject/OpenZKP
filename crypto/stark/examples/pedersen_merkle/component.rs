@@ -366,7 +366,7 @@ mod test {
     #[quickcheck]
     fn test_pedersen_merkle(seed: u64) {
         let mut rng = Xoshiro256PlusPlus::seed_from_u64(seed);
-        let size = 1 << Uniform::from(0..8).sample(&mut rng);
+        let size = 1 << Uniform::from(0..4).sample(&mut rng);
         let witness = Witness {
             directions: (0..size).map(|_| rng.gen()).collect(),
             path:       (0..size).map(|_| rng.gen()).collect(),

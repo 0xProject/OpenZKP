@@ -200,12 +200,14 @@ pub fn verify(constraints: &Constraints, proof: &Proof) -> Result<()> {
 
     let trace_arguments = constraints.trace_arguments();
     let trace_values: Vec<FieldElement> = channel.replay_many(trace_arguments.len());
-    let trace_value_coefficients: Vec<FieldElement> =
-        trace_values.iter().map(|_| channel.get_random()).collect();
 
     let constraints_trace_degree = constraints.degree().next_power_of_two();
     let combined_constraints_values: Vec<FieldElement> =
         channel.replay_many(constraints_trace_degree);
+
+    let trace_value_coefficients: Vec<FieldElement> =
+        trace_values.iter().map(|_| channel.get_random()).collect();
+
     let combined_constraints_coefficients: Vec<FieldElement> = combined_constraints_values
         .iter()
         .map(|_| channel.get_random())
@@ -491,8 +493,10 @@ fn out_of_domain_element(
     constraint_oods_values: &[FieldElement],
     x_cord: &FieldElement,
     oods_point: &FieldElement,
-    oods_values: &[FieldElement],
-    oods_coefficients: &[FieldElement],
+    trace_values: &[FieldElement],
+    trace_value_coefficients: &[FieldElement],
+    combined_constraints_values: &[FieldElement],
+    combined_constraints_coefficients: &[FieldElement],
     eval_domain_size: usize,
     blowup: usize,
     trace_arguments: &[(usize, isize)],
@@ -505,9 +509,9 @@ fn out_of_domain_element(
     let g = omega.pow(blowup);
     let mut r = FieldElement::zero();
 
-    for ((coefficient, value), (i, j)) in oods_coefficients
+    for ((coefficient, value), (i, j)) in trace_value_coefficients
         .iter()
-        .zip(oods_values)
+        .zip(trace_values)
         .zip(trace_arguments)
     {
         r += coefficient * (&poly_points[*i] - value)
@@ -515,8 +519,8 @@ fn out_of_domain_element(
     }
 
     for (i, constraint_oods_value) in constraint_oods_values.iter().enumerate() {
-        r += &oods_coefficients[trace_arguments.len() + i]
-            * (constraint_oods_value - &oods_values[trace_arguments.len() + i])
+        r += &combined_constraints_coefficients[i]
+            * (constraint_oods_value - &combined_constraints_values[i])
             / (&x_transform - oods_point.pow(constraint_oods_values.len()));
     }
     Ok(r)
