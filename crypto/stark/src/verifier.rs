@@ -205,8 +205,7 @@ pub fn verify(constraints: &Constraints, proof: &Proof) -> Result<()> {
     let combined_constraints_values: Vec<FieldElement> =
         channel.replay_many(constraints_trace_degree);
 
-    let trace_value_coefficients = channel.get_coefficients(trace_map.len());
-    let combined_constraints_coefficients = channel.get_coefficients(constraints_trace_degree);
+    let oods_coefficients = channel.get_coefficients(trace_map.len() + constraints_trace_degree);
 
     let mut fri_commitments: Vec<Commitment> = Vec::with_capacity(constraints.fri_layout.len() + 1);
     let mut eval_points: Vec<FieldElement> = Vec::with_capacity(constraints.fri_layout.len() + 1);
@@ -313,9 +312,8 @@ pub fn verify(constraints: &Constraints, proof: &Proof) -> Result<()> {
                             &eval_x[z_reverse],
                             &oods_point,
                             &trace_map,
-                            &trace_value_coefficients,
                             &combined_constraints_values,
-                            &combined_constraints_coefficients,
+                            &oods_coefficients,
                             trace_length,
                         )?);
                     }
@@ -482,9 +480,8 @@ fn out_of_domain_element(
     x_cord: &FieldElement,
     oods_point: &FieldElement,
     trace_map: &BTreeMap<(usize, isize), FieldElement>,
-    trace_value_coefficients: &[FieldElement],
     combined_constraints_values: &[FieldElement],
-    combined_constraints_coefficients: &[FieldElement],
+    oods_coefficients: &[FieldElement],
     trace_length: usize,
 ) -> Result<FieldElement> {
     let x_transform = x_cord * FieldElement::generator();
@@ -493,19 +490,24 @@ fn out_of_domain_element(
         None => return Err(Error::RootUnavailable),
     };
 
-    let mut r = FieldElement::zero();
+    let trace_terms = trace_map.iter().map(|((column_index, offset), value)| {
+        (&poly_points[*column_index] - value)
+            / (&x_transform - trace_generator.pow(*offset).unwrap() * oods_point)
+    });
 
-    for (coefficient, ((i, j), value)) in trace_value_coefficients.iter().zip(trace_map) {
-        r += coefficient * (&poly_points[*i] - value)
-            / (&x_transform - trace_generator.pow(*j).unwrap() * oods_point);
-    }
+    let constraints_trace_degree = constraint_oods_values.len();
+    let combined_constraints_terms = constraint_oods_values
+        .iter()
+        .zip(combined_constraints_values)
+        .map(|(oods_value, value)| {
+            (oods_value - value) / (&x_transform - oods_point.pow(constraints_trace_degree))
+        });
 
-    for (i, constraint_oods_value) in constraint_oods_values.iter().enumerate() {
-        r += &combined_constraints_coefficients[i]
-            * (constraint_oods_value - &combined_constraints_values[i])
-            / (&x_transform - oods_point.pow(constraint_oods_values.len()));
-    }
-    Ok(r)
+    Ok(trace_terms
+        .chain(combined_constraints_terms)
+        .zip(oods_coefficients)
+        .map(|(coeffient, term)| coeffient * term)
+        .sum())
 }
 
 #[cfg(feature = "std")]
