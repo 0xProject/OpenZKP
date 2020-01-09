@@ -49,13 +49,6 @@ pub(crate) struct VerifierChannel {
 }
 
 impl PublicCoin {
-    pub(crate) fn new() -> Self {
-        Self {
-            digest:  [0; 32],
-            counter: 0,
-        }
-    }
-
     pub(crate) fn seed(&mut self, seed: &[u8]) {
         let mut keccak = Keccak::new_keccak256();
         keccak.update(seed);
@@ -67,7 +60,7 @@ impl PublicCoin {
 impl From<Vec<u8>> for ProverChannel {
     fn from(proof_data: Vec<u8>) -> Self {
         Self {
-            coin:  PublicCoin::new(),
+            coin:  PublicCoin::default(),
             proof: proof_data,
         }
     }
@@ -75,13 +68,6 @@ impl From<Vec<u8>> for ProverChannel {
 
 #[cfg(feature = "prover")]
 impl ProverChannel {
-    pub(crate) fn new() -> Self {
-        Self {
-            coin:  PublicCoin::new(),
-            proof: Vec::new(),
-        }
-    }
-
     pub(crate) fn initialize(&mut self, seed: &[u8]) {
         self.coin.seed(seed);
     }
@@ -90,7 +76,7 @@ impl ProverChannel {
 impl VerifierChannel {
     pub(crate) fn new(proof: Vec<u8>) -> Self {
         Self {
-            coin: PublicCoin::new(),
+            coin: PublicCoin::default(),
             proof,
             proof_index: 0,
         }
@@ -321,7 +307,7 @@ mod tests {
     // the nature of the channel
     #[test]
     fn test_channel_get_random() {
-        let mut source = ProverChannel::new();
+        let mut source = ProverChannel::default();
         source.initialize(hex!("0123456789abcded").to_vec().as_slice());
         let rand_bytes: [u8; 32] = source.get_random();
         assert_eq!(
@@ -346,7 +332,7 @@ mod tests {
     // the nature of the channel
     #[test]
     fn test_channel_write() {
-        let mut source = ProverChannel::new();
+        let mut source = ProverChannel::default();
         source.initialize(&hex!("0123456789abcded"));
         let rand_bytes: [u8; 32] = source.get_random();
         source.write(&rand_bytes[..]);
@@ -385,7 +371,7 @@ mod tests {
 
     #[test]
     fn verifier_channel_test() {
-        let mut source = ProverChannel::new();
+        let mut source = ProverChannel::default();
         source.initialize(&hex!("0123456789abcded"));
         let rand_bytes: [u8; 32] = source.get_random();
         source.write(&rand_bytes[..]);
@@ -443,7 +429,7 @@ mod tests {
 
     #[test]
     fn test_challenge_seed_from_channel() {
-        let mut rand_source = ProverChannel::new();
+        let mut rand_source = ProverChannel::default();
         rand_source.initialize(&hex!("0123456789abcded"));
         // Verify that reading challenges does not depend on public coin counter.
         // FIX: Make it depend on public coin counter.

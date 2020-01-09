@@ -365,7 +365,7 @@ pub fn prove(constraints: &Constraints, trace: &TraceTable) -> Result<Proof> {
     info!("{} constraints", constraints.len(),);
 
     info!("Initialize channel with claim.");
-    let mut proof = ProverChannel::new();
+    let mut proof = ProverChannel::default();
     proof.initialize(constraints.channel_seed());
 
     // 1. Trace commitment.
@@ -989,7 +989,7 @@ mod tests {
             hex!("018dc61f748b1a6c440827876f30f63cb6c4c188000000000000000000000000")
         );
 
-        let mut proof = ProverChannel::new();
+        let mut proof = ProverChannel::default();
         proof.initialize(&claim.seed());
         // Checks that the channel is inited properly
         assert_eq!(
