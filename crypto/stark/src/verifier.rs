@@ -197,14 +197,19 @@ pub fn verify(constraints: &Constraints, proof: &Proof) -> Result<()> {
 
     // Get the oods information from the proof and random
     let oods_point: FieldElement = channel.get_random();
-    let constraints_trace_degree = constraints.degree().next_power_of_two();
-    let oods_values: Vec<FieldElement> =
-        channel.replay_many(constraints.trace_arguments().len() + constraints_trace_degree);
 
-    let mut oods_coefficients: Vec<FieldElement> = Vec::with_capacity(oods_values.len());
-    for _ in &oods_values {
-        oods_coefficients.push(channel.get_random());
-    }
+    let trace_arguments = constraints.trace_arguments();
+    let trace_values: Vec<FieldElement> = channel.replay_many(trace_arguments.len());
+    let trace_value_coefficients: Vec<FieldElement> =
+        trace_values.iter().map(|_| channel.get_random()).collect();
+
+    let constraints_trace_degree = constraints.degree().next_power_of_two();
+    let combined_constraints_values: Vec<FieldElement> =
+        channel.replay_many(constraints_trace_degree);
+    let combined_constraints_coefficients: Vec<FieldElement> = combined_constraints_values
+        .iter()
+        .map(|_| channel.get_random())
+        .collect();
 
     let mut fri_commitments: Vec<Commitment> = Vec::with_capacity(constraints.fri_layout.len() + 1);
     let mut eval_points: Vec<FieldElement> = Vec::with_capacity(constraints.fri_layout.len() + 1);
@@ -310,8 +315,10 @@ pub fn verify(constraints: &Constraints, proof: &Proof) -> Result<()> {
                             &constraint_values[z].1,
                             &eval_x[z_reverse],
                             &oods_point,
-                            oods_values.as_slice(),
-                            oods_coefficients.as_slice(),
+                            &trace_values,
+                            &trace_value_coefficients,
+                            &combined_constraints_values,
+                            &combined_constraints_coefficients,
                             eval_domain_size,
                             constraints.blowup,
                             &constraints.trace_arguments(),
@@ -382,23 +389,17 @@ pub fn verify(constraints: &Constraints, proof: &Proof) -> Result<()> {
         }
     }
 
-    let trace_arguments = constraints.trace_arguments();
-
-    let (trace_values, constraint_values) = oods_values.split_at(trace_arguments.len());
-
-    assert_eq!(trace_values.len(), trace_arguments.len());
-
-    let mut trace_map = BTreeMap::new();
-    for (argument, value) in trace_arguments.iter().zip(trace_values) {
-        let _ = trace_map.insert(*argument, value.clone());
-    }
+    let trace_map: BTreeMap<(usize, isize), FieldElement> = trace_arguments
+        .into_iter()
+        .zip(trace_values.iter().cloned())
+        .collect();
 
     if oods_value_from_trace_values(
         &constraints,
         &constraint_coefficients,
         &trace_map,
         &oods_point,
-    ) != oods_value_from_constraint_values(&constraint_values, &oods_point)
+    ) != oods_value_from_constraint_values(&combined_constraints_values, &oods_point)
     {
         return Err(Error::OodsMismatch);
     }
