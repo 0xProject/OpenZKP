@@ -233,8 +233,7 @@ pub fn verify(constraints: &Constraints, proof: &Proof) -> Result<()> {
     }
     // Gets the last layer and the polynomial coefficients
     eval_points.push(channel.get_random());
-    let last_layer_coefficient: Vec<FieldElement> =
-        Replayable::<FieldElement>::replay_many(&mut channel, fri_size / constraints.blowup);
+    let last_layer_coefficients = channel.replay_fri_layer(fri_size / constraints.blowup);
 
     // Gets the proof of work from the proof.
     let pow_seed: proof_of_work::ChallengeSeed = channel.get_random();
@@ -272,7 +271,7 @@ pub fn verify(constraints: &Constraints, proof: &Proof) -> Result<()> {
     for query_index in &queries {
         constraint_values.push((
             *query_index,
-            Replayable::<FieldElement>::replay_many(&mut channel, constraints_trace_degree),
+            channel.replay_fri_layer(constraints_trace_degree),
         ));
     }
     let constraint_proof_length = constraint_commitment.proof_size(&queries)?;
@@ -388,7 +387,7 @@ pub fn verify(constraints: &Constraints, proof: &Proof) -> Result<()> {
     for key in &previous_indices {
         let calculated = fri_folds[key].clone();
         let x_pow = interp_root.pow(fft::permute_index(len, *key));
-        let committed = DensePolynomial::new(&last_layer_coefficient).evaluate(&x_pow);
+        let committed = DensePolynomial::new(&last_layer_coefficients).evaluate(&x_pow);
 
         if committed != calculated.clone() {
             return Err(Error::OodsCalculationFailure);
