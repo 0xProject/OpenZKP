@@ -185,12 +185,8 @@ pub fn verify(constraints: &Constraints, proof: &Proof) -> Result<()> {
     // TODO: Make it work as channel.read()
     let low_degree_extension_root: Hash = channel.replay();
     let lde_commitment = Commitment::from_size_hash(eval_domain_size, &low_degree_extension_root)?;
-    let mut constraint_coefficients: Vec<FieldElement> =
-        Vec::with_capacity(constraints.trace_arguments().len());
-    for _ in 0..constraints.len() {
-        constraint_coefficients.push(channel.get_random());
-        constraint_coefficients.push(channel.get_random());
-    }
+    let constraint_coefficients = channel.get_coefficients(2 * constraints.len());
+
     let constraint_evaluated_root: Hash = channel.replay();
     let constraint_commitment =
         Commitment::from_size_hash(eval_domain_size, &constraint_evaluated_root)?;
@@ -200,18 +196,17 @@ pub fn verify(constraints: &Constraints, proof: &Proof) -> Result<()> {
 
     let trace_arguments = constraints.trace_arguments();
     let trace_values: Vec<FieldElement> = channel.replay_many(trace_arguments.len());
+    let trace_map: BTreeMap<(usize, isize), FieldElement> = trace_arguments
+        .into_iter()
+        .zip(trace_values.iter().cloned())
+        .collect();
 
     let constraints_trace_degree = constraints.degree().next_power_of_two();
     let combined_constraints_values: Vec<FieldElement> =
         channel.replay_many(constraints_trace_degree);
 
-    let trace_value_coefficients: Vec<FieldElement> =
-        trace_values.iter().map(|_| channel.get_random()).collect();
-
-    let combined_constraints_coefficients: Vec<FieldElement> = combined_constraints_values
-        .iter()
-        .map(|_| channel.get_random())
-        .collect();
+    let trace_value_coefficients = channel.get_coefficients(trace_map.len());
+    let combined_constraints_coefficients = channel.get_coefficients(constraints_trace_degree);
 
     let mut fri_commitments: Vec<Commitment> = Vec::with_capacity(constraints.fri_layout.len() + 1);
     let mut eval_points: Vec<FieldElement> = Vec::with_capacity(constraints.fri_layout.len() + 1);
@@ -390,11 +385,6 @@ pub fn verify(constraints: &Constraints, proof: &Proof) -> Result<()> {
             return Err(Error::OodsCalculationFailure);
         }
     }
-
-    let trace_map: BTreeMap<(usize, isize), FieldElement> = trace_arguments
-        .into_iter()
-        .zip(trace_values.iter().cloned())
-        .collect();
 
     if oods_value_from_trace_values(
         &constraints,
