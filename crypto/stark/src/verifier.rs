@@ -196,16 +196,17 @@ pub fn verify(constraints: &Constraints, proof: &Proof) -> Result<()> {
 
     let trace_arguments = constraints.trace_arguments();
     let trace_values: Vec<FieldElement> = channel.replay_many(trace_arguments.len());
-    let trace_map: BTreeMap<(usize, isize), FieldElement> = trace_arguments
+    let claimed_trace_map: BTreeMap<(usize, isize), FieldElement> = trace_arguments
         .into_iter()
         .zip(trace_values.iter().cloned())
         .collect();
 
     let constraints_trace_degree = constraints.degree().next_power_of_two();
-    let combined_constraints_values: Vec<FieldElement> =
+    let claimed_constraint_values: Vec<FieldElement> =
         channel.replay_many(constraints_trace_degree);
 
-    let oods_coefficients = channel.get_coefficients(trace_map.len() + constraints_trace_degree);
+    let oods_coefficients =
+        channel.get_coefficients(claimed_trace_map.len() + claimed_constraint_values.len());
 
     let mut fri_commitments: Vec<Commitment> = Vec::with_capacity(constraints.fri_layout.len() + 1);
     let mut eval_points: Vec<FieldElement> = Vec::with_capacity(constraints.fri_layout.len() + 1);
@@ -307,12 +308,12 @@ pub fn verify(constraints: &Constraints, proof: &Proof) -> Result<()> {
                     } else {
                         let z_reverse = fft::permute_index(eval_domain_size, queries[z]);
                         coset.push(out_of_domain_element(
+                            &eval_x[z_reverse],
                             &lde_values[z].1,
                             &constraint_values[z].1,
-                            &eval_x[z_reverse],
                             &oods_point,
-                            &trace_map,
-                            &combined_constraints_values,
+                            &claimed_trace_map,
+                            &claimed_constraint_values,
                             &oods_coefficients,
                             trace_length,
                         )?);
@@ -385,9 +386,9 @@ pub fn verify(constraints: &Constraints, proof: &Proof) -> Result<()> {
     if oods_value_from_trace_values(
         &constraints,
         &constraint_coefficients,
-        &trace_map,
+        &claimed_trace_map,
         &oods_point,
-    ) != oods_value_from_constraint_values(&combined_constraints_values, &oods_point)
+    ) != oods_value_from_constraint_values(&claimed_constraint_values, &oods_point)
     {
         return Err(Error::OodsMismatch);
     }
@@ -475,32 +476,34 @@ fn fri_single_fold(
 
 #[allow(clippy::too_many_arguments)]
 fn out_of_domain_element(
-    poly_points: &[FieldElement],
-    constraint_oods_values: &[FieldElement],
-    x_cord: &FieldElement,
+    query_x: &FieldElement,
+    query_trace_values: &[FieldElement],
+    query_constraint_values: &[FieldElement],
     oods_point: &FieldElement,
-    trace_map: &BTreeMap<(usize, isize), FieldElement>,
-    combined_constraints_values: &[FieldElement],
+    oods_trace_map: &BTreeMap<(usize, isize), FieldElement>,
+    oods_constraint_values: &[FieldElement],
     oods_coefficients: &[FieldElement],
     trace_length: usize,
 ) -> Result<FieldElement> {
-    let x_transform = x_cord * FieldElement::generator();
+    let shifted_x = query_x * FieldElement::generator();
     let trace_generator = match FieldElement::root(trace_length) {
         Some(x) => x,
         None => return Err(Error::RootUnavailable),
     };
 
-    let trace_terms = trace_map.iter().map(|((column_index, offset), value)| {
-        (&poly_points[*column_index] - value)
-            / (&x_transform - trace_generator.pow(*offset).unwrap() * oods_point)
-    });
-
-    let constraints_trace_degree = constraint_oods_values.len();
-    let combined_constraints_terms = constraint_oods_values
+    let trace_terms = oods_trace_map
         .iter()
-        .zip(combined_constraints_values)
-        .map(|(oods_value, value)| {
-            (oods_value - value) / (&x_transform - oods_point.pow(constraints_trace_degree))
+        .map(|((column_index, offset), oods_value)| {
+            (&query_trace_values[*column_index] - oods_value)
+                / (&shifted_x - trace_generator.pow(*offset).unwrap() * oods_point)
+        });
+
+    let constraints_trace_degree = query_constraint_values.len();
+    let combined_constraints_terms = query_constraint_values
+        .iter()
+        .zip(oods_constraint_values)
+        .map(|(query_value, oods_value)| {
+            (query_value - oods_value) / (&shifted_x - oods_point.pow(constraints_trace_degree))
         });
 
     Ok(trace_terms
