@@ -1,6 +1,6 @@
 use super::Parameters;
 use crate::{
-    algorithms::limb_operations::{adc, mac, macc, sbb},
+    algorithms::limb_operations::{adc, mac, sbb},
     U256,
 };
 
@@ -32,12 +32,18 @@ pub fn redc_inline(m3: u64, lo: &U256, hi: &U256) -> U256 {
     let (a0, carry0) = sbb(0, lo[0], 0);
     let (a1, carry0) = sbb(0, lo[1], carry0);
     let (a2, carry0) = sbb(0, lo[2], carry0);
-    let (a3, carry1) = mac(lo[3], a0, m3, carry0);
-    let (a3, carry0) = sbb(0, a3, 0);
-    let (a4, carry1) = macc(hi[0], a1, m3, carry1, carry0);
-    let (a5, carry1) = mac(hi[1], a2, m3, carry1);
-    let (a6, carry1) = mac(hi[2], a3, m3, carry1);
-    let (a7, _carry) = adc(hi[3], 0, carry1);
+    let (a3, carry1) = mac(lo[3], a0, m3, 0);
+    let (a3, carry0) = sbb(0, a3, carry0);
+
+    let (a4, carry0) = adc(0, hi[0], carry0);
+    let (a5, carry0) = adc(0, hi[1], carry0);
+    let (a6, carry0) = adc(0, hi[2], carry0);
+    let (a7, _carry0) = adc(0, hi[3], carry0);
+
+    let (a4, carry1) = mac(a4, a1, m3, carry1);
+    let (a5, carry1) = mac(a5, a2, m3, carry1);
+    let (a6, carry1) = mac(a6, a3, m3, carry1);
+    let (a7, _carry1) = adc(a7, 0, carry1);
 
     // Final reduction
     let (r0, carry) = sbb(a4, 1, 0);
