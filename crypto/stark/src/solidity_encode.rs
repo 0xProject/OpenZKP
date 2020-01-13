@@ -2,7 +2,7 @@
 #![allow(unused_results)]
 use crate::rational_expression::*;
 use std::{
-    cmp::Ordering, collections::HashMap, error::Error, fs::File, io::prelude::*, path::Path,
+    cmp::Ordering, collections::BTreeMap, error::Error, fs::File, io::prelude::*, path::Path,
     prelude::v1::*,
 };
 use zkp_primefield::{FieldElement, Pow, Root};
@@ -92,9 +92,9 @@ pub fn autogen(
     n_cols: usize,
 ) -> Result<(), std::io::Error> {
     let generator = FieldElement::root(trace_len).unwrap();
-    let mut traces = HashMap::new();
-    let mut inverses = HashMap::new();
-    let mut periodic = HashMap::new();
+    let mut traces = BTreeMap::new();
+    let mut inverses = BTreeMap::new();
+    let mut periodic = BTreeMap::new();
     for exp in constraints.iter() {
         traces.extend(exp.trace_search());
         inverses.extend(exp.inv_search());
@@ -219,13 +219,13 @@ pub fn autogen_memory_layout(
             The offsets of the different fields are listed below.
             E.g. The offset of the i'th hash is [mm_hashes + i].
         */
-    
+
         uint256 constant internal channel_state_size = 3;
         uint256 constant internal max_n_queries =  22;
         uint256 constant internal fri_queue_size = max_n_queries;
-    
+
         uint256 constant internal max_supported_max_fri_step = 3;
-    
+
         uint256 constant internal mm_eval_domain_size =                              0;
         uint256 constant internal mm_blow_up_factor =                                1;
         uint256 constant internal mm_log_eval_domain_size =                          2;
@@ -376,9 +376,9 @@ pub fn setup_call_memory(
     traces: &[&RationalExpression],
     periodic: &[&RationalExpression],
     adjustment_degrees: &[usize],
-) -> Result<HashMap<RationalExpression, String>, std::io::Error> {
+) -> Result<BTreeMap<RationalExpression, String>, std::io::Error> {
     let mut index = 1; // Note index 0 is taken by the oods_point
-    let mut memory_lookups: HashMap<RationalExpression, String> = HashMap::new();
+    let mut memory_lookups: BTreeMap<RationalExpression, String> = BTreeMap::new();
     for &exp in public_inputs.iter() {
         memory_lookups.insert(exp.clone(), format!("mload({})", index * 32));
         index += 1;
@@ -454,14 +454,14 @@ contract OodsPoly {{
                 }}
                 res := mload(p)
             }}
-    
+
             function degree_adjustment(composition_polynomial_degree_bound, constraint_degree, \
          numerator_degree,
                 denominator_degree) -> res {{
                                         res := sub(sub(composition_polynomial_degree_bound, 1),
                        sub(add(constraint_degree, numerator_degree), denominator_degree))
                     }}
-    
+
             function small_expmod(x, num, prime) -> res {{
                 res := 1
                 for {{ let ind := 0 }} lt(ind, num) {{ ind := add(ind, 1) }} {{
@@ -571,7 +571,7 @@ pub fn autogen_oods(
 
         import \"./MemoryMap.sol\";
         import \"./StarkParameters.sol\";
-        
+
         contract Oods is MemoryMap, StarkParameters {{
           // For each query point we want to invert (2 + n_rows_in_mask) items:
           //  The query point itself (x).
@@ -590,7 +590,7 @@ pub fn autogen_oods(
 
     let mut last_seen_row = isize::max_value();
     let mut counter = 0;
-    let mut index_to_offset = HashMap::new();
+    let mut index_to_offset = BTreeMap::new();
 
     let mut row_sorted_trace = trace.to_vec();
     row_sorted_trace.sort_by(|a, b| back_lexicographic_compare(a, b));
