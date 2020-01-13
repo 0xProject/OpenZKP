@@ -1,8 +1,10 @@
 use crate::polynomial::DensePolynomial;
 #[cfg(feature = "std")]
-use std::collections::{hash_map::DefaultHasher, BTreeMap};
 use std::{
     cmp::Ordering,
+    collections::{hash_map::DefaultHasher, BTreeMap},
+};
+use std::{
     collections::BTreeSet,
     hash::{Hash, Hasher},
     iter::Sum,
