@@ -1,5 +1,4 @@
 use crate::polynomial::DensePolynomial;
-#[cfg(feature = "std")]
 use std::{
     cmp::Ordering,
     collections::hash_map::DefaultHasher,
