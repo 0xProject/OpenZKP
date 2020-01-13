@@ -1,8 +1,9 @@
 use crate::polynomial::DensePolynomial;
+#[cfg(feature = "std")]
+use std::collections::{hash_map::DefaultHasher, BTreeMap};
 use std::{
     cmp::Ordering,
-    collections::hash_map::DefaultHasher,
-    collections::{BTreeMap, BTreeSet},
+    collections::BTreeSet,
     hash::{Hash, Hasher},
     iter::Sum,
     ops::{Add, Div, Mul, Sub},
@@ -455,18 +456,21 @@ impl Hash for RationalExpression {
     }
 }
 
+#[cfg(feature = "std")]
 impl PartialOrd for RationalExpression {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
+#[cfg(feature = "std")]
 fn get_hash(r: &RationalExpression) -> u64 {
     let mut hasher = DefaultHasher::new();
     r.hash(&mut hasher);
     hasher.finish()
 }
 
+#[cfg(feature = "std")]
 impl Ord for RationalExpression {
     fn cmp(&self, other: &Self) -> Ordering {
         get_hash(self).cmp(&get_hash(other))
