@@ -1,6 +1,9 @@
 use crate::polynomial::DensePolynomial;
 #[cfg(feature = "std")]
-use std::collections::HashMap;
+use std::{
+    cmp::Ordering,
+    collections::{hash_map::DefaultHasher, BTreeMap},
+};
 use std::{
     collections::BTreeSet,
     hash::{Hash, Hasher},
@@ -301,7 +304,7 @@ impl RationalExpression {
     }
 
     #[cfg(feature = "std")]
-    pub fn soldity_encode(&self, memory_layout: &HashMap<Self, String>) -> String {
+    pub fn soldity_encode(&self, memory_layout: &BTreeMap<Self, String>) -> String {
         use RationalExpression::*;
 
         #[allow(clippy::match_same_arms)]
@@ -355,11 +358,11 @@ impl RationalExpression {
 
     // TODO - DRY this by writing a generic search over subtypes
     #[cfg(feature = "std")]
-    pub fn trace_search(&self) -> HashMap<Self, bool> {
+    pub fn trace_search(&self) -> BTreeMap<Self, bool> {
         use RationalExpression::*;
 
         match self {
-            X | Constant(..) => HashMap::new(),
+            X | Constant(..) => BTreeMap::new(),
             Trace(..) => [(self.clone(), true)].iter().cloned().collect(),
             Add(a, b) | Mul(a, b) => {
                 let mut first = a.trace_search();
@@ -371,11 +374,11 @@ impl RationalExpression {
     }
 
     #[cfg(feature = "std")]
-    pub fn inv_search(&self) -> HashMap<Self, bool> {
+    pub fn inv_search(&self) -> BTreeMap<Self, bool> {
         use RationalExpression::*;
 
         match self {
-            X | Constant(_) | Trace(..) => HashMap::new(),
+            X | Constant(_) | Trace(..) => BTreeMap::new(),
             Add(a, b) | Mul(a, b) => {
                 let mut first = a.inv_search();
                 first.extend(b.inv_search());
@@ -387,11 +390,11 @@ impl RationalExpression {
     }
 
     #[cfg(feature = "std")]
-    pub fn periodic_search(&self) -> HashMap<Self, bool> {
+    pub fn periodic_search(&self) -> BTreeMap<Self, bool> {
         use RationalExpression::*;
 
         match self {
-            X | Constant(_) | Trace(..) => HashMap::new(),
+            X | Constant(_) | Trace(..) => BTreeMap::new(),
             Polynomial(..) => [(self.clone(), true)].iter().cloned().collect(),
             Add(a, b) | Mul(a, b) => {
                 let mut first = a.periodic_search();
@@ -452,5 +455,26 @@ impl Hash for RationalExpression {
                 e.hash(state);
             }
         }
+    }
+}
+
+#[cfg(feature = "std")]
+impl PartialOrd for RationalExpression {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+#[cfg(feature = "std")]
+fn get_hash(r: &RationalExpression) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    r.hash(&mut hasher);
+    hasher.finish()
+}
+
+#[cfg(feature = "std")]
+impl Ord for RationalExpression {
+    fn cmp(&self, other: &Self) -> Ordering {
+        get_hash(self).cmp(&get_hash(other))
     }
 }
