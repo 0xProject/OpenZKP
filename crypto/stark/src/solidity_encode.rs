@@ -2,7 +2,7 @@
 #![allow(unused_results)]
 use crate::rational_expression::*;
 use std::{
-    cmp::Ordering, collections::HashMap, fs::File, io::prelude::*, path::Path, prelude::v1::*,
+    cmp::Ordering, collections::BTreeMap, fs::File, io::prelude::*, path::Path, prelude::v1::*,
 };
 use zkp_primefield::{FieldElement, Pow, Root};
 use zkp_u256::U256;
