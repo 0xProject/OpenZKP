@@ -23,12 +23,14 @@ itertools = { version = "0.8.0", default_features = false }
 crunchy = { version = "0.2.2", default_features = false }
 hex = { version = "0.4.0", optional = true }
 quickcheck = { version = "0.9", optional = true }
+serde = { version = "1.0", features = ["derive"], optional = true}
 
 # HACK: Criterion is really a dev-dependency, but it's important that it's
 # optional, or it will enable the `std` flag on various dependencies. Cargo
 # does not allow dev-dependencies to be optional.
 criterion = { version = "0.3.0", optional = true }
 quickcheck_macros = {version = "0.8", optional = true }
+
 
 [[bench]]
 name = "benchmark"
@@ -55,7 +57,8 @@ std = [
     "itertools/use_std",
     "crunchy/std",
     "num-traits/std",
-    "hex"
+    "hex",
+    "serde"
 ]
 use_rand = [
     "rand"

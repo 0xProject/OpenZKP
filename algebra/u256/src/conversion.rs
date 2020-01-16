@@ -1,4 +1,11 @@
 use crate::U256;
+#[cfg(feature = "std")]
+use serde::{
+    de::{self, Deserialize, Deserializer, Visitor},
+    ser::{Serialize, Serializer},
+};
+#[cfg(feature = "std")]
+use std::fmt;
 use std::{prelude::v1::*, u64};
 
 impl U256 {
@@ -21,6 +28,51 @@ impl U256 {
             n >>= 8;
         }
         r
+    }
+}
+
+#[cfg(feature = "std")]
+impl Serialize for U256 {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_bytes(&self.to_bytes_be())
+    }
+}
+
+#[cfg(feature = "std")]
+struct U256Visitor;
+
+#[cfg(feature = "std")]
+impl Visitor<'_> for U256Visitor {
+    type Value = U256;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(formatter, "a byte array containing 32 bytes")
+    }
+
+    fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        if v.len() <= 32 {
+            let mut held_array = [0_u8; 32];
+            held_array.clone_from_slice(v);
+            Ok(U256::from_bytes_be(&held_array))
+        } else {
+            Err(E::custom(format!("Too many bytes: {}", v.len())))
+        }
+    }
+}
+
+#[cfg(feature = "std")]
+impl<'de> Deserialize<'de> for U256 {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_bytes(U256Visitor)
     }
 }
 

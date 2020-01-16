@@ -2,8 +2,7 @@
 #![allow(unused_results)]
 use crate::rational_expression::*;
 use std::{
-    cmp::Ordering, collections::BTreeMap, error::Error, fs::File, io::prelude::*, path::Path,
-    prelude::v1::*,
+    cmp::Ordering, collections::BTreeMap, fs::File, io::prelude::*, path::Path, prelude::v1::*,
 };
 use zkp_primefield::{FieldElement, Pow, Root};
 use zkp_u256::U256;
@@ -49,7 +48,7 @@ pub fn autogen_periodic(
     let path = Path::new(&name);
     let display = path.display();
     let mut file = match File::create(&path) {
-        Err(why) => panic!("couldn't create {}: {}", display, why.description()),
+        Err(why) => panic!("couldn't create {}: {}", display, why.to_string()),
         Ok(file) => file,
     };
 
@@ -104,7 +103,7 @@ pub fn autogen(
     let path = Path::new("contracts/ConstraintPoly.sol");
     let display = path.display();
     let mut file = match File::create(&path) {
-        Err(why) => panic!("couldn't create {}: {}", display, why.description()),
+        Err(why) => panic!("couldn't create {}: {}", display, why.to_string()),
         Ok(file) => file,
     };
 
@@ -206,7 +205,7 @@ pub fn autogen_memory_layout(
     let path = Path::new("contracts/MemoryMap.sol");
     let display = path.display();
     let mut file = match File::create(&path) {
-        Err(why) => panic!("couldn't create {}: {}", display, why.description()),
+        Err(why) => panic!("couldn't create {}: {}", display, why.to_string()),
         Ok(file) => file,
     };
     writeln!(
@@ -561,7 +560,7 @@ pub fn autogen_oods(
     let path = Path::new("contracts/Odds.sol");
     let display = path.display();
     let mut file = match File::create(&path) {
-        Err(why) => panic!("couldn't create {}: {}", display, why.description()),
+        Err(why) => panic!("couldn't create {}: {}", display, why.to_string()),
         Ok(file) => file,
     };
 
