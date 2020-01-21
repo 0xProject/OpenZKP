@@ -116,7 +116,11 @@ impl<'de> Deserialize<'de> for U256 {
     where
         D: Deserializer<'de>,
     {
-        deserializer.deserialize_str(U256Visitor)
+        if deserializer.is_human_readable() {
+            deserializer.deserialize_str(U256Visitor)
+        } else {
+            deserializer.deserialize_bytes(U256Visitor)
+        }
     }
 }
 

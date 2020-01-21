@@ -168,6 +168,10 @@ impl<'de> Deserialize<'de> for FieldElement {
     where
         D: Deserializer<'de>,
     {
-        deserializer.deserialize_str(FieldElementVisitor)
+        if deserializer.is_human_readable() {
+            deserializer.deserialize_str(FieldElementVisitor)
+        } else {
+            deserializer.deserialize_bytes(FieldElementVisitor)
+        }
     }
 }
