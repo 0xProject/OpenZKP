@@ -1,6 +1,6 @@
 use crate::{Parameters, PrimeField};
 #[cfg(feature = "std")]
-use hex::decode;
+use hex::{decode, encode};
 #[cfg(feature = "std")]
 use serde::{
     de::{self, Deserialize, Deserializer, SeqAccess, Visitor},
@@ -79,7 +79,11 @@ impl Serialize for FieldElement {
     where
         S: Serializer,
     {
-        serializer.serialize_bytes(&U256::from(self).to_bytes_be())
+        if serializer.is_human_readable() {
+            serializer.serialize_str(&encode(&U256::from(self).to_bytes_be()))
+        } else {
+            serializer.serialize_bytes(&U256::from(self).to_bytes_be())
+        }
     }
 }
 

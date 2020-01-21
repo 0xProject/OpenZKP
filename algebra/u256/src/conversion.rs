@@ -1,6 +1,6 @@
 use crate::U256;
 #[cfg(feature = "std")]
-use hex::decode;
+use hex::{decode, encode};
 #[cfg(feature = "std")]
 use serde::{
     de::{self, Deserialize, Deserializer, SeqAccess, Visitor},
@@ -39,7 +39,11 @@ impl Serialize for U256 {
     where
         S: Serializer,
     {
-        serializer.serialize_bytes(&self.to_bytes_be())
+        if serializer.is_human_readable() {
+            serializer.serialize_str(&encode(&self.to_bytes_be()))
+        } else {
+            serializer.serialize_bytes(&self.to_bytes_be())
+        }
     }
 }
 
