@@ -133,54 +133,54 @@ pub fn reduce_1(
     s1: u64,
     s2: u64,
     s3: u64,
-    d0: &mut u64,
-    d1: &mut u64,
-    d2: &mut u64,
-    d3: &mut u64,
     m0: u64,
     m1: u64,
     m2: u64,
     m3: u64,
-) {
+) -> (u64, u64, u64, u64) {
+    let r0: u64;
+    let r1: u64;
+    let r2: u64;
+    let r3: u64;
     unsafe {
         asm!(r"
-        // Copy [s0..3] into [d0..3]
-        mov $4, $0
-        mov $5, $1
-        mov $6, $2
-        mov $7, $3
-
+        // Copy [s0..3] into [r0..3]
         // Subtract [m0..3] from [s0..3] in place
-        // TODO: Move up for better pipelining
+        mov $4, $0
         sub $8, $4
+        mov $5, $1
         sbb $9, $5
+        mov $6, $2
         sbb $10, $6
+        mov $7, $3
         sbb $11, $7
 
-        // Conditionally copy [s0..3] into [d0..3] when no carry
+        // Conditionally copy [s0..3] into [r0..3] when no carry
         cmovnc $4, $0
         cmovnc $5, $1
         cmovnc $6, $2
         cmovnc $7, $3
         "
         : // Output constraints
-            "=rm"(*d0),   // $0 d0..3 are in register or memory
-            "=rm"(*d1),   // $1
-            "=rm"(*d2),   // $2
-            "=rm"(*d3),   // $3
+            "=&rm"(r0),   // $0 d0..3 are in register or memory
+            "=&rm"(r1),   // $1
+            "=&rm"(r2),   // $2
+            "=&rm"(r3)    // $3
         : // Input constraints
             "r"(s0),      // $4 s0..3 are in registers
             "r"(s1),      // $5
             "r"(s2),      // $6
             "r"(s3),      // $7
-            "rmi"(m0)     // $8 m0..3 are in registers or memory or immediate
-            "rmi"(m1)     // $9
-            "rmi"(m2)     // $10
+            "rmi"(m0),    // $8 m0..3 are in registers or memory or immediate
+            "rmi"(m1),    // $9
+            "rmi"(m2),    // $10
             "rmi"(m3)     // $11
+            // TODO: Make sure m is immediate
         : // Clobbers
            "cc"         // Flags
         )
     }
+    (r0, r1, r2, r3)
 }
 
 #[inline(always)]
