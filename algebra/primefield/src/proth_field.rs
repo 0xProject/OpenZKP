@@ -73,6 +73,12 @@ impl From<&FieldElement> for U256 {
     }
 }
 
+impl Default for FieldElement {
+    fn default() -> Self {
+        Self::zero()
+    }
+}
+
 #[cfg(feature = "std")]
 impl Serialize for FieldElement {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
