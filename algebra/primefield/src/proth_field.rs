@@ -1,6 +1,7 @@
 use crate::{Parameters, PrimeField};
 #[cfg(feature = "std")]
 use hex::{decode, encode};
+use num_traits::identities::Zero;
 #[cfg(feature = "std")]
 use serde::{
     de::{self, Deserialize, Deserializer, SeqAccess, Visitor},
