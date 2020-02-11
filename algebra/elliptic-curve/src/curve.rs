@@ -28,7 +28,7 @@ impl Affine {
     pub fn x(&self) -> FieldElement {
         match self {
             Self::Zero => panic!("no x coordinate for 0"),
-            Self::Point { x, _ } => x,
+            Self::Point { x, .. } => x.clone(),
         }
     }
 
