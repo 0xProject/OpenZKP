@@ -1,6 +1,6 @@
 [package]
 name = "zkp-stark"
-version = "0.1.2"
+version = "0.2.1"
 description = "Implementation of the STARK ZK-proof system"
 repository = "https://github.com/0xProject/starkcrypto/tree/master/crypto/stark"
 keywords = ["zkp", "stark", "no-std", "wasm"]
@@ -41,6 +41,12 @@ criterion = { version = "0.3.0", optional = true }
 zkp-criterion-utils = { version = "0.1.0", path = "../../utils/criterion-utils", optional = true }
 quickcheck_macros = { version = "0.8", optional = true }
 hex = { version = "0.4.0", optional = true }
+proptest = { version = "0.9.4", optional = true }
+
+# Examples dependencies
+structopt = { version = "0.3.5", optional = true }
+rand = { version = "0.7.2", optional = true }
+rand_xoshiro = { version = "0.4.0", optional = true }
 
 [[bench]]
 name = "benchmark"
@@ -48,7 +54,7 @@ harness = false
 required-features = ["bench"]
 
 [features]
-default = [ "std", "prover", "examples" ]
+default = [ "std", "inline", "prover", "examples" ]
 std = [
     "zkp-macros-decl/std",
     "zkp-mmap-vec/std",
@@ -64,11 +70,17 @@ std = [
     "rayon",
     "hex",
 ]
+inline = [
+    "zkp-u256/inline",
+    "zkp-primefield/inline",
+    "zkp-elliptic-curve/inline",
+]
 test = [
     "zkp-u256/test",
     "zkp-primefield/test",
     "zkp-elliptic-curve/test",
     "zkp-elliptic-curve-crypto/test",
+    "proptest",
     "quickcheck",
     "quickcheck_macros",
     "hex",
@@ -79,10 +91,14 @@ bench = [
     "zkp-criterion-utils",
 ]
 examples = [
+    "zkp-primefield/use_rand",
     "zkp-logging-allocator",
-    "env_logger",
     "zkp-elliptic-curve",
     "zkp-elliptic-curve-crypto",
+    "env_logger",
+    "structopt",
+    "rand",
+    "rand_xoshiro",
 ]
 prover = [
     "std", # TODO: Make prove run in no-std wasm.

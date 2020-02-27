@@ -17,12 +17,15 @@ edition = "2018"
 [dependencies]
 zkp-macros-decl = { version = "0.1.0", path = "../../utils/macros-decl",  default_features = false }
 zkp-u256 =  { version = "0.1.0", path = "../u256", default_features = false }
+num-traits = { version = "0.2.10", default_features = false }
+rand = { version = "0.7.2", optional = true }
 
 no-std-compat = { version = "0.1.0", features = [ "alloc" ] }
 hex = { version = "0.4.0", optional = true }
 itertools = { version = "0.8.0", default_features = false }
 crunchy = { version = "0.2.2", default_features = false }
 quickcheck = { version = "0.9", optional = true}
+serde = { version = "1.0", features = ["derive"], optional = true}
 
 # HACK: Criterion is really a dev-dependency, but it's important that it's
 # optional, or it will enable the `std` flag on various dependencies. Cargo
@@ -37,7 +40,10 @@ harness = false
 required-features = ["bench"]
 
 [features]
-default = [ "std" ]
+default = [
+    "std",
+    "inline"
+]
 bench = [
     "test",
     "criterion",
@@ -54,7 +60,19 @@ std = [
     "no-std-compat/std",
     "itertools/use_std",
     "crunchy/std",
+    "num-traits/std",
     "hex",
+    "serde",
+]
+# HACK: Cargo does not allow features with the same name as dependencies.
+# this is fine (since optional dependencies are their own feature) but not
+# if we need to enable other features as a consequence.
+use_rand = [
+    "rand",
+    "zkp-u256/use_rand",
+]
+inline = [
+    "zkp-u256/inline",
 ]
 
 # Allow math in docs

@@ -7,9 +7,10 @@ use std::{
 use zkp_mmap_vec::MmapVec;
 use zkp_primefield::{
     fft::{ifft_permuted, permute},
-    FieldElement,
+    FieldElement, Root, Zero,
 };
 
+#[derive(Clone, PartialEq)]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct TraceTable {
     trace_length: usize,
@@ -22,7 +23,7 @@ impl TraceTable {
     pub fn new(trace_length: usize, num_columns: usize) -> Self {
         let mut values: MmapVec<FieldElement> = MmapVec::with_capacity(trace_length * num_columns);
         for _ in 0..(trace_length * num_columns) {
-            values.push(FieldElement::ZERO);
+            values.push(FieldElement::zero());
         }
         Self {
             trace_length,

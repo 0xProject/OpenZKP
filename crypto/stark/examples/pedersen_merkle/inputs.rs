@@ -1,7 +1,6 @@
-use super::{constraints::get_pedersen_merkle_constraints, trace_table::get_trace_table};
+use super::pedersen_points::merkle_hash;
 use std::{prelude::v1::*, vec};
 use zkp_primefield::FieldElement;
-use zkp_stark::{Constraints, Provable, TraceTable, Verifiable};
 
 #[derive(PartialEq, Clone)]
 #[cfg_attr(feature = "std", derive(Debug))]
@@ -18,19 +17,6 @@ pub struct Witness {
     pub path:       Vec<FieldElement>,
 }
 
-impl Verifiable for Claim {
-    fn constraints(&self) -> Constraints {
-        get_pedersen_merkle_constraints(self)
-    }
-}
-
-#[cfg(feature = "prover")]
-impl Provable<&Witness> for Claim {
-    fn trace(&self, witness: &Witness) -> TraceTable {
-        get_trace_table(self, witness)
-    }
-}
-
 impl From<&Claim> for Vec<u8> {
     fn from(claim: &Claim) -> Self {
         let mut bytes: Self = vec![];
@@ -38,6 +24,28 @@ impl From<&Claim> for Vec<u8> {
         bytes.extend_from_slice(&claim.root.as_montgomery().to_bytes_be());
         bytes.extend_from_slice(&claim.leaf.as_montgomery().to_bytes_be());
         bytes
+    }
+}
+
+impl Claim {
+    pub fn from_leaf_witness(leaf: FieldElement, witness: &Witness) -> Self {
+        let mut root = leaf.clone();
+        for (direction, sibling) in witness.directions.iter().zip(witness.path.iter()) {
+            root = if *direction {
+                merkle_hash(sibling, &root)
+            } else {
+                merkle_hash(&root, sibling)
+            }
+        }
+        Claim {
+            path_length: witness.path.len(),
+            leaf,
+            root,
+        }
+    }
+
+    pub fn verify(&self, witness: &Witness) {
+        assert_eq!(self, &Claim::from_leaf_witness(self.leaf.clone(), witness));
     }
 }
 

@@ -1,4 +1,4 @@
-use crate::u256::U256;
+use crate::{u256::U256, Binary};
 use crunchy::unroll;
 
 /// Lehmer update matrix
@@ -31,31 +31,31 @@ impl Matrix {
 // We shadow variables for readability.
 #[allow(clippy::shadow_unrelated)]
 fn mat_mul(a: &mut U256, b: &mut U256, (q00, q01, q10, q11): (u64, u64, u64, u64)) {
-    use crate::utils::{mac, msb};
-    let (ai, ac) = mac( 0, q00, a.c0, 0);
-    let (ai, ab) = msb(ai, q01, b.c0, 0);
-    let (bi, bc) = mac( 0, q11, b.c0, 0);
-    let (bi, bb) = msb(bi, q10, a.c0, 0);
-    a.c0 = ai;
-    b.c0 = bi;
-    let (ai, ac) = mac( 0, q00, a.c1, ac);
-    let (ai, ab) = msb(ai, q01, b.c1, ab);
-    let (bi, bc) = mac( 0, q11, b.c1, bc);
-    let (bi, bb) = msb(bi, q10, a.c1, bb);
-    a.c1 = ai;
-    b.c1 = bi;
-    let (ai, ac) = mac( 0, q00, a.c2, ac);
-    let (ai, ab) = msb(ai, q01, b.c2, ab);
-    let (bi, bc) = mac( 0, q11, b.c2, bc);
-    let (bi, bb) = msb(bi, q10, a.c2, bb);
-    a.c2 = ai;
-    b.c2 = bi;
-    let (ai, _) = mac( 0, q00, a.c3, ac);
-    let (ai, _) = msb(ai, q01, b.c3, ab);
-    let (bi, _) = mac( 0, q11, b.c3, bc);
-    let (bi, _) = msb(bi, q10, a.c3, bb);
-    a.c3 = ai;
-    b.c3 = bi;
+    use crate::algorithms::limb_operations::{mac, msb};
+    let (ai, ac) = mac( 0, q00, a.limb(0), 0);
+    let (ai, ab) = msb(ai, q01, b.limb(0), 0);
+    let (bi, bc) = mac( 0, q11, b.limb(0), 0);
+    let (bi, bb) = msb(bi, q10, a.limb(0), 0);
+    a.set_limb(0, ai);
+    b.set_limb(0, bi);
+    let (ai, ac) = mac( 0, q00, a.limb(1), ac);
+    let (ai, ab) = msb(ai, q01, b.limb(1), ab);
+    let (bi, bc) = mac( 0, q11, b.limb(1), bc);
+    let (bi, bb) = msb(bi, q10, a.limb(1), bb);
+    a.set_limb(1, ai);
+    b.set_limb(1, bi);
+    let (ai, ac) = mac( 0, q00, a.limb(2), ac);
+    let (ai, ab) = msb(ai, q01, b.limb(2), ab);
+    let (bi, bc) = mac( 0, q11, b.limb(2), bc);
+    let (bi, bb) = msb(bi, q10, a.limb(2), bb);
+    a.set_limb(2, ai);
+    b.set_limb(2, bi);
+    let (ai, _) = mac( 0, q00, a.limb(3), ac);
+    let (ai, _) = msb(ai, q01, b.limb(3), ab);
+    let (bi, _) = mac( 0, q11, b.limb(3), bc);
+    let (bi, _) = msb(bi, q10, a.limb(3), bb);
+    a.set_limb(3, ai);
+    b.set_limb(3, bi);
 }
 
 /// Applies the Lehmer update matrix to the variable pair in place.
@@ -293,15 +293,16 @@ fn lehmer_loop(a0: u64, mut a1: u64) -> Matrix {
 #[allow(clippy::shadow_unrelated)]
 fn lehmer_double(mut r0: U256, mut r1: U256) -> Matrix {
     debug_assert!(r0 >= r1);
-    if r0.bits() < 64 {
-        debug_assert!(r1.bits() < 64);
-        debug_assert!(r0.c0 >= r1.c0);
-        return lehmer_small(r0.c0, r1.c0);
+    if r0.leading_zeros() >= 192 {
+        // OPT: Rewrite using to_u64 -> Option
+        debug_assert!(r1.leading_zeros() >= 192);
+        debug_assert!(r0.limb(0) >= r1.limb(0));
+        return lehmer_small(r0.limb(0), r1.limb(0));
     }
     let s = r0.leading_zeros();
     let r0s = r0.clone() << s;
     let r1s = r1.clone() << s;
-    let q = lehmer_loop(r0s.c3, r1s.c3);
+    let q = lehmer_loop(r0s.limb(3), r1s.limb(3));
     if q == Matrix::IDENTITY {
         return q;
     }
@@ -313,9 +314,9 @@ fn lehmer_double(mut r0: U256, mut r1: U256) -> Matrix {
     // OPT: Can we reuse the shifted variables here?
     lehmer_update(&mut r0, &mut r1, &q);
     let s = r0.leading_zeros();
-    let r0s = r0.clone() << s;
-    let r1s = r1.clone() << s;
-    let qn = lehmer_loop(r0s.c3, r1s.c3);
+    let r0s = r0 << s;
+    let r1s = r1 << s;
+    let qn = lehmer_loop(r0s.limb(3), r1s.limb(3));
 
     // Multiply matrices qn * q
     Matrix(
@@ -330,7 +331,7 @@ fn lehmer_double(mut r0: U256, mut r1: U256) -> Matrix {
 //// Lehmer's GCD algorithms.
 /// See `gcd_extended` for documentation. This version maintains
 /// full precission cofactors.
-pub fn gcd(mut r0: U256, mut r1: U256) -> U256 {
+pub(crate) fn gcd(mut r0: U256, mut r1: U256) -> U256 {
     if r1 > r0 {
         core::mem::swap(&mut r0, &mut r1);
     }
@@ -370,7 +371,7 @@ pub fn gcd(mut r0: U256, mut r1: U256) -> U256 {
 /// <https://gmplib.org/repo/gmp-6.1/file/tip/mpn/generic/gcdext_lehmer.c#l146>
 // Importing as `gcd_extended` is more readable than `gcd::extended`.
 #[allow(clippy::module_name_repetitions)]
-pub fn gcd_extended(mut r0: U256, mut r1: U256) -> (U256, U256, U256, bool) {
+pub(crate) fn gcd_extended(mut r0: U256, mut r1: U256) -> (U256, U256, U256, bool) {
     let swapped = r1 > r0;
     if swapped {
         core::mem::swap(&mut r0, &mut r1);

@@ -36,7 +36,11 @@
     variant_size_differences
 )]
 #![cfg_attr(feature = "std", warn(missing_debug_implementations,))]
-
+// rand_xoshiro v0.4.0 is required for a zkp-stark example and v0.3.1 for criterion
+#![allow(clippy::multiple_crate_versions)]
+// TODO - Nightly warns on this pattern but stable won't compile on it, change
+// this when that changes
+#[allow(unused_extern_crates)]
 extern crate proc_macro;
 use proc_macro_hack::proc_macro_hack;
 

@@ -1,17 +1,39 @@
-use crate::FieldElement;
-use std::prelude::v1::*;
+// False positives, see <https://github.com/rust-lang/rust/issues/55058>
+#![allow(single_use_lifetimes)]
+
+use crate::{FieldLike, Pow, RefFieldLike};
+use std::{cmp::min, prelude::v1::*};
 
 #[derive(Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "std", derive(Debug))]
-pub struct GeometricSeries {
-    current: FieldElement,
-    step:    FieldElement,
+pub struct GeometricIter<Field>
+where
+    Field: FieldLike,
+    for<'a> &'a Field: RefFieldLike<Field>,
+{
+    current: Field,
+    step:    Field,
     length:  usize,
 }
 
-impl GeometricSeries {
-    pub fn at(&self, index: usize) -> FieldElement {
+impl<Field> GeometricIter<Field>
+where
+    Field: FieldLike,
+    for<'a> &'a Field: RefFieldLike<Field>,
+{
+    pub fn at(&self, index: usize) -> Field {
         &self.current * self.step.pow(index)
+    }
+
+    pub fn skip(mut self, n: usize) -> Self {
+        self.current *= self.step.pow(n);
+        self.length -= n;
+        self
+    }
+
+    pub fn take(mut self, n: usize) -> Self {
+        self.length = min(self.length, n);
+        self
     }
 
     /// Transform the series
@@ -23,8 +45,12 @@ impl GeometricSeries {
     }
 }
 
-impl Iterator for GeometricSeries {
-    type Item = FieldElement;
+impl<Field> Iterator for GeometricIter<Field>
+where
+    Field: FieldLike,
+    for<'a> &'a Field: RefFieldLike<Field>,
+{
+    type Item = Field;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.length == 0 {
@@ -46,26 +72,31 @@ impl Iterator for GeometricSeries {
 // TODO: Implement multiplication for GeometricSeries x GeometricSeries and
 // GeometricSeries x FieldElement.
 
-pub fn geometric_series(base: &FieldElement, step: &FieldElement) -> GeometricSeries {
-    GeometricSeries {
+pub fn geometric_series<Field>(base: &Field, step: &Field) -> GeometricIter<Field>
+where
+    Field: FieldLike,
+    for<'a> &'a Field: RefFieldLike<Field>,
+{
+    GeometricIter {
         current: base.clone(),
         step:    step.clone(),
         length:  usize::max_value(),
     }
 }
 
-pub fn root_series(order: usize) -> GeometricSeries {
-    let root = FieldElement::root(order).expect("No root found of given order.");
-    GeometricSeries {
-        current: FieldElement::ONE,
-        step:    root,
-        length:  order,
-    }
+pub fn root_series<Field>(order: usize) -> GeometricIter<Field>
+where
+    Field: FieldLike,
+    for<'a> &'a Field: RefFieldLike<Field>,
+{
+    let root = Field::root(order).expect("No root found of given order.");
+    geometric_series(&Field::one(), &root).take(order)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::FieldElement;
     use zkp_macros_decl::field_element;
     use zkp_u256::U256;
 

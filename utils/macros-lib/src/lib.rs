@@ -36,6 +36,8 @@
     variant_size_differences
 )]
 #![cfg_attr(feature = "std", warn(missing_debug_implementations,))]
+// rand_xoshiro v0.4.0 is required for a zkp-stark example and v0.3.1 for criterion
+#![allow(clippy::multiple_crate_versions)]
 
 use proc_macro2::{Literal, Span, TokenStream};
 use quote::quote;
@@ -185,6 +187,7 @@ fn montgomery_convert(x: (u64, u64, u64, u64)) -> (u64, u64, u64, u64) {
     }
 }
 
+#[must_use]
 pub fn hex(input: TokenStream) -> TokenStream {
     // Wrapped in a closure so we can use `?` and
     // capture the Result<T,E>.
@@ -196,6 +199,7 @@ pub fn hex(input: TokenStream) -> TokenStream {
     .unwrap_or_else(|err: syn::Error| err.to_compile_error())
 }
 
+#[must_use]
 pub fn u256h(input: TokenStream) -> TokenStream {
     (|| {
         // TODO: Also accept integer literals
@@ -209,11 +213,12 @@ pub fn u256h(input: TokenStream) -> TokenStream {
         // TODO: Ideally we'd locally import U256 here and
         // use $crate::U256 here, but this leads to a circular
         // dependency.
-        Ok(quote! { U256::from_limbs(#c0, #c1, #c2, #c3) })
+        Ok(quote! { U256::from_limbs([#c0, #c1, #c2, #c3]) })
     })()
     .unwrap_or_else(|err: syn::Error| err.to_compile_error())
 }
 
+#[must_use]
 pub fn field_element(input: TokenStream) -> TokenStream {
     (|| {
         // TODO: Also accept integer literals
@@ -225,7 +230,7 @@ pub fn field_element(input: TokenStream) -> TokenStream {
         let c2 = Literal::u64_suffixed(c2);
         let c3 = Literal::u64_suffixed(c3);
 
-        Ok(quote! { FieldElement::from_montgomery(U256::from_limbs(#c0, #c1, #c2, #c3)) })
+        Ok(quote! { FieldElement::from_montgomery_const(U256::from_limbs([#c0, #c1, #c2, #c3])) })
     })()
     .unwrap_or_else(|err: syn::Error| err.to_compile_error())
 }
@@ -283,12 +288,12 @@ mod test {
     fn u256h_positive() {
         assert_eq!(
             u256h(quote! {""}).to_string(),
-            quote! {U256::from_limbs(0u64, 0u64, 0u64, 0u64)}.to_string()
+            quote! {U256::from_limbs([0u64, 0u64, 0u64, 0u64])}.to_string()
         );
         assert_eq!(
             u256h(quote! {"0000000000000004000000000000000300000000000000020000000000000001"})
                 .to_string(),
-            quote! {U256::from_limbs(1u64, 2u64, 3u64, 4u64)}.to_string()
+            quote! {U256::from_limbs([1u64, 2u64, 3u64, 4u64])}.to_string()
         );
     }
 
@@ -296,15 +301,15 @@ mod test {
     fn field_element_positive() {
         assert_eq!(
             field_element(quote! {""}).to_string(),
-            quote! {FieldElement::from_montgomery(
-                U256::from_limbs(0u64, 0u64, 0u64, 0u64)
+            quote! {FieldElement::from_montgomery_const(
+                U256::from_limbs([0u64, 0u64, 0u64, 0u64])
             )}
             .to_string()
         );
         assert_eq!(
             field_element(quote! {"01"}).to_string(),
-            quote! {FieldElement::from_montgomery(
-                U256::from_limbs(18446744073709551585u64 , 18446744073709551615u64 , 18446744073709551615u64 , 576460752303422960u64)
+            quote! {FieldElement::from_montgomery_const(
+                U256::from_limbs([18446744073709551585u64 , 18446744073709551615u64 , 18446744073709551615u64 , 576460752303422960u64])
             )}
             .to_string()
         );

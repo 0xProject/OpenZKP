@@ -36,14 +36,20 @@
     variant_size_differences
 )]
 #![cfg_attr(feature = "std", warn(missing_debug_implementations,))]
+// rand_xoshiro v0.4.0 is required for a zkp-stark example and v0.3.1 for criterion
+#![allow(clippy::multiple_crate_versions)]
+// TODO: Toggle based on stable/nightly
+// #![allow(clippy::missing_errors_doc)]
+// TODO: Add `must_use` attributes
+#![allow(clippy::must_use_candidate)]
 
 use lazy_static::*;
 use std::prelude::v1::*;
 use tiny_keccak::sha3_256;
 use zkp_elliptic_curve::{
-    base_mul, double_base_mul, window_table_affine, Affine, GENERATOR, ORDER,
+    base_mul, double_base_mul, window_table_affine, Affine, Order, GENERATOR, ORDER,
 };
-use zkp_u256::U256;
+use zkp_u256::{Binary, InvMod, Montgomery, U256};
 
 #[cfg(not(feature = "std"))]
 extern crate no_std_compat as std;
@@ -62,12 +68,14 @@ pub fn private_to_public(private_key: &U256) -> Affine {
 }
 
 fn divmod(a: &U256, b: &U256) -> Option<U256> {
-    b.invmod(&ORDER).map(|bi| a.mulmod(&bi, &ORDER))
+    b.inv_mod(&ORDER).map(|bi| a.mul_mod::<Order>(&bi))
 }
 
 // TODO (SECURITY): The signatures are malleable in s -> MODULUS - s.
 pub fn sign(msg_hash: &U256, private_key: &U256) -> (U256, U256) {
     assert!(msg_hash.bits() <= 251);
+    let private_key_mod = private_key % ORDER;
+    let msg_hash_mod = msg_hash % ORDER;
     for i in 0..1000 {
         let k = U256::from_bytes_be(&sha3_256(
             &[
@@ -87,7 +95,12 @@ pub fn sign(msg_hash: &U256, private_key: &U256) -> (U256, U256) {
                 if r == U256::ZERO || r.bits() > 251 {
                     continue;
                 }
-                match divmod(&k, &(msg_hash + r.mulmod(private_key, &ORDER))) {
+                let mut s = r.mul_mod::<Order>(&private_key_mod);
+                s += &msg_hash_mod;
+                if s >= ORDER {
+                    s -= ORDER;
+                }
+                match divmod(&k, &s) {
                     None => continue,
                     Some(w) => return (r, w),
                 }
@@ -107,9 +120,9 @@ pub fn verify(msg_hash: &U256, r: &U256, w: &U256, public_key: &Affine) -> bool 
 
     match Affine::from(&double_base_mul(
         &*GENERATOR_TABLE,
-        msg_hash.mulmod(&w, &ORDER),
+        msg_hash.mul_mod::<Order>(w),
         &public_key,
-        r.mulmod(&w, &ORDER),
+        r.mul_mod::<Order>(w),
     )) {
         Affine::Zero => false,
         Affine::Point { x, .. } => U256::from(x) == *r,

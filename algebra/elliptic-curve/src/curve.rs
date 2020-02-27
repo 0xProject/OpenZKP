@@ -1,13 +1,15 @@
 use crate::BETA;
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
 use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
     prelude::v1::*,
 };
-use zkp_primefield::FieldElement;
+use zkp_primefield::{FieldElement, NegInline, One, Zero};
 use zkp_u256::{commutative_binop, noncommutative_binop, U256};
 
 #[derive(PartialEq, Eq, Clone)]
-#[cfg_attr(feature = "std", derive(Debug))]
+#[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
 pub enum Affine {
     Zero, // Neutral element, point at infinity, additive identity, etc.
     Point { x: FieldElement, y: FieldElement },
@@ -16,10 +18,12 @@ pub enum Affine {
 impl Affine {
     pub const ZERO: Self = Self::Zero;
 
+    #[must_use]
     pub fn new(x: FieldElement, y: FieldElement) -> Self {
         Self::Point { x, y }
     }
 
+    #[must_use]
     pub fn on_curve(&self) -> bool {
         match self {
             Self::Zero => true,
@@ -31,14 +35,15 @@ impl Affine {
         *self = self.double();
     }
 
+    #[must_use]
     pub fn double(&self) -> Self {
         match self {
             Self::Zero => Self::Zero,
             Self::Point { x, y } => {
-                if *y == FieldElement::ZERO {
+                if *y == FieldElement::zero() {
                     Self::Zero
                 } else {
-                    let m = ((x + x + x) * x + FieldElement::ONE) / (y + y);
+                    let m = ((x + x + x) * x + FieldElement::one()) / (y + y);
                     let nx = &m * &m - x - x;
                     let ny = m * (x - &nx) - y;
                     Self::Point { x: nx, y: ny }
@@ -70,7 +75,7 @@ impl Neg for &Affine {
             Affine::Point { x, y } => {
                 Affine::Point {
                     x: x.clone(),
-                    y: y.neg(),
+                    y: -y,
                 }
             }
         }
@@ -118,15 +123,20 @@ macro_rules! curve_operations {
             type Output = $type;
 
             fn mul(self, scalar: &U256) -> $type {
+                use zkp_u256::Binary;
                 // OPT: Use WNAF
-                let mut r = self.clone();
-                for i in (0..scalar.msb()).rev() {
-                    r.double_assign();
-                    if scalar.bit(i) {
-                        r += self;
+                if let Some(position) = scalar.most_significant_bit() {
+                    let mut r = self.clone();
+                    for i in (0..position).rev() {
+                        r.double_assign();
+                        if scalar.bit(i) {
+                            r += self;
+                        }
                     }
+                    r
+                } else {
+                    $type::ZERO
                 }
-                r
             }
         }
 
@@ -192,10 +202,10 @@ impl Arbitrary for Affine {
     }
 }
 
-// TODO: Use u256h literals here.
-#[allow(clippy::unreadable_literal)]
 // Quickcheck needs pass by value
 #[allow(clippy::needless_pass_by_value)]
+// We allow these in tests for readability/ease of editing
+#[allow(clippy::redundant_clone)]
 #[cfg(test)]
 mod tests {
     use super::*;

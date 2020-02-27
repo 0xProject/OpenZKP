@@ -36,6 +36,12 @@
     variant_size_differences
 )]
 #![cfg_attr(feature = "std", warn(missing_debug_implementations,))]
+// rand_xoshiro v0.4.0 is required for a zkp-stark example and v0.3.1 for criterion
+#![allow(clippy::multiple_crate_versions)]
+// TODO: Toggle based on stable/nightly
+// #![allow(clippy::missing_errors_doc)]
+// TODO: Add `must_use` attributes
+#![allow(clippy::must_use_candidate)]
 
 mod channel;
 mod constraints;
@@ -51,9 +57,13 @@ mod verifier;
 #[cfg(feature = "prover")]
 mod algebraic_dag;
 #[cfg(feature = "prover")]
+mod component;
+#[cfg(feature = "prover")]
 mod constraint_check;
 #[cfg(feature = "prover")]
 mod prover;
+#[cfg(feature = "prover")]
+pub mod solidity_encode;
 #[cfg(feature = "prover")]
 mod trace_table;
 
@@ -77,7 +87,16 @@ pub use verifier::{verify, Error as VerifierError};
 
 // Exports for prover
 #[cfg(feature = "prover")]
+pub use component::{
+    compose_folded, compose_horizontal, compose_vertical, fold, fold_many, permute_columns, shift,
+    Component,
+};
+#[cfg(feature = "prover")]
+pub use constraint_check::check_constraints;
+#[cfg(feature = "prover")]
 pub use prover::{prove, Error as ProverError};
+#[cfg(feature = "prover")]
+pub use solidity_encode::autogen;
 #[cfg(feature = "prover")]
 pub use trace_table::TraceTable;
 #[cfg(feature = "prover")]

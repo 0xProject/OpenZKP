@@ -36,18 +36,49 @@
     variant_size_differences
 )]
 #![cfg_attr(feature = "std", warn(missing_debug_implementations,))]
+// rand_xoshiro v0.4.0 is required for a zkp-stark example and v0.3.1 for criterion
+#![allow(clippy::multiple_crate_versions)]
+// TODO: Add `must_use` where relevant
+#![allow(clippy::must_use_candidate)]
+// All `#[inline(always)]` attributes are carefully considered and benchmarked.
+// Performance is an important goal of this library.
+// TODO: Provide two versions of hot functions `_inlined` and plain.
+#![allow(clippy::inline_always)]
+// TODO: Document errors
+// TODO: Toggle based on stable/nightly
+// #![allow(clippy::missing_errors_doc)]
 
-mod binops;
+// Some routines have assembly optimized versions available for some
+// architectures #![cfg_attr(feature = "asm", feature(asm))]
+
+mod additive;
+pub(crate) mod algorithms;
+mod binary;
+mod conversion;
 mod division;
-mod gcd;
+mod encoding;
+mod functions;
+mod multiplicative;
+#[cfg(feature = "use_rand")]
+mod rand;
+mod traits;
 mod u256;
+mod u256_traits;
 
-// TODO: This seems out of scope for U256 to export.
-pub mod utils;
+// TODO: Create a BinaryRing trait that represents numbers modulo some power of
+// two.
 
-pub use crate::u256::U256;
+pub use u256::U256;
 
-// TODO: Make member functions of U256?
-pub use gcd::{gcd, gcd_extended};
+pub use algorithms::{
+    adc, div_2_1, divrem_nby1, divrem_nbym, mac, macc, msb, sbb, to_montgomery_const,
+};
+pub use num_traits::{Bounded, Inv, MulAdd, MulAddAssign, One, Pow, Zero};
+pub use traits::{
+    AddFullInline, AddInline, Binary, BinaryAssignRef, BinaryOps, BinaryRing, DivRem, InvMod,
+    Montgomery, MontgomeryParameters, MulFullInline, MulInline, NegInline, SquareFullInline,
+    SquareInline, SubFromFullInline, SubFromInline, SubFullInline, SubInline, GCD,
+};
+
 #[cfg(not(feature = "std"))]
 extern crate no_std_compat as std;

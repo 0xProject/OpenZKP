@@ -5,10 +5,13 @@ use super::{
         LEFT_X_COEFFICIENTS, LEFT_Y_COEFFICIENTS, RIGHT_X_COEFFICIENTS, RIGHT_Y_COEFFICIENTS,
     },
 };
+use elliptic_curve::Affine;
+use openstark::{
+    solidity_encode::{autogen, autogen_constraint_poly},
+    Constraints, DensePolynomial, RationalExpression,
+};
+use primefield::FieldElement;
 use std::{prelude::v1::*, vec};
-use zkp_elliptic_curve::Affine;
-use zkp_primefield::FieldElement;
-use zkp_stark::{Constraints, DensePolynomial, RationalExpression};
 
 // TODO: Naming
 #[allow(clippy::module_name_repetitions)]
@@ -41,7 +44,7 @@ pub fn get_pedersen_merkle_constraints(claim: &Claim) -> Constraints {
     // Repeating patterns
     // TODO: Clean this up
     let trace_generator = Constant(FieldElement::root(trace_length).unwrap());
-    let on_first_row = |a: RationalExpression| a / (X - Constant(FieldElement::ONE));
+    let on_first_row = |a: RationalExpression| a / (X - Constant(FieldElement::one()));
     let on_last_row = |a: RationalExpression| a / (X - trace_generator.pow(trace_length - 1));
     let on_hash_end_rows = |a: RationalExpression| {
         a * (X - trace_generator.pow(trace_length - 1))
@@ -63,7 +66,7 @@ pub fn get_pedersen_merkle_constraints(claim: &Claim) -> Constraints {
     let left_bit = Trace(0, 0) - Trace(0, 1) * 2.into();
     let right_bit = Trace(4, 0) - Trace(4, 1) * 2.into();
 
-    Constraints::from_expressions((trace_length, 8), claim.into(), vec![
+    let expressions = vec![
         Trace(0, 0),
         Trace(1, 0),
         Trace(2, 0),
@@ -93,10 +96,10 @@ pub fn get_pedersen_merkle_constraints(claim: &Claim) -> Constraints {
                 - Trace(1, 1) * (Trace(6, 0) - Trace(2, 1)),
         ),
         on_hash_loop_rows(
-            (Constant(FieldElement::ONE) - left_bit.clone()) * (Trace(6, 0) - Trace(2, 1)),
+            (Constant(FieldElement::one()) - left_bit.clone()) * (Trace(6, 0) - Trace(2, 1)),
         ),
         on_hash_loop_rows(
-            (Constant(FieldElement::ONE) - left_bit.clone()) * (Trace(7, 0) - Trace(3, 1)),
+            (Constant(FieldElement::one()) - left_bit.clone()) * (Trace(7, 0) - Trace(3, 1)),
         ),
         on_fe_end_rows(Trace(0, 0)),
         on_no_hash_rows(Trace(0, 0)),
@@ -114,15 +117,33 @@ pub fn get_pedersen_merkle_constraints(claim: &Claim) -> Constraints {
                 - Trace(5, 1) * (Trace(2, 1) - Trace(6, 1)),
         ),
         on_hash_loop_rows(
-            (Constant(FieldElement::ONE) - right_bit.clone()) * (Trace(2, 1) - Trace(6, 1)),
+            (Constant(FieldElement::one()) - right_bit.clone()) * (Trace(2, 1) - Trace(6, 1)),
         ),
         on_hash_loop_rows(
-            (Constant(FieldElement::ONE) - right_bit.clone()) * (Trace(3, 1) - Trace(7, 1)),
+            (Constant(FieldElement::one()) - right_bit.clone()) * (Trace(3, 1) - Trace(7, 1)),
         ),
         on_fe_end_rows(Trace(4, 0)),
         on_no_hash_rows(Trace(4, 0)),
-    ])
-    .unwrap()
+    ];
+
+    let path_len_const = Constant(FieldElement::from(claim.path_length));
+    let root_const = Constant(claim.root.clone());
+    let leaf_const = Constant(claim.leaf.clone());
+
+    let public = vec![&path_len_const, &root_const, &leaf_const];
+
+    match autogen(
+        trace_length,
+        public.as_slice(),
+        expressions.as_slice(),
+        2,
+        8,
+    ) {
+        Ok(()) => {}
+        Err(error) => panic!("File io problem: {:?}", error),
+    };
+
+    Constraints::from_expressions((trace_length, 8), claim.into(), expressions).unwrap()
 }
 
 #[cfg(test)]
@@ -131,7 +152,7 @@ mod tests {
         super::inputs::{short_witness, SHORT_CLAIM},
         *,
     };
-    use zkp_stark::{prove, Provable, Verifiable};
+    use openstark::{prove, Provable, Verifiable};
 
     #[test]
     fn short_pedersen_merkle() {

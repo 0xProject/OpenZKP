@@ -3,7 +3,8 @@ use crate::{
 };
 use std::{cmp::min, ops::Neg, prelude::v1::*};
 use tiny_keccak::Keccak;
-use zkp_primefield::{invert_batch_src_dst, FieldElement};
+use zkp_macros_decl::field_element;
+use zkp_primefield::{invert_batch_src_dst, FieldElement, Inv, One, Pow, Root, Zero};
 use zkp_u256::U256;
 
 /// Number of values to calculate at once.
@@ -14,22 +15,22 @@ const CHUNK_SIZE: usize = 16;
 // HACK: FieldElement does not implement Copy, so we need to explicitly
 // instantiate
 const CHUNK_INIT: [FieldElement; CHUNK_SIZE] = [
-    FieldElement::ZERO,
-    FieldElement::ZERO,
-    FieldElement::ZERO,
-    FieldElement::ZERO,
-    FieldElement::ZERO,
-    FieldElement::ZERO,
-    FieldElement::ZERO,
-    FieldElement::ZERO,
-    FieldElement::ZERO,
-    FieldElement::ZERO,
-    FieldElement::ZERO,
-    FieldElement::ZERO,
-    FieldElement::ZERO,
-    FieldElement::ZERO,
-    FieldElement::ZERO,
-    FieldElement::ZERO,
+    field_element!("00"),
+    field_element!("00"),
+    field_element!("00"),
+    field_element!("00"),
+    field_element!("00"),
+    field_element!("00"),
+    field_element!("00"),
+    field_element!("00"),
+    field_element!("00"),
+    field_element!("00"),
+    field_element!("00"),
+    field_element!("00"),
+    field_element!("00"),
+    field_element!("00"),
+    field_element!("00"),
+    field_element!("00"),
 ];
 
 /// Maximum size of a periodic lookup table.
@@ -77,7 +78,7 @@ pub(crate) struct Node {
 
     /// Scratch space for the evaluators
     // TODO: Something cleaner
-    note: FieldElement,
+    note:   FieldElement,
     values: [FieldElement; CHUNK_SIZE],
 }
 
@@ -123,7 +124,7 @@ impl std::fmt::Debug for AlgebraicGraph {
                 fmt,
                 "{:?}: {:016x} {:>8} {:?}",
                 Index(i),
-                n.hash.as_montgomery().c0,
+                n.hash.as_montgomery().limb(0),
                 n.period,
                 n.op
             )?
@@ -301,12 +302,13 @@ impl AlgebraicGraph {
         } else {
             // Recognize expressions evaluating to zero or one. Simplify other
             // expressions.
-            let operation = match hash {
-                FieldElement::ZERO => Operation::Constant(FieldElement::ZERO),
-                FieldElement::ONE => Operation::Constant(FieldElement::ONE),
+            // OPT: Add more constants? Maybe evaluate in two points to detect all
+            // constants?
+            let operation = match &hash {
+                h if h.is_zero() => Operation::Constant(FieldElement::zero()),
+                h if h.is_one() => Operation::Constant(FieldElement::one()),
                 _ => self.simplify(operation),
             };
-
             // Create new node
             let index = self.nodes.len();
             let period = self.period(&operation);
@@ -315,7 +317,7 @@ impl AlgebraicGraph {
                 hash,
                 period,
                 values: CHUNK_INIT,
-                note: FieldElement::ZERO,
+                note: FieldElement::zero(),
             });
             Index(index)
         }
@@ -529,7 +531,7 @@ impl AlgebraicGraph {
                 Neg(a) => {
                     let a = &previous[a.0].values;
                     for i in 0..CHUNK_SIZE {
-                        values[i] = a[i].neg()
+                        values[i] = -&a[i]
                     }
                 }
                 Mul(a, b) => {
@@ -582,7 +584,7 @@ mod tests {
     use RationalExpression as RE;
 
     fn coset_hash(cofactor: FieldElement, size: usize) -> FieldElement {
-        let mut dag = AlgebraicGraph::new(&FieldElement::GENERATOR, 1024, 2);
+        let mut dag = AlgebraicGraph::new(&FieldElement::generator(), 1024, 2);
         let index = dag.op(Op::Coset(cofactor, size));
         dag[index].hash.clone()
     }
@@ -590,24 +592,24 @@ mod tests {
     #[test]
     fn test_hash_coset_zero() {
         // hash(Coset(0, _)) = 0
-        assert_eq!(coset_hash(FieldElement::ZERO, 1), FieldElement::ZERO);
-        assert_eq!(coset_hash(FieldElement::ZERO, 2), FieldElement::ZERO);
-        assert_eq!(coset_hash(FieldElement::ZERO, 512), FieldElement::ZERO);
-        assert_eq!(coset_hash(FieldElement::ZERO, 1024), FieldElement::ZERO);
+        assert_eq!(coset_hash(FieldElement::zero(), 1), FieldElement::zero());
+        assert_eq!(coset_hash(FieldElement::zero(), 2), FieldElement::zero());
+        assert_eq!(coset_hash(FieldElement::zero(), 512), FieldElement::zero());
+        assert_eq!(coset_hash(FieldElement::zero(), 1024), FieldElement::zero());
     }
 
     #[test]
     fn test_hash_coset_constant() {
         // hash(Coset(c, 1)) = c * (seed / cofactor) ^ coset_size
         fn test(c: FieldElement) {
-            let mut dag = AlgebraicGraph::new(&FieldElement::GENERATOR, 1024, 2);
+            let mut dag = AlgebraicGraph::new(&FieldElement::generator(), 1024, 2);
             let factor = (&dag.seed / &dag.cofactor).pow(dag.coset_size);
             let index = dag.op(Op::Coset(c.clone(), 1));
             assert_eq!(dag[index].hash, c * factor);
         }
-        test(FieldElement::ZERO);
-        test(FieldElement::ONE);
-        test(FieldElement::GENERATOR);
+        test(FieldElement::zero());
+        test(FieldElement::one());
+        test(FieldElement::generator());
         test(field_element!(
             "022550177068302c52659dbd983cf622984f1f2a7fb2277003a64c7ecf96edaf"
         ));
@@ -615,7 +617,7 @@ mod tests {
 
     #[test]
     fn test_hash_x_is_seed() {
-        let mut dag = AlgebraicGraph::new(&FieldElement::GENERATOR, 1024, 2);
+        let mut dag = AlgebraicGraph::new(&FieldElement::generator(), 1024, 2);
         let index = dag.expression(RE::X);
         assert_eq!(dag[index].hash, dag.seed);
     }

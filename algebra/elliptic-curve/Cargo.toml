@@ -23,6 +23,7 @@ itertools = { version = "0.8.0", default_features = false }
 lazy_static = { version = "1.3.0", features = [ "spin_no_std" ] } # TODO: When `std` is set we want this feature off!
 tiny-keccak = "1.5.0"
 quickcheck = { version = "0.9", optional = true}
+serde = { version = "1.0", features = ["derive"], optional = true}
 
 # HACK: Criterion is really a dev-dependency, but it's important that it's
 # optional, or it will enable the `std` flag on various dependencies. Cargo
@@ -36,13 +37,21 @@ harness = false
 required-features = ["bench"]
 
 [features]
-default = [ "std" ]
+default = [
+    "std",
+    "inline",
+]
 std = [
     "zkp-macros-decl/std",
     "zkp-u256/std",
     "zkp-primefield/std",
     "no-std-compat/std",
     "itertools/use_std",
+    "serde",
+]
+inline = [
+    "zkp-u256/inline",
+    "zkp-primefield/inline"
 ]
 test = [
     "quickcheck",

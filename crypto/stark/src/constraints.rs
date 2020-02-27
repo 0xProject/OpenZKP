@@ -1,7 +1,7 @@
 use crate::rational_expression::RationalExpression;
 use itertools::Itertools;
 use std::{collections::BTreeSet, fmt, prelude::v1::*};
-use zkp_primefield::FieldElement;
+use zkp_primefield::{FieldElement, Root};
 
 #[derive(Clone, Debug)]
 pub enum Error {
@@ -91,7 +91,6 @@ impl Constraints {
         expressions: Vec<RationalExpression>,
     ) -> Result<Self, Error> {
         let _ = FieldElement::root(trace_nrows).ok_or(Error::InvalidTraceLength)?;
-        // TODO: Validate expressions
         // TODO: Hash expressions into channel seed
         // TODO - Examine if we want to up these security params further.
         // 22.5*4  + 0 queries = 90
@@ -105,6 +104,48 @@ impl Constraints {
             pow_bits: 0,
             num_queries: 45,
             fri_layout: Self::default_fri_layout(trace_nrows),
+        })
+    }
+
+    pub fn from_expressions_detailed(
+        (trace_nrows, trace_ncolumns): (usize, usize),
+        channel_seed: Vec<u8>,
+        expressions: Vec<RationalExpression>,
+        op_blowup: Option<usize>,
+        op_pow_bits: Option<usize>,
+        op_num_queries: Option<usize>,
+        op_fri_layout: Option<Vec<usize>>,
+    ) -> Result<Self, Error> {
+        let _ = FieldElement::root(trace_nrows).ok_or(Error::InvalidTraceLength)?;
+        // TODO: Hash expressions into channel seed
+        // 15*4 + 30 queries = 90
+        Ok(Self {
+            channel_seed,
+            trace_nrows,
+            trace_ncolumns,
+            expressions,
+            blowup: match op_blowup {
+                Some(x) => x,
+                None => 16,
+            },
+            pow_bits: match op_pow_bits {
+                Some(x) => x,
+                None => {
+                    if cfg!(test) {
+                        0
+                    } else {
+                        20
+                    }
+                }
+            },
+            num_queries: match op_num_queries {
+                Some(x) => x,
+                None => 13,
+            },
+            fri_layout: match op_fri_layout {
+                Some(x) => x,
+                None => Self::default_fri_layout(trace_nrows),
+            },
         })
     }
 
@@ -181,7 +222,7 @@ impl Constraints {
         32 * total_decommitment
     }
 
-    pub(crate) fn combine(&self, constraint_coefficients: &[FieldElement]) -> RationalExpression {
+    pub fn combine(&self, constraint_coefficients: &[FieldElement]) -> RationalExpression {
         use RationalExpression::*;
         assert_eq!(2 * self.len(), constraint_coefficients.len());
         let target_degree = self.degree() * self.trace_nrows() - 1;

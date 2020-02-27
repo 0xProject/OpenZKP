@@ -1,5 +1,6 @@
+use std::time::Instant;
 use zkp_macros_decl::field_element;
-use zkp_primefield::{fft::ifft, FieldElement};
+use zkp_primefield::{fft::ifft, FieldElement, Pow, Root};
 use zkp_stark::{
     Constraints, DensePolynomial, Provable, RationalExpression, TraceTable, Verifiable,
 };
@@ -58,7 +59,7 @@ impl Verifiable for Claim {
 
         Constraints::from_expressions((trace_length, 1), seed, vec![
             // Says the next row for each row is current x_0^alpha + k
-            (Trace(0, 1) - (Exp(Box::new(Trace(0, 0)), ALPHA) + k_coef.clone())) * every_row(),
+            (Trace(0, 1) - (Exp(Box::new(Trace(0, 0)), ALPHA) + k_coef)) * every_row(),
             // Says the first x_0 is the before
             (Trace(0, 0) - (&self.before).into()) * on_row(0),
             // Says the the x_0 on row ROUNDS
@@ -93,8 +94,12 @@ fn mimc(start: &FieldElement) -> FieldElement {
 fn main() {
     let before = field_element!("00a74f2a70da4ea3723cabd2acc55d03f9ff6d0e7acef0fc63263b12c10dd837");
     let after = mimc(&before);
+    let start = Instant::now();
     let claim = Claim { before, after };
     assert_eq!(claim.check(()), Ok(()));
     let proof = claim.prove(()).unwrap();
+    let duration = start.elapsed();
+    println!("Time elapsed in proof function is: {:?}", duration);
+    println!("The proof length is {}", proof.as_bytes().len());
     claim.verify(&proof).unwrap();
 }

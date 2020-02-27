@@ -8,13 +8,16 @@ FROM circleci/rust:1-node
 
 # The latest nightly
 # TODO: Update manually. 
-ENV NIGHTLY="nightly-2019-08-15"
+ENV NIGHTLY="nightly-2019-12-20"
 
 RUN true \
  # For the rocksdb dependency of substrate-node
  && sudo apt-get install clang \
  # For coverage reports
  && sudo apt-get install lcov \
+ # Update rust stable and use
+ && rustup update stable \
+ && rustup default stable \
  # Install Nightly with rustfmt, wasm and Cortex-M3 support
  && rustup toolchain install $NIGHTLY \
  && rustup target add wasm32-unknown-unknown --toolchain $NIGHTLY \

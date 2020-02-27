@@ -24,6 +24,7 @@ pub struct MmapVec<T: Clone> {
 }
 
 impl<T: Clone> MmapVec<T> {
+    #[must_use]
     pub fn with_capacity(capacity: usize) -> Self {
         // From https://docs.rs/tempfile/3.1.0/tempfile/: tempfile() relies on
         // the OS to remove the temporary file once the last handle is closed.
@@ -31,7 +32,9 @@ impl<T: Clone> MmapVec<T> {
         // TODO: Round up to nearest 4KB
         // Note: mmaped files can not be empty, so we use at leas one byte.
         let size = max(1, capacity * size_of::<T>());
-        info!("Allocating {} MB in temp file", size / 1_000_000);
+        if size > 1_000_000 {
+            info!("Allocating {} MB in temp file", size / 1_000_000);
+        }
         file.set_len(size as u64)
             .expect("cannot set mmap file length");
         let mmap = unsafe { MmapOptions::new().len(size).map_mut(&file) }
@@ -44,18 +47,26 @@ impl<T: Clone> MmapVec<T> {
         }
     }
 
+    /// # Safety
+    /// This function returns an array of size `len` that is initialized
+    /// with all bits set to zero. This is only safe if all-zeros is a valid
+    /// and safe bit-pattern for type `T`. This is for example the case for
+    /// integer types, but is not safe for types containing references.
     // TODO: Maybe we should do something like a Zeroed trait?
     // See https://github.com/rust-lang/rfcs/issues/2626
+    #[must_use]
     pub unsafe fn zero_initialized(len: usize) -> Self {
         let mut result = Self::with_capacity(len);
         result.length = len;
         result
     }
 
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.length == 0
     }
 
+    #[must_use]
     pub fn len(&self) -> usize {
         self.length
     }
@@ -89,11 +100,13 @@ impl<T: Clone> MmapVec<T> {
     }
 
     #[inline]
+    #[must_use]
     pub fn as_slice(&self) -> &[T] {
         self
     }
 
     #[inline]
+    #[must_use]
     pub fn as_mut_slice(&mut self) -> &mut [T] {
         self
     }

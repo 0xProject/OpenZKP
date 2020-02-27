@@ -1,14 +1,22 @@
 use crate::polynomial::DensePolynomial;
+#[cfg(feature = "std")]
+use std::{
+    cmp::Ordering,
+    collections::{hash_map::DefaultHasher, BTreeMap},
+};
 use std::{
     collections::BTreeSet,
+    hash::{Hash, Hasher},
     iter::Sum,
     ops::{Add, Div, Mul, Sub},
     prelude::v1::*,
 };
-use zkp_primefield::FieldElement;
+use zkp_macros_decl::field_element;
+use zkp_primefield::{FieldElement, Inv, One, Pow, Zero};
+use zkp_u256::U256;
 
 // TODO: Rename to algebraic expression
-#[derive(Clone)]
+#[derive(Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub enum RationalExpression {
     X,
@@ -33,6 +41,28 @@ impl RationalExpression {
 
     pub fn pow(&self, exponent: usize) -> Self {
         Self::Exp(Box::new(self.clone()), exponent)
+    }
+
+    /// Apply a function bottom up on the expression.
+    ///
+    /// **Note.** Unlike the conventional generalization of `map` to tree
+    /// structures, this map also applies the function to each tree node,
+    /// after it has been applied to all its descendants.
+    pub fn map(&self, f: &impl Fn(Self) -> Self) -> Self {
+        use RationalExpression::*;
+        let e = match self {
+            // Tree types are recursed first
+            Polynomial(p, e) => Polynomial(p.clone(), Box::new(e.map(f))),
+            Add(a, b) => Add(Box::new(a.map(f)), Box::new(b.map(f))),
+            Neg(a) => Neg(Box::new(a.map(f))),
+            Mul(a, b) => Mul(Box::new(a.map(f)), Box::new(b.map(f))),
+            Inv(a) => Inv(Box::new(a.map(f))),
+            Exp(a, e) => Exp(Box::new(a.map(f)), *e),
+
+            // Leaf types are mapped as is.
+            other => other.clone(),
+        };
+        f(e)
     }
 }
 
@@ -122,11 +152,12 @@ impl RationalExpression {
                 (p.degree() * n, p.degree() * d)
             }
             Add(a, b) => {
-                let (an, ad) = a.degree_impl(x_degree, trace_degree);
-                let (bn, bd) = b.degree_impl(x_degree, trace_degree);
-                assert!(ad == 0); // TODO: Can we handle this better?
-                assert!(bd == 0);
-                (std::cmp::max(an, bn), 0)
+                let (a_numerator, a_denominator) = a.degree_impl(x_degree, trace_degree);
+                let (b_numerator, b_denominator) = b.degree_impl(x_degree, trace_degree);
+                (
+                    std::cmp::max(a_numerator + b_denominator, b_numerator + a_denominator),
+                    a_denominator + b_denominator,
+                )
             }
             Neg(a) => a.degree_impl(x_degree, trace_degree),
             Mul(a, b) => {
@@ -145,7 +176,7 @@ impl RationalExpression {
         }
     }
 
-    // Note - This function is incomplete in it's treatment of rational expressions
+    // Note - This function is incomplete in its treatment of rational expressions
     // and may not produce the right answer when used with nested expressions
     // containing inverses
     pub fn check(
@@ -165,7 +196,7 @@ impl RationalExpression {
                 if is_ok {
                     (p.evaluate(&res), true)
                 } else {
-                    (FieldElement::ONE, false)
+                    (FieldElement::one(), false)
                 }
             }
             Add(a, b) => {
@@ -174,7 +205,7 @@ impl RationalExpression {
                 if a_ok && b_ok {
                     (res_a + res_b, true)
                 } else {
-                    (FieldElement::ONE, false)
+                    (FieldElement::one(), false)
                 }
             }
             Neg(a) => {
@@ -189,27 +220,27 @@ impl RationalExpression {
                 if a_ok && b_ok {
                     (res_a * res_b, true)
                 } else if a_ok && !b_ok {
-                    if res_a == FieldElement::ZERO {
-                        (FieldElement::ZERO, true)
+                    if res_a == FieldElement::zero() {
+                        (FieldElement::zero(), true)
                     } else {
-                        (FieldElement::ONE, false)
+                        (FieldElement::one(), false)
                     }
                 } else if !a_ok && b_ok {
-                    if res_b == FieldElement::ZERO {
-                        (FieldElement::ZERO, true)
+                    if res_b == FieldElement::zero() {
+                        (FieldElement::zero(), true)
                     } else {
-                        (FieldElement::ONE, false)
+                        (FieldElement::one(), false)
                     }
                 } else {
-                    (FieldElement::ONE, false)
+                    (FieldElement::one(), false)
                 }
             }
             // TODO - This behavior is suspect
             Inv(a) => {
                 let (res_a, a_ok) = a.clone().check(x, trace);
                 if a_ok {
-                    if res_a == FieldElement::ZERO {
-                        (FieldElement::ONE, false)
+                    if res_a == FieldElement::zero() {
+                        (FieldElement::one(), false)
                     } else {
                         (res_a, true)
                     }
@@ -217,7 +248,7 @@ impl RationalExpression {
                     match *(a.clone()) {
                         Inv(b) => b.check(x, trace),
                         // TODO - Fully enumerate all checks
-                        _ => (FieldElement::ONE, false),
+                        _ => (FieldElement::one(), false),
                     }
                 }
             }
@@ -226,7 +257,7 @@ impl RationalExpression {
                 if a_ok {
                     (res_a.pow(*e), true)
                 } else {
-                    (FieldElement::ONE, false)
+                    (FieldElement::one(), false)
                 }
             }
         }
@@ -270,5 +301,180 @@ impl RationalExpression {
                 b.trace_arguments_impl(s);
             }
         }
+    }
+
+    #[cfg(feature = "std")]
+    pub fn soldity_encode(&self, memory_layout: &BTreeMap<Self, String>) -> String {
+        use RationalExpression::*;
+
+        #[allow(clippy::match_same_arms)]
+        match self {
+            X => "mload(0x0)".to_owned(),
+            Constant(_) if memory_layout.contains_key(self) => {
+                memory_layout.get(self).unwrap().clone()
+            }
+            Constant(c) => format!("0x{}", U256::from(c).to_string()),
+            Trace(..) | Polynomial(..) => memory_layout.get(self).unwrap().clone(),
+            Add(a, b) => {
+                format!(
+                    "addmod({}, {}, PRIME)",
+                    a.soldity_encode(memory_layout),
+                    b.soldity_encode(memory_layout)
+                )
+            }
+            Neg(a) => format!("sub(PRIME , {})", a.soldity_encode(memory_layout)),
+            Mul(a, b) => {
+                format!(
+                    "mulmod({}, {}, PRIME)",
+                    a.soldity_encode(memory_layout),
+                    b.soldity_encode(memory_layout)
+                )
+            }
+            Inv(_) => memory_layout.get(self).unwrap().clone(),
+            Exp(a, e) => {
+                match e {
+                    0 => "0x01".to_owned(),
+                    1 => a.soldity_encode(memory_layout),
+                    _ => {
+                        // TODO - Check the gas to see what the real breaking point should be
+                        if *e < 10 {
+                            format!(
+                                "small_expmod({}, {}, PRIME)",
+                                a.soldity_encode(memory_layout),
+                                e.to_string()
+                            )
+                        } else {
+                            format!(
+                                "expmod({}, {}, PRIME)",
+                                a.soldity_encode(memory_layout),
+                                e.to_string()
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // TODO - DRY this by writing a generic search over subtypes
+    #[cfg(feature = "std")]
+    pub fn trace_search(&self) -> BTreeMap<Self, bool> {
+        use RationalExpression::*;
+
+        match self {
+            X | Constant(..) => BTreeMap::new(),
+            Trace(..) => [(self.clone(), true)].iter().cloned().collect(),
+            Add(a, b) | Mul(a, b) => {
+                let mut first = a.trace_search();
+                first.extend(b.trace_search());
+                first
+            }
+            Polynomial(_, a) | Inv(a) | Exp(a, _) | Neg(a) => a.trace_search(),
+        }
+    }
+
+    #[cfg(feature = "std")]
+    pub fn inv_search(&self) -> BTreeMap<Self, bool> {
+        use RationalExpression::*;
+
+        match self {
+            X | Constant(_) | Trace(..) => BTreeMap::new(),
+            Add(a, b) | Mul(a, b) => {
+                let mut first = a.inv_search();
+                first.extend(b.inv_search());
+                first
+            }
+            Inv(_) => [(self.clone(), true)].iter().cloned().collect(),
+            Polynomial(_, a) | Exp(a, _) | Neg(a) => a.inv_search(),
+        }
+    }
+
+    #[cfg(feature = "std")]
+    pub fn periodic_search(&self) -> BTreeMap<Self, bool> {
+        use RationalExpression::*;
+
+        match self {
+            X | Constant(_) | Trace(..) => BTreeMap::new(),
+            Polynomial(..) => [(self.clone(), true)].iter().cloned().collect(),
+            Add(a, b) | Mul(a, b) => {
+                let mut first = a.periodic_search();
+                first.extend(b.periodic_search());
+                first
+            }
+            Inv(a) | Exp(a, _) | Neg(a) => a.periodic_search(),
+        }
+    }
+}
+
+#[allow(clippy::derive_hash_xor_eq)]
+impl Hash for RationalExpression {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        use RationalExpression::*;
+        match self {
+            X => {
+                "x".hash(state);
+            }
+            Constant(c) => {
+                c.hash(state);
+            }
+            &Trace(i, j) => {
+                "trace".hash(state);
+                i.hash(state);
+                j.hash(state);
+            }
+            Polynomial(p, _) => {
+                "poly".hash(state);
+                let x = field_element!(
+                    "754ed488ec9208d1c552bb254c0890042078a9e1f7e36072ebff1bf4e193d11b"
+                );
+                // Note - We don't hash in the a because we can deploy the same contract for
+                // identical dense poly, for true equality we need to hash a into it.
+                (p.evaluate(&x)).hash(state);
+            }
+            Add(a, b) => {
+                "add".hash(state);
+                a.hash(state);
+                b.hash(state);
+            }
+            Neg(a) => {
+                "neg".hash(state);
+                a.hash(state);
+            }
+            Mul(a, b) => {
+                "mul".hash(state);
+                a.hash(state);
+                b.hash(state);
+            }
+            Inv(a) => {
+                "inv".hash(state);
+                a.hash(state);
+            }
+            Exp(a, e) => {
+                "exp".hash(state);
+                a.hash(state);
+                e.hash(state);
+            }
+        }
+    }
+}
+
+#[cfg(feature = "std")]
+impl PartialOrd for RationalExpression {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+#[cfg(feature = "std")]
+fn get_hash(r: &RationalExpression) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    r.hash(&mut hasher);
+    hasher.finish()
+}
+
+#[cfg(feature = "std")]
+impl Ord for RationalExpression {
+    fn cmp(&self, other: &Self) -> Ordering {
+        get_hash(self).cmp(&get_hash(other))
     }
 }
