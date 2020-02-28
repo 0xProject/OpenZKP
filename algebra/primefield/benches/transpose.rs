@@ -10,14 +10,17 @@ use zkp_primefield::{
 };
 use zkp_u256::U256;
 
-const SIZES: [usize; 7] = [64, 1024, 16384, 262144, 4194304, 16777216, 33554432];
+const SIZES: [usize; 6] = [64, 1024, 16384, 262144, 4194304, 16777216];
 
 fn bench_size(crit: &mut Criterion) {
     log_size_bench(crit, "Transpose square size", &SIZES, move |bench, size| {
-        let row_size = size / 2;
-        let src: Vec<_> = (0..size).map(FieldElement::from).collect();
+        let log2 = size.trailing_zeros() as usize;
+        assert_eq!(log2 % 2, 0);
+        let rows = 1_usize << (log2 / 2);
+        let cols = 1_usize << (log2 / 2);
+        let src: Vec<_> = (0..rows * cols).map(FieldElement::from).collect();
         let mut dst = src.clone();
-        bench.iter(|| transpose(&src, &mut dst, row_size))
+        bench.iter(|| transpose(&src, &mut dst, rows))
     });
 }
 
@@ -27,10 +30,13 @@ fn bench_size_ref(crit: &mut Criterion) {
         "Transpose base square size",
         &SIZES,
         move |bench, size| {
-            let row_size = size / 2;
+            let log2 = size.trailing_zeros() as usize;
+            assert_eq!(log2 % 2, 0);
+            let rows = 1_usize << (log2 / 2);
+            let cols = 1_usize << (log2 / 2);
             let src: Vec<_> = (0..size).map(FieldElement::from).collect();
             let mut dst = src.clone();
-            bench.iter(|| transpose_base(&src, &mut dst, row_size))
+            bench.iter(|| transpose_base(&src, &mut dst, rows))
         },
     );
 }
