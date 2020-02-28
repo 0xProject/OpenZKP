@@ -33,6 +33,7 @@ serde = { version = "1.0", features = ["derive"], optional = true}
 criterion = { version = "0.3.0", optional = true }
 zkp-criterion-utils = { version = "0.1.0", path = "../../utils/criterion-utils", optional = true }
 quickcheck_macros = { version = "0.8", optional = true }
+proptest = { version = "0.9.5", optional = true }
 
 [[bench]]
 name = "benchmark"
@@ -52,6 +53,7 @@ bench = [
 test = [
     "quickcheck",
     "quickcheck_macros",
+    "proptest",
     "zkp-u256/test"
 ]
 std = [
