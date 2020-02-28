@@ -33,7 +33,7 @@ pub fn transpose<T: Clone>(src: &[T], dst: &mut [T], row_size: usize) {
 }
 
 // TODO: Is there an in-place version of this algorithm?
-fn transpose_rec<T: Clone>(
+fn transpose_rec<T: Sized + Clone>(
     src: &[T],
     dst: &mut [T],
     row_size: usize,
@@ -45,9 +45,9 @@ fn transpose_rec<T: Clone>(
     // Base case size
     // smaller in tests for better coverage of the recursive case.
     #[cfg(test)]
-    const BASE: usize = 8;
+    let base = 16;
     #[cfg(not(test))]
-    const BASE: usize = 1024;
+    let base = 32768 / std::mem::size_of::<T>();
 
     debug_assert!(row_end >= row_start);
     debug_assert!(col_end >= col_start);
@@ -56,7 +56,7 @@ fn transpose_rec<T: Clone>(
     let col_span = col_end - col_start;
     debug_assert!(row_span >= 1);
     debug_assert!(col_span >= 1);
-    if row_span <= BASE && col_span <= BASE {
+    if row_span * col_span <= base {
         for row in row_start..row_end {
             for col in col_start..col_end {
                 let i = col * row_size + row;
