@@ -42,6 +42,7 @@ fn transpose_rec<T: Clone>(
     col_start: usize,
     col_end: usize,
 ) {
+    const BASE: usize = 16;
     debug_assert!(row_end >= row_start);
     debug_assert!(col_end >= col_start);
     let col_size = src.len() / row_size;
@@ -49,12 +50,14 @@ fn transpose_rec<T: Clone>(
     let col_span = col_end - col_start;
     debug_assert!(row_span >= 1);
     debug_assert!(col_span >= 1);
-    if row_span == 1 && col_span == 1 {
-        // Base case
-        // TODO: Larger base case to amortize recursion
-        let i = col_start * row_size + row_start;
-        let j = row_start * col_size + col_start;
-        dst[j] = src[i].clone();
+    if row_span <= BASE && col_span <= BASE {
+        for row in row_start..row_end {
+            for col in col_start..col_end {
+                let i = col * row_size + row;
+                let j = row * col_size + col;
+                dst[j] = src[i].clone();
+            }
+        }
     } else {
         // Divide along longest axis
         if row_span >= col_span {
