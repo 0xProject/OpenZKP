@@ -4,7 +4,12 @@ use std::mem::swap;
 // http://fftw.org/fftw-paper-ieee.pdf
 // https://wgropp.cs.illinois.edu/courses/cs598-s16/lectures/lecture08.pdf
 
+// See: <https://cacs.usc.edu/education/cs653/Frigo-CacheOblivious-FOCS99.pdf>
+
 pub fn transpose<T>(matrix: &mut [T], row_size: usize) {
+    if matrix.len() == 0 || row_size == 0 {
+        return;
+    }
     debug_assert_eq!(matrix.len() % row_size, 0);
     transpose_rec(matrix, row_size, 0, row_size, 0, 9);
 }
@@ -23,18 +28,13 @@ fn transpose_rec<T>(
     let col_size = matrix.len() / row_size;
     let row_span = row_end - row_start;
     let col_span = col_end - col_start;
-    if row_span < BASE && col_span < BASE {
+    debug_assert!(row_span >= 1);
+    debug_assert!(col_span >= 1);
+    if row_span == 1 && col_span == 1 {
         // Base case
-        for row in row_start..row_end {
-            for col in col_start..col_end {
-                let i = col * row_size + row;
-                let j = row * col_size + col;
-                // TODO: Don't generate filtered values
-                if i < j {
-                    matrix.swap(i, j);
-                }
-            }
-        }
+        let i = col_start * row_size + row_start;
+        let j = row_start * col_size + col_start;
+        matrix.swap(i, j);
     } else {
         // Divide along longest axis
         if row_span >= col_span {
@@ -51,6 +51,7 @@ fn transpose_rec<T>(
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use proptest::prelude::*;
 
     /// Generate arbitrary u32 matrices
@@ -66,37 +67,43 @@ mod tests {
     }
 
     /// Reference implementation of transposition
-    fn transpose_ref<T: Clone>(matrix: &mut [T], row_size: usize) {
-        if matrix.len() == 0 || row_size == 0 {
+    fn transpose_ref<T: Clone>(src: &[T], dst: &mut [T], row_size: usize) {
+        assert_eq!(src.len(), dst.len());
+        if src.len() == 0 || row_size == 0 {
             return;
         }
-        debug_assert_eq!(matrix.len() % row_size, 0);
-
-        // Compute out of place using temporary
-        let mut result = matrix.to_vec();
-        let col_size = matrix.len() / row_size;
+        debug_assert_eq!(src.len() % row_size, 0);
+        let col_size = src.len() / row_size;
         for row in 0..row_size {
             for col in 0..col_size {
                 let i = col * row_size + row;
                 let j = row * col_size + col;
-                result[j] = matrix[i].clone();
+                dst[j] = src[i].clone();
             }
-        }
-        for i in 0..matrix.len() {
-            matrix[i] = result[i].clone();
         }
     }
 
     proptest! {
 
         #[test]
-        /// Transpose is it's own inverse
-        fn test_ref_inv((mut m, row_size) in arb_matrix()) {
-            let col_size = if row_size == 0 { 0 } else { m.len() / row_size };
-            let orig = m.clone();
-            transpose_ref(&mut m, row_size);
-            transpose_ref(&mut m, col_size);
-            prop_assert_eq!(orig, m);
+        /// Reference transpose is it's own inverse
+        fn test_ref_inv((orig, row_size) in arb_matrix()) {
+            let col_size = if row_size == 0 { 0 } else { orig.len() / row_size };
+            let mut transposed_1 = orig.clone();
+            let mut transposed_2 = orig.clone();
+            transpose_ref(&orig, &mut transposed_1, row_size);
+            transpose_ref(&orig, &mut transposed_2, col_size);
+            prop_assert_eq!(orig, transposed_2);
+        }
+
+        #[test]
+        /// Transpose matches reference
+        fn test_ref((orig, row_size) in arb_matrix()) {
+            let mut result = orig.clone();
+            let mut reference = orig.clone();
+            transpose_ref(&orig, &mut reference, row_size);
+            transpose(&mut result, row_size);
+            prop_assert_eq!(result, reference);
         }
 
     }
