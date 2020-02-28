@@ -6,6 +6,22 @@ use std::mem::swap;
 
 // See: <https://cacs.usc.edu/education/cs653/Frigo-CacheOblivious-FOCS99.pdf>
 
+pub fn transpose_base<T: Clone>(src: &[T], dst: &mut [T], row_size: usize) {
+    assert_eq!(src.len(), dst.len());
+    if src.len() == 0 || row_size == 0 {
+        return;
+    }
+    debug_assert_eq!(src.len() % row_size, 0);
+    let col_size = src.len() / row_size;
+    for row in 0..row_size {
+        for col in 0..col_size {
+            let i = col * row_size + row;
+            let j = row * col_size + col;
+            dst[j] = src[i].clone();
+        }
+    }
+}
+
 pub fn transpose<T: Clone>(src: &[T], dst: &mut [T], row_size: usize) {
     assert_eq!(src.len(), dst.len());
     if src.len() == 0 || row_size == 0 {
