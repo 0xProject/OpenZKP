@@ -57,7 +57,7 @@ mod rand;
 #[cfg(any(test, feature = "quickcheck"))]
 mod test;
 mod traits;
-mod transpose;
+pub mod transpose;
 mod uint;
 
 // Generic field implementation
