@@ -6,45 +6,49 @@ use std::mem::swap;
 
 // See: <https://cacs.usc.edu/education/cs653/Frigo-CacheOblivious-FOCS99.pdf>
 
-pub fn transpose<T>(matrix: &mut [T], row_size: usize) {
-    if matrix.len() == 0 || row_size == 0 {
+pub fn transpose<T: Clone>(src: &[T], dst: &mut [T], row_size: usize) {
+    assert_eq!(src.len(), dst.len());
+    if src.len() == 0 || row_size == 0 {
         return;
     }
-    debug_assert_eq!(matrix.len() % row_size, 0);
-    transpose_rec(matrix, row_size, 0, row_size, 0, 9);
+    debug_assert_eq!(src.len() % row_size, 0);
+    let col_size = src.len() / row_size;
+    transpose_rec(src, dst, row_size, 0, row_size, 0, col_size);
 }
 
-fn transpose_rec<T>(
-    matrix: &mut [T],
+// TODO: Is there an in-place version of this algorithm?
+fn transpose_rec<T: Clone>(
+    src: &[T],
+    dst: &mut [T],
     row_size: usize,
     row_start: usize,
     row_end: usize,
     col_start: usize,
     col_end: usize,
 ) {
-    const BASE: usize = 16;
     debug_assert!(row_end >= row_start);
     debug_assert!(col_end >= col_start);
-    let col_size = matrix.len() / row_size;
+    let col_size = src.len() / row_size;
     let row_span = row_end - row_start;
     let col_span = col_end - col_start;
     debug_assert!(row_span >= 1);
     debug_assert!(col_span >= 1);
     if row_span == 1 && col_span == 1 {
         // Base case
+        // TODO: Larger base case to amortize recursion
         let i = col_start * row_size + row_start;
         let j = row_start * col_size + col_start;
-        matrix.swap(i, j);
+        dst[j] = src[i].clone();
     } else {
         // Divide along longest axis
         if row_span >= col_span {
-            let row_mid = row_span / 2;
-            transpose_rec(matrix, row_size, row_start, row_mid, col_start, col_end);
-            transpose_rec(matrix, row_size, row_mid, row_end, col_start, col_end);
+            let row_mid = row_start + (row_span / 2);
+            transpose_rec(src, dst, row_size, row_start, row_mid, col_start, col_end);
+            transpose_rec(src, dst, row_size, row_mid, row_end, col_start, col_end);
         } else {
-            let col_mid = col_span / 2;
-            transpose_rec(matrix, row_size, row_start, row_end, col_start, col_mid);
-            transpose_rec(matrix, row_size, row_start, row_end, col_mid, col_end);
+            let col_mid = col_start + (col_span / 2);
+            transpose_rec(src, dst, row_size, row_start, row_end, col_start, col_mid);
+            transpose_rec(src, dst, row_size, row_start, row_end, col_mid, col_end);
         }
     }
 }
@@ -92,7 +96,7 @@ mod tests {
             let mut transposed_1 = orig.clone();
             let mut transposed_2 = orig.clone();
             transpose_ref(&orig, &mut transposed_1, row_size);
-            transpose_ref(&orig, &mut transposed_2, col_size);
+            transpose_ref(&transposed_1, &mut transposed_2, col_size);
             prop_assert_eq!(orig, transposed_2);
         }
 
@@ -102,7 +106,7 @@ mod tests {
             let mut result = orig.clone();
             let mut reference = orig.clone();
             transpose_ref(&orig, &mut reference, row_size);
-            transpose(&mut result, row_size);
+            transpose(&orig, &mut result, row_size);
             prop_assert_eq!(result, reference);
         }
 
