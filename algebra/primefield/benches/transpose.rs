@@ -41,4 +41,34 @@ fn bench_size_ref(crit: &mut Criterion) {
     );
 }
 
-criterion_group!(group, bench_size, bench_size_ref);
+fn bench_strip_size(crit: &mut Criterion) {
+    log_size_bench(crit, "Transpose strip size", &SIZES, move |bench, size| {
+        let rows = size / 8;
+        let cols = 8;
+        let src: Vec<_> = (0..rows * cols).map(FieldElement::from).collect();
+        let mut dst = src.clone();
+        bench.iter(|| transpose(&src, &mut dst, rows))
+    });
+}
+
+fn bench_strip_size_ref(crit: &mut Criterion) {
+    log_size_bench(
+        crit,
+        "Transpose base strip size",
+        &SIZES,
+        move |bench, size| {
+            let rows = size / 8;
+            let cols = 8;
+            let src: Vec<_> = (0..size).map(FieldElement::from).collect();
+            let mut dst = src.clone();
+            bench.iter(|| transpose_base(&src, &mut dst, rows))
+        },
+    );
+}
+criterion_group!(
+    group,
+    bench_size,
+    bench_size_ref,
+    bench_strip_size,
+    bench_strip_size_ref
+);
