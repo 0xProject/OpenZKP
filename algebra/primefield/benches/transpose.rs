@@ -10,9 +10,7 @@ use zkp_primefield::{
 };
 use zkp_u256::U256;
 
-const SIZES: [usize; 10] = [
-    64, 256, 1024, 4096, 16384, 65536, 262144, 1048576, 4194304, 16777216,
-];
+const SIZES: [usize; 7] = [64, 1024, 16384, 262144, 4194304, 16777216, 33554432];
 
 fn bench_size(crit: &mut Criterion) {
     log_size_bench(crit, "Transpose square size", &SIZES, move |bench, size| {

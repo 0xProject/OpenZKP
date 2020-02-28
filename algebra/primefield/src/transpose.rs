@@ -42,7 +42,13 @@ fn transpose_rec<T: Clone>(
     col_start: usize,
     col_end: usize,
 ) {
-    const BASE: usize = 16;
+    // Base case size
+    // smaller in tests for better coverage of the recursive case.
+    #[cfg(test)]
+    const BASE: usize = 8;
+    #[cfg(not(test))]
+    const BASE: usize = 1024;
+
     debug_assert!(row_end >= row_start);
     debug_assert!(col_end >= col_start);
     let col_size = src.len() / row_size;
