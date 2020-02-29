@@ -55,7 +55,61 @@ pub fn transpose_inplace<T: Clone>(matrix: &mut [T], row_size: usize) {
     // and end up with a square problem again.
     assert_eq!(col_size % row_size, 0);
 
-    unimplemented!()
+    // TODO: Remove
+    assert_eq!(col_size, row_size);
+
+    transpose_inplace_rec(matrix, row_size, 0, row_size, 0, col_size);
+}
+
+fn transpose_inplace_rec<T: Sized + Clone>(
+    matrix: &mut [T],
+    row_size: usize,
+    row_start: usize,
+    row_end: usize,
+    col_start: usize,
+    col_end: usize,
+) {
+    // Base case size
+    // TODO: Figure out why size_of::<T> can not be stored in const
+    // TODO: Make const when <https://github.com/rust-lang/rust/issues/49146> lands
+    let base = if cfg!(test) {
+        // Small in tests for better coverage of the recursive case.
+        16
+    } else {
+        // Size base such that the sub-matrix fits in L1
+        L1_CACHE_SIZE / size_of::<T>()
+    };
+
+    debug_assert!(row_end >= row_start);
+    debug_assert!(col_end >= col_start);
+    let col_size = matrix.len() / row_size;
+    let row_span = row_end - row_start;
+    let col_span = col_end - col_start;
+    debug_assert!(row_span >= 1);
+    debug_assert!(col_span >= 1);
+    if row_span * col_span <= base {
+        for row in row_start..row_end {
+            for col in col_start..col_end {
+                let i = col * row_size + row;
+                let j = row * col_size + col;
+                if i < j {
+                    // TODO: Don't filter, just generated better indices
+                    matrix.swap(i, j);
+                }
+            }
+        }
+    } else {
+        // Divide along longest axis
+        if row_span >= col_span {
+            let row_mid = row_start + (row_span / 2);
+            transpose_inplace_rec(matrix, row_size, row_start, row_mid, col_start, col_end);
+            transpose_inplace_rec(matrix, row_size, row_mid, row_end, col_start, col_end);
+        } else {
+            let col_mid = col_start + (col_span / 2);
+            transpose_inplace_rec(matrix, row_size, row_start, row_end, col_start, col_mid);
+            transpose_inplace_rec(matrix, row_size, row_start, row_end, col_mid, col_end);
+        }
+    }
 }
 
 fn transpose_rec<T: Sized + Clone>(
@@ -74,7 +128,7 @@ fn transpose_rec<T: Sized + Clone>(
         // Small in tests for better coverage of the recursive case.
         16
     } else {
-        // Size base such that `src` and `dst` fit in L1
+        // Size base such that src and dst sub-matrices fit in L1
         L1_CACHE_SIZE / (2 * size_of::<T>())
     };
 
@@ -120,6 +174,10 @@ mod tests {
         )
     }
 
+    fn arb_square_matrix() -> impl Strategy<Value = (Vec<u32>, usize)> {
+        (0_usize..=100).prop_flat_map(|n| arb_matrix_sized(n, n))
+    }
+
     fn arb_matrix() -> impl Strategy<Value = (Vec<u32>, usize)> {
         (0_usize..=100, 0_usize..=100).prop_flat_map(|(rows, cols)| arb_matrix_sized(rows, cols))
     }
@@ -141,11 +199,20 @@ mod tests {
         /// Transpose matches reference
         fn compare_reference((orig, row_size) in arb_matrix()) {
             let mut result = orig.clone();
-            let mut reference = orig.clone();
-            reference(&orig, &mut reference, row_size);
+            let mut expected = orig.clone();
+            reference(&orig, &mut expected, row_size);
             transpose(&orig, &mut result, row_size);
-            prop_assert_eq!(result, reference);
+            prop_assert_eq!(result, expected);
         }
 
+        #[test]
+        /// Transpose matches reference
+        fn inplace_compare_reference((orig, row_size) in arb_square_matrix()) {
+            let mut result = orig.clone();
+            let mut expected = orig.clone();
+            reference(&orig, &mut expected, row_size);
+            transpose_inplace(&mut result, row_size);
+            prop_assert_eq!(result, expected);
+        }
     }
 }
