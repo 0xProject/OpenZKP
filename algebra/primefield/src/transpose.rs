@@ -1,14 +1,19 @@
+use std::mem::size_of;
 /// Cache-oblivious transposition
 use std::mem::swap;
 
 const L1_CACHE_SIZE: usize = 32768;
+
+// TODO: Bitreverse <https://arxiv.org/pdf/1708.01873.pdf>
 
 // http://fftw.org/fftw-paper-ieee.pdf
 // https://wgropp.cs.illinois.edu/courses/cs598-s16/lectures/lecture08.pdf
 
 // See: <https://cacs.usc.edu/education/cs653/Frigo-CacheOblivious-FOCS99.pdf>
 
-pub fn transpose_base<T: Clone>(src: &[T], dst: &mut [T], row_size: usize) {
+// Reference implementation for testing and benchmarking purposes
+#[cfg(any(feature = "test", feature = "bench"))]
+pub fn reference<T: Clone>(src: &[T], dst: &mut [T], row_size: usize) {
     assert_eq!(src.len(), dst.len());
     if src.len() == 0 || row_size == 0 {
         return;
@@ -29,12 +34,30 @@ pub fn transpose<T: Clone>(src: &[T], dst: &mut [T], row_size: usize) {
     if src.len() == 0 || row_size == 0 {
         return;
     }
-    debug_assert_eq!(src.len() % row_size, 0);
+    assert_eq!(src.len() % row_size, 0);
     let col_size = src.len() / row_size;
     transpose_rec(src, dst, row_size, 0, row_size, 0, col_size);
 }
 
-// TODO: Is there an in-place version of this algorithm?
+/// In place matrix transpose.
+///
+/// Requires `rows = k * cols`.
+pub fn transpose_inplace<T: Clone>(matrix: &mut [T], row_size: usize) {
+    if matrix.len() == 0 || row_size == 0 {
+        return;
+    }
+    assert_eq!(matrix.len() % row_size, 0);
+    let col_size = matrix.len() / row_size;
+
+    // The square case is trivially done in-place by swapping variables,
+    // there are no cycles larger than two.
+    // If `rows = k * cols` then we can lump together `k` consecutive values
+    // and end up with a square problem again.
+    assert_eq!(col_size % row_size, 0);
+
+    unimplemented!()
+}
+
 fn transpose_rec<T: Sized + Clone>(
     src: &[T],
     dst: &mut [T],
@@ -45,12 +68,14 @@ fn transpose_rec<T: Sized + Clone>(
     col_end: usize,
 ) {
     // Base case size
+    // TODO: Figure out why size_of::<T> can not be stored in const
+    // TODO: Make const when <https://github.com/rust-lang/rust/issues/49146> lands
     let base = if cfg!(test) {
         // Small in tests for better coverage of the recursive case.
         16
     } else {
         // Size base such that `src` and `dst` fit in L1
-        L1_CACHE_SIZE / (2 * std::mem::size_of::<T>())
+        L1_CACHE_SIZE / (2 * size_of::<T>())
     };
 
     debug_assert!(row_end >= row_start);
@@ -99,42 +124,25 @@ mod tests {
         (0_usize..=100, 0_usize..=100).prop_flat_map(|(rows, cols)| arb_matrix_sized(rows, cols))
     }
 
-    /// Reference implementation of transposition
-    fn transpose_ref<T: Clone>(src: &[T], dst: &mut [T], row_size: usize) {
-        assert_eq!(src.len(), dst.len());
-        if src.len() == 0 || row_size == 0 {
-            return;
-        }
-        debug_assert_eq!(src.len() % row_size, 0);
-        let col_size = src.len() / row_size;
-        for row in 0..row_size {
-            for col in 0..col_size {
-                let i = col * row_size + row;
-                let j = row * col_size + col;
-                dst[j] = src[i].clone();
-            }
-        }
-    }
-
     proptest! {
 
         #[test]
         /// Reference transpose is it's own inverse
-        fn test_ref_inv((orig, row_size) in arb_matrix()) {
+        fn reference_inverse((orig, row_size) in arb_matrix()) {
             let col_size = if row_size == 0 { 0 } else { orig.len() / row_size };
             let mut transposed_1 = orig.clone();
             let mut transposed_2 = orig.clone();
-            transpose_ref(&orig, &mut transposed_1, row_size);
-            transpose_ref(&transposed_1, &mut transposed_2, col_size);
+            reference(&orig, &mut transposed_1, row_size);
+            reference(&transposed_1, &mut transposed_2, col_size);
             prop_assert_eq!(orig, transposed_2);
         }
 
         #[test]
         /// Transpose matches reference
-        fn test_ref((orig, row_size) in arb_matrix()) {
+        fn compare_reference((orig, row_size) in arb_matrix()) {
             let mut result = orig.clone();
             let mut reference = orig.clone();
-            transpose_ref(&orig, &mut reference, row_size);
+            reference(&orig, &mut reference, row_size);
             transpose(&orig, &mut result, row_size);
             prop_assert_eq!(result, reference);
         }

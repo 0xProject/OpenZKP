@@ -5,7 +5,7 @@ use zkp_macros_decl::field_element;
 use zkp_primefield::{
     fft,
     fft::{fft2_permuted, fft_cofactor_permuted},
-    transpose::{transpose, transpose_base},
+    transpose::{reference, transpose},
     FieldElement,
 };
 use zkp_u256::U256;
@@ -27,7 +27,7 @@ fn bench_size(crit: &mut Criterion) {
 fn bench_size_ref(crit: &mut Criterion) {
     log_size_bench(
         crit,
-        "Transpose base square size",
+        "Transpose reference square size",
         &SIZES,
         move |bench, size| {
             let log2 = size.trailing_zeros() as usize;
@@ -36,7 +36,7 @@ fn bench_size_ref(crit: &mut Criterion) {
             let cols = 1_usize << (log2 / 2);
             let src: Vec<_> = (0..size).map(FieldElement::from).collect();
             let mut dst = src.clone();
-            bench.iter(|| transpose_base(&src, &mut dst, rows))
+            bench.iter(|| reference(&src, &mut dst, rows))
         },
     );
 }
@@ -54,14 +54,14 @@ fn bench_strip_size(crit: &mut Criterion) {
 fn bench_strip_size_ref(crit: &mut Criterion) {
     log_size_bench(
         crit,
-        "Transpose base strip size",
+        "Transpose reference strip size",
         &SIZES,
         move |bench, size| {
             let rows = size / 8;
             let cols = 8;
             let src: Vec<_> = (0..size).map(FieldElement::from).collect();
             let mut dst = src.clone();
-            bench.iter(|| transpose_base(&src, &mut dst, rows))
+            bench.iter(|| reference(&src, &mut dst, rows))
         },
     );
 }
