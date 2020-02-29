@@ -4,7 +4,7 @@ use zkp_criterion_utils::{log_size_bench, log_thread_bench};
 use zkp_macros_decl::field_element;
 use zkp_primefield::{
     fft,
-    fft::{fft_cofactor_permuted, fft_recurse},
+    fft::{fft2_inplace, fft_cofactor_permuted, fft_recurse},
     FieldElement,
 };
 use zkp_u256::U256;
@@ -55,7 +55,7 @@ fn fft_rec_size(crit: &mut Criterion) {
         &SIZES,
         move |bench, size| {
             let mut values: Vec<_> = (0..size).map(FieldElement::from).collect();
-            bench.iter(|| fft_recurse(&mut values))
+            bench.iter(|| fft2_inplace(&mut values))
         },
     );
 }

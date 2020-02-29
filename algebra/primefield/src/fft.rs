@@ -170,16 +170,27 @@ where
     }
 }
 
-fn fft2<Field>(values: &[Field]) -> Vec<Field>
+pub fn fft2<Field>(values: &[Field]) -> Vec<Field>
 where
     Field: FieldLike + std::fmt::Debug + From<usize>,
     for<'a> &'a Field: RefFieldLike<Field>,
 {
     assert!(values.len().is_power_of_two());
+    let root = Field::root(values.len()).expect("No root of unity for input length");
     let mut result = values.to_vec();
-    fft_recurse(&mut result);
+    fft_recurse(&mut result, &root);
     // permute(&mut result);
     result
+}
+
+pub fn fft2_inplace<Field>(values: &mut [Field])
+where
+    Field: FieldLike + std::fmt::Debug + From<usize>,
+    for<'a> &'a Field: RefFieldLike<Field>,
+{
+    assert!(values.len().is_power_of_two());
+    let root = Field::root(values.len()).expect("No root of unity for input length");
+    fft_recurse(values, &root);
 }
 
 // See https://github.com/awelkie/RustFFT
@@ -198,15 +209,19 @@ where
 }
 
 // See <http://wwwa.pikara.ne.jp/okojisan/otfft-en/sixstepfft.html>
-pub fn fft_recurse<Field>(values: &mut [Field])
+pub fn fft_recurse<Field>(values: &mut [Field], root: &Field)
 where
     Field: FieldLike + std::fmt::Debug + From<usize>,
     for<'a> &'a Field: RefFieldLike<Field>,
 {
+    debug_assert_eq!(
+        root,
+        &Field::root(values.len()).expect("No root of FFT length")
+    );
     debug_assert!(values.len().is_power_of_two());
     match values.len() {
         length if length <= 1024 => {
-            fft_permuted(values);
+            fft_permuted_root(root, values);
             permute(values);
         }
         length => {
@@ -220,15 +235,15 @@ where
             transpose_inplace(values, outer);
 
             // 2 Apply inner FFTs
+            let inner_root = root.pow(outer);
             for row in values.chunks_mut(inner) {
-                fft_recurse(row);
+                fft_recurse(row, &inner_root);
             }
 
             // 3 Apply twiddle factors
-            let omega = Field::root(length).unwrap();
             for j in 0..outer {
                 for i in 0..inner {
-                    values[j * inner + i] *= omega.pow(i * j);
+                    values[j * inner + i] *= root.pow(i * j);
                 }
             }
 
@@ -236,8 +251,9 @@ where
             transpose_inplace(values, inner);
 
             // 5 Apply outer FFTs
+            let outer_root = root.pow(inner);
             for row in values.chunks_mut(outer) {
-                fft_recurse(row);
+                fft_recurse(row, &outer_root);
             }
 
             // 6 Shuffle for output order
