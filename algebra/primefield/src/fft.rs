@@ -198,7 +198,7 @@ where
     Field: FieldLike + std::fmt::Debug,
     for<'a> &'a Field: RefFieldLike<Field>,
 {
-    println!("Length: {:?}", length);
+    // println!("Length: {:?}", length);
     assert!(length.is_power_of_two());
     match length {
         0 | 1 => {}
@@ -212,7 +212,7 @@ where
             // Transform into a matrix of size (inner, outer)
             let (inner, outer) = (length / 2, 2);
             assert_eq!(outer * inner, length);
-            println!("{:?}", (inner, outer));
+            // println!("{:?}", (inner, outer));
 
             // Inner FFTs over columns
             for i in 0..outer {
@@ -363,6 +363,13 @@ mod tests {
             let f = reference_fft(&orig, false);
             let mut f2 = reference_fft(&f, true);
             prop_assert_eq!(f2, orig);
+        }
+
+        #[test]
+        fn fft2_ref(orig in arb_vec()) {
+            let reference = reference_fft(&orig, false);
+            let result = fft2(&orig);
+            prop_assert_eq!(result, reference);
         }
     }
 
