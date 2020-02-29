@@ -41,7 +41,7 @@ pub trait FieldLike:
     + One
     + for<'a> AddInline<&'a Self>
     + for<'a> SubInline<&'a Self>
-    + for<'a> NegInline
+    + NegInline
     + SquareInline
     + for<'a> MulInline<&'a Self>
     + FieldOps

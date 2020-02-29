@@ -1,6 +1,4 @@
 use std::mem::size_of;
-/// Cache-oblivious transposition
-use std::mem::swap;
 
 const L1_CACHE_SIZE: usize = 32768;
 
