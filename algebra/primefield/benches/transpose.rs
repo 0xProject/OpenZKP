@@ -5,14 +5,14 @@ use zkp_macros_decl::field_element;
 use zkp_primefield::{
     fft,
     fft::{fft2_permuted, fft_cofactor_permuted},
-    transpose::{reference, transpose},
+    transpose::{reference, transpose, transpose_inplace},
     FieldElement,
 };
 use zkp_u256::U256;
 
 const SIZES: [usize; 6] = [64, 1024, 16384, 262144, 4194304, 16777216];
 
-fn bench_size(crit: &mut Criterion) {
+fn bench_square(crit: &mut Criterion) {
     log_size_bench(crit, "Transpose square size", &SIZES, move |bench, size| {
         let log2 = size.trailing_zeros() as usize;
         assert_eq!(log2 % 2, 0);
@@ -24,7 +24,34 @@ fn bench_size(crit: &mut Criterion) {
     });
 }
 
-fn bench_size_ref(crit: &mut Criterion) {
+fn bench_strip(crit: &mut Criterion) {
+    log_size_bench(crit, "Transpose strip size", &SIZES, move |bench, size| {
+        let rows = size / 8;
+        let cols = 8;
+        let src: Vec<_> = (0..rows * cols).map(FieldElement::from).collect();
+        let mut dst = src.clone();
+        bench.iter(|| transpose(&src, &mut dst, rows))
+    });
+}
+
+fn bench_square_inplace(crit: &mut Criterion) {
+    log_size_bench(
+        crit,
+        "Transpose square in-place size",
+        &SIZES,
+        move |bench, size| {
+            let log2 = size.trailing_zeros() as usize;
+            assert_eq!(log2 % 2, 0);
+            let rows = 1_usize << (log2 / 2);
+            let cols = 1_usize << (log2 / 2);
+            let src: Vec<_> = (0..rows * cols).map(FieldElement::from).collect();
+            let mut dst = src.clone();
+            bench.iter(|| transpose_inplace(&mut dst, rows))
+        },
+    );
+}
+
+fn bench_reference_square(crit: &mut Criterion) {
     log_size_bench(
         crit,
         "Transpose reference square size",
@@ -41,17 +68,7 @@ fn bench_size_ref(crit: &mut Criterion) {
     );
 }
 
-fn bench_strip_size(crit: &mut Criterion) {
-    log_size_bench(crit, "Transpose strip size", &SIZES, move |bench, size| {
-        let rows = size / 8;
-        let cols = 8;
-        let src: Vec<_> = (0..rows * cols).map(FieldElement::from).collect();
-        let mut dst = src.clone();
-        bench.iter(|| transpose(&src, &mut dst, rows))
-    });
-}
-
-fn bench_strip_size_ref(crit: &mut Criterion) {
+fn bench_reference_strip(crit: &mut Criterion) {
     log_size_bench(
         crit,
         "Transpose reference strip size",
@@ -67,8 +84,9 @@ fn bench_strip_size_ref(crit: &mut Criterion) {
 }
 criterion_group!(
     group,
-    bench_size,
-    bench_size_ref,
-    bench_strip_size,
-    bench_strip_size_ref
+    bench_square,
+    bench_strip,
+    bench_square_inplace,
+    bench_reference_square,
+    bench_reference_strip,
 );
