@@ -311,15 +311,29 @@ where
 mod tests {
     use super::*;
     use crate::{FieldElement, One, Root, Zero};
+    use proptest::prelude::*;
     use quickcheck_macros::quickcheck;
     use zkp_macros_decl::u256h;
     use zkp_u256::U256;
 
+    fn arb_elem() -> impl Strategy<Value = FieldElement> {
+        (any::<u64>(), any::<u64>(), any::<u64>(), any::<u64>())
+            .prop_map(move |(a, b, c, d)| FieldElement::from(U256::from_limbs([a, b, c, d])))
+    }
+
+    // Generate a power-of-two size
+    fn arb_vec() -> impl Strategy<Value = Vec<FieldElement>> {
+        (0_usize..=8).prop_flat_map(|size| prop::collection::vec(arb_elem(), 1_usize << size))
+    }
+
     // O(n^2) reference implementation evaluating
     //     x_i' = Sum_j x_j * omega_n^(ij)
     // directly using Horner's method.
-    fn reference_fft(x: &[FieldElement]) -> Vec<FieldElement> {
-        let root = FieldElement::root(x.len()).unwrap();
+    fn reference_fft(x: &[FieldElement], inverse: bool) -> Vec<FieldElement> {
+        let mut root = FieldElement::root(x.len()).unwrap();
+        if inverse {
+            root = root.inv().expect("Root should be invertible.");
+        }
         let mut result = Vec::with_capacity(x.len());
         let mut root_i = FieldElement::one();
         for _ in 0..x.len() {
@@ -332,7 +346,24 @@ mod tests {
             result.push(sum);
             root_i *= &root;
         }
+        if inverse {
+            if let Some(inverse_length) = FieldElement::from(x.len()).inv() {
+                for x in &mut result {
+                    *x *= &inverse_length;
+                }
+            }
+        }
         result
+    }
+
+    proptest! {
+
+        #[test]
+        fn fft_ref_inv(orig in arb_vec()) {
+            let f = reference_fft(&orig, false);
+            let mut f2 = reference_fft(&f, true);
+            prop_assert_eq!(f2, orig);
+        }
     }
 
     #[test]
@@ -397,7 +428,7 @@ mod tests {
         ];
 
         let res = fft(&vector);
-        let expected = reference_fft(&vector);
+        let expected = reference_fft(&vector, false);
         assert_eq!(res, expected);
 
         assert_eq!(

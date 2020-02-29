@@ -1,6 +1,8 @@
 /// Cache-oblivious transposition
 use std::mem::swap;
 
+const L1_CACHE_SIZE: usize = 32768;
+
 // http://fftw.org/fftw-paper-ieee.pdf
 // https://wgropp.cs.illinois.edu/courses/cs598-s16/lectures/lecture08.pdf
 
@@ -43,11 +45,13 @@ fn transpose_rec<T: Sized + Clone>(
     col_end: usize,
 ) {
     // Base case size
-    // smaller in tests for better coverage of the recursive case.
-    #[cfg(test)]
-    let base = 16;
-    #[cfg(not(test))]
-    let base = 32768 / std::mem::size_of::<T>();
+    let base = if cfg!(test) {
+        // Small in tests for better coverage of the recursive case.
+        16
+    } else {
+        // Size base such that `src` and `dst` fit in L1
+        L1_CACHE_SIZE / (2 * std::mem::size_of::<T>())
+    };
 
     debug_assert!(row_end >= row_start);
     debug_assert!(col_end >= col_start);
