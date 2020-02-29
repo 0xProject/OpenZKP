@@ -176,63 +176,74 @@ where
     for<'a> &'a Field: RefFieldLike<Field>,
 {
     let mut result = values.to_vec();
-    dif_ntt(result.len(), 0, 1, &mut result);
-    permute(&mut result);
-    result
-}
-
-pub fn fft2_permuted<Field>(values: &[Field]) -> Vec<Field>
-where
-    Field: FieldLike + std::fmt::Debug,
-    for<'a> &'a Field: RefFieldLike<Field>,
-{
-    let mut result = values.to_vec();
-    dif_ntt(result.len(), 0, 1, &mut result);
+    fft_recurse(&mut result);
+    // permute(&mut result);
     result
 }
 
 // See https://github.com/awelkie/RustFFT
 
-fn dif_ntt<Field>(length: usize, offset: usize, stride: usize, values: &mut [Field])
+fn transpose_inplace<Field>(values: &mut [Field], row_size: usize)
 where
     Field: FieldLike + std::fmt::Debug,
     for<'a> &'a Field: RefFieldLike<Field>,
 {
-    // println!("Length: {:?}", length);
-    assert!(length.is_power_of_two());
-    match length {
+    if row_size * row_size == values.len() {
+        crate::transpose::transpose_inplace(values, row_size);
+    } else {
+        let temp = values.to_vec();
+        crate::transpose::transpose(&temp, values, row_size);
+    }
+}
+
+// See <http://wwwa.pikara.ne.jp/okojisan/otfft-en/sixstepfft.html>
+fn fft_recurse<Field>(values: &mut [Field])
+where
+    Field: FieldLike + std::fmt::Debug,
+    for<'a> &'a Field: RefFieldLike<Field>,
+{
+    assert!(values.len().is_power_of_two());
+    match values.len() {
         0 | 1 => {}
-        2 => radix_2(offset, stride, values),
-        // 4 => { radix_4(offset, stride, values) }
-        // 8 => { radix_8(offset, stride, values) }
+        2 => {
+            let a = values[0].clone();
+            let b = values[1].clone();
+            values[0] = &a + &b;
+            values[1] = a - b;
+        }
         length => {
-            // Depth-first:
-            // Cooley-Tukey recursion with outer size two
+            // Split along the square root
+            let outer = 1_usize << (length.trailing_zeros() / 2);
+            let inner = length / outer;
+            debug_assert!(outer == inner || inner == 2 * outer);
+            debug_assert_eq!(outer * inner, length);
 
-            // Transform into a matrix of size (inner, outer)
-            let (inner, outer) = (length / 2, 2);
-            assert_eq!(outer * inner, length);
-            // println!("{:?}", (inner, outer));
+            // 1 Shuffle for inner FFTs
+            transpose_inplace(values, outer);
 
-            // Inner FFTs over columns
-            for i in 0..outer {
-                dif_ntt(inner, offset + i * stride, outer * stride, values);
+            // 2 Apply inner FFTs
+            for row in values.chunks_mut(inner) {
+                fft_recurse(row);
             }
 
-            // Twiddle factors
+            // 3 Apply twiddle factors
             let omega = Field::root(length).unwrap();
-            for i in 0..inner {
-                for j in 0..outer {
-                    values[offset + (i * outer + j) * stride] *= omega.pow(i * j);
+            for j in 0..outer {
+                for i in 0..inner {
+                    values[j * inner + i] *= omega.pow(i * j);
                 }
             }
 
-            // TODO: Cache-oblivious transpose?
+            // 4 Shuffle for outer FFTs
+            transpose_inplace(values, inner);
 
-            // Outer FFTs over rows
-            for i in 0..inner {
-                dif_ntt(outer, offset + i * outer * stride, stride, values);
+            // 5 Apply outer FFTs
+            for row in values.chunks_mut(outer) {
+                fft_recurse(row);
             }
+
+            // 6 Shuffle for output order
+            transpose_inplace(values, outer);
         }
     }
 }
