@@ -172,9 +172,10 @@ where
 
 fn fft2<Field>(values: &[Field]) -> Vec<Field>
 where
-    Field: FieldLike + std::fmt::Debug,
+    Field: FieldLike + std::fmt::Debug + From<usize>,
     for<'a> &'a Field: RefFieldLike<Field>,
 {
+    assert!(values.len().is_power_of_two());
     let mut result = values.to_vec();
     fft_recurse(&mut result);
     // permute(&mut result);
@@ -185,7 +186,7 @@ where
 
 fn transpose_inplace<Field>(values: &mut [Field], row_size: usize)
 where
-    Field: FieldLike + std::fmt::Debug,
+    Field: FieldLike + std::fmt::Debug + From<usize>,
     for<'a> &'a Field: RefFieldLike<Field>,
 {
     if row_size * row_size == values.len() {
@@ -197,19 +198,16 @@ where
 }
 
 // See <http://wwwa.pikara.ne.jp/okojisan/otfft-en/sixstepfft.html>
-fn fft_recurse<Field>(values: &mut [Field])
+pub fn fft_recurse<Field>(values: &mut [Field])
 where
-    Field: FieldLike + std::fmt::Debug,
+    Field: FieldLike + std::fmt::Debug + From<usize>,
     for<'a> &'a Field: RefFieldLike<Field>,
 {
-    assert!(values.len().is_power_of_two());
+    debug_assert!(values.len().is_power_of_two());
     match values.len() {
-        0 | 1 => {}
-        2 => {
-            let a = values[0].clone();
-            let b = values[1].clone();
-            values[0] = &a + &b;
-            values[1] = a - b;
+        length if length <= 1024 => {
+            fft_permuted(values);
+            permute(values);
         }
         length => {
             // Split along the square root

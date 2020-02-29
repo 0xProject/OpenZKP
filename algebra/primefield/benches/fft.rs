@@ -9,7 +9,7 @@ use zkp_primefield::{
 };
 use zkp_u256::U256;
 
-const SIZES: [usize; 7] = [64, 256, 1024, 4096, 16384, 65536, 262144];
+const SIZES: [usize; 8] = [64, 256, 1024, 4096, 16384, 65536, 262144, 1048576];
 
 fn fft_butterfly_radix_2_simple(crit: &mut Criterion) {
     let mut a = FieldElement::from(123);
