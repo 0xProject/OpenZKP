@@ -179,7 +179,7 @@ where
     let root = Field::root(values.len()).expect("No root of unity for input length");
     let mut result = values.to_vec();
     fft_recurse(&mut result, &root);
-    // permute(&mut result);
+    permute(&mut result);
     result
 }
 
@@ -222,7 +222,6 @@ where
     match values.len() {
         length if length <= 1024 => {
             fft_permuted_root(root, values);
-            permute(values);
         }
         length => {
             // Split along the square root
@@ -231,33 +230,27 @@ where
             debug_assert!(outer == inner || inner == 2 * outer);
             debug_assert_eq!(outer * inner, length);
 
-            // 1 Shuffle for inner FFTs
-            transpose_inplace(values, outer);
-
-            // 2 Apply inner FFTs
+            // 1 Apply inner FFTs
             let inner_root = root.pow(outer);
             for row in values.chunks_mut(inner) {
                 fft_recurse(row, &inner_root);
             }
 
-            // 3 Apply twiddle factors
+            // 2 Apply twiddle factors
             for j in 0..outer {
                 for i in 0..inner {
                     values[j * inner + i] *= root.pow(i * j);
                 }
             }
 
-            // 4 Shuffle for outer FFTs
+            // 3 Shuffle for outer FFTs
             transpose_inplace(values, inner);
 
-            // 5 Apply outer FFTs
+            // 4 Apply outer FFTs
             let outer_root = root.pow(inner);
             for row in values.chunks_mut(outer) {
                 fft_recurse(row, &outer_root);
             }
-
-            // 6 Shuffle for output order
-            transpose_inplace(values, outer);
         }
     }
 }
