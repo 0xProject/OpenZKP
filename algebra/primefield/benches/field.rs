@@ -52,4 +52,4 @@ fn field_sqrt(crit: &mut Criterion) {
     });
 }
 
-criterion_group!(field, field_add, field_mul, field_inv, field_sqrt);
+criterion_group!(group, field_add, field_mul, field_inv, field_sqrt);

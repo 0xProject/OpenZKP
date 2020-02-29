@@ -3,8 +3,6 @@ use criterion::{black_box, criterion_group, Criterion};
 use zkp_criterion_utils::{log_size_bench, log_thread_bench};
 use zkp_macros_decl::field_element;
 use zkp_primefield::{
-    fft,
-    fft::{fft2_permuted, fft_cofactor_permuted},
     transpose::{reference, transpose, transpose_inplace},
     FieldElement,
 };

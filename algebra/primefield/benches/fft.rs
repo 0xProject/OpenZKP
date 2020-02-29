@@ -2,10 +2,14 @@
 use criterion::{black_box, criterion_group, Criterion};
 use zkp_criterion_utils::{log_size_bench, log_thread_bench};
 use zkp_macros_decl::field_element;
-use zkp_primefield::{fft::fft_cofactor_permuted, fft::fft2_permuted, FieldElement, fft};
+use zkp_primefield::{
+    fft,
+    fft::{fft_cofactor_permuted, fft_recurse},
+    FieldElement,
+};
 use zkp_u256::U256;
 
-const SIZES: [usize; 6] = [64, 256, 1024, 4096, 16384, 65536];
+const SIZES: [usize; 7] = [64, 256, 1024, 4096, 16384, 65536, 262144];
 
 fn fft_butterfly_radix_2_simple(crit: &mut Criterion) {
     let mut a = FieldElement::from(123);
@@ -14,7 +18,7 @@ fn fft_butterfly_radix_2_simple(crit: &mut Criterion) {
         bench.iter(|| {
             fft::radix_2_simple(&mut a, &mut b);
         })
-    });  
+    });
 }
 
 fn fft_butterfly_radix_2(crit: &mut Criterion) {
@@ -23,7 +27,7 @@ fn fft_butterfly_radix_2(crit: &mut Criterion) {
         bench.iter(|| {
             fft::radix_2(0, 1, black_box(&mut values));
         })
-    });  
+    });
 }
 
 fn fft_butterfly_radix_4(crit: &mut Criterion) {
@@ -44,6 +48,18 @@ fn fft_butterfly_radix_8(crit: &mut Criterion) {
     });
 }
 
+fn fft_rec_size(crit: &mut Criterion) {
+    log_size_bench(
+        crit,
+        "FFT cache-oblivious size",
+        &SIZES,
+        move |bench, size| {
+            let mut values: Vec<_> = (0..size).map(FieldElement::from).collect();
+            bench.iter(|| fft_recurse(&mut values))
+        },
+    );
+}
+
 fn fft_size(crit: &mut Criterion) {
     log_size_bench(crit, "FFT size", &SIZES, move |bench, size| {
         let cofactor =
@@ -52,8 +68,7 @@ fn fft_size(crit: &mut Criterion) {
         let mut copy = leaves.clone();
         bench.iter(|| {
             copy.clone_from_slice(&leaves);
-//            fft_cofactor_permuted(black_box(&cofactor), black_box(&mut copy))
-            fft2_permuted(black_box(&mut copy))
+            fft_cofactor_permuted(black_box(&cofactor), black_box(&mut copy))
         })
     });
 }
@@ -72,11 +87,13 @@ fn fft_threads(crit: &mut Criterion) {
     });
 }
 
-criterion_group!(fft,
-    fft_butterfly_radix_2_simple,
-    fft_butterfly_radix_2,
-    fft_butterfly_radix_4,
-    fft_butterfly_radix_8,
+criterion_group!(
+    group,
+    // fft_butterfly_radix_2_simple,
+    // fft_butterfly_radix_2,
+    // fft_butterfly_radix_4,
+    // fft_butterfly_radix_8,
     fft_size,
-    fft_threads
+    fft_rec_size,
+    // fft_threads
 );
