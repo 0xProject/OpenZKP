@@ -39,26 +39,13 @@ pub fn transpose<T: Clone>(src: &[T], dst: &mut [T], row_size: usize) {
     transpose_rec(src, dst, row_size, 0, row_size, 0, col_size);
 }
 
-/// In place matrix transpose.
-///
-/// Requires `rows = k * cols`.
+/// In place square matrix transpose.
 pub fn transpose_inplace<T: Clone>(matrix: &mut [T], row_size: usize) {
     if matrix.len() == 0 || row_size == 0 {
         return;
     }
-    assert_eq!(matrix.len() % row_size, 0);
-    let col_size = matrix.len() / row_size;
-
-    // The square case is trivially done in-place by swapping variables,
-    // there are no cycles larger than two.
-    // If `rows = k * cols` then we can lump together `k` consecutive values
-    // and end up with a square problem again.
-    assert_eq!(col_size % row_size, 0);
-
-    // TODO: Remove
-    assert_eq!(col_size, row_size);
-
-    transpose_inplace_rec(matrix, row_size, 0, row_size, 0, col_size);
+    assert_eq!(matrix.len(), row_size * row_size);
+    transpose_inplace_rec(matrix, row_size, 0, row_size, 0, row_size);
 }
 
 fn transpose_inplace_rec<T: Sized + Clone>(
@@ -82,7 +69,6 @@ fn transpose_inplace_rec<T: Sized + Clone>(
 
     debug_assert!(row_end >= row_start);
     debug_assert!(col_end >= col_start);
-    let col_size = matrix.len() / row_size;
     let row_span = row_end - row_start;
     let col_span = col_end - col_start;
     debug_assert!(row_span >= 1);
@@ -91,7 +77,7 @@ fn transpose_inplace_rec<T: Sized + Clone>(
         for row in row_start..row_end {
             for col in col_start..col_end {
                 let i = col * row_size + row;
-                let j = row * col_size + col;
+                let j = row * row_size + col;
                 if i < j {
                     // TODO: Don't filter, just generated better indices
                     matrix.swap(i, j);
@@ -174,18 +160,18 @@ mod tests {
         )
     }
 
-    fn arb_square_matrix() -> impl Strategy<Value = (Vec<u32>, usize)> {
-        (0_usize..=100).prop_flat_map(|n| arb_matrix_sized(n, n))
-    }
-
     fn arb_matrix() -> impl Strategy<Value = (Vec<u32>, usize)> {
         (0_usize..=100, 0_usize..=100).prop_flat_map(|(rows, cols)| arb_matrix_sized(rows, cols))
     }
 
+    fn arb_square_matrix() -> impl Strategy<Value = (Vec<u32>, usize)> {
+        (0_usize..=100).prop_flat_map(|n| arb_matrix_sized(n, n))
+    }
+
     proptest! {
 
-        #[test]
         /// Reference transpose is it's own inverse
+        #[test]
         fn reference_inverse((orig, row_size) in arb_matrix()) {
             let col_size = if row_size == 0 { 0 } else { orig.len() / row_size };
             let mut transposed_1 = orig.clone();
@@ -195,8 +181,8 @@ mod tests {
             prop_assert_eq!(orig, transposed_2);
         }
 
-        #[test]
         /// Transpose matches reference
+        #[test]
         fn compare_reference((orig, row_size) in arb_matrix()) {
             let mut result = orig.clone();
             let mut expected = orig.clone();
@@ -205,8 +191,8 @@ mod tests {
             prop_assert_eq!(result, expected);
         }
 
+        /// Transpose inplace matches reference
         #[test]
-        /// Transpose matches reference
         fn inplace_compare_reference((orig, row_size) in arb_square_matrix()) {
             let mut result = orig.clone();
             let mut expected = orig.clone();
