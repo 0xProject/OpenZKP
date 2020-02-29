@@ -61,7 +61,7 @@ fn bench_reference_square(crit: &mut Criterion) {
             assert_eq!(log2 % 2, 0);
             let rows = 1_usize << (log2 / 2);
             let cols = 1_usize << (log2 / 2);
-            let src: Vec<_> = (0..size).map(FieldElement::from).collect();
+            let src: Vec<_> = (0..rows * cols).map(FieldElement::from).collect();
             let mut dst = src.clone();
             bench.iter(|| reference(&src, &mut dst, rows))
         },
@@ -76,7 +76,7 @@ fn bench_reference_strip(crit: &mut Criterion) {
         move |bench, size| {
             let rows = size / 8;
             let cols = 8;
-            let src: Vec<_> = (0..size).map(FieldElement::from).collect();
+            let src: Vec<_> = (0..rows * cols).map(FieldElement::from).collect();
             let mut dst = src.clone();
             bench.iter(|| reference(&src, &mut dst, rows))
         },
