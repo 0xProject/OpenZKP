@@ -349,6 +349,53 @@ fn parallel_recurse_inplace_inorder<Field, F, G>(
     transpose_inplace(values, outer);
 }
 
+/// Generic parallel recursive six-point FFT with permuted output.
+///
+/// Advantages:
+///  * The inner and outer FFT functions can be in permuted order
+///  * Only two transpositions are required instead of three.
+fn recurse_inplace_permuted<Field, F, G>(
+    values: &mut [Field],
+    root: &Field,
+    outer: usize,
+    inner: usize,
+    inner_fft: F,
+    outer_fft: G,
+) where
+    Field: FieldLike + Send + Sync,
+    for<'a> &'a Field: RefFieldLike<Field>,
+    F: Fn(&mut [Field]) + Sync,
+    G: Fn(&mut [Field]) + Sync,
+{
+    let length = values.len();
+    debug_assert!(root.pow(length).is_one());
+    debug_assert_eq!(outer * inner, length);
+
+    // 1 Transpose inner * outer sized matrix
+    transpose_inplace(values, outer);
+
+    // 2 Apply inner FFTs continguously
+    // 3 Apply twiddle factors
+    let inner_root = root.pow(outer);
+    values.chunks_mut(inner).enumerate().for_each(|(j, row)| {
+        inner_fft(row);
+        if j > 0 {
+            let outer_twiddle = root.pow(j);
+            for (i, x) in row.iter_mut().enumerate() {
+                let i = permute_index(inner, i);
+                let inner_twiddle = outer_twiddle.pow(i);
+                *x *= inner_twiddle;
+            }
+        }
+    });
+
+    // 4 Transpose outer * inner sized matrix
+    transpose_inplace(values, inner);
+
+    // 5 Apply outer FFTs contiguously
+    values.chunks_mut(outer).for_each(|row| outer_fft(row));
+}
+
 /// Transforms (x0, x1) to (x0 + x1, x0 - x1)
 #[inline(always)]
 pub fn radix_2_simple<Field>(x0: &mut Field, x1: &mut Field)
@@ -507,6 +554,27 @@ mod tests {
                 ref_fft_inplace,
             );
             prop_assert_eq!(result, reference);
+        }
+
+        #[test]
+        fn test_recurse_inplace_permuted(orig in arb_vec()) {
+            // TODO: Test different splittings
+            const SPLIT: usize = 4;
+            let mut expected = orig.clone();
+            ref_fft_permuted(&mut expected);
+            let root = FieldElement::root(orig.len()).unwrap();
+            let mut result = orig.clone();
+            let inner = max(1, orig.len() / SPLIT);
+            let outer = min(orig.len(), SPLIT);
+            recurse_inplace_permuted(
+                &mut result,
+                &root,
+                outer,
+                inner,
+                ref_fft_permuted,
+                ref_fft_permuted,
+            );
+            prop_assert_eq!(result, expected);
         }
 
         #[test]
