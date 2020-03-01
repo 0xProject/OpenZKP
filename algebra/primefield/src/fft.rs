@@ -3,6 +3,7 @@
 // Many false positives from trait bounds
 #![allow(single_use_lifetimes)]
 use crate::{geometric_series::root_series, FieldLike, Inv, Pow, RefFieldLike, L1_CACHE_SIZE};
+use rayon::prelude::*;
 use std::{mem::size_of, prelude::v1::*};
 use zkp_macros_decl::field_element;
 use zkp_u256::U256;
@@ -174,7 +175,7 @@ where
 
 pub fn fft2<Field>(values: &[Field]) -> Vec<Field>
 where
-    Field: FieldLike + std::fmt::Debug + From<usize>,
+    Field: FieldLike + std::fmt::Debug + From<usize> + Send + Sync,
     for<'a> &'a Field: RefFieldLike<Field>,
 {
     assert!(values.len().is_power_of_two());
@@ -187,7 +188,7 @@ where
 
 pub fn fft2_inplace<Field>(values: &mut [Field])
 where
-    Field: FieldLike + std::fmt::Debug + From<usize>,
+    Field: FieldLike + std::fmt::Debug + From<usize> + Send + Sync,
     for<'a> &'a Field: RefFieldLike<Field>,
 {
     assert!(values.len().is_power_of_two());
@@ -199,7 +200,7 @@ where
 
 fn transpose_inplace<Field>(values: &mut [Field], row_size: usize)
 where
-    Field: FieldLike + std::fmt::Debug + From<usize>,
+    Field: FieldLike + std::fmt::Debug + From<usize> + Send + Sync,
     for<'a> &'a Field: RefFieldLike<Field>,
 {
     if row_size * row_size == values.len() {
@@ -230,7 +231,7 @@ where
 /// for this see <http://wwwa.pikara.ne.jp/okojisan/otfft-en/sixstepfft.html>.
 pub fn fft_recurse<Field>(values: &mut [Field], root: &Field)
 where
-    Field: FieldLike + std::fmt::Debug + From<usize>,
+    Field: FieldLike + std::fmt::Debug + From<usize> + Send + Sync,
     for<'a> &'a Field: RefFieldLike<Field>,
 {
     debug_assert_eq!(
@@ -273,27 +274,30 @@ where
             // 2 Apply inner FFTs continguously
             // 3 Apply twiddle factors
             let inner_root = root.pow(outer);
-            let mut outer_twiddle = root.clone();
-            for (j, row) in values.chunks_mut(inner).enumerate() {
-                fft_recurse(row, &inner_root);
-                if j > 0 {
-                    let mut inner_twiddle = outer_twiddle.clone();
-                    for x in row.iter_mut().skip(1) {
-                        *x *= &inner_twiddle;
-                        inner_twiddle *= &outer_twiddle;
+
+            values
+                .par_chunks_mut(inner)
+                .enumerate()
+                .for_each(|(j, row)| {
+                    fft_recurse(row, &inner_root);
+                    if j > 0 {
+                        let outer_twiddle = root.pow(j);
+                        let mut inner_twiddle = outer_twiddle.clone();
+                        for x in row.iter_mut().skip(1) {
+                            *x *= &inner_twiddle;
+                            inner_twiddle *= &outer_twiddle;
+                        }
                     }
-                    outer_twiddle *= root;
-                }
-            }
+                });
 
             // 4 Transpose outer * inner sized matrix
             transpose_inplace(values, inner);
 
             // 5 Apply outer FFTs contiguously
             let outer_root = root.pow(inner);
-            for row in values.chunks_mut(outer) {
-                fft_recurse(row, &outer_root);
-            }
+            values
+                .par_chunks_mut(outer)
+                .for_each(|row| fft_recurse(row, &outer_root));
 
             // 6 Transpose back to get results in output order
             transpose_inplace(values, outer);
