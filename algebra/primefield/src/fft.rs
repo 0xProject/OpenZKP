@@ -248,61 +248,55 @@ where
         // Size base such that the are at least L1 sized
         L1_CACHE_SIZE / size_of::<Field>()
     };
-
-    match values.len() {
-        length if length <= base => {
-            fft_permuted_root(root, values);
-            permute(values);
-        }
-        // 0 | 1 => {}
-        // 2 => {
-        // let a = values[0].clone();
-        // let b = values[1].clone();
-        // values[0] = &a + &b;
-        // values[1] = a - b;
-        // }
-        length => {
-            // Split along the square root
-            let outer = 1_usize << (length.trailing_zeros() / 2);
-            let inner = length / outer;
-            debug_assert!(outer == inner || inner == 2 * outer);
-            debug_assert_eq!(outer * inner, length);
-
-            // 1 Transpose inner * outer sized matrix
-            transpose_inplace(values, outer);
-
-            // 2 Apply inner FFTs continguously
-            // 3 Apply twiddle factors
-            let inner_root = root.pow(outer);
-
-            values
-                .par_chunks_mut(inner)
-                .enumerate()
-                .for_each(|(j, row)| {
-                    fft_recurse(row, &inner_root);
-                    if j > 0 {
-                        let outer_twiddle = root.pow(j);
-                        let mut inner_twiddle = outer_twiddle.clone();
-                        for x in row.iter_mut().skip(1) {
-                            *x *= &inner_twiddle;
-                            inner_twiddle *= &outer_twiddle;
-                        }
-                    }
-                });
-
-            // 4 Transpose outer * inner sized matrix
-            transpose_inplace(values, inner);
-
-            // 5 Apply outer FFTs contiguously
-            let outer_root = root.pow(inner);
-            values
-                .par_chunks_mut(outer)
-                .for_each(|row| fft_recurse(row, &outer_root));
-
-            // 6 Transpose back to get results in output order
-            transpose_inplace(values, outer);
-        }
+    let length = values.len();
+    if length <= base {
+        fft_permuted_root(root, values);
+        permute(values);
+        return;
     }
+
+    // Split along the square root
+    let outer = 1_usize << (length.trailing_zeros() / 2);
+    let inner = length / outer;
+    debug_assert!(outer == inner || inner == 2 * outer);
+    debug_assert_eq!(outer * inner, length);
+
+    // TODO: Bit-reversed order
+
+    // 1 Transpose inner * outer sized matrix
+    transpose_inplace(values, outer);
+
+    // 2 Apply inner FFTs continguously
+    // 3 Apply twiddle factors
+    let inner_root = root.pow(outer);
+    values
+        .par_chunks_mut(inner)
+        .enumerate()
+        .for_each(|(j, row)| {
+            fft_permuted_root(&inner_root, row);
+            permute(row);
+            if j > 0 {
+                let outer_twiddle = root.pow(j);
+                let mut inner_twiddle = outer_twiddle.clone();
+                for x in row.iter_mut().skip(1) {
+                    *x *= &inner_twiddle;
+                    inner_twiddle *= &outer_twiddle;
+                }
+            }
+        });
+
+    // 4 Transpose outer * inner sized matrix
+    transpose_inplace(values, inner);
+
+    // 5 Apply outer FFTs contiguously
+    let outer_root = root.pow(inner);
+    values.par_chunks_mut(outer).for_each(|row| {
+        fft_permuted_root(&inner_root, row);
+        permute(row);
+    });
+
+    // 6 Transpose back to get results in output order
+    transpose_inplace(values, outer);
 }
 
 /// Transforms (x0, x1) to (x0 + x1, x0 - x1)
