@@ -248,37 +248,35 @@ where
     };
 
     match values.len() {
-        // length if length <= base => {
-        // fft_permuted_root(root, values);
-        // }
-        0 | 1 => {}
-        2 => {
-            let a = values[0].clone();
-            let b = values[1].clone();
-            values[0] = &a + &b;
-            values[1] = a - b;
+        length if length <= base => {
+            fft_permuted_root(root, values);
+            permute(values);
         }
+        // 0 | 1 => {}
+        // 2 => {
+        // let a = values[0].clone();
+        // let b = values[1].clone();
+        // values[0] = &a + &b;
+        // values[1] = a - b;
+        // }
         length => {
             // Split along the square root
             let outer = 1_usize << (length.trailing_zeros() / 2);
             let inner = length / outer;
             debug_assert!(outer == inner || inner == 2 * outer);
             debug_assert_eq!(outer * inner, length);
-            // println!("Recursing {} * {}", outer, inner);
+            println!("Recursing {} * {}", outer, inner);
 
             // 1 Transpose inner * outer sized matrix
             transpose_inplace(values, outer);
 
             // 2 Apply inner FFTs continguously
-            let inner_root = root.pow(outer);
-            for row in values.chunks_mut(inner) {
-                fft_recurse(row, &inner_root);
-            }
-
             // 3 Apply twiddle factors
-            for j in 0..outer {
+            let inner_root = root.pow(outer);
+            for (j, row) in values.chunks_mut(inner).enumerate() {
+                fft_recurse(row, &inner_root);
                 for i in 0..inner {
-                    values[j * inner + i] *= root.pow(i * j);
+                    row[i] *= root.pow(i * j);
                 }
             }
 
