@@ -221,6 +221,7 @@ where
 ///   Cache-oblivious algorithms. <http://supertech.csail.mit.edu/papers/FrigoLePr99.pdf>
 /// * S. Johnson, M. Frigo (2005). The Design and Implementation of FFTW3. <http://www.fftw.org/fftw-paper-ieee.pdf>
 /// * S. Johnson, M. Frigo (2012). Implementing FFTs in Practice. <https://cnx.org/contents/ulXtQbN7@15/Implementing-FFTs-in-Practice>
+///   <https://www.csd.uwo.ca/~moreno/CS433-CS9624/Resources/Implementing_FFTs_in_Practice.pdf>
 ///
 /// <https://doi.org/10.1007/978-981-13-9965-7_6>
 /// <https://eprint.iacr.org/2016/504.pdf>
@@ -243,7 +244,7 @@ where
         // Small in tests for better coverage of the recursive case.
         2
     } else {
-        // Size base such that the sub-matrix fits in L1
+        // Size base such that the are at least L1 sized
         L1_CACHE_SIZE / size_of::<Field>()
     };
 
@@ -265,7 +266,6 @@ where
             let inner = length / outer;
             debug_assert!(outer == inner || inner == 2 * outer);
             debug_assert_eq!(outer * inner, length);
-            println!("Recursing {} * {}", outer, inner);
 
             // 1 Transpose inner * outer sized matrix
             transpose_inplace(values, outer);
@@ -273,11 +273,15 @@ where
             // 2 Apply inner FFTs continguously
             // 3 Apply twiddle factors
             let inner_root = root.pow(outer);
+            let mut outer_twiddle = Field::one();
             for (j, row) in values.chunks_mut(inner).enumerate() {
                 fft_recurse(row, &inner_root);
+                let mut inner_twiddle = Field::one();
                 for i in 0..inner {
-                    row[i] *= root.pow(i * j);
+                    row[i] *= &inner_twiddle;
+                    inner_twiddle *= &outer_twiddle;
                 }
+                outer_twiddle *= root;
             }
 
             // 4 Transpose outer * inner sized matrix
