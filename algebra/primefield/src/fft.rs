@@ -181,7 +181,7 @@ where
     assert!(values.len().is_power_of_two());
     let root = Field::root(values.len()).expect("No root of unity for input length");
     let mut result = values.to_vec();
-    fft_recurse(&mut result, &root);
+    radix_sqrt(&mut result, &root);
     // permute(&mut result);
     result
 }
@@ -193,7 +193,7 @@ where
 {
     assert!(values.len().is_power_of_two());
     let root = Field::root(values.len()).expect("No root of unity for input length");
-    fft_recurse(values, &root);
+    radix_sqrt(values, &root);
 }
 
 // See https://github.com/awelkie/RustFFT
@@ -226,86 +226,33 @@ fn transpose_inplace<T: Clone>(values: &mut [T], row_size: usize) {
 /// There is also a six-step version that outputs the result in normal order,
 /// for this see <http://wwwa.pikara.ne.jp/okojisan/otfft-en/sixstepfft.html>.
 // TODO: Bit-reversed order
-pub fn fft_recurse<Field>(values: &mut [Field], root: &Field)
+pub fn radix_sqrt<Field>(values: &mut [Field], root: &Field)
 where
     Field: FieldLike + std::fmt::Debug + From<usize> + Send + Sync,
     for<'a> &'a Field: RefFieldLike<Field>,
 {
-    debug_assert_eq!(
-        root,
-        &Field::root(values.len()).expect("No root of FFT length")
-    );
-    debug_assert!(values.len().is_power_of_two());
-
-    // Base case size
-    let base = if cfg!(test) {
-        // Small in tests for better coverage of the recursive case.
-        2
-    } else {
-        // Size base such that the are at least L1 sized
-        L1_CACHE_SIZE / size_of::<Field>()
-    };
-    let length = values.len();
-
-    // Base case
-    if length <= base {
-        fft_permuted_root(root, values);
-        permute(values);
-        return;
-    }
-
-    // Parallelize on the last level of recursion
-    let parallel = length <= base * base;
-
     // Recurse by splitting along the square root
+    let length = values.len();
     let outer = 1_usize << (length.trailing_zeros() / 2);
     let inner = length / outer;
     debug_assert!(outer == inner || inner == 2 * outer);
     debug_assert_eq!(outer * inner, length);
-
-    // 1 Transpose inner * outer sized matrix
-    transpose_inplace(values, outer);
-
-    // 2 Apply inner FFTs continguously
-    // 3 Apply twiddle factors
     let inner_root = root.pow(outer);
-    let inner_loop = |(j, row): (usize, &mut [Field])| {
-        fft_recurse(row, &inner_root);
-        if j > 0 {
-            let outer_twiddle = root.pow(j);
-            let mut inner_twiddle = outer_twiddle.clone();
-            for x in row.iter_mut().skip(1) {
-                *x *= &inner_twiddle;
-                inner_twiddle *= &outer_twiddle;
-            }
-        }
-    };
-    if parallel {
-        values
-            .par_chunks_mut(inner)
-            .enumerate()
-            .for_each(inner_loop);
-    } else {
-        values.chunks_mut(inner).enumerate().for_each(inner_loop);
-    }
-
-    // 4 Transpose outer * inner sized matrix
-    transpose_inplace(values, inner);
-
-    // 5 Apply outer FFTs contiguously
     let outer_root = root.pow(inner);
-    if parallel {
-        values
-            .par_chunks_mut(outer)
-            .for_each(|row| fft_recurse(row, &outer_root));
-    } else {
-        values
-            .chunks_mut(outer)
-            .for_each(|row| fft_recurse(row, &outer_root));
-    }
-
-    // 6 Transpose back to get results in output order
-    transpose_inplace(values, outer);
+    parallel_recurse_inplace_inorder(
+        values,
+        root,
+        outer,
+        inner,
+        |row| {
+            fft_permuted_root(&inner_root, row);
+            permute(row);
+        },
+        |row| {
+            fft_permuted_root(&outer_root, row);
+            permute(row);
+        },
+    );
 }
 
 /// Generic recursive six-point FFT.

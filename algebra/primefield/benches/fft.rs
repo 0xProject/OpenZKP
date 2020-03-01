@@ -4,7 +4,7 @@ use zkp_criterion_utils::{log_size_bench, log_thread_bench};
 use zkp_macros_decl::field_element;
 use zkp_primefield::{
     fft,
-    fft::{fft2_inplace, fft_cofactor_permuted, fft_recurse},
+    fft::{fft2_inplace, fft_cofactor_permuted},
     FieldElement,
 };
 use zkp_u256::U256;
