@@ -273,15 +273,17 @@ where
             // 2 Apply inner FFTs continguously
             // 3 Apply twiddle factors
             let inner_root = root.pow(outer);
-            let mut outer_twiddle = Field::one();
+            let mut outer_twiddle = root.clone();
             for (j, row) in values.chunks_mut(inner).enumerate() {
                 fft_recurse(row, &inner_root);
-                let mut inner_twiddle = Field::one();
-                for i in 0..inner {
-                    row[i] *= &inner_twiddle;
-                    inner_twiddle *= &outer_twiddle;
+                if j > 0 {
+                    let mut inner_twiddle = outer_twiddle.clone();
+                    for x in row.iter_mut().skip(1) {
+                        *x *= &inner_twiddle;
+                        inner_twiddle *= &outer_twiddle;
+                    }
+                    outer_twiddle *= root;
                 }
-                outer_twiddle *= root;
             }
 
             // 4 Transpose outer * inner sized matrix
