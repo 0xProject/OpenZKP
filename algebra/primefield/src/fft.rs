@@ -198,11 +198,7 @@ where
 
 // See https://github.com/awelkie/RustFFT
 
-fn transpose_inplace<Field>(values: &mut [Field], row_size: usize)
-where
-    Field: FieldLike + std::fmt::Debug + From<usize> + Send + Sync,
-    for<'a> &'a Field: RefFieldLike<Field>,
-{
+fn transpose_inplace<T: Clone>(values: &mut [T], row_size: usize) {
     if row_size * row_size == values.len() {
         crate::transpose::transpose_inplace(values, row_size);
     } else {
@@ -301,12 +297,106 @@ where
     if parallel {
         values
             .par_chunks_mut(outer)
-            .for_each(|row| fft_recurse(row, &inner_root));
+            .for_each(|row| fft_recurse(row, &outer_root));
     } else {
         values
             .chunks_mut(outer)
-            .for_each(|row| fft_recurse(row, &inner_root));
+            .for_each(|row| fft_recurse(row, &outer_root));
     }
+
+    // 6 Transpose back to get results in output order
+    transpose_inplace(values, outer);
+}
+
+/// Generic recursive six-point FFT.
+fn recurse_inplace_inorder<Field, F, G>(
+    values: &mut [Field],
+    root: &Field,
+    outer: usize,
+    inner: usize,
+    inner_fft: F,
+    outer_fft: G,
+) where
+    Field: FieldLike,
+    for<'a> &'a Field: RefFieldLike<Field>,
+    F: Fn(&mut [Field]),
+    G: Fn(&mut [Field]),
+{
+    let length = values.len();
+    debug_assert!(root.pow(length).is_one());
+    debug_assert_eq!(outer * inner, length);
+
+    // 1 Transpose inner * outer sized matrix
+    transpose_inplace(values, outer);
+
+    // 2 Apply inner FFTs continguously
+    // 3 Apply twiddle factors
+    values.chunks_mut(inner).enumerate().for_each(|(j, row)| {
+        inner_fft(row);
+        if j > 0 {
+            let outer_twiddle = root.pow(j);
+            let mut inner_twiddle = outer_twiddle.clone();
+            for x in row.iter_mut().skip(1) {
+                *x *= &inner_twiddle;
+                inner_twiddle *= &outer_twiddle;
+            }
+        }
+    });
+
+    // 4 Transpose outer * inner sized matrix
+    transpose_inplace(values, inner);
+
+    // 5 Apply outer FFTs contiguously
+    values.chunks_mut(outer).for_each(|row| outer_fft(row));
+
+    // 6 Transpose back to get results in output order
+    transpose_inplace(values, outer);
+}
+
+/// Generic parallel recursive six-point FFT.
+fn parallel_recurse_inplace_inorder<Field, F, G>(
+    values: &mut [Field],
+    root: &Field,
+    outer: usize,
+    inner: usize,
+    inner_fft: F,
+    outer_fft: G,
+) where
+    Field: FieldLike + Send + Sync,
+    for<'a> &'a Field: RefFieldLike<Field>,
+    F: Fn(&mut [Field]) + Sync,
+    G: Fn(&mut [Field]) + Sync,
+{
+    let length = values.len();
+    debug_assert!(root.pow(length).is_one());
+    debug_assert_eq!(outer * inner, length);
+
+    // 1 Transpose inner * outer sized matrix
+    transpose_inplace(values, outer);
+
+    // 2 Apply inner FFTs continguously
+    // 3 Apply twiddle factors
+    let inner_root = root.pow(outer);
+    values
+        .par_chunks_mut(inner)
+        .enumerate()
+        .for_each(|(j, row)| {
+            inner_fft(row);
+            if j > 0 {
+                let outer_twiddle = root.pow(j);
+                let mut inner_twiddle = outer_twiddle.clone();
+                for x in row.iter_mut().skip(1) {
+                    *x *= &inner_twiddle;
+                    inner_twiddle *= &outer_twiddle;
+                }
+            }
+        });
+
+    // 4 Transpose outer * inner sized matrix
+    transpose_inplace(values, inner);
+
+    // 5 Apply outer FFTs contiguously
+    values.par_chunks_mut(outer).for_each(|row| outer_fft(row));
 
     // 6 Transpose back to get results in output order
     transpose_inplace(values, outer);
@@ -388,6 +478,7 @@ mod tests {
     use crate::{FieldElement, One, Root, Zero};
     use proptest::prelude::*;
     use quickcheck_macros::quickcheck;
+    use std::cmp::{max, min};
     use zkp_macros_decl::u256h;
     use zkp_u256::U256;
 
@@ -398,7 +489,7 @@ mod tests {
 
     // Generate a power-of-two size
     fn arb_vec() -> impl Strategy<Value = Vec<FieldElement>> {
-        (0_usize..=8).prop_flat_map(|size| prop::collection::vec(arb_elem(), 1_usize << size))
+        (0_usize..=9).prop_flat_map(|size| prop::collection::vec(arb_elem(), 1_usize << size))
     }
 
     // O(n^2) reference implementation evaluating
@@ -431,6 +522,17 @@ mod tests {
         result
     }
 
+    fn ref_fft_inplace(values: &mut [FieldElement]) {
+        let result = reference_fft(values, false);
+        values.clone_from_slice(&result);
+    }
+
+    fn ref_fft_permuted(values: &mut [FieldElement]) {
+        let result = reference_fft(values, false);
+        values.clone_from_slice(&result);
+        permute(values);
+    }
+
     proptest! {
 
         #[test]
@@ -438,6 +540,46 @@ mod tests {
             let f = reference_fft(&orig, false);
             let mut f2 = reference_fft(&f, true);
             prop_assert_eq!(f2, orig);
+        }
+
+        #[test]
+        fn test_recurse_inplace_inorder(orig in arb_vec()) {
+            // TODO: Test different splittings
+            const SPLIT: usize = 4;
+            let reference = reference_fft(&orig, false);
+            let root = FieldElement::root(orig.len()).unwrap();
+            let mut result = orig.clone();
+            let inner = max(1, orig.len() / SPLIT);
+            let outer = min(orig.len(), SPLIT);
+            recurse_inplace_inorder(
+                &mut result,
+                &root,
+                outer,
+                inner,
+                ref_fft_inplace,
+                ref_fft_inplace,
+            );
+            prop_assert_eq!(result, reference);
+        }
+
+        #[test]
+        fn test_parallel_recurse_inplace_inorder(orig in arb_vec()) {
+            // TODO: Test different splittings
+            const SPLIT: usize = 4;
+            let reference = reference_fft(&orig, false);
+            let root = FieldElement::root(orig.len()).unwrap();
+            let mut result = orig.clone();
+            let inner = max(1, orig.len() / SPLIT);
+            let outer = min(orig.len(), SPLIT);
+            parallel_recurse_inplace_inorder(
+                &mut result,
+                &root,
+                outer,
+                inner,
+                ref_fft_inplace,
+                ref_fft_inplace,
+            );
+            prop_assert_eq!(result, reference);
         }
 
         #[test]
