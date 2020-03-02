@@ -196,7 +196,7 @@ where
     }
 }
 
-pub fn fft2<Field>(values: &[Field]) -> Vec<Field>
+pub fn fft2<Field>(values: &[Field], twiddles: &mut Vec<Field>) -> Vec<Field>
 where
     Field: FieldLike + std::fmt::Debug + From<usize> + Send + Sync,
     for<'a> &'a Field: RefFieldLike<Field>,
@@ -204,21 +204,21 @@ where
     assert!(values.len().is_power_of_two());
     let root = Field::root(values.len()).expect("No root of unity for input length");
     let mut result = values.to_vec();
-    radix_sqrt(&mut result, &root);
+    radix_sqrt(&mut result, &root, twiddles);
     result
 }
 
-pub fn fft2_inplace<Field>(values: &mut [Field])
+pub fn fft2_inplace<Field>(values: &mut [Field], twiddles: &mut Vec<Field>)
 where
     Field: FieldLike + std::fmt::Debug + From<usize> + Send + Sync,
     for<'a> &'a Field: RefFieldLike<Field>,
 {
     assert!(values.len().is_power_of_two());
     let root = Field::root(values.len()).expect("No root of unity for input length");
-    radix_sqrt(values, &root);
+    radix_sqrt(values, &root, twiddles);
 }
 
-pub fn radix_sqrt<Field>(values: &mut [Field], root: &Field)
+pub fn radix_sqrt<Field>(values: &mut [Field], root: &Field, twiddles: &mut Vec<Field>)
 where
     Field: FieldLike + std::fmt::Debug + From<usize> + Send + Sync,
     for<'a> &'a Field: RefFieldLike<Field>,
@@ -234,6 +234,7 @@ where
     parallel_recurse_inplace_permuted(
         values,
         root,
+        twiddles,
         outer,
         inner,
         |row| fft_permuted_root(&inner_root, row),
@@ -420,6 +421,7 @@ fn recurse_inplace_permuted<Field, F, G>(
 fn parallel_recurse_inplace_permuted<Field, F, G>(
     values: &mut [Field],
     root: &Field,
+    twiddles: &mut Vec<Field>,
     outer: usize,
     inner: usize,
     inner_fft: F,
@@ -438,7 +440,10 @@ fn parallel_recurse_inplace_permuted<Field, F, G>(
     transpose_inplace(values, outer);
 
     // Compute twiddles
-    let twiddles = compute_twiddles_permuted(root, outer, inner);
+    if twiddles.is_empty() {
+        let mut computed = compute_twiddles_permuted(root, outer, inner);
+        std::mem::swap(twiddles, &mut computed);
+    }
 
     // 2 Apply inner FFTs continguously
     // 3 Apply twiddle factors
@@ -666,9 +671,10 @@ mod tests {
 
         #[test]
         fn fft2_ref(orig in arb_vec()) {
+            let mut twiddles = Vec::default();
             let mut reference = reference_fft(&orig, false);
             permute(&mut reference);
-            let result = fft2(&orig);
+            let result = fft2(&orig, &mut twiddles);
             prop_assert_eq!(result, reference);
         }
     }
