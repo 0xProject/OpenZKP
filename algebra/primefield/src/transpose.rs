@@ -61,6 +61,11 @@ fn transpose_inplace_rec<T: Sized + Clone>(
     col_start: usize,
     col_end: usize,
 ) {
+    // Limit to lower-left triangle
+    if col_start >= row_end {
+        return;
+    }
+
     // Base case size
     // TODO: Figure out why size_of::<T> can not be stored in const
     // TODO: Make const when <https://github.com/rust-lang/rust/issues/49146> lands
@@ -79,13 +84,25 @@ fn transpose_inplace_rec<T: Sized + Clone>(
     debug_assert!(row_span >= 1);
     debug_assert!(col_span >= 1);
     if row_span * col_span <= base {
-        for row in row_start..row_end {
-            for col in col_start..col_end {
-                let i = col * row_size + row;
-                let j = row * row_size + col;
-                if i < j {
-                    // TODO: Don't filter, just generated better indices
+        if col_end <= row_start {
+            // Block does not straddle the diagonal
+            for row in row_start..row_end {
+                for col in col_start..col_end {
+                    let i = col * row_size + row;
+                    let j = row * row_size + col;
                     matrix.swap(i, j);
+                }
+            }
+        } else {
+            // Block crosses the diagonal
+            for row in row_start..row_end {
+                for col in col_start..col_end {
+                    // TODO: Don't filter, just generated better indices
+                    if col < row {
+                        let i = col * row_size + row;
+                        let j = row * row_size + col;
+                        matrix.swap(i, j);
+                    }
                 }
             }
         }
