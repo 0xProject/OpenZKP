@@ -149,7 +149,7 @@ where
 // See https://en.wikipedia.org/wiki/Split-radix_FFT_algorithm
 // See http://www.fftw.org/newsplit.pdf
 
-fn fft_permuted_root<Field>(root: &Field, coefficients: &mut [Field])
+pub fn fft_permuted_root<Field>(root: &Field, coefficients: &mut [Field])
 where
     Field: FieldLike + std::fmt::Debug,
     for<'a> &'a Field: RefFieldLike<Field>,

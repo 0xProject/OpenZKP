@@ -4,57 +4,28 @@ use zkp_criterion_utils::{log_size_bench, log_thread_bench};
 use zkp_macros_decl::field_element;
 use zkp_primefield::{
     fft,
-    fft::{fft2_inplace, fft_cofactor_permuted},
-    FieldElement,
+    fft::{fft2_inplace, fft_permuted_root},
+    FieldElement, Root,
 };
 use zkp_u256::U256;
 
-const SIZES: [usize; 11] = [
-    64, 256, 1024, 4096, 16384, 65536, 262144, 1048576, 4194304, 8388608, 16777216,
-];
+const SMALL: [usize; 7] = [4, 16, 64, 256, 1024, 4096, 16384];
 
-fn fft_butterfly_radix_2_simple(crit: &mut Criterion) {
-    let mut a = FieldElement::from(123);
-    let mut b = FieldElement::from(3432);
-    crit.bench_function("FFT butterfly/radix 2 simple", move |bench| {
-        bench.iter(|| {
-            fft::radix_2_simple(&mut a, &mut b);
-        })
+const LARGE: [usize; 4] = [1048576, 4194304, 8388608, 16777216];
+
+fn fft_small(crit: &mut Criterion) {
+    log_size_bench(crit, "FFT size", &SMALL, move |bench, size| {
+        let root = FieldElement::root(size).expect("No root of unity for input length");
+        let mut values: Vec<_> = (0..size).map(FieldElement::from).collect();
+        bench.iter(|| fft_permuted_root(&root, &mut values))
     });
 }
 
-fn fft_butterfly_radix_2(crit: &mut Criterion) {
-    let mut values: Vec<_> = (0..2).map(FieldElement::from).collect();
-    crit.bench_function("FFT butterfly/radix 2", move |bench| {
-        bench.iter(|| {
-            fft::radix_2(0, 1, black_box(&mut values));
-        })
-    });
-}
-
-fn fft_butterfly_radix_4(crit: &mut Criterion) {
-    let mut values: Vec<_> = (0..4).map(FieldElement::from).collect();
-    crit.bench_function("FFT butterfly/radix 4", move |bench| {
-        bench.iter(|| {
-            fft::radix_4(0, 1, black_box(&mut values));
-        })
-    });
-}
-
-fn fft_butterfly_radix_8(crit: &mut Criterion) {
-    let mut values: Vec<_> = (0..8).map(FieldElement::from).collect();
-    crit.bench_function("FFT butterfly/radix 8", move |bench| {
-        bench.iter(|| {
-            fft::radix_8(0, 1, black_box(&mut values));
-        })
-    });
-}
-
-fn fft_rec_size(crit: &mut Criterion) {
+fn fft_large(crit: &mut Criterion) {
     log_size_bench(
         crit,
         "FFT cache-oblivious size",
-        &SIZES,
+        &LARGE,
         move |bench, size| {
             let mut values: Vec<_> = (0..size).map(FieldElement::from).collect();
             bench.iter(|| fft2_inplace(&mut values))
@@ -62,40 +33,12 @@ fn fft_rec_size(crit: &mut Criterion) {
     );
 }
 
-fn fft_size(crit: &mut Criterion) {
-    log_size_bench(crit, "FFT size", &SIZES, move |bench, size| {
-        let cofactor =
-            field_element!("0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f");
-        let leaves: Vec<_> = (0..size).map(FieldElement::from).collect();
-        let mut copy = leaves.clone();
-        bench.iter(|| {
-            copy.clone_from_slice(&leaves);
-            fft_cofactor_permuted(black_box(&cofactor), black_box(&mut copy))
-        })
-    });
-}
-
 fn fft_threads(crit: &mut Criterion) {
-    let size: usize = *SIZES.last().unwrap();
-    log_thread_bench(crit, "FFT threads", size, move |bench| {
-        let cofactor =
-            field_element!("0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f");
-        let leaves: Vec<_> = (0..size).map(FieldElement::from).collect();
-        let mut copy = leaves.clone();
-        bench.iter(|| {
-            copy.clone_from_slice(&leaves);
-            fft_cofactor_permuted(black_box(&cofactor), black_box(&mut copy))
-        })
+    const SIZE: usize = 8388608;
+    log_thread_bench(crit, "FFT threads", SIZE, move |bench| {
+        let mut values: Vec<_> = (0..SIZE).map(FieldElement::from).collect();
+        bench.iter(|| fft2_inplace(&mut values))
     });
 }
 
-criterion_group!(
-    group,
-    // fft_butterfly_radix_2_simple,
-    // fft_butterfly_radix_2,
-    // fft_butterfly_radix_4,
-    // fft_butterfly_radix_8,
-    fft_size,
-    fft_rec_size,
-    // fft_threads
-);
+criterion_group!(group, fft_small, fft_large, fft_threads);
