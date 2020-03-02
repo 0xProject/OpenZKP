@@ -53,6 +53,22 @@ pub fn transpose_inplace<T: Clone>(matrix: &mut [T], row_size: usize) {
     }
 }
 
+/// Unsafe unchecked swap of two elements
+///
+/// Copied from [`[T]::swap`][0] and modified to ignore bounds checks.
+///
+/// [0]: https://doc.rust-lang.org/stable/std/primitive.slice.html#method.swap
+#[inline]
+fn swap_unchecked<T: Sized + Clone>(vec: &mut [T], a: usize, b: usize) {
+    unsafe {
+        // Can't take two mutable loans from one vector, so instead just cast
+        // them to their raw pointers to do the swap
+        let pa: *mut T = vec.get_unchecked_mut(a);
+        let pb: *mut T = vec.get_unchecked_mut(b);
+        std::ptr::swap(pa, pb);
+    }
+}
+
 fn transpose_inplace_rec<T: Sized + Clone>(
     matrix: &mut [T],
     row_size: usize,
@@ -87,20 +103,24 @@ fn transpose_inplace_rec<T: Sized + Clone>(
         if col_end <= row_start {
             // Block is contained in lower-left triangle
             for row in row_start..row_end {
+                let mut i = col_start * row_size + row;
+                let mut j = row * row_size + col_start;
                 for col in col_start..col_end {
-                    let i = col * row_size + row;
-                    let j = row * row_size + col;
-                    matrix.swap(i, j);
+                    swap_unchecked(matrix, i, j);
+                    i += row_size;
+                    j += 1;
                 }
             }
         } else {
             // Block crosses the diagonal
             for row in row_start..row_end {
+                let mut i = col_start * row_size + row;
+                let mut j = row * row_size + col_start;
                 let end = min(col_end, row);
                 for col in col_start..end {
-                    let i = col * row_size + row;
-                    let j = row * row_size + col;
-                    matrix.swap(i, j);
+                    swap_unchecked(matrix, i, j);
+                    i += row_size;
+                    j += 1;
                 }
             }
         }
