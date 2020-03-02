@@ -1,5 +1,5 @@
 use crate::L1_CACHE_SIZE;
-use std::mem::size_of;
+use std::{cmp::min, mem::size_of};
 
 // TODO: Bitreverse <https://arxiv.org/pdf/1708.01873.pdf>
 
@@ -85,7 +85,7 @@ fn transpose_inplace_rec<T: Sized + Clone>(
     debug_assert!(col_span >= 1);
     if row_span * col_span <= base {
         if col_end <= row_start {
-            // Block does not straddle the diagonal
+            // Block is contained in lower-left triangle
             for row in row_start..row_end {
                 for col in col_start..col_end {
                     let i = col * row_size + row;
@@ -96,13 +96,11 @@ fn transpose_inplace_rec<T: Sized + Clone>(
         } else {
             // Block crosses the diagonal
             for row in row_start..row_end {
-                for col in col_start..col_end {
-                    // TODO: Don't filter, just generated better indices
-                    if col < row {
-                        let i = col * row_size + row;
-                        let j = row * row_size + col;
-                        matrix.swap(i, j);
-                    }
+                let end = min(col_end, row);
+                for col in col_start..end {
+                    let i = col * row_size + row;
+                    let j = row * row_size + col;
+                    matrix.swap(i, j);
                 }
             }
         }
