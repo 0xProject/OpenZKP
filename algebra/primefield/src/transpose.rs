@@ -61,21 +61,15 @@ fn transpose_inplace_rec<T: Sized + Clone>(
     col_start: usize,
     col_end: usize,
 ) {
+    // Base case size
+    // Use smaller base case during tests to force better coverage of recursion.
+    // TODO: Make const when <https://github.com/rust-lang/rust/issues/49146> lands
+    let base: usize = if cfg!(test) { 16 } else { 64 };
+
     // Limit to lower-left triangle
     if col_start >= row_end {
         return;
     }
-
-    // Base case size
-    // TODO: Figure out why size_of::<T> can not be stored in const
-    // TODO: Make const when <https://github.com/rust-lang/rust/issues/49146> lands
-    let base = if cfg!(test) {
-        // Small in tests for better coverage of the recursive case.
-        16
-    } else {
-        // Size base such that the sub-matrix fits in L1
-        L1_CACHE_SIZE / size_of::<T>()
-    };
 
     debug_assert!(row_end >= row_start);
     debug_assert!(col_end >= col_start);
