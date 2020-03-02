@@ -24,6 +24,38 @@ use zkp_u256::U256;
 
 // TODO: Create a dedicated type for permuted vectors
 
+/// In-place FFT with permuted output.
+///
+/// Implement's the four step FFT in a cache-oblivious manner.
+///
+/// * D. H. Bailey (1990). FFTs in external or hierarchical memory. <https://www.davidhbailey.com/dhbpapers/fftq.pdf>
+/// * W. M. Gentleman & G. Sande (1966). Fast Fourier Transforms: for fun and
+///   profit. <https://doi.org/10.1145/1464291.1464352> <http://cis.rit.edu/class/simg716/FFT_Fun_Profit.pdf>
+/// * M. Frigo, C.E. Leiserson, H. Prokop & S. Ramachandran (1999).
+///   Cache-oblivious algorithms. <http://supertech.csail.mit.edu/papers/FrigoLePr99.pdf>
+/// * S. Johnson, M. Frigo (2005). The Design and Implementation of FFTW3. <http://www.fftw.org/fftw-paper-ieee.pdf>
+/// * S. Johnson, M. Frigo (2012). Implementing FFTs in Practice. <https://cnx.org/contents/ulXtQbN7@15/Implementing-FFTs-in-Practice>
+///   <https://www.csd.uwo.ca/~moreno/CS433-CS9624/Resources/Implementing_FFTs_in_Practice.pdf>
+///
+/// <https://doi.org/10.1007/978-981-13-9965-7_6>
+/// <https://eprint.iacr.org/2016/504.pdf>
+///
+/// There is also a six-step version that outputs the result in normal order,
+/// for this see <http://wwwa.pikara.ne.jp/okojisan/otfft-en/sixstepfft.html>.
+// TODO: Bit-reversed order
+
+// TODO: Cache-oblivious FFT
+// See https://www.csd.uwo.ca/~moreno/CS433-CS9624/Resources/Implementing_FFTs_in_Practice.pdf
+// See https://cs.uwaterloo.ca/~imunro/cs840/Notes16/frigo.pdf
+// My `sysctl hw` cache sizes: 32kiB, 256kiB, 8MiB, or 1k, 8k, 256k
+// FieldElements.
+
+// TODO: https://cnx.org/contents/4kChocHM@6/Efficient-FFT-Algorithm-and-Programming-Tricks
+
+// TODO: Radix-4 and/or Split-radix FFT
+// See https://en.wikipedia.org/wiki/Split-radix_FFT_algorithm
+// See http://www.fftw.org/newsplit.pdf
+
 /// Permute index for an FFT of `size`
 ///
 /// The permutation is it's own inverse. The permutation is currently
@@ -137,18 +169,6 @@ where
     }
 }
 
-// TODO: Cache-oblivious FFT
-// See https://www.csd.uwo.ca/~moreno/CS433-CS9624/Resources/Implementing_FFTs_in_Practice.pdf
-// See https://cs.uwaterloo.ca/~imunro/cs840/Notes16/frigo.pdf
-// My `sysctl hw` cache sizes: 32kiB, 256kiB, 8MiB, or 1k, 8k, 256k
-// FieldElements.
-
-// TODO: https://cnx.org/contents/4kChocHM@6/Efficient-FFT-Algorithm-and-Programming-Tricks
-
-// TODO: Radix-4 and/or Split-radix FFT
-// See https://en.wikipedia.org/wiki/Split-radix_FFT_algorithm
-// See http://www.fftw.org/newsplit.pdf
-
 fn fft_permuted_root<Field>(root: &Field, coefficients: &mut [Field])
 where
     Field: FieldLike + std::fmt::Debug,
@@ -185,7 +205,6 @@ where
     let root = Field::root(values.len()).expect("No root of unity for input length");
     let mut result = values.to_vec();
     radix_sqrt(&mut result, &root);
-    // permute(&mut result);
     result
 }
 
@@ -199,27 +218,6 @@ where
     radix_sqrt(values, &root);
 }
 
-// See https://github.com/awelkie/RustFFT
-
-/// In-place FFT with permuted output.
-///
-/// Implement's the four step FFT in a cache-oblivious manner.
-///
-/// * D. H. Bailey (1990). FFTs in external or hierarchical memory. <https://www.davidhbailey.com/dhbpapers/fftq.pdf>
-/// * W. M. Gentleman & G. Sande (1966). Fast Fourier Transforms: for fun and
-///   profit. <https://doi.org/10.1145/1464291.1464352> <http://cis.rit.edu/class/simg716/FFT_Fun_Profit.pdf>
-/// * M. Frigo, C.E. Leiserson, H. Prokop & S. Ramachandran (1999).
-///   Cache-oblivious algorithms. <http://supertech.csail.mit.edu/papers/FrigoLePr99.pdf>
-/// * S. Johnson, M. Frigo (2005). The Design and Implementation of FFTW3. <http://www.fftw.org/fftw-paper-ieee.pdf>
-/// * S. Johnson, M. Frigo (2012). Implementing FFTs in Practice. <https://cnx.org/contents/ulXtQbN7@15/Implementing-FFTs-in-Practice>
-///   <https://www.csd.uwo.ca/~moreno/CS433-CS9624/Resources/Implementing_FFTs_in_Practice.pdf>
-///
-/// <https://doi.org/10.1007/978-981-13-9965-7_6>
-/// <https://eprint.iacr.org/2016/504.pdf>
-///
-/// There is also a six-step version that outputs the result in normal order,
-/// for this see <http://wwwa.pikara.ne.jp/okojisan/otfft-en/sixstepfft.html>.
-// TODO: Bit-reversed order
 pub fn radix_sqrt<Field>(values: &mut [Field], root: &Field)
 where
     Field: FieldLike + std::fmt::Debug + From<usize> + Send + Sync,
@@ -288,6 +286,34 @@ fn recurse_inplace_inorder<Field, F, G>(
     transpose_inplace(values, outer);
 }
 
+fn compute_twiddles<Field>(root: &Field, outer: usize, inner: usize) -> Vec<Field>
+where
+    Field: FieldLike,
+    for<'a> &'a Field: RefFieldLike<Field>,
+{
+    let mut result = Vec::with_capacity(outer * inner);
+    let mut outer_root = Field::one();
+    for j in 0..outer {
+        let mut inner_root = Field::one();
+        for i in 0..inner {
+            result.push(inner_root.clone());
+            inner_root *= &outer_root;
+        }
+        outer_root *= root;
+    }
+    result
+}
+
+fn compute_twiddles_permuted<Field>(root: &Field, outer: usize, inner: usize) -> Vec<Field>
+where
+    Field: FieldLike,
+    for<'a> &'a Field: RefFieldLike<Field>,
+{
+    let mut result = compute_twiddles(root, outer, inner);
+    result.chunks_mut(inner).for_each(permute);
+    result
+}
+
 /// Generic parallel recursive six-point FFT.
 fn parallel_recurse_inplace_inorder<Field, F, G>(
     values: &mut [Field],
@@ -309,20 +335,21 @@ fn parallel_recurse_inplace_inorder<Field, F, G>(
     // 1 Transpose inner * outer sized matrix
     transpose_inplace(values, outer);
 
+    // Compute twiddles
+    let twiddles = compute_twiddles(root, outer, inner);
+
     // 2 Apply inner FFTs continguously
     // 3 Apply twiddle factors
     let inner_root = root.pow(outer);
     values
         .par_chunks_mut(inner)
+        .zip(twiddles.par_chunks(inner))
         .enumerate()
-        .for_each(|(j, row)| {
+        .for_each(|(j, (row, twiddles))| {
             inner_fft(row);
             if j > 0 {
-                let outer_twiddle = root.pow(j);
-                let mut inner_twiddle = outer_twiddle.clone();
-                for x in row.iter_mut().skip(1) {
-                    *x *= &inner_twiddle;
-                    inner_twiddle *= &outer_twiddle;
+                for (x, twiddle) in row.iter_mut().zip(twiddles.iter()).skip(1) {
+                    *x *= twiddle;
                 }
             }
         });
@@ -337,7 +364,7 @@ fn parallel_recurse_inplace_inorder<Field, F, G>(
     transpose_inplace(values, outer);
 }
 
-/// Generic recursive six-point FFT with permuted output.
+/// Generic recursive six-step FFT with permuted output.
 ///
 /// Advantages:
 ///  * The inner and outer FFT functions can be in permuted order
@@ -364,6 +391,7 @@ fn recurse_inplace_permuted<Field, F, G>(
 
     // 2 Apply inner FFTs continguously
     // 3 Apply twiddle factors
+    // TODO: Cache twiddles
     let inner_root = root.pow(outer);
     values.chunks_mut(inner).enumerate().for_each(|(j, row)| {
         inner_fft(row);
@@ -384,7 +412,7 @@ fn recurse_inplace_permuted<Field, F, G>(
     values.chunks_mut(outer).for_each(|row| outer_fft(row));
 }
 
-/// Generic recursive six-point FFT with permuted output.
+/// Generic recursive five-step FFT with permuted output.
 ///
 /// Advantages:
 ///  * The inner and outer FFT functions can be in permuted order
@@ -409,21 +437,21 @@ fn parallel_recurse_inplace_permuted<Field, F, G>(
     // 1 Transpose inner * outer sized matrix
     transpose_inplace(values, outer);
 
+    // Compute twiddles
+    let twiddles = compute_twiddles_permuted(root, outer, inner);
+
     // 2 Apply inner FFTs continguously
     // 3 Apply twiddle factors
     let inner_root = root.pow(outer);
     values
         .par_chunks_mut(inner)
+        .zip(twiddles.par_chunks(inner))
         .enumerate()
-        .for_each(|(j, row)| {
+        .for_each(|(j, (row, twiddles))| {
             inner_fft(row);
             if j > 0 {
-                let outer_twiddle = root.pow(j);
-                let mut inner_twiddle = outer_twiddle.clone();
-                for i in 1..inner {
-                    let i = permute_index(inner, i);
-                    row[i] *= &inner_twiddle;
-                    inner_twiddle *= &outer_twiddle;
+                for (x, twiddle) in row.iter_mut().zip(twiddles.iter()).skip(1) {
+                    *x *= twiddle;
                 }
             }
         });
@@ -638,7 +666,8 @@ mod tests {
 
         #[test]
         fn fft2_ref(orig in arb_vec()) {
-            let reference = reference_fft(&orig, false);
+            let mut reference = reference_fft(&orig, false);
+            permute(&mut reference);
             let result = fft2(&orig);
             prop_assert_eq!(result, reference);
         }
