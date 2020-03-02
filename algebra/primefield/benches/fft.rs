@@ -56,9 +56,8 @@ fn fft_rec_size(crit: &mut Criterion) {
         "FFT cache-oblivious size",
         &SIZES,
         move |bench, size| {
-            let mut twiddles = Vec::default();
             let mut values: Vec<_> = (0..size).map(FieldElement::from).collect();
-            bench.iter(|| fft2_inplace(&mut values, &mut twiddles))
+            bench.iter(|| fft2_inplace(&mut values))
         },
     );
 }
