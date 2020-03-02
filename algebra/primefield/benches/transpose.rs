@@ -85,6 +85,6 @@ criterion_group!(
     bench_square,
     bench_strip,
     bench_square_inplace,
-    bench_reference_square,
-    bench_reference_strip,
+    /* bench_reference_square,
+     * bench_reference_strip, */
 );

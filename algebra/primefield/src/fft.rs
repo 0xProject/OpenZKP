@@ -2,7 +2,10 @@
 #![allow(clippy::module_name_repetitions)]
 // Many false positives from trait bounds
 #![allow(single_use_lifetimes)]
-use crate::{geometric_series::root_series, FieldLike, Inv, Pow, RefFieldLike, L1_CACHE_SIZE};
+use crate::{
+    geometric_series::root_series, transpose::transpose_inplace, FieldLike, Inv, Pow, RefFieldLike,
+    L1_CACHE_SIZE,
+};
 use rayon::prelude::*;
 use std::{mem::size_of, prelude::v1::*};
 use zkp_macros_decl::field_element;
@@ -197,15 +200,6 @@ where
 }
 
 // See https://github.com/awelkie/RustFFT
-
-fn transpose_inplace<T: Clone>(values: &mut [T], row_size: usize) {
-    if row_size * row_size == values.len() {
-        crate::transpose::transpose_inplace(values, row_size);
-    } else {
-        let temp = values.to_vec();
-        crate::transpose::transpose(&temp, values, row_size);
-    }
-}
 
 /// In-place FFT with permuted output.
 ///

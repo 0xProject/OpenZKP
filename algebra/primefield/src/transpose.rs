@@ -1,6 +1,5 @@
+use crate::L1_CACHE_SIZE;
 use std::mem::size_of;
-
-const L1_CACHE_SIZE: usize = 32768;
 
 // TODO: Bitreverse <https://arxiv.org/pdf/1708.01873.pdf>
 
@@ -37,13 +36,21 @@ pub fn transpose<T: Clone>(src: &[T], dst: &mut [T], row_size: usize) {
     transpose_rec(src, dst, row_size, 0, row_size, 0, col_size);
 }
 
-/// In place square matrix transpose.
+/// In place matrix transpose.
+///
+/// Uses a temporary copy when `matrix` is not square.
 pub fn transpose_inplace<T: Clone>(matrix: &mut [T], row_size: usize) {
-    if matrix.len() == 0 || row_size == 0 {
+    if matrix.is_empty() || row_size == 1 || row_size == matrix.len() {
         return;
     }
-    assert_eq!(matrix.len(), row_size * row_size);
-    transpose_inplace_rec(matrix, row_size, 0, row_size, 0, row_size);
+    debug_assert_eq!(matrix.len() % row_size, 0);
+    if matrix.len() == row_size * row_size {
+        transpose_inplace_rec(matrix, row_size, 0, row_size, 0, row_size);
+    } else {
+        // TODO: Figure out cache-oblivious in-place algorithm
+        let temp = matrix.to_vec();
+        crate::transpose::transpose(&temp, matrix, row_size);
+    }
 }
 
 fn transpose_inplace_rec<T: Sized + Clone>(
