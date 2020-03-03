@@ -1,6 +1,7 @@
 use crate::{Parameters, PrimeField};
 #[cfg(feature = "std")]
 use hex::{decode, encode};
+use num_traits::identities::Zero;
 #[cfg(feature = "std")]
 use serde::{
     de::{self, Deserialize, Deserializer, SeqAccess, Visitor},
@@ -70,6 +71,12 @@ impl From<&FieldElement> for U256 {
     #[inline(always)]
     fn from(other: &FieldElement) -> Self {
         other.to_uint()
+    }
+}
+
+impl Default for FieldElement {
+    fn default() -> Self {
+        Self::zero()
     }
 }
 
