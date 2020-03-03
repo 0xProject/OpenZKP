@@ -24,6 +24,15 @@ impl Affine {
     }
 
     #[must_use]
+    // TODO: return result
+    pub fn x(&self) -> FieldElement {
+        match self {
+            Self::Zero => panic!("no x coordinate for 0"),
+            Self::Point { x, .. } => x.clone(),
+        }
+    }
+
+    #[must_use]
     pub fn on_curve(&self) -> bool {
         match self {
             Self::Zero => true,
