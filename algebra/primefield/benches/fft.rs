@@ -34,7 +34,7 @@ fn fft_large(crit: &mut Criterion) {
 }
 
 fn fft_threads(crit: &mut Criterion) {
-    const SIZE: usize = 8388608;
+    const SIZE: usize = 4194304;
     log_thread_bench(crit, "FFT threads", SIZE, move |bench| {
         let mut values: Vec<_> = (0..SIZE).map(FieldElement::from).collect();
         bench.iter(|| fft2_inplace(&mut values))
