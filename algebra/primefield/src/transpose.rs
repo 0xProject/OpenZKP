@@ -53,6 +53,15 @@ pub fn transpose_inplace<T: Clone>(matrix: &mut [T], row_size: usize) {
     }
 }
 
+pub fn transpose_inplace2<T: Clone>(matrix: &mut [T], cols: usize) {
+    let rows = matrix.len() / cols;
+    assert!(rows == 2 * cols);
+    for submatrix in matrix.chunks_mut(cols * cols) {
+        println!("{}", submatrix.len());
+        transpose_inplace(submatrix, cols);
+    }
+}
+
 fn transpose_inplace_rec<T: Sized + Clone>(
     matrix: &mut [T],
     row_size: usize,
@@ -126,24 +135,18 @@ fn transpose_rec<T: Sized + Clone>(
     col_end: usize,
 ) {
     // Base case size
-    // TODO: Figure out why size_of::<T> can not be stored in const
+    // Use smaller base case during tests to force better coverage of recursion.
     // TODO: Make const when <https://github.com/rust-lang/rust/issues/49146> lands
-    let base = if cfg!(test) {
-        // Small in tests for better coverage of the recursive case.
-        16
-    } else {
-        // Size base such that src and dst sub-matrices fit in L1
-        L1_CACHE_SIZE / (2 * size_of::<T>())
-    };
+    let base = if cfg!(test) { 16 } else { 64 };
 
     debug_assert!(row_end >= row_start);
     debug_assert!(col_end >= col_start);
-    let col_size = src.len() / row_size;
     let row_span = row_end - row_start;
     let col_span = col_end - col_start;
     debug_assert!(row_span >= 1);
     debug_assert!(col_span >= 1);
     if row_span * col_span <= base {
+        let col_size = src.len() / row_size;
         for row in row_start..row_end {
             for col in col_start..col_end {
                 let i = col * row_size + row;
@@ -218,5 +221,30 @@ mod tests {
             transpose_inplace(&mut result, row_size);
             prop_assert_eq!(result, expected);
         }
+    }
+
+    fn print<T: std::fmt::Debug>(matrix: &[T], cols: usize) {
+        for row in matrix.chunks(cols) {
+            println!("{:?}", row);
+        }
+        println!("");
+    }
+
+    #[test]
+    fn test_2nn_algo() {
+        let rows = 16;
+        let cols = rows / 2;
+        let original = (0..rows * cols).collect::<Vec<_>>();
+        print(&original, cols);
+
+        let mut expected = original.clone();
+        transpose_inplace(&mut expected, cols);
+        print(&expected, rows);
+
+        let mut result = original.clone();
+        transpose_inplace2(&mut result, cols);
+        print(&result, rows);
+
+        assert_eq!(result, expected);
     }
 }
