@@ -1,12 +1,10 @@
 #![warn(clippy::all)]
-use criterion::{black_box, criterion_group, Criterion};
-use zkp_criterion_utils::{log_size_bench, log_thread_bench};
-use zkp_macros_decl::field_element;
+use criterion::{criterion_group, Criterion};
+use zkp_criterion_utils::log_size_bench;
 use zkp_primefield::{
-    transpose::{reference, transpose, transpose_inplace},
+    transpose::{transpose, transpose_inplace},
     FieldElement,
 };
-use zkp_u256::U256;
 
 const SIZES: [usize; 4] = [16384, 262144, 4194304, 16777216];
 const N2N: [usize; 4] = [131072, 524288, 2097152, 8388608];

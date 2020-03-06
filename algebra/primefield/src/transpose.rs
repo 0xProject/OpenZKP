@@ -1,4 +1,4 @@
-use std::{cmp::min, mem::size_of};
+use std::cmp::min;
 
 // TODO: Bitreverse <https://arxiv.org/pdf/1708.01873.pdf>
 
@@ -48,7 +48,7 @@ pub fn transpose_inplace<T: Clone>(matrix: &mut [T], row_size: usize) {
     } else {
         // TODO: Figure out cache-oblivious in-place algorithm
         let temp = matrix.to_vec();
-        crate::transpose::transpose(&temp, matrix, row_size);
+        transpose(&temp, matrix, row_size);
     }
 }
 
@@ -91,7 +91,7 @@ fn transpose_inplace_rec<T: Sized + Clone>(
             for row in row_start..row_end {
                 let mut i = col_start * row_size + row;
                 let mut j = row * row_size + col_start;
-                for col in col_start..col_end {
+                for _col in col_start..col_end {
                     matrix.swap(i, j);
                     i += row_size;
                     j += 1;
@@ -103,7 +103,7 @@ fn transpose_inplace_rec<T: Sized + Clone>(
                 let mut i = col_start * row_size + row;
                 let mut j = row * row_size + col_start;
                 let end = min(col_end, row);
-                for col in col_start..end {
+                for _col in col_start..end {
                     matrix.swap(i, j);
                     i += row_size;
                     j += 1;

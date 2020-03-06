@@ -2,13 +2,9 @@
 #![allow(clippy::module_name_repetitions)]
 // Many false positives from trait bounds
 #![allow(single_use_lifetimes)]
-use crate::{
-    geometric_series::root_series, transpose::transpose_inplace, FieldLike, Inv, Pow, RefFieldLike,
-};
+use crate::{transpose::transpose_inplace, FieldLike, Inv, Pow, RefFieldLike};
 use rayon::prelude::*;
-use std::{mem::size_of, prelude::v1::*};
-use zkp_macros_decl::field_element;
-use zkp_u256::U256;
+use std::prelude::v1::*;
 
 // OPT: Implement parallel strategies: https://inf.ethz.ch/personal/markusp/teaching/263-2300-ETH-spring12/slides/class19.pdf
 
@@ -195,7 +191,6 @@ where
     if size > 1 {
         depth_first_recurse(values, offset, stride * 2);
         depth_first_recurse(values, offset + stride, stride * 2);
-        let mut twiddle = Field::one();
         let root = Field::root(size).expect("No root found");
         for i in (0..size).step_by(2) {
             let twiddle = root.pow(permute_index(half, i / 2));
@@ -349,7 +344,6 @@ fn parallel_recurse_inplace_inorder<Field, F, G>(
 
     // 2 Apply inner FFTs continguously
     // 3 Apply twiddle factors
-    let inner_root = root.pow(outer);
     values
         .par_chunks_mut(inner)
         .enumerate()
@@ -402,7 +396,6 @@ fn recurse_inplace_permuted<Field, F, G>(
 
     // 2 Apply inner FFTs continguously
     // 3 Apply twiddle factors
-    let inner_root = root.pow(outer);
     values
         .chunks_exact_mut(inner)
         .enumerate()
@@ -454,7 +447,6 @@ fn parallel_recurse_inplace_permuted<Field, F, G>(
 
     // 2 Apply inner FFTs continguously
     // 3 Apply twiddle factors
-    let inner_root = root.pow(outer);
     values
         .par_chunks_mut(inner)
         .enumerate()
@@ -555,7 +547,7 @@ mod tests {
     use proptest::prelude::*;
     use quickcheck_macros::quickcheck;
     use std::cmp::{max, min};
-    use zkp_macros_decl::u256h;
+    use zkp_macros_decl::{field_element, u256h};
     use zkp_u256::U256;
 
     fn arb_elem() -> impl Strategy<Value = FieldElement> {
@@ -614,7 +606,7 @@ mod tests {
         #[test]
         fn fft_ref_inv(orig in arb_vec()) {
             let f = reference_fft(&orig, false);
-            let mut f2 = reference_fft(&f, true);
+            let f2 = reference_fft(&f, true);
             prop_assert_eq!(f2, orig);
         }
 
