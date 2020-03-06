@@ -175,11 +175,20 @@ where
     Field: FieldLike + std::fmt::Debug,
     for<'a> &'a Field: RefFieldLike<Field>,
 {
-    depth_first_recurse(values, 0, 1);
+    let size = values.len();
+    debug_assert!(size.is_power_of_two());
+    let root = Field::root(values.len()).expect("No root exists");
+    let mut twiddles = (0..size / 2).map(|i| root.pow(i)).collect::<Vec<_>>();
+    permute(&mut twiddles);
+    depth_first_recurse(values, &twiddles, 0, 1);
 }
 
-fn depth_first_recurse<Field>(values: &mut [Field], offset: usize, stride: usize)
-where
+fn depth_first_recurse<Field>(
+    values: &mut [Field],
+    twiddles: &[Field],
+    offset: usize,
+    stride: usize,
+) where
     Field: FieldLike + std::fmt::Debug,
     for<'a> &'a Field: RefFieldLike<Field>,
 {
@@ -189,11 +198,13 @@ where
     debug_assert!(offset < stride);
     debug_assert_eq!(values.len() % size, 0);
     if size > 1 {
-        depth_first_recurse(values, offset, stride * 2);
-        depth_first_recurse(values, offset + stride, stride * 2);
+        depth_first_recurse(values, twiddles, offset, stride * 2);
+        depth_first_recurse(values, twiddles, offset + stride, stride * 2);
         let root = Field::root(size).expect("No root found");
-        for i in (0..size).step_by(2) {
+        for (i, twiddle2) in (0..size).step_by(2).zip(twiddles) {
+            // TODO: First twiddle is one
             let twiddle = root.pow(permute_index(half, i / 2));
+            debug_assert_eq!(&twiddle, twiddle2);
             let i = offset + i * stride;
             let j = i + stride;
             let a = values[i].clone();
