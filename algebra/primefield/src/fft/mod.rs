@@ -2,9 +2,15 @@
 #![allow(clippy::module_name_repetitions)]
 // Many false positives from trait bounds
 #![allow(single_use_lifetimes)]
-use crate::{transpose::transpose_inplace, FieldLike, Inv, Pow, RefFieldLike};
+
+mod bit_reverse;
+mod transpose;
+
+use crate::{FieldLike, Inv, Pow, RefFieldLike};
+use bit_reverse::{permute, permute_index};
 use rayon::prelude::*;
 use std::prelude::v1::*;
+pub use transpose::{transpose, transpose_inplace};
 
 // OPT: Implement parallel strategies: https://inf.ethz.ch/personal/markusp/teaching/263-2300-ETH-spring12/slides/class19.pdf
 
@@ -18,35 +24,6 @@ use std::prelude::v1::*;
 // https://ocw.mit.edu/courses/electrical-engineering-and-computer-science/6-973-communication-system-design-spring-2006/lecture-notes/lecture_8.pdf
 
 // TODO: Create a dedicated type for permuted vectors
-
-/// Permute index for an FFT of `size`
-///
-/// The permutation is it's own inverse. The permutation is currently
-/// a 'bit-reversal' one, where each index has its binary representation
-/// reversed.
-pub fn permute_index(size: usize, index: usize) -> usize {
-    const USIZE_BITS: usize = 0_usize.count_zeros() as usize;
-    debug_assert!(index < size);
-    if size == 1 {
-        0
-    } else {
-        debug_assert!(size.is_power_of_two());
-        let bits = size.trailing_zeros() as usize;
-        index.reverse_bits() >> (USIZE_BITS - bits)
-    }
-}
-
-/// Permute an array of FFT results.
-// TODO expose public ifft function which accepts bit-reversed input instead.
-pub fn permute<T>(v: &mut [T]) {
-    let n = v.len();
-    for i in 0..n {
-        let j = permute_index(n, i);
-        if j > i {
-            v.swap(i, j);
-        }
-    }
-}
 
 /// Out-of-place FFT with non-permuted result.
 pub fn fft<Field>(a: &[Field]) -> Vec<Field>
@@ -199,13 +176,7 @@ fn depth_first_recurse<Field>(
     debug_assert_eq!(values.len() % size, 0);
     match size {
         1 => {}
-        2 => {
-            let i = offset;
-            let j = offset + stride;
-            let a = values[i].clone();
-            values[i] = &a + &values[j];
-            values[j] = a - &values[j];
-        }
+        2 => radix_2(offset, stride, values),
         _ => {
             depth_first_recurse(values, twiddles, offset, stride * 2);
             depth_first_recurse(values, twiddles, offset + stride, stride * 2);

@@ -2,7 +2,7 @@
 use criterion::{criterion_group, Criterion};
 use zkp_criterion_utils::log_size_bench;
 use zkp_primefield::{
-    transpose::{transpose, transpose_inplace},
+    fft::{transpose, transpose_inplace},
     FieldElement,
 };
 
