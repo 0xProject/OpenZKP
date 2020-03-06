@@ -193,18 +193,14 @@ fn depth_first_recurse<Field>(
     for<'a> &'a Field: RefFieldLike<Field>,
 {
     let size = values.len() / stride;
-    let half = size / 2;
     debug_assert!(size.is_power_of_two());
     debug_assert!(offset < stride);
     debug_assert_eq!(values.len() % size, 0);
     if size > 1 {
         depth_first_recurse(values, twiddles, offset, stride * 2);
         depth_first_recurse(values, twiddles, offset + stride, stride * 2);
-        let root = Field::root(size).expect("No root found");
-        for (i, twiddle2) in (0..size).step_by(2).zip(twiddles) {
+        for (i, twiddle) in (0..size).step_by(2).zip(twiddles) {
             // TODO: First twiddle is one
-            let twiddle = root.pow(permute_index(half, i / 2));
-            debug_assert_eq!(&twiddle, twiddle2);
             let i = offset + i * stride;
             let j = i + stride;
             let a = values[i].clone();
