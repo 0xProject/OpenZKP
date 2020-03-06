@@ -169,7 +169,8 @@ where
     }
 }
 
-/// Depth-first in-place bit-reversed FFT.
+/// Radix-2 depth-first in-place bit-reversed FFT.
+// TODO: Radix-4?
 pub fn fft_depth_first<Field>(values: &mut [Field])
 where
     Field: FieldLike + std::fmt::Debug,
@@ -196,17 +197,28 @@ fn depth_first_recurse<Field>(
     debug_assert!(size.is_power_of_two());
     debug_assert!(offset < stride);
     debug_assert_eq!(values.len() % size, 0);
-    if size > 1 {
-        depth_first_recurse(values, twiddles, offset, stride * 2);
-        depth_first_recurse(values, twiddles, offset + stride, stride * 2);
-        for (i, twiddle) in (0..size).step_by(2).zip(twiddles) {
-            // TODO: First twiddle is one
-            let i = offset + i * stride;
-            let j = i + stride;
+    match size {
+        1 => {}
+        2 => {
+            let i = offset;
+            let j = offset + stride;
             let a = values[i].clone();
-            let b = twiddle * &values[j];
-            values[i] = &a + &b;
-            values[j] = a - b;
+            values[i] = &a + &values[j];
+            values[j] = a - &values[j];
+        }
+        _ => {
+            depth_first_recurse(values, twiddles, offset, stride * 2);
+            depth_first_recurse(values, twiddles, offset + stride, stride * 2);
+
+            for (i, twiddle) in (0..size).step_by(2).zip(twiddles) {
+                // TODO: First twiddle is one
+                let i = offset + i * stride;
+                let j = i + stride;
+                let a = values[i].clone();
+                let b = twiddle * &values[j];
+                values[i] = &a + &b;
+                values[j] = a - b;
+            }
         }
     }
 }
