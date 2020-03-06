@@ -266,23 +266,28 @@ fn recurse_inplace_inorder<Field, F, G>(
 
     // 2 Apply inner FFTs continguously
     // 3 Apply twiddle factors
-    values.chunks_mut(inner).enumerate().for_each(|(j, row)| {
-        inner_fft(row);
-        if j > 0 {
-            let outer_twiddle = root.pow(j);
-            let mut inner_twiddle = outer_twiddle.clone();
-            for x in row.iter_mut().skip(1) {
-                *x *= &inner_twiddle;
-                inner_twiddle *= &outer_twiddle;
+    values
+        .chunks_exact_mut(inner)
+        .enumerate()
+        .for_each(|(j, row)| {
+            inner_fft(row);
+            if j > 0 {
+                let outer_twiddle = root.pow(j);
+                let mut inner_twiddle = outer_twiddle.clone();
+                for x in row.iter_mut().skip(1) {
+                    *x *= &inner_twiddle;
+                    inner_twiddle *= &outer_twiddle;
+                }
             }
-        }
-    });
+        });
 
     // 4 Transpose outer * inner sized matrix
     transpose_inplace(values, inner);
 
     // 5 Apply outer FFTs contiguously
-    values.chunks_mut(outer).for_each(|row| outer_fft(row));
+    values
+        .chunks_exact_mut(outer)
+        .for_each(|row| outer_fft(row));
 
     // 6 Transpose back to get results in output order
     transpose_inplace(values, outer);
@@ -365,23 +370,28 @@ fn recurse_inplace_permuted<Field, F, G>(
     // 2 Apply inner FFTs continguously
     // 3 Apply twiddle factors
     let inner_root = root.pow(outer);
-    values.chunks_mut(inner).enumerate().for_each(|(j, row)| {
-        inner_fft(row);
-        if j > 0 {
-            let outer_twiddle = root.pow(j);
-            for (i, x) in row.iter_mut().enumerate() {
-                let i = permute_index(inner, i);
-                let inner_twiddle = outer_twiddle.pow(i);
-                *x *= inner_twiddle;
+    values
+        .chunks_exact_mut(inner)
+        .enumerate()
+        .for_each(|(j, row)| {
+            inner_fft(row);
+            if j > 0 {
+                let outer_twiddle = root.pow(j);
+                for (i, x) in row.iter_mut().enumerate() {
+                    let i = permute_index(inner, i);
+                    let inner_twiddle = outer_twiddle.pow(i);
+                    *x *= inner_twiddle;
+                }
             }
-        }
-    });
+        });
 
     // 4 Transpose outer * inner sized matrix
     transpose_inplace(values, inner);
 
     // 5 Apply outer FFTs contiguously
-    values.chunks_mut(outer).for_each(|row| outer_fft(row));
+    values
+        .chunks_exact_mut(outer)
+        .for_each(|row| outer_fft(row));
 }
 
 /// Generic recursive six-point FFT with permuted output.

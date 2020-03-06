@@ -56,7 +56,7 @@ pub fn transpose_inplace<T: Clone>(matrix: &mut [T], row_size: usize) {
 pub fn transpose_inplace2<T: Clone>(matrix: &mut [T], cols: usize) {
     let rows = matrix.len() / cols;
     assert!(rows == 2 * cols);
-    for submatrix in matrix.chunks_mut(cols * cols) {
+    for submatrix in matrix.chunks_exact_mut(cols * cols) {
         println!("{}", submatrix.len());
         transpose_inplace(submatrix, cols);
     }
