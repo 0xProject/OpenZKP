@@ -60,9 +60,6 @@ mod traits;
 pub mod transpose;
 mod uint;
 
-// Tuning parameter
-const L1_CACHE_SIZE: usize = 32768;
-
 // Generic field implementation
 pub use prime_field::{Parameters, PrimeField};
 pub use zkp_u256::MontgomeryParameters;

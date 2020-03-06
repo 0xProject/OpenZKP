@@ -4,7 +4,6 @@
 #![allow(single_use_lifetimes)]
 use crate::{
     geometric_series::root_series, transpose::transpose_inplace, FieldLike, Inv, Pow, RefFieldLike,
-    L1_CACHE_SIZE,
 };
 use rayon::prelude::*;
 use std::{mem::size_of, prelude::v1::*};
@@ -160,11 +159,9 @@ where
     for layer in 0..n_elements.trailing_zeros() {
         let n_blocks = 1_usize << layer;
         let mut twiddle_factor = Field::one();
-        // OPT: In place combined update like gcd::mat_mul.
         let block_size = n_elements >> (layer + 1);
         let twiddle_factor_update = root.pow(block_size);
         for block in 0..n_blocks {
-            // TODO: Do without casts.
             debug_assert!(block < n_blocks);
             let block_start = 2 * permute_index(n_blocks, block) * block_size;
             for i in block_start..block_start + block_size {

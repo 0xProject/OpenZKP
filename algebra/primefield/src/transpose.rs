@@ -1,4 +1,3 @@
-use crate::L1_CACHE_SIZE;
 use std::{cmp::min, mem::size_of};
 
 // TODO: Bitreverse <https://arxiv.org/pdf/1708.01873.pdf>
