@@ -9,4 +9,6 @@ rm target/$TARGET/release/benchmark-* || true
 cargo build --release --package zkp-primefield --target $TARGET  --bench benchmark --all-features
 BENCH=(target/$TARGET/release/benchmark-*)
 scp $BENCH $MACHINE:~/benchmark
-ssh -t $MACHINE "~/benchmark" --color --bench "$@"
+printf -v ARGS %q "$@"
+echo "~/benchmark --color --bench $ARGS"
+ssh -t $MACHINE "~/benchmark --color --bench $ARGS"
