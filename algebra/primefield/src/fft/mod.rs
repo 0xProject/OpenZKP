@@ -140,7 +140,7 @@ where
             let block_start = 2 * permute_index(n_blocks, block) * block_size;
             for i in block_start..block_start + block_size {
                 coefficients[i + block_size] *= &twiddle_factor;
-                small::radix_2(i, block_size, coefficients);
+                small::radix_2(coefficients, i, block_size);
             }
             twiddle_factor *= &twiddle_factor_update;
         }
@@ -177,7 +177,7 @@ fn depth_first_recurse<Field>(
     debug_assert_eq!(values.len() % size, 0);
     match size {
         1 => {}
-        2 => small::radix_2(offset, stride, values),
+        2 => small::radix_2(values, offset, stride),
         _ => {
             depth_first_recurse(values, twiddles, offset, stride * 2);
             depth_first_recurse(values, twiddles, offset + stride, stride * 2);
