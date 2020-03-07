@@ -10,15 +10,11 @@ where
     Field: FieldLike + std::fmt::Debug,
     for<'a> &'a Field: RefFieldLike<Field>,
 {
-    // OPT: Inplace +- operation like in gcd::mat_mul.
-    // OPT: Use Dev's combined REDC
-
-    let (left, right) = values.split_at_mut(offset + stride);
-    let t = left[offset].clone();
-    left[offset] += &right[0];
-    // OPT: sub_from_assign
-    right[0] -= t;
-    right[0].neg_assign();
+    let i = offset;
+    let j = offset + stride;
+    let temp = values[i].clone();
+    values[i] = &temp + &values[j];
+    values[j] = temp - &values[j];
 }
 
 #[inline(always)]
