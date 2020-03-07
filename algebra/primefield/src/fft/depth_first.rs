@@ -39,9 +39,11 @@ fn depth_first_recurse<Field>(
             depth_first_recurse(values, twiddles, offset, stride * 2);
             depth_first_recurse(values, twiddles, offset + stride, stride * 2);
             radix_2(values, offset, stride);
-            for (i, twiddle) in (0..size).step_by(2).zip(twiddles).skip(1) {
-                radix_2_twiddle(values, twiddle, offset + i * stride, stride);
-            }
+            (offset..offset + size * stride)
+                .step_by(2 * stride)
+                .zip(twiddles)
+                .skip(1)
+                .for_each(|(offset, twiddle)| radix_2_twiddle(values, twiddle, offset, stride));
         }
     }
 }
