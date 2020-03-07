@@ -19,7 +19,7 @@ where
     depth_first_recurse(values, &twiddles, 0, 1);
 }
 
-fn depth_first_recurse<Field>(
+pub fn depth_first_recurse<Field>(
     values: &mut [Field],
     twiddles: &[Field],
     offset: usize,

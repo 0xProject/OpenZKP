@@ -1,8 +1,10 @@
 use super::{
-    bit_reverse::permute_index, iterative::fft_permuted_root, transpose::transpose_inplace,
+    bit_reverse::permute_index, depth_first::depth_first_recurse, get_twiddles,
+    iterative::fft_permuted_root, transpose::transpose_inplace,
 };
 use crate::{FieldLike, Pow, RefFieldLike};
 use rayon::prelude::*;
+use std::cmp::max;
 
 /// In-place FFT with permuted output.
 ///
@@ -22,15 +24,16 @@ where
     let inner = length / outer;
     debug_assert!(outer == inner || inner == 2 * outer);
     debug_assert_eq!(outer * inner, length);
-    let inner_root = root.pow(outer);
-    let outer_root = root.pow(inner);
+    let _inner_root = root.pow(outer);
+    let _outer_root = root.pow(inner);
+    let twiddles = get_twiddles(max(outer, inner));
     parallel_recurse_inplace_permuted(
         values,
         root,
         outer,
         inner,
-        |row| fft_permuted_root(&inner_root, row),
-        |row| fft_permuted_root(&outer_root, row),
+        |row| depth_first_recurse(row, &twiddles, 0, 1),
+        |row| depth_first_recurse(row, &twiddles, 0, 1),
     );
 }
 
