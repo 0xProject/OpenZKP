@@ -20,21 +20,35 @@ fn fft_base(crit: &mut Criterion) {
     group.throughput(Throughput::Elements(2));
     group.bench_function("2", move |bench| {
         let mut values: Vec<FieldElement> = repeat_with(random).take(2).collect();
-        bench.iter(|| radix_2(black_box(&mut values), 0, 1))
+        bench.iter(|| radix_2(black_box(&mut values), black_box(0), black_box(1)))
     });
     // radix_4
     let twiddles = get_twiddles(4);
     group.throughput(Throughput::Elements(4));
     group.bench_function("4", move |bench| {
         let mut values: Vec<FieldElement> = repeat_with(random).take(4).collect();
-        bench.iter(|| radix_4(black_box(&mut values), &twiddles, 0, 1))
+        bench.iter(|| {
+            radix_4(
+                black_box(&mut values),
+                black_box(&twiddles),
+                black_box(0),
+                black_box(1),
+            )
+        })
     });
     // radix_8
     let twiddles = get_twiddles(8);
     group.throughput(Throughput::Elements(8));
     group.bench_function("8", move |bench| {
         let mut values: Vec<FieldElement> = repeat_with(random).take(8).collect();
-        bench.iter(|| radix_8(black_box(&mut values), &twiddles, 0, 1))
+        bench.iter(|| {
+            radix_8(
+                black_box(&mut values),
+                black_box(&twiddles),
+                black_box(0),
+                black_box(1),
+            )
+        })
     });
 }
 
