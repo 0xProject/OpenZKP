@@ -1,4 +1,7 @@
-use crate::{FieldLike, Inv, Pow, RefFieldLike};
+use crate::{FieldLike, RefFieldLike};
+
+// OPT: Inplace +- operation like in gcd::mat_mul.
+// OPT: Use Dev's combined REDC
 
 /// Transforms (x0, x1) to (x0 + x1, x0 - x1)
 #[inline(always)]

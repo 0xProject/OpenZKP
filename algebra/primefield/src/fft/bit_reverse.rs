@@ -26,3 +26,26 @@ pub fn permute<T>(v: &mut [T]) {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use quickcheck_macros::quickcheck;
+
+    #[test]
+    fn test_permute() {
+        assert_eq!(permute_index(4, 0), 0);
+        assert_eq!(permute_index(4, 1), 2);
+        assert_eq!(permute_index(4, 2), 1);
+        assert_eq!(permute_index(4, 3), 3);
+    }
+
+    #[quickcheck]
+    fn check_permute(size: usize, index: usize) {
+        let size = size.next_power_of_two();
+        let index = index % size;
+        let permuted = permute_index(size, index);
+        assert!(permuted < size);
+        assert_eq!(permute_index(size, permuted), index);
+    }
+}
