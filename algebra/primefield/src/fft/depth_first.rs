@@ -1,6 +1,6 @@
 use super::{
     bit_reverse::permute,
-    small::{radix_2, radix_2_twiddle, radix_4},
+    small::{radix_2, radix_2_twiddle, radix_4, radix_8},
 };
 use crate::{FieldLike, Pow, RefFieldLike};
 
@@ -35,6 +35,8 @@ fn depth_first_recurse<Field>(
     match size {
         1 => {}
         2 => radix_2(values, offset, stride),
+        4 => radix_4(values, twiddles, offset, stride),
+        8 => radix_8(values, twiddles, offset, stride),
         _ => {
             depth_first_recurse(values, twiddles, offset, stride * 2);
             depth_first_recurse(values, twiddles, offset + stride, stride * 2);
