@@ -1,6 +1,7 @@
 use crate::{FieldLike, RefFieldLike};
 use zkp_u256::SubFromInline;
 
+// OPT: Unchecked slice access
 // OPT: Inplace +- operation like in gcd::mat_mul.
 // OPT: Use Dev's combined REDC
 
@@ -39,12 +40,11 @@ where
     Field: FieldLike + std::fmt::Debug,
     for<'a> &'a Field: RefFieldLike<Field>,
 {
-    radix_2(values, 0, 2);
-    radix_2(values, 1, 2);
-    // OPT: Unchecked access
+    radix_2(values, offset, 2 * stride);
+    radix_2(values, offset + stride, 2 * stride);
     values[offset + 3 * stride] *= &twiddles[1];
-    radix_2(values, 0, 1);
-    radix_2(values, 2, 1);
+    radix_2(values, offset, stride);
+    radix_2(values, offset + 2 * stride, stride);
 }
 
 #[inline(always)]
@@ -53,15 +53,15 @@ where
     Field: FieldLike + std::fmt::Debug,
     for<'a> &'a Field: RefFieldLike<Field>,
 {
-    radix_4(values, twiddles, 0, 2);
-    radix_4(values, twiddles, 1, 2);
+    radix_4(values, twiddles, offset, 2 * stride);
+    radix_4(values, twiddles, offset + stride, 2 * stride);
     values[offset + 3 * stride] *= &twiddles[1];
     values[offset + 5 * stride] *= &twiddles[2];
     values[offset + 7 * stride] *= &twiddles[3];
-    radix_2(values, 0, 1);
-    radix_2(values, 2, 1);
-    radix_2(values, 4, 1);
-    radix_2(values, 6, 1);
+    radix_2(values, offset, stride);
+    radix_2(values, offset + 2 * stride, stride);
+    radix_2(values, offset + 4 * stride, stride);
+    radix_2(values, offset + 6 * stride, stride);
 }
 
 #[cfg(test)]
