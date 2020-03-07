@@ -6,7 +6,7 @@ use zkp_criterion_utils::{log_size_bench, log_thread_bench};
 use zkp_primefield::{
     fft::{
         fft2_inplace, fft_depth_first, fft_permuted_root, get_twiddles,
-        small::{radix_2, radix_4, radix_8},
+        small::{radix_2, radix_2_twiddle, radix_4, radix_8},
     },
     FieldElement, Root,
 };
@@ -21,6 +21,20 @@ fn fft_base(crit: &mut Criterion) {
     group.bench_function("2", move |bench| {
         let mut values: Vec<FieldElement> = repeat_with(random).take(2).collect();
         bench.iter(|| radix_2(black_box(&mut values), black_box(0), black_box(1)))
+    });
+    // radix_2_twiddle
+    group.throughput(Throughput::Elements(2));
+    group.bench_function("2 (twiddle)", move |bench| {
+        let twiddle = random();
+        let mut values: Vec<FieldElement> = repeat_with(random).take(2).collect();
+        bench.iter(|| {
+            radix_2_twiddle(
+                black_box(&mut values),
+                black_box(&twiddle),
+                black_box(0),
+                black_box(1),
+            )
+        })
     });
     // radix_4
     let twiddles = get_twiddles(4);
