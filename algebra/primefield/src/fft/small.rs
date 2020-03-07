@@ -1,4 +1,5 @@
 use crate::{FieldLike, RefFieldLike};
+use zkp_u256::SubFromInline;
 
 // OPT: Inplace +- operation like in gcd::mat_mul.
 // OPT: Use Dev's combined REDC
@@ -14,7 +15,22 @@ where
     let j = offset + stride;
     let temp = values[i].clone();
     values[i] = &temp + &values[j];
-    values[j] = temp - &values[j];
+    values[j] = &temp - &values[j];
+}
+
+/// Transforms (x0, x1) to (x0 + x1, x0 - x1)
+#[inline(always)]
+pub fn radix_2_twiddle<Field>(values: &mut [Field], twiddle: &Field, offset: usize, stride: usize)
+where
+    Field: FieldLike + std::fmt::Debug,
+    for<'a> &'a Field: RefFieldLike<Field>,
+{
+    let i = offset;
+    let j = offset + stride;
+    let temp = values[i].clone();
+    values[j] *= twiddle;
+    values[i] = &temp + &values[j];
+    values[j] = &temp - &values[j];
 }
 
 #[inline(always)]
