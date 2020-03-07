@@ -1,13 +1,42 @@
 #![warn(clippy::all)]
-use criterion::{criterion_group, Criterion};
+use criterion::{black_box, criterion_group, Criterion, Throughput};
+use rand::prelude::*;
+use std::iter::repeat_with;
 use zkp_criterion_utils::{log_size_bench, log_thread_bench};
 use zkp_primefield::{
-    fft::{fft2_inplace, fft_depth_first, fft_permuted_root},
+    fft::{
+        fft2_inplace, fft_depth_first, fft_permuted_root, get_twiddles,
+        small::{radix_2, radix_4, radix_8},
+    },
     FieldElement, Root,
 };
 
 const SMALL: [usize; 7] = [4, 16, 64, 256, 1024, 4096, 16384];
 const LARGE: [usize; 4] = [1048576, 4194304, 8388608, 16777216];
+
+fn fft_base(crit: &mut Criterion) {
+    let mut group = crit.benchmark_group("FFT base");
+    // radix_2
+    group.throughput(Throughput::Elements(2));
+    group.bench_function("2", move |bench| {
+        let mut values: Vec<FieldElement> = repeat_with(random).take(2).collect();
+        bench.iter(|| radix_2(black_box(&mut values), 0, 1))
+    });
+    // radix_4
+    let twiddles = get_twiddles(4);
+    group.throughput(Throughput::Elements(4));
+    group.bench_function("4", move |bench| {
+        let mut values: Vec<FieldElement> = repeat_with(random).take(4).collect();
+        bench.iter(|| radix_4(black_box(&mut values), &twiddles, 0, 1))
+    });
+    // radix_8
+    let twiddles = get_twiddles(8);
+    group.throughput(Throughput::Elements(8));
+    group.bench_function("8", move |bench| {
+        let mut values: Vec<FieldElement> = repeat_with(random).take(8).collect();
+        bench.iter(|| radix_8(black_box(&mut values), &twiddles, 0, 1))
+    });
+}
 
 fn fft_small(crit: &mut Criterion) {
     log_size_bench(crit, "FFT size", &SMALL, move |bench, size| {
@@ -44,4 +73,11 @@ fn fft_threads(crit: &mut Criterion) {
     });
 }
 
-criterion_group!(group, fft_small, fft_df_small, fft_large, fft_threads);
+criterion_group!(
+    group,
+    fft_base,
+    fft_small,
+    fft_df_small,
+    fft_large,
+    fft_threads
+);

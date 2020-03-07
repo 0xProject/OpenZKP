@@ -230,6 +230,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_2nn_algo() {
         let rows = 16;
         let cols = rows / 2;

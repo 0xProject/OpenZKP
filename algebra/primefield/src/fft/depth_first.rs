@@ -38,8 +38,11 @@ fn depth_first_recurse<Field>(
 
             for (i, twiddle) in (0..size).step_by(2).zip(twiddles) {
                 // TODO: First twiddle is one
+                // TODO: Use radix_2
                 let i = offset + i * stride;
                 let j = i + stride;
+                // values[j] *= twiddle;
+                // radix_2(values, offset + i * stride, stride);
                 let a = values[i].clone();
                 let b = twiddle * &values[j];
                 values[i] = &a + &b;

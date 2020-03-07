@@ -7,7 +7,7 @@ mod bit_reverse;
 mod depth_first;
 mod iterative;
 mod radix_sqrt;
-mod small;
+pub mod small;
 mod transpose;
 
 use crate::{FieldLike, Inv, Pow, RefFieldLike};
@@ -128,6 +128,18 @@ where
     }
 }
 
+pub fn get_twiddles<Field>(size: usize) -> Vec<Field>
+where
+    Field: FieldLike + From<usize> + std::fmt::Debug,
+    for<'a> &'a Field: RefFieldLike<Field>,
+{
+    debug_assert!(size.is_power_of_two());
+    let root = Field::root(size).expect("No root exists");
+    let mut twiddles = (0..size / 2).map(|i| root.pow(i)).collect::<Vec<_>>();
+    permute(&mut twiddles);
+    twiddles
+}
+
 // TODO: https://cnx.org/contents/4kChocHM@6/Efficient-FFT-Algorithm-and-Programming-Tricks
 
 // TODO: Radix-4 and/or Split-radix FFT
@@ -191,14 +203,19 @@ mod tests {
     }
 
     // Generate a power-of-two size
+    pub(super) fn arb_vec_size(size: usize) -> impl Strategy<Value = Vec<FieldElement>> {
+        prop::collection::vec(arb_elem(), size)
+    }
+
+    // Generate a power-of-two size
     pub(super) fn arb_vec() -> impl Strategy<Value = Vec<FieldElement>> {
-        (0_usize..=9).prop_flat_map(|size| prop::collection::vec(arb_elem(), 1_usize << size))
+        (0_usize..=9).prop_flat_map(|size| arb_vec_size(1_usize << size))
     }
 
     // O(n^2) reference implementation evaluating
     //     x_i' = Sum_j x_j * omega_n^(ij)
     // directly using Horner's method.
-    pub(super) fn reference_fft(x: &[FieldElement], inverse: bool) -> Vec<FieldElement> {
+    fn reference_fft(x: &[FieldElement], inverse: bool) -> Vec<FieldElement> {
         let mut root = FieldElement::root(x.len()).unwrap();
         if inverse {
             root = root.inv().expect("Root should be invertible.");
@@ -246,10 +263,11 @@ mod tests {
         }
 
         #[test]
-        fn fft2_ref(orig in arb_vec()) {
-            let reference = reference_fft(&orig, false);
-            let result = fft2(&orig);
-            prop_assert_eq!(result, reference);
+        fn fft2_ref(values in arb_vec()) {
+            let mut expect = values.clone();
+            ref_fft_permuted(&mut expect);
+            let result = fft2(&values);
+            prop_assert_eq!(result, expect);
         }
     }
     #[test]

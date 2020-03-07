@@ -236,7 +236,7 @@ fn parallel_recurse_inplace_permuted<Field, F, G>(
 #[cfg(test)]
 mod tests {
     use super::{
-        super::tests::{arb_vec, ref_fft_inplace, ref_fft_permuted, reference_fft},
+        super::tests::{arb_vec, ref_fft_inplace, ref_fft_permuted},
         *,
     };
     use crate::{FieldElement, Root};
@@ -246,14 +246,15 @@ mod tests {
     proptest! {
 
         #[test]
-        fn test_recurse_inplace_inorder(orig in arb_vec()) {
+        fn test_recurse_inplace_inorder(values in arb_vec()) {
             // TODO: Test different splittings
             const SPLIT: usize = 4;
-            let reference = reference_fft(&orig, false);
-            let root = FieldElement::root(orig.len()).unwrap();
-            let mut result = orig.clone();
-            let inner = max(1, orig.len() / SPLIT);
-            let outer = min(orig.len(), SPLIT);
+            let mut expected = values.clone();
+            ref_fft_inplace(&mut expected);
+            let root = FieldElement::root(values.len()).unwrap();
+            let mut result = values.clone();
+            let inner = max(1, values.len() / SPLIT);
+            let outer = min(values.len(), SPLIT);
             recurse_inplace_inorder(
                 &mut result,
                 &root,
@@ -262,7 +263,7 @@ mod tests {
                 ref_fft_inplace,
                 ref_fft_inplace,
             );
-            prop_assert_eq!(result, reference);
+            prop_assert_eq!(result, expected);
         }
 
         #[test]
@@ -287,14 +288,15 @@ mod tests {
         }
 
         #[test]
-        fn test_parallel_recurse_inplace_inorder(orig in arb_vec()) {
+        fn test_parallel_recurse_inplace_inorder(values in arb_vec()) {
             // TODO: Test different splittings
             const SPLIT: usize = 4;
-            let reference = reference_fft(&orig, false);
-            let root = FieldElement::root(orig.len()).unwrap();
-            let mut result = orig.clone();
-            let inner = max(1, orig.len() / SPLIT);
-            let outer = min(orig.len(), SPLIT);
+            let mut expected = values.clone();
+            ref_fft_inplace(&mut expected);
+            let root = FieldElement::root(values.len()).unwrap();
+            let mut result = values.clone();
+            let inner = max(1, values.len() / SPLIT);
+            let outer = min(values.len(), SPLIT);
             parallel_recurse_inplace_inorder(
                 &mut result,
                 &root,
@@ -303,8 +305,7 @@ mod tests {
                 ref_fft_inplace,
                 ref_fft_inplace,
             );
-            prop_assert_eq!(result, reference);
+            prop_assert_eq!(result, expected);
         }
-
     }
 }
