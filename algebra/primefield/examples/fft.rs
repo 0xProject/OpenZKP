@@ -12,7 +12,10 @@ use std::{
 use structopt::StructOpt;
 use zkp_logging_allocator::ALLOCATOR;
 use zkp_mmap_vec::MmapVec;
-use zkp_primefield::{fft::fft2_inplace, FieldElement};
+use zkp_primefield::{
+    fft::{fft2_inplace, transpose_inplace},
+    FieldElement,
+};
 
 fn parse_hex(src: &str) -> Result<u32, ParseIntError> {
     u32::from_str_radix(src, 16)
@@ -47,13 +50,18 @@ struct Options {
 
 #[derive(Debug, StructOpt)]
 enum Command {
-    /// Run a benchmark of a given size
-    Size {
+    /// Benchmarks fast-fourier transforms (default)
+    Fft {
+        /// Run a benchmark of a given size
         #[structopt()]
-        log_size: usize,
+        log_size: Option<usize>,
     },
-    /// Run benchmarks of ever larger proof sizes
-    Benchmark {},
+    /// Benchmark transpositions
+    Transpose {
+        /// Run a benchmark of a given size
+        #[structopt()]
+        log_size: Option<usize>,
+    },
 }
 
 #[derive(Debug)]
@@ -106,17 +114,36 @@ impl Allocation {
     }
 }
 
+fn bench_transpose<R: Rng + ?Sized>(
+    rng: &mut R,
+    mmap: bool,
+    log_size: usize,
+) -> Result<Duration, Error> {
+    let size = 1 << log_size;
+    let rows = 1 << (log_size / 2);
+    let cols = size / rows;
+    info!(
+        "Benchmarking Transpose of size 2^{} = {} ⨉ {}",
+        log_size, rows, cols
+    );
+    let mut allocation = Allocation::random(rng, mmap, size);
+    info!("Transposing");
+    let start = Instant::now();
+    transpose_inplace(allocation.as_mut_slice(), cols);
+    let duration = start.elapsed();
+    warn!("Total time {:?}", duration);
+    Ok(duration)
+}
+
 fn bench_fft<R: Rng + ?Sized>(rng: &mut R, mmap: bool, log_size: usize) -> Result<Duration, Error> {
     let size = 1 << log_size;
     info!("Benchmarking FFT of size 2^{} = {}", log_size, size);
-
     let mut allocation = Allocation::random(rng, mmap, size);
     info!("FFT transforming");
     let start = Instant::now();
     fft2_inplace(allocation.as_mut_slice());
     let duration = start.elapsed();
     warn!("Total time {:?}", duration);
-
     Ok(duration)
 }
 
@@ -156,13 +183,24 @@ fn main() -> Result<(), Error> {
 
     // Run command
     match options.command {
-        Size { log_size } => {
-            bench_fft(&mut rng, options.mmap, log_size)?;
+        Transpose { log_size } => {
+            if let Some(log_size) = log_size {
+                bench_transpose(&mut rng, options.mmap, log_size)?;
+            } else {
+                for log_size in 1.. {
+                    let duration = bench_transpose(&mut rng, options.mmap, log_size)?;
+                    println!("{}\t{}", log_size, duration.as_secs_f64());
+                }
+            }
         }
-        Benchmark {} => {
-            for log_size in 1.. {
-                let duration = bench_fft(&mut rng, options.mmap, log_size)?;
-                println!("{}\t{}", log_size, duration.as_secs_f64());
+        Fft { log_size } => {
+            if let Some(log_size) = log_size {
+                bench_fft(&mut rng, options.mmap, log_size)?;
+            } else {
+                for log_size in 1.. {
+                    let duration = bench_fft(&mut rng, options.mmap, log_size)?;
+                    println!("{}\t{}", log_size, duration.as_secs_f64());
+                }
             }
         }
     };
