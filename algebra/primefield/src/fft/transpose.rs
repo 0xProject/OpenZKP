@@ -8,6 +8,9 @@ use std::cmp::min;
 
 // See: <https://cacs.usc.edu/education/cs653/Frigo-CacheOblivious-FOCS99.pdf>
 // See <https://www.csc.lsu.edu/~gb/TCE/Publications/SeqTranspose-TR0352.pdf>
+// See <https://ieeexplore.ieee.org/document/824350>
+
+// <https://devblogs.nvidia.com/efficient-matrix-transpose-cuda-cc/>
 
 // Reference implementation for testing and benchmarking purposes
 #[cfg(any(feature = "test", feature = "bench"))]
@@ -44,8 +47,8 @@ pub fn transpose<T: Clone>(src: &[T], dst: &mut [T], row_size: usize) {
 pub fn transpose_inplace<T: Clone>(matrix: &mut [T], row_size: usize) {
     trace!(
         "Transposing {} ⨉ {} matrix",
-        row_size,
-        matrix.len() / row_size
+        matrix.len() / row_size,
+        row_size
     );
     if matrix.is_empty() || row_size == 1 || row_size == matrix.len() {
         return;
