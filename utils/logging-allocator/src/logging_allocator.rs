@@ -29,7 +29,7 @@ impl LoggingAllocator {
             info:              1_000_000,
             warn:              10_000_000,
             error:             100_000_000,
-            reject:            10_000_000_000,
+            reject:            1_000_000_000_000,
             allocated:         AtomicUsize::new(0),
             peak_allocated:    AtomicUsize::new(0),
             total_allocated:   AtomicUsize::new(0),
