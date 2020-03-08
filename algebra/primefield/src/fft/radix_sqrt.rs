@@ -3,6 +3,7 @@ use super::{
     iterative::fft_permuted_root, transpose::transpose_inplace,
 };
 use crate::{FieldLike, Pow, RefFieldLike};
+use log::trace;
 use rayon::prelude::*;
 use std::cmp::max;
 
@@ -110,6 +111,7 @@ fn parallel_recurse_inplace_inorder<Field, F, G>(
 
     // 2 Apply inner FFTs continguously
     // 3 Apply twiddle factors
+    trace!("Inner FFTs  {} times size {} (with twiddles)", outer, inner);
     values
         .par_chunks_mut(inner)
         .enumerate()
@@ -129,6 +131,7 @@ fn parallel_recurse_inplace_inorder<Field, F, G>(
     transpose_inplace(values, inner);
 
     // 5 Apply outer FFTs contiguously
+    trace!("Outer FFTs  {} times size {}", outer, inner);
     values.par_chunks_mut(outer).for_each(|row| outer_fft(row));
 
     // 6 Transpose back to get results in output order
@@ -162,6 +165,7 @@ fn recurse_inplace_permuted<Field, F, G>(
 
     // 2 Apply inner FFTs continguously
     // 3 Apply twiddle factors
+    trace!("Inner FFTs  {} times size {} (with twiddles)", outer, inner);
     values
         .chunks_exact_mut(inner)
         .enumerate()
@@ -170,6 +174,7 @@ fn recurse_inplace_permuted<Field, F, G>(
             if j > 0 {
                 let outer_twiddle = root.pow(j);
                 for (i, x) in row.iter_mut().enumerate() {
+                    // TODO: Precompute twiddles? At leas avoid the `pow` if we can...
                     let i = permute_index(inner, i);
                     let inner_twiddle = outer_twiddle.pow(i);
                     *x *= inner_twiddle;
@@ -181,6 +186,7 @@ fn recurse_inplace_permuted<Field, F, G>(
     transpose_inplace(values, inner);
 
     // 5 Apply outer FFTs contiguously
+    trace!("Outer FFTs  {} times size {}", outer, inner);
     values
         .chunks_exact_mut(outer)
         .for_each(|row| outer_fft(row));
@@ -213,6 +219,11 @@ fn parallel_recurse_inplace_permuted<Field, F, G>(
 
     // 2 Apply inner FFTs continguously
     // 3 Apply twiddle factors
+    trace!(
+        "Parallel {} ⨉ inner FFT size {} (with twiddles)",
+        outer,
+        inner
+    );
     values
         .par_chunks_mut(inner)
         .enumerate()
@@ -233,6 +244,7 @@ fn parallel_recurse_inplace_permuted<Field, F, G>(
     transpose_inplace(values, inner);
 
     // 5 Apply outer FFTs contiguously
+    trace!("Parallel {} ⨉ outer FFT size {}", outer, inner);
     values.par_chunks_mut(outer).for_each(|row| outer_fft(row));
 }
 

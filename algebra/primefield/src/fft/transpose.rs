@@ -1,3 +1,4 @@
+use log::trace;
 use std::cmp::min;
 
 // TODO: Bitreverse <https://arxiv.org/pdf/1708.01873.pdf>
@@ -6,6 +7,7 @@ use std::cmp::min;
 // https://wgropp.cs.illinois.edu/courses/cs598-s16/lectures/lecture08.pdf
 
 // See: <https://cacs.usc.edu/education/cs653/Frigo-CacheOblivious-FOCS99.pdf>
+// See <https://www.csc.lsu.edu/~gb/TCE/Publications/SeqTranspose-TR0352.pdf>
 
 // Reference implementation for testing and benchmarking purposes
 #[cfg(any(feature = "test", feature = "bench"))]
@@ -38,7 +40,13 @@ pub fn transpose<T: Clone>(src: &[T], dst: &mut [T], row_size: usize) {
 /// In place matrix transpose.
 ///
 /// Uses a temporary copy when `matrix` is not square.
+// OPT: Avoid temporary or use a smaller temporary when in place
 pub fn transpose_inplace<T: Clone>(matrix: &mut [T], row_size: usize) {
+    trace!(
+        "Transposing {} ⨉ {} matrix",
+        row_size,
+        matrix.len() / row_size
+    );
     if matrix.is_empty() || row_size == 1 || row_size == matrix.len() {
         return;
     }
@@ -61,6 +69,7 @@ pub fn transpose_inplace2<T: Clone>(matrix: &mut [T], cols: usize) {
     }
 }
 
+// OPT: Parallel recursion up to some size.
 fn transpose_inplace_rec<T: Sized + Clone>(
     matrix: &mut [T],
     row_size: usize,
