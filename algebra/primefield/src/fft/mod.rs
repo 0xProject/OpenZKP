@@ -11,7 +11,7 @@ pub mod small;
 mod transpose;
 
 use crate::{FieldLike, Inv, Pow, RefFieldLike};
-use bit_reverse::{permute, permute_index};
+pub use bit_reverse::{permute, permute_index};
 pub use depth_first::fft_depth_first;
 pub use iterative::fft_permuted_root;
 use radix_sqrt::radix_sqrt;
