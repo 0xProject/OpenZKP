@@ -1,5 +1,4 @@
 use crate::{FieldLike, RefFieldLike};
-use zkp_u256::SubFromInline;
 
 // OPT: Unchecked slice access
 // OPT: Inplace +- operation like in gcd::mat_mul.
