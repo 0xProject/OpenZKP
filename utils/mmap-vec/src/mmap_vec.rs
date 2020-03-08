@@ -1,6 +1,7 @@
 // This module abstracts low-level `unsafe` behaviour
 #![allow(unsafe_code)]
 use log::*;
+use memadvise::{advise, Advice};
 use memmap::{MmapMut, MmapOptions};
 use std::{
     cmp::max,
@@ -44,6 +45,15 @@ impl<T: Clone> MmapVec<T> {
             length: 0,
             capacity,
             _t: PhantomData,
+        }
+    }
+
+    /// Provide advice to the operating system.
+    pub fn advise(&mut self, advice: Advice) {
+        unsafe {
+            let ptr = self.mmap.as_mut_ptr() as *mut ();
+            // TODO: Handle result
+            advise(ptr, self.mmap.len(), advice);
         }
     }
 
@@ -147,6 +157,9 @@ impl<'a, T: 'a + Clone> Extend<&'a T> for MmapVec<T> {
         }
     }
 }
+
+// TODO: Implement Rayon's ParallelExtend
+// see <https://docs.rs/rayon/1.3.0/rayon/iter/trait.ParallelExtend.html#tymethod.par_extend>
 
 impl<T: Clone> Deref for MmapVec<T> {
     type Target = [T];
