@@ -3,7 +3,7 @@ use log::{info, warn};
 use num_cpus;
 use rand::prelude::*;
 use rand_xoshiro::Xoshiro256PlusPlus;
-use rayon::{current_num_threads, prelude::*, ThreadPoolBuilder};
+use rayon::{current_num_threads, ThreadPoolBuilder};
 use std::{
     iter::repeat_with,
     num::ParseIntError,
@@ -13,7 +13,7 @@ use structopt::StructOpt;
 use zkp_logging_allocator::ALLOCATOR;
 use zkp_mmap_vec::MmapVec;
 use zkp_primefield::{
-    fft::{fft2_inplace, transpose_inplace},
+    fft::{fft2_inplace, permute, transpose_inplace},
     FieldElement,
 };
 
@@ -35,33 +35,19 @@ struct Options {
     #[structopt(long, parse(try_from_str = parse_hex))]
     seed: Option<u32>,
 
-    /// Use heap allocations instead of memory-mapped files
-    // TODO: Xor with --mmap
-    #[structopt(long)]
-    heap: bool,
+    /// Allocation strategy to use (defaults to mmap)
+    /// Valid options are: heap, mmap
+    #[structopt(long, default_value = "mmap")]
+    allocation: String,
 
-    /// Use memory-mapped files instead of heap allocations (default)
-    #[structopt(long)]
-    mmap: bool,
+    /// Operation to benchmark (defaults to fft)
+    /// Valid options are: fft, transpose, permute
+    #[structopt(default_value = "fft")]
+    operation: String,
 
-    #[structopt(subcommand)]
-    command: Command,
-}
-
-#[derive(Debug, StructOpt)]
-enum Command {
-    /// Benchmarks fast-fourier transforms (default)
-    Fft {
-        /// Run a benchmark of a given size
-        #[structopt()]
-        log_size: Option<usize>,
-    },
-    /// Benchmark transpositions
-    Transpose {
-        /// Run a benchmark of a given size
-        #[structopt()]
-        log_size: Option<usize>,
-    },
+    /// Run a benchmark of a given size
+    #[structopt()]
+    log_size: Option<usize>,
 }
 
 #[derive(Debug)]
@@ -88,21 +74,25 @@ enum Allocation {
 }
 
 impl Allocation {
-    fn random<R: Rng + ?Sized>(rng: &mut R, mmap: bool, size: usize) -> Allocation {
-        if mmap {
-            info!("Memore mapping size {} ", size);
-            let mut vec = MmapVec::<FieldElement>::with_capacity(size);
-            info!("Filling with random numbers");
-            vec.extend(repeat_with(|| rng.gen::<FieldElement>()).take(size));
-            assert_eq!(vec.len(), size);
-            Allocation::Mmap(vec)
-        } else {
-            info!("Allocating size {} on heap", size);
-            let mut vec = Vec::<FieldElement>::with_capacity(size);
-            info!("Filling with random numbers");
-            vec.extend(repeat_with(|| rng.gen::<FieldElement>()).take(size));
-            assert_eq!(vec.len(), size);
-            Allocation::Heap(vec)
+    fn random<R: Rng + ?Sized>(rng: &mut R, allocation: &str, size: usize) -> Allocation {
+        match allocation {
+            "heap" => {
+                info!("Allocating size {} on heap", size);
+                let mut vec = Vec::<FieldElement>::with_capacity(size);
+                info!("Filling with random numbers");
+                vec.extend(repeat_with(|| rng.gen::<FieldElement>()).take(size));
+                assert_eq!(vec.len(), size);
+                Allocation::Heap(vec)
+            }
+            "mmap" => {
+                info!("Memore mapping size {} ", size);
+                let mut vec = MmapVec::<FieldElement>::with_capacity(size);
+                info!("Filling with random numbers");
+                vec.extend(repeat_with(|| rng.gen::<FieldElement>()).take(size));
+                assert_eq!(vec.len(), size);
+                Allocation::Mmap(vec)
+            }
+            _ => unimplemented!(),
         }
     }
 
@@ -114,41 +104,25 @@ impl Allocation {
     }
 }
 
-fn bench_transpose<R: Rng + ?Sized>(
+fn bench<R: Rng + ?Sized>(
     rng: &mut R,
-    mmap: bool,
+    allocation: &str,
     log_size: usize,
+    name: &str,
+    func: &mut Box<dyn FnMut(&mut [FieldElement])>,
 ) -> Result<Duration, Error> {
     let size = 1 << log_size;
-    let rows = 1 << (log_size / 2);
-    let cols = size / rows;
-    info!(
-        "Benchmarking Transpose of size 2^{} = {} ⨉ {}",
-        log_size, rows, cols
-    );
-    let mut allocation = Allocation::random(rng, mmap, size);
-    info!("Transposing");
+    info!("Benchmarking {} size 2^{} = {}", name, log_size, size);
+    let mut allocation = Allocation::random(rng, allocation, size);
+    info!("{}-ing", name);
     let start = Instant::now();
-    transpose_inplace(allocation.as_mut_slice(), cols);
-    let duration = start.elapsed();
-    warn!("Total time {:?}", duration);
-    Ok(duration)
-}
-
-fn bench_fft<R: Rng + ?Sized>(rng: &mut R, mmap: bool, log_size: usize) -> Result<Duration, Error> {
-    let size = 1 << log_size;
-    info!("Benchmarking FFT of size 2^{} = {}", log_size, size);
-    let mut allocation = Allocation::random(rng, mmap, size);
-    info!("FFT transforming");
-    let start = Instant::now();
-    fft2_inplace(allocation.as_mut_slice());
+    func(allocation.as_mut_slice());
     let duration = start.elapsed();
     warn!("Total time {:?}", duration);
     Ok(duration)
 }
 
 fn main() -> Result<(), Error> {
-    use Command::*;
     let options = Options::from_args();
 
     // Initialize log output
@@ -181,32 +155,35 @@ fn main() -> Result<(), Error> {
     info!("Using random seed {:x}", seed);
     let mut rng = Xoshiro256PlusPlus::seed_from_u64(seed.into());
 
-    // Run command
-    match options.command {
-        Transpose { log_size } => {
-            if let Some(log_size) = log_size {
-                bench_transpose(&mut rng, options.mmap, log_size)?;
-            } else {
-                for log_size in 1.. {
-                    let duration = bench_transpose(&mut rng, options.mmap, log_size)?;
-                    println!("{}\t{}", log_size, duration.as_secs_f64());
-                }
-            }
+    // Get function to benchmark
+    let name = &options.operation;
+    let mut func: Box<dyn FnMut(&mut [FieldElement])> = match name.as_ref() {
+        "fft" => Box::new(fft2_inplace),
+        "permute" => Box::new(permute),
+        "transpose" => {
+            Box::new(|values: &mut [FieldElement]| {
+                let length = values.len();
+                let rows = 1_usize << (length.trailing_zeros() / 2);
+                let cols = length / rows;
+                transpose_inplace(values, cols)
+            })
         }
-        Fft { log_size } => {
-            if let Some(log_size) = log_size {
-                bench_fft(&mut rng, options.mmap, log_size)?;
-            } else {
-                for log_size in 1.. {
-                    let duration = bench_fft(&mut rng, options.mmap, log_size)?;
-                    println!("{}\t{}", log_size, duration.as_secs_f64());
-                }
-            }
-        }
+        _ => unimplemented!(),
     };
 
-    // Log allocator stats
-    ALLOCATOR.log_statistics();
+    // Run benchmark
+    if let Some(log_size) = options.log_size {
+        bench(&mut rng, &options.allocation, log_size, name, &mut func)?;
+        // Log allocator stats
+        ALLOCATOR.log_statistics();
+    } else {
+        for log_size in 1.. {
+            let duration = bench(&mut rng, &options.allocation, log_size, name, &mut func)?;
+            // Log allocator stats
+            ALLOCATOR.log_statistics();
+            println!("{}\t{}", log_size, duration.as_secs_f64());
+        }
+    }
 
     Ok(())
 }
