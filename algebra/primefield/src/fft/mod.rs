@@ -151,6 +151,7 @@ where
 // See https://en.wikipedia.org/wiki/Split-radix_FFT_algorithm
 // See http://www.fftw.org/newsplit.pdf
 
+#[cfg(feature = "std")]
 pub fn fft2<Field>(values: &[Field]) -> Vec<Field>
 where
     Field: FieldLike + std::fmt::Debug + From<usize> + Send + Sync,
