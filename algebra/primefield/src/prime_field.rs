@@ -103,7 +103,7 @@ impl<P: Parameters> PrimeField<P> {
 
     #[inline(always)]
     pub fn as_montgomery(&self) -> &P::UInt {
-        debug_assert!(&self.uint < &Self::modulus());
+        debug_assert!(self.uint < Self::modulus());
         &self.uint
     }
 
@@ -113,7 +113,7 @@ impl<P: Parameters> PrimeField<P> {
     // TODO: Make `const fn` after <https://github.com/rust-lang/rust/issues/57563>
     #[inline(always)]
     pub fn from_montgomery(uint: P::UInt) -> Self {
-        debug_assert!(&uint < &Self::modulus());
+        debug_assert!(uint < Self::modulus());
         // TODO: Uncomment assertion when support in `const fn` is enabled.
         // See https://github.com/rust-lang/rust/issues/57563
         // debug_assert!(n < Self::MODULUS);
@@ -132,7 +132,7 @@ impl<P: Parameters> PrimeField<P> {
     /// Convert to `UInt`.
     #[inline(always)] // Simple wrapper for `from_montgomery`
     pub fn to_uint(&self) -> P::UInt {
-        debug_assert!(&self.uint < &Self::modulus());
+        debug_assert!(self.uint < Self::modulus());
         P::UInt::from_montgomery::<Montgomery<P>>(self.as_montgomery())
     }
 
@@ -235,7 +235,7 @@ impl<P: Parameters> AddInline<&Self> for PrimeField<P> {
         if result >= Self::modulus() {
             result.sub_assign_inline(&Self::modulus());
         }
-        debug_assert!(&result < &Self::modulus());
+        debug_assert!(result < Self::modulus());
         Self::from_montgomery(result)
     }
 }

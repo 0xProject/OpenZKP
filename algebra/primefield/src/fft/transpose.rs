@@ -32,7 +32,7 @@ pub fn reference<T: Clone>(src: &[T], dst: &mut [T], row_size: usize) {
 
 pub fn transpose<T: Clone>(src: &[T], dst: &mut [T], row_size: usize) {
     assert_eq!(src.len(), dst.len());
-    if src.len() == 0 || row_size == 0 {
+    if src.is_empty() || row_size == 0 {
         return;
     }
     assert_eq!(src.len() % row_size, 0);
@@ -46,7 +46,7 @@ pub fn transpose<T: Clone>(src: &[T], dst: &mut [T], row_size: usize) {
 // OPT: Avoid temporary or use a smaller temporary when in place
 pub fn transpose_inplace<T: Clone>(matrix: &mut [T], row_size: usize) {
     trace!(
-        "Transposing {} ⨉ {} matrix",
+        "Transposing {} x {} matrix",
         matrix.len() / row_size,
         row_size
     );
@@ -60,15 +60,6 @@ pub fn transpose_inplace<T: Clone>(matrix: &mut [T], row_size: usize) {
         // TODO: Figure out cache-oblivious in-place algorithm
         let temp = matrix.to_vec();
         transpose(&temp, matrix, row_size);
-    }
-}
-
-pub fn transpose_inplace2<T: Clone>(matrix: &mut [T], cols: usize) {
-    let rows = matrix.len() / cols;
-    assert!(rows == 2 * cols);
-    for submatrix in matrix.chunks_exact_mut(cols * cols) {
-        println!("{}", submatrix.len());
-        transpose_inplace(submatrix, cols);
     }
 }
 
@@ -238,7 +229,7 @@ mod tests {
         for row in matrix.chunks(cols) {
             println!("{:?}", row);
         }
-        println!("");
+        println!();
     }
 
     #[test]

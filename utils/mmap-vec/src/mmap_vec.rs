@@ -50,11 +50,8 @@ impl<T: Clone> MmapVec<T> {
 
     /// Provide advice to the operating system.
     pub fn advise(&mut self, advice: Advice) {
-        unsafe {
-            let ptr = self.mmap.as_mut_ptr() as *mut ();
-            // TODO: Handle result
-            advise(ptr, self.mmap.len(), advice);
-        }
+        let ptr = self.mmap.as_mut_ptr() as *mut ();
+        advise(ptr, self.mmap.len(), advice).unwrap_or_else(|_| panic!("madvise failed"));
     }
 
     /// # Safety
