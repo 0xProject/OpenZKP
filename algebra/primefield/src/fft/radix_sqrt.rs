@@ -123,8 +123,8 @@ mod tests {
                 &root,
                 outer,
                 inner,
-                ref_fft_inplace,
-                ref_fft_inplace,
+                ref_fft_permuted,
+                ref_fft_permuted,
             );
             prop_assert_eq!(result, expected);
         }
