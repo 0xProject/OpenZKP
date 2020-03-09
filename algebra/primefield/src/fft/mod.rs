@@ -2,39 +2,52 @@
 #![allow(clippy::module_name_repetitions)]
 // Many false positives from trait bounds
 #![allow(single_use_lifetimes)]
+
+mod bit_reverse;
+mod depth_first;
+mod iterative;
+pub mod small;
+mod transpose;
+
+// TODO: Make no-std compatible
+#[cfg(feature = "std")]
+mod radix_sqrt;
+
 use crate::{FieldLike, Inv, Pow, RefFieldLike};
+pub use bit_reverse::{permute, permute_index};
+pub use depth_first::fft_depth_first;
+pub use iterative::fft_permuted_root;
 use std::prelude::v1::*;
+pub use transpose::{transpose, transpose_inplace};
+
+#[cfg(feature = "std")]
+use radix_sqrt::radix_sqrt;
+
+/// 
+/// * D. H. Bailey (1990). FFTs in external or hierarchical memory. <https://www.davidhbailey.com/dhbpapers/fftq.pdf>
+/// * W. M. Gentleman & G. Sande (1966). Fast Fourier Transforms: for fun and
+///   profit. <https://doi.org/10.1145/1464291.1464352> <http://cis.rit.edu/class/simg716/FFT_Fun_Profit.pdf>
+/// * M. Frigo, C.E. Leiserson, H. Prokop & S. Ramachandran (1999).
+///   Cache-oblivious algorithms. <http://supertech.csail.mit.edu/papers/FrigoLePr99.pdf>
+/// * S. Johnson, M. Frigo (2005). The Design and Implementation of FFTW3. <http://www.fftw.org/fftw-paper-ieee.pdf>
+/// * S. Johnson, M. Frigo (2012). Implementing FFTs in Practice. <https://cnx.org/contents/ulXtQbN7@15/Implementing-FFTs-in-Practice>
+///   <https://www.csd.uwo.ca/~moreno/CS433-CS9624/Resources/Implementing_FFTs_in_Practice.pdf>
+///
+/// <https://doi.org/10.1007/978-981-13-9965-7_6>
+/// <https://eprint.iacr.org/2016/504.pdf>
+
+// OPT: Implement parallel strategies: https://inf.ethz.ch/personal/markusp/teaching/263-2300-ETH-spring12/slides/class19.pdf
+
+// TODO: Implement "A modified split-radix FFT with fewer arithmetic operations"
+// See http://www.fftw.org/newsplit.pdf
+
+// TODO: Winograd FFT? https://pdfs.semanticscholar.org/cdfc/fed48f6f7e26a2986df8890f3f67087336d5.pdf
+
+/// <https://www.csd.uwo.ca/~moreno/CS433-CS9624/Resources/Implementing_FFTs_in_Practice.pdf>
+
+// https://ocw.mit.edu/courses/electrical-engineering-and-computer-science/6-973-communication-system-design-spring-2006/lecture-notes/lecture_8.pdf
 
 // TODO: Create a dedicated type for permuted vectors
-
-/// Permute index for an FFT of `size`
-///
-/// The permutation is it's own inverse. The permutation is currently
-/// a 'bit-reversal' one, where each index has its binary representation
-/// reversed.
-pub fn permute_index(size: usize, index: usize) -> usize {
-    const USIZE_BITS: usize = 0_usize.count_zeros() as usize;
-    debug_assert!(index < size);
-    if size == 1 {
-        0
-    } else {
-        debug_assert!(size.is_power_of_two());
-        let bits = size.trailing_zeros() as usize;
-        index.reverse_bits() >> (USIZE_BITS - bits)
-    }
-}
-
-/// Permute an array of FFT results.
-// TODO expose public ifft function which accepts bit-reversed input instead.
-pub fn permute<T>(v: &mut [T]) {
-    let n = v.len();
-    for i in 0..n {
-        let j = permute_index(n, i);
-        if j > i {
-            v.swap(i, j);
-        }
-    }
-}
 
 /// Out-of-place FFT with non-permuted result.
 pub fn fft<Field>(a: &[Field]) -> Vec<Field>
@@ -120,10 +133,17 @@ where
     }
 }
 
-// TODO: Cache-oblivious FFT
-// See https://www.csd.uwo.ca/~moreno/CS433-CS9624/Resources/Implementing_FFTs_in_Practice.pdf
-// My `sysctl hw` cache sizes: 32kiB, 256kiB, 8MiB, or 1k, 8k, 256k
-// FieldElements.
+pub fn get_twiddles<Field>(size: usize) -> Vec<Field>
+where
+    Field: FieldLike + From<usize> + std::fmt::Debug,
+    for<'a> &'a Field: RefFieldLike<Field>,
+{
+    debug_assert!(size.is_power_of_two());
+    let root = Field::root(size).expect("No root exists");
+    let mut twiddles = (0..size / 2).map(|i| root.pow(i)).collect::<Vec<_>>();
+    permute(&mut twiddles);
+    twiddles
+}
 
 // TODO: https://cnx.org/contents/4kChocHM@6/Efficient-FFT-Algorithm-and-Programming-Tricks
 
@@ -131,34 +151,43 @@ where
 // See https://en.wikipedia.org/wiki/Split-radix_FFT_algorithm
 // See http://www.fftw.org/newsplit.pdf
 
-fn fft_permuted_root<Field>(root: &Field, coefficients: &mut [Field])
+#[cfg(feature = "std")]
+pub fn fft2<Field>(values: &[Field]) -> Vec<Field>
+where
+    Field: FieldLike + std::fmt::Debug + From<usize> + Send + Sync,
+    for<'a> &'a Field: RefFieldLike<Field>,
+{
+    assert!(values.len().is_power_of_two());
+    let root = Field::root(values.len()).expect("No root of unity for input length");
+    let mut result = values.to_vec();
+    radix_sqrt(&mut result, &root);
+    // permute(&mut result);
+    result
+}
+
+#[cfg(feature = "std")]
+pub fn fft2_inplace<Field>(values: &mut [Field])
+where
+    Field: FieldLike + std::fmt::Debug + From<usize> + Send + Sync,
+    for<'a> &'a Field: RefFieldLike<Field>,
+{
+    assert!(values.len().is_power_of_two());
+    let root = Field::root(values.len()).expect("No root of unity for input length");
+    radix_sqrt(values, &root);
+}
+
+/// Transforms (x0, x1) to (x0 + x1, x0 - x1)
+#[inline(always)]
+pub fn radix_2_simple<Field>(x0: &mut Field, x1: &mut Field)
 where
     Field: FieldLike + std::fmt::Debug,
     for<'a> &'a Field: RefFieldLike<Field>,
 {
-    let n_elements = coefficients.len();
-    debug_assert!(n_elements.is_power_of_two());
-    debug_assert_eq!(root.pow(n_elements), Field::one());
-    for layer in 0..n_elements.trailing_zeros() {
-        let n_blocks = 1_usize << layer;
-        let mut twiddle_factor = Field::one();
-        // OPT: In place combined update like gcd::mat_mul.
-        let block_size = n_elements >> (layer + 1);
-        let twiddle_factor_update = root.pow(block_size);
-        for block in 0..n_blocks {
-            // TODO: Do without casts.
-            debug_assert!(block < n_blocks);
-            let block_start = 2 * permute_index(n_blocks, block) * block_size;
-            for i in block_start..block_start + block_size {
-                let j = i + block_size;
-                let left = coefficients[i].clone();
-                let right = &coefficients[j] * &twiddle_factor;
-                coefficients[i] = &left + &right;
-                coefficients[j] = left - right;
-            }
-            twiddle_factor *= &twiddle_factor_update;
-        }
-    }
+    let t = x0.clone();
+    *x0 += &*x1;
+    // OPT: sub_from_assign
+    *x1 -= t;
+    x1.neg_assign();
 }
 
 // Quickcheck needs pass by value
@@ -169,15 +198,34 @@ where
 mod tests {
     use super::*;
     use crate::{FieldElement, One, Root, Zero};
+    use proptest::prelude::*;
     use quickcheck_macros::quickcheck;
     use zkp_macros_decl::u256h;
     use zkp_u256::U256;
 
+    pub(super) fn arb_elem() -> impl Strategy<Value = FieldElement> {
+        (any::<u64>(), any::<u64>(), any::<u64>(), any::<u64>())
+            .prop_map(move |(a, b, c, d)| FieldElement::from(U256::from_limbs([a, b, c, d])))
+    }
+
+    // Generate a power-of-two size
+    pub(super) fn arb_vec_size(size: usize) -> impl Strategy<Value = Vec<FieldElement>> {
+        prop::collection::vec(arb_elem(), size)
+    }
+
+    // Generate a power-of-two size
+    pub(super) fn arb_vec() -> impl Strategy<Value = Vec<FieldElement>> {
+        (0_usize..=9).prop_flat_map(|size| arb_vec_size(1_usize << size))
+    }
+
     // O(n^2) reference implementation evaluating
     //     x_i' = Sum_j x_j * omega_n^(ij)
     // directly using Horner's method.
-    fn reference_fft(x: &[FieldElement]) -> Vec<FieldElement> {
-        let root = FieldElement::root(x.len()).unwrap();
+    fn reference_fft(x: &[FieldElement], inverse: bool) -> Vec<FieldElement> {
+        let mut root = FieldElement::root(x.len()).unwrap();
+        if inverse {
+            root = root.inv().expect("Root should be invertible.");
+        }
         let mut result = Vec::with_capacity(x.len());
         let mut root_i = FieldElement::one();
         for _ in 0..x.len() {
@@ -190,69 +238,45 @@ mod tests {
             result.push(sum);
             root_i *= &root;
         }
+        if inverse {
+            if let Some(inverse_length) = FieldElement::from(x.len()).inv() {
+                for x in &mut result {
+                    *x *= &inverse_length;
+                }
+            }
+        }
         result
     }
 
-    #[test]
-    fn test_permute() {
-        assert_eq!(permute_index(4, 0), 0);
-        assert_eq!(permute_index(4, 1), 2);
-        assert_eq!(permute_index(4, 2), 1);
-        assert_eq!(permute_index(4, 3), 3);
+    #[allow(dead_code)]
+    pub(super) fn ref_fft_inplace(values: &mut [FieldElement]) {
+        let result = reference_fft(values, false);
+        values.clone_from_slice(&result);
     }
 
-    #[quickcheck]
-    fn check_permute(size: usize, index: usize) {
-        let size = size.next_power_of_two();
-        let index = index % size;
-        let permuted = permute_index(size, index);
-        assert!(permuted < size);
-        assert_eq!(permute_index(size, permuted), index);
+    pub(super) fn ref_fft_permuted(values: &mut [FieldElement]) {
+        let result = reference_fft(values, false);
+        values.clone_from_slice(&result);
+        permute(values);
     }
 
-    // TODO
-    // #[test]
-    // fn fft_one_element_test() {
-    // let v = vec![FieldElement::from_hex_str("435767")];
-    // assert_eq!(fft(&v), v);
-    // }
-    //
-    // #[test]
-    // fn fft_two_element_test() {
-    // let a = FieldElement::from_hex_str("435767");
-    // let b = FieldElement::from_hex_str("123430");
-    // let v = vec![a.clone(), b.clone()];
-    // assert_eq!(fft(&v), vec![&a + &b, &a - &b]);
-    // }
-    //
-    // #[test]
-    // fn fft_four_element_test() {
-    // let v = vec![
-    // FieldElement::from_hex_str("4357670"),
-    // FieldElement::from_hex_str("1353542"),
-    // FieldElement::from_hex_str("3123423"),
-    // FieldElement::from_hex_str("9986432"),
-    // ];
-    // assert_eq!(fft(&v), reference_fft(&v));
-    // }
-    //
-    // #[test]
-    // fn fft_eight_element_test() {
-    // let v = vec![
-    // FieldElement::from_hex_str("4357670"),
-    // FieldElement::from_hex_str("1353542"),
-    // FieldElement::from_hex_str("3123423"),
-    // FieldElement::from_hex_str("9986432"),
-    // FieldElement::from_hex_str("43576702"),
-    // FieldElement::from_hex_str("23452346"),
-    // FieldElement::from_hex_str("31234230"),
-    // FieldElement::from_hex_str("99864321"),
-    // ];
-    // let expected = reference_fft(&v);
-    // assert_eq!(fft(&v), expected);
-    // }
-    //
+    proptest! {
 
+        #[test]
+        fn fft_ref_inv(orig in arb_vec()) {
+            let f = reference_fft(&orig, false);
+            let f2 = reference_fft(&f, true);
+            prop_assert_eq!(f2, orig);
+        }
+
+        #[test]
+        fn fft2_ref(values in arb_vec()) {
+            let mut expect = values.clone();
+            ref_fft_permuted(&mut expect);
+            let result = fft2(&values);
+            prop_assert_eq!(result, expect);
+        }
+    }
     #[test]
     fn fft_test() {
         let cofactor = FieldElement::from(u256h!(
@@ -286,7 +310,7 @@ mod tests {
         ];
 
         let res = fft(&vector);
-        let expected = reference_fft(&vector);
+        let expected = reference_fft(&vector, false);
         assert_eq!(res, expected);
 
         assert_eq!(
