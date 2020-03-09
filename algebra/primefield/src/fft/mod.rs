@@ -6,6 +6,7 @@
 mod bit_reverse;
 mod depth_first;
 mod iterative;
+mod recursive;
 pub mod small;
 mod transpose;
 
