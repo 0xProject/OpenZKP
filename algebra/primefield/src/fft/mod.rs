@@ -17,9 +17,11 @@ use crate::{FieldLike, Inv, Pow, RefFieldLike};
 pub use bit_reverse::{permute, permute_index};
 pub use depth_first::fft_depth_first;
 pub use iterative::fft_permuted_root;
-use radix_sqrt::radix_sqrt;
 use std::prelude::v1::*;
 pub use transpose::{transpose, transpose_inplace};
+
+#[cfg(feature = "std")]
+use radix_sqrt::radix_sqrt;
 
 /// 
 /// * D. H. Bailey (1990). FFTs in external or hierarchical memory. <https://www.davidhbailey.com/dhbpapers/fftq.pdf>
