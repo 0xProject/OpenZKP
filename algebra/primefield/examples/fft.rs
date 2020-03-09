@@ -3,6 +3,7 @@ use log::{info, warn};
 use num_cpus;
 use rand::prelude::*;
 use rand_xoshiro::Xoshiro256PlusPlus;
+use raw_cpuid::{CacheType, CpuId};
 use rayon::{current_num_threads, ThreadPoolBuilder};
 use std::{
     iter::repeat_with,
@@ -122,6 +123,65 @@ fn bench<R: Rng + ?Sized>(
     Ok(duration)
 }
 
+// TODO: Log topology and frequency, see raw-cpuid examples.
+// TODO: Log ram size, page size, disk type
+fn log_sys() {
+    let cpuid = CpuId::new();
+    info!(
+        "CPU Model is: {}",
+        cpuid.get_extended_function_info().as_ref().map_or_else(
+            || "n/a",
+            |extfuninfo| extfuninfo.processor_brand_string().unwrap_or("unreadable"),
+        )
+    );
+    cpuid.get_cache_parameters().map_or_else(
+        || info!("No cache parameter information available"),
+        |cparams| {
+            for cache in cparams {
+                let size = cache.associativity()
+                    * cache.physical_line_partitions()
+                    * cache.coherency_line_size()
+                    * cache.sets();
+
+                let typ = match cache.cache_type() {
+                    CacheType::Data => "Instruction-Cache",
+                    CacheType::Instruction => "Data-Cache",
+                    CacheType::Unified => "Unified-Cache",
+                    _ => "Unknown cache type",
+                };
+
+                let associativity = if cache.is_fully_associative() {
+                    format!("fully associative")
+                } else {
+                    format!("{}-way associativity", cache.associativity())
+                };
+
+                let size_repr = if size > 1024 * 1024 {
+                    format!("{} MiB", size / (1024 * 1024))
+                } else {
+                    format!("{} KiB", size / 1024)
+                };
+
+                let mapping = if cache.has_complex_indexing() {
+                    "hash-based-mapping"
+                } else {
+                    "direct-mapped"
+                };
+
+                info!(
+                    "Cache L{} {}: ({}, {} B block, {}, {})",
+                    cache.level(),
+                    typ,
+                    size_repr,
+                    cache.coherency_line_size(),
+                    associativity,
+                    mapping,
+                );
+            }
+        },
+    );
+}
+
 fn main() -> Result<(), Error> {
     let options = Options::from_args();
 
@@ -137,6 +197,9 @@ fn main() -> Result<(), Error> {
         });
     }
     env_logger::init();
+
+    // Log system info
+    log_sys();
 
     // Configure thread pool
     if let Some(threads) = options.threads {
@@ -173,9 +236,10 @@ fn main() -> Result<(), Error> {
 
     // Run benchmark
     if let Some(log_size) = options.log_size {
-        bench(&mut rng, &options.allocation, log_size, name, &mut func)?;
+        let duration = bench(&mut rng, &options.allocation, log_size, name, &mut func)?;
         // Log allocator stats
         ALLOCATOR.log_statistics();
+        println!("{}\t{}", log_size, duration.as_secs_f64());
     } else {
         for log_size in 1.. {
             let duration = bench(&mut rng, &options.allocation, log_size, name, &mut func)?;
