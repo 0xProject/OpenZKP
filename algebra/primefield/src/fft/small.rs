@@ -72,17 +72,14 @@ mod tests {
         },
         *,
     };
-    use crate::{traits::Root, FieldElement};
     use proptest::prelude::*;
-    use zkp_macros_decl::field_element;
-    use zkp_u256::U256;
 
     proptest! {
         #[test]
         fn test_radix_2(values in arb_vec_size(2)) {
             let mut expected = values.clone();
             ref_fft_permuted(&mut expected);
-            let mut result =  values.clone();
+            let mut result =  values;
             radix_2(&mut result, 0, 1);
             prop_assert_eq!(result, expected);
         }
@@ -91,7 +88,7 @@ mod tests {
         fn test_radix_4(values in arb_vec_size(4)) {
             let mut expected = values.clone();
             ref_fft_permuted(&mut expected);
-            let mut result =  values.clone();
+            let mut result =  values;
             radix_4(&mut result, &get_twiddles(4), 0, 1);
             prop_assert_eq!(result, expected);
         }
@@ -100,7 +97,7 @@ mod tests {
         fn test_radix_8(values in arb_vec_size(8)) {
             let mut expected = values.clone();
             ref_fft_permuted(&mut expected);
-            let mut result =  values.clone();
+            let mut result =  values;
 
             radix_8(&mut result, &get_twiddles(8), 0, 1);
             prop_assert_eq!(result, expected);

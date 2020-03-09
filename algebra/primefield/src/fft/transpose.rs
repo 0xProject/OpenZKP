@@ -13,10 +13,12 @@ use std::cmp::min;
 // <https://devblogs.nvidia.com/efficient-matrix-transpose-cuda-cc/>
 
 // Reference implementation for testing and benchmarking purposes
+// TODO: Remove
+#[allow(unreachable_pub, dead_code)]
 #[cfg(any(feature = "test", feature = "bench"))]
 pub fn reference<T: Clone>(src: &[T], dst: &mut [T], row_size: usize) {
     assert_eq!(src.len(), dst.len());
-    if src.len() == 0 || row_size == 0 {
+    if src.is_empty() || row_size == 0 {
         return;
     }
     debug_assert_eq!(src.len() % row_size, 0);
@@ -176,6 +178,8 @@ mod tests {
     use proptest::prelude::*;
 
     /// Generate arbitrary u32 matrices
+    // Numbers involved are always small enough
+    #[allow(clippy::cast_possible_truncation)]
     fn arb_matrix_sized(rows: usize, cols: usize) -> impl Strategy<Value = (Vec<u32>, usize)> {
         (
             Just((0..rows * cols).map(|i| i as u32).collect()),
@@ -223,31 +227,5 @@ mod tests {
             transpose_inplace(&mut result, row_size);
             prop_assert_eq!(result, expected);
         }
-    }
-
-    fn print<T: std::fmt::Debug>(matrix: &[T], cols: usize) {
-        for row in matrix.chunks(cols) {
-            println!("{:?}", row);
-        }
-        println!();
-    }
-
-    #[test]
-    #[ignore]
-    fn test_2nn_algo() {
-        let rows = 16;
-        let cols = rows / 2;
-        let original = (0..rows * cols).collect::<Vec<_>>();
-        print(&original, cols);
-
-        let mut expected = original.clone();
-        transpose_inplace(&mut expected, cols);
-        print(&expected, rows);
-
-        let mut result = original.clone();
-        transpose_inplace2(&mut result, cols);
-        print(&result, rows);
-
-        assert_eq!(result, expected);
     }
 }

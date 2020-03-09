@@ -63,7 +63,7 @@ mod tests {
         #[test]
         fn fft_df_ref(orig in arb_vec()) {
             let mut reference = orig.clone();
-            let mut result = orig.clone();
+            let mut result = orig;
             ref_fft_permuted(&mut reference);
             fft_depth_first(&mut result);
             prop_assert_eq!(result, reference);

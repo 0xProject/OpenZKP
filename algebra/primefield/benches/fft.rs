@@ -11,8 +11,8 @@ use zkp_primefield::{
     FieldElement, Root,
 };
 
-const SMALL: [usize; 7] = [4, 16, 64, 256, 1024, 4096, 16384];
-const LARGE: [usize; 4] = [1048576, 4194304, 8388608, 16777216];
+const SMALL: [usize; 7] = [4, 16, 64, 256, 1024, 4_096, 16_384];
+const LARGE: [usize; 4] = [1_048_576, 4_194_304, 8_388_608, 16_777_216];
 
 fn fft_base(crit: &mut Criterion) {
     let mut group = crit.benchmark_group("FFT base");
@@ -94,7 +94,7 @@ fn fft_large(crit: &mut Criterion) {
 }
 
 fn fft_threads(crit: &mut Criterion) {
-    const SIZE: usize = 4194304;
+    const SIZE: usize = 4_194_304;
     log_thread_bench(crit, "FFT threads", SIZE, move |bench| {
         let mut values: Vec<_> = (0..SIZE).map(FieldElement::from).collect();
         bench.iter(|| fft2_inplace(&mut values))

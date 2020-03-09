@@ -110,7 +110,7 @@ fn bench<R: Rng + ?Sized>(
     allocation: &str,
     log_size: usize,
     name: &str,
-    func: &mut Box<dyn FnMut(&mut [FieldElement])>,
+    func: &mut dyn FnMut(&mut [FieldElement]),
 ) -> Result<Duration, Error> {
     let size = 1 << log_size;
     info!("Benchmarking {} size 2^{} = {}", name, log_size, size);
@@ -151,7 +151,7 @@ fn log_sys() {
                 };
 
                 let associativity = if cache.is_fully_associative() {
-                    format!("fully associative")
+                    "fully associative".to_string()
                 } else {
                     format!("{}-way associativity", cache.associativity())
                 };

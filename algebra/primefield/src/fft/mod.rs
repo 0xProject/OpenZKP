@@ -193,8 +193,7 @@ mod tests {
     use crate::{FieldElement, One, Root, Zero};
     use proptest::prelude::*;
     use quickcheck_macros::quickcheck;
-    use std::cmp::{max, min};
-    use zkp_macros_decl::{field_element, u256h};
+    use zkp_macros_decl::u256h;
     use zkp_u256::U256;
 
     pub(super) fn arb_elem() -> impl Strategy<Value = FieldElement> {

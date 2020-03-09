@@ -8,7 +8,7 @@ use zkp_primefield::{
     FieldElement,
 };
 
-const SIZES: [usize; 4] = [16384, 262144, 4194304, 16777216];
+const SIZES: [usize; 4] = [16_384, 262_144, 4_194_304, 16_777_216];
 
 fn bench_permute_index(crit: &mut Criterion) {
     crit.bench_function("Permute index", move |bench| {

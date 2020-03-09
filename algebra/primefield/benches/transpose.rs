@@ -6,8 +6,8 @@ use zkp_primefield::{
     FieldElement,
 };
 
-const SIZES: [usize; 4] = [16384, 262144, 4194304, 16777216];
-const N2N: [usize; 4] = [131072, 524288, 2097152, 8388608];
+const SIZES: [usize; 4] = [16_384, 262_144, 4_194_304, 16_777_216];
+const N2N: [usize; 4] = [131_072, 524_288, 2_097_152, 8_388_608];
 
 fn bench_square(crit: &mut Criterion) {
     log_size_bench(
@@ -53,7 +53,7 @@ fn bench_square_inplace(crit: &mut Criterion) {
             let cols = 1_usize << (log2 / 2);
             assert_eq!(rows * cols, size);
             let src: Vec<_> = (0..rows * cols).map(FieldElement::from).collect();
-            let mut dst = src.clone();
+            let mut dst = src;
             bench.iter(|| transpose_inplace(&mut dst, cols))
         },
     );
@@ -70,7 +70,7 @@ fn bench_rectangle_inplace(crit: &mut Criterion) {
             let cols = 2_usize << (log2 / 2);
             assert_eq!(rows * cols, size);
             let src: Vec<_> = (0..rows * cols).map(FieldElement::from).collect();
-            let mut dst = src.clone();
+            let mut dst = src;
             bench.iter(|| transpose_inplace(&mut dst, cols))
         },
     );
@@ -87,7 +87,7 @@ fn bench_rectangle2_inplace(crit: &mut Criterion) {
             let cols = 1_usize << (log2 / 2);
             assert_eq!(rows * cols, size);
             let src: Vec<_> = (0..rows * cols).map(FieldElement::from).collect();
-            let mut dst = src.clone();
+            let mut dst = src;
             bench.iter(|| transpose_inplace(&mut dst, cols))
         },
     );
@@ -103,7 +103,7 @@ fn bench_strip_inplace(crit: &mut Criterion) {
             let cols = 8;
             assert_eq!(rows * cols, size);
             let src: Vec<_> = (0..rows * cols).map(FieldElement::from).collect();
-            let mut dst = src.clone();
+            let mut dst = src;
             bench.iter(|| transpose_inplace(&mut dst, cols))
         },
     );
@@ -119,7 +119,7 @@ fn bench_strip2_inplace(crit: &mut Criterion) {
             let cols = size / 8;
             assert_eq!(rows * cols, size);
             let src: Vec<_> = (0..rows * cols).map(FieldElement::from).collect();
-            let mut dst = src.clone();
+            let mut dst = src;
             bench.iter(|| transpose_inplace(&mut dst, cols))
         },
     );

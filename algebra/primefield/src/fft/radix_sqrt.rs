@@ -107,58 +107,16 @@ mod tests {
     proptest! {
 
         #[test]
-        fn test_recurse_inplace_inorder(values in arb_vec()) {
+        fn test_parallel_recurse_inplace_permuted(values in arb_vec()) {
             // TODO: Test different splittings
             const SPLIT: usize = 4;
             let mut expected = values.clone();
-            ref_fft_inplace(&mut expected);
-            let root = FieldElement::root(values.len()).unwrap();
-            let mut result = values.clone();
-            let inner = max(1, values.len() / SPLIT);
-            let outer = min(values.len(), SPLIT);
-            recurse_inplace_inorder(
-                &mut result,
-                &root,
-                outer,
-                inner,
-                ref_fft_inplace,
-                ref_fft_inplace,
-            );
-            prop_assert_eq!(result, expected);
-        }
-
-        #[test]
-        fn test_recurse_inplace_permuted(orig in arb_vec()) {
-            // TODO: Test different splittings
-            const SPLIT: usize = 4;
-            let mut expected = orig.clone();
             ref_fft_permuted(&mut expected);
-            let root = FieldElement::root(orig.len()).unwrap();
-            let mut result = orig.clone();
-            let inner = max(1, orig.len() / SPLIT);
-            let outer = min(orig.len(), SPLIT);
-            recurse_inplace_permuted(
-                &mut result,
-                &root,
-                outer,
-                inner,
-                ref_fft_permuted,
-                ref_fft_permuted,
-            );
-            prop_assert_eq!(result, expected);
-        }
-
-        #[test]
-        fn test_parallel_recurse_inplace_inorder(values in arb_vec()) {
-            // TODO: Test different splittings
-            const SPLIT: usize = 4;
-            let mut expected = values.clone();
-            ref_fft_inplace(&mut expected);
             let root = FieldElement::root(values.len()).unwrap();
             let mut result = values.clone();
             let inner = max(1, values.len() / SPLIT);
             let outer = min(values.len(), SPLIT);
-            parallel_recurse_inplace_inorder(
+            parallel_recurse_inplace_permuted(
                 &mut result,
                 &root,
                 outer,
