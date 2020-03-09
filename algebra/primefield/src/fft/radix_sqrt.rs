@@ -99,7 +99,7 @@ fn parallel_recurse_inplace_permuted<Field, F, G>(
 #[cfg(test)]
 mod tests {
     use super::{
-        super::tests::{arb_vec, ref_fft_inplace, ref_fft_permuted},
+        super::tests::{arb_vec, ref_fft_permuted},
         *,
     };
     use crate::{FieldElement, Root};

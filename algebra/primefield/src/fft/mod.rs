@@ -245,6 +245,7 @@ mod tests {
         result
     }
 
+    #[allow(dead_code)]
     pub(super) fn ref_fft_inplace(values: &mut [FieldElement]) {
         let result = reference_fft(values, false);
         values.clone_from_slice(&result);
