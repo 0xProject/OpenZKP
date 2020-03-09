@@ -6,9 +6,12 @@
 mod bit_reverse;
 mod depth_first;
 mod iterative;
-mod radix_sqrt;
 pub mod small;
 mod transpose;
+
+// TODO: Make no-std compatible
+#[cfg(feature = "std")]
+mod radix_sqrt;
 
 use crate::{FieldLike, Inv, Pow, RefFieldLike};
 pub use bit_reverse::{permute, permute_index};
@@ -159,6 +162,7 @@ where
     result
 }
 
+#[cfg(feature = "std")]
 pub fn fft2_inplace<Field>(values: &mut [Field])
 where
     Field: FieldLike + std::fmt::Debug + From<usize> + Send + Sync,

@@ -4,8 +4,10 @@ use super::{
 };
 use crate::{FieldLike, Pow, RefFieldLike};
 use log::trace;
+use std::{cmp::max, prelude::v1::*};
+
+#[cfg(feature = "std")]
 use rayon::prelude::*;
-use std::cmp::max;
 
 /// In-place FFT with permuted output.
 ///
