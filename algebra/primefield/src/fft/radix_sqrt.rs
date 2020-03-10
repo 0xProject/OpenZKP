@@ -1,82 +1,50 @@
 use super::{
-    bit_reverse::permute_index, depth_first::depth_first_recurse, get_twiddles,
-    transpose::transpose_inplace,
+    bit_reverse::permute_index, depth_first::depth_first_recurse, fft_vec_recursive, get_twiddles,
+    transpose_square_stretch,
 };
 use crate::{FieldLike, Pow, RefFieldLike};
 use log::trace;
-use std::{cmp::max, prelude::v1::*};
-
-#[cfg(feature = "std")]
 use rayon::prelude::*;
+use std::cmp::max;
 
 /// In-place FFT with permuted output.
 ///
-/// Implement's the four step FFT in a cache-oblivious manner.
-///
-/// There is also a six-step version that outputs the result in normal order,
-/// for this see <http://wwwa.pikara.ne.jp/okojisan/otfft-en/sixstepfft.html>.
-// TODO: Bit-reversed order
+/// Implement's the six step FFT in a cache-oblivious manner. Output is
+/// permuted, which avoids the last permutations step.
 pub(super) fn radix_sqrt<Field>(values: &mut [Field], root: &Field)
 where
     Field: FieldLike + std::fmt::Debug + From<usize> + Send + Sync,
     for<'a> &'a Field: RefFieldLike<Field>,
 {
     // Recurse by splitting along the square root
+    // Round such that outer is larger.
     let length = values.len();
-    let outer = 1_usize << (length.trailing_zeros() / 2);
-    let inner = length / outer;
-    debug_assert!(outer == inner || inner == 2 * outer);
-    debug_assert_eq!(outer * inner, length);
-    let _inner_root = root.pow(outer);
-    let _outer_root = root.pow(inner);
-    let twiddles = get_twiddles(max(outer, inner));
-    parallel_recurse_inplace_permuted(
-        values,
-        root,
-        outer,
-        inner,
-        |row| depth_first_recurse(row, &twiddles, 0, 1),
-        |row| depth_first_recurse(row, &twiddles, 0, 1),
-    );
-}
-
-/// Generic recursive six-point FFT with permuted output.
-///
-/// Advantages:
-///  * The inner and outer FFT functions can be in permuted order
-///  * Only two transpositions are required instead of three.
-fn parallel_recurse_inplace_permuted<Field, F, G>(
-    values: &mut [Field],
-    root: &Field,
-    outer: usize,
-    inner: usize,
-    inner_fft: F,
-    outer_fft: G,
-) where
-    Field: FieldLike + Send + Sync,
-    for<'a> &'a Field: RefFieldLike<Field>,
-    F: Fn(&mut [Field]) + Sync,
-    G: Fn(&mut [Field]) + Sync,
-{
-    let length = values.len();
-    debug_assert!(root.pow(length).is_one());
+    let inner = 1_usize << (length.trailing_zeros() / 2);
+    let outer = length / inner;
+    let stretch = outer / inner;
+    debug_assert!(outer == inner || outer == 2 * inner);
     debug_assert_eq!(outer * inner, length);
 
-    // 1 Transpose inner * outer sized matrix
-    transpose_inplace(values, outer);
+    // Prepare twiddles
+    let twiddles = get_twiddles(outer);
 
-    // 2 Apply inner FFTs continguously
-    // 3 Apply twiddle factors
+    // 1. Transpose inner x inner x stretch square matrix
+    transpose_square_stretch(values, inner, stretch);
+
+    // 2. Apply inner FFTs contiguously
+    // 2. Apply twiddle factors
     trace!(
         "Parallel {} x inner FFT size {} (with twiddles)",
         outer,
         inner
     );
     values
-        .par_chunks_mut(inner)
+        .par_chunks_mut(outer)
         .enumerate()
         .for_each(|(j, row)| {
-            inner_fft(row);
+            fft_vec_recursive(row, &twiddles, 0, stretch, stretch);
+
+            // TODO: Fix twiddles (maybe do them in step 5?)
             if j > 0 {
                 let outer_twiddle = root.pow(j);
                 let mut inner_twiddle = outer_twiddle.clone();
@@ -88,12 +56,14 @@ fn parallel_recurse_inplace_permuted<Field, F, G>(
             }
         });
 
-    // 4 Transpose outer * inner sized matrix
-    transpose_inplace(values, inner);
+    // 4. Transpose inner x inner x stretch square matrix
+    transpose_square_stretch(values, inner, stretch);
 
     // 5 Apply outer FFTs contiguously
     trace!("Parallel {} x outer FFT size {}", outer, inner);
-    values.par_chunks_mut(outer).for_each(|row| outer_fft(row));
+    values
+        .par_chunks_mut(outer)
+        .for_each(|row| fft_vec_recursive(row, &twiddles, 0, 1, 1));
 }
 
 #[cfg(test)]
@@ -109,23 +79,12 @@ mod tests {
     proptest! {
 
         #[test]
-        fn test_parallel_recurse_inplace_permuted(values in arb_vec()) {
-            // TODO: Test different splittings
-            const SPLIT: usize = 4;
+        fn test_radix_sqrt(values in arb_vec()) {
+            let root = FieldElement::root(values.len()).unwrap();
             let mut expected = values.clone();
             ref_fft_permuted(&mut expected);
-            let root = FieldElement::root(values.len()).unwrap();
             let mut result = values.clone();
-            let inner = max(1, values.len() / SPLIT);
-            let outer = min(values.len(), SPLIT);
-            parallel_recurse_inplace_permuted(
-                &mut result,
-                &root,
-                outer,
-                inner,
-                ref_fft_permuted,
-                ref_fft_permuted,
-            );
+            radix_sqrt(&mut result, &root);
             prop_assert_eq!(result, expected);
         }
     }
