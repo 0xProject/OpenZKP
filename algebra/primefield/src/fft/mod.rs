@@ -14,7 +14,7 @@ mod recursive;
 #[cfg(feature = "std")]
 mod radix_sqrt;
 
-pub use self::prefetch::Prefetch;
+pub use self::prefetch::{Prefetch, PrefetchIndex};
 use crate::{FieldLike, Inv, Pow, RefFieldLike};
 pub use bit_reverse::{permute, permute_index};
 pub use iterative::fft_permuted_root;

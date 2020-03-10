@@ -1,6 +1,7 @@
-use super::Prefetch;
+use super::PrefetchIndex;
 use log::{trace, warn};
 use std::cmp::min;
+use std::ops::Index;
 
 // TODO: Outer cache-oblivious layer for mmap-backed.
 // TODO: Parallel transpose.
@@ -43,19 +44,11 @@ fn transpose_square_1<T>(matrix: &mut [T], size: usize) {
         for col in (row..size).step_by(2).skip(1) {
             let i = row * size + col;
             let j = col * size + row;
-            if PREFETCH_STRIDE > 0 {
-                unsafe {
-                    matrix.get_unchecked(i + PREFETCH_STRIDE).prefetch_write();
-                    matrix
-                        .get_unchecked(i + PREFETCH_STRIDE + size)
-                        .prefetch_write();
-                    matrix
-                        .get_unchecked(j + PREFETCH_STRIDE * size)
-                        .prefetch_write();
-                    matrix
-                        .get_unchecked(j + PREFETCH_STRIDE * size + size)
-                        .prefetch_write();
-                }
+            if PREFETCH_STRIDE > 0 && col + PREFETCH_STRIDE < size {
+                matrix.prefetch_index_write(i + PREFETCH_STRIDE * 2);
+                matrix.prefetch_index_write(i + PREFETCH_STRIDE * 2 + size);
+                matrix.prefetch_index_write(j + PREFETCH_STRIDE * 2 * size);
+                matrix.prefetch_index_write(j + PREFETCH_STRIDE * 2 * size + size);
             }
             matrix.swap(i, j);
             matrix.swap(i + 1, j + size);
@@ -75,12 +68,8 @@ fn transpose_square_2<T>(matrix: &mut [T], size: usize) {
         for col in (row..size).skip(1) {
             let i = (row * size + col) * 2;
             let j = (col * size + row) * 2;
-            if PREFETCH_STRIDE > 0 {
-                unsafe {
-                    matrix
-                        .get_unchecked(i + PREFETCH_STRIDE * size)
-                        .prefetch_write();
-                }
+            if PREFETCH_STRIDE > 0 && col + PREFETCH_STRIDE < size {
+                matrix.prefetch_index_write(i + PREFETCH_STRIDE * size);
             }
             matrix.swap(i, j);
             matrix.swap(i + 1, j + 1);
