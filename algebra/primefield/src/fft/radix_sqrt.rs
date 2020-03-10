@@ -38,7 +38,7 @@ where
     // 2. Apply inner FFTs contiguously
     // 2. Apply twiddle factors
     trace!(
-        "Parallel {} x inner FFT size {} (with twiddles)",
+        "Parallel {} x inner FFT size {}",
         outer,
         inner
     );
@@ -50,7 +50,7 @@ where
     transpose_square_stretch(values, inner, stretch);
 
     // 5 Apply outer FFTs contiguously
-    trace!("Parallel {} x outer FFT size {}", outer, inner);
+    trace!("Parallel {} x outer FFT size {} (with twiddles)", outer, inner);
     values
         .par_chunks_mut(outer)
         .enumerate()
