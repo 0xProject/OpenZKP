@@ -8,8 +8,7 @@ use rayon::prelude::*;
 
 /// In-place FFT with permuted output.
 ///
-/// Implement's the six step FFT in a cache-oblivious manner. Output is
-/// permuted, which avoids the last permutations step.
+/// Implement's the six step FFT. Output is permuted, which avoids the last permutations step.
 pub(super) fn radix_sqrt<Field>(values: &mut [Field], root: &Field)
 where
     Field: FieldLike + std::fmt::Debug + From<usize> + Send + Sync,
@@ -36,35 +35,28 @@ where
 
     // 2. Apply inner FFTs contiguously
     // 2. Apply twiddle factors
-    trace!(
-        "Parallel {} x inner FFT size {}",
-        outer,
-        inner
-    );
-    values
-        .par_chunks_mut(outer)
-        .for_each(|row| fft_vec_recursive(row, &twiddles, 0, stretch, stretch));
+    trace!("Parallel {} x inner FFT size {}", outer, inner);
+    values.par_chunks_mut(outer).for_each(|row| {
+        fft_vec_recursive(row, &twiddles, 0, stretch, stretch)
+    });
 
     // 4. Transpose inner x inner x stretch square matrix
     transpose_square_stretch(values, inner, stretch);
 
     // 5 Apply outer FFTs contiguously
     trace!("Parallel {} x outer FFT size {} (with twiddles)", outer, inner);
-    values
-        .par_chunks_mut(outer)
-        .enumerate()
-        .for_each(|(i, row)| {
+    values.par_chunks_mut(outer).enumerate().for_each(|(i, row)| {
+        if i > 0 {
             let i = permute_index(inner, i);
-            if i > 0 {
-                let inner_twiddle = root.pow(i);
-                let mut outer_twiddle = inner_twiddle.clone();
-                for j in 1..outer {
-                    row[j] *= &outer_twiddle;
-                    outer_twiddle *= &inner_twiddle;
-                }
+            let inner_twiddle = root.pow(i);
+            let mut outer_twiddle = inner_twiddle.clone();
+            for element in row.iter_mut().skip(1) {
+                *element *= &outer_twiddle;
+                outer_twiddle *= &inner_twiddle;
             }
-            fft_vec_recursive(row, &twiddles, 0, 1, 1)
-        });
+        }
+        fft_vec_recursive(row, &twiddles, 0, 1, 1)
+    });
 }
 
 #[cfg(test)]
