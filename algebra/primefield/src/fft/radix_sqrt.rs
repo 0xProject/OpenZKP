@@ -1,5 +1,5 @@
 use super::{
-    bit_reverse::permute_index, depth_first::depth_first_recurse, fft_vec_recursive, get_twiddles,
+    bit_reverse::permute_index, fft_vec_recursive, get_twiddles,
     transpose_square_stretch,
 };
 use crate::{FieldLike, Pow, RefFieldLike};

@@ -14,7 +14,7 @@ use structopt::StructOpt;
 use zkp_logging_allocator::ALLOCATOR;
 use zkp_mmap_vec::MmapVec;
 use zkp_primefield::{
-    fft::{fft2_inplace, fft_depth_first, fft_permuted, permute, transpose_square_stretch},
+    fft::{fft2_inplace,fft_recursive, fft_permuted, permute, transpose_square_stretch},
     FieldElement,
 };
 
@@ -42,7 +42,7 @@ struct Options {
     allocation: String,
 
     /// Operation to benchmark (defaults to fft)
-    /// Valid options are: fft, fft_iterative, fft_depth_first, transpose,
+    /// Valid options are: fft, fft_iterative, fft_recursive, transpose,
     /// permute
     #[structopt(default_value = "fft")]
     operation: String,
@@ -224,7 +224,7 @@ fn main() -> Result<(), Error> {
     let mut func: Box<dyn FnMut(&mut [FieldElement])> = match name.as_ref() {
         "fft" => Box::new(fft2_inplace),
         "fft_iterative" => Box::new(fft_permuted),
-        "fft_depth_first" => Box::new(fft_depth_first),
+        "fft_recursive" => Box::new(fft_recursive),
         "permute" => Box::new(permute),
         "transpose" => {
             Box::new(|values: &mut [FieldElement]| {

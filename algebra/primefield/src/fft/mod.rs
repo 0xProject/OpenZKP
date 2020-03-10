@@ -4,12 +4,11 @@
 #![allow(single_use_lifetimes)]
 
 mod bit_reverse;
-mod depth_first;
 mod iterative;
 mod prefetch;
-mod recursive;
 pub mod small;
 mod transpose;
+mod recursive;
 
 // TODO: Make no-std compatible
 #[cfg(feature = "std")]
@@ -18,7 +17,6 @@ mod radix_sqrt;
 pub use self::prefetch::Prefetch;
 use crate::{FieldLike, Inv, Pow, RefFieldLike};
 pub use bit_reverse::{permute, permute_index};
-pub use depth_first::fft_depth_first;
 pub use iterative::fft_permuted_root;
 pub use recursive::{fft_recursive, fft_vec_recursive};
 use std::prelude::v1::*;
