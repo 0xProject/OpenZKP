@@ -3,6 +3,7 @@ use log::{trace, warn};
 use std::cmp::min;
 
 // TODO: Outer cache-oblivious layer for mmap-backed.
+// TODO: Parallel transpose.
 
 /// Transpose a square matrix of stretches.
 ///
