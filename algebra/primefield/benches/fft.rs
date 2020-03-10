@@ -5,7 +5,7 @@ use std::iter::repeat_with;
 use zkp_criterion_utils::{log_size_bench, log_thread_bench};
 use zkp_primefield::{
     fft::{
-        fft2_inplace, fft_depth_first, fft_permuted_root, fft_recursive, get_twiddles,
+        fft2_inplace, fft_permuted_root, fft_recursive, get_twiddles,
         small::{radix_2, radix_2_twiddle, radix_4, radix_8},
     },
     FieldElement, Root,
@@ -74,13 +74,6 @@ fn fft_iter_small(crit: &mut Criterion) {
     });
 }
 
-fn fft_df_small(crit: &mut Criterion) {
-    log_size_bench(crit, "FFT DF size", &SMALL, move |bench, size| {
-        let mut values: Vec<_> = (0..size).map(FieldElement::from).collect();
-        bench.iter(|| fft_depth_first(&mut values))
-    });
-}
-
 fn fft_rec_small(crit: &mut Criterion) {
     log_size_bench(crit, "FFT rec size", &SMALL, move |bench, size| {
         let mut values: Vec<_> = (0..size).map(FieldElement::from).collect();
@@ -112,7 +105,6 @@ criterion_group!(
     group,
     // fft_base,
     fft_iter_small,
-    fft_df_small,
     fft_rec_small,
     /* fft_large,
      * fft_threads */

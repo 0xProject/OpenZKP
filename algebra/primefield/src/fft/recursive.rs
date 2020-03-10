@@ -46,26 +46,14 @@ pub fn fft_vec_recursive<Field>(
     debug_assert_eq!(values.len() % size, 0);
     match size {
         1 => {}
-        // 2 => {
-        // for offset in offset..offset + count {
-        // radix_2(values, offset, stride);
-        // }
-        // }
-        // 4 => {
-        // for offset in offset..offset + count {
-        // radix_4(values, twiddles, offset, stride);
-        // }
-        // }
-        // 8 => {
-        // for offset in offset..offset + count {
-        // radix_8(values, twiddles, offset, stride);
-        // }
-        // }
+        // Special casing for small sizes doesn't seem to give an advantage.
         _ => {
             // Inner FFT radix size/2
             if stride == count && count < max_loop {
                 fft_vec_recursive(values, twiddles, offset, 2 * count, 2 * stride);
             } else {
+                // TODO: We could do parallel recursion here, if we had a way to
+                // do a strided split. (Like the ndarray package provides)
                 fft_vec_recursive(values, twiddles, offset, count, 2 * stride);
                 fft_vec_recursive(values, twiddles, offset + stride, count, 2 * stride);
             }
