@@ -44,7 +44,7 @@ fn transpose_square_1<T>(matrix: &mut [T], size: usize) {
         for col in (row..size).step_by(2).skip(1) {
             let i = row * size + col;
             let j = col * size + row;
-            if PREFETCH_STRIDE > 0 && col + PREFETCH_STRIDE < size {
+            if PREFETCH_STRIDE > 0 && col + PREFETCH_STRIDE * 2 < size {
                 matrix.prefetch_index_write(i + PREFETCH_STRIDE * 2);
                 matrix.prefetch_index_write(i + PREFETCH_STRIDE * 2 + size);
                 matrix.prefetch_index_write(j + PREFETCH_STRIDE * 2 * size);
@@ -59,7 +59,7 @@ fn transpose_square_1<T>(matrix: &mut [T], size: usize) {
 }
 
 fn transpose_square_2<T>(matrix: &mut [T], size: usize) {
-    const PREFETCH_STRIDE: usize = 4;
+    const PREFETCH_STRIDE: usize = 8;
     trace!("Transposing {} x {} 2-square matrix", size, size);
     debug_assert_eq!(matrix.len(), 2 * size * size);
 
@@ -69,7 +69,9 @@ fn transpose_square_2<T>(matrix: &mut [T], size: usize) {
             let i = (row * size + col) * 2;
             let j = (col * size + row) * 2;
             if PREFETCH_STRIDE > 0 && col + PREFETCH_STRIDE < size {
-                matrix.prefetch_index_write(i + PREFETCH_STRIDE * size);
+                // Hardware prefetcher picks up on the first one.
+                // matrix.prefetch_index_write(i + PREFETCH_STRIDE * 2);
+                matrix.prefetch_index_write(i + PREFETCH_STRIDE * 2 * size);
             }
             matrix.swap(i, j);
             matrix.swap(i + 1, j + 1);
