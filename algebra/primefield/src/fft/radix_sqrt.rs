@@ -16,6 +16,10 @@ where
     Field: FieldLike + std::fmt::Debug + From<usize> + Send + Sync,
     for<'a> &'a Field: RefFieldLike<Field>,
 {
+    if values.len() <= 1 {
+        return;
+    }
+
     // Recurse by splitting along the square root
     // Round such that outer is larger.
     let length = values.len();
@@ -40,21 +44,7 @@ where
     );
     values
         .par_chunks_mut(outer)
-        .enumerate()
-        .for_each(|(j, row)| {
-            fft_vec_recursive(row, &twiddles, 0, stretch, stretch);
-
-            // TODO: Fix twiddles (maybe do them in step 5?)
-            if j > 0 {
-                let outer_twiddle = root.pow(j);
-                let mut inner_twiddle = outer_twiddle.clone();
-                for i in 1..inner {
-                    let i = permute_index(inner, i);
-                    row[i] *= &inner_twiddle;
-                    inner_twiddle *= &outer_twiddle;
-                }
-            }
-        });
+        .for_each(|row| fft_vec_recursive(row, &twiddles, 0, stretch, stretch));
 
     // 4. Transpose inner x inner x stretch square matrix
     transpose_square_stretch(values, inner, stretch);
@@ -63,7 +53,19 @@ where
     trace!("Parallel {} x outer FFT size {}", outer, inner);
     values
         .par_chunks_mut(outer)
-        .for_each(|row| fft_vec_recursive(row, &twiddles, 0, 1, 1));
+        .enumerate()
+        .for_each(|(i, row)| {
+            let i = permute_index(inner, i);
+            if i > 0 {
+                let inner_twiddle = root.pow(i);
+                let mut outer_twiddle = inner_twiddle.clone();
+                for j in 1..outer {
+                    row[j] *= &outer_twiddle;
+                    outer_twiddle *= &inner_twiddle;
+                }
+            }
+            fft_vec_recursive(row, &twiddles, 0, 1, 1)
+        });
 }
 
 #[cfg(test)]
@@ -80,6 +82,7 @@ mod tests {
 
         #[test]
         fn test_radix_sqrt(values in arb_vec()) {
+            prop_assume!(values.len() < 16);
             let root = FieldElement::root(values.len()).unwrap();
             let mut expected = values.clone();
             ref_fft_permuted(&mut expected);

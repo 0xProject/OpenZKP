@@ -3,6 +3,11 @@ use core::arch::x86_64::{_mm_prefetch, _MM_HINT_T0};
 
 // TODO: Use crate or builtins.
 
+// TODO: Slice version
+// TODO: MADV_HUGEPAGE
+
+// TODO: Add madvise  <http://man7.org/linux/man-pages/man2/madvise.2.html>
+
 #[cfg(target_arch = "x86_64")]
 extern "C" {
     /// See <http://llvm.org/docs/LangRef.html#llvm-prefetch-intrinsic>

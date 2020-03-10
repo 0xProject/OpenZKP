@@ -54,6 +54,7 @@ use radix_sqrt::radix_sqrt;
 // TODO: Create a dedicated type for permuted vectors
 
 /// Out-of-place FFT with non-permuted result.
+// TODO: Remove
 pub fn fft<Field>(a: &[Field]) -> Vec<Field>
 where
     Field: FieldLike + From<usize> + std::fmt::Debug,
@@ -66,6 +67,7 @@ where
 }
 
 /// Out-of-place inverse FFT with non-permuted result.
+// TODO: Remove
 pub fn ifft<Field>(a: &[Field]) -> Vec<Field>
 where
     Field: FieldLike + From<usize> + std::fmt::Debug,
@@ -181,6 +183,7 @@ where
 }
 
 /// Transforms (x0, x1) to (x0 + x1, x0 - x1)
+// TODO: Remove
 #[inline(always)]
 pub fn radix_2_simple<Field>(x0: &mut Field, x1: &mut Field)
 where
