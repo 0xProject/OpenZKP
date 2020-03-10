@@ -1,14 +1,14 @@
 use super::{
     bit_reverse::permute,
     small::{radix_2, radix_2_twiddle, radix_4, radix_8},
+    Prefetch,
 };
 use crate::{FieldLike, Pow, RefFieldLike};
 use std::prelude::v1::*;
 
-// https://www.cs.waikato.ac.nz/~ihw/papers/13-AMB-IHW-MJC-FastFourier.pdf
+// TODO: Radix-4 recursion?
 
 /// Radix-2 depth-first in-place bit-reversed FFT.
-// TODO: Radix-4?
 pub fn fft_recursive<Field>(values: &mut [Field])
 where
     Field: FieldLike + std::fmt::Debug,
@@ -19,10 +19,13 @@ where
     let root = Field::root(values.len()).expect("No root exists");
     let mut twiddles = (0..size / 2).map(|i| root.pow(i)).collect::<Vec<_>>();
     permute(&mut twiddles);
-    recurse(values, &twiddles, 0, 1, 1);
+    fft_vec_recursive(values, &twiddles, 0, 1, 1);
 }
 
-pub(crate) fn recurse<Field>(
+/// Recursive vector-FFT.
+///
+/// Computes several parallel FFTs
+pub fn fft_vec_recursive<Field>(
     values: &mut [Field],
     twiddles: &[Field],
     offset: usize,
@@ -32,27 +35,54 @@ pub(crate) fn recurse<Field>(
     Field: FieldLike + std::fmt::Debug,
     for<'a> &'a Field: RefFieldLike<Field>,
 {
-    const MAX_LOOP: usize = 4;
+    const PREFETCH_STRIDE: usize = 4;
+    // Target loop size
+    // Use smaller base case during tests to force better coverage of recursion.
+    // TODO: Make const when <https://github.com/rust-lang/rust/issues/49146> lands
+    let max_loop: usize = if cfg!(test) { 8 } else { 128 };
     let size = values.len() / stride;
     debug_assert!(size.is_power_of_two());
     debug_assert!(offset < stride);
     debug_assert_eq!(values.len() % size, 0);
     match size {
         1 => {}
-        // 2 => radix_2(values, offset, stride),
-        // 4 => radix_4(values, twiddles, offset, stride),
-        // 8 => radix_8(values, twiddles, offset, stride),
+        // 2 => {
+        // for offset in offset..offset + count {
+        // radix_2(values, offset, stride);
+        // }
+        // }
+        // 4 => {
+        // for offset in offset..offset + count {
+        // radix_4(values, twiddles, offset, stride);
+        // }
+        // }
+        // 8 => {
+        // for offset in offset..offset + count {
+        // radix_8(values, twiddles, offset, stride);
+        // }
+        // }
         _ => {
             // Inner FFT radix size/2
-            if stride == count && count < MAX_LOOP {
-                recurse(values, twiddles, offset, 2 * count, 2 * stride);
+            if stride == count && count < max_loop {
+                fft_vec_recursive(values, twiddles, offset, 2 * count, 2 * stride);
             } else {
-                recurse(values, twiddles, offset, count, 2 * stride);
-                recurse(values, twiddles, offset + stride, count, 2 * stride);
+                fft_vec_recursive(values, twiddles, offset, count, 2 * stride);
+                fft_vec_recursive(values, twiddles, offset + stride, count, 2 * stride);
             }
 
             // Outer FFT radix 2
+            // Lookahead about 3
             for offset in offset..offset + count {
+                if PREFETCH_STRIDE > 0 {
+                    unsafe {
+                        values
+                            .get_unchecked(offset + PREFETCH_STRIDE)
+                            .prefetch_write();
+                        values
+                            .get_unchecked(offset + stride + PREFETCH_STRIDE)
+                            .prefetch_write();
+                    }
+                }
                 radix_2(values, offset, stride);
             }
             for (offset, twiddle) in (offset..offset + size * stride)
@@ -61,6 +91,16 @@ pub(crate) fn recurse<Field>(
                 .skip(1)
             {
                 for offset in offset..offset + count {
+                    if PREFETCH_STRIDE > 0 {
+                        unsafe {
+                            values
+                                .get_unchecked(offset + PREFETCH_STRIDE)
+                                .prefetch_write();
+                            values
+                                .get_unchecked(offset + stride + PREFETCH_STRIDE)
+                                .prefetch_write();
+                        }
+                    }
                     radix_2_twiddle(values, twiddle, offset, stride)
                 }
             }
