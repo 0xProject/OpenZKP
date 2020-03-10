@@ -1,7 +1,7 @@
 use super::{
     bit_reverse::permute,
     small::{radix_2, radix_2_twiddle, radix_4, radix_8},
-    Prefetch,
+    PrefetchIndex,
 };
 use crate::{FieldLike, Pow, RefFieldLike};
 use std::prelude::v1::*;
@@ -60,36 +60,34 @@ pub fn fft_vec_recursive<Field>(
 
             // Outer FFT radix 2
             // Lookahead about 3
-            for offset in offset..offset + count {
+            for i in offset..offset + count {
                 if PREFETCH_STRIDE > 0 {
-                    unsafe {
-                        values
-                            .get_unchecked(offset + PREFETCH_STRIDE)
-                            .prefetch_write();
-                        values
-                            .get_unchecked(offset + stride + PREFETCH_STRIDE)
-                            .prefetch_write();
+                    if i + PREFETCH_STRIDE < offset + count {
+                        values.prefetch_index_write(i + PREFETCH_STRIDE);
+                        values.prefetch_index_write(i + PREFETCH_STRIDE + stride);
+                    } else {
+                        values.prefetch_index_write(i + PREFETCH_STRIDE - count + 2 * stride);
+                        values.prefetch_index_write(i + PREFETCH_STRIDE - count + 3 * stride);
                     }
                 }
-                radix_2(values, offset, stride);
+                radix_2(values, i, stride);
             }
             for (offset, twiddle) in (offset..offset + size * stride)
                 .step_by(2 * stride)
                 .zip(twiddles)
                 .skip(1)
             {
-                for offset in offset..offset + count {
+                for i in offset..offset + count {
                     if PREFETCH_STRIDE > 0 {
-                        unsafe {
-                            values
-                                .get_unchecked(offset + PREFETCH_STRIDE)
-                                .prefetch_write();
-                            values
-                                .get_unchecked(offset + stride + PREFETCH_STRIDE)
-                                .prefetch_write();
+                        if i + PREFETCH_STRIDE < offset + count {
+                            values.prefetch_index_write(i + PREFETCH_STRIDE);
+                            values.prefetch_index_write(i + PREFETCH_STRIDE + stride);
+                        } else {
+                            values.prefetch_index_write(i + PREFETCH_STRIDE - count + 2 * stride);
+                            values.prefetch_index_write(i + PREFETCH_STRIDE - count + 3 * stride);
                         }
                     }
-                    radix_2_twiddle(values, twiddle, offset, stride)
+                    radix_2_twiddle(values, twiddle, i, stride)
                 }
             }
         }
