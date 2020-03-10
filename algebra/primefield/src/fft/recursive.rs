@@ -35,7 +35,6 @@ pub fn fft_vec_recursive<Field>(
     Field: FieldLike + std::fmt::Debug,
     for<'a> &'a Field: RefFieldLike<Field>,
 {
-    const PREFETCH_STRIDE: usize = 4;
     // Target loop size
     // Use smaller base case during tests to force better coverage of recursion.
     // TODO: Make const when <https://github.com/rust-lang/rust/issues/49146> lands
@@ -61,15 +60,6 @@ pub fn fft_vec_recursive<Field>(
             // Outer FFT radix 2
             // Lookahead about 3
             for i in offset..offset + count {
-                if PREFETCH_STRIDE > 0 {
-                    if i + PREFETCH_STRIDE < offset + count {
-                        values.prefetch_index_write(i + PREFETCH_STRIDE);
-                        values.prefetch_index_write(i + PREFETCH_STRIDE + stride);
-                    } else {
-                        values.prefetch_index_write(i + PREFETCH_STRIDE - count + 2 * stride);
-                        values.prefetch_index_write(i + PREFETCH_STRIDE - count + 3 * stride);
-                    }
-                }
                 radix_2(values, i, stride);
             }
             for (offset, twiddle) in (offset..offset + size * stride)
@@ -78,15 +68,6 @@ pub fn fft_vec_recursive<Field>(
                 .skip(1)
             {
                 for i in offset..offset + count {
-                    if PREFETCH_STRIDE > 0 {
-                        if i + PREFETCH_STRIDE < offset + count {
-                            values.prefetch_index_write(i + PREFETCH_STRIDE);
-                            values.prefetch_index_write(i + PREFETCH_STRIDE + stride);
-                        } else {
-                            values.prefetch_index_write(i + PREFETCH_STRIDE - count + 2 * stride);
-                            values.prefetch_index_write(i + PREFETCH_STRIDE - count + 3 * stride);
-                        }
-                    }
                     radix_2_twiddle(values, twiddle, i, stride)
                 }
             }
