@@ -139,7 +139,7 @@ where
 
 pub fn get_twiddles<Field>(size: usize) -> Vec<Field>
 where
-    Field: FieldLike + From<usize> + std::fmt::Debug,
+    Field: FieldLike,
     for<'a> &'a Field: RefFieldLike<Field>,
 {
     debug_assert!(size.is_power_of_two());

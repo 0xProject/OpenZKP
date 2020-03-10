@@ -8,7 +8,7 @@ use crate::{FieldLike, RefFieldLike};
 #[inline(always)]
 pub fn radix_2<Field>(values: &mut [Field], offset: usize, stride: usize)
 where
-    Field: FieldLike + std::fmt::Debug,
+    Field: FieldLike,
     for<'a> &'a Field: RefFieldLike<Field>,
 {
     let i = offset;
@@ -22,7 +22,7 @@ where
 #[inline(always)]
 pub fn radix_2_twiddle<Field>(values: &mut [Field], twiddle: &Field, offset: usize, stride: usize)
 where
-    Field: FieldLike + std::fmt::Debug,
+    Field: FieldLike,
     for<'a> &'a Field: RefFieldLike<Field>,
 {
     let i = offset;
@@ -36,7 +36,7 @@ where
 #[inline(always)]
 pub fn radix_4<Field>(values: &mut [Field], twiddles: &[Field], offset: usize, stride: usize)
 where
-    Field: FieldLike + std::fmt::Debug,
+    Field: FieldLike,
     for<'a> &'a Field: RefFieldLike<Field>,
 {
     radix_2(values, offset, 2 * stride);
@@ -49,7 +49,7 @@ where
 #[inline(always)]
 pub fn radix_8<Field>(values: &mut [Field], twiddles: &[Field], offset: usize, stride: usize)
 where
-    Field: FieldLike + std::fmt::Debug,
+    Field: FieldLike,
     for<'a> &'a Field: RefFieldLike<Field>,
 {
     radix_4(values, twiddles, offset, 2 * stride);

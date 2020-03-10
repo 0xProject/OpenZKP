@@ -1,7 +1,5 @@
 use super::PrefetchIndex;
-use log::{trace, warn};
-use std::cmp::min;
-use std::ops::Index;
+use log::trace;
 
 // TODO: Outer cache-oblivious layer for mmap-backed.
 // TODO: Parallel transpose.

@@ -1,24 +1,18 @@
 use super::{
-    bit_reverse::permute,
-    small::{radix_2, radix_2_twiddle, radix_4, radix_8},
-    PrefetchIndex,
+    get_twiddles,
+    small::{radix_2, radix_2_twiddle},
 };
-use crate::{FieldLike, Pow, RefFieldLike};
-use std::prelude::v1::*;
+use crate::{FieldLike, RefFieldLike};
 
 // TODO: Radix-4 recursion?
 
 /// Radix-2 depth-first in-place bit-reversed FFT.
 pub fn fft_recursive<Field>(values: &mut [Field])
 where
-    Field: FieldLike + std::fmt::Debug,
+    Field: FieldLike,
     for<'a> &'a Field: RefFieldLike<Field>,
 {
-    let size = values.len();
-    debug_assert!(size.is_power_of_two());
-    let root = Field::root(values.len()).expect("No root exists");
-    let mut twiddles = (0..size / 2).map(|i| root.pow(i)).collect::<Vec<_>>();
-    permute(&mut twiddles);
+    let twiddles = get_twiddles(values.len());
     fft_vec_recursive(values, &twiddles, 0, 1, 1);
 }
 
@@ -32,7 +26,7 @@ pub fn fft_vec_recursive<Field>(
     count: usize,
     stride: usize,
 ) where
-    Field: FieldLike + std::fmt::Debug,
+    Field: FieldLike,
     for<'a> &'a Field: RefFieldLike<Field>,
 {
     // Target loop size

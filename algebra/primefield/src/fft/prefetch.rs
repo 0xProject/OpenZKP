@@ -1,6 +1,3 @@
-use std::ops::Index;
-use std::slice::SliceIndex;
-
 // TODO: Move to utils crate
 
 // TODO: Use crate or builtins.
@@ -46,23 +43,24 @@ pub trait PrefetchIndex<I> where I: ?Sized {
 impl<T> Prefetch for T {
     #[inline(always)]
     fn prefetch(&self) {
-        let ptr = self as *const T;
-        #[cfg(target_arch = "x86_64")]
         // Prefetching does not affect the semantics of the program.
         #[allow(unsafe_code)]
         unsafe {
-            llvm_prefetch(ptr as *const i8, READ, L1, DATA);
+            #[allow(trivial_casts)] // False positive
+            let ptr = self as *const T as *const i8;
+            llvm_prefetch(ptr, READ, L1, DATA);
         }
     }
 
     #[inline(always)]
     fn prefetch_write(&self) {
-        let ptr = self as *const T;
         #[cfg(target_arch = "x86_64")]
         // Prefetching does not affect the semantics of the program.
         #[allow(unsafe_code)]
         unsafe {
-            llvm_prefetch(ptr as *const i8, WRITE, L1, DATA);
+            #[allow(trivial_casts)] // False positive
+            let ptr = self as *const T as *const i8;
+            llvm_prefetch(ptr, WRITE, L1, DATA);
         }
     }
 }
@@ -78,8 +76,9 @@ impl<T> PrefetchIndex<usize> for [T] where  {
         // ignored by the CPU.
         #[allow(unsafe_code)]
         unsafe {
-            let ptr = self.get_unchecked(index) as *const T;
-            llvm_prefetch(ptr as *const i8, READ, L1, DATA);
+            #[allow(trivial_casts)] // False positive
+            let ptr = self.get_unchecked(index) as *const T as *const i8;
+            llvm_prefetch(ptr, READ, L1, DATA);
         }
     }
 
@@ -92,8 +91,9 @@ impl<T> PrefetchIndex<usize> for [T] where  {
         // ignored by the CPU.
         #[allow(unsafe_code)]
         unsafe {
-            let ptr = self.get_unchecked(index) as *const T;
-            llvm_prefetch(ptr as *const i8, WRITE, L1, DATA);
+            #[allow(trivial_casts)] // False positive
+            let ptr = self.get_unchecked(index) as *const T as *const i8;
+            llvm_prefetch(ptr, WRITE, L1, DATA);
         }
     }
 }

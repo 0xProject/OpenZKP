@@ -5,7 +5,6 @@ use super::{
 use crate::{FieldLike, Pow, RefFieldLike};
 use log::trace;
 use rayon::prelude::*;
-use std::cmp::max;
 
 /// In-place FFT with permuted output.
 ///
@@ -76,7 +75,6 @@ mod tests {
     };
     use crate::{FieldElement, Root};
     use proptest::prelude::*;
-    use std::cmp::{max, min};
 
     proptest! {
 
