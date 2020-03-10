@@ -6,6 +6,7 @@
 mod bit_reverse;
 mod depth_first;
 mod iterative;
+mod prefetch;
 mod recursive;
 pub mod small;
 mod transpose;
@@ -14,12 +15,14 @@ mod transpose;
 #[cfg(feature = "std")]
 mod radix_sqrt;
 
+pub use self::prefetch::Prefetch;
 use crate::{FieldLike, Inv, Pow, RefFieldLike};
 pub use bit_reverse::{permute, permute_index};
 pub use depth_first::fft_depth_first;
 pub use iterative::fft_permuted_root;
+pub use recursive::{fft_recursive, fft_vec_recursive};
 use std::prelude::v1::*;
-pub use transpose::{transpose, transpose_inplace};
+pub use transpose::transpose_square_stretch;
 
 #[cfg(feature = "std")]
 use radix_sqrt::radix_sqrt;

@@ -14,7 +14,7 @@ use structopt::StructOpt;
 use zkp_logging_allocator::ALLOCATOR;
 use zkp_mmap_vec::MmapVec;
 use zkp_primefield::{
-    fft::{fft2_inplace, fft_depth_first, fft_permuted, permute, transpose_inplace},
+    fft::{fft2_inplace, fft_depth_first, fft_permuted, permute, transpose_square_stretch},
     FieldElement,
 };
 
@@ -229,9 +229,9 @@ fn main() -> Result<(), Error> {
         "transpose" => {
             Box::new(|values: &mut [FieldElement]| {
                 let length = values.len();
-                let rows = 1_usize << (length.trailing_zeros() / 2);
-                let cols = length / rows;
-                transpose_inplace(values, cols)
+                let size = 1_usize << (length.trailing_zeros() / 2);
+                let stretch = length / (size * size);
+                transpose_square_stretch(values, size, stretch)
             })
         }
         _ => unimplemented!(),
