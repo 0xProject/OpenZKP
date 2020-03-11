@@ -74,8 +74,7 @@ pub use zkp_u256 as u256;
 
 // Export and re-export traits
 // TODO: Create a prelude module that contains all the useful ones
-pub use fft::Fft;
-pub use traits::{FieldLike, RefFieldLike, Root, SquareRoot};
+pub use traits::{Fft, FieldLike, RefFieldLike, Root, SquareRoot};
 pub use zkp_u256::{AddInline, Inv, MulInline, NegInline, One, Pow, SquareInline, SubInline, Zero};
 
 pub use uint::UInt;

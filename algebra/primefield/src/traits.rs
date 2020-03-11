@@ -99,3 +99,26 @@ pub trait SquareRoot: Sized {
 
     fn square_root(&self) -> Option<Self>;
 }
+
+/// Fast-Fourier Transforms
+///
+/// This trait is intended to apply on containers like `[T]`
+pub trait Fft<T> {
+    /// In-place permuted FFT.
+    fn fft(&mut self);
+
+    /// In-place permuted inverse FFT.
+    ///
+    /// Note, it requires inpute to be in non-permuted order and output
+    /// will be in permuted order.
+    fn ifft(&mut self);
+
+    /// In-place permuted FFT with a cofactor.
+    fn fft_cofactor(&mut self, cofactor: &T);
+
+    /// In-place permuted inverse FFT with a cofactor.
+    fn ifft_cofactor(&mut self, cofactor: &T);
+
+    /// In-place permuted FFT.
+    fn fft_root(&mut self, root: &T);
+}

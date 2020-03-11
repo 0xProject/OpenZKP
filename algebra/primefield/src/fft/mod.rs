@@ -10,7 +10,7 @@ mod recursive;
 pub mod small;
 mod transpose;
 
-use crate::{FieldLike, Inv, Pow, RefFieldLike};
+use crate::{Fft, FieldLike, Inv, Pow, RefFieldLike};
 
 // Re-exports
 // TODO: Only re-export for bench
@@ -44,27 +44,7 @@ pub use transpose::transpose_square_stretch;
 
 // https://ocw.mit.edu/courses/electrical-engineering-and-computer-science/6-973-communication-system-design-spring-2006/lecture-notes/lecture_8.pdf
 
-pub trait Fft<T> {
-    /// In-place permuted FFT.
-    fn fft(&mut self);
-
-    /// In-place permuted inverse FFT.
-    ///
-    /// Note, it requires inpute to be in non-permuted order and output
-    /// will be in permuted order.
-    fn ifft(&mut self);
-
-    /// In-place permuted FFT with a cofactor.
-    fn fft_cofactor(&mut self, cofactor: &T);
-
-    /// In-place permuted inverse FFT with a cofactor.
-    fn ifft_cofactor(&mut self, cofactor: &T);
-
-    /// In-place permuted FFT.
-    fn fft_root(&mut self, root: &T);
-}
-
-// Blanket implementation for slices
+/// Blanket implementation of [`Fft`] for all slices of a [`FieldLike`]
 impl<Field> Fft<Field> for [Field]
 where
     Field: FieldLike + From<usize> + Send + Sync,
