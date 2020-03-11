@@ -72,6 +72,7 @@ mod tests {
         },
         *,
     };
+    use crate::{FieldElement, Root};
     use proptest::prelude::*;
 
     proptest! {
@@ -89,7 +90,8 @@ mod tests {
             let mut expected = values.clone();
             ref_fft_permuted(&mut expected);
             let mut result =  values;
-            radix_4(&mut result, &get_twiddles(4), 0, 1);
+            let root = FieldElement::root(4).unwrap();
+            radix_4(&mut result, &get_twiddles(&root, 4), 0, 1);
             prop_assert_eq!(result, expected);
         }
 
@@ -98,8 +100,8 @@ mod tests {
             let mut expected = values.clone();
             ref_fft_permuted(&mut expected);
             let mut result =  values;
-
-            radix_8(&mut result, &get_twiddles(8), 0, 1);
+            let root = FieldElement::root(8).unwrap();
+            radix_8(&mut result, &get_twiddles(&root, 8), 0, 1);
             prop_assert_eq!(result, expected);
         }
     }

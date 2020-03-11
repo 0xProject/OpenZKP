@@ -1,4 +1,4 @@
-use super::PrefetchIndex;
+use super::prefetch::PrefetchIndex;
 use log::trace;
 
 // TODO: Outer cache-oblivious layer for mmap-backed.
@@ -20,7 +20,7 @@ pub fn transpose_square_stretch<T>(matrix: &mut [T], size: usize, stretch: usize
     match stretch {
         1 => transpose_square_1(matrix, size),
         2 => transpose_square_2(matrix, size),
-        _ => unimplemented!(),
+        _ => unimplemented!("Only stretch sizes 1 and 2 are supported"),
     }
 }
 

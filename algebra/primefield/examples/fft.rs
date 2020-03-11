@@ -14,8 +14,8 @@ use structopt::StructOpt;
 use zkp_logging_allocator::ALLOCATOR;
 use zkp_mmap_vec::MmapVec;
 use zkp_primefield::{
-    fft::{fft2_inplace,fft_recursive, fft_permuted, permute, transpose_square_stretch},
-    FieldElement,
+    fft::{fft_vec_recursive, get_twiddles, permute, radix_sqrt, transpose_square_stretch},
+    Fft, FieldElement, Root,
 };
 
 fn parse_hex(src: &str) -> Result<u32, ParseIntError> {
@@ -222,9 +222,20 @@ fn main() -> Result<(), Error> {
     // Get function to benchmark
     let name = &options.operation;
     let mut func: Box<dyn FnMut(&mut [FieldElement])> = match name.as_ref() {
-        "fft" => Box::new(fft2_inplace),
-        "fft_iterative" => Box::new(fft_permuted),
-        "fft_recursive" => Box::new(fft_recursive),
+        "fft" => Box::new(Fft::fft),
+        "fft_sqrt" => {
+            Box::new(|values| {
+                let root = FieldElement::root(values.len()).unwrap();
+                radix_sqrt(values, &root);
+            })
+        }
+        "fft_recursive" => {
+            Box::new(|values| {
+                let root = FieldElement::root(values.len()).unwrap();
+                let twiddles = get_twiddles(&root, values.len());
+                fft_vec_recursive(values, &twiddles, 0, 1, 1);
+            })
+        }
         "permute" => Box::new(permute),
         "transpose" => {
             Box::new(|values: &mut [FieldElement]| {

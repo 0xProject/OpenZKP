@@ -1,20 +1,7 @@
-use super::{
-    get_twiddles,
-    small::{radix_2, radix_2_twiddle},
-};
+use super::small::{radix_2, radix_2_twiddle};
 use crate::{FieldLike, RefFieldLike};
 
 // TODO: Radix-4 recursion?
-
-/// Radix-2 depth-first in-place bit-reversed FFT.
-pub fn fft_recursive<Field>(values: &mut [Field])
-where
-    Field: FieldLike,
-    for<'a> &'a Field: RefFieldLike<Field>,
-{
-    let twiddles = get_twiddles(values.len());
-    fft_vec_recursive(values, &twiddles, 0, 1, 1);
-}
 
 /// Recursive vector-FFT.
 ///
@@ -72,19 +59,25 @@ pub fn fft_vec_recursive<Field>(
 #[cfg(test)]
 mod tests {
     use super::{
-        super::tests::{arb_vec, ref_fft_permuted},
+        super::{
+            get_twiddles,
+            tests::{arb_vec, ref_fft_permuted},
+        },
         *,
     };
+    use crate::{FieldElement, Root};
     use proptest::prelude::*;
 
     proptest! {
 
         #[test]
-        fn fft_rec_ref(orig in arb_vec()) {
+        fn test_reference(orig in arb_vec()) {
             let mut reference = orig.clone();
-            let mut result = orig;
+            let mut result = orig.clone();
+            let root = FieldElement::root(orig.len()).unwrap();
+            let twiddles = get_twiddles(&root, orig.len());
             ref_fft_permuted(&mut reference);
-            fft_recursive(&mut result);
+            fft_vec_recursive(&mut result, &twiddles, 0, 1, 1);
             prop_assert_eq!(result, reference);
         }
     }

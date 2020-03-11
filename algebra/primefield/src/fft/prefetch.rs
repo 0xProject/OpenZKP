@@ -30,7 +30,10 @@ pub trait Prefetch {
     fn prefetch_write(&self);
 }
 
-pub trait PrefetchIndex<I> where I: ?Sized {
+pub trait PrefetchIndex<I>
+where
+    I: ?Sized,
+{
     /// Prefetch an element from a collection by index
     fn prefetch_index(&self, index: I);
 
@@ -66,10 +69,9 @@ impl<T> Prefetch for T {
 }
 
 // Blanket implementation for slices
-impl<T> PrefetchIndex<usize> for [T] where  {
+impl<T> PrefetchIndex<usize> for [T] {
     #[inline(always)]
     fn prefetch_index(&self, index: usize) {
-
         // Bounds checking is not necessary for prefetches.
         // Prefetches do not change the semantics and even if the prefetch
         // causes a page fault or any other memory exception, it is silently
@@ -84,7 +86,6 @@ impl<T> PrefetchIndex<usize> for [T] where  {
 
     #[inline(always)]
     fn prefetch_index_write(&self, index: usize) {
-
         // Bounds checking is not necessary for prefetches.
         // Prefetches do not change the semantics and even if the prefetch
         // causes a page fault or any other memory exception, it is silently

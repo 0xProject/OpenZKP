@@ -16,7 +16,6 @@ pub fn permute_index(size: usize, index: usize) -> usize {
 }
 
 /// Permute an array of FFT results.
-// TODO expose public ifft function which accepts bit-reversed input instead.
 pub fn permute<T>(v: &mut [T]) {
     let n = v.len();
     for i in 0..n {
