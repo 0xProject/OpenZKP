@@ -42,7 +42,7 @@ struct Options {
     allocation: String,
 
     /// Operation to benchmark (defaults to fft)
-    /// Valid options are: fft, fft_iterative, fft_recursive, transpose,
+    /// Valid options are: fft, fft_sqrt, fft_recursive, transpose,
     /// permute
     #[structopt(default_value = "fft")]
     operation: String,
