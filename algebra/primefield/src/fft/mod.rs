@@ -5,17 +5,21 @@
 
 mod bit_reverse;
 mod prefetch;
-mod radix_sqrt;
 mod recursive;
 pub mod small;
 mod transpose;
 
+#[cfg(feature = "std")]
+mod radix_sqrt;
+
 use crate::{Fft, FieldLike, Inv, Pow, RefFieldLike};
+use std::prelude::v1::*;
 
 // Re-exports
 // TODO: Only re-export for bench
 pub use bit_reverse::{permute, permute_index};
 pub use prefetch::{Prefetch, PrefetchIndex};
+#[cfg(feature = "std")]
 pub use radix_sqrt::radix_sqrt;
 pub use recursive::fft_vec_recursive;
 pub use transpose::transpose_square_stretch;
@@ -90,7 +94,8 @@ where
 
     fn fft_root(&mut self, root: &Field) {
         const RADIX_SQRT_TRESHOLD: usize = 1 << 10;
-        if self.len() >= RADIX_SQRT_TRESHOLD {
+        if cfg!(feature = "std") && self.len() >= RADIX_SQRT_TRESHOLD {
+            #[cfg(feature = "std")]
             radix_sqrt(self, root);
         } else {
             let twiddles = get_twiddles(root, self.len());

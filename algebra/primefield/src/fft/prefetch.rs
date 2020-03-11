@@ -34,6 +34,7 @@ where
 // Blanket implementation for all types
 impl<T> Prefetch for T {
     #[inline(always)]
+    #[cfg(target_arch = "x86_64")]
     fn prefetch_read(&self) {
         // Prefetching does not affect the semantics of the program.
         #[allow(unsafe_code)]
@@ -42,6 +43,12 @@ impl<T> Prefetch for T {
             let ptr = self as *const T as *const i8;
             _mm_prefetch(ptr, _MM_HINT_T0);
         }
+    }
+
+    #[inline(always)]
+    #[cfg(not(target_arch = "x86_64"))]
+    fn prefetch_read(&self) {
+        // Unsupported platform, do nothing
     }
 
     #[inline(always)]
@@ -54,6 +61,7 @@ impl<T> Prefetch for T {
 // Blanket implementation for slices
 impl<T> PrefetchIndex<usize> for [T] {
     #[inline(always)]
+    #[cfg(target_arch = "x86_64")]
     fn prefetch_index_read(&self, index: usize) {
         // Bounds checking is not necessary for prefetches.
         // Prefetches do not change the semantics and even if the prefetch
@@ -65,6 +73,12 @@ impl<T> PrefetchIndex<usize> for [T] {
             let ptr = self.get_unchecked(index) as *const T as *const i8;
             _mm_prefetch(ptr, _MM_HINT_T0);
         }
+    }
+
+    #[inline(always)]
+    #[cfg(not(target_arch = "x86_64"))]
+    fn prefetch_index_read(&self, _index: usize) {
+        // Unsupported platform, do nothing
     }
 
     #[inline(always)]
