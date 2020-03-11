@@ -200,6 +200,7 @@ mod tests {
         }
     }
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn fft_test() {
         let cofactor = FieldElement::from(u256h!(
             "07696b8ff70e8e9285c76bef95d3ad76cdb29e213e4b5d9a9cd0afbd7cb29b5c"

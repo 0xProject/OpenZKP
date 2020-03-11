@@ -24,33 +24,30 @@ pub fn fft_vec_recursive<Field>(
     debug_assert!(size.is_power_of_two());
     debug_assert!(offset < stride);
     debug_assert_eq!(values.len() % size, 0);
-    match size {
-        1 => {}
-        // Special casing for small sizes doesn't seem to give an advantage.
-        _ => {
-            // Inner FFT radix size/2
-            if stride == count && count < max_loop {
-                fft_vec_recursive(values, twiddles, offset, 2 * count, 2 * stride);
-            } else {
-                // TODO: We could do parallel recursion here, if we had a way to
-                // do a strided split. (Like the ndarray package provides)
-                fft_vec_recursive(values, twiddles, offset, count, 2 * stride);
-                fft_vec_recursive(values, twiddles, offset + stride, count, 2 * stride);
-            }
+    // Special casing small radices doesn't seem to give and advantage.
+    if size > 1 {
+        // Inner FFT radix size/2
+        if stride == count && count < max_loop {
+            fft_vec_recursive(values, twiddles, offset, 2 * count, 2 * stride);
+        } else {
+            // TODO: We could do parallel recursion here, if we had a way to
+            // do a strided split. (Like the ndarray package provides)
+            fft_vec_recursive(values, twiddles, offset, count, 2 * stride);
+            fft_vec_recursive(values, twiddles, offset + stride, count, 2 * stride);
+        }
 
-            // Outer FFT radix 2
-            // Lookahead about 3
+        // Outer FFT radix 2
+        // Lookahead about 3
+        for i in offset..offset + count {
+            radix_2(values, i, stride);
+        }
+        for (offset, twiddle) in (offset..offset + size * stride)
+            .step_by(2 * stride)
+            .zip(twiddles)
+            .skip(1)
+        {
             for i in offset..offset + count {
-                radix_2(values, i, stride);
-            }
-            for (offset, twiddle) in (offset..offset + size * stride)
-                .step_by(2 * stride)
-                .zip(twiddles)
-                .skip(1)
-            {
-                for i in offset..offset + count {
-                    radix_2_twiddle(values, twiddle, i, stride)
-                }
+                radix_2_twiddle(values, twiddle, i, stride)
             }
         }
     }

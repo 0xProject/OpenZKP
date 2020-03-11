@@ -98,6 +98,7 @@ mod tests {
     }
 
     fn arb_matrix_sized(size: usize, stretch: usize) -> impl Strategy<Value = Vec<u32>> {
+        #[allow(clippy::cast_possible_truncation)]
         Just((0..size * size * stretch).map(|i| i as u32).collect())
     }
 
