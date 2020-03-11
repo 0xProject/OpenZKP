@@ -49,12 +49,15 @@ pub trait Fft<T> {
     fn fft(&mut self);
 
     /// In-place permuted inverse FFT.
+    ///
+    /// Note, it requires inpute to be in non-permuted order and output
+    /// will be in permuted order.
     fn ifft(&mut self);
 
     /// In-place permuted FFT with a cofactor.
     fn fft_cofactor(&mut self, cofactor: &T);
 
-    /// In-place permuted FFT with a cofactor.
+    /// In-place permuted inverse FFT with a cofactor.
     fn ifft_cofactor(&mut self, cofactor: &T);
 
     /// In-place permuted FFT.
@@ -106,7 +109,7 @@ where
     }
 
     fn fft_root(&mut self, root: &Field) {
-        const RADIX_SQRT_TRESHOLD: usize = 1 << 15;
+        const RADIX_SQRT_TRESHOLD: usize = 1 << 10;
         if self.len() >= RADIX_SQRT_TRESHOLD {
             radix_sqrt(self, root);
         } else {
@@ -251,6 +254,7 @@ mod tests {
 
         let mut res = vector.clone();
         res.fft();
+        permute(&mut res);
         let expected = reference_fft(&vector, false);
         assert_eq!(res, expected);
 
@@ -333,7 +337,9 @@ mod tests {
         let truncated = &v[0..(1 + v.len()).next_power_of_two() / 2].to_vec();
         let mut result = truncated.clone();
         result.fft();
+        permute(&mut result);
         result.ifft();
+        permute(&mut result);
         &result == truncated
     }
 }

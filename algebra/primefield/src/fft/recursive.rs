@@ -71,14 +71,14 @@ mod tests {
     proptest! {
 
         #[test]
-        fn test_reference(orig in arb_vec()) {
-            let mut reference = orig.clone();
-            let mut result = orig.clone();
-            let root = FieldElement::root(orig.len()).unwrap();
-            let twiddles = get_twiddles(&root, orig.len());
-            ref_fft_permuted(&mut reference);
+        fn test_reference(values in arb_vec()) {
+            let mut expected = values.clone();
+            let mut result = values.clone();
+            let root = FieldElement::root(values.len()).unwrap();
+            let twiddles = get_twiddles(&root, values.len());
+            ref_fft_permuted(&mut expected);
             fft_vec_recursive(&mut result, &twiddles, 0, 1, 1);
-            prop_assert_eq!(result, reference);
+            prop_assert_eq!(result, expected);
         }
     }
 }

@@ -25,11 +25,12 @@ where
     let inner = 1_usize << (length.trailing_zeros() / 2);
     let outer = length / inner;
     let stretch = outer / inner;
+    debug_assert!(root.pow(values.len()).is_one());
     debug_assert!(outer == inner || outer == 2 * inner);
     debug_assert_eq!(outer * inner, length);
 
     // Prepare twiddles
-    let twiddles = get_twiddles(root, outer);
+    let twiddles = get_twiddles(&root.pow(inner), outer);
 
     // 1. Transpose inner x inner x stretch square matrix
     transpose_square_stretch(values, inner, stretch);
@@ -80,11 +81,10 @@ mod tests {
 
         #[test]
         fn test_radix_sqrt(values in arb_vec()) {
-            prop_assume!(values.len() < 16);
-            let root = FieldElement::root(values.len()).unwrap();
             let mut expected = values.clone();
-            ref_fft_permuted(&mut expected);
             let mut result = values.clone();
+            let root = FieldElement::root(values.len()).unwrap();
+            ref_fft_permuted(&mut expected);
             radix_sqrt(&mut result, &root);
             prop_assert_eq!(result, expected);
         }
