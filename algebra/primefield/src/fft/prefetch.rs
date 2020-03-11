@@ -70,7 +70,7 @@ impl<T> PrefetchIndex<usize> for [T] {
         #[allow(unsafe_code)]
         unsafe {
             #[allow(trivial_casts)] // False positive
-            let ptr = self.get_unchecked(index) as *const Self as *const i8;
+            let ptr = self.get_unchecked(index) as *const T as *const i8;
             _mm_prefetch(ptr, _MM_HINT_T0);
         }
     }
