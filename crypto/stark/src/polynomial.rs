@@ -1,15 +1,11 @@
 // TODO: Naming?
 #![allow(clippy::module_name_repetitions)]
-#[cfg(feature = "std")]
-use rayon::prelude::*;
 use std::prelude::v1::*;
 use zkp_macros_decl::field_element;
 use zkp_mmap_vec::MmapVec;
 #[cfg(feature = "std")]
-use zkp_primefield::fft::{fft_cofactor_permuted_out, permute_index};
+use zkp_primefield::{fft::permute_index, Fft, Pow, Root};
 use zkp_primefield::{FieldElement, Zero};
-#[cfg(feature = "std")]
-use zkp_primefield::{Pow, Root};
 use zkp_u256::U256;
 
 #[derive(Clone)]
@@ -103,11 +99,12 @@ impl DensePolynomial {
         // Compute cosets in parallel
         result
             .as_mut_slice()
-            .par_chunks_mut(self.len())
+            .chunks_mut(self.len())
             .enumerate()
             .for_each(|(i, slice)| {
                 let cofactor = &shift_factor * generator.pow(permute_index(blowup, i));
-                fft_cofactor_permuted_out(&cofactor, &self.coefficients(), slice);
+                slice.clone_from_slice(&self.coefficients());
+                slice.fft_cofactor(&cofactor);
             });
         result
     }

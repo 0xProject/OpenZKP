@@ -13,9 +13,9 @@ use zkp_hash::{Hash, Hashable, MaskedKeccak};
 use zkp_merkle_tree::{Error as MerkleError, Tree, VectorCommitment};
 use zkp_mmap_vec::MmapVec;
 use zkp_primefield::{
-    fft::{ifft_permuted, permute, permute_index},
+    fft::{permute, permute_index},
     geometric_series::geometric_series,
-    FieldElement, Inv, One, Pow, Root, SquareInline, Zero,
+    Fft, FieldElement, Inv, One, Pow, Root, SquareInline, Zero,
 };
 use zkp_u256::U256;
 
@@ -580,7 +580,7 @@ fn get_constraint_polynomials(
         });
 
     info!("Convert from values to coefficients");
-    ifft_permuted(values);
+    values.ifft();
     permute(values);
     // OPT: Merge with even-odd separation loop.
     for (f, y) in geometric_series(
@@ -779,7 +779,7 @@ fn perform_fri_layering(
     let n_coefficients = next_layer.len() / blowup;
     let points = &mut next_layer[0..n_coefficients];
     permute(points);
-    ifft_permuted(points);
+    points.ifft();
     permute(points);
     proof.write(&*points);
 

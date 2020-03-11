@@ -8,7 +8,7 @@ use crate::{FieldLike, RefFieldLike};
 #[inline(always)]
 pub fn radix_2<Field>(values: &mut [Field], offset: usize, stride: usize)
 where
-    Field: FieldLike + std::fmt::Debug,
+    Field: FieldLike,
     for<'a> &'a Field: RefFieldLike<Field>,
 {
     let i = offset;
@@ -22,7 +22,7 @@ where
 #[inline(always)]
 pub fn radix_2_twiddle<Field>(values: &mut [Field], twiddle: &Field, offset: usize, stride: usize)
 where
-    Field: FieldLike + std::fmt::Debug,
+    Field: FieldLike,
     for<'a> &'a Field: RefFieldLike<Field>,
 {
     let i = offset;
@@ -36,7 +36,7 @@ where
 #[inline(always)]
 pub fn radix_4<Field>(values: &mut [Field], twiddles: &[Field], offset: usize, stride: usize)
 where
-    Field: FieldLike + std::fmt::Debug,
+    Field: FieldLike,
     for<'a> &'a Field: RefFieldLike<Field>,
 {
     radix_2(values, offset, 2 * stride);
@@ -49,7 +49,7 @@ where
 #[inline(always)]
 pub fn radix_8<Field>(values: &mut [Field], twiddles: &[Field], offset: usize, stride: usize)
 where
-    Field: FieldLike + std::fmt::Debug,
+    Field: FieldLike,
     for<'a> &'a Field: RefFieldLike<Field>,
 {
     radix_4(values, twiddles, offset, 2 * stride);
@@ -72,6 +72,7 @@ mod tests {
         },
         *,
     };
+    use crate::{FieldElement, Root};
     use proptest::prelude::*;
 
     proptest! {
@@ -89,7 +90,8 @@ mod tests {
             let mut expected = values.clone();
             ref_fft_permuted(&mut expected);
             let mut result =  values;
-            radix_4(&mut result, &get_twiddles(4), 0, 1);
+            let root = FieldElement::root(4).unwrap();
+            radix_4(&mut result, &get_twiddles(&root, 4), 0, 1);
             prop_assert_eq!(result, expected);
         }
 
@@ -98,8 +100,8 @@ mod tests {
             let mut expected = values.clone();
             ref_fft_permuted(&mut expected);
             let mut result =  values;
-
-            radix_8(&mut result, &get_twiddles(8), 0, 1);
+            let root = FieldElement::root(8).unwrap();
+            radix_8(&mut result, &get_twiddles(&root, 8), 0, 1);
             prop_assert_eq!(result, expected);
         }
     }

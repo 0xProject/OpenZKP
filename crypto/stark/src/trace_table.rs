@@ -5,10 +5,7 @@ use std::{
     prelude::v1::*,
 };
 use zkp_mmap_vec::MmapVec;
-use zkp_primefield::{
-    fft::{ifft_permuted, permute},
-    FieldElement, Root, Zero,
-};
+use zkp_primefield::{fft::permute, Fft, FieldElement, Root, Zero};
 
 #[derive(Clone, PartialEq)]
 #[cfg_attr(feature = "std", derive(Debug))]
@@ -83,7 +80,7 @@ impl TraceTable {
                 }
 
                 // Transform to coefficients
-                ifft_permuted(&mut vec);
+                vec.ifft();
                 permute(&mut vec);
                 DensePolynomial::from_mmap_vec(vec)
             })

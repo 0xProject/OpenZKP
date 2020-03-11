@@ -1,7 +1,7 @@
 #![allow(clippy::possible_missing_comma)]
 use std::time::Instant;
 use zkp_macros_decl::field_element;
-use zkp_primefield::{fft::ifft, FieldElement, Pow, Root, SquareInline, Zero};
+use zkp_primefield::{fft::permute, Fft, FieldElement, Pow, Root, SquareInline, Zero};
 use zkp_stark::{
     solidity_encode::autogen, Constraints, DensePolynomial, Provable, RationalExpression,
     TraceTable, Verifiable,
@@ -169,7 +169,10 @@ impl Verifiable for Claim {
                 Box::new(X.pow(trace_length / coefficients.len())),
             )
         };
-        let k_coef = periodic(&ifft(&K_COEF.to_vec()));
+        let mut k_coef = K_COEF.to_vec();
+        k_coef.ifft();
+        permute(&mut k_coef);
+        let k_coef = periodic(&k_coef);
 
         let on_loop_rows = |length: usize| {
             (X.pow(trace_length / length)

@@ -1,99 +1,71 @@
 use super::{
-    bit_reverse::permute_index, depth_first::depth_first_recurse, get_twiddles,
-    transpose::transpose_inplace,
+    bit_reverse::permute_index, get_twiddles, recursive::fft_vec_recursive,
+    transpose::transpose_square_stretch,
 };
 use crate::{FieldLike, Pow, RefFieldLike};
 use log::trace;
-use std::{cmp::max, prelude::v1::*};
-
-#[cfg(feature = "std")]
 use rayon::prelude::*;
 
 /// In-place FFT with permuted output.
 ///
-/// Implement's the four step FFT in a cache-oblivious manner.
-///
-/// There is also a six-step version that outputs the result in normal order,
-/// for this see <http://wwwa.pikara.ne.jp/okojisan/otfft-en/sixstepfft.html>.
-// TODO: Bit-reversed order
-pub(super) fn radix_sqrt<Field>(values: &mut [Field], root: &Field)
+/// Implement's the six step FFT. Output is permuted, which avoids the last
+/// permutations step.
+pub fn radix_sqrt<Field>(values: &mut [Field], root: &Field)
 where
-    Field: FieldLike + std::fmt::Debug + From<usize> + Send + Sync,
-    for<'a> &'a Field: RefFieldLike<Field>,
-{
-    // Recurse by splitting along the square root
-    let length = values.len();
-    let outer = 1_usize << (length.trailing_zeros() / 2);
-    let inner = length / outer;
-    debug_assert!(outer == inner || inner == 2 * outer);
-    debug_assert_eq!(outer * inner, length);
-    let _inner_root = root.pow(outer);
-    let _outer_root = root.pow(inner);
-    let twiddles = get_twiddles(max(outer, inner));
-    parallel_recurse_inplace_permuted(
-        values,
-        root,
-        outer,
-        inner,
-        |row| depth_first_recurse(row, &twiddles, 0, 1),
-        |row| depth_first_recurse(row, &twiddles, 0, 1),
-    );
-}
-
-/// Generic recursive six-point FFT with permuted output.
-///
-/// Advantages:
-///  * The inner and outer FFT functions can be in permuted order
-///  * Only two transpositions are required instead of three.
-fn parallel_recurse_inplace_permuted<Field, F, G>(
-    values: &mut [Field],
-    root: &Field,
-    outer: usize,
-    inner: usize,
-    inner_fft: F,
-    outer_fft: G,
-) where
     Field: FieldLike + Send + Sync,
     for<'a> &'a Field: RefFieldLike<Field>,
-    F: Fn(&mut [Field]) + Sync,
-    G: Fn(&mut [Field]) + Sync,
 {
+    if values.len() <= 1 {
+        return;
+    }
+
+    // Recurse by splitting along the square root
+    // Round such that outer is larger.
     let length = values.len();
-    debug_assert!(root.pow(length).is_one());
+    let inner = 1_usize << (length.trailing_zeros() / 2);
+    let outer = length / inner;
+    let stretch = outer / inner;
+    debug_assert!(root.pow(values.len()).is_one());
+    debug_assert!(outer == inner || outer == 2 * inner);
     debug_assert_eq!(outer * inner, length);
 
-    // 1 Transpose inner * outer sized matrix
-    transpose_inplace(values, outer);
+    // Prepare twiddles
+    let twiddles = get_twiddles(&root.pow(inner), outer);
 
-    // 2 Apply inner FFTs continguously
-    // 3 Apply twiddle factors
+    // 1. Transpose inner x inner x stretch square matrix
+    transpose_square_stretch(values, inner, stretch);
+
+    // 2. Apply inner FFTs contiguously
+    // 2. Apply twiddle factors
+    trace!("Parallel {} x inner FFT size {}", outer, inner);
+    values
+        .par_chunks_mut(outer)
+        .for_each(|row| fft_vec_recursive(row, &twiddles, 0, stretch, stretch));
+
+    // 4. Transpose inner x inner x stretch square matrix
+    transpose_square_stretch(values, inner, stretch);
+
+    // 5 Apply outer FFTs contiguously
     trace!(
-        "Parallel {} x inner FFT size {} (with twiddles)",
+        "Parallel {} x outer FFT size {} (with twiddles)",
         outer,
         inner
     );
     values
-        .par_chunks_mut(inner)
+        .par_chunks_mut(outer)
         .enumerate()
-        .for_each(|(j, row)| {
-            inner_fft(row);
-            if j > 0 {
-                let outer_twiddle = root.pow(j);
-                let mut inner_twiddle = outer_twiddle.clone();
-                for i in 1..inner {
-                    let i = permute_index(inner, i);
-                    row[i] *= &inner_twiddle;
-                    inner_twiddle *= &outer_twiddle;
+        .for_each(|(i, row)| {
+            if i > 0 {
+                let i = permute_index(inner, i);
+                let inner_twiddle = root.pow(i);
+                let mut outer_twiddle = inner_twiddle.clone();
+                for element in row.iter_mut().skip(1) {
+                    *element *= &outer_twiddle;
+                    outer_twiddle *= &inner_twiddle;
                 }
             }
+            fft_vec_recursive(row, &twiddles, 0, 1, 1)
         });
-
-    // 4 Transpose outer * inner sized matrix
-    transpose_inplace(values, inner);
-
-    // 5 Apply outer FFTs contiguously
-    trace!("Parallel {} x outer FFT size {}", outer, inner);
-    values.par_chunks_mut(outer).for_each(|row| outer_fft(row));
 }
 
 #[cfg(test)]
@@ -104,28 +76,16 @@ mod tests {
     };
     use crate::{FieldElement, Root};
     use proptest::prelude::*;
-    use std::cmp::{max, min};
 
     proptest! {
 
         #[test]
-        fn test_parallel_recurse_inplace_permuted(values in arb_vec()) {
-            // TODO: Test different splittings
-            const SPLIT: usize = 4;
+        fn test_radix_sqrt(values in arb_vec()) {
             let mut expected = values.clone();
-            ref_fft_permuted(&mut expected);
-            let root = FieldElement::root(values.len()).unwrap();
             let mut result = values.clone();
-            let inner = max(1, values.len() / SPLIT);
-            let outer = min(values.len(), SPLIT);
-            parallel_recurse_inplace_permuted(
-                &mut result,
-                &root,
-                outer,
-                inner,
-                ref_fft_permuted,
-                ref_fft_permuted,
-            );
+            let root = FieldElement::root(values.len()).unwrap();
+            ref_fft_permuted(&mut expected);
+            radix_sqrt(&mut result, &root);
             prop_assert_eq!(result, expected);
         }
     }

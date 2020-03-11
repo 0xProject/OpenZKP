@@ -14,8 +14,8 @@ use structopt::StructOpt;
 use zkp_logging_allocator::ALLOCATOR;
 use zkp_mmap_vec::MmapVec;
 use zkp_primefield::{
-    fft::{fft2_inplace, permute, transpose_inplace},
-    FieldElement,
+    fft::{fft_vec_recursive, get_twiddles, permute, radix_sqrt, transpose_square_stretch},
+    Fft, FieldElement, Root,
 };
 
 fn parse_hex(src: &str) -> Result<u32, ParseIntError> {
@@ -42,7 +42,8 @@ struct Options {
     allocation: String,
 
     /// Operation to benchmark (defaults to fft)
-    /// Valid options are: fft, transpose, permute
+    /// Valid options are: fft, fft_sqrt, fft_recursive, transpose,
+    /// permute
     #[structopt(default_value = "fft")]
     operation: String,
 
@@ -221,14 +222,27 @@ fn main() -> Result<(), Error> {
     // Get function to benchmark
     let name = &options.operation;
     let mut func: Box<dyn FnMut(&mut [FieldElement])> = match name.as_ref() {
-        "fft" => Box::new(fft2_inplace),
+        "fft" => Box::new(Fft::fft),
+        "fft_sqrt" => {
+            Box::new(|values| {
+                let root = FieldElement::root(values.len()).unwrap();
+                radix_sqrt(values, &root);
+            })
+        }
+        "fft_recursive" => {
+            Box::new(|values| {
+                let root = FieldElement::root(values.len()).unwrap();
+                let twiddles = get_twiddles(&root, values.len());
+                fft_vec_recursive(values, &twiddles, 0, 1, 1);
+            })
+        }
         "permute" => Box::new(permute),
         "transpose" => {
             Box::new(|values: &mut [FieldElement]| {
                 let length = values.len();
-                let rows = 1_usize << (length.trailing_zeros() / 2);
-                let cols = length / rows;
-                transpose_inplace(values, cols)
+                let size = 1_usize << (length.trailing_zeros() / 2);
+                let stretch = length / (size * size);
+                transpose_square_stretch(values, size, stretch)
             })
         }
         _ => unimplemented!(),

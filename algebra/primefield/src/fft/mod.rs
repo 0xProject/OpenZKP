@@ -4,24 +4,25 @@
 #![allow(single_use_lifetimes)]
 
 mod bit_reverse;
-mod depth_first;
-mod iterative;
+mod prefetch;
+mod recursive;
 pub mod small;
 mod transpose;
 
-// TODO: Make no-std compatible
 #[cfg(feature = "std")]
 mod radix_sqrt;
 
-use crate::{FieldLike, Inv, Pow, RefFieldLike};
-pub use bit_reverse::{permute, permute_index};
-pub use depth_first::fft_depth_first;
-pub use iterative::fft_permuted_root;
+use crate::{Fft, FieldLike, Inv, Pow, RefFieldLike};
 use std::prelude::v1::*;
-pub use transpose::{transpose, transpose_inplace};
 
+// Re-exports
+// TODO: Only re-export for bench
+pub use bit_reverse::{permute, permute_index};
+pub use prefetch::{Prefetch, PrefetchIndex};
 #[cfg(feature = "std")]
-use radix_sqrt::radix_sqrt;
+pub use radix_sqrt::radix_sqrt;
+pub use recursive::fft_vec_recursive;
+pub use transpose::transpose_square_stretch;
 
 /// 
 /// * D. H. Bailey (1990). FFTs in external or hierarchical memory. <https://www.davidhbailey.com/dhbpapers/fftq.pdf>
@@ -47,147 +48,72 @@ use radix_sqrt::radix_sqrt;
 
 // https://ocw.mit.edu/courses/electrical-engineering-and-computer-science/6-973-communication-system-design-spring-2006/lecture-notes/lecture_8.pdf
 
-// TODO: Create a dedicated type for permuted vectors
-
-/// Out-of-place FFT with non-permuted result.
-pub fn fft<Field>(a: &[Field]) -> Vec<Field>
+/// Blanket implementation of [`Fft`] for all slices of a [`FieldLike`]
+impl<Field> Fft<Field> for [Field]
 where
-    Field: FieldLike + From<usize> + std::fmt::Debug,
+    Field: FieldLike + From<usize> + Send + Sync,
     for<'a> &'a Field: RefFieldLike<Field>,
 {
-    let mut result = a.to_owned();
-    fft_permuted(&mut result);
-    permute(&mut result);
-    result
-}
-
-/// Out-of-place inverse FFT with non-permuted result.
-pub fn ifft<Field>(a: &[Field]) -> Vec<Field>
-where
-    Field: FieldLike + From<usize> + std::fmt::Debug,
-    for<'a> &'a Field: RefFieldLike<Field>,
-{
-    let mut result = a.to_owned();
-    ifft_permuted(&mut result);
-    permute(&mut result);
-    result
-}
-
-/// In-place permuted FFT.
-pub fn fft_permuted<Field>(x: &mut [Field])
-where
-    Field: FieldLike + From<usize> + std::fmt::Debug,
-    for<'a> &'a Field: RefFieldLike<Field>,
-{
-    let root = Field::root(x.len()).expect("No root of unity for input length");
-    fft_permuted_root(&root, x);
-}
-
-/// Out-of-place permuted FFT with a cofactor.
-pub fn fft_cofactor_permuted_out<Field>(cofactor: &Field, x: &[Field], out: &mut [Field])
-where
-    Field: FieldLike + From<usize> + std::fmt::Debug,
-    for<'a> &'a Field: RefFieldLike<Field>,
-{
-    // TODO: Use geometric_series
-    let mut c = Field::one();
-    for (x, out) in x.iter().zip(out.iter_mut()) {
-        *out = x * &c;
-        c *= cofactor;
+    fn fft(&mut self) {
+        let root = Field::root(self.len()).expect("No root of unity for input length");
+        self.fft_root(&root);
     }
-    fft_permuted(out);
-}
 
-/// In-place permuted FFT with a cofactor.
-pub fn fft_cofactor_permuted<Field>(cofactor: &Field, x: &mut [Field])
-where
-    Field: FieldLike + From<usize> + std::fmt::Debug,
-    for<'a> &'a Field: RefFieldLike<Field>,
-{
-    // TODO: Use geometric_series
-    let mut c = Field::one();
-    for element in x.iter_mut() {
-        *element *= &c;
-        c *= cofactor;
+    fn ifft(&mut self) {
+        let inverse_root = Field::root(self.len())
+            .expect("No root of unity for input length")
+            .pow(self.len() - 1);
+        let inverse_length = Field::from(self.len())
+            .inv()
+            .expect("No inverse length for empty list");
+        self.fft_root(&inverse_root);
+        for e in self.iter_mut() {
+            *e *= &inverse_length;
+        }
     }
-    fft_permuted(x);
-}
 
-/// In-place permuted inverse FFT with cofactor.
-pub fn ifft_permuted<Field>(x: &mut [Field])
-where
-    Field: FieldLike + From<usize> + std::fmt::Debug,
-    for<'a> &'a Field: RefFieldLike<Field>,
-{
-    // OPT: make inv_root function.
-    let inverse_root = Field::root(x.len())
-        .expect("No root of unity for input length")
-        .inv()
-        .expect("No inverse for Field::zero()");
-    let inverse_length = Field::from(x.len())
-        .inv()
-        .expect("No inverse length for empty list");
-    fft_permuted_root(&inverse_root, x);
-    for e in x {
-        *e *= &inverse_length;
+    fn fft_cofactor(&mut self, cofactor: &Field) {
+        // TODO: This patterns happens often, abstract?
+        let mut c = Field::one();
+        for element in self.iter_mut() {
+            *element *= &c;
+            c *= cofactor;
+        }
+        self.fft();
+    }
+
+    fn ifft_cofactor(&mut self, cofactor: &Field) {
+        self.ifft();
+        let cofactor = cofactor.inv().expect("Can not invert cofactor");
+        let mut c = Field::one();
+        for element in self.iter_mut() {
+            *element *= &c;
+            c *= &cofactor;
+        }
+    }
+
+    fn fft_root(&mut self, root: &Field) {
+        const RADIX_SQRT_TRESHOLD: usize = 1 << 10;
+        if cfg!(feature = "std") && self.len() >= RADIX_SQRT_TRESHOLD {
+            #[cfg(feature = "std")]
+            radix_sqrt(self, root);
+        } else {
+            let twiddles = get_twiddles(root, self.len());
+            fft_vec_recursive(self, &twiddles, 0, 1, 1);
+        }
     }
 }
 
-pub fn get_twiddles<Field>(size: usize) -> Vec<Field>
+pub fn get_twiddles<Field>(root: &Field, size: usize) -> Vec<Field>
 where
-    Field: FieldLike + From<usize> + std::fmt::Debug,
+    Field: FieldLike,
     for<'a> &'a Field: RefFieldLike<Field>,
 {
     debug_assert!(size.is_power_of_two());
-    let root = Field::root(size).expect("No root exists");
+    debug_assert!(root.pow(size).is_one());
     let mut twiddles = (0..size / 2).map(|i| root.pow(i)).collect::<Vec<_>>();
     permute(&mut twiddles);
     twiddles
-}
-
-// TODO: https://cnx.org/contents/4kChocHM@6/Efficient-FFT-Algorithm-and-Programming-Tricks
-
-// TODO: Radix-4 and/or Split-radix FFT
-// See https://en.wikipedia.org/wiki/Split-radix_FFT_algorithm
-// See http://www.fftw.org/newsplit.pdf
-
-#[cfg(feature = "std")]
-pub fn fft2<Field>(values: &[Field]) -> Vec<Field>
-where
-    Field: FieldLike + std::fmt::Debug + From<usize> + Send + Sync,
-    for<'a> &'a Field: RefFieldLike<Field>,
-{
-    assert!(values.len().is_power_of_two());
-    let root = Field::root(values.len()).expect("No root of unity for input length");
-    let mut result = values.to_vec();
-    radix_sqrt(&mut result, &root);
-    // permute(&mut result);
-    result
-}
-
-#[cfg(feature = "std")]
-pub fn fft2_inplace<Field>(values: &mut [Field])
-where
-    Field: FieldLike + std::fmt::Debug + From<usize> + Send + Sync,
-    for<'a> &'a Field: RefFieldLike<Field>,
-{
-    assert!(values.len().is_power_of_two());
-    let root = Field::root(values.len()).expect("No root of unity for input length");
-    radix_sqrt(values, &root);
-}
-
-/// Transforms (x0, x1) to (x0 + x1, x0 - x1)
-#[inline(always)]
-pub fn radix_2_simple<Field>(x0: &mut Field, x1: &mut Field)
-where
-    Field: FieldLike + std::fmt::Debug,
-    for<'a> &'a Field: RefFieldLike<Field>,
-{
-    let t = x0.clone();
-    *x0 += &*x1;
-    // OPT: sub_from_assign
-    *x1 -= t;
-    x1.neg_assign();
 }
 
 // Quickcheck needs pass by value
@@ -270,14 +196,16 @@ mod tests {
         }
 
         #[test]
-        fn fft2_ref(values in arb_vec()) {
+        fn fft_ref(values in arb_vec()) {
             let mut expect = values.clone();
             ref_fft_permuted(&mut expect);
-            let result = fft2(&values);
+            let mut result = values.clone();
+            result.fft();
             prop_assert_eq!(result, expect);
         }
     }
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn fft_test() {
         let cofactor = FieldElement::from(u256h!(
             "07696b8ff70e8e9285c76bef95d3ad76cdb29e213e4b5d9a9cd0afbd7cb29b5c"
@@ -307,9 +235,12 @@ mod tests {
             FieldElement::from(u256h!(
                 "06c0926a786abb30b8f6e0eb9ef2278b910862717ed4beb35121d4741717e0e0"
             )),
-        ];
+        ]
+        .to_vec();
 
-        let res = fft(&vector);
+        let mut res = vector.clone();
+        res.fft();
+        permute(&mut res);
         let expected = reference_fft(&vector, false);
         assert_eq!(res, expected);
 
@@ -347,7 +278,7 @@ mod tests {
         );
 
         let mut res = vector.clone();
-        fft_cofactor_permuted(&cofactor, &mut res);
+        res.fft_cofactor(&cofactor);
         permute(&mut res);
 
         assert_eq!(
@@ -389,24 +320,12 @@ mod tests {
         if v.is_empty() {
             return true;
         }
-        let truncated = &v[0..(1 + v.len()).next_power_of_two() / 2];
-        truncated.to_vec() == ifft(&fft(truncated))
-    }
-
-    #[quickcheck]
-    fn ifft_permuted_is_inverse(v: Vec<FieldElement>) {
-        if v.is_empty() {
-            return;
-        }
-        let original = &v[0..(1 + v.len()).next_power_of_two() / 2];
-        let mut copy = original.to_owned();
-
-        // TODO: Make it work without the permutes in between
-        fft_permuted(&mut copy);
-        permute(&mut copy);
-        ifft_permuted(&mut copy);
-        permute(&mut copy);
-
-        assert_eq!(copy, original)
+        let truncated = &v[0..(1 + v.len()).next_power_of_two() / 2].to_vec();
+        let mut result = truncated.clone();
+        result.fft();
+        permute(&mut result);
+        result.ifft();
+        permute(&mut result);
+        &result == truncated
     }
 }
