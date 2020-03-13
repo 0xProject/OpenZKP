@@ -12,6 +12,56 @@ use zkp_primefield::{FieldElement, Pow, Root};
 // OPT: Don't reallocate trace table so many times, instead use a view
 // that is passed top-down for writing.
 
+pub trait TComponent {
+    type Claim;
+    type Witness;
+
+    fn constraints(
+        &self,
+        claim: &Self::Claim,
+    ) -> (
+        (usize, usize),
+        Vec<RationalExpression>,
+        HashMap<String, (usize, RationalExpression)>,
+    );
+
+    fn trace(&self, claim: &Self::Claim, witness: &Self::Witness) -> TraceTable;
+
+    fn check(&self, claim: &Self::Claim, witness: &Self::Witness) -> Result<(), (usize, usize)> {
+        let (dimensions, expressions, _) = self.constraints(claim);
+        let channel_seed = Vec::default();
+
+        let constraints = Constraints::from_expressions(dimensions, channel_seed, expressions)
+            .expect("Could not produce Constraint object for Component");
+        let trace = self.trace(claim, witness);
+        check_constraints(&constraints, &trace)
+    }
+}
+
+impl<T> Verifiable for T
+where
+    T: TComponent<Claim = ()>,
+{
+    fn constraints(&self) -> Constraints {
+        let claim = ();
+        let (dimensions, expressions, _) = self.constraints(&claim);
+        let channel_seed = Vec::default();
+
+        Constraints::from_expressions(dimensions, channel_seed, expressions)
+            .expect("Could not produce Constraint object for Component")
+    }
+}
+
+impl<T, W> Provable<&W> for T
+where
+    T: TComponent<Claim = (), Witness = W>,
+{
+    fn trace(&self, witness: &W) -> TraceTable {
+        let claim = ();
+        <Self as TComponent>::trace(self, &claim, witness)
+    }
+}
+
 #[derive(Clone)]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct Component {
@@ -19,6 +69,30 @@ pub struct Component {
     pub trace:       TraceTable,
     pub constraints: Vec<RationalExpression>,
     pub labels:      HashMap<String, (usize, RationalExpression)>,
+}
+
+impl TComponent for Component {
+    type Claim = ();
+    type Witness = ();
+
+    fn constraints(
+        &self,
+        _claim: &Self::Claim,
+    ) -> (
+        (usize, usize),
+        Vec<RationalExpression>,
+        HashMap<String, (usize, RationalExpression)>,
+    ) {
+        (
+            (self.trace.num_rows(), self.trace.num_columns()),
+            self.constraints.clone(),
+            self.labels.clone(),
+        )
+    }
+
+    fn trace(&self, _claim: &Self::Claim, _witness: &Self::Witness) -> TraceTable {
+        self.trace.clone()
+    }
 }
 
 /// Utility function to add offsets on indices
@@ -114,23 +188,6 @@ impl Component {
                 .iter()
                 .map(|(label, (row, expr))| (label.clone(), (*row, expr.map(&expr_map)))),
         )
-    }
-}
-
-impl Verifiable for Component {
-    fn constraints(&self) -> Constraints {
-        Constraints::from_expressions(
-            (self.trace.num_rows(), self.trace.num_columns()),
-            Vec::new(), // TODO: create a meaningful seed value
-            self.constraints.clone(),
-        )
-        .expect("Could not produce Constraint object for Component")
-    }
-}
-
-impl Provable<()> for Component {
-    fn trace(&self, _witness: ()) -> TraceTable {
-        self.trace.clone()
     }
 }
 
@@ -711,7 +768,7 @@ mod tests {
             // TODO: Make prove and verify support empty/tiny traces correctly
             prop_assume!(component.trace.num_rows() >= 2);
             prop_assume!(component.trace.num_columns() >= 1);
-            let proof = component.prove(());
+            let proof = component.prove(&());
             let proof = proof.expect("Expected proof");
             component.verify(&proof).unwrap();
         }

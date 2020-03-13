@@ -119,7 +119,7 @@ fn main() {
     info!("Constructing proof...");
     let proof = {
         let _timer = Timer::default();
-        component.prove(())
+        component.prove(&())
     }
     .expect("failed to create proof");
     println!("Proof size is {}", proof.as_bytes().len());
