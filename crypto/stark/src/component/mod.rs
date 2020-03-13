@@ -1,9 +1,11 @@
-use crate::{
-    constraint_check::check_constraints, Constraints, Provable, RationalExpression, TraceTable,
-    Verifiable,
-};
-use std::{collections::HashMap, convert::TryFrom};
+use crate::RationalExpression;
+use std::convert::TryFrom;
 use zkp_primefield::{FieldElement, Pow, Root};
+
+pub(super) mod fixed;
+mod traits;
+
+use fixed::FixedComponent;
 
 // TODO: Introduce prover/verifier distinction
 
@@ -11,89 +13,6 @@ use zkp_primefield::{FieldElement, Pow, Root};
 
 // OPT: Don't reallocate trace table so many times, instead use a view
 // that is passed top-down for writing.
-
-pub trait TComponent {
-    type Claim;
-    type Witness;
-
-    fn constraints(
-        &self,
-        claim: &Self::Claim,
-    ) -> (
-        (usize, usize),
-        Vec<RationalExpression>,
-        HashMap<String, (usize, RationalExpression)>,
-    );
-
-    fn trace(&self, claim: &Self::Claim, witness: &Self::Witness) -> TraceTable;
-
-    fn check(&self, claim: &Self::Claim, witness: &Self::Witness) -> Result<(), (usize, usize)> {
-        let (dimensions, expressions, _) = self.constraints(claim);
-        let channel_seed = Vec::default();
-
-        let constraints = Constraints::from_expressions(dimensions, channel_seed, expressions)
-            .expect("Could not produce Constraint object for Component");
-        let trace = self.trace(claim, witness);
-        check_constraints(&constraints, &trace)
-    }
-}
-
-impl<T> Verifiable for T
-where
-    T: TComponent<Claim = ()>,
-{
-    fn constraints(&self) -> Constraints {
-        let claim = ();
-        let (dimensions, expressions, _) = self.constraints(&claim);
-        let channel_seed = Vec::default();
-
-        Constraints::from_expressions(dimensions, channel_seed, expressions)
-            .expect("Could not produce Constraint object for Component")
-    }
-}
-
-impl<T, W> Provable<&W> for T
-where
-    T: TComponent<Claim = (), Witness = W>,
-{
-    fn trace(&self, witness: &W) -> TraceTable {
-        let claim = ();
-        <Self as TComponent>::trace(self, &claim, witness)
-    }
-}
-
-#[derive(Clone)]
-#[cfg_attr(feature = "std", derive(Debug))]
-pub struct Component {
-    // TODO: Make private
-    pub trace:       TraceTable,
-    pub constraints: Vec<RationalExpression>,
-    pub labels:      HashMap<String, (usize, RationalExpression)>,
-}
-
-impl TComponent for Component {
-    type Claim = ();
-    type Witness = ();
-
-    fn constraints(
-        &self,
-        _claim: &Self::Claim,
-    ) -> (
-        (usize, usize),
-        Vec<RationalExpression>,
-        HashMap<String, (usize, RationalExpression)>,
-    ) {
-        (
-            (self.trace.num_rows(), self.trace.num_columns()),
-            self.constraints.clone(),
-            self.labels.clone(),
-        )
-    }
-
-    fn trace(&self, _claim: &Self::Claim, _witness: &Self::Witness) -> TraceTable {
-        self.trace.clone()
-    }
-}
 
 /// Utility function to add offsets on indices
 // Valid indices will be substantially less than type limits
@@ -104,91 +23,6 @@ fn index_rotate(len: usize, index: usize, offset: isize) -> usize {
     let len = len as isize;
     let index = index as isize;
     (index + offset).rem_euclid(len) as usize
-}
-
-impl Component {
-    /// Constructs an empty component of given size.
-    ///
-    /// This is useful in combination with composition combinators to pad out a
-    /// component to a required size.
-    pub fn empty(rows: usize, columns: usize) -> Self {
-        Self {
-            trace:       TraceTable::new(rows, columns),
-            constraints: Vec::new(),
-            labels:      HashMap::new(),
-        }
-    }
-
-    pub fn check(&self) -> bool {
-        let constraints = Constraints::from_expressions(
-            (self.trace.num_rows(), self.trace.num_columns()),
-            Vec::new(),
-            self.constraints.clone(),
-        )
-        .unwrap();
-        check_constraints(&constraints, &self.trace).is_ok()
-    }
-
-    pub fn generator(&self) -> FieldElement {
-        FieldElement::root(self.trace.num_rows()).expect("no generator for trace length")
-    }
-
-    // TODO: Generic eval for given X that interpolates the columns
-
-    pub fn eval_row(&self, expression: &RationalExpression, row: usize) -> FieldElement {
-        assert!(row < self.trace.num_rows());
-        let x = self.generator().pow(row);
-        expression.evaluate(&x, &|col, offset| {
-            self.trace[(index_rotate(self.trace.num_rows(), row, offset), col)].clone()
-        })
-    }
-
-    pub fn eval_label(&self, label: &str) -> FieldElement {
-        let (row, expression) = &self.labels[label];
-        self.eval_row(expression, *row)
-    }
-
-    pub fn rename_label(&mut self, old: &str, new: &str) {
-        if let Some(value) = self.labels.remove(old) {
-            let _ = self.labels.insert(new.to_string(), value);
-        } else {
-            panic!("Label '{}' not found", old);
-        }
-    }
-
-    pub fn remove_label(&mut self, label: &str) {
-        if self.labels.remove(label).is_none() {
-            panic!("Label '{}' not found", label);
-        }
-    }
-
-    pub fn project_into(
-        &self,
-        target: &mut Self,
-        trace_map: impl Fn(usize, usize) -> (usize, usize),
-        expr_map: impl Fn(RationalExpression) -> RationalExpression,
-    ) {
-        // Copy over TraceTable
-        for i in 0..self.trace.num_rows() {
-            for j in 0..self.trace.num_columns() {
-                target.trace[trace_map(i, j)] = self.trace[(i, j)].clone();
-            }
-        }
-        // Copy over Constraints
-        target.constraints.extend(
-            self.constraints
-                .iter()
-                .map(|expr| expr.clone().map(&expr_map)),
-        );
-        // Copy over Labels
-        // TODO: Rename colliding labels?
-        // TODO: Row numbers?
-        target.labels.extend(
-            self.labels
-                .iter()
-                .map(|(label, (row, expr))| (label.clone(), (*row, expr.map(&expr_map)))),
-        )
-    }
 }
 
 // OPT: Use the degree of freedom provided by shift_x + shift_trace to
@@ -203,7 +37,7 @@ impl Component {
 // TODO: Figure out a better strategy for passing traces around, for now we
 // always pass by value.
 #[allow(clippy::needless_pass_by_value)]
-pub fn permute_columns(a: Component, permutation: &[usize]) -> Component {
+pub fn permute_columns(a: FixedComponent, permutation: &[usize]) -> FixedComponent {
     use RationalExpression::*;
 
     // Validate the permutation
@@ -215,7 +49,7 @@ pub fn permute_columns(a: Component, permutation: &[usize]) -> Component {
     );
 
     // Create a new trace table that permutes the columns
-    let mut result = Component::empty(a.trace.num_rows(), a.trace.num_columns());
+    let mut result = FixedComponent::empty(a.trace.num_rows(), a.trace.num_columns());
     a.project_into(
         &mut result,
         |i, j| (i, permutation[j]),
@@ -232,14 +66,14 @@ pub fn permute_columns(a: Component, permutation: &[usize]) -> Component {
 /// Rotate around the row indices
 ///
 /// `new_row_index = old_row_index + amount`
-pub fn shift(a: Component, amount: isize) -> Component {
+pub fn shift(a: FixedComponent, amount: isize) -> FixedComponent {
     use RationalExpression::*;
     if a.trace.num_rows() <= 1 {
         return a;
     }
     let amount_abs: usize =
         usize::try_from(amount.rem_euclid(isize::try_from(a.trace.num_rows()).unwrap())).unwrap();
-    let mut result = Component::empty(a.trace.num_rows(), a.trace.num_columns());
+    let mut result = FixedComponent::empty(a.trace.num_rows(), a.trace.num_columns());
     let factor = FieldElement::root(a.trace.num_rows())
         .expect("No generator for trace length")
         .pow(-amount)
@@ -274,10 +108,10 @@ pub fn shift(a: Component, amount: isize) -> Component {
 #[allow(clippy::needless_pass_by_value)]
 // Valid indices will be substantially less than type limits
 #[allow(clippy::cast_possible_wrap)]
-pub fn fold(a: Component) -> Component {
+pub fn fold(a: FixedComponent) -> FixedComponent {
     use RationalExpression::*;
     assert_eq!(a.trace.num_columns() % 2, 0);
-    let mut result = Component::empty(2 * a.trace.num_rows(), a.trace.num_columns() / 2);
+    let mut result = FixedComponent::empty(2 * a.trace.num_rows(), a.trace.num_columns() / 2);
     a.project_into(
         &mut result,
         |i, j| (2 * i + (j % 2), j / 2),
@@ -294,10 +128,10 @@ pub fn fold(a: Component) -> Component {
     result
 }
 
-pub fn compose_horizontal(mut a: Component, mut b: Component) -> Component {
+pub fn compose_horizontal(mut a: FixedComponent, mut b: FixedComponent) -> FixedComponent {
     use RationalExpression::*;
     assert_eq!(a.trace.num_rows(), b.trace.num_rows());
-    let mut result = Component::empty(
+    let mut result = FixedComponent::empty(
         a.trace.num_rows(),
         a.trace.num_columns() + b.trace.num_columns(),
     );
@@ -327,7 +161,7 @@ pub fn compose_horizontal(mut a: Component, mut b: Component) -> Component {
 
 // We allow this for symmetry
 #[allow(clippy::needless_pass_by_value)]
-pub fn compose_vertical(mut a: Component, mut b: Component) -> Component {
+pub fn compose_vertical(mut a: FixedComponent, mut b: FixedComponent) -> FixedComponent {
     use RationalExpression::*;
     assert_eq!(a.trace.num_rows(), b.trace.num_rows());
     assert_eq!(a.trace.num_columns(), b.trace.num_columns());
@@ -339,7 +173,7 @@ pub fn compose_vertical(mut a: Component, mut b: Component) -> Component {
             other => other,
         }
     };
-    let mut result = Component::empty(2 * a.trace.num_rows(), a.trace.num_columns());
+    let mut result = FixedComponent::empty(2 * a.trace.num_rows(), a.trace.num_columns());
     a.labels = a
         .labels
         .into_iter()
@@ -358,12 +192,12 @@ pub fn compose_vertical(mut a: Component, mut b: Component) -> Component {
 }
 
 /// Fold a component a number of times, padding if necessary.
-pub fn fold_many(a: Component, folds: usize) -> Component {
+pub fn fold_many(a: FixedComponent, folds: usize) -> FixedComponent {
     let mut result = a;
     for _ in 0..folds {
         if result.trace.num_columns() % 2 == 1 {
             let rows = result.trace.num_rows();
-            result = compose_horizontal(result, Component::empty(rows, 1));
+            result = compose_horizontal(result, FixedComponent::empty(rows, 1));
             result.labels = result
                 .labels
                 .into_iter()
@@ -378,7 +212,7 @@ pub fn fold_many(a: Component, folds: usize) -> Component {
 }
 
 /// Horizontally compose two components of potentially unequal length
-pub fn compose_folded(mut a: Component, mut b: Component) -> Component {
+pub fn compose_folded(mut a: FixedComponent, mut b: FixedComponent) -> FixedComponent {
     use std::cmp::Ordering::*;
     let a_len = a.trace.num_rows();
     let b_len = b.trace.num_rows();
@@ -411,97 +245,10 @@ pub fn compose_folded(mut a: Component, mut b: Component) -> Component {
     }
 }
 
-#[cfg(feature = "test")]
-impl Component {
-    /// Creates an example constraint system of given size
-    ///
-    /// It takes two seed values, one to make the constraints unique
-    /// and one to make the witness unique.
-    pub fn example(
-        rows: usize,
-        columns: usize,
-        constraint_seed: &FieldElement,
-        witness_seed: &FieldElement,
-    ) -> Self {
-        use RationalExpression::*;
-
-        // Construct a sequence using the quadratic recurrence relation:
-        //     x[0]   = constraint_seed     (part of constraints)
-        //     x[1]   = witness_seed        (not part of constraints)
-        //     x[i+2] = x[i] * x[i + 1] + constraint_seed
-        let mut x0 = constraint_seed.clone();
-        let mut x1 = witness_seed.clone();
-        let mut next = || {
-            let result = x0.clone();
-            let x2 = &x0 * &x1 + constraint_seed;
-            x0 = x1.clone();
-            x1 = x2;
-            result
-        };
-
-        // Fill in the trace table with the sequence
-        // the sequence is written left-to-right, then top-to-bottom.
-        let mut trace = TraceTable::new(rows, columns);
-        for i in 0..(rows * columns) {
-            trace[(i / columns, i % columns)] = next();
-        }
-
-        // Construct the constraint system for the sequence.
-        let omega = Constant(FieldElement::root(rows).unwrap());
-        let mut constraints = Vec::new();
-        let mut labels = HashMap::new();
-        // x[0] = start
-        if rows * columns >= 1 {
-            constraints.push((Trace(0, 0) - constraint_seed.into()) / (X - omega.pow(0)));
-            let _ = labels.insert("start".to_owned(), (0, Trace(0, 0)));
-        }
-        if rows * columns >= 3 {
-            let _ = labels.insert("final".to_owned(), (rows - 1, Trace(columns - 1, 0)));
-            let _ = labels.insert(
-                "next".to_owned(),
-                (
-                    rows - 1,
-                    if columns == 1 {
-                        Trace(0, -1) * Trace(0, 0) + constraint_seed.into()
-                    } else {
-                        Trace(columns - 2, 0) * Trace(columns - 1, 0) + constraint_seed.into()
-                    },
-                ),
-            );
-            // For each column we need to add a constraint
-            for i in 0..columns {
-                // Find the previous two cells in the table
-                let (x0, x1) = match (i, columns) {
-                    (0, 1) => (Trace(0, -2), Trace(0, -1)),
-                    (0, _) => (Trace(columns - 2, -1), Trace(columns - 1, -1)),
-                    (1, _) => (Trace(columns - 1, -1), Trace(0, 0)),
-                    (..) => (Trace(i - 2, 0), Trace(i - 1, 0)),
-                };
-                // Exempt the first two cells
-                let exceptions = match (i, columns) {
-                    (0, 1) => (X - omega.pow(0)) * (X - omega.pow(1)),
-                    (0, _) | (1, _) => (X - omega.pow(0)),
-                    (..) => 1.into(),
-                };
-                // x[i+2] = x[i] * x[i + 1] + offset
-                constraints.push(
-                    (Trace(i, 0) - x0 * x1 - constraint_seed.into()) * exceptions
-                        / (X.pow(rows) - 1.into()),
-                )
-            }
-        }
-
-        Self {
-            trace,
-            constraints,
-            labels,
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::traits::{Provable, Verifiable};
     use proptest::prelude::*;
     use zkp_macros_decl::field_element;
     use zkp_primefield::{u256::U256, One};
@@ -536,21 +283,21 @@ mod tests {
     }
 
     /// Generates an arbitrary component of given size
-    fn arb_component_size(rows: usize, cols: usize) -> impl Strategy<Value = Component> {
+    fn arb_component_size(rows: usize, cols: usize) -> impl Strategy<Value = FixedComponent> {
         (arb_field_element(), arb_field_element()).prop_map(
             move |(constraint_seed, witness_seed)| {
-                Component::example(rows, cols, &constraint_seed, &witness_seed)
+                FixedComponent::example(rows, cols, &constraint_seed, &witness_seed)
             },
         )
     }
 
     /// Generates an arbitrary component
-    fn arb_component() -> impl Strategy<Value = Component> {
+    fn arb_component() -> impl Strategy<Value = FixedComponent> {
         (arb_2exp(10), 0_usize..=10).prop_flat_map(|(rows, cols)| arb_component_size(rows, cols))
     }
 
     /// Generates an arbitrary component and column permutation
-    fn arb_component_and_permutation() -> impl Strategy<Value = (Component, Vec<usize>)> {
+    fn arb_component_and_permutation() -> impl Strategy<Value = (FixedComponent, Vec<usize>)> {
         arb_component().prop_flat_map(|component| {
             let permutation = arb_permutation(component.trace.num_columns());
             (Just(component), permutation)
@@ -558,7 +305,7 @@ mod tests {
     }
 
     /// Generate two components with equal number of rows
-    fn arb_hor_components() -> impl Strategy<Value = (Component, Component)> {
+    fn arb_hor_components() -> impl Strategy<Value = (FixedComponent, FixedComponent)> {
         (arb_2exp(10), 0_usize..=10, 0_usize..=10).prop_flat_map(|(rows, cols_left, cols_right)| {
             (
                 arb_component_size(rows, cols_left),
@@ -568,7 +315,7 @@ mod tests {
     }
 
     /// Generate two components with equal number of rows
-    fn arb_ver_components() -> impl Strategy<Value = (Component, Component)> {
+    fn arb_ver_components() -> impl Strategy<Value = (FixedComponent, FixedComponent)> {
         (
             arb_2exp(10),
             0_usize..=10,
@@ -578,15 +325,15 @@ mod tests {
         )
             .prop_map(|(rows, cols, constraint_seed, top_seed, bottom_seed)| {
                 (
-                    Component::example(rows, cols, &constraint_seed, &top_seed),
-                    Component::example(rows, cols, &constraint_seed, &bottom_seed),
+                    FixedComponent::example(rows, cols, &constraint_seed, &top_seed),
+                    FixedComponent::example(rows, cols, &constraint_seed, &bottom_seed),
                 )
             })
     }
 
     #[test]
     fn test_labels() {
-        let component = Component::example(4, 2, &2.into(), &3.into());
+        let component = FixedComponent::example(4, 2, &2.into(), &3.into());
         assert_eq!(
             component.eval_label("start"),
             field_element!("0000000000000000000000000000000000000000000000000000000000000002")
@@ -605,7 +352,7 @@ mod tests {
 
         #[test]
         fn test_empty(rows in arb_2exp(10), cols in 0_usize..=10) {
-            let component = Component::empty(rows, cols);
+            let component = FixedComponent::empty(rows, cols);
             assert!(component.check())
         }
 

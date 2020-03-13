@@ -88,8 +88,8 @@ pub use verifier::{verify, Error as VerifierError};
 // Exports for prover
 #[cfg(feature = "prover")]
 pub use component::{
-    compose_folded, compose_horizontal, compose_vertical, fold, fold_many, permute_columns, shift,
-    Component,
+    compose_folded, compose_horizontal, compose_vertical, fixed::FixedComponent as Component, fold,
+    fold_many, permute_columns, shift,
 };
 #[cfg(feature = "prover")]
 pub use constraint_check::check_constraints;
