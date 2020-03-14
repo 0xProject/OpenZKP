@@ -29,7 +29,7 @@ impl Component for Example {
         let mut labels = HashMap::new();
         // x[0] = start
         if self.rows * self.columns >= 1 {
-            constraints.push((Trace(0, 0) - claim.into()) / (X - omega.pow(0)));
+            constraints.push((Trace(0, 0) - (&self.seed).into()) / (X - omega.pow(0)));
             let _ = labels.insert("start".to_owned(), (0, Trace(0, 0)));
         }
         if self.rows * self.columns >= 3 {
@@ -76,10 +76,10 @@ impl Component for Example {
 
     fn trace(&self, claim: &Self::Claim, witness: &Self::Witness) -> TraceTable {
         // Construct a sequence using the quadratic recurrence relation:
-        //     x[0]   = constraint_seed     (part of constraints)
-        //     x[1]   = witness_seed        (not part of constraints)
-        //     x[i+2] = x[i] * x[i + 1] + constraint_seed
-        let mut x0 = claim.clone();
+        //     x[0]   = seed           (part of constraints)
+        //     x[1]   = witness        (not part of constraints)
+        //     x[i+2] = x[i] * x[i + 1] + claim
+        let mut x0 = self.seed.clone();
         let mut x1 = witness.clone();
         let mut next = || {
             let result = x0.clone();
