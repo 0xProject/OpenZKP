@@ -2,6 +2,8 @@ use crate::RationalExpression;
 use std::convert::TryFrom;
 use zkp_primefield::{FieldElement, Pow, Root};
 
+#[cfg(feature = "test")]
+mod example;
 pub(super) mod fixed;
 mod traits;
 
