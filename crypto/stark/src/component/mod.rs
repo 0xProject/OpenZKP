@@ -5,6 +5,7 @@ use zkp_primefield::{FieldElement, Pow, Root};
 #[cfg(feature = "test")]
 mod example;
 pub(super) mod fixed;
+mod horizontal;
 mod traits;
 
 use fixed::FixedComponent;

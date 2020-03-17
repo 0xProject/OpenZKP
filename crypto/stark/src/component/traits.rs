@@ -4,20 +4,29 @@ use crate::{
 };
 use std::collections::HashMap;
 
+/// Proof component
+///
+/// Currently has
+/// * Fixed size trace table.
+/// * Constraints
+/// * Return trace table.
+///
+/// To do:
+/// * Generate constraint system without public input.
+/// * Generate
 pub trait Component {
     type Claim;
     type Witness;
 
-    fn constraints(
+    fn trace(
         &self,
         claim: &Self::Claim,
+        witness: &Self::Witness,
     ) -> (
-        (usize, usize),
         Vec<RationalExpression>,
         HashMap<String, (usize, RationalExpression)>,
+        TraceTable,
     );
-
-    fn trace(&self, claim: &Self::Claim, witness: &Self::Witness) -> TraceTable;
 
     fn check(&self, claim: &Self::Claim, witness: &Self::Witness) -> Result<(), (usize, usize)> {
         let (dimensions, expressions, _) = self.constraints(claim);
