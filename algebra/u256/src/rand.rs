@@ -1,4 +1,4 @@
-use crate::U256;
+use crate::{Binary, U256};
 use rand::{
     distributions::{
         uniform::{SampleBorrow, SampleUniform, UniformSampler},

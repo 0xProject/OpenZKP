@@ -2,10 +2,9 @@
 #![allow(unused_results)]
 use crate::rational_expression::*;
 use std::{
-    cmp::Ordering, collections::HashMap, error::Error, fs::File, io::prelude::*, path::Path,
-    prelude::v1::*,
+    cmp::Ordering, collections::BTreeMap, fs::File, io::prelude::*, path::Path, prelude::v1::*,
 };
-use zkp_primefield::FieldElement;
+use zkp_primefield::{FieldElement, Pow, Root};
 use zkp_u256::U256;
 
 // Contains the offsets from the context data array pointer to the named values
@@ -45,18 +44,20 @@ pub fn autogen_periodic(
     index: usize,
     name: &str,
 ) -> Result<(), std::io::Error> {
-    let name = format!("{}.sol", name);
+    let name = format!("contracts/{}.sol", name);
     let path = Path::new(&name);
     let display = path.display();
     let mut file = match File::create(&path) {
-        Err(why) => panic!("couldn't create {}: {}", display, why.description()),
+        Err(why) => panic!("couldn't create {}: {}", display, why.to_string()),
         Ok(file) => file,
     };
+
+    println!("{}: {:?}", index, periodic);
 
     if let RationalExpression::Polynomial(poly, _) = periodic {
         writeln!(
             &mut file,
-            "pragma solidity ^0.5.2;
+            "pragma solidity ^0.5.11;
 
 contract perodic{} {{
     function evaluate(uint x) external pure returns (uint y){{
@@ -82,7 +83,7 @@ contract perodic{} {{
     Ok(())
 }
 
-pub fn autogen_constraint_poly(
+pub fn autogen(
     trace_len: usize,
     public: &[&RationalExpression],
     constraints: &[RationalExpression],
@@ -90,19 +91,19 @@ pub fn autogen_constraint_poly(
     n_cols: usize,
 ) -> Result<(), std::io::Error> {
     let generator = FieldElement::root(trace_len).unwrap();
-    let mut traces = HashMap::new();
-    let mut inverses = HashMap::new();
-    let mut periodic = HashMap::new();
+    let mut traces = BTreeMap::new();
+    let mut inverses = BTreeMap::new();
+    let mut periodic = BTreeMap::new();
     for exp in constraints.iter() {
         traces.extend(exp.trace_search());
         inverses.extend(exp.inv_search());
         periodic.extend(exp.periodic_search());
     }
 
-    let path = Path::new("ConstraintPoly.sol");
+    let path = Path::new("contracts/ConstraintPoly.sol");
     let display = path.display();
     let mut file = match File::create(&path) {
-        Err(why) => panic!("couldn't create {}: {}", display, why.description()),
+        Err(why) => panic!("couldn't create {}: {}", display, why.to_string()),
         Ok(file) => file,
     };
 
@@ -201,15 +202,15 @@ pub fn autogen_memory_layout(
     ctx.fri_values = 56;
 
     let max_query_size = 22;
-    let path = Path::new("MemoryMap.sol");
+    let path = Path::new("contracts/MemoryMap.sol");
     let display = path.display();
     let mut file = match File::create(&path) {
-        Err(why) => panic!("couldn't create {}: {}", display, why.description()),
+        Err(why) => panic!("couldn't create {}: {}", display, why.to_string()),
         Ok(file) => file,
     };
     writeln!(
         &mut file,
-        "pragma solidity ^0.5.0;
+        "pragma solidity ^0.5.11;
 
     contract MemoryMap {{
         /*
@@ -217,13 +218,13 @@ pub fn autogen_memory_layout(
             The offsets of the different fields are listed below.
             E.g. The offset of the i'th hash is [mm_hashes + i].
         */
-    
+
         uint256 constant internal channel_state_size = 3;
         uint256 constant internal max_n_queries =  22;
         uint256 constant internal fri_queue_size = max_n_queries;
-    
+
         uint256 constant internal max_supported_max_fri_step = 3;
-    
+
         uint256 constant internal mm_eval_domain_size =                              0;
         uint256 constant internal mm_blow_up_factor =                                1;
         uint256 constant internal mm_log_eval_domain_size =                          2;
@@ -374,9 +375,9 @@ pub fn setup_call_memory(
     traces: &[&RationalExpression],
     periodic: &[&RationalExpression],
     adjustment_degrees: &[usize],
-) -> Result<HashMap<RationalExpression, String>, std::io::Error> {
+) -> Result<BTreeMap<RationalExpression, String>, std::io::Error> {
     let mut index = 1; // Note index 0 is taken by the oods_point
-    let mut memory_lookups: HashMap<RationalExpression, String> = HashMap::new();
+    let mut memory_lookups: BTreeMap<RationalExpression, String> = BTreeMap::new();
     for &exp in public_inputs.iter() {
         memory_lookups.insert(exp.clone(), format!("mload({})", index * 32));
         index += 1;
@@ -409,7 +410,7 @@ pub fn setup_call_memory(
         if flag {
             held.extend(
                 format!(
-                    "        mstore({},expmod(mload(0), {}, PRIME))\n",
+                    "        mstore({},expmod(mload(0x0), {}, PRIME))\n",
                     index * 32,
                     degree
                 )
@@ -425,13 +426,16 @@ pub fn setup_call_memory(
 
     writeln!(
         file,
-        "pragma solidity ^0.5.2;
+        "pragma solidity ^0.5.11;
 
 contract OodsPoly {{
     function() external {{
           uint256 res;
           assembly {{
-            let PRIME := 0x800000000000011000000000000000000000000000000000000000000000001
+            PRIME := 0x800000000000011000000000000000000000000000000000000000000000001
+            // NOTE - If compilation hits a stack depth error on variable PRIME,
+            // then uncomment the following line and globally replace PRIME with mload({})
+            // mstore({}, 0x800000000000011000000000000000000000000000000000000000000000001)
             // Copy input from calldata to memory.
             calldatacopy(0x0, 0x0, /*input_data_size*/ {})
 
@@ -449,20 +453,22 @@ contract OodsPoly {{
                 }}
                 res := mload(p)
             }}
-    
+
             function degree_adjustment(composition_polynomial_degree_bound, constraint_degree, \
          numerator_degree,
                 denominator_degree) -> res {{
                                         res := sub(sub(composition_polynomial_degree_bound, 1),
                        sub(add(constraint_degree, numerator_degree), denominator_degree))
                     }}
-    
+
             function small_expmod(x, num, prime) -> res {{
                 res := 1
                 for {{ let ind := 0 }} lt(ind, num) {{ ind := add(ind, 1) }} {{
                        res := mulmod(res, x, prime)
                 }}
             }}",
+        (index + inverses.len() + 6) * 32,
+        (index + inverses.len() + 6) * 32,
         in_data_size * 32,
         (index + inverses.len()) * 32
     )?;
@@ -551,16 +557,28 @@ pub fn autogen_oods(
     degree_bound: usize,
     ctx: &ContextArray,
 ) -> Result<(), std::io::Error> {
-    let path = Path::new("Odds.sol");
+    let path = Path::new("contracts/Odds.sol");
     let display = path.display();
     let mut file = match File::create(&path) {
-        Err(why) => panic!("couldn't create {}: {}", display, why.description()),
+        Err(why) => panic!("couldn't create {}: {}", display, why.to_string()),
         Ok(file) => file,
     };
 
     writeln!(
         &mut file,
-        "  function oods_prepare_inverses(uint256[] memory context) internal pure {{
+        "pragma solidity ^0.5.11;
+
+        import \"./MemoryMap.sol\";
+        import \"./StarkParameters.sol\";
+
+        contract Oods is MemoryMap, StarkParameters {{
+          // For each query point we want to invert (2 + n_rows_in_mask) items:
+          //  The query point itself (x).
+          //  The denominator for the constraint polynomial (x-z^constraint_degree)
+          //  [(x-(g^row_number)z) for row_number in mask].
+          uint256 constant internal batch_inverse_chunk = (2 + n_rows_in_mask);
+          uint256 constant internal batch_inverse_size = max_n_queries * batch_inverse_chunk;
+          function oods_prepare_inverses(uint256[] memory context) internal pure {{
         uint trace_generator = 0x{};
         uint oods_point = context[mm_oods_point];
         for (uint i = 0; i < context[mm_n_unique_queries]; i ++) {{
@@ -571,7 +589,7 @@ pub fn autogen_oods(
 
     let mut last_seen_row = isize::max_value();
     let mut counter = 0;
-    let mut index_to_offset = HashMap::new();
+    let mut index_to_offset = BTreeMap::new();
 
     let mut row_sorted_trace = trace.to_vec();
     row_sorted_trace.sort_by(|a, b| back_lexicographic_compare(a, b));
@@ -591,7 +609,7 @@ pub fn autogen_oods(
                         "        context[batch_inverse_chunk*i + {} + mm_batch_inverse_in] = \
                          fsub(x, fmul(oods_point, 0x{}));",
                         counter,
-                        U256::from(generator.pow(*j))
+                        U256::from(generator.pow(*j).unwrap())
                     )?;
                     index_to_offset.insert(j, counter * 32);
                     counter += 1;
@@ -624,7 +642,7 @@ pub fn autogen_oods(
         "}}
 
     uint carried = 1;
-    for (uint i = 0; i < context[mm_n_unique_queries]*4; i ++) {{
+    for (uint i = 0; i < context[mm_n_unique_queries]*batch_inverse_chunk; i ++) {{
         carried = fmul(carried, context[mm_batch_inverse_in+i]);
         context[mm_batch_inverse_out+i] = carried;
     }}
@@ -765,21 +783,22 @@ pub fn autogen_oods(
         &mut file,
         "              // Advance the composition_query_responses by the the amount we've read \
          (0x20 * constraint_degree).
-    composition_query_responses := add(composition_query_responses, {})
+      composition_query_responses := add(composition_query_responses, {})
 
-    // Append the sum of the trace boundary constraints to the fri_values array.
-    // Note that we need to add the sum of the composition boundary constraints to those
-    // values before running fri.
-    mstore(fri_values, res)
+      // Append the sum of the trace boundary constraints to the fri_values array.
+      // Note that we need to add the sum of the composition boundary constraints to those
+      // values before running fri.
+      mstore(fri_values, res)
 
-    // Append the fri_inv_point of the current query to the fri_inv_points array.
-    mstore(fri_inv_points, mload(add(denominators_ptr, {})))
-    fri_inv_points := add(fri_inv_points, 0x20)
+      // Append the fri_inv_point of the current query to the fri_inv_points array.
+      mstore(fri_inv_points, mload(add(denominators_ptr, {})))
+      fri_inv_points := add(fri_inv_points, 0x20)
 
-    // Advance denominators_ptr by chunk size (0x20 * (2+n_rows_in_mask)).
-    denominators_ptr := add(denominators_ptr, {})
-}}
-}}
+      // Advance denominators_ptr by chunk size (0x20 * (2+n_rows_in_mask)).
+      denominators_ptr := add(denominators_ptr, {})
+      }}
+    }}
+  }}
 }}",
         degree_bound * 32,
         (index_to_offset.len() + 1) * 32,

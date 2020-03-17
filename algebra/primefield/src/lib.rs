@@ -45,20 +45,38 @@
 // TODO: Provide two versions of hot functions `_inlined` and plain.
 #![allow(clippy::inline_always)]
 
+mod convert;
 pub mod fft;
-mod field;
 pub mod geometric_series;
+mod invert_batch;
+mod ops;
+mod prime_field;
+mod proth_field;
 #[cfg(feature = "use_rand")]
 mod rand;
-mod square_root;
+#[cfg(any(test, feature = "quickcheck"))]
+mod test;
+mod traits;
+mod uint;
 
-pub use field::FieldElement;
+// Generic field implementation
+pub use prime_field::{Parameters, PrimeField};
+pub use zkp_u256::MontgomeryParameters;
 
-// TODO: Make member functions of FieldElement?
-pub use field::{invert_batch, invert_batch_src_dst};
+// The smallest 252-bit Proth field
+pub use proth_field::FieldElement;
+
+pub use invert_batch::{invert_batch, invert_batch_src_dst};
 
 // Re-exports dependencies that are part of the public interface
 pub use zkp_u256 as u256;
+
+// Export and re-export traits
+// TODO: Create a prelude module that contains all the useful ones
+pub use traits::{Fft, FieldLike, RefFieldLike, Root, SquareRoot};
+pub use zkp_u256::{AddInline, Inv, MulInline, NegInline, One, Pow, SquareInline, SubInline, Zero};
+
+pub use uint::UInt;
 
 // Std/no-std imports
 #[cfg(not(feature = "std"))]

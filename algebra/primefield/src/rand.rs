@@ -1,14 +1,19 @@
-use crate::FieldElement;
+use crate::{Parameters, PrimeField, UInt};
 use rand::{
-    distributions::{Distribution, Standard, Uniform},
+    distributions::{uniform::SampleUniform, Distribution, Standard, Uniform},
     Rng,
 };
-use zkp_u256::U256;
 
 /// Draw from a uniform distribution over all values.
-impl Distribution<FieldElement> for Standard {
-    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> FieldElement {
-        let uniform = Uniform::new(U256::ZERO, FieldElement::MODULUS);
-        FieldElement::from_montgomery(uniform.sample(rng))
+///
+/// Requires `UInt` to implement [`SampleUniform`].
+impl<U, P> Distribution<PrimeField<P>> for Standard
+where
+    U: UInt + SampleUniform,
+    P: Parameters<UInt = U>,
+{
+    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> PrimeField<P> {
+        let uniform = Uniform::new(U::zero(), P::MODULUS);
+        PrimeField::<P>::from_montgomery(uniform.sample(rng))
     }
 }

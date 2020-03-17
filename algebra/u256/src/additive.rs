@@ -1,47 +1,103 @@
 use crate::{
-    algorithms::limb_operations::{adc, sbb},
-    commutative_binop, noncommutative_binop, U256,
+    adc, assign_ops_from_trait, noncommutative_self_ops_from_trait, sbb, self_ops_from_trait,
+    AddFullInline, AddInline, NegInline, SubFromFullInline, SubFromInline, SubFullInline,
+    SubInline, U256,
 };
 use std::{
-    ops::{Add, AddAssign, Sub, SubAssign},
+    ops::{Add, AddAssign, Neg, Sub, SubAssign},
     prelude::v1::*,
 };
 
 // Additive operations: Add, Sub
-// TODO: SubFrom
 
-impl AddAssign<&U256> for U256 {
-    // This is a small function that appears often in hot paths.
-    #[cfg_attr(feature = "inline", inline(always))]
-    fn add_assign(&mut self, rhs: &Self) {
+impl AddFullInline<&U256> for U256 {
+    type High = u64;
+
+    #[inline(always)]
+    fn add_full_inline(&self, rhs: &Self) -> (Self, Self::High) {
         let (c0, carry) = adc(self.limb(0), rhs.limb(0), 0);
         let (c1, carry) = adc(self.limb(1), rhs.limb(1), carry);
         let (c2, carry) = adc(self.limb(2), rhs.limb(2), carry);
-        let (c3, _) = adc(self.limb(3), rhs.limb(3), carry);
-        self.set_limb(0, c0);
-        self.set_limb(1, c1);
-        self.set_limb(2, c2);
-        self.set_limb(3, c3);
+        let (c3, carry) = adc(self.limb(3), rhs.limb(3), carry);
+        (Self::from_limbs([c0, c1, c2, c3]), carry)
     }
 }
 
-impl SubAssign<&U256> for U256 {
-    // This is a small function that appears often in hot paths.
-    #[cfg_attr(feature = "inline", inline(always))]
-    fn sub_assign(&mut self, rhs: &Self) {
+impl AddInline<&U256> for U256 {
+    #[inline(always)]
+    fn add_inline(&self, rhs: &Self) -> Self {
+        self.add_full_inline(rhs).0
+    }
+}
+
+assign_ops_from_trait!(U256, U256, AddAssign, add_assign, AddInline, add_assign);
+self_ops_from_trait!(U256, Add, add, AddInline, add, add_assign);
+
+impl SubFullInline<&U256> for U256 {
+    type High = u64;
+
+    #[inline(always)]
+    fn sub_full_inline(&self, rhs: &Self) -> (Self, Self::High) {
         let (c0, borrow) = sbb(self.limb(0), rhs.limb(0), 0);
         let (c1, borrow) = sbb(self.limb(1), rhs.limb(1), borrow);
         let (c2, borrow) = sbb(self.limb(2), rhs.limb(2), borrow);
-        let (c3, _) = sbb(self.limb(3), rhs.limb(3), borrow);
-        self.set_limb(0, c0);
-        self.set_limb(1, c1);
-        self.set_limb(2, c2);
-        self.set_limb(3, c3);
+        let (c3, borrow) = sbb(self.limb(3), rhs.limb(3), borrow);
+        (Self::from_limbs([c0, c1, c2, c3]), borrow)
     }
 }
 
-commutative_binop!(U256, Add, add, AddAssign, add_assign);
-noncommutative_binop!(U256, Sub, sub, SubAssign, sub_assign);
+impl SubInline<&U256> for U256 {
+    #[inline(always)]
+    fn sub_inline(&self, rhs: &Self) -> Self {
+        self.sub_full_inline(rhs).0
+    }
+}
+
+assign_ops_from_trait!(U256, U256, SubAssign, sub_assign, SubInline, sub_assign);
+noncommutative_self_ops_from_trait!(U256, Sub, sub, SubInline, sub, sub_assign);
+
+impl SubFromFullInline<&U256> for U256 {
+    type High = u64;
+
+    #[inline(always)]
+    fn sub_from_full_assign_inline(&mut self, rhs: &Self) -> Self::High {
+        let (lo, hi) = rhs.sub_full_inline(self);
+        *self = lo;
+        hi
+    }
+}
+
+impl SubFromInline<&U256> for U256 {
+    #[inline(always)]
+    fn sub_from_assign_inline(&mut self, rhs: &Self) {
+        let _hi = self.sub_from_full_assign_inline(rhs);
+    }
+}
+
+impl NegInline for U256 {
+    #[inline(always)]
+    fn neg_inline(&self) -> Self {
+        Self::ZERO.sub_inline(self)
+    }
+}
+
+impl Neg for U256 {
+    type Output = Self;
+
+    #[inline(always)]
+    fn neg(self) -> Self::Output {
+        <Self as NegInline>::neg(&self)
+    }
+}
+
+impl Neg for &U256 {
+    type Output = U256;
+
+    #[inline(always)]
+    fn neg(self) -> Self::Output {
+        <U256 as NegInline>::neg(self)
+    }
+}
 
 impl core::iter::Sum for U256 {
     fn sum<I: Iterator<Item = U256>>(iter: I) -> Self {

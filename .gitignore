@@ -36,3 +36,6 @@ substrate-ui
 # Codechecks is written in javascript
 node_modules
 yarn-error.log
+
+# Auto generated solidity files shouldn't be commited
+contracts/

@@ -1,4 +1,13 @@
 use crate::U256;
+#[cfg(feature = "std")]
+use hex::{decode, encode};
+#[cfg(feature = "std")]
+use serde::{
+    de::{self, Deserialize, Deserializer, SeqAccess, Visitor},
+    ser::{Serialize, Serializer},
+};
+#[cfg(feature = "std")]
+use std::fmt;
 use std::{prelude::v1::*, u64};
 
 impl U256 {
@@ -21,6 +30,97 @@ impl U256 {
             n >>= 8;
         }
         r
+    }
+}
+
+#[cfg(feature = "std")]
+impl Serialize for U256 {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        if serializer.is_human_readable() {
+            serializer.serialize_str(&encode(&self.to_bytes_be()))
+        } else {
+            serializer.serialize_bytes(&self.to_bytes_be())
+        }
+    }
+}
+
+#[cfg(feature = "std")]
+struct U256Visitor;
+
+#[cfg(feature = "std")]
+impl<'de> Visitor<'de> for U256Visitor {
+    type Value = U256;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(formatter, "a byte array containing 32 bytes")
+    }
+
+    fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        if v.len() <= 32 {
+            let mut held_array = [0_u8; 32];
+            held_array.clone_from_slice(v);
+            Ok(U256::from_bytes_be(&held_array))
+        } else {
+            Err(E::custom(format!("Too many bytes: {}", v.len())))
+        }
+    }
+
+    fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+    where
+        A: SeqAccess<'de>,
+    {
+        let mut holder = Vec::with_capacity(32);
+
+        while let Some(elem) = seq.next_element().unwrap() {
+            holder.push(elem);
+        }
+
+        let mut held_array = [0_u8; 32];
+        held_array.clone_from_slice(holder.as_slice());
+        Ok(U256::from_bytes_be(&held_array))
+    }
+
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E> {
+        let mut holder: Vec<u8> = match decode(v) {
+            Ok(x) => x,
+            Err(r) => {
+                panic!("hex decoder error: {:?}", r);
+            }
+        };
+
+        let pading_len = 32 - holder.len();
+        if pading_len > 0 {
+            let mut new_vec: Vec<u8> = Vec::with_capacity(32);
+            for _ in 0..pading_len {
+                new_vec.push(0);
+            }
+            new_vec.append(&mut holder);
+            holder = new_vec;
+        }
+
+        let mut held_array = [0_u8; 32];
+        held_array.clone_from_slice(holder.as_slice());
+        Ok(U256::from_bytes_be(&held_array))
+    }
+}
+
+#[cfg(feature = "std")]
+impl<'de> Deserialize<'de> for U256 {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        if deserializer.is_human_readable() {
+            deserializer.deserialize_str(U256Visitor)
+        } else {
+            deserializer.deserialize_bytes(U256Visitor)
+        }
     }
 }
 

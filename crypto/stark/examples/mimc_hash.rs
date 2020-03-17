@@ -1,10 +1,10 @@
 #![allow(clippy::possible_missing_comma)]
 use std::time::Instant;
 use zkp_macros_decl::field_element;
-use zkp_primefield::{fft::ifft, FieldElement};
+use zkp_primefield::{fft::permute, Fft, FieldElement, Pow, Root, SquareInline, Zero};
 use zkp_stark::{
-    solidity_encode::autogen_constraint_poly, Constraints, DensePolynomial, Provable,
-    RationalExpression, TraceTable, Verifiable,
+    solidity_encode::autogen, Constraints, DensePolynomial, Provable, RationalExpression,
+    TraceTable, Verifiable,
 };
 use zkp_u256::U256;
 
@@ -169,7 +169,10 @@ impl Verifiable for Claim {
                 Box::new(X.pow(trace_length / coefficients.len())),
             )
         };
-        let k_coef = periodic(&ifft(&K_COEF.to_vec()));
+        let mut k_coef = K_COEF.to_vec();
+        k_coef.ifft();
+        permute(&mut k_coef);
+        let k_coef = periodic(&k_coef);
 
         let on_loop_rows = |length: usize| {
             (X.pow(trace_length / length)
@@ -183,15 +186,12 @@ impl Verifiable for Claim {
 
         let expressions = vec![
             ((Exp(Trace(0, 0).into(), 3)
-                + Constant(3.into())
-                    * Constant(Q.clone())
-                    * Trace(0, 0)
-                    * Exp(Trace(1, 0).into(), 2)
+                + Constant(3.into()) * Constant(Q) * Trace(0, 0) * Exp(Trace(1, 0).into(), 2)
                 + k_coef)
                 - Trace(0, 1))
                 * on_loop_rows(128),
             (Constant(3.into()) * Exp(Trace(0, 0).into(), 2)
-                + Constant(Q.clone()) * Exp(Trace(1, 0).into(), 3)
+                + Constant(Q) * Exp(Trace(1, 0).into(), 3)
                 - Trace(1, 1))
                 * every_row(),
             // Boundary constraints
@@ -203,7 +203,7 @@ impl Verifiable for Claim {
 
         let public = vec![&const_before_x, &const_before_y, &const_after];
 
-        match autogen_constraint_poly(
+        match autogen(
             trace_length,
             public.as_slice(),
             expressions.as_slice(),
@@ -222,16 +222,15 @@ impl Provable<()> for Claim {
         let mut trace = TraceTable::new(256, 2);
 
         let mut left = self.before_x.clone();
-        let mut right = FieldElement::ZERO;
+        let mut right = FieldElement::zero();
 
         for i in 0..128 {
             trace[(i, 0)] = left.clone();
             trace[(i, 1)] = right.clone();
-            let new_left = (left.clone()).pow(U256::from(3))
-                + FieldElement::from(3) * &Q * &left * (&right.pow(2))
+            let new_left = (left.clone()).pow(3_usize)
+                + FieldElement::from(3) * &Q * &left * (&right.square())
                 + &K_COEF[i];
-            let new_right = FieldElement::from(3) * (&left.pow(U256::from(2)))
-                + &Q * (&right.pow(U256::from(3)));
+            let new_right = FieldElement::from(3) * (&left.square()) + &Q * (&right.pow(3_usize));
             left = new_left;
             right = new_right;
         }
@@ -242,11 +241,10 @@ impl Provable<()> for Claim {
             trace[(i + execution_increment, 0)] = left.clone();
             trace[(i + execution_increment, 1)] = right.clone();
 
-            let new_left = (left.clone()).pow(U256::from(3))
-                + FieldElement::from(3) * &Q * &left * (&right.pow(2))
+            let new_left = (left.clone()).pow(3_usize)
+                + FieldElement::from(3) * &Q * &left * (&right.square())
                 + &K_COEF[i];
-            let new_right = FieldElement::from(3) * (&left.pow(U256::from(2)))
-                + &Q * (&right.pow(U256::from(3)));
+            let new_right = FieldElement::from(3) * (&left.square()) + &Q * (&right.pow(3_usize));
             left = new_left;
             right = new_right;
         }
@@ -258,24 +256,22 @@ impl Provable<()> for Claim {
 
 fn mimc(x: &FieldElement, y: &FieldElement) -> FieldElement {
     let mut left = x.clone();
-    let mut right = FieldElement::ZERO;
+    let mut right = FieldElement::zero();
     for item in K_COEF.iter() {
-        let new_left = (left.clone()).pow(U256::from(3))
-            + FieldElement::from(3) * &Q * &left * (&right.pow(2))
+        let new_left = (left.clone()).pow(3_usize)
+            + FieldElement::from(3) * &Q * &left * (&right.square())
             + item;
-        let new_right =
-            FieldElement::from(3) * (&left.pow(U256::from(2))) + &Q * (&right.pow(U256::from(3)));
+        let new_right = FieldElement::from(3) * (&left.square()) + &Q * (&right.pow(3_usize));
         left = new_left;
         right = new_right;
     }
     left = y.clone();
 
     for item in K_COEF.iter().take(127) {
-        let new_left = (left.clone()).pow(U256::from(3))
-            + FieldElement::from(3) * &Q * &left * (&right.pow(2))
+        let new_left = (left.clone()).pow(3_usize)
+            + FieldElement::from(3) * &Q * &left * (&right.square())
             + item;
-        let new_right =
-            FieldElement::from(3) * (&left.pow(U256::from(2))) + &Q * (&right.pow(U256::from(3)));
+        let new_right = FieldElement::from(3) * (&left.square()) + &Q * (&right.pow(3_usize));
         left = new_left;
         right = new_right;
     }

@@ -1,7 +1,7 @@
 #![warn(clippy::all)]
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use zkp_macros_decl::u256h;
-use zkp_primefield::FieldElement;
+use zkp_primefield::{FieldElement, Root};
 use zkp_stark::{prove, verify, Constraints, Provable, RationalExpression, TraceTable, Verifiable};
 use zkp_u256::U256;
 

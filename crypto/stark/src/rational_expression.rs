@@ -1,6 +1,9 @@
 use crate::polynomial::DensePolynomial;
 #[cfg(feature = "std")]
-use std::collections::HashMap;
+use std::{
+    cmp::Ordering,
+    collections::{hash_map::DefaultHasher, BTreeMap},
+};
 use std::{
     collections::BTreeSet,
     hash::{Hash, Hasher},
@@ -9,7 +12,7 @@ use std::{
     prelude::v1::*,
 };
 use zkp_macros_decl::field_element;
-use zkp_primefield::FieldElement;
+use zkp_primefield::{FieldElement, Inv, One, Pow, Zero};
 use zkp_u256::U256;
 
 // TODO: Rename to algebraic expression
@@ -193,7 +196,7 @@ impl RationalExpression {
                 if is_ok {
                     (p.evaluate(&res), true)
                 } else {
-                    (FieldElement::ONE, false)
+                    (FieldElement::one(), false)
                 }
             }
             Add(a, b) => {
@@ -202,7 +205,7 @@ impl RationalExpression {
                 if a_ok && b_ok {
                     (res_a + res_b, true)
                 } else {
-                    (FieldElement::ONE, false)
+                    (FieldElement::one(), false)
                 }
             }
             Neg(a) => {
@@ -217,27 +220,27 @@ impl RationalExpression {
                 if a_ok && b_ok {
                     (res_a * res_b, true)
                 } else if a_ok && !b_ok {
-                    if res_a == FieldElement::ZERO {
-                        (FieldElement::ZERO, true)
+                    if res_a == FieldElement::zero() {
+                        (FieldElement::zero(), true)
                     } else {
-                        (FieldElement::ONE, false)
+                        (FieldElement::one(), false)
                     }
                 } else if !a_ok && b_ok {
-                    if res_b == FieldElement::ZERO {
-                        (FieldElement::ZERO, true)
+                    if res_b == FieldElement::zero() {
+                        (FieldElement::zero(), true)
                     } else {
-                        (FieldElement::ONE, false)
+                        (FieldElement::one(), false)
                     }
                 } else {
-                    (FieldElement::ONE, false)
+                    (FieldElement::one(), false)
                 }
             }
             // TODO - This behavior is suspect
             Inv(a) => {
                 let (res_a, a_ok) = a.clone().check(x, trace);
                 if a_ok {
-                    if res_a == FieldElement::ZERO {
-                        (FieldElement::ONE, false)
+                    if res_a == FieldElement::zero() {
+                        (FieldElement::one(), false)
                     } else {
                         (res_a, true)
                     }
@@ -245,7 +248,7 @@ impl RationalExpression {
                     match *(a.clone()) {
                         Inv(b) => b.check(x, trace),
                         // TODO - Fully enumerate all checks
-                        _ => (FieldElement::ONE, false),
+                        _ => (FieldElement::one(), false),
                     }
                 }
             }
@@ -254,7 +257,7 @@ impl RationalExpression {
                 if a_ok {
                     (res_a.pow(*e), true)
                 } else {
-                    (FieldElement::ONE, false)
+                    (FieldElement::one(), false)
                 }
             }
         }
@@ -301,12 +304,12 @@ impl RationalExpression {
     }
 
     #[cfg(feature = "std")]
-    pub fn soldity_encode(&self, memory_layout: &HashMap<Self, String>) -> String {
+    pub fn soldity_encode(&self, memory_layout: &BTreeMap<Self, String>) -> String {
         use RationalExpression::*;
 
         #[allow(clippy::match_same_arms)]
         match self {
-            X => "mload(0)".to_owned(),
+            X => "mload(0x0)".to_owned(),
             Constant(_) if memory_layout.contains_key(self) => {
                 memory_layout.get(self).unwrap().clone()
             }
@@ -355,11 +358,11 @@ impl RationalExpression {
 
     // TODO - DRY this by writing a generic search over subtypes
     #[cfg(feature = "std")]
-    pub fn trace_search(&self) -> HashMap<Self, bool> {
+    pub fn trace_search(&self) -> BTreeMap<Self, bool> {
         use RationalExpression::*;
 
         match self {
-            X | Constant(..) => HashMap::new(),
+            X | Constant(..) => BTreeMap::new(),
             Trace(..) => [(self.clone(), true)].iter().cloned().collect(),
             Add(a, b) | Mul(a, b) => {
                 let mut first = a.trace_search();
@@ -371,11 +374,11 @@ impl RationalExpression {
     }
 
     #[cfg(feature = "std")]
-    pub fn inv_search(&self) -> HashMap<Self, bool> {
+    pub fn inv_search(&self) -> BTreeMap<Self, bool> {
         use RationalExpression::*;
 
         match self {
-            X | Constant(_) | Trace(..) => HashMap::new(),
+            X | Constant(_) | Trace(..) => BTreeMap::new(),
             Add(a, b) | Mul(a, b) => {
                 let mut first = a.inv_search();
                 first.extend(b.inv_search());
@@ -387,11 +390,11 @@ impl RationalExpression {
     }
 
     #[cfg(feature = "std")]
-    pub fn periodic_search(&self) -> HashMap<Self, bool> {
+    pub fn periodic_search(&self) -> BTreeMap<Self, bool> {
         use RationalExpression::*;
 
         match self {
-            X | Constant(_) | Trace(..) => HashMap::new(),
+            X | Constant(_) | Trace(..) => BTreeMap::new(),
             Polynomial(..) => [(self.clone(), true)].iter().cloned().collect(),
             Add(a, b) | Mul(a, b) => {
                 let mut first = a.periodic_search();
@@ -419,13 +422,14 @@ impl Hash for RationalExpression {
                 i.hash(state);
                 j.hash(state);
             }
-            Polynomial(p, a) => {
+            Polynomial(p, _) => {
                 "poly".hash(state);
                 let x = field_element!(
                     "754ed488ec9208d1c552bb254c0890042078a9e1f7e36072ebff1bf4e193d11b"
                 );
+                // Note - We don't hash in the a because we can deploy the same contract for
+                // identical dense poly, for true equality we need to hash a into it.
                 (p.evaluate(&x)).hash(state);
-                a.hash(state);
             }
             Add(a, b) => {
                 "add".hash(state);
@@ -451,5 +455,26 @@ impl Hash for RationalExpression {
                 e.hash(state);
             }
         }
+    }
+}
+
+#[cfg(feature = "std")]
+impl PartialOrd for RationalExpression {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+#[cfg(feature = "std")]
+fn get_hash(r: &RationalExpression) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    r.hash(&mut hasher);
+    hasher.finish()
+}
+
+#[cfg(feature = "std")]
+impl Ord for RationalExpression {
+    fn cmp(&self, other: &Self) -> Ordering {
+        get_hash(self).cmp(&get_hash(other))
     }
 }

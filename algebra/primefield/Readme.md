@@ -58,6 +58,9 @@ You can then run tests under profiling. It is recommended to filter for a specif
 cargo instruments --release --bench benchmark --open [test name]
 ```
 
+```
+instruments -t "Time Profiler"  target/release/deps/benchmark-c7230d017f7da1a3 --bench cache
+```
 
 ## References and benchmarks
 
