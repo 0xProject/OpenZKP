@@ -1,8 +1,5 @@
 #![allow(unsafe_code)]
-use crate::{
-    algorithms::{limb_operations::mac, montgomery::Parameters},
-    U256,
-};
+use crate::{MontgomeryParameters, U256};
 use std::mem::MaybeUninit;
 
 // For instruction timings and through puts
@@ -465,8 +462,9 @@ pub fn proth_redc_asm(m3: u64, lo: &U256, hi: &U256) -> U256 {
 // NEG sets CF and clobbers OF.
 
 #[inline(always)]
-pub fn mul_redc<M: Parameters>(a: &U256, b: &U256) -> U256 {
+pub fn mul_redc<M: MontgomeryParameters<UInt = U256>>(a: &U256, b: &U256) -> U256 {
     const ZERO: u64 = 0; // $3
+    let modulus = M::MODULUS.as_limbs();
 
     let a = a.as_limbs();
     let b = b.as_limbs();
@@ -597,8 +595,14 @@ pub fn mul_redc<M: Parameters>(a: &U256, b: &U256) -> U256 {
             movq %r15, 24($0)
             "
             :
-            : "r"(result.as_mut_ptr()), "r"(a), "r"(b),
-              "m"(ZERO), "m"(M::MODULUS.limb(0)), "m"(M::MODULUS.limb(1)), "m"(M::MODULUS.limb(2)), "m"(M::MODULUS.limb(3)), "m"(M::M64)
+            : "r"(result.as_mut_ptr()),
+              "r"(a), "r"(b),
+              "m"(ZERO),
+              "m"(modulus[0]),
+              "m"(modulus[1]),
+              "m"(modulus[2]),
+              "m"(modulus[3]),
+              "m"(M::M64)
             : "rdx", "rdi", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15", "cc", "memory"
         );
     }
@@ -623,7 +627,7 @@ mod tests {
     fn test_proth_redc() {
         let a = u256h!("0548c135e26faa9c977fb2eda057b54b2e0baa9a77a0be7c80278f4f03462d4c");
         let b = u256h!("024385f6bebc1c496e09955db534ef4b1eaff9a78e27d4093cfa8f7c8f886f6b");
-        let c = crate::algorithms::montgomery::proth::redc(M3, &a, &b);
+        let c = crate::algorithms::montgomery::proth::redc_inline(M3, &a, &b);
         assert_eq!(proth_redc_asm(M3, &a, &b), c);
     }
 }

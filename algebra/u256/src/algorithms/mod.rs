@@ -17,4 +17,4 @@ pub use knuth_division::{divrem_nby1, divrem_nbym};
 pub use montgomery::to_montgomery_const;
 // False positives, we re-export in `lib.rs`
 #[allow(unreachable_pub)]
-pub use limb_operations::{adc, div_2_1, mac, macc, msb, sbb};
+pub use limb_operations::{adc, div_2_1, mac, msb, sbb};
