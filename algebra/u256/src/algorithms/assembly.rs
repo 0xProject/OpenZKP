@@ -2,6 +2,10 @@
 use crate::{MontgomeryParameters, U256};
 use std::mem::MaybeUninit;
 
+// TODO: Intrinsics based approach usind AD_X is currently blocked on LLVM.
+// See <https://github.com/rust-lang/stdarch/issues/666>
+// See <https://bugs.llvm.org/show_bug.cgi?id=41546>
+
 // For instruction timings and through puts
 // See <https://gmplib.org/~tege/x86-timing.pdf>
 
