@@ -126,7 +126,7 @@ mod tests {
     use crate::{FieldElement, One, Root, Zero};
     use proptest::prelude::*;
     use quickcheck_macros::quickcheck;
-    use zkp_macros_decl::{field_element, u256h};
+    use zkp_macros_decl::field_element;
     use zkp_u256::U256;
 
     pub(super) fn arb_elem() -> impl Strategy<Value = FieldElement> {
@@ -187,7 +187,6 @@ mod tests {
     }
 
     proptest! {
-
         #[test]
         fn fft_ref_inv(orig in arb_vec()) {
             let f = reference_fft(&orig, false);
@@ -204,12 +203,12 @@ mod tests {
             prop_assert_eq!(result, expect);
         }
     }
+
     #[test]
-    #[allow(clippy::too_many_lines)]
     fn fft_test() {
         let cofactor =
             field_element!("07696b8ff70e8e9285c76bef95d3ad76cdb29e213e4b5d9a9cd0afbd7cb29b5c");
-        let vector = [
+        let vector = vec![
             field_element!("008ee28fdbe9f1a7983bc1b600dfb9177c2d82d825023022ab4965d999bd3faf"),
             field_element!("037fa3db272cc54444894042223dcf260e1d1ec73fa9baea0e4572817fdf5751"),
             field_element!("054483fc9bcc150b421fae26530f8d3d2e97cf1918f534e67ef593038f683241"),
@@ -218,8 +217,7 @@ mod tests {
             field_element!("044729b25360c0025d244d31a5f144917e59f728a3d03dd4685c634d2b0e7cda"),
             field_element!("079b0e14d0bae81ff4fe55328fb09c4117bcd961cb60581eb6f2a770a42240ed"),
             field_element!("06c0926a786abb30b8f6e0eb9ef2278b910862717ed4beb35121d4741717e0e0"),
-        ]
-        .to_vec();
+        ];
 
         let mut res = vector.clone();
         res.fft();
@@ -227,75 +225,31 @@ mod tests {
         let expected = reference_fft(&vector, false);
         assert_eq!(res, expected);
 
-        assert_eq!(
-            U256::from(&res[0]),
-            u256h!("06a1b7c038205cb38aaeea38662ae2259a19c14a7519bd522543f72dc7fa74b2")
-        );
-        assert_eq!(
-            U256::from(&res[1]),
-            u256h!("017884f169b20153de79a9c642d4e3259263f2e7ac5f85f5a8191f28d8f14544")
-        );
-        assert_eq!(
-            U256::from(&res[2]),
-            u256h!("03112a352e474819d491a13b700a07161eee580ff40098df978fa19f39b4fd2d")
-        );
-        assert_eq!(
-            U256::from(&res[3]),
-            u256h!("011606a821f418d13914c72b424141c5b88bdb184b0b5a55fc537587346c78a2")
-        );
-        assert_eq!(
-            U256::from(&res[4]),
-            u256h!("00dc2519322c102b8ad3628106a3ebef7c39f85215203bfc820c7a04a9645419")
-        );
-        assert_eq!(
-            U256::from(&res[5]),
-            u256h!("01df6a70d033d89376c96c45ce8dbbe4eeedce2d32636c29d3cb87b9e2074d00")
-        );
-        assert_eq!(
-            U256::from(&res[6]),
-            u256h!("00ee6a5e89e9307e64789e1a71c42105de12bfa104e32c5a381fe5c2697ffeec")
-        );
-        assert_eq!(
-            U256::from(&res[7]),
-            u256h!("048bad0760f8b52ee4f9a46964bcf1ba9439a9467b2576176b1319cec9f12db0")
-        );
+        assert_eq!(res, vec![
+            field_element!("06a1b7c038205cb38aaeea38662ae2259a19c14a7519bd522543f72dc7fa74b2"),
+            field_element!("017884f169b20153de79a9c642d4e3259263f2e7ac5f85f5a8191f28d8f14544"),
+            field_element!("03112a352e474819d491a13b700a07161eee580ff40098df978fa19f39b4fd2d"),
+            field_element!("011606a821f418d13914c72b424141c5b88bdb184b0b5a55fc537587346c78a2"),
+            field_element!("00dc2519322c102b8ad3628106a3ebef7c39f85215203bfc820c7a04a9645419"),
+            field_element!("01df6a70d033d89376c96c45ce8dbbe4eeedce2d32636c29d3cb87b9e2074d00"),
+            field_element!("00ee6a5e89e9307e64789e1a71c42105de12bfa104e32c5a381fe5c2697ffeec"),
+            field_element!("048bad0760f8b52ee4f9a46964bcf1ba9439a9467b2576176b1319cec9f12db0"),
+        ]);
 
         let mut res = vector.clone();
         res.fft_cofactor(&cofactor);
         permute(&mut res);
 
-        assert_eq!(
-            U256::from(&res[0]),
-            u256h!("05d817ee1af8beff1880aad163a9912704d66e0c717a670c52db93da5ea34455")
-        );
-        assert_eq!(
-            U256::from(&res[1]),
-            u256h!("0631b16aceb1ee5711066df1ffafd9f5f451b0dc44c86e90005bc78e8bb4f861")
-        );
-        assert_eq!(
-            U256::from(&res[2]),
-            u256h!("01a30c98c149179cd16059ba201b99cf629d3e04844a50936006a185a67ad354")
-        );
-        assert_eq!(
-            U256::from(&res[3]),
-            u256h!("07a17b9035ff1ffd1f9e0bc52982effcd957bc07230830c10e51e906ed092f9e")
-        );
-        assert_eq!(
-            U256::from(&res[4]),
-            u256h!("01381787eccc6c77b0c5dff0b4b66dc0bb7d911bd705baf85f62001976e6ff27")
-        );
-        assert_eq!(
-            U256::from(&res[5]),
-            u256h!("009defa0822d287ce55035bb705319eb34e78180157e5297e6a46df9af8ef042")
-        );
-        assert_eq!(
-            U256::from(&res[6]),
-            u256h!("020b8317360c61abbc0bdce513eb42295402eb5dde3d13abfc0325f277f507bc")
-        );
-        assert_eq!(
-            U256::from(&res[7]),
-            u256h!("034738bd5956b1df55369cdc211109fd67e6ffd2ffbb08e856b1b4d1b1a2c6ae")
-        );
+        assert_eq!(res, vec![
+            field_element!("05d817ee1af8beff1880aad163a9912704d66e0c717a670c52db93da5ea34455"),
+            field_element!("0631b16aceb1ee5711066df1ffafd9f5f451b0dc44c86e90005bc78e8bb4f861"),
+            field_element!("01a30c98c149179cd16059ba201b99cf629d3e04844a50936006a185a67ad354"),
+            field_element!("07a17b9035ff1ffd1f9e0bc52982effcd957bc07230830c10e51e906ed092f9e"),
+            field_element!("01381787eccc6c77b0c5dff0b4b66dc0bb7d911bd705baf85f62001976e6ff27"),
+            field_element!("009defa0822d287ce55035bb705319eb34e78180157e5297e6a46df9af8ef042"),
+            field_element!("020b8317360c61abbc0bdce513eb42295402eb5dde3d13abfc0325f277f507bc"),
+            field_element!("034738bd5956b1df55369cdc211109fd67e6ffd2ffbb08e856b1b4d1b1a2c6ae"),
+        ]);
     }
 
     #[quickcheck]
