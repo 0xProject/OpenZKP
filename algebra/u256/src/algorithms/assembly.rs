@@ -201,6 +201,7 @@ pub(crate) fn reduce_1(
 // Currently unused
 #[allow(dead_code)]
 #[inline(always)]
+#[cfg(all(target_arch = "x86_64", target_feature = "adx"))]
 pub(crate) fn full_mul_asm2(x: &U256, y: &U256) -> (U256, U256) {
     let x = x.as_limbs();
     let y = y.as_limbs();
@@ -226,6 +227,7 @@ pub(crate) fn full_mul_asm2(x: &U256, y: &U256) -> (U256, U256) {
 // Currently unused
 #[allow(dead_code)]
 #[inline(always)]
+#[cfg(all(target_arch = "x86_64", target_feature = "adx"))]
 pub(crate) fn mul_asm(x: &U256, y: &U256) -> U256 {
     let x = x.as_limbs();
     let y = y.as_limbs();
@@ -291,6 +293,7 @@ pub(crate) fn mul_asm(x: &U256, y: &U256) -> U256 {
 // Currently unused
 #[allow(dead_code)]
 #[inline(always)]
+#[cfg(all(target_arch = "x86_64", target_feature = "adx"))]
 pub(crate) fn full_mul_asm(x: &U256, y: &U256) -> (U256, U256) {
     const ZERO: u64 = 0;
     let x = x.as_limbs();
@@ -389,6 +392,7 @@ pub(crate) fn full_mul_asm(x: &U256, y: &U256) -> (U256, U256) {
 // Currently unused
 #[allow(dead_code)]
 #[inline(always)]
+#[cfg(all(target_arch = "x86_64", target_feature = "adx"))]
 pub(crate) fn proth_redc_asm(m3: u64, lo: &U256, hi: &U256) -> U256 {
     // TODO: Fix carry bug
     const ZERO: u64 = 0;
@@ -492,6 +496,7 @@ pub(crate) fn proth_redc_asm(m3: u64, lo: &U256, hi: &U256) -> U256 {
 // This assembly block needs to be contiguous
 #[allow(clippy::too_many_lines)]
 #[inline(always)]
+#[cfg(all(target_arch = "x86_64", target_feature = "adx"))]
 pub(crate) fn mul_redc<M: MontgomeryParameters<UInt = U256>>(a: &U256, b: &U256) -> U256 {
     const ZERO: u64 = 0; // $3
     let modulus = M::MODULUS.as_limbs();

@@ -1,3 +1,4 @@
+#[cfg(all(target_arch = "x86_64", target_feature = "adx"))]
 pub(crate) mod assembly;
 mod binary_operator_macros;
 mod knuth_division;
