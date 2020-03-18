@@ -259,12 +259,10 @@ impl Arbitrary for Jacobian {
 
 // TODO: Replace literals with u256h!
 #[allow(clippy::unreadable_literal)]
-// Quickcheck needs pass by value
-#[allow(clippy::needless_pass_by_value)]
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ORDER;
+    use crate::ScalarFieldElement;
     use quickcheck_macros::quickcheck;
     use zkp_macros_decl::u256h;
 
@@ -340,18 +338,14 @@ mod tests {
         assert_eq!(a * b, c);
     }
 
-    #[allow(clippy::eq_op)]
     #[quickcheck]
     fn add_commutative(a: Jacobian, b: Jacobian) -> bool {
         &a + &b == &b + &a
     }
 
     #[quickcheck]
-    fn distributivity(p: Jacobian, mut a: U256, mut b: U256) -> bool {
-        a %= &ORDER;
-        b %= &ORDER;
+    fn distributivity(p: Jacobian, a: ScalarFieldElement, b: ScalarFieldElement) -> bool {
         let c = &a + &b;
-        // TODO: c %= &ORDER;
-        (&p * a) + (&p * b) == &p * c
+        (&p * a.to_uint()) + (&p * b.to_uint()) == &p * c.to_uint()
     }
 }
