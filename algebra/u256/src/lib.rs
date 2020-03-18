@@ -50,7 +50,8 @@
 
 // Some routines have assembly optimized versions available for some
 // architectures
-#![cfg_attr(feature = "asm", feature(asm))]
+// TODO: No asm on stable
+// #![cfg_attr(feature = "asm", feature(asm))]
 
 mod additive;
 pub(crate) mod algorithms;
