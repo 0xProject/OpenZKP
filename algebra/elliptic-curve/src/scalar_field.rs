@@ -1,23 +1,11 @@
 use zkp_macros_decl::u256h;
 use zkp_primefield::*;
-use zkp_u256::{MontgomeryParameters, U256};
+use zkp_u256::U256;
 
 pub type Element = PrimeField<Order>;
 
 #[derive(PartialEq, Eq, Clone, Debug, Hash)]
 pub struct Order();
-
-// TODO: derive one of these from the other.
-impl MontgomeryParameters for Order {
-    type UInt = U256;
-
-    const M64: u64 = 0xbb6b_3c4c_e8bd_e631;
-    const MODULUS: U256 =
-        u256h!("0800000000000010ffffffffffffffffb781126dcae7b2321e66a241adc64d2f");
-    const R1: U256 = u256h!("07fffffffffffdf10000000000000008c75ec4b46df16bee51925a0bf4fca74f");
-    const R2: U256 = u256h!("07d9e57c2333766ebaf0ab4cf78bbabb509cf64d14ce60b96021b3f1ea1c688d");
-    const R3: U256 = u256h!("01b2ba88ca1fe18a1f0d9dedfedfda501da2136eb8b3f20e81147668fddd0429");
-}
 
 impl Parameters for Order {
     type UInt = U256;
@@ -32,17 +20,34 @@ impl Parameters for Order {
     const R3: U256 = u256h!("01b2ba88ca1fe18a1f0d9dedfedfda501da2136eb8b3f20e81147668fddd0429");
 }
 
-#[allow(clippy::redundant_clone)]
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    const PRIME_FACTORS: [U256; 5] = [
+        u256h!("02"),
+        u256h!("03"),
+        u256h!("16996f"),
+        u256h!("046fcf43"),
+        u256h!("03677abc4eb30ccc5c90ee8268a99c0bbc3cf562d68c5c461f11"),
+    ];
+
+    #[test]
+    fn prime_factors_correct() {
+        assert_eq!(
+            PRIME_FACTORS.iter().cloned().product::<U256>(),
+            Element::order()
+        );
+        for factor in &PRIME_FACTORS {
+            assert!((Element::order() % factor).is_zero());
+        }
+    }
+
     #[test]
     fn generator_correct() {
-        let half_order: U256 = Element::order() / U256::from(2);
-        assert_eq!(
-            Element::generator().pow(&half_order) + Element::one(),
-            Element::zero()
-        );
+        for factor in &PRIME_FACTORS {
+            let exponent = Element::order() / factor;
+            assert!(!Element::generator().pow(&exponent).is_one());
+        }
     }
 }
