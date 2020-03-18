@@ -32,7 +32,6 @@ impl Parameters for Order {
     const R3: U256 = u256h!("01b2ba88ca1fe18a1f0d9dedfedfda501da2136eb8b3f20e81147668fddd0429");
 }
 
-#[allow(clippy::redundant_clone)]
 #[cfg(test)]
 mod tests {
     use super::*;
