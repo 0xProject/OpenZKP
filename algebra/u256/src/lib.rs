@@ -51,6 +51,7 @@
 // Some routines have assembly optimized versions available for some
 // architectures
 // TODO: No asm on stable
+// See <https://github.com/rust-lang/rust/issues/29722>
 // #![cfg_attr(feature = "asm", feature(asm))]
 
 mod additive;
