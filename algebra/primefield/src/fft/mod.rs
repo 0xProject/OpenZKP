@@ -126,7 +126,7 @@ mod tests {
     use crate::{FieldElement, One, Root, Zero};
     use proptest::prelude::*;
     use quickcheck_macros::quickcheck;
-    use zkp_macros_decl::u256h;
+    use zkp_macros_decl::{field_element, u256h};
     use zkp_u256::U256;
 
     pub(super) fn arb_elem() -> impl Strategy<Value = FieldElement> {
@@ -207,34 +207,17 @@ mod tests {
     #[test]
     #[allow(clippy::too_many_lines)]
     fn fft_test() {
-        let cofactor = FieldElement::from(u256h!(
-            "07696b8ff70e8e9285c76bef95d3ad76cdb29e213e4b5d9a9cd0afbd7cb29b5c"
-        ));
+        let cofactor =
+            field_element!("07696b8ff70e8e9285c76bef95d3ad76cdb29e213e4b5d9a9cd0afbd7cb29b5c");
         let vector = [
-            FieldElement::from(u256h!(
-                "008ee28fdbe9f1a7983bc1b600dfb9177c2d82d825023022ab4965d999bd3faf"
-            )),
-            FieldElement::from(u256h!(
-                "037fa3db272cc54444894042223dcf260e1d1ec73fa9baea0e4572817fdf5751"
-            )),
-            FieldElement::from(u256h!(
-                "054483fc9bcc150b421fae26530f8d3d2e97cf1918f534e67ef593038f683241"
-            )),
-            FieldElement::from(u256h!(
-                "005b695b9001e5e62549557c48a23fd7f1706c1acdae093909d81451cd455b43"
-            )),
-            FieldElement::from(u256h!(
-                "025079cb6cb547b63b67614dd2c78474c8a7b17b3bc53f7f7276984b6b67b18a"
-            )),
-            FieldElement::from(u256h!(
-                "044729b25360c0025d244d31a5f144917e59f728a3d03dd4685c634d2b0e7cda"
-            )),
-            FieldElement::from(u256h!(
-                "079b0e14d0bae81ff4fe55328fb09c4117bcd961cb60581eb6f2a770a42240ed"
-            )),
-            FieldElement::from(u256h!(
-                "06c0926a786abb30b8f6e0eb9ef2278b910862717ed4beb35121d4741717e0e0"
-            )),
+            field_element!("008ee28fdbe9f1a7983bc1b600dfb9177c2d82d825023022ab4965d999bd3faf"),
+            field_element!("037fa3db272cc54444894042223dcf260e1d1ec73fa9baea0e4572817fdf5751"),
+            field_element!("054483fc9bcc150b421fae26530f8d3d2e97cf1918f534e67ef593038f683241"),
+            field_element!("005b695b9001e5e62549557c48a23fd7f1706c1acdae093909d81451cd455b43"),
+            field_element!("025079cb6cb547b63b67614dd2c78474c8a7b17b3bc53f7f7276984b6b67b18a"),
+            field_element!("044729b25360c0025d244d31a5f144917e59f728a3d03dd4685c634d2b0e7cda"),
+            field_element!("079b0e14d0bae81ff4fe55328fb09c4117bcd961cb60581eb6f2a770a42240ed"),
+            field_element!("06c0926a786abb30b8f6e0eb9ef2278b910862717ed4beb35121d4741717e0e0"),
         ]
         .to_vec();
 

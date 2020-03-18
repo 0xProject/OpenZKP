@@ -1,6 +1,6 @@
 #![warn(clippy::all)]
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use zkp_macros_decl::u256h;
+use zkp_macros_decl::field_element;
 use zkp_primefield::{FieldElement, Root};
 use zkp_stark::{prove, verify, Constraints, Provable, RationalExpression, TraceTable, Verifiable};
 use zkp_u256::U256;
@@ -59,14 +59,10 @@ impl Provable<&Witness> for Claim {
 fn bench_prove(crit: &mut Criterion) {
     let claim = Claim {
         index: 1000,
-        value: FieldElement::from(u256h!(
-            "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
-        )),
+        value: field_element!("0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"),
     };
     let witness = Witness {
-        secret: FieldElement::from(u256h!(
-            "00000000000000000000000000000000000000000000000000000000cafebabe"
-        )),
+        secret: field_element!("cafebabe"),
     };
     let constraints = claim.constraints();
     let trace = claim.trace(&witness);
@@ -79,14 +75,10 @@ fn bench_prove(crit: &mut Criterion) {
 fn bench_verify(crit: &mut Criterion) {
     let claim = Claim {
         index: 1000,
-        value: FieldElement::from(u256h!(
-            "0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"
-        )),
+        value: field_element!("0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f"),
     };
     let witness = Witness {
-        secret: FieldElement::from(u256h!(
-            "00000000000000000000000000000000000000000000000000000000cafebabe"
-        )),
+        secret: field_element!("cafebabe"),
     };
 
     let constraints = claim.constraints();

@@ -484,9 +484,7 @@ mod tests {
         let b = FieldElement::from_montgomery(u256h!(
             "024385f6bebc1c496e09955db534ef4b1eaff9a78e27d4093cfa8f7c8f886f6b"
         ));
-        let c = FieldElement::from(u256h!(
-            "03d7be0dd45f307519282c76caedd14b3ead2be9cb6512ab60cfd7dfeb5a806a"
-        ));
+        let c = field_element!("03d7be0dd45f307519282c76caedd14b3ead2be9cb6512ab60cfd7dfeb5a806a");
         assert_eq!(a - b, c);
     }
 
@@ -498,9 +496,7 @@ mod tests {
         let b = FieldElement::from_montgomery(u256h!(
             "024385f6bebc1c496e09955db534ef4b1eaff9a78e27d4093cfa8f7c8f886f6b"
         ));
-        let c = FieldElement::from(u256h!(
-            "0738900c5dcab24b419674df19d2cfeb9782eca6d1107be18577eb060390365b"
-        ));
+        let c = field_element!("0738900c5dcab24b419674df19d2cfeb9782eca6d1107be18577eb060390365b");
         assert_eq!(a * b, c);
     }
 
@@ -512,9 +508,7 @@ mod tests {
         let b = FieldElement::from_montgomery(u256h!(
             "024385f6bebc1c496e09955db534ef4b1eaff9a78e27d4093cfa8f7c8f886f6b"
         ));
-        let c = FieldElement::from(u256h!(
-            "003a9a346e7103c74dfcddd0eeb4e16ca71d8887c2bed3d4ee718b62015e87b2"
-        ));
+        let c = field_element!("003a9a346e7103c74dfcddd0eeb4e16ca71d8887c2bed3d4ee718b62015e87b2");
         assert_eq!(a / b, c);
     }
     #[quickcheck]
