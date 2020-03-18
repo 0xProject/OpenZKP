@@ -6,28 +6,28 @@ use zkp_macros_decl::u256h;
 use zkp_u256::U256;
 
 fn ecdsa_sign(crit: &mut Criterion) {
-    let message_hash = ScalarFieldElement::from(u256h!(
+    let digest = ScalarFieldElement::from(u256h!(
         "03d937c035c878245caf64531a5756109c53068da139362728feb561405371cb"
     ));
     let private_key = ScalarFieldElement::from(u256h!(
         "0208a0a10250e382e1e4bbe2880906c2791bf6275695e02fbbc6aeff9cd8b31a"
     ));
     crit.bench_function("Ecdsa sign", move |bench| {
-        bench.iter(|| black_box(sign(&message_hash, &private_key)))
+        bench.iter(|| black_box(sign(&digest, &private_key)))
     });
 }
 
 fn ecdsa_verify(crit: &mut Criterion) {
-    let message_hash = ScalarFieldElement::from(u256h!(
+    let digest = ScalarFieldElement::from(u256h!(
         "03d937c035c878245caf64531a5756109c53068da139362728feb561405371cb"
     ));
     let private_key = ScalarFieldElement::from(u256h!(
         "0208a0a10250e382e1e4bbe2880906c2791bf6275695e02fbbc6aeff9cd8b31a"
     ));
     let public = private_to_public(&private_key);
-    let (r, w) = sign(&message_hash, &private_key);
+    let signature = sign(&digest, &private_key);
     crit.bench_function("Ecdsa verify", move |bench| {
-        bench.iter(|| black_box(verify(&message_hash, &r, &w, &public)))
+        bench.iter(|| black_box(verify(&digest, &signature, &public)))
     });
 }
 

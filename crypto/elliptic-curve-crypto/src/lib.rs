@@ -63,16 +63,19 @@ lazy_static! {
     };
 }
 
+// TODO (SECURITY): The signatures are malleable in w -> -w.
+#[derive(PartialEq, Eq, Clone, Debug, Hash)]
+pub struct Signature {
+    r: ScalarFieldElement,
+    w: ScalarFieldElement,
+}
+
 // TODO (SECURITY): Use side-channel-resistant math
 pub fn private_to_public(private_key: &ScalarFieldElement) -> Affine {
     Affine::from(&base_mul(&*GENERATOR_TABLE, private_key.to_uint()))
 }
 
-// TODO (SECURITY): The signatures are malleable in w -> -w.
-pub fn sign(
-    digest: &ScalarFieldElement,
-    private_key: &ScalarFieldElement,
-) -> (ScalarFieldElement, ScalarFieldElement) {
+pub fn sign(digest: &ScalarFieldElement, private_key: &ScalarFieldElement) -> Signature {
     for nonce in 0..1000 {
         let k = get_k(private_key, digest, nonce);
         if k.is_zero() {
@@ -88,7 +91,7 @@ pub fn sign(
                 let s = &r * private_key + digest;
                 match s.inv() {
                     None => continue,
-                    Some(inverse) => return (r, k * inverse),
+                    Some(inverse) => return Signature { r, w: k * inverse },
                 }
             }
         }
@@ -112,25 +115,19 @@ fn get_k(
     .into()
 }
 
-// TODO (SECURITY): The signatures are malleable in w -> -w.
-pub fn verify(
-    digest: &ScalarFieldElement,
-    r: &ScalarFieldElement,
-    w: &ScalarFieldElement,
-    public_key: &Affine,
-) -> bool {
-    assert!(!r.is_zero());
-    assert!(!w.is_zero());
+pub fn verify(digest: &ScalarFieldElement, signature: &Signature, public_key: &Affine) -> bool {
+    assert!(!signature.r.is_zero());
+    assert!(!signature.w.is_zero());
     assert!(public_key.on_curve());
 
     match Affine::from(&double_base_mul(
         &*GENERATOR_TABLE,
-        (digest * w).to_uint(),
+        (digest * &signature.w).to_uint(),
         &public_key,
-        (r * w).to_uint(),
+        (&signature.r * &signature.w).to_uint(),
     )) {
         Affine::Zero => false,
-        Affine::Point { x, .. } => ScalarFieldElement::from(x.to_uint()) == *r,
+        Affine::Point { x, .. } => ScalarFieldElement::from(x.to_uint()) == signature.r,
     }
 }
 
@@ -162,27 +159,27 @@ mod tests {
 
     #[test]
     fn test_sign() {
-        let message_hash = ScalarFieldElement::from(u256h!(
+        let digest = ScalarFieldElement::from(u256h!(
             "01921ce52df68f0185ade7572776513304bdd4a07faf6cf28cefc65a86fc496c"
         ));
         let private_key = ScalarFieldElement::from(u256h!(
             "03c1e9550e66958296d11b60f8e8e7a7ad990d07fa65d5f7652c4a6c87d4e3cc"
         ));
-        let expected = (
-            ScalarFieldElement::from(u256h!(
+        let expected = Signature {
+            r: ScalarFieldElement::from(u256h!(
                 "006d1f96368ae3a73893790a957d86850d443e77c157682cc65f4943b8385bcb"
             )),
-            ScalarFieldElement::from(u256h!(
+            w: ScalarFieldElement::from(u256h!(
                 "05a48d5ab6ccea487a6d0c2e9bc5ea5e5c7857252f72937250ef3ad8b290b29f"
             )),
-        );
-        let result = sign(&message_hash, &private_key);
+        };
+        let result = sign(&digest, &private_key);
         assert_eq!(result, expected);
     }
 
     #[test]
     fn test_verify() {
-        let message_hash = ScalarFieldElement::from(u256h!(
+        let digest = ScalarFieldElement::from(u256h!(
             "01e542e2da71b3f5d7b4e9d329b4d30ac0b5d6f266ebef7364bf61c39aac35d0"
         ));
         let public_key = Affine::Point {
@@ -199,13 +196,14 @@ mod tests {
         let w = ScalarFieldElement::from(u256h!(
             "07656a287e3be47c6e9a29482aecc10cd8b1ae4797b4b956a3573b425d1e66c9"
         ));
-        assert!(verify(&message_hash, &r, &w, &public_key));
+        let signature = Signature { r, w };
+        assert!(verify(&digest, &signature, &public_key));
     }
 
     #[quickcheck]
-    fn test_ecdsa(message_hash: ScalarFieldElement, private_key: ScalarFieldElement) -> bool {
+    fn test_ecdsa(digest: ScalarFieldElement, private_key: ScalarFieldElement) -> bool {
         let public_key = private_to_public(&private_key);
-        let (r, w) = sign(&message_hash, &private_key);
-        verify(&message_hash, &r, &w, &public_key)
+        let signature = sign(&digest, &private_key);
+        verify(&digest, &signature, &public_key)
     }
 }
