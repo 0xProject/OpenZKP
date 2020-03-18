@@ -4,7 +4,7 @@ t = "test --all-features --tests --lib --bins --examples"
 b = "build --all-features --all-targets"
 lint = "clippy --all-features --all-targets -- -D warnings"
 nostd = "check --lib --bins --no-default-features --target=thumbv7m-none-eabi"
-perf = "bench --all-features --bench benchmark --package zkp-primefield"
+perf = "bench --all-features --bench benchmark --package"
 
 # Build for the current CPU by default
 [build]

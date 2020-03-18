@@ -44,7 +44,8 @@ default = [
 ]
 bench = [
     "test",
-    "criterion"
+    "criterion",
+    "rand",
 ]
 test = [
     "std",
