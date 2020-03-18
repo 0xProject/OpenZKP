@@ -6,8 +6,7 @@
   "directories": {
     "test": "test"
   },
-  "dependencies": {
-  },
+  "dependencies": {},
   "devDependencies": {
     "buidler-typechain": "^0.0.5",
     "ts-generator": "^0.0.8",
