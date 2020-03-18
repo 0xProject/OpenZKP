@@ -18,6 +18,8 @@ pub(crate) fn is_proth<M: MontgomeryParameters<UInt = U256>>() -> bool {
 //   m_0 = 1. m_1 =0, m_2 = 0, m' = -1
 // We rebind variables for readability
 #[allow(clippy::shadow_unrelated)]
+// Variable names are structured.
+#[allow(clippy::similar_names)]
 #[inline(always)]
 pub(crate) fn redc_inline(m3: u64, lo: &U256, hi: &U256) -> U256 {
     let lo = lo.as_limbs();
@@ -44,10 +46,10 @@ pub(crate) fn redc_inline(m3: u64, lo: &U256, hi: &U256) -> U256 {
     let (r1, carry) = sbb(a5, 0, carry);
     let (r2, carry) = sbb(a6, 0, carry);
     let (r3, carry) = sbb(a7, m3, carry);
-    if carry != 0 {
-        U256::from_limbs([a4, a5, a6, a7])
-    } else {
+    if carry == 0 {
         U256::from_limbs([r0, r1, r2, r3])
+    } else {
+        U256::from_limbs([a4, a5, a6, a7])
     }
 }
 

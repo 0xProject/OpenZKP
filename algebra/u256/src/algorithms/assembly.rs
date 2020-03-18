@@ -18,15 +18,19 @@ use std::mem::MaybeUninit;
 
 // Computes r[0..5] = a * b[0..4]
 // Uses MULX
+// Currently unused
+#[allow(dead_code)]
 #[inline(always)]
 #[cfg(all(target_arch = "x86_64", target_feature = "adx"))]
-pub fn mul_1_asm(a: u64, b0: u64, b1: u64, b2: u64, b3: u64) -> (u64, u64, u64, u64, u64) {
+pub(crate) fn mul_1_asm(a: u64, b0: u64, b1: u64, b2: u64, b3: u64) -> (u64, u64, u64, u64, u64) {
     let r0: u64;
     let r1: u64;
     let r2: u64;
     let r3: u64;
     let r4: u64;
     let _lo: u64;
+    // Binding `_lo` will not be used after assignment.
+    #[allow(clippy::used_underscore_binding)]
     unsafe {
         asm!(r"
         mulx $7, $0, $1      // (r0, r1) = a * b0
@@ -64,9 +68,13 @@ pub fn mul_1_asm(a: u64, b0: u64, b1: u64, b2: u64, b3: u64) -> (u64, u64, u64, 
 
 // Computes r[0..4] += a * b[0..4], returns carry
 // Uses MULX and ADCX/ADOX carry chain
+// Currently unused
+#[allow(dead_code)]
+// We want each argument to be able to get it's own register after inlining.
+#[allow(clippy::too_many_arguments)]
 #[inline(always)]
 #[cfg(all(target_arch = "x86_64", target_feature = "adx"))]
-pub fn mul_add_1_asm(
+pub(crate) fn mul_add_1_asm(
     r0: &mut u64,
     r1: &mut u64,
     r2: &mut u64,
@@ -80,6 +88,8 @@ pub fn mul_add_1_asm(
     let _lo: u64;
     let _hi: u64;
     let r4: u64;
+    // Bindings `_lo` and `_hi` will not be used after assignment.
+    #[allow(clippy::used_underscore_binding)]
     unsafe {
         asm!(r"
         xor $4, $4            // r4 = CF = OF 0
@@ -123,9 +133,13 @@ pub fn mul_add_1_asm(
 }
 
 /// Reduce at most once
+// Currently unused
+#[allow(dead_code)]
+// We want each argument to be able to get it's own register after inlining.
+#[allow(clippy::too_many_arguments)]
 #[inline(always)]
 #[cfg(all(target_arch = "x86_64", target_feature = "adx"))]
-pub fn reduce_1(
+pub(crate) fn reduce_1(
     s0: u64,
     s1: u64,
     s2: u64,
@@ -180,8 +194,10 @@ pub fn reduce_1(
     (r0, r1, r2, r3)
 }
 
+// Currently unused
+#[allow(dead_code)]
 #[inline(always)]
-pub fn full_mul_asm2(x: &U256, y: &U256) -> (U256, U256) {
+pub(crate) fn full_mul_asm2(x: &U256, y: &U256) -> (U256, U256) {
     let x = x.as_limbs();
     let y = y.as_limbs();
     let (r0, mut r1, mut r2, mut r3, mut r4) = mul_1_asm(x[0], y[0], y[1], y[2], y[3]);
@@ -203,8 +219,10 @@ pub fn full_mul_asm2(x: &U256, y: &U256) -> (U256, U256) {
 // TODO: Square asm
 // TODO: Mul-add
 
+// Currently unused
+#[allow(dead_code)]
 #[inline(always)]
-pub fn mul_asm(x: &U256, y: &U256) -> U256 {
+pub(crate) fn mul_asm(x: &U256, y: &U256) -> U256 {
     let x = x.as_limbs();
     let y = y.as_limbs();
     let mut r = MaybeUninit::<[u64; 4]>::uninit();
@@ -266,8 +284,10 @@ pub fn mul_asm(x: &U256, y: &U256) -> U256 {
     U256::from_limbs(r)
 }
 
+// Currently unused
+#[allow(dead_code)]
 #[inline(always)]
-pub fn full_mul_asm(x: &U256, y: &U256) -> (U256, U256) {
+pub(crate) fn full_mul_asm(x: &U256, y: &U256) -> (U256, U256) {
     const ZERO: u64 = 0;
     let x = x.as_limbs();
     let y = y.as_limbs();
@@ -362,8 +382,10 @@ pub fn full_mul_asm(x: &U256, y: &U256) -> (U256, U256) {
     (U256::from_limbs(lo), U256::from_limbs(hi))
 }
 
+// Currently unused
+#[allow(dead_code)]
 #[inline(always)]
-pub fn proth_redc_asm(m3: u64, lo: &U256, hi: &U256) -> U256 {
+pub(crate) fn proth_redc_asm(m3: u64, lo: &U256, hi: &U256) -> U256 {
     // TODO: Fix carry bug
     const ZERO: u64 = 0;
     let lo = lo.as_limbs();
@@ -461,8 +483,12 @@ pub fn proth_redc_asm(m3: u64, lo: &U256, hi: &U256) -> U256 {
 // NOT INC  can be used for a carry free NEG
 // NEG sets CF and clobbers OF.
 
+// Currently unused
+#[allow(dead_code)]
+// This assembly block needs to be contiguous
+#[allow(clippy::too_many_lines)]
 #[inline(always)]
-pub fn mul_redc<M: MontgomeryParameters<UInt = U256>>(a: &U256, b: &U256) -> U256 {
+pub(crate) fn mul_redc<M: MontgomeryParameters<UInt = U256>>(a: &U256, b: &U256) -> U256 {
     const ZERO: u64 = 0; // $3
     let modulus = M::MODULUS.as_limbs();
 

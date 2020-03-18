@@ -1,6 +1,6 @@
-pub mod assembly;
+pub(crate) mod assembly;
 mod binary_operator_macros;
-pub mod intrinsics;
+pub(crate) mod intrinsics;
 mod knuth_division;
 mod lehmer_gcd;
 mod limb_operations;

@@ -5,22 +5,42 @@ use core::arch::x86_64::{_addcarryx_u64, _mulx_u64};
 // See <https://github.com/rust-lang/stdarch/issues/666>
 // See <https://bugs.llvm.org/show_bug.cgi?id=41546>
 
+// Currently unused
+#[allow(dead_code)]
 #[inline(always)]
-pub fn mul(a: u64, b: u64) -> (u64, u64) {
-    let mut hi = 0_u64; // TODO: MaybeUninit?
+pub(crate) fn mul(a: u64, b: u64) -> (u64, u64) {
+    // TODO: MaybeUninit?
+    let mut hi = 0_u64;
+    // TODO: Feature detection.
+    // The mulx intrinsic requires unsafe because it may not be available on all
+    // architectures.
+    #[allow(unsafe_code)]
     let lo = unsafe { _mulx_u64(a, b, &mut hi) };
     (lo, hi)
 }
 
+// Currently unused
+#[allow(dead_code)]
 #[inline(always)]
-pub fn add(a: u64, b: u64, carry: u8) -> (u64, u8) {
-    let mut r = 0_u64; // TODO: MaybeUninit?
+pub(crate) fn add(a: u64, b: u64, carry: u8) -> (u64, u8) {
+    // TODO: MaybeUninit?
+    let mut r = 0_u64;
+    // TODO: Feature detection.
+    // The mulx intrinsic requires unsafe because it may not be available on all
+    // architectures.
+    #[allow(unsafe_code)]
     let carry = unsafe { _addcarryx_u64(carry, a, b, &mut r) };
     (r, carry)
 }
 
+// Currently unused
+#[allow(dead_code)]
+// Variable names are re-used for clarity.
+#[allow(clippy::shadow_unrelated)]
+// Variable names are structured.
+#[allow(clippy::similar_names)]
 #[inline(always)]
-pub fn mul_full(x: &U256, y: &U256) -> (U256, U256) {
+pub(crate) fn mul_full(x: &U256, y: &U256) -> (U256, U256) {
     const ZERO: u64 = 0;
     let x = x.as_limbs();
     let y = y.as_limbs();
