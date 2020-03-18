@@ -218,7 +218,7 @@ impl Arbitrary for Affine {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ORDER;
+    use crate::ScalarFieldElement;
     use quickcheck_macros::quickcheck;
     use zkp_macros_decl::u256h;
     use zkp_u256::U256;
@@ -303,11 +303,8 @@ mod tests {
     }
 
     #[quickcheck]
-    fn distributivity(p: Affine, mut a: U256, mut b: U256) -> bool {
-        a %= &ORDER;
-        b %= &ORDER;
+    fn distributivity(p: Affine, a: ScalarFieldElement, b: ScalarFieldElement) -> bool {
         let c = &a + &b;
-        // TODO: c %= &ORDER;
-        (&p * a) + (&p * b) == &p * c
+        (&p * a.to_uint()) + (&p * b.to_uint()) == &p * c.to_uint()
     }
 }

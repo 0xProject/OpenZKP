@@ -70,8 +70,6 @@ pub const BETA: FieldElement = FieldElement::from_montgomery_const(u256h!(
     "013931651774247fab8a1e002a41f9476725f2237aab9006359ddd67b59a21ca"
 ));
 
-pub const ORDER: U256 = u256h!("0800000000000010ffffffffffffffffb781126dcae7b2321e66a241adc64d2f");
-
 // x = 0x01ef15c18599971b7beced415a40f0c7deacfd9b0d1819e03d723d8bc943cfca
 // y = 0x005668060aa49730b7be4801df46ec62de53ecd11abe43a32873000c36e8dc1f
 pub const GENERATOR: Affine = Affine::Point {
