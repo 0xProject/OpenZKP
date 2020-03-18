@@ -7,6 +7,8 @@
     "test": "test"
   },
   "dependencies": {
+  },
+  "devDependencies": {
     "buidler-typechain": "^0.0.5",
     "ts-generator": "^0.0.8",
     "ts-node": "^8.6.2",
@@ -14,9 +16,7 @@
     "typechain-target-ethers": "^1.0.3",
     "typechain-target-truffle": "^1.0.2",
     "typechain-target-web3-v1": "^1.0.4",
-    "typescript": "^3.8.3"
-  },
-  "devDependencies": {
+    "typescript": "^3.8.3",
     "@nomiclabs/buidler": "^1.2.0",
     "@nomiclabs/buidler-ethers": "^1.2.0",
     "@nomiclabs/buidler-waffle": "^1.2.0",
