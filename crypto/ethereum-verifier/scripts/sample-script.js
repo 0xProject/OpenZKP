@@ -9,10 +9,6 @@ async function main() {
   await env.run("compile");
 
   // We require the artifacts once our contracts are compiled
-  // const Greeter = env.artifacts.require("Greeter");
-  // const greeter = await Greeter.new("Hello, world!");
-
-  // console.log("Greeter address:", greeter.address);
 }
 
 // We recommend this pattern to be able to use async/await everywhere

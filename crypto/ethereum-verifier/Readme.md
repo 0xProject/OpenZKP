@@ -1,7 +1,11 @@
 # Ethereum Stark Verifier
+
 ## Install
-`npm init`
+
+`npm install`
+
 ## Run tests
+
 `npx buidler compile`
 
 `npx builder typechain`
