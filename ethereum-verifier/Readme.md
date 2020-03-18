@@ -1,7 +1,9 @@
 # Ethereum Stark Verifier
 ## Install
-'npm init'
+`npm init`
 ## Run tests
-'npx buidler compile'
-'npx builder typechain'
-'npx builder test'
+`npx buidler compile`
+
+`npx builder typechain`
+
+`npx builder test`
