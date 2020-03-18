@@ -288,7 +288,7 @@ mod tests {
                 "018a7a2ab4e795405f924de277b0e723d90eac55f2a470d8532113d735bdedd4"
             )),
         );
-        let result = p.clone() * c;
+        let result = p * c;
         assert_eq!(result, expected);
     }
 
