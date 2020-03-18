@@ -1,4 +1,4 @@
 #Buidler files
 cache
 artifacts
-src/types
+typechain

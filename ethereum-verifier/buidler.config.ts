@@ -9,7 +9,7 @@ const config: BuidlerConfig = {
     version: "0.6.4"
   },
   typechain: {
-    outDir: "src/types",
+    outDir: "typechain",
     target: "ethers"
   }
 };
