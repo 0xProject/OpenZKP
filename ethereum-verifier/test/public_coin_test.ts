@@ -1,10 +1,10 @@
 import { deployContract, getWallets, solidity } from "ethereum-waffle";
 import { waffle } from "@nomiclabs/buidler";
 import chai from "chai";
-
+import {tx_to_events} from './test_utils';
 
 import PublicCoinTestingArtifact from "../artifacts/PublicCoinTesting.json";
-import { PublicCoinTesting } from "../src/types/PublicCoinTesting";
+import { PublicCoinTesting } from "../typechain/PublicCoinTesting";
 
 chai.use(solidity);
 const { expect } = chai;
@@ -21,16 +21,16 @@ describe("Public coin testing", () => {
   });
 
   it("Should read the correct data from multiple reads", async function() {  
-      await coin_contract.init_and_read(init_hex, 3);
+      let events = await tx_to_events(coin_contract.init_and_read(init_hex, 3));
 
-      expect(await coin_contract.read_data(0)).to.eq("0x7d84f75ca3e9328b92123c1790834ee0084e02c09b379c6f95c5d2ae8739b9c8");
-      expect(await coin_contract.read_data(1)).to.eq("0x4ed5f0fd8cffa8dec69beebab09ee881e7369d6d084b90208a079eedc67d2d45");
-      expect(await coin_contract.read_data(2)).to.eq("0x2389a47fe0e1e5f9c05d8dcb27b069b67b1c7ec61a5c0a3f54d81aea83d2c8f0");
+      expect(events[0].data).to.eq("0x7d84f75ca3e9328b92123c1790834ee0084e02c09b379c6f95c5d2ae8739b9c8");
+      expect(events[1].data).to.eq("0x4ed5f0fd8cffa8dec69beebab09ee881e7369d6d084b90208a079eedc67d2d45");
+      expect(events[2].data).to.eq("0x2389a47fe0e1e5f9c05d8dcb27b069b67b1c7ec61a5c0a3f54d81aea83d2c8f0");
   });
 
   it("Should have the correct digest after a write", async function() {
-      await coin_contract.init_and_write(init_hex, "0x7d84f75ca3e9328b92123c1790834ee0084e02c09b379c6f95c5d2ae8739b9c8");
-      expect(await coin_contract.read_data(0)).to.eq("0x3174a00d031bc8deff799e24a78ee347b303295a6cb61986a49873d9b6f13a0d");
+      let events = await tx_to_events(coin_contract.init_and_write(init_hex, "0x7d84f75ca3e9328b92123c1790834ee0084e02c09b379c6f95c5d2ae8739b9c8"));
+      expect(events[0].data).to.eq("0x3174a00d031bc8deff799e24a78ee347b303295a6cb61986a49873d9b6f13a0d");
   });
 
 });
