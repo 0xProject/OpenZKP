@@ -1,4 +1,4 @@
-use crate::{curve::Affine, curve_operations};
+use crate::{curve_operations, Affine, ScalarFieldElement};
 use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
     prelude::v1::*,
@@ -326,7 +326,9 @@ mod tests {
                 "005668060aa49730b7be4801df46ec62de53ecd11abe43a32873000c36e8dc1f"
             )),
         ));
-        let b = u256h!("07374b7d69dc9825fc758b28913c8d2a27be5e7c32412f612b20c9c97afbe4dd");
+        let b = ScalarFieldElement::from(u256h!(
+            "07374b7d69dc9825fc758b28913c8d2a27be5e7c32412f612b20c9c97afbe4dd"
+        ));
         let c = Jacobian::from(Affine::new(
             FieldElement::from(u256h!(
                 "00f24921907180cd42c9d2d4f9490a7bc19ac987242e80ac09a8ac2bcf0445de"
@@ -345,6 +347,6 @@ mod tests {
 
     #[quickcheck]
     fn distributivity(p: Jacobian, a: ScalarFieldElement, b: ScalarFieldElement) -> bool {
-        (&p * a.to_uint()) + (&p * b.to_uint()) == p * (a + b).to_uint()
+        &p * &a + &p * &b == p * (a + b)
     }
 }

@@ -1,6 +1,6 @@
 #![warn(clippy::all)]
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use zkp_elliptic_curve::{mul, Affine, Jacobian};
+use zkp_elliptic_curve::{mul, Affine, Jacobian, ScalarFieldElement};
 use zkp_macros_decl::u256h;
 use zkp_primefield::FieldElement;
 use zkp_u256::U256;
@@ -54,7 +54,9 @@ fn curve_mul(crit: &mut Criterion) {
             "0176a4c00d1ce6b642176e460624b1699da148593f701cac4df2280c2edb163f"
         )),
     };
-    let b = u256h!("014023b44fbb1e6f2a79c929c6da775be3c4b9e043d439385b5050fdc69177e3");
+    let b = ScalarFieldElement::from(u256h!(
+        "014023b44fbb1e6f2a79c929c6da775be3c4b9e043d439385b5050fdc69177e3"
+    ));
     crit.bench_function("Curve mul", move |bench| {
         bench.iter(|| {
             black_box(black_box(&a) * black_box(&b));
@@ -151,7 +153,9 @@ fn jacobian_mul(crit: &mut Criterion) {
             "0176a4c00d1ce6b642176e460624b1699da148593f701cac4df2280c2edb163f"
         )),
     });
-    let b = u256h!("014023b44fbb1e6f2a79c929c6da775be3c4b9e043d439385b5050fdc69177e3");
+    let b = ScalarFieldElement::from(u256h!(
+        "014023b44fbb1e6f2a79c929c6da775be3c4b9e043d439385b5050fdc69177e3"
+    ));
     crit.bench_function("Jacobian mul", move |bench| {
         bench.iter(|| {
             black_box(black_box(&a) * black_box(&b));

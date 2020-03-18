@@ -1,4 +1,4 @@
-use crate::BETA;
+use crate::{ScalarFieldElement, BETA};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use std::{
@@ -6,7 +6,7 @@ use std::{
     prelude::v1::*,
 };
 use zkp_primefield::{FieldElement, NegInline, One, Zero};
-use zkp_u256::{commutative_binop, noncommutative_binop, U256};
+use zkp_u256::{commutative_binop, noncommutative_binop};
 
 #[derive(PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
@@ -128,17 +128,18 @@ macro_rules! curve_operations {
             }
         }
 
-        impl Mul<&U256> for &$type {
+        impl Mul<&ScalarFieldElement> for &$type {
             type Output = $type;
 
-            fn mul(self, scalar: &U256) -> $type {
+            fn mul(self, scalar: &ScalarFieldElement) -> $type {
                 use zkp_u256::Binary;
+                let bits = scalar.to_uint();
                 // OPT: Use WNAF
-                if let Some(position) = scalar.most_significant_bit() {
+                if let Some(position) = bits.most_significant_bit() {
                     let mut r = self.clone();
                     for i in (0..position).rev() {
                         r.double_assign();
-                        if scalar.bit(i) {
+                        if bits.bit(i) {
                             r += self;
                         }
                     }
@@ -149,38 +150,38 @@ macro_rules! curve_operations {
             }
         }
 
-        impl MulAssign<&U256> for $type {
-            fn mul_assign(&mut self, scalar: &U256) {
+        impl MulAssign<&ScalarFieldElement> for $type {
+            fn mul_assign(&mut self, scalar: &ScalarFieldElement) {
                 *self = &*self * scalar;
             }
         }
 
-        impl MulAssign<U256> for $type {
-            fn mul_assign(&mut self, scalar: U256) {
+        impl MulAssign<ScalarFieldElement> for $type {
+            fn mul_assign(&mut self, scalar: ScalarFieldElement) {
                 *self *= &scalar;
             }
         }
 
-        impl Mul<U256> for $type {
+        impl Mul<ScalarFieldElement> for $type {
             type Output = Self;
 
-            fn mul(self, scalar: U256) -> Self {
+            fn mul(self, scalar: ScalarFieldElement) -> Self {
                 &self * &scalar
             }
         }
 
-        impl Mul<&U256> for $type {
+        impl Mul<&ScalarFieldElement> for $type {
             type Output = Self;
 
-            fn mul(self, scalar: &U256) -> Self {
+            fn mul(self, scalar: &ScalarFieldElement) -> Self {
                 &self * scalar
             }
         }
 
-        impl Mul<U256> for &$type {
+        impl Mul<ScalarFieldElement> for &$type {
             type Output = $type;
 
-            fn mul(self, scalar: U256) -> $type {
+            fn mul(self, scalar: ScalarFieldElement) -> $type {
                 self * &scalar
             }
         }
@@ -279,7 +280,9 @@ mod tests {
                 "005668060aa49730b7be4801df46ec62de53ecd11abe43a32873000c36e8dc1f"
             )),
         );
-        let c = u256h!("07374b7d69dc9825fc758b28913c8d2a27be5e7c32412f612b20c9c97afbe4dd");
+        let c = ScalarFieldElement::from(u256h!(
+            "07374b7d69dc9825fc758b28913c8d2a27be5e7c32412f612b20c9c97afbe4dd"
+        ));
         let expected = Affine::new(
             FieldElement::from(u256h!(
                 "00f24921907180cd42c9d2d4f9490a7bc19ac987242e80ac09a8ac2bcf0445de"
@@ -299,6 +302,6 @@ mod tests {
 
     #[quickcheck]
     fn distributivity(p: Affine, a: ScalarFieldElement, b: ScalarFieldElement) -> bool {
-        (&p * a.to_uint()) + (&p * b.to_uint()) == p * (a + b).to_uint()
+        (&p * &a) + (&p * &b) == p * (a + b)
     }
 }
