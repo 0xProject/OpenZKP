@@ -50,7 +50,7 @@ use zkp_elliptic_curve::{
     base_mul, double_base_mul, window_table_affine, Affine, ScalarFieldElement, GENERATOR,
 };
 use zkp_primefield::*;
-use zkp_u256::{Binary, U256};
+use zkp_u256::U256;
 
 #[cfg(not(feature = "std"))]
 extern crate no_std_compat as std;
@@ -70,32 +70,25 @@ pub fn private_to_public(private_key: &ScalarFieldElement) -> Affine {
 
 // TODO (SECURITY): The signatures are malleable in w -> -w.
 pub fn sign(
-    msg_hash: &ScalarFieldElement,
+    digest: &ScalarFieldElement,
     private_key: &ScalarFieldElement,
 ) -> (ScalarFieldElement, ScalarFieldElement) {
-    for i in 0..1000 {
-        let k = U256::from_bytes_be(&sha3_256(
-            &[
-                private_key.to_uint().to_bytes_be(),
-                msg_hash.to_uint().to_bytes_be(),
-                U256::from(i).to_bytes_be(),
-            ]
-            .concat(),
-        )) >> 4;
-        if k == U256::ZERO || k.bits() > 251 {
+    for nonce in 0..1000 {
+        let k = get_k(private_key, digest, nonce);
+        if k.is_zero() {
             continue;
         }
-        match Affine::from(&base_mul(&*GENERATOR_TABLE, k.clone())) {
+        match Affine::from(&base_mul(&*GENERATOR_TABLE, k.to_uint())) {
             Affine::Zero => continue,
             Affine::Point { x, .. } => {
                 let r = ScalarFieldElement::from(x.to_uint());
                 if r.is_zero() {
                     continue;
                 }
-                let s = &r * private_key + msg_hash;
+                let s = &r * private_key + digest;
                 match s.inv() {
                     None => continue,
-                    Some(inverse) => return (r, ScalarFieldElement::from(k) * inverse),
+                    Some(inverse) => return (r, k * inverse),
                 }
             }
         }
@@ -103,9 +96,25 @@ pub fn sign(
     panic!("Could not find k for ECDSA after 1000 tries.")
 }
 
+fn get_k(
+    private_key: &ScalarFieldElement,
+    digest: &ScalarFieldElement,
+    nonce: u64,
+) -> ScalarFieldElement {
+    U256::from_bytes_be(&sha3_256(
+        &[
+            private_key.to_uint().to_bytes_be(),
+            digest.to_uint().to_bytes_be(),
+            U256::from(nonce).to_bytes_be(),
+        ]
+        .concat(),
+    ))
+    .into()
+}
+
 // TODO (SECURITY): The signatures are malleable in w -> -w.
 pub fn verify(
-    msg_hash: &ScalarFieldElement,
+    digest: &ScalarFieldElement,
     r: &ScalarFieldElement,
     w: &ScalarFieldElement,
     public_key: &Affine,
@@ -116,7 +125,7 @@ pub fn verify(
 
     match Affine::from(&double_base_mul(
         &*GENERATOR_TABLE,
-        (msg_hash * w).to_uint(),
+        (digest * w).to_uint(),
         &public_key,
         (r * w).to_uint(),
     )) {
@@ -161,10 +170,10 @@ mod tests {
         ));
         let expected = (
             ScalarFieldElement::from(u256h!(
-                "049ae96821351a2bbc91d3d1e84bc825bea2cb645a7184446dd92f4f1bc4f5b8"
+                "006d1f96368ae3a73893790a957d86850d443e77c157682cc65f4943b8385bcb"
             )),
             ScalarFieldElement::from(u256h!(
-                "03cdabfdd233bf8146621fd2e938ef5b326c485eac8fbe59aa9ae39adfaf4cbc"
+                "05a48d5ab6ccea487a6d0c2e9bc5ea5e5c7857252f72937250ef3ad8b290b29f"
             )),
         );
         let result = sign(&message_hash, &private_key);
