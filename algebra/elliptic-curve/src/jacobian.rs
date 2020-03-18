@@ -340,12 +340,11 @@ mod tests {
 
     #[quickcheck]
     fn add_commutative(a: Jacobian, b: Jacobian) -> bool {
-        &a + &b == &b + &a
+        &a + &b == b + a
     }
 
     #[quickcheck]
     fn distributivity(p: Jacobian, a: ScalarFieldElement, b: ScalarFieldElement) -> bool {
-        let c = &a + &b;
-        (&p * a.to_uint()) + (&p * b.to_uint()) == &p * c.to_uint()
+        (&p * a.to_uint()) + (&p * b.to_uint()) == p * (a + b).to_uint()
     }
 }

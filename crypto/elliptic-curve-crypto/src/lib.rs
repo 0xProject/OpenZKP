@@ -64,7 +64,8 @@ lazy_static! {
 }
 
 // TODO (SECURITY): The signatures are malleable in w -> -w.
-#[derive(PartialEq, Eq, Clone, Debug, Hash)]
+#[derive(PartialEq, Eq, Clone, Hash)]
+#[cfg_attr(feature = "std", derive(Debug))]
 pub struct Signature {
     r: ScalarFieldElement,
     w: ScalarFieldElement,

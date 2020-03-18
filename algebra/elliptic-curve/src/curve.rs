@@ -211,10 +211,6 @@ impl Arbitrary for Affine {
     }
 }
 
-// Quickcheck needs pass by value
-#[allow(clippy::needless_pass_by_value)]
-// We allow these in tests for readability/ease of editing
-#[allow(clippy::redundant_clone)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -292,19 +288,17 @@ mod tests {
                 "018a7a2ab4e795405f924de277b0e723d90eac55f2a470d8532113d735bdedd4"
             )),
         );
-        let result = p.clone() * c;
+        let result = p * c;
         assert_eq!(result, expected);
     }
 
-    #[allow(clippy::eq_op)]
     #[quickcheck]
     fn add_commutative(a: Affine, b: Affine) -> bool {
-        &a + &b == &b + &a
+        &a + &b == b + a
     }
 
     #[quickcheck]
     fn distributivity(p: Affine, a: ScalarFieldElement, b: ScalarFieldElement) -> bool {
-        let c = &a + &b;
-        (&p * a.to_uint()) + (&p * b.to_uint()) == &p * c.to_uint()
+        (&p * a.to_uint()) + (&p * b.to_uint()) == p * (a + b).to_uint()
     }
 }
