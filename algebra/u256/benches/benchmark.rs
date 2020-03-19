@@ -1,11 +1,11 @@
 #![warn(clippy::all)]
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use rand::prelude::*;
 use zkp_macros_decl::u256h;
 use zkp_u256::{
     DivRem, Inv, InvMod, Montgomery, MontgomeryParameters, MulFullInline, SquareFullInline,
     SquareInline, U256,
 };
-
 struct Generic();
 
 impl MontgomeryParameters for Generic {
@@ -33,141 +33,147 @@ impl MontgomeryParameters for Proth {
 }
 
 fn and(crit: &mut Criterion) {
-    let a = u256h!("01c9e043b135fa21471cec503f1181884ef3d9c2cb44b6a3531bb3056443bc99");
-    let b = u256h!("04742d726d4800e1015941bf06591cd139bd034f968ab8a225f92cbba85e5776");
     crit.bench_function("and", move |bench| {
-        bench.iter(|| black_box(&a).clone() & black_box(&b))
+        let a: &U256 = &random();
+        let b: &U256 = &random();
+        bench.iter(|| black_box(a) & black_box(b))
     });
 }
 
 fn shl(crit: &mut Criterion) {
-    let a = u256h!("01c9e043b135fa21471cec503f1181884ef3d9c2cb44b6a3531bb3056443bc99");
     crit.bench_function("shl", move |bench| {
-        bench.iter(|| black_box(&a).clone() << 3)
+        let a: &U256 = &random();
+        let b = random::<usize>() % 256;
+        bench.iter(|| black_box(a).clone() << b)
     });
 }
 
 fn add(crit: &mut Criterion) {
-    let a = u256h!("01c9e043b135fa21471cec503f1181884ef3d9c2cb44b6a3531bb3056443bc99");
-    let b = u256h!("04742d726d4800e1015941bf06591cd139bd034f968ab8a225f92cbba85e5776");
     crit.bench_function("add", move |bench| {
-        bench.iter(|| black_box(&a).clone() + black_box(&b))
+        let a: &U256 = &random();
+        let b: &U256 = &random();
+        bench.iter(|| black_box(a) + black_box(b))
     });
 }
 
 fn sub(crit: &mut Criterion) {
-    let a = u256h!("01c9e043b135fa21471cec503f1181884ef3d9c2cb44b6a3531bb3056443bc99");
-    let b = u256h!("04742d726d4800e1015941bf06591cd139bd034f968ab8a225f92cbba85e5776");
     crit.bench_function("sub", move |bench| {
-        bench.iter(|| black_box(&a).clone() - black_box(&b))
+        let a: &U256 = &random();
+        let b: &U256 = &random();
+        bench.iter(|| black_box(a) - black_box(b))
     });
 }
 
 fn sqr(crit: &mut Criterion) {
-    let a = u256h!("01c9e043b135fa21471cec503f1181884ef3d9c2cb44b6a3531bb3056443bc99");
     crit.bench_function("sqr", move |bench| {
-        bench.iter(|| black_box(&a).square_inline())
+        let a: &U256 = &random();
+        bench.iter(|| black_box(a).square_inline())
     });
 }
 
 fn sqr_full(crit: &mut Criterion) {
-    let a = u256h!("01c9e043b135fa21471cec503f1181884ef3d9c2cb44b6a3531bb3056443bc99");
     crit.bench_function("sqr full", move |bench| {
-        bench.iter(|| black_box(&a).square_full_inline())
+        let a = &random::<U256>();
+        bench.iter(|| black_box(a).square_full_inline())
     });
 }
 
 fn mul(crit: &mut Criterion) {
-    let a = u256h!("01c9e043b135fa21471cec503f1181884ef3d9c2cb44b6a3531bb3056443bc99");
-    let b = u256h!("04742d726d4800e1015941bf06591cd139bd034f968ab8a225f92cbba85e5776");
     crit.bench_function("mul", move |bench| {
-        bench.iter(|| black_box(&a).clone() * black_box(&b))
+        let a: &U256 = &random();
+        let b: &U256 = &random();
+        bench.iter(|| black_box(a) * black_box(b))
     });
 }
 
 fn mul_full(crit: &mut Criterion) {
-    let a = u256h!("01c9e043b135fa21471cec503f1181884ef3d9c2cb44b6a3531bb3056443bc99");
-    let b = u256h!("04742d726d4800e1015941bf06591cd139bd034f968ab8a225f92cbba85e5776");
     crit.bench_function("mul full", move |bench| {
-        bench.iter(|| black_box(&a).mul_full_inline(&b))
+        let a: &U256 = &random();
+        let b: &U256 = &random();
+        bench.iter(|| black_box(a).mul_full_inline(black_box(b)))
     });
 }
 
 fn invmod256(crit: &mut Criterion) {
-    let n = u256h!("07717a21e77894e8d82120c54277c73ee1062290709829411717f47973471ed5");
-    crit.bench_function("invmod256", move |bench| bench.iter(|| black_box(&n).inv()));
+    crit.bench_function("invmod256", move |bench| {
+        // Value must be odd
+        let a: &U256 = &(random::<U256>() | U256::ONE);
+        bench.iter(|| black_box(a).inv())
+    });
 }
 
 fn invmod(crit: &mut Criterion) {
-    let m = u256h!("0800000000000011000000000000000000000000000000000000000000000001");
-    let n = u256h!("07717a21e77894e8d82120c54277c73ee1062290709829411717f47973471ed5");
+    // Fixed Proth-prime modulus
+    let m = &u256h!("0800000000000011000000000000000000000000000000000000000000000001");
     crit.bench_function("invmod", move |bench| {
-        bench.iter(|| black_box(&n).inv_mod(black_box(&m)))
+        // Should not be zero, but chance is neglible
+        let a: &U256 = &(random::<U256>() % m);
+        bench.iter(|| black_box(a).inv_mod(black_box(m)))
     });
 }
 
 fn divrem(crit: &mut Criterion) {
-    let a = u256h!("01c9e043b135fa21471cec503f1181884ef3d9c2cb44b6a3531bb3056443bc99");
-    let b = u256h!("0800000000000011000000000000000000000000000000000000000000000001");
     crit.bench_function("divrem", move |bench| {
-        bench.iter(|| black_box(black_box(&a).div_rem(black_box(&b))))
+        let a: &U256 = &random();
+        let b: &U256 = &random();
+        bench.iter(|| black_box(black_box(a).div_rem(black_box(b))))
     });
 }
 
 fn mulmod(crit: &mut Criterion) {
-    let a = u256h!("01c9e043b135fa21471cec503f1181884ef3d9c2cb44b6a3531bb3056443bc99");
-    let b = u256h!("07717a21e77894e8d82120c54277c73ee1062290709829411717f47973471ed5");
-    let m = u256h!("0800000000000011000000000000000000000000000000000000000000000001");
+    let m = &u256h!("0800000000000011000000000000000000000000000000000000000000000001");
     crit.bench_function("mulmod", move |bench| {
+        let a = &(random::<U256>() % m);
+        let b = &(random::<U256>() % m);
         bench.iter(|| black_box(black_box(&a).mulmod(black_box(&b), black_box(&m))))
     });
 }
 
 fn montgomery_redc(crit: &mut Criterion) {
-    let a = u256h!("01c9e043b135fa21471cec503f1181884ef3d9c2cb44b6a3531bb3056443bc99");
-    let b = u256h!("04742d726d4800e1015941bf06591cd139bd034f968ab8a225f92cbba85e5776");
     crit.bench_function("redc", move |bench| {
-        bench.iter(|| U256::redc_inline::<Generic>(black_box(&a), black_box(&b)))
+        let a = &(random::<U256>() % Generic::MODULUS);
+        let b = &(random::<U256>() % Generic::MODULUS);
+        bench.iter(|| U256::redc_inline::<Generic>(black_box(a), black_box(b)))
     });
 }
 
 fn montgomery_mul_redc(crit: &mut Criterion) {
-    let a = u256h!("01c9e043b135fa21471cec503f1181884ef3d9c2cb44b6a3531bb3056443bc99");
-    let b = u256h!("04742d726d4800e1015941bf06591cd139bd034f968ab8a225f92cbba85e5776");
     crit.bench_function("mul redc", move |bench| {
-        bench.iter(|| black_box(&a).mul_redc_inline::<Generic>(black_box(&b)))
+        let a = &(random::<U256>() % Generic::MODULUS);
+        let b = &(random::<U256>() % Generic::MODULUS);
+        bench.iter(|| black_box(a).mul_redc_inline::<Generic>(black_box(b)))
     });
 }
 
 fn montgomery_mulmod(crit: &mut Criterion) {
-    let a = u256h!("01c9e043b135fa21471cec503f1181884ef3d9c2cb44b6a3531bb3056443bc99");
-    let b = u256h!("04742d726d4800e1015941bf06591cd139bd034f968ab8a225f92cbba85e5776");
     crit.bench_function("mont mulmod", move |bench| {
-        bench.iter(|| black_box(&a).mul_mod::<Generic>(black_box(&b)))
+        let a = &(random::<U256>() % Generic::MODULUS);
+        let b = &(random::<U256>() % Generic::MODULUS);
+        bench.iter(|| black_box(a).mul_mod::<Generic>(black_box(b)))
     });
 }
 
 fn montgomery_proth_redc(crit: &mut Criterion) {
-    let a = u256h!("01c9e043b135fa21471cec503f1181884ef3d9c2cb44b6a3531bb3056443bc99");
-    let b = u256h!("04742d726d4800e1015941bf06591cd139bd034f968ab8a225f92cbba85e5776");
     crit.bench_function("proth redc", move |bench| {
-        bench.iter(|| U256::redc_inline::<Proth>(black_box(&a), black_box(&b)))
+        let a = &(random::<U256>() % Proth::MODULUS);
+        let b = &(random::<U256>() % Proth::MODULUS);
+        bench.iter(|| U256::redc_inline::<Proth>(black_box(a), black_box(b)))
     });
 }
 
 fn montgomery_proth_mul_redc(crit: &mut Criterion) {
-    let a = u256h!("01c9e043b135fa21471cec503f1181884ef3d9c2cb44b6a3531bb3056443bc99");
-    let b = u256h!("04742d726d4800e1015941bf06591cd139bd034f968ab8a225f92cbba85e5776");
     crit.bench_function("proth mul redc", move |bench| {
-        bench.iter(|| black_box(&a).mul_redc_inline::<Proth>(black_box(&b)))
+        let a = &(random::<U256>() % Proth::MODULUS);
+        let b = &(random::<U256>() % Proth::MODULUS);
+        bench.iter(|| black_box(a).mul_redc_inline::<Proth>(black_box(b)))
     });
 }
 
 fn montgomery_proth_mulmod(crit: &mut Criterion) {
-    let a = u256h!("01c9e043b135fa21471cec503f1181884ef3d9c2cb44b6a3531bb3056443bc99");
-    let b = u256h!("04742d726d4800e1015941bf06591cd139bd034f968ab8a225f92cbba85e5776");
     crit.bench_function("proth mont mulmod", move |bench| {
-        bench.iter(|| black_box(&a).mul_mod::<Proth>(black_box(&b)))
+        let a = &(random::<U256>() % Proth::MODULUS);
+        let b = &(random::<U256>() % Proth::MODULUS);
+        bench.iter(|| black_box(a).mul_mod::<Proth>(black_box(b)))
     });
 }
 
