@@ -1,265 +1,223 @@
-use crate::utils::{adc, msb};
-use core::{convert::TryFrom, u64};
+use crate::{
+    algorithms::{div_2_1, divrem_nby1, divrem_nbym, inv_mod},
+    noncommutative_binop, Binary, DivRem, InvMod, U256,
+};
+use num_traits::Inv;
+use std::{
+    num::Wrapping,
+    ops::{Div, DivAssign, Rem, RemAssign},
+    prelude::v1::*,
+    u64,
+};
 
-const fn val_2(lo: u64, hi: u64) -> u128 {
-    ((hi as u128) << 64) | (lo as u128)
-}
+// Division like routines: Integer division/remaindering, Ring
+// division/inversion Modular inversions/divisions.
 
-const fn mul_2(a: u64, b: u64) -> u128 {
-    (a as u128) * (b as u128)
-}
-
-/// Compute <hi, lo> / d, returning the quotient and the remainder.
-// TODO: Make sure it uses divq on x86_64.
-// See http://lists.llvm.org/pipermail/llvm-dev/2017-October/118323.html
-// (Note that we require d > hi for this)
-// TODO: If divq is not supported, use a fast software implementation:
-// See https://gmplib.org/~tege/division-paper.pdf
-fn divrem_2by1(lo: u64, hi: u64, d: u64) -> (u64, u64) {
-    debug_assert!(d > 0);
-    debug_assert!(d > hi);
-    let d = u128::from(d);
-    let n = val_2(lo, hi);
-    let q = n / d;
-    let r = n % d;
-    debug_assert!(q < val_2(0, 1));
-    debug_assert!(
-        mul_2(u64::try_from(q).unwrap(), u64::try_from(d).unwrap())
-            + val_2(u64::try_from(r).unwrap(), 0)
-            == val_2(lo, hi)
-    );
-    debug_assert!(r < d);
-    // There should not be any truncation.
-    #[allow(clippy::cast_possible_truncation)]
-    (q as u64, r as u64)
-}
-
-pub(crate) fn divrem_nby1(numerator: &mut [u64], divisor: u64) -> u64 {
-    debug_assert!(divisor > 0);
-    let mut remainder = 0;
-    for i in (0..numerator.len()).rev() {
-        let (ni, ri) = divrem_2by1(numerator[i], remainder, divisor);
-        numerator[i] = ni;
-        remainder = ri;
+impl InvMod for U256 {
+    /// Computes the inverse modulo a given modulus
+    #[inline(always)]
+    fn inv_mod(&self, modulus: &Self) -> Option<Self> {
+        inv_mod(modulus, self)
     }
-    remainder
 }
 
-//      |  n2 n1 n0  |
-//  q = |  --------  |
-//      |_    d1 d0 _|
-fn div_3by2(n: &[u64; 3], d: &[u64; 2]) -> u64 {
-    // The highest bit of d needs to be set
-    debug_assert!(d[1] >> 63 == 1);
+impl DivRem<u64> for U256 {
+    type Quotient = Self;
+    type Remainder = u64;
 
-    // The quotient needs to fit u64. For this we need [n2 n1] < [d1 d0]
-    debug_assert!(val_2(n[1], n[2]) < val_2(d[0], d[1]));
-
-    if n[2] == d[1] {
-        // From [n2 n1] < [d1 d0] and n2 = d1 it follows that n[1] < d[0].
-        debug_assert!(n[1] < d[0]);
-        // We start by subtracting 2^64 times the divisor, resulting in a
-        // negative remainder. Depending on the result, we need to add back
-        // in one or two times the divisor to make the remainder positive.
-        // (It can not be more since the divisor is > 2^127 and the negated
-        // remainder is < 2^128.)
-        let neg_remainder = val_2(0, d[0]) - val_2(n[0], n[1]);
-        if neg_remainder > val_2(d[0], d[1]) {
-            0xffff_ffff_ffff_fffe_u64
+    // Short division
+    // TODO: Can be computed in-place
+    fn div_rem(&self, rhs: u64) -> Option<(Self, u64)> {
+        if rhs == 0 {
+            None
         } else {
-            0xffff_ffff_ffff_ffff_u64
+            // Knuth Algorithm S
+            // 4 by 1 division
+            let (q3, r) = div_2_1(self.limb(3), 0, rhs);
+            let (q2, r) = div_2_1(self.limb(2), r, rhs);
+            let (q1, r) = div_2_1(self.limb(1), r, rhs);
+            let (q0, r) = div_2_1(self.limb(0), r, rhs);
+            Some((Self::from_limbs([q0, q1, q2, q3]), r))
         }
-    } else {
-        // Compute quotient and remainder
-        let (mut q, mut r) = divrem_2by1(n[1], n[2], d[1]);
-
-        if mul_2(q, d[0]) > val_2(n[0], r) {
-            q -= 1;
-            r = r.wrapping_add(d[1]);
-            let overflow = r < d[1];
-            if !overflow && mul_2(q, d[0]) > val_2(n[0], r) {
-                q -= 1;
-                // UNUSED: r += d[1];
-            }
-        }
-        q
     }
 }
 
-// Turns numerator into remainder, returns quotient.
-// Implements Knuth's division algorithm.
-// See D. Knuth "The Art of Computer Programming". Sec. 4.3.1. Algorithm D.
-// See https://github.com/chfast/intx/blob/master/lib/intx/div.cpp
-// NOTE: numerator must have one additional zero at the end.
-// The result will be computed in-place in numerator.
-// The divisor will be normalized.
-pub(crate) fn divrem_nbym(numerator: &mut [u64], divisor: &mut [u64]) {
-    debug_assert!(divisor.len() >= 2);
-    debug_assert!(numerator.len() > divisor.len());
-    debug_assert!(*divisor.last().unwrap() > 0);
-    debug_assert!(*numerator.last().unwrap() == 0);
-    // OPT: Once const generics are in, unroll for lengths.
-    // OPT: We can use macro generated specializations till then.
-    let n = divisor.len();
-    let m = numerator.len() - n - 1;
+impl DivRem<&Self> for U256 {
+    type Quotient = Self;
+    type Remainder = Self;
 
-    // D1. Normalize.
-    let shift = divisor[n - 1].leading_zeros();
-    if shift > 0 {
-        numerator[n + m] = numerator[n + m - 1] >> (64 - shift);
-        for i in (1..n + m).rev() {
-            numerator[i] <<= shift;
-            numerator[i] |= numerator[i - 1] >> (64 - shift);
-        }
-        numerator[0] <<= shift;
-        for i in (1..n).rev() {
-            divisor[i] <<= shift;
-            divisor[i] |= divisor[i - 1] >> (64 - shift);
-        }
-        divisor[0] <<= shift;
-    }
-
-    // D2. Loop over quotient digits
-    for j in (0..=m).rev() {
-        // D3. Calculate approximate quotient word
-        let mut qhat = div_3by2(
-            &[numerator[j + n - 2], numerator[j + n - 1], numerator[j + n]],
-            &[divisor[n - 2], divisor[n - 1]],
-        );
-
-        // D4. Multiply and subtract.
-        let mut borrow = 0;
-        for i in 0..n {
-            let (a, b) = msb(numerator[j + i], qhat, divisor[i], borrow);
-            numerator[j + i] = a;
-            borrow = b;
-        }
-
-        // D5. Test remainder for negative result.
-        if numerator[j + n] < borrow {
-            // D6. Add back. (happens rarely)
-            let mut carry = 0;
-            for i in 0..n {
-                let (a, b) = adc(numerator[j + i], divisor[i], carry);
-                numerator[j + i] = a;
-                carry = b;
-            }
-            qhat -= 1;
-            // The updated value of numerator[j + n] would be 0. But since we're going to
-            // overwrite it below, we only check that the result would be 0.
-            debug_assert_eq!(numerator[j + n].wrapping_sub(borrow).wrapping_add(carry), 0);
+    // Short division
+    // TODO: Can be computed in-place
+    fn div_rem(&self, rhs: &Self) -> Option<(Self, Self)> {
+        let mut numerator = [self.limb(0), self.limb(1), self.limb(2), self.limb(3), 0];
+        if rhs.limb(3) > 0 {
+            // divrem_nby4
+            divrem_nbym(&mut numerator, &mut [
+                rhs.limb(0),
+                rhs.limb(1),
+                rhs.limb(2),
+                rhs.limb(3),
+            ]);
+            Some((
+                Self::from_limbs([numerator[4], 0, 0, 0]),
+                Self::from_limbs([numerator[0], numerator[1], numerator[2], numerator[3]]),
+            ))
+        } else if rhs.limb(2) > 0 {
+            // divrem_nby3
+            divrem_nbym(&mut numerator, &mut [rhs.limb(0), rhs.limb(1), rhs.limb(2)]);
+            Some((
+                Self::from_limbs([numerator[3], numerator[4], 0, 0]),
+                Self::from_limbs([numerator[0], numerator[1], numerator[2], 0]),
+            ))
+        } else if rhs.limb(1) > 0 {
+            // divrem_nby2
+            divrem_nbym(&mut numerator, &mut [rhs.limb(0), rhs.limb(1)]);
+            Some((
+                Self::from_limbs([numerator[2], numerator[3], numerator[4], 0]),
+                Self::from_limbs([numerator[0], numerator[1], 0, 0]),
+            ))
+        } else if rhs.limb(0) > 0 {
+            let remainder = divrem_nby1(&mut numerator, rhs.limb(0));
+            Some((
+                Self::from_limbs([numerator[0], numerator[1], numerator[2], numerator[3]]),
+                Self::from_limbs([remainder, 0, 0, 0]),
+            ))
         } else {
-            // This the would be the updated value when the remainder is non-negative.
-            debug_assert_eq!(numerator[j + n].wrapping_sub(borrow), 0);
+            None
         }
-
-        // Store remainder in the unused bits of numerator
-        numerator[j + n] = qhat;
-    }
-
-    // D8. Unnormalize.
-    if shift > 0 {
-        // Make sure to only normalize the remainder part, the quotient
-        // is already normalized.
-        for i in 0..(n - 1) {
-            numerator[i] >>= shift;
-            numerator[i] |= numerator[i + 1] << (64 - shift);
-        }
-        numerator[n - 1] >>= shift;
     }
 }
 
+/// Ring inversion.
+// TODO: Make custom trait that adds `fn is_unit(&self) -> bool`.
+// TODO: Implement Inv for u8..u128
+impl Inv for &U256 {
+    type Output = Option<U256>;
+
+    /// Computes the inverse modulo 2^256
+    fn inv(self) -> Self::Output {
+        if self.bit(0) {
+            // Invert using Hensel lifted Newton-Rhapson iteration
+            // See: https://arxiv.org/abs/1303.0328
+            // r[2] = 3 * self XOR 2 mod 2^4
+            // r[n+1] = r[n] * (1 - self * r[n]) mod 2^(2^n)
+            let c = Wrapping(self.limb(0));
+            let mut r: Wrapping<u64> = (Wrapping(3) * c) ^ Wrapping(2); // mod 2^4
+            r *= Wrapping(2) - c * r; // mod 2^8
+            r *= Wrapping(2) - c * r; // mod 2^16
+            r *= Wrapping(2) - c * r; // mod 2^32
+            r *= Wrapping(2) - c * r; // mod 2^64
+            let mut r = Wrapping(u128::from(r.0));
+            r *= Wrapping(2) - Wrapping(self.as_u128()) * r; // mod 2^128
+            let mut r = U256::from(r.0);
+            r *= &(U256::from(2_u64) - &(r.clone() * self)); // mod 2^256
+            Some(r)
+        } else {
+            None
+        }
+    }
+}
+
+impl DivAssign<&U256> for U256 {
+    #[inline(always)]
+    fn div_assign(&mut self, rhs: &Self) {
+        let (q, _r) = self.div_rem(rhs).unwrap();
+        *self = q;
+    }
+}
+
+impl RemAssign<&U256> for U256 {
+    #[inline(always)]
+    fn rem_assign(&mut self, rhs: &Self) {
+        let (_q, r) = self.div_rem(rhs).unwrap();
+        *self = r;
+    }
+}
+
+noncommutative_binop!(U256, Div, div, DivAssign, div_assign);
+noncommutative_binop!(U256, Rem, rem, RemAssign, rem_assign);
+
+// TODO: Replace literals with u256h!
+#[allow(clippy::unreadable_literal)]
+// Quickcheck requires pass by value
+#[allow(clippy::needless_pass_by_value)]
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::u256::U256;
-    use macros_decl::u256h;
     use quickcheck_macros::quickcheck;
 
-    const HALF: u64 = 1_u64 << 63;
-    const FULL: u64 = u64::max_value();
-
     #[test]
-    fn div_3by2_tests() {
-        // Test cases where n[2] == d[1]
-        assert_eq!(div_3by2(&[FULL, FULL - 1, HALF], &[FULL, HALF]), FULL);
-        assert_eq!(div_3by2(&[0, 0, HALF], &[FULL, HALF]), FULL - 1);
+    fn test_invmod256() {
+        let a = U256::from_limbs([
+            0xf80aa815a36a7e47,
+            0x090be90cfa96712a,
+            0xf52ec0a4083d2c14,
+            0x05405dfd1d1c1a97,
+        ]);
+        let e = U256::from_limbs([
+            0xf0a9a0091b3bcb77,
+            0x42d3eba6084ca0de,
+            0x60d848b6513392d7,
+            0xdf45026654d086d6,
+        ]);
+        let r = a.inv().unwrap();
+        assert_eq!(r, e);
     }
 
     #[test]
-    fn test_divrem_4by3() {
-        let mut numerator = [40, 31, 79, 84, 0];
-        let mut divisor = [53, 12, 12];
-        let expected_quotient = [u64::max_value(), 6];
-        let expected_remainder = [93, 0xffff_ffff_ffff_feb8, 6];
-        divrem_nbym(&mut numerator, &mut divisor);
-        let remainder = &numerator[0..3];
-        let quotient = &numerator[3..5];
-        assert_eq!(remainder, expected_remainder);
-        assert_eq!(quotient, expected_quotient);
-    }
-
-    #[allow(clippy::unreadable_literal)]
-    #[test]
-    fn test_divrem_8by4() {
-        let mut numerator = [
-            0x9c2bcebfa9cca2c6_u64,
-            0x274e154bb5e24f7a_u64,
-            0xe1442d5d3842be2b_u64,
-            0xf18f5adfd420853f_u64,
-            0x04ed6127eba3b594_u64,
-            0xc5c179973cdb1663_u64,
-            0x7d7f67780bb268ff_u64,
-            0x0000000000000003_u64,
-            0x0000000000000000_u64,
-        ];
-        let mut divisor = [
-            0x0181880b078ab6a1_u64,
-            0x62d67f6b7b0bda6b_u64,
-            0x92b1840f9c792ded_u64,
-            0x0000000000000019_u64,
-        ];
-        let expected_quotient = [
-            0x9128464e61d6b5b3_u64,
-            0xd9eea4fc30c5ac6c_u64,
-            0x944a2d832d5a6a08_u64,
-            0x22f06722e8d883b1_u64,
-            0x0000000000000000_u64,
-        ];
-        let expected_remainder = [
-            0x1dfa5a7ea5191b33_u64,
-            0xb5aeb3f9ad5e294e_u64,
-            0xfc710038c13e4eed_u64,
-            0x000000000000000b_u64,
-        ];
-        divrem_nbym(&mut numerator, &mut divisor);
-        let remainder = &numerator[0..4];
-        let quotient = &numerator[4..9];
-        assert_eq!(remainder, expected_remainder);
-        assert_eq!(quotient, expected_quotient);
+    fn test_invmod_small() {
+        let n = U256::from_limbs([271, 0, 0, 0]);
+        let m = U256::from_limbs([383, 0, 0, 0]);
+        let i = U256::from_limbs([106, 0, 0, 0]);
+        let r = n.inv_mod(&m).unwrap();
+        assert_eq!(i, r);
     }
 
     #[test]
-    fn test_divrem_4by4() {
-        let a = u256h!("6f1480e63854afa41868b9a7d418e9c64edef514135f5899e72530a3d4e91ea3");
-        let b = u256h!("3ba5ddaec5090ef0b87126f34ee28533ffb08af4108f9aeaa62b65900d2a62bb");
-        let r = a.clone() - &b;
-        let mut numerator = [a.c0, a.c1, a.c2, a.c3, 0];
-        let mut divisor = [b.c0, b.c1, b.c2, b.c3];
-        divrem_nbym(&mut numerator, &mut divisor);
-        let remainder = &numerator[0..4];
-        let quotient = numerator[4];
-        assert_eq!(remainder, [r.c0, r.c1, r.c2, r.c3]);
-        assert_eq!(quotient, 1);
+    fn test_invmod() {
+        let m = U256::from_limbs([
+            0x0000000000000001,
+            0x0000000000000000,
+            0x0000000000000000,
+            0x0800000000000011,
+        ]);
+        let n = U256::from_limbs([
+            0x1717f47973471ed5,
+            0xe106229070982941,
+            0xd82120c54277c73e,
+            0x07717a21e77894e8,
+        ]);
+        let i = U256::from_limbs([
+            0xbda5eaad406f66d1,
+            0xfac4d8e66130d944,
+            0x97c88939cbce8317,
+            0x001752ce51d19c97,
+        ]);
+        let r = n.inv_mod(&m).unwrap();
+        assert_eq!(i, r);
     }
 
     #[quickcheck]
-    fn div_3by2_correct(q: u64, d0: u64, d1: u64) -> bool {
-        // TODO: Add remainder
-        let d1 = d1 | (1 << 63);
-        let n = U256::from_limbs(d0, d1, 0, 0) * &U256::from(q);
-        debug_assert!(n.c3 == 0);
-        let qhat = div_3by2(&[n.c0, n.c1, n.c2], &[d0, d1]);
-        qhat == q
+    fn test_divrem_u64(a: U256, b: u64) -> bool {
+        match a.div_rem(b) {
+            None => b == 0,
+            Some((q, r)) => r < b && q * &U256::from(b) + &U256::from(r) == a,
+        }
+    }
+
+    #[quickcheck]
+    fn test_divrem(a: U256, b: U256) -> bool {
+        match a.div_rem(&b) {
+            None => b == U256::ZERO,
+            Some((q, r)) => r < b && q * &b + &r == a,
+        }
+    }
+
+    #[quickcheck]
+    fn invmod256(a: U256) -> bool {
+        match a.inv() {
+            None => true,
+            Some(i) => a * &i == U256::ONE,
+        }
     }
 }

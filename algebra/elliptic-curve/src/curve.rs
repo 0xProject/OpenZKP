@@ -1,13 +1,15 @@
-use crate::BETA;
-use primefield::FieldElement;
+use crate::{ScalarFieldElement, BETA};
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
 use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
     prelude::v1::*,
 };
-use u256::{commutative_binop, noncommutative_binop, U256};
+use zkp_primefield::{FieldElement, NegInline, One, Zero};
+use zkp_u256::{commutative_binop, noncommutative_binop};
 
 #[derive(PartialEq, Eq, Clone)]
-#[cfg_attr(feature = "std", derive(Debug))]
+#[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
 pub enum Affine {
     Zero, // Neutral element, point at infinity, additive identity, etc.
     Point { x: FieldElement, y: FieldElement },
@@ -16,10 +18,21 @@ pub enum Affine {
 impl Affine {
     pub const ZERO: Self = Self::Zero;
 
+    #[must_use]
     pub fn new(x: FieldElement, y: FieldElement) -> Self {
         Self::Point { x, y }
     }
 
+    #[must_use]
+    // TODO: return result
+    pub fn x(&self) -> FieldElement {
+        match self {
+            Self::Zero => panic!("no x coordinate for 0"),
+            Self::Point { x, .. } => x.clone(),
+        }
+    }
+
+    #[must_use]
     pub fn on_curve(&self) -> bool {
         match self {
             Self::Zero => true,
@@ -31,14 +44,15 @@ impl Affine {
         *self = self.double();
     }
 
+    #[must_use]
     pub fn double(&self) -> Self {
         match self {
             Self::Zero => Self::Zero,
             Self::Point { x, y } => {
-                if *y == FieldElement::ZERO {
+                if *y == FieldElement::zero() {
                     Self::Zero
                 } else {
-                    let m = ((x + x + x) * x + FieldElement::ONE) / (y + y);
+                    let m = ((x + x + x) * x + FieldElement::one()) / (y + y);
                     let nx = &m * &m - x - x;
                     let ny = m * (x - &nx) - y;
                     Self::Point { x: nx, y: ny }
@@ -70,7 +84,7 @@ impl Neg for &Affine {
             Affine::Point { x, y } => {
                 Affine::Point {
                     x: x.clone(),
-                    y: y.neg(),
+                    y: -y,
                 }
             }
         }
@@ -114,54 +128,60 @@ macro_rules! curve_operations {
             }
         }
 
-        impl Mul<&U256> for &$type {
+        impl Mul<&ScalarFieldElement> for &$type {
             type Output = $type;
 
-            fn mul(self, scalar: &U256) -> $type {
+            fn mul(self, scalar: &ScalarFieldElement) -> $type {
+                use zkp_u256::Binary;
+                let bits = scalar.to_uint();
                 // OPT: Use WNAF
-                let mut r = self.clone();
-                for i in (0..scalar.msb()).rev() {
-                    r.double_assign();
-                    if scalar.bit(i) {
-                        r += self;
+                if let Some(position) = bits.most_significant_bit() {
+                    let mut r = self.clone();
+                    for i in (0..position).rev() {
+                        r.double_assign();
+                        if bits.bit(i) {
+                            r += self;
+                        }
                     }
+                    r
+                } else {
+                    $type::ZERO
                 }
-                r
             }
         }
 
-        impl MulAssign<&U256> for $type {
-            fn mul_assign(&mut self, scalar: &U256) {
+        impl MulAssign<&ScalarFieldElement> for $type {
+            fn mul_assign(&mut self, scalar: &ScalarFieldElement) {
                 *self = &*self * scalar;
             }
         }
 
-        impl MulAssign<U256> for $type {
-            fn mul_assign(&mut self, scalar: U256) {
+        impl MulAssign<ScalarFieldElement> for $type {
+            fn mul_assign(&mut self, scalar: ScalarFieldElement) {
                 *self *= &scalar;
             }
         }
 
-        impl Mul<U256> for $type {
+        impl Mul<ScalarFieldElement> for $type {
             type Output = Self;
 
-            fn mul(self, scalar: U256) -> Self {
+            fn mul(self, scalar: ScalarFieldElement) -> Self {
                 &self * &scalar
             }
         }
 
-        impl Mul<&U256> for $type {
+        impl Mul<&ScalarFieldElement> for $type {
             type Output = Self;
 
-            fn mul(self, scalar: &U256) -> Self {
+            fn mul(self, scalar: &ScalarFieldElement) -> Self {
                 &self * scalar
             }
         }
 
-        impl Mul<U256> for &$type {
+        impl Mul<ScalarFieldElement> for &$type {
             type Output = $type;
 
-            fn mul(self, scalar: U256) -> $type {
+            fn mul(self, scalar: ScalarFieldElement) -> $type {
                 self * &scalar
             }
         }
@@ -192,43 +212,27 @@ impl Arbitrary for Affine {
     }
 }
 
-// TODO: Use u256h literals here.
-#[allow(clippy::unreadable_literal)]
-// Quickcheck needs pass by value
-#[allow(clippy::needless_pass_by_value)]
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ORDER;
-    use macros_decl::u256h;
+    use crate::ScalarFieldElement;
     use quickcheck_macros::quickcheck;
-    use u256::U256;
+    use zkp_macros_decl::{field_element, u256h};
+    use zkp_u256::U256;
 
     #[test]
     fn test_add() {
         let a = Affine::new(
-            FieldElement::from(u256h!(
-                "01ef15c18599971b7beced415a40f0c7deacfd9b0d1819e03d723d8bc943cfca"
-            )),
-            FieldElement::from(u256h!(
-                "005668060aa49730b7be4801df46ec62de53ecd11abe43a32873000c36e8dc1f"
-            )),
+            field_element!("01ef15c18599971b7beced415a40f0c7deacfd9b0d1819e03d723d8bc943cfca"),
+            field_element!("005668060aa49730b7be4801df46ec62de53ecd11abe43a32873000c36e8dc1f"),
         );
         let b = Affine::new(
-            FieldElement::from(u256h!(
-                "00f24921907180cd42c9d2d4f9490a7bc19ac987242e80ac09a8ac2bcf0445de"
-            )),
-            FieldElement::from(u256h!(
-                "018a7a2ab4e795405f924de277b0e723d90eac55f2a470d8532113d735bdedd4"
-            )),
+            field_element!("00f24921907180cd42c9d2d4f9490a7bc19ac987242e80ac09a8ac2bcf0445de"),
+            field_element!("018a7a2ab4e795405f924de277b0e723d90eac55f2a470d8532113d735bdedd4"),
         );
         let c = Affine::new(
-            FieldElement::from(u256h!(
-                "0457342950d2475d9e83a4de8beb3c0850181342ea04690d804b37aa907b735f"
-            )),
-            FieldElement::from(u256h!(
-                "00011bd6102b929632ce605b5ae1c9c6c1b8cba2f83aa0c5a6d1247318871137"
-            )),
+            field_element!("0457342950d2475d9e83a4de8beb3c0850181342ea04690d804b37aa907b735f"),
+            field_element!("00011bd6102b929632ce605b5ae1c9c6c1b8cba2f83aa0c5a6d1247318871137"),
         );
         assert_eq!(a + b, c);
     }
@@ -236,20 +240,12 @@ mod tests {
     #[test]
     fn test_double() {
         let a = Affine::new(
-            FieldElement::from(u256h!(
-                "01ef15c18599971b7beced415a40f0c7deacfd9b0d1819e03d723d8bc943cfca"
-            )),
-            FieldElement::from(u256h!(
-                "005668060aa49730b7be4801df46ec62de53ecd11abe43a32873000c36e8dc1f"
-            )),
+            field_element!("01ef15c18599971b7beced415a40f0c7deacfd9b0d1819e03d723d8bc943cfca"),
+            field_element!("005668060aa49730b7be4801df46ec62de53ecd11abe43a32873000c36e8dc1f"),
         );
         let b = Affine::new(
-            FieldElement::from(u256h!(
-                "0759ca09377679ecd535a81e83039658bf40959283187c654c5416f439403cf5"
-            )),
-            FieldElement::from(u256h!(
-                "06f524a3400e7708d5c01a28598ad272e7455aa88778b19f93b562d7a9646c41"
-            )),
+            field_element!("0759ca09377679ecd535a81e83039658bf40959283187c654c5416f439403cf5"),
+            field_element!("06f524a3400e7708d5c01a28598ad272e7455aa88778b19f93b562d7a9646c41"),
         );
         assert_eq!(a.double(), b);
     }
@@ -257,38 +253,27 @@ mod tests {
     #[test]
     fn test_mul() {
         let p = Affine::new(
-            FieldElement::from(u256h!(
-                "01ef15c18599971b7beced415a40f0c7deacfd9b0d1819e03d723d8bc943cfca"
-            )),
-            FieldElement::from(u256h!(
-                "005668060aa49730b7be4801df46ec62de53ecd11abe43a32873000c36e8dc1f"
-            )),
+            field_element!("01ef15c18599971b7beced415a40f0c7deacfd9b0d1819e03d723d8bc943cfca"),
+            field_element!("005668060aa49730b7be4801df46ec62de53ecd11abe43a32873000c36e8dc1f"),
         );
-        let c = u256h!("07374b7d69dc9825fc758b28913c8d2a27be5e7c32412f612b20c9c97afbe4dd");
+        let c = ScalarFieldElement::from(u256h!(
+            "07374b7d69dc9825fc758b28913c8d2a27be5e7c32412f612b20c9c97afbe4dd"
+        ));
         let expected = Affine::new(
-            FieldElement::from(u256h!(
-                "00f24921907180cd42c9d2d4f9490a7bc19ac987242e80ac09a8ac2bcf0445de"
-            )),
-            FieldElement::from(u256h!(
-                "018a7a2ab4e795405f924de277b0e723d90eac55f2a470d8532113d735bdedd4"
-            )),
+            field_element!("00f24921907180cd42c9d2d4f9490a7bc19ac987242e80ac09a8ac2bcf0445de"),
+            field_element!("018a7a2ab4e795405f924de277b0e723d90eac55f2a470d8532113d735bdedd4"),
         );
-        let result = p.clone() * c;
+        let result = p * c;
         assert_eq!(result, expected);
     }
 
-    #[allow(clippy::eq_op)]
     #[quickcheck]
     fn add_commutative(a: Affine, b: Affine) -> bool {
-        &a + &b == &b + &a
+        &a + &b == b + a
     }
 
     #[quickcheck]
-    fn distributivity(p: Affine, mut a: U256, mut b: U256) -> bool {
-        a %= &ORDER;
-        b %= &ORDER;
-        let c = &a + &b;
-        // TODO: c %= &ORDER;
-        (&p * a) + (&p * b) == &p * c
+    fn distributivity(p: Affine, a: ScalarFieldElement, b: ScalarFieldElement) -> bool {
+        (&p * &a) + (&p * &b) == p * (a + b)
     }
 }

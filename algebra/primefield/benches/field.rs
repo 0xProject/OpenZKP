@@ -1,8 +1,8 @@
 #![warn(clippy::all)]
 use criterion::{black_box, criterion_group, Criterion};
-use macros_decl::u256h;
-use primefield::FieldElement;
-use u256::U256;
+use zkp_macros_decl::u256h;
+use zkp_primefield::{FieldElement, Inv, SquareRoot};
+use zkp_u256::U256;
 
 fn field_add(crit: &mut Criterion) {
     let a = FieldElement::from_montgomery(u256h!(
@@ -30,17 +30,6 @@ fn field_mul(crit: &mut Criterion) {
     });
 }
 
-fn field_sqrt(crit: &mut Criterion) {
-    let a = FieldElement::from_montgomery(u256h!(
-        "03f9b5d66dd1e8ef70ead1370f862cc9c29e319a176e9f5b7f10c24c4de29f0f"
-    ));
-    crit.bench_function("Field square root", move |bench| {
-        bench.iter(|| {
-            black_box(black_box(&a).square_root());
-        })
-    });
-}
-
 fn field_inv(crit: &mut Criterion) {
     let a = FieldElement::from_montgomery(u256h!(
         "03f9b5d66dd1e8ef70ead1370f862cc9c29e319a176e9f5b7f10c24c4de29f0f"
@@ -52,4 +41,15 @@ fn field_inv(crit: &mut Criterion) {
     });
 }
 
-criterion_group!(field, field_add, field_mul, field_inv, field_sqrt);
+fn field_sqrt(crit: &mut Criterion) {
+    let a = FieldElement::from_montgomery(u256h!(
+        "03f9b5d66dd1e8ef70ead1370f862cc9c29e319a176e9f5b7f10c24c4de29f0f"
+    ));
+    crit.bench_function("Field square root", move |bench| {
+        bench.iter(|| {
+            black_box(black_box(&a).square_root());
+        })
+    });
+}
+
+criterion_group!(group, field_add, field_mul, field_inv, field_sqrt);

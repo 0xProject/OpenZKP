@@ -14,3 +14,6 @@ slower constant-time algorithms.
 -   Secp256k1 bindings
 -   Ed25519 dalek
 -   Curve25519 donna bindings
+-   TODO: https://github.com/AztecProtocol/barretenberg
+
+- TODO: https://github.com/scipr-lab/zexe

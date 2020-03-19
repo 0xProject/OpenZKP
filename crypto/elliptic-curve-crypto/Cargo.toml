@@ -1,5 +1,5 @@
 [package]
-name = "elliptic-curve-crypto"
+name = "zkp-elliptic-curve-crypto"
 version = "0.1.0"
 description = "Pedersen commitments and digital signatures"
 repository = "https://github.com/0xProject/starkcrypto/tree/master/crypto/elliptic-curve-crypto"
@@ -14,10 +14,10 @@ license = "Apache-2.0"
 edition = "2018"
 
 [dependencies]
-macros-decl = { path = "../../utils/macros-decl", default-features = false }
-u256 = { path = "../../algebra/u256", default-features = false }
-primefield = { path = "../../algebra/primefield", default-features = false }
-elliptic-curve = { path = "../../algebra/elliptic-curve", default-features = false }
+zkp-macros-decl = { version = "0.1.0", path = "../../utils/macros-decl", default-features = false }
+zkp-u256 = { version = "0.1.0", path = "../../algebra/u256", default-features = false }
+zkp-primefield = { version = "0.1.0", path = "../../algebra/primefield", default-features = false }
+zkp-elliptic-curve = { version = "0.1.0", path = "../../algebra/elliptic-curve", default-features = false }
 
 no-std-compat = { version = "0.1.0", features = [ "alloc" ] }
 itertools = { version = "0.8.0", default_features = false }
@@ -39,19 +39,23 @@ required-features = ["bench"]
 [features]
 default = [ "std" ]
 std = [
-    "macros-decl/std",
-    "u256/std",
-    "primefield/std",
-    "elliptic-curve/std",
+    "zkp-macros-decl/std",
+    "zkp-u256/std",
+    "zkp-primefield/std",
+    "zkp-elliptic-curve/std",
     "no-std-compat/std",
     "itertools/use_std",
 ]
 test = [
     "quickcheck",
     "quickcheck_macros",
-    "u256/test",
-    "primefield/test",
-    "elliptic-curve/std",
+    "zkp-u256/test",
+    "zkp-primefield/test",
+    "zkp-elliptic-curve/std",
 ]
 bench = ["criterion"]
 unsafe_ecdsa = []
+
+# Allow math in docs
+[package.metadata.docs.rs]
+rustdoc-args = ["--html-in-header", ".cargo/katex-header.html"]

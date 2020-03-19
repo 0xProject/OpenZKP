@@ -1,5 +1,16 @@
 [alias]
-t = "test --all-features"
+# TODO: --all-targets fails for benches
+t = "test --all-features --tests --lib --bins --examples"
 b = "build --all-features --all-targets"
 lint = "clippy --all-features --all-targets -- -D warnings"
 nostd = "check --lib --bins --no-default-features --target=thumbv7m-none-eabi"
+perf = "bench --all-features --bench benchmark --package"
+
+# Build for the current CPU by default
+[build]
+rustflags = [ "-C", "target-cpu=native" ]
+
+# Cross compile to Linux
+[target.x86_64-unknown-linux-musl]
+linker = "x86_64-linux-musl-gcc"
+ar = "x86_64-linux-musl-ar"

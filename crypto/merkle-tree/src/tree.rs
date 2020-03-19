@@ -1,8 +1,8 @@
 use crate::{Commitment, Error, Index, Node, Proof, Result, VectorCommitment};
-use error_utils::require;
-use hash::{Hash, Hashable};
-use mmap_vec::MmapVec;
 use std::collections::VecDeque;
+use zkp_error_utils::require;
+use zkp_hash::{Hash, Hashable};
+use zkp_mmap_vec::MmapVec;
 
 #[cfg(feature = "std")]
 use rayon::prelude::*;
@@ -190,9 +190,9 @@ impl<Container: VectorCommitment> Tree<Container> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use macros_decl::hex;
     use quickcheck_macros::quickcheck;
-    use u256::U256;
+    use zkp_macros_decl::hex;
+    use zkp_u256::{Pow, U256};
 
     #[test]
     fn test_explicit_values() {
@@ -272,7 +272,7 @@ mod tests {
         let num_leaves = 1_usize << depth;
         let indices: Vec<_> = indices.iter().map(|&i| i % num_leaves).collect();
         let leaves: Vec<_> = (0..num_leaves)
-            .map(|i| (&seed + U256::from(i)).pow(3).unwrap())
+            .map(|i| (&seed + U256::from(i)).pow(3))
             .collect();
 
         // Build the tree

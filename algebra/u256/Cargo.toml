@@ -1,6 +1,6 @@
 [package]
-name = "u256"
-version = "0.1.0"
+name = "zkp-u256"
+version = "0.1.1"
 description = "Performant implementation of 256-bit unsigned integers"
 repository = "https://github.com/0xProject/starkcrypto/tree/master/algebra/u256"
 keywords = ["cryptography", "u256", "algebra", "no-std", "wasm"]
@@ -14,13 +14,16 @@ license = "Apache-2.0"
 edition = "2018"
 
 [dependencies]
-macros-decl = { path = "../../utils/macros-decl", default_features = false }
+zkp-macros-decl = { version = "0.1.0", path = "../../utils/macros-decl", default_features = false }
+num-traits = { version = "0.2.10", default_features = false }
+rand = { version = "0.7.2", optional = true }
 
 no-std-compat = { version = "0.1.0", features = [ "alloc" ] }
 itertools = { version = "0.8.0", default_features = false }
 crunchy = { version = "0.2.2", default_features = false }
-hex = { version = "", optional = true }
+hex = { version = "0.4.0", optional = true }
 quickcheck = { version = "0.9", optional = true }
+serde = { version = "1.0", features = ["derive"], optional = true}
 
 # HACK: Criterion is really a dev-dependency, but it's important that it's
 # optional, or it will enable the `std` flag on various dependencies. Cargo
@@ -28,16 +31,21 @@ quickcheck = { version = "0.9", optional = true }
 criterion = { version = "0.3.0", optional = true }
 quickcheck_macros = {version = "0.8", optional = true }
 
+
 [[bench]]
 name = "benchmark"
 harness = false
 required-features = ["bench"]
 
 [features]
-default = ["std"] # Default to using the std
+default = [
+    "std",
+    "inline"
+]
 bench = [
     "test",
-    "criterion"
+    "criterion",
+    "rand",
 ]
 test = [
     "std",
@@ -45,13 +53,20 @@ test = [
     "quickcheck_macros"
 ]
 std = [
-    "macros-decl/std",
+    "zkp-macros-decl/std",
     "no-std-compat/std",
     "itertools/use_std",
     "crunchy/std",
-    "hex"
+    "num-traits/std",
+    "hex",
+    "serde"
 ]
+use_rand = [
+    "rand"
+]
+asm = []
+inline = []
 
 # Allow math in docs
 [package.metadata.docs.rs]
-rustdoc-args = ["--html-in-header", "../../.cargo/katex-header.html"]
+rustdoc-args = ["--html-in-header", ".cargo/katex-header.html"]

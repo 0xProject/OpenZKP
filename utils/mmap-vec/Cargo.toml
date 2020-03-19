@@ -1,5 +1,5 @@
 [package]
-name = "mmap-vec"
+name = "zkp-mmap-vec"
 version = "0.1.0"
 description = "Replacement for `Vec` that uses file-backed storage"
 repository = "https://github.com/0xProject/starkcrypto/tree/master/utils/mmap-vec"
@@ -18,6 +18,7 @@ no-std-compat = { version = "0.1.0", features = [ "alloc" ] }
 log = { version = "0.4.8", default_features = false }
 memmap = { version = "^0.7.0", optional = true }
 tempfile = { version = "^3.1.0", optional = true }
+memadvise = { version = "0.1.2", optional = true }
 
 [features]
 default = ["std"]
@@ -25,5 +26,6 @@ std = [
     "no-std-compat/std",
     "log/std",
     "memmap",
-    "tempfile"
+    "tempfile",
+    "memadvise",
 ]

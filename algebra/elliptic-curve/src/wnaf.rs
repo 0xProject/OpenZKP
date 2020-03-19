@@ -1,8 +1,8 @@
-use crate::{curve::Affine, jacobian::Jacobian};
+use crate::{curve::Affine, jacobian::Jacobian, ScalarFieldElement};
 use itertools::izip;
-use primefield::FieldElement;
 use std::prelude::v1::*;
-use u256::U256;
+use zkp_primefield::{FieldElement, Inv, One, SquareInline};
+use zkp_u256::{Binary, U256};
 
 pub(crate) fn window_table(p: &Affine, naf: &mut [Jacobian]) {
     // naf = P, 3P, 5P, ... 15P
@@ -30,10 +30,10 @@ pub(crate) fn batch_convert(jacobians: &[Jacobian], affines: &mut [Affine]) {
     debug_assert!(jacobians.len() == affines.len());
 
     // Intermediate values
-    let mut vals = vec![FieldElement::ONE; jacobians.len()];
+    let mut vals = vec![FieldElement::one(); jacobians.len()];
 
     // Accumulate all z values
-    let mut acc = FieldElement::ONE;
+    let mut acc = FieldElement::one();
     // OPT: Check if `izip!` has overhead
     for (jac, val) in izip!(jacobians.iter(), vals.iter_mut()) {
         // TODO: Handle zeros
@@ -70,7 +70,8 @@ pub(crate) fn batch_convert(jacobians: &[Jacobian], affines: &mut [Affine]) {
 // OPT: Can we turn this into a left-to-right version of the algorithm
 //      so we can consume the values as they are produced and we don't
 //      need any allocations?
-pub(crate) fn non_adjacent_form(mut scalar: U256, window: usize) -> [i16; 257] {
+pub(crate) fn non_adjacent_form(scalar: &ScalarFieldElement, window: usize) -> [i16; 257] {
+    let mut scalar = scalar.to_uint();
     let mask = (1_u64 << window) - 1;
     let half = 1_i16 << (window - 1);
     let mut snaf = [0_i16; 257];
@@ -89,7 +90,7 @@ pub(crate) fn non_adjacent_form(mut scalar: U256, window: usize) -> [i16; 257] {
         // Extract window and shift W buts
         // The mask prevents truncations
         #[allow(clippy::cast_possible_truncation)]
-        let mut n: i16 = (scalar.c0 & mask) as i16;
+        let mut n: i16 = (scalar.limb(0) & mask) as i16;
         scalar >>= window;
 
         // Make negative if n > 2^(w-1)
@@ -109,13 +110,16 @@ pub(crate) fn non_adjacent_form(mut scalar: U256, window: usize) -> [i16; 257] {
 // See https://doc-internal.dalek.rs/curve25519_dalek/traits/trait.VartimeMultiscalarMul.html
 // Signs are explicitly handled
 #[allow(clippy::cast_sign_loss)]
-pub fn mul(p: &Affine, scalar: &U256) -> Jacobian {
+#[must_use]
+// TODO: [refactor] [beginner] [small] rewrite
+#[allow(clippy::comparison_chain)]
+pub fn mul(p: &Affine, scalar: &ScalarFieldElement) -> Jacobian {
     // Precomputed odd multiples
     let mut naf_table: [Jacobian; 8] = Default::default();
     window_table(p, &mut naf_table);
 
     // Get SNAF
-    let snaf_expansion = non_adjacent_form(scalar.clone(), 5);
+    let snaf_expansion = non_adjacent_form(scalar, 5);
 
     // Algorithm 3.36 of Guide to Elliptic Curve Cryptography
     let mut r = Jacobian::ZERO;
@@ -134,7 +138,15 @@ pub fn mul(p: &Affine, scalar: &U256) -> Jacobian {
 
 // Signs are explicitly handled
 #[allow(clippy::cast_sign_loss)]
-pub fn double_mul(point_a: &Affine, scalar_a: U256, point_b: &Affine, scalar_b: U256) -> Jacobian {
+#[must_use]
+// TODO: [refactor] [beginner] [small] rewrite
+#[allow(clippy::comparison_chain)]
+pub fn double_mul(
+    point_a: &Affine,
+    scalar_a: &ScalarFieldElement,
+    point_b: &Affine,
+    scalar_b: &ScalarFieldElement,
+) -> Jacobian {
     // Precomputed odd multiples
     let mut naf_table_a: [Jacobian; 8] = Default::default();
     let mut naf_table_b: [Jacobian; 8] = Default::default();
@@ -168,9 +180,12 @@ pub fn double_mul(point_a: &Affine, scalar_a: U256, point_b: &Affine, scalar_b: 
 
 // Signs are explicitly handled
 #[allow(clippy::cast_sign_loss)]
-pub fn base_mul(naf_table: &[Affine], s: U256) -> Jacobian {
+// TODO: [refactor] [beginner] [small] rewrite
+#[allow(clippy::comparison_chain)]
+#[must_use]
+pub fn base_mul(naf_table: &[Affine], scalar: &ScalarFieldElement) -> Jacobian {
     // Get SNAF
-    let snaf_expansion = non_adjacent_form(s, 7);
+    let snaf_expansion = non_adjacent_form(scalar, 7);
 
     // Algorithm 3.36 of Guide to Elliptic Curve Cryptography
     let mut r = Jacobian::ZERO;
@@ -191,11 +206,14 @@ pub fn base_mul(naf_table: &[Affine], s: U256) -> Jacobian {
 #[allow(clippy::cast_sign_loss)]
 // Rebind naf_table after affine batch conversion
 #[allow(clippy::shadow_unrelated)]
+// TODO: [refactor] [beginner] [small] rewrite
+#[allow(clippy::comparison_chain)]
+#[must_use]
 pub fn double_base_mul(
     naf_table_a: &[Affine],
-    scalar_a: U256,
+    scalar_a: &ScalarFieldElement,
     point_b: &Affine,
-    scalar_b: U256,
+    scalar_b: &ScalarFieldElement,
 ) -> Jacobian {
     // Precomputed odd multiples
     let mut naf_table_b: [Jacobian; 8] = Default::default();
@@ -235,33 +253,25 @@ pub fn double_base_mul(
 
 // TODO: https://github.com/dalek-cryptography/curve25519-dalek/blob/8b2742cb9dae6a365915021ac7474227d610f09a/src/backend/vector/scalar_mul/vartime_double_base.rs
 
-// TODO: Replace literals with u256h!
-#[allow(clippy::unreadable_literal)]
 #[cfg(test)]
 mod tests {
     use super::*;
-    use macros_decl::u256h;
-    use primefield::FieldElement;
+    use zkp_macros_decl::{field_element, u256h};
+    use zkp_primefield::FieldElement;
 
     #[test]
     fn test_mul() {
-        let p = Affine::Point {
-            x: FieldElement::from(u256h!(
-                "01ef15c18599971b7beced415a40f0c7deacfd9b0d1819e03d723d8bc943cfca"
-            )),
-            y: FieldElement::from(u256h!(
-                "005668060aa49730b7be4801df46ec62de53ecd11abe43a32873000c36e8dc1f"
-            )),
-        };
-        let c = u256h!("07374b7d69dc9825fc758b28913c8d2a27be5e7c32412f612b20c9c97afbe4dd");
-        let expected = Jacobian::from(Affine::Point {
-            x: FieldElement::from(u256h!(
-                "00f24921907180cd42c9d2d4f9490a7bc19ac987242e80ac09a8ac2bcf0445de"
-            )),
-            y: FieldElement::from(u256h!(
-                "018a7a2ab4e795405f924de277b0e723d90eac55f2a470d8532113d735bdedd4"
-            )),
-        });
+        let p = Affine::new(
+            field_element!("01ef15c18599971b7beced415a40f0c7deacfd9b0d1819e03d723d8bc943cfca"),
+            field_element!("005668060aa49730b7be4801df46ec62de53ecd11abe43a32873000c36e8dc1f"),
+        );
+        let c = ScalarFieldElement::from(u256h!(
+            "07374b7d69dc9825fc758b28913c8d2a27be5e7c32412f612b20c9c97afbe4dd"
+        ));
+        let expected = Jacobian::from(Affine::new(
+            field_element!("00f24921907180cd42c9d2d4f9490a7bc19ac987242e80ac09a8ac2bcf0445de"),
+            field_element!("018a7a2ab4e795405f924de277b0e723d90eac55f2a470d8532113d735bdedd4"),
+        ));
         let result = mul(&p, &c);
         assert_eq!(result, expected);
     }

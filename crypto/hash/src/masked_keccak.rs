@@ -6,6 +6,7 @@ pub struct MaskedKeccak(Keccak);
 impl MaskedKeccak {
     const MASK_LENGTH: usize = 20;
 
+    #[must_use]
     pub fn new() -> Self {
         Self(Keccak::new_keccak256())
     }
@@ -14,6 +15,7 @@ impl MaskedKeccak {
         self.0.update(input)
     }
 
+    #[must_use]
     pub fn hash(self) -> Hash {
         let mut result: [u8; 32] = [0; 32];
         self.0.finalize(&mut result);

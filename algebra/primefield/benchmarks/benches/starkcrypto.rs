@@ -2,10 +2,10 @@
 #![allow(clippy::trivially_copy_pass_by_ref)]
 
 use criterion::{black_box, Bencher};
-use ecc::{private_to_public, sign, verify};
-use macros_decl::{field_element, u256h};
-use primefield::FieldElement;
-use u256::U256;
+use zkp_elliptic_curve_crypto::{private_to_public, sign, verify};
+use zkp_macros_decl::{field_element, u256h};
+use zkp_primefield::FieldElement;
+use zkp_u256::U256;
 
 pub fn starkcrypto_verify(bench: &mut Bencher, _i: &()) {
     let message_hash = u256h!("03d937c035c878245caf64531a5756109c53068da139362728feb561405371cb");

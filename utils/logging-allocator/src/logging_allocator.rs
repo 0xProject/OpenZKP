@@ -23,12 +23,13 @@ pub struct LoggingAllocator {
 impl LoggingAllocator {
     // We need a `const fn` constructor
     // TODO: Implement `Default` when trait functions can be `const`.
+    #[must_use]
     pub const fn new() -> Self {
         Self {
             info:              1_000_000,
             warn:              10_000_000,
             error:             100_000_000,
-            reject:            10_000_000_000,
+            reject:            1_000_000_000_000,
             allocated:         AtomicUsize::new(0),
             peak_allocated:    AtomicUsize::new(0),
             total_allocated:   AtomicUsize::new(0),

@@ -1,8 +1,8 @@
 [package]
-name = "primefield"
-version = "0.1.0"
+name = "zkp-primefield"
+version = "0.1.1"
 description = "A 251-bit prime field suitable for FFTs."
-repository = "https://github.com/0xProject/starkcrypto/tree/master/algebra/prime-field"
+repository = "https://github.com/0xProject/starkcrypto/tree/master/algebra/primefield"
 keywords = ["cryptography", "finite", "algebra", "no-std", "wasm"]
 categories = ["algorithms", "cryptography", "no-std", "wasm", "science"]
 authors = [
@@ -13,23 +13,35 @@ readme = "Readme.md"
 license = "Apache-2.0"
 edition = "2018"
 
-
 [dependencies]
-macros-decl = { path = "../../utils/macros-decl",  default_features = false }
-u256 =  { path = "../u256", default_features = false }
+zkp-macros-decl = { version = "0.1.0", path = "../../utils/macros-decl",  default_features = false }
+zkp-u256 =  { version = "0.1.0", path = "../u256", default_features = false }
+num-traits = { version = "0.2.10", default_features = false }
+rand = { version = "0.7.2", optional = true }
+rayon = { version = "1.3.0", optional = true }
+log = "0.4.8"
 
 no-std-compat = { version = "0.1.0", features = [ "alloc" ] }
-hex = { version = "", optional = true }
+hex = { version = "0.4.0", optional = true }
 itertools = { version = "0.8.0", default_features = false }
 crunchy = { version = "0.2.2", default_features = false }
 quickcheck = { version = "0.9", optional = true}
+serde = { version = "1.0", features = ["derive"], optional = true}
 
 # HACK: Criterion is really a dev-dependency, but it's important that it's
 # optional, or it will enable the `std` flag on various dependencies. Cargo
 # does not allow dev-dependencies to be optional.
 criterion = { version = "0.3.0", optional = true }
-criterion-utils = { path = "../../utils/criterion-utils", optional = true }
+zkp-criterion-utils = { version = "0.1.0", path = "../../utils/criterion-utils", optional = true }
 quickcheck_macros = { version = "0.8", optional = true }
+proptest = { version = "0.9.5", optional = true }
+structopt = { version = "0.3", optional = true }
+env_logger = { version = "0.7.1", optional = true }
+num_cpus = { version = "1.12.0", optional = true }
+zkp-mmap-vec = { version = "0.1.0", path = "../../utils/mmap-vec", optional = true }
+zkp-logging-allocator = { version = "0.1.0", path = "../../utils/logging-allocator", optional = true }
+rand_xoshiro = { version = "0.4.0", optional = true }
+raw-cpuid = { version = "7.0.3", optional = true }
 
 [[bench]]
 name = "benchmark"
@@ -37,21 +49,53 @@ harness = false
 required-features = ["bench"]
 
 [features]
-default = [ "std" ]
+default = [
+    "std",
+    "inline"
+]
 bench = [
+    "test",
     "criterion",
-    "criterion-utils",
+    "zkp-criterion-utils",
 ]
 test = [
     "quickcheck",
     "quickcheck_macros",
-    "u256/test"
+    "proptest",
+    "zkp-u256/test"
 ]
 std = [
-    "macros-decl/std",
-    "u256/std",
+    "zkp-macros-decl/std",
+    "zkp-u256/std",
     "no-std-compat/std",
     "itertools/use_std",
     "crunchy/std",
+    "num-traits/std",
     "hex",
+    "serde",
+    "structopt",
+    "env_logger",
+    "num_cpus",
+    "zkp-mmap-vec",
+    "zkp-logging-allocator",
+    "rand_xoshiro",
+    "raw-cpuid",
+    "rayon",
 ]
+# HACK: Cargo does not allow features with the same name as dependencies.
+# this is fine (since optional dependencies are their own feature) but not
+# if we need to enable other features as a consequence.
+use_rand = [
+    "rand",
+    "zkp-u256/use_rand",
+]
+inline = [
+    "zkp-u256/inline",
+]
+asm = [
+    "zkp-u256/asm",
+]
+
+# Allow math in docs
+[package.metadata.docs.rs]
+rustdoc-args = ["--html-in-header", ".cargo/katex-header.html"]

@@ -1,5 +1,5 @@
 [package]
-name = "logging-allocator"
+name = "zkp-logging-allocator"
 version = "0.1.0"
 description = "Wrapper around the system allocator that logs large allocations"
 repository = "https://github.com/0xProject/starkcrypto/tree/master/utils/logging-allocator"

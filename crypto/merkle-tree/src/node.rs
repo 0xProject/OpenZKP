@@ -1,4 +1,4 @@
-use hash::{Hash, Hashable, MaskedKeccak};
+use zkp_hash::{Hash, Hashable, MaskedKeccak};
 
 #[derive(Clone)]
 #[cfg_attr(feature = "std", derive(Debug))]
