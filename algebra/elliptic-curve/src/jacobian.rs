@@ -58,19 +58,6 @@ impl Jacobian {
         r.double_assign();
         r
     }
-
-    // Multiply Affine point using Jacobian accumulator
-    #[must_use]
-    pub fn mul(p: &Affine, scalar: &U256) -> Self {
-        let mut r = Self::from(p);
-        for i in (0..scalar.most_significant_bit().unwrap_or_default()).rev() {
-            r.double_assign();
-            if scalar.bit(i) {
-                r += p;
-            }
-        }
-        r
-    }
 }
 
 impl PartialEq for Jacobian {
