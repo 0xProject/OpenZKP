@@ -5,7 +5,7 @@ use std::{
 };
 use zkp_macros_decl::field_element;
 use zkp_primefield::{FieldElement, Inv, NegInline, One, SquareInline, Zero};
-use zkp_u256::{commutative_binop, noncommutative_binop, Binary, U256};
+use zkp_u256::{commutative_binop, noncommutative_binop, U256};
 
 // See http://www.hyperelliptic.org/EFD/g1p/auto-shortw-jacobian.html
 
