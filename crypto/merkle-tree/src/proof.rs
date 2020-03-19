@@ -45,8 +45,8 @@ impl Proof {
         let mut nodes = leafs
             .iter()
             .map(|(index, leaf)| {
-                (Index::from_size_offset(self.commitment.size(), *index)
-                    .map(|index| (index, leaf.hash())))
+                Index::from_size_offset(self.commitment.size(), *index)
+                    .map(|index| (index, leaf.hash()))
             })
             .collect::<Result<Vec<_>>>()?;
         nodes.sort_unstable_by_key(|(index, _)| *index);
