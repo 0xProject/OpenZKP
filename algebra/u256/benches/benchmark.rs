@@ -34,15 +34,15 @@ impl MontgomeryParameters for Proth {
 
 fn and(crit: &mut Criterion) {
     crit.bench_function("and", move |bench| {
-        let a = &random::<U256>();
-        let b = &random::<U256>();
+        let a: &U256 = &random();
+        let b: &U256 = &random();
         bench.iter(|| black_box(a) & black_box(b))
     });
 }
 
 fn shl(crit: &mut Criterion) {
     crit.bench_function("shl", move |bench| {
-        let a = &random::<U256>();
+        let a: &U256 = &random();
         let b = random::<usize>() % 256;
         bench.iter(|| black_box(a).clone() << b)
     });
@@ -50,23 +50,23 @@ fn shl(crit: &mut Criterion) {
 
 fn add(crit: &mut Criterion) {
     crit.bench_function("add", move |bench| {
-        let a = &random::<U256>();
-        let b = &random::<U256>();
+        let a: &U256 = &random();
+        let b: &U256 = &random();
         bench.iter(|| black_box(a) + black_box(b))
     });
 }
 
 fn sub(crit: &mut Criterion) {
     crit.bench_function("sub", move |bench| {
-        let a = &random::<U256>();
-        let b = &random::<U256>();
+        let a: &U256 = &random();
+        let b: &U256 = &random();
         bench.iter(|| black_box(a) - black_box(b))
     });
 }
 
 fn sqr(crit: &mut Criterion) {
     crit.bench_function("sqr", move |bench| {
-        let a = &random::<U256>();
+        let a: &U256 = &random();
         bench.iter(|| black_box(a).square_inline())
     });
 }
@@ -80,16 +80,16 @@ fn sqr_full(crit: &mut Criterion) {
 
 fn mul(crit: &mut Criterion) {
     crit.bench_function("mul", move |bench| {
-        let a = &random::<U256>();
-        let b = &random::<U256>();
+        let a: &U256 = &random();
+        let b: &U256 = &random();
         bench.iter(|| black_box(a) * black_box(b))
     });
 }
 
 fn mul_full(crit: &mut Criterion) {
     crit.bench_function("mul full", move |bench| {
-        let a = &random::<U256>();
-        let b = &random::<U256>();
+        let a: &U256 = &random();
+        let b: &U256 = &random();
         bench.iter(|| black_box(a).mul_full_inline(black_box(b)))
     });
 }
@@ -97,7 +97,7 @@ fn mul_full(crit: &mut Criterion) {
 fn invmod256(crit: &mut Criterion) {
     crit.bench_function("invmod256", move |bench| {
         // Value must be odd
-        let a = &(random::<U256>() | U256::ONE);
+        let a: &U256 = &(random::<U256>() | U256::ONE);
         bench.iter(|| black_box(a).inv())
     });
 }
@@ -107,15 +107,15 @@ fn invmod(crit: &mut Criterion) {
     let m = &u256h!("0800000000000011000000000000000000000000000000000000000000000001");
     crit.bench_function("invmod", move |bench| {
         // Should not be zero, but chance is neglible
-        let a = &(random::<U256>() % m);
+        let a: &U256 = &(random::<U256>() % m);
         bench.iter(|| black_box(a).inv_mod(black_box(m)))
     });
 }
 
 fn divrem(crit: &mut Criterion) {
     crit.bench_function("divrem", move |bench| {
-        let a = &random::<U256>();
-        let b = &random::<U256>();
+        let a: &U256 = &random();
+        let b: &U256 = &random();
         bench.iter(|| black_box(black_box(a).div_rem(black_box(b))))
     });
 }
