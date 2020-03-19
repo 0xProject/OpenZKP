@@ -250,28 +250,20 @@ pub fn double_base_mul(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use zkp_macros_decl::u256h;
+    use zkp_macros_decl::{field_element, u256h};
     use zkp_primefield::FieldElement;
 
     #[test]
     fn test_mul() {
-        let p = Affine::Point {
-            x: FieldElement::from(u256h!(
-                "01ef15c18599971b7beced415a40f0c7deacfd9b0d1819e03d723d8bc943cfca"
-            )),
-            y: FieldElement::from(u256h!(
-                "005668060aa49730b7be4801df46ec62de53ecd11abe43a32873000c36e8dc1f"
-            )),
-        };
+        let p = Affine::new(
+            field_element!("01ef15c18599971b7beced415a40f0c7deacfd9b0d1819e03d723d8bc943cfca"),
+            field_element!("005668060aa49730b7be4801df46ec62de53ecd11abe43a32873000c36e8dc1f"),
+        );
         let c = u256h!("07374b7d69dc9825fc758b28913c8d2a27be5e7c32412f612b20c9c97afbe4dd");
-        let expected = Jacobian::from(Affine::Point {
-            x: FieldElement::from(u256h!(
-                "00f24921907180cd42c9d2d4f9490a7bc19ac987242e80ac09a8ac2bcf0445de"
-            )),
-            y: FieldElement::from(u256h!(
-                "018a7a2ab4e795405f924de277b0e723d90eac55f2a470d8532113d735bdedd4"
-            )),
-        });
+        let expected = Jacobian::from(Affine::new(
+            field_element!("00f24921907180cd42c9d2d4f9490a7bc19ac987242e80ac09a8ac2bcf0445de"),
+            field_element!("018a7a2ab4e795405f924de277b0e723d90eac55f2a470d8532113d735bdedd4"),
+        ));
         let result = mul(&p, &c);
         assert_eq!(result, expected);
     }

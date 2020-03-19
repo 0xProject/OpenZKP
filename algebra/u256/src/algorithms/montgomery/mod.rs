@@ -1,7 +1,7 @@
 use crate::{MontgomeryParameters, SquareFullInline, U256};
 
-mod generic;
-mod proth;
+pub(crate) mod generic;
+pub(crate) mod proth;
 
 // TODO: Special algorithms for Solinas and Crandall primes
 // <https://en.wikipedia.org/wiki/Solinas_prime>

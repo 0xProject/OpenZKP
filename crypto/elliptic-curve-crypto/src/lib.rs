@@ -138,7 +138,7 @@ pub fn verify(digest: &ScalarFieldElement, signature: &Signature, public_key: &A
 mod tests {
     use super::*;
     use quickcheck_macros::quickcheck;
-    use zkp_macros_decl::u256h;
+    use zkp_macros_decl::{field_element, u256h};
     use zkp_primefield::FieldElement;
 
     #[test]
@@ -146,14 +146,10 @@ mod tests {
         let private_key = ScalarFieldElement::from(u256h!(
             "03c1e9550e66958296d11b60f8e8e7a7ad990d07fa65d5f7652c4a6c87d4e3cc"
         ));
-        let expected = Affine::Point {
-            x: FieldElement::from(u256h!(
-                "077a3b314db07c45076d11f62b6f9e748a39790441823307743cf00d6597ea43"
-            )),
-            y: FieldElement::from(u256h!(
-                "054d7beec5ec728223671c627557efc5c9a6508425dc6c900b7741bf60afec06"
-            )),
-        };
+        let expected = Affine::new(
+            field_element!("077a3b314db07c45076d11f62b6f9e748a39790441823307743cf00d6597ea43"),
+            field_element!("054d7beec5ec728223671c627557efc5c9a6508425dc6c900b7741bf60afec06"),
+        );
         let result = private_to_public(&private_key);
         assert_eq!(result, expected);
     }
@@ -184,12 +180,8 @@ mod tests {
             "01e542e2da71b3f5d7b4e9d329b4d30ac0b5d6f266ebef7364bf61c39aac35d0"
         ));
         let public_key = Affine::Point {
-            x: FieldElement::from(u256h!(
-                "077a3b314db07c45076d11f62b6f9e748a39790441823307743cf00d6597ea43"
-            )),
-            y: FieldElement::from(u256h!(
-                "054d7beec5ec728223671c627557efc5c9a6508425dc6c900b7741bf60afec06"
-            )),
+            x: field_element!("077a3b314db07c45076d11f62b6f9e748a39790441823307743cf00d6597ea43"),
+            y: field_element!("054d7beec5ec728223671c627557efc5c9a6508425dc6c900b7741bf60afec06"),
         };
         let r = ScalarFieldElement::from(u256h!(
             "01ef15c18599971b7beced415a40f0c7deacfd9b0d1819e03d723d8bc943cfca"
