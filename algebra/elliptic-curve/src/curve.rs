@@ -1,4 +1,4 @@
-use crate::BETA;
+use crate::{ScalarFieldElement, BETA};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use std::{
@@ -6,7 +6,7 @@ use std::{
     prelude::v1::*,
 };
 use zkp_primefield::{FieldElement, NegInline, One, Zero};
-use zkp_u256::{commutative_binop, noncommutative_binop, U256};
+use zkp_u256::{commutative_binop, noncommutative_binop};
 
 #[derive(PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
@@ -128,17 +128,18 @@ macro_rules! curve_operations {
             }
         }
 
-        impl Mul<&U256> for &$type {
+        impl Mul<&ScalarFieldElement> for &$type {
             type Output = $type;
 
-            fn mul(self, scalar: &U256) -> $type {
+            fn mul(self, scalar: &ScalarFieldElement) -> $type {
                 use zkp_u256::Binary;
+                let bits = scalar.to_uint();
                 // OPT: Use WNAF
-                if let Some(position) = scalar.most_significant_bit() {
+                if let Some(position) = bits.most_significant_bit() {
                     let mut r = self.clone();
                     for i in (0..position).rev() {
                         r.double_assign();
-                        if scalar.bit(i) {
+                        if bits.bit(i) {
                             r += self;
                         }
                     }
@@ -149,38 +150,38 @@ macro_rules! curve_operations {
             }
         }
 
-        impl MulAssign<&U256> for $type {
-            fn mul_assign(&mut self, scalar: &U256) {
+        impl MulAssign<&ScalarFieldElement> for $type {
+            fn mul_assign(&mut self, scalar: &ScalarFieldElement) {
                 *self = &*self * scalar;
             }
         }
 
-        impl MulAssign<U256> for $type {
-            fn mul_assign(&mut self, scalar: U256) {
+        impl MulAssign<ScalarFieldElement> for $type {
+            fn mul_assign(&mut self, scalar: ScalarFieldElement) {
                 *self *= &scalar;
             }
         }
 
-        impl Mul<U256> for $type {
+        impl Mul<ScalarFieldElement> for $type {
             type Output = Self;
 
-            fn mul(self, scalar: U256) -> Self {
+            fn mul(self, scalar: ScalarFieldElement) -> Self {
                 &self * &scalar
             }
         }
 
-        impl Mul<&U256> for $type {
+        impl Mul<&ScalarFieldElement> for $type {
             type Output = Self;
 
-            fn mul(self, scalar: &U256) -> Self {
+            fn mul(self, scalar: &ScalarFieldElement) -> Self {
                 &self * scalar
             }
         }
 
-        impl Mul<U256> for &$type {
+        impl Mul<ScalarFieldElement> for &$type {
             type Output = $type;
 
-            fn mul(self, scalar: U256) -> $type {
+            fn mul(self, scalar: ScalarFieldElement) -> $type {
                 self * &scalar
             }
         }
@@ -211,14 +212,10 @@ impl Arbitrary for Affine {
     }
 }
 
-// Quickcheck needs pass by value
-#[allow(clippy::needless_pass_by_value)]
-// We allow these in tests for readability/ease of editing
-#[allow(clippy::redundant_clone)]
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ORDER;
+    use crate::ScalarFieldElement;
     use quickcheck_macros::quickcheck;
     use zkp_macros_decl::{field_element, u256h};
     use zkp_u256::U256;
@@ -259,27 +256,24 @@ mod tests {
             field_element!("01ef15c18599971b7beced415a40f0c7deacfd9b0d1819e03d723d8bc943cfca"),
             field_element!("005668060aa49730b7be4801df46ec62de53ecd11abe43a32873000c36e8dc1f"),
         );
-        let c = u256h!("07374b7d69dc9825fc758b28913c8d2a27be5e7c32412f612b20c9c97afbe4dd");
+        let c = ScalarFieldElement::from(u256h!(
+            "07374b7d69dc9825fc758b28913c8d2a27be5e7c32412f612b20c9c97afbe4dd"
+        ));
         let expected = Affine::new(
             field_element!("00f24921907180cd42c9d2d4f9490a7bc19ac987242e80ac09a8ac2bcf0445de"),
             field_element!("018a7a2ab4e795405f924de277b0e723d90eac55f2a470d8532113d735bdedd4"),
         );
-        let result = p.clone() * c;
+        let result = p * c;
         assert_eq!(result, expected);
     }
 
-    #[allow(clippy::eq_op)]
     #[quickcheck]
     fn add_commutative(a: Affine, b: Affine) -> bool {
-        &a + &b == &b + &a
+        &a + &b == b + a
     }
 
     #[quickcheck]
-    fn distributivity(p: Affine, mut a: U256, mut b: U256) -> bool {
-        a %= &ORDER;
-        b %= &ORDER;
-        let c = &a + &b;
-        // TODO: c %= &ORDER;
-        (&p * a) + (&p * b) == &p * c
+    fn distributivity(p: Affine, a: ScalarFieldElement, b: ScalarFieldElement) -> bool {
+        (&p * &a) + (&p * &b) == p * (a + b)
     }
 }
