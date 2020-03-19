@@ -92,7 +92,7 @@ use_rand = [
 inline = [
     "zkp-u256/inline",
 ]
-iasm = [
+asm = [
     "zkp-u256/asm",
 ]
 
