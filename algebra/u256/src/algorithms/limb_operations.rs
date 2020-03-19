@@ -17,20 +17,10 @@ pub const fn sbb(a: u64, b: u64, borrow: u64) -> (u64, u64) {
 }
 
 /// Compute a + (b * c) + carry, returning the result and the new carry over.
+/// Both `a` and `carry` can be the full 64-bit range
 #[inline(always)]
 pub const fn mac(a: u64, b: u64, c: u64, carry: u64) -> (u64, u64) {
     let ret = (a as u128) + ((b as u128) * (c as u128)) + (carry as u128);
-    // We want truncation here
-    #[allow(clippy::cast_possible_truncation)]
-    (ret as u64, (ret >> 64) as u64)
-}
-
-/// Compute a + (b * c) + carry0 + carry1, returning the result and the new
-/// carry over.
-// TODO: Is it safe to have two carries here?
-#[inline(always)]
-pub const fn macc(a: u64, b: u64, c: u64, carry0: u64, carry1: u64) -> (u64, u64) {
-    let ret = (a as u128) + ((b as u128) * (c as u128)) + (carry0 as u128) + (carry1 as u128);
     // We want truncation here
     #[allow(clippy::cast_possible_truncation)]
     (ret as u64, (ret >> 64) as u64)

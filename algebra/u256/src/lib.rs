@@ -49,7 +49,10 @@
 // #![allow(clippy::missing_errors_doc)]
 
 // Some routines have assembly optimized versions available for some
-// architectures #![cfg_attr(feature = "asm", feature(asm))]
+// architectures
+// TODO: No asm on stable
+// See <https://github.com/rust-lang/rust/issues/29722>
+// #![cfg_attr(feature = "asm", feature(asm))]
 
 mod additive;
 pub(crate) mod algorithms;
@@ -70,9 +73,7 @@ mod u256_traits;
 
 pub use u256::U256;
 
-pub use algorithms::{
-    adc, div_2_1, divrem_nby1, divrem_nbym, mac, macc, msb, sbb, to_montgomery_const,
-};
+pub use algorithms::{adc, div_2_1, divrem_nby1, divrem_nbym, mac, msb, sbb, to_montgomery_const};
 pub use num_traits::{Bounded, Inv, MulAdd, MulAddAssign, One, Pow, Zero};
 pub use traits::{
     AddFullInline, AddInline, Binary, BinaryAssignRef, BinaryOps, BinaryRing, DivRem, InvMod,

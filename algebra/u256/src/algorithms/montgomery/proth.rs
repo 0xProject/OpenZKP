@@ -1,5 +1,5 @@
 use crate::{
-    algorithms::limb_operations::{adc, mac, macc, sbb},
+    algorithms::limb_operations::{adc, mac, sbb},
     MontgomeryParameters, U256,
 };
 
@@ -18,6 +18,8 @@ pub(crate) fn is_proth<M: MontgomeryParameters<UInt = U256>>() -> bool {
 //   m_0 = 1. m_1 =0, m_2 = 0, m' = -1
 // We rebind variables for readability
 #[allow(clippy::shadow_unrelated)]
+// Variable names are structured.
+#[allow(clippy::similar_names)]
 #[inline(always)]
 pub(crate) fn redc_inline(m3: u64, lo: &U256, hi: &U256) -> U256 {
     let lo = lo.as_limbs();
@@ -26,19 +28,29 @@ pub(crate) fn redc_inline(m3: u64, lo: &U256, hi: &U256) -> U256 {
     let (a0, carry0) = sbb(0, lo[0], 0);
     let (a1, carry0) = sbb(0, lo[1], carry0);
     let (a2, carry0) = sbb(0, lo[2], carry0);
-    let (a3, carry1) = mac(lo[3], a0, m3, carry0);
-    let (a3, carry0) = sbb(0, a3, 0);
-    let (a4, carry1) = macc(hi[0], a1, m3, carry1, carry0);
-    let (a5, carry1) = mac(hi[1], a2, m3, carry1);
-    let (a6, carry1) = mac(hi[2], a3, m3, carry1);
-    let (a7, _carry) = adc(hi[3], 0, carry1);
+    let (a3, carry1) = mac(lo[3], a0, m3, 0);
+    let (a3, carry0) = sbb(0, a3, carry0);
+
+    let (a4, carry0) = adc(0, hi[0], carry0);
+    let (a5, carry0) = adc(0, hi[1], carry0);
+    let (a6, carry0) = adc(0, hi[2], carry0);
+    let (a7, _carry0) = adc(0, hi[3], carry0);
+
+    let (a4, carry1) = mac(a4, a1, m3, carry1);
+    let (a5, carry1) = mac(a5, a2, m3, carry1);
+    let (a6, carry1) = mac(a6, a3, m3, carry1);
+    let (a7, _carry1) = adc(a7, 0, carry1);
 
     // Final reduction
-    let mut r = U256::from_limbs([a4, a5, a6, a7]);
-    if r >= U256::from_limbs([1, 0, 0, m3]) {
-        r -= U256::from_limbs([1, 0, 0, m3]);
+    let (r0, carry) = sbb(a4, 1, 0);
+    let (r1, carry) = sbb(a5, 0, carry);
+    let (r2, carry) = sbb(a6, 0, carry);
+    let (r3, carry) = sbb(a7, m3, carry);
+    if carry == 0 {
+        U256::from_limbs([r0, r1, r2, r3])
+    } else {
+        U256::from_limbs([a4, a5, a6, a7])
     }
-    r
 }
 
 // We rebind variables for readability
@@ -58,27 +70,28 @@ pub(crate) fn mul_redc_inline(m3: u64, x: &U256, y: &U256) -> U256 {
     let (a1, carry) = mac(a1, x[1], y[0], carry);
     let (a2, carry) = mac(a2, x[1], y[1], carry);
     let (a3, carry) = mac(a3, x[1], y[2], carry);
-    let (a4, carry) = macc(a4, x[1], y[3], carry, carry1);
+    let (a4, carry) = mac(a4, x[1], y[3], carry);
     let a5 = carry;
     let (k, carry) = sbb(0, a1, 0);
-    let (a4, carry1) = mac(a4, k, m3, 0);
+    let (a4, carry1) = mac(a4, k, m3, carry1);
     let (a2, carry) = mac(a2, x[2], y[0], carry);
     let (a3, carry) = mac(a3, x[2], y[1], carry);
     let (a4, carry) = mac(a4, x[2], y[2], carry);
-    let (a5, carry) = macc(a5, x[2], y[3], carry, carry1);
+    let (a5, carry) = mac(a5, x[2], y[3], carry);
     let a6 = carry;
     let (k, carry) = sbb(0, a2, 0);
-    let (a5, carry1) = mac(a5, k, m3, 0);
+    let (a5, carry1) = mac(a5, k, m3, carry1);
     let (a3, carry) = mac(a3, x[3], y[0], carry);
     let (a4, carry) = mac(a4, x[3], y[1], carry);
     let (a5, carry) = mac(a5, x[3], y[2], carry);
-    let (a6, carry) = macc(a6, x[3], y[3], carry, carry1);
+    let (a6, carry) = mac(a6, x[3], y[3], carry);
     let a7 = carry;
     let (k, carry) = sbb(0, a3, 0);
+    let (a6, carry1) = adc(a6, 0, carry1);
     let (a4, carry) = adc(a4, 0, carry);
     let (a5, carry) = adc(a5, 0, carry);
     let (a6, carry) = mac(a6, k, m3, carry);
-    let a7 = a7 + carry;
+    let a7 = a7 + carry + carry1;
 
     // Final reduction
     let mut r = U256::from_limbs([a4, a5, a6, a7]);
