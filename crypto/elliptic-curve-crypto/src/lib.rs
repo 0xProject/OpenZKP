@@ -73,7 +73,7 @@ pub struct Signature {
 
 // TODO (SECURITY): Use side-channel-resistant math
 pub fn private_to_public(private_key: &ScalarFieldElement) -> Affine {
-    Affine::from(&base_mul(&*GENERATOR_TABLE, private_key.to_uint()))
+    Affine::from(&base_mul(&*GENERATOR_TABLE, private_key))
 }
 
 pub fn sign(digest: &ScalarFieldElement, private_key: &ScalarFieldElement) -> Signature {
@@ -82,7 +82,7 @@ pub fn sign(digest: &ScalarFieldElement, private_key: &ScalarFieldElement) -> Si
         if k.is_zero() {
             continue;
         }
-        match Affine::from(&base_mul(&*GENERATOR_TABLE, k.to_uint())) {
+        match Affine::from(&base_mul(&*GENERATOR_TABLE, &k)) {
             Affine::Zero => continue,
             Affine::Point { x, .. } => {
                 let r = ScalarFieldElement::from(x.to_uint());
@@ -121,11 +121,13 @@ pub fn verify(digest: &ScalarFieldElement, signature: &Signature, public_key: &A
     assert!(!signature.w.is_zero());
     assert!(public_key.on_curve());
 
+    let generator_factor = digest * &signature.w;
+    let pubkey_factor = &signature.r * &signature.w;
     match Affine::from(&double_base_mul(
         &*GENERATOR_TABLE,
-        (digest * &signature.w).to_uint(),
+        &generator_factor,
         &public_key,
-        (&signature.r * &signature.w).to_uint(),
+        &pubkey_factor,
     )) {
         Affine::Zero => false,
         Affine::Point { x, .. } => ScalarFieldElement::from(x.to_uint()) == signature.r,
