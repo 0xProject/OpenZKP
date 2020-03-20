@@ -92,6 +92,9 @@ use_rand = [
 inline = [
     "zkp-u256/inline",
 ]
+asm = [
+    "zkp-u256/asm",
+]
 
 # Allow math in docs
 [package.metadata.docs.rs]
