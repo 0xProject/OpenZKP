@@ -1,6 +1,7 @@
 use env_logger;
 use log::{info, warn};
 use num_cpus;
+use num_traits::pow::Pow;
 use rand::prelude::*;
 use rand_xoshiro::Xoshiro256PlusPlus;
 use raw_cpuid::{CacheType, CpuId};
@@ -12,15 +13,38 @@ use std::{
 };
 use structopt::StructOpt;
 use zkp_logging_allocator::ALLOCATOR;
+use zkp_macros_decl::u256h;
 use zkp_mmap_vec::MmapVec;
 use zkp_primefield::{
     fft::{fft_vec_recursive, get_twiddles, permute, radix_sqrt, transpose_square_stretch},
-    Fft, FieldElement, Root,
+    Fft, FieldElement, Parameters, PrimeField, Root,
 };
+use zkp_u256::U256;
 
 fn parse_hex(src: &str) -> Result<u32, ParseIntError> {
     u32::from_str_radix(src, 16)
 }
+
+#[derive(PartialEq, Eq, Clone, Debug, Hash)]
+pub struct Bls12_381_Fr();
+
+impl Parameters for Bls12_381_Fr {
+    type UInt = U256;
+
+    /// 3, in montgomery form.
+    const GENERATOR: U256 =
+        u256h!("351332208fc5a8c4ff9c57876f8457b017e363d300189c0f0000000efffffff1");
+    const M64: u64 = 0xffff_fffe_ffff_ffff;
+    const MODULUS: U256 =
+        u256h!("73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001");
+    ///
+    const ORDER: U256 = u256h!("0800000000000011000000000000000000000000000000000000000000000000");
+    const R1: U256 = u256h!("1824b159acc5056f998c4fefecbc4ff55884b7fa0003480200000001fffffffe");
+    const R2: U256 = u256h!("0748d9d99f59ff1105d314967254398f2b6cedcb87925c23c999e990f3f29c6d");
+    const R3: U256 = u256h!("6e2a5bb9c8db33e973d13c71c7b5f4181b3e0d188cf06990c62c1807439b73af");
+}
+
+type Field = PrimeField<Bls12_381_Fr>;
 
 #[derive(Debug, StructOpt)]
 struct Options {
@@ -71,8 +95,8 @@ impl From<rayon::ThreadPoolBuildError> for Error {
 }
 
 enum Allocation {
-    Heap(Vec<FieldElement>),
-    Mmap(MmapVec<FieldElement>),
+    Heap(Vec<Field>),
+    Mmap(MmapVec<Field>),
 }
 
 impl Allocation {
@@ -80,17 +104,17 @@ impl Allocation {
         match allocation {
             "heap" => {
                 info!("Allocating size {} on heap", size);
-                let mut vec = Vec::<FieldElement>::with_capacity(size);
+                let mut vec = Vec::<Field>::with_capacity(size);
                 info!("Filling with random numbers");
-                vec.extend(repeat_with(|| rng.gen::<FieldElement>()).take(size));
+                vec.extend(repeat_with(|| rng.gen::<Field>()).take(size));
                 assert_eq!(vec.len(), size);
                 Allocation::Heap(vec)
             }
             "mmap" => {
                 info!("Memore mapping size {} ", size);
-                let mut vec = MmapVec::<FieldElement>::with_capacity(size);
+                let mut vec = MmapVec::<Field>::with_capacity(size);
                 info!("Filling with random numbers");
-                vec.extend(repeat_with(|| rng.gen::<FieldElement>()).take(size));
+                vec.extend(repeat_with(|| rng.gen::<Field>()).take(size));
                 assert_eq!(vec.len(), size);
                 Allocation::Mmap(vec)
             }
@@ -98,7 +122,7 @@ impl Allocation {
         }
     }
 
-    fn as_mut_slice(&mut self) -> &mut [FieldElement] {
+    fn as_mut_slice(&mut self) -> &mut [Field] {
         match self {
             Allocation::Heap(vec) => vec,
             Allocation::Mmap(vec) => vec,
@@ -111,7 +135,7 @@ fn bench<R: Rng + ?Sized>(
     allocation: &str,
     log_size: usize,
     name: &str,
-    func: &mut dyn FnMut(&mut [FieldElement]),
+    func: &mut dyn FnMut(&mut [Field]),
 ) -> Result<Duration, Error> {
     let size = 1 << log_size;
     info!("Benchmarking {} size 2^{} = {}", name, log_size, size);
@@ -221,24 +245,24 @@ fn main() -> Result<(), Error> {
 
     // Get function to benchmark
     let name = &options.operation;
-    let mut func: Box<dyn FnMut(&mut [FieldElement])> = match name.as_ref() {
+    let mut func: Box<dyn FnMut(&mut [Field])> = match name.as_ref() {
         "fft" => Box::new(Fft::fft),
         "fft_sqrt" => {
             Box::new(|values| {
-                let root = FieldElement::root(values.len()).unwrap();
+                let root = Field::root(values.len()).unwrap();
                 radix_sqrt(values, &root);
             })
         }
         "fft_recursive" => {
             Box::new(|values| {
-                let root = FieldElement::root(values.len()).unwrap();
+                let root = Field::root(values.len()).unwrap();
                 let twiddles = get_twiddles(&root, values.len());
                 fft_vec_recursive(values, &twiddles, 0, 1, 1);
             })
         }
         "permute" => Box::new(permute),
         "transpose" => {
-            Box::new(|values: &mut [FieldElement]| {
+            Box::new(|values: &mut [Field]| {
                 let length = values.len();
                 let size = 1_usize << (length.trailing_zeros() / 2);
                 let stretch = length / (size * size);
