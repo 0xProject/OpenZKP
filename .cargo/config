@@ -1,6 +1,6 @@
 [alias]
-t = "hack test --ignore-unknown-features --features test --tests --lib --bins --examples"
-b = "hack build --ignore-unknown-features --tests --lib --bins --examples"
+t = "hack test --all-targets --ignore-unknown-features --features test"
+b = "hack build --all-targets --ignore-unknown-features"
 lint = "clippy --all-features --all-targets -- -D warnings"
 nostd = "check --lib --bins --no-default-features --target=thumbv7m-none-eabi"
 perf = "bench --all-features --bench benchmark --package"

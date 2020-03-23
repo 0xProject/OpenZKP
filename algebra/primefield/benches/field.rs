@@ -1,5 +1,5 @@
 #![warn(clippy::all)]
-use criterion::{black_box, criterion_group, Criterion};
+use criterion::{black_box, Criterion};
 use zkp_macros_decl::u256h;
 use zkp_primefield::{FieldElement, Inv, SquareRoot};
 use zkp_u256::U256;
@@ -52,4 +52,9 @@ fn field_sqrt(crit: &mut Criterion) {
     });
 }
 
-criterion_group!(group, field_add, field_mul, field_inv, field_sqrt);
+pub fn group(crit: &mut Criterion) {
+    field_add(crit);
+    field_mul(crit);
+    field_inv(crit);
+    field_sqrt(crit);
+}

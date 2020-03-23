@@ -1,5 +1,5 @@
 #![warn(clippy::all)]
-use criterion::{black_box, criterion_group, Criterion, Throughput};
+use criterion::{black_box, Criterion, Throughput};
 use rand::prelude::*;
 use std::iter::repeat_with;
 use zkp_criterion_utils::{log_size_bench, log_thread_bench};
@@ -12,7 +12,12 @@ use zkp_primefield::{
 };
 
 const SMALL: [usize; 9] = [4, 16, 64, 256, 1024, 4_096, 16_384, 65_536, 262_144];
+
+#[cfg(not(test))]
 const LARGE: [usize; 4] = [1_048_576, 4_194_304, 8_388_608, 16_777_216];
+
+#[cfg(test)]
+const LARGE: [usize; 1] = [1_048_576];
 
 fn fft_base(crit: &mut Criterion) {
     let mut group = crit.benchmark_group("FFT base");
@@ -69,6 +74,10 @@ fn fft_base(crit: &mut Criterion) {
 }
 
 fn fft_rec_small(crit: &mut Criterion) {
+    // Exclude from unit tests (single iter is long)
+    if cfg!(test) {
+        return;
+    }
     log_size_bench(crit, "FFT rec size", &SMALL, move |bench, size| {
         let root = FieldElement::root(size).unwrap();
         let twiddles = get_twiddles(&root, size);
@@ -78,6 +87,10 @@ fn fft_rec_small(crit: &mut Criterion) {
 }
 
 fn fft_large(crit: &mut Criterion) {
+    // Exclude from unit tests (single iter is long)
+    if cfg!(test) {
+        return;
+    }
     log_size_bench(
         crit,
         "FFT cache-oblivious size",
@@ -90,11 +103,16 @@ fn fft_large(crit: &mut Criterion) {
 }
 
 fn fft_threads(crit: &mut Criterion) {
-    const SIZE: usize = 4_194_304;
-    log_thread_bench(crit, "FFT threads", SIZE, move |bench| {
-        let mut values: Vec<_> = (0..SIZE).map(FieldElement::from).collect();
+    let size = if cfg!(test) { 1_048_576 } else { 4_194_304 };
+    log_thread_bench(crit, "FFT threads", size, move |bench| {
+        let mut values: Vec<_> = (0..size).map(FieldElement::from).collect();
         bench.iter(|| values.fft())
     });
 }
 
-criterion_group!(group, fft_base, fft_rec_small, fft_large, fft_threads);
+pub fn group(crit: &mut Criterion) {
+    fft_base(crit);
+    fft_rec_small(crit);
+    fft_large(crit);
+    fft_threads(crit);
+}
