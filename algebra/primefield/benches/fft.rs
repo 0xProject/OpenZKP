@@ -103,7 +103,7 @@ fn fft_large(crit: &mut Criterion) {
 }
 
 fn fft_threads(crit: &mut Criterion) {
-    let size = if cfg!(test) { 1_048_576 } else { 4_194_304 };
+    let size = if cfg!(test) { 16_384 } else { 4_194_304 };
     log_thread_bench(crit, "FFT threads", size, move |bench| {
         let mut values: Vec<_> = (0..size).map(FieldElement::from).collect();
         bench.iter(|| values.fft())
