@@ -1,7 +1,6 @@
 [alias]
-# TODO: --all-targets fails for benches
-t = "test --all-features --tests --lib --bins --examples"
-b = "build --all-features --all-targets"
+t = "hack test --ignore-unknown-features --features test --tests --lib --bins --examples"
+b = "hack build --ignore-unknown-features --tests --lib --bins --examples"
 lint = "clippy --all-features --all-targets -- -D warnings"
 nostd = "check --lib --bins --no-default-features --target=thumbv7m-none-eabi"
 perf = "bench --all-features --bench benchmark --package"
