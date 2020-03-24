@@ -11,8 +11,6 @@ FROM circleci/rust:1-node
 ENV NIGHTLY="nightly-2020-03-17"
 
 RUN true \
-    # For the rocksdb dependency of substrate-node
-    && sudo apt-get install clang \
     # For coverage reports
     && sudo apt-get install lcov \
     # Update rust stable and use
@@ -53,9 +51,6 @@ ENV COVFLAGS="-Dwarnings -Zprofile -Zno-landing-pads -Ccodegen-units=1 -Cinline-
 COPY --chown=circleci:circleci . /home/circleci/project
 
 RUN true \
-    # Download codechecks deps
-    && cd $HOME/project/.circleci/codechecks \
-    && yarn \
     # Fetch project dependencies
     && cd $HOME/project \
     && cargo fetch \
