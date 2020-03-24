@@ -268,21 +268,14 @@ jobs:
           command: |
             cargo generate-lockfile
             cargo audit
-      # TODO: This step fails
-      # - run:
-      #     name: Check for use of unsafe in workspace
-      #     command: |
-      #       workspace=$(toml2json < ./Cargo.toml  | jq '.workspace.members[]' -r)
-      #       for member in $workspace; do
-      #         pushd $member
-      #         cargo geiger --all-features --all-targets
-      #         popd
-      #       done
-      # TODO: Fix
-      # - run:
-      #     name: Check for outdated dependencies
-      #     command: |
-      #       cargo outdated
+      - run:
+          name: Check for use of unsafe in workspace
+          command: |
+            cargo hack geiger
+      - run:
+          name: Check for outdated dependencies
+          command: |
+            cargo outdated
   accept:
     executor: minimal
     steps:
