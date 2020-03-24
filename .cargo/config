@@ -1,10 +1,55 @@
 [alias]
-t = "hack test --all-targets --ignore-unknown-features --features test"
-b = "hack build --all-targets --ignore-unknown-features --features test"
-lint = "hack clippy --all-targets --ignore-unknown-features --features test -- -D warnings"
-nostd = "hack check --lib --bins --no-default-features --target=thumbv7m-none-eabi"
-nostd_all = "nostd --workspace --exclude zkp-criterion-utils --exclude zkp-macros-lib --exclude zkp-macros-impl --exclude zkp-macros-decl --exclude zkp-logging-allocator"
-perf = "hack bench --bench benchmark --ignore-unknown-features --features bench --package"
+t = """
+    hack test
+    --all-targets
+    --ignore-unknown-features
+    --features test
+    """
+b = """
+    hack build
+    --all-targets
+    --ignore-unknown-features
+    --features test
+    """
+lint = """
+    hack clippy
+    --all-targets
+    --ignore-unknown-features
+    --features test
+    --
+    -D warnings
+    """
+nostd = """
+    hack check
+    --lib
+    --bins
+    --no-default-features
+    --target=thumbv7m-none-eabi
+    """
+perf = """
+    hack bench
+    --bench benchmark
+    --ignore-unknown-features
+    --features bench
+    """
+nostd_all = """
+    nostd --workspace
+    --exclude zkp-criterion-utils
+    --exclude zkp-macros-lib
+    --exclude zkp-macros-impl
+    --exclude zkp-macros-decl
+    --exclude zkp-logging-allocator
+    """
+perf_all = """
+    perf --workspace
+    --exclude zkp-macros-lib
+    --exclude zkp-macros-impl
+    --exclude zkp-macros-decl
+    --exclude zkp-criterion-utils
+    --exclude zkp-error-utils
+    --exclude zkp-logging-allocator
+    --exclude zkp-mmap-vec
+    """
 
 # Build for the current CPU by default
 [target.'cfg(target_arch = "x86_64")']
