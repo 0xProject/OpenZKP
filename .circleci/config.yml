@@ -1,28 +1,8 @@
 version: 2.1
 # Validate using `circleci config validate`
 
-# TODO: Build with profile guided optimization. Use benchmarks and select
-#  example projects as guides. This is probably only worthwhile on `master`.
-#  See https://doc.rust-lang.org/rustc/profile-guided-optimization.html
-
 # TODO: Push relevant packages to crates.io when a version of master is tagged.
 
-# TODO: Generate rustdoc and host somewhere
-# TODO: Report documentation coverage.
-# TODO: Codecheck on documentation coverage changes.
-# TODO: Codecheck on benchmark changes.
-# TODO: Submit all codecheck from `master` stats to Metabase.
-
-# TODO: Sync `TODO` and other comments.
-
-# TODO: Minimal version testing.
-#       https://doc.rust-lang.org/cargo/reference/unstable.html#minimal-versions
-
-# TODO: Configure Quickcheck to use more rounds and require passing tests.
-#       Using QUICKCHECK_TESTS, QUICKCHECK_MAX_TESTS, & QUICKCHECK_MIN_TESTS_PASSED
-#       https://github.com/BurntSushi/quickcheck#more-thorough-checking
-
-# OPT: Create docker images tailored for each job
 executors:
   minimal:
     docker:
@@ -96,17 +76,6 @@ commands:
           key: sccache-cache-v4-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ epoch }}
           paths:
             - "~/.cache/sccache"
-  codechecks:
-    steps:
-      - run:
-          name: Run Codechecks
-          command: |
-            pushd .circleci/codechecks
-            if [ -f $CIRCLE_JOB.yml ]; then
-              npx codechecks all-jobs.yml $CIRCLE_JOB.yml
-            else
-              npx codechecks all-jobs.yml
-            fi
 
 jobs:
   rebuild-docker:
@@ -162,7 +131,6 @@ jobs:
       - store_artifacts:
           path: target/lcov.info
           destination: lcov.info
-      - codechecks
   benchmarks:
     executor: docker-rust
     steps:
@@ -190,7 +158,6 @@ jobs:
           root: target/release/deps
           paths:
             - benchmark-*
-      - codechecks
   benchmark-ec2:
     # Run benchmarks on AWS EC2
     # See https://engineering.mongodb.com/post/reducing-variability-in-performance-tests-on-ec2-setup-and-key-results
@@ -250,7 +217,6 @@ jobs:
           name: Lint with rustformat nightly
           command: cargo +$NIGHTLY fmt --all -- --check
           # TODO: Run over wasm targets (which are not part of the workspace)
-      - codechecks
   build-no-std:
     executor: docker-rust
     steps:
@@ -266,7 +232,6 @@ jobs:
           command: |
             cargo nostd_all
       - save-sccache-cache
-      - codechecks
   clippy:
     executor: docker-rust
     steps:
@@ -277,7 +242,6 @@ jobs:
           command: |
             cargo lint
       - save-sccache-cache
-      - codechecks
   analysis:
     executor: docker-rust
     steps:
@@ -312,7 +276,6 @@ jobs:
       #         cargo geiger --all-features --all-targets
       #         popd
       #       done
-      - codechecks
       # TODO: Fix
       # - run:
       #     name: Check for outdated dependencies
