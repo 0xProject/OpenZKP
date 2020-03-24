@@ -8,36 +8,37 @@ FROM circleci/rust:1-node
 
 # The latest nightly
 # TODO: Update manually. 
-ENV NIGHTLY="nightly-2019-12-20"
+ENV NIGHTLY="nightly-2020-03-17"
 
 RUN true \
- # For the rocksdb dependency of substrate-node
- && sudo apt-get install clang \
- # For coverage reports
- && sudo apt-get install lcov \
- # Update rust stable and use
- && rustup update stable \
- && rustup default stable \
- # Install Nightly with rustfmt, wasm and Cortex-M3 support
- && rustup toolchain install $NIGHTLY \
- && rustup target add wasm32-unknown-unknown --toolchain $NIGHTLY \
- && rustup target add thumbv7m-none-eabi --toolchain $NIGHTLY \
- && rustup component add rustfmt --toolchain $NIGHTLY \
- # Install tools
- && rustup component add clippy \
- && cargo install sccache --no-default-features \
- && cargo install --git https://github.com/alexcrichton/wasm-gc \
- && cargo install twiggy \
- && cargo install cargo-cache \
- && cargo install grcov \
- # More analysis tools
- && cargo install cargo-outdated \
- && cargo install cargo-audit \
- && cargo install cargo-geiger \
- && sudo apt-get install python3-pip \
- && python3 -m pip install remarshal --user \
- # Compress cargo caches
- && cargo cache --autoclean-expensive
+    # For the rocksdb dependency of substrate-node
+    && sudo apt-get install clang \
+    # For coverage reports
+    && sudo apt-get install lcov \
+    # Update rust stable and use
+    && rustup update stable \
+    && rustup default stable \
+    # Install Nightly with rustfmt, wasm and Cortex-M3 support
+    && rustup toolchain install $NIGHTLY \
+    && rustup target add wasm32-unknown-unknown --toolchain $NIGHTLY \
+    && rustup target add thumbv7m-none-eabi --toolchain $NIGHTLY \
+    && rustup component add rustfmt --toolchain $NIGHTLY \
+    # Install tools
+    && rustup component add clippy \
+    && cargo install sccache --no-default-features \
+    && cargo install --git https://github.com/alexcrichton/wasm-gc \
+    && cargo install twiggy \
+    && cargo install cargo-cache \
+    && cargo install grcov \
+    && cargo install cargo-hack \
+    # More analysis tools
+    && cargo install cargo-outdated \
+    && cargo install cargo-audit \
+    && cargo install cargo-geiger \
+    && sudo apt-get install python3-pip \
+    && python3 -m pip install remarshal --user \
+    # Compress cargo caches
+    && cargo cache --autoclean-expensive
 
 # Flags used to build coverage. To benefit from precompiling, we need to use
 # identical flags in CI, which is why they are exported in an ENV.
@@ -52,23 +53,22 @@ ENV COVFLAGS="-Dwarnings -Zprofile -Zno-landing-pads -Ccodegen-units=1 -Cinline-
 COPY --chown=circleci:circleci . /home/circleci/project
 
 RUN true \
- # Download codechecks deps
- && cd $HOME/project/.circleci/codechecks \
- && yarn \
- # Fetch project dependencies
- && cd $HOME/project \
- && cargo fetch \
- # Compress cargo caches
- && cargo cache --autoclean-expensive
-
-# Pre-build all packages
-ENV PACKAGES="--all"
+    # Download codechecks deps
+    && cd $HOME/project/.circleci/codechecks \
+    && yarn \
+    # Fetch project dependencies
+    && cd $HOME/project \
+    && cargo fetch \
+    # Compress cargo caches
+    && cargo cache --autoclean-expensive
 
 # Warnings are not accepted in CI build
 ENV RUSTFLAGS="-Dwarnings"
 
+# Prebuild all to fill caches
 RUN true \
- && cd $HOME/project \
- && CARGO_INCREMENTAL=0 RUSTFLAGS="$COVFLAGS" cargo +$NIGHTLY build $PACKAGES --tests --all-features \
- && cargo clippy $PACKAGES --all-targets --all-features \
- && cargo build --release --bench benchmark $PACKAGES --all-features
+    && cd $HOME/project \
+    && CARGO_INCREMENTAL=0 RUSTFLAGS="$COVFLAGS" cargo +$NIGHTLY t --no-run \
+    && cargo lint \
+    && cargo nostd_all \
+    && cargo perf_all --no-run
