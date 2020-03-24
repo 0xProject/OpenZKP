@@ -2,20 +2,14 @@
 t = """
     hack test
     --all-targets
-    --ignore-unknown-features
-    --features test
     """
 b = """
     hack build
     --all-targets
-    --ignore-unknown-features
-    --features test
     """
 lint = """
     hack clippy
     --all-targets
-    --ignore-unknown-features
-    --features test
     --
     -D warnings
     """
@@ -30,8 +24,6 @@ nostd = """
 perf = """
     hack bench
     --bench benchmark
-    --ignore-unknown-features
-    --features bench
     """
 nostd_all = """
     nostd --workspace
