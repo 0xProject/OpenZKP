@@ -24,6 +24,7 @@ nostd = """
     --lib
     --bins
     --no-default-features
+    --no-dev-deps
     --target=thumbv7m-none-eabi
     """
 perf = """
