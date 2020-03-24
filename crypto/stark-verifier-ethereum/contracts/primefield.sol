@@ -8,15 +8,12 @@ contract PrimeField {
     uint256 constant internal GENERATOR = 3;
     uint256 constant internal ONE = 1;
 
-    function from_montgomery(uint256 value) internal pure returns (uint256 result) {
+    function from_montgomery(uint256 value) internal pure returns (uint256) {
         return mulmod(value, MONTGOMERY_R_INV, MODULUS);
     }
 
     function from_montgomery_bytes(bytes32 bs) internal pure returns (uint256) {
-        /// Assuming bs is a 256bit bytes object, in montgomery form, it is read into a field
-        /// element
-        uint256 result = uint256(bs);
-        return from_montgomery(result);
+        return from_montgomery(uint256(bs));
     }
 
     // This is an unchecked cast and should be used very carefully,
@@ -27,19 +24,19 @@ contract PrimeField {
         }
     }
 
-    function to_montgomery_int(uint256 value) internal pure returns (uint256 result) {
+    function to_montgomery_int(uint256 value) internal pure returns (uint256) {
         return mulmod(value, MONTGOMERY_R, MODULUS);
     }
 
-    function fmul(uint256 a, uint256 b) internal pure returns (uint256 result) {
+    function fmul(uint256 a, uint256 b) internal pure returns (uint256) {
         return mulmod(a, b, MODULUS);
     }
 
-    function fadd(uint256 a, uint256 b) internal pure returns (uint256 result) {
+    function fadd(uint256 a, uint256 b) internal pure returns (uint256) {
         return addmod(a, b, MODULUS);
     }
 
-    function fsub(uint256 a, uint256 b) internal pure returns (uint256 result) {
+    function fsub(uint256 a, uint256 b) internal pure returns (uint256) {
         return addmod(a, MODULUS - b, MODULUS);
     }
 

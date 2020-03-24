@@ -15,16 +15,10 @@ contract PrimeFieldTester is PrimeField {
     }
 
     function fpow_external(uint256 a, uint256 b) external {
-        emit log_bytes32(hard_cast(fpow(a, b)));
+        emit log_bytes32(bytes32(fpow(a, b)));
     }
 
     function inverse_external(uint256 a) external {
-        emit log_bytes32(hard_cast(inverse(a)));
-    }
-
-    function hard_cast(uint a) internal pure returns(bytes32 b) {
-        assembly {
-            b := a
-        }
+        emit log_bytes32(bytes32(inverse(a)));
     }
 }
