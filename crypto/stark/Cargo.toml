@@ -33,20 +33,16 @@ log = { version = "0.4.8", default_features = false }
 env_logger = { version = "0.6.2", optional = true }
 zkp-elliptic-curve = { version = "0.1.0", path = "../../algebra/elliptic-curve", default-features = false, optional = true }
 zkp-elliptic-curve-crypto = { version = "0.1.0", path = "../../crypto/elliptic-curve-crypto", default-features = false, optional = true }
-
-# HACK: Criterion is really a dev-dependency, but it's important that it's
-# optional, or it will enable the `std` flag on various dependencies. Cargo
-# does not allow dev-dependencies to be optional.
-criterion = { version = "0.3.0", optional = true }
-zkp-criterion-utils = { version = "0.1.0", path = "../../utils/criterion-utils", optional = true }
-quickcheck_macros = { version = "0.8", optional = true }
 hex = { version = "0.4.0", optional = true }
-proptest = { version = "0.9.4", optional = true }
 
-# Examples dependencies
-structopt = { version = "0.3.5", optional = true }
-rand = { version = "0.7.2", optional = true }
-rand_xoshiro = { version = "0.4.0", optional = true }
+[dev-dependencies]
+criterion = "0.3.0"
+zkp-criterion-utils = { version = "0.1.0", path = "../../utils/criterion-utils" }
+quickcheck_macros = "0.8"
+proptest = "0.9.4"
+structopt = "0.3.5"
+rand = "0.7.2"
+rand_xoshiro = "0.4.0"
 
 [[bench]]
 name = "benchmark"
@@ -68,41 +64,30 @@ std = [
     "itertools/use_std",
     "log/std",
     "rayon",
-    "hex",
+    "hex"
 ]
 inline = [
     "zkp-u256/inline",
     "zkp-primefield/inline",
-    "zkp-elliptic-curve/inline",
+    "zkp-elliptic-curve/inline"
 ]
 test = [
     "zkp-u256/test",
     "zkp-primefield/test",
     "zkp-elliptic-curve/test",
     "zkp-elliptic-curve-crypto/test",
-    "proptest",
-    "quickcheck",
-    "quickcheck_macros",
-    "hex",
-    "env_logger",
+    "quickcheck"
 ]
-bench = [
-    "criterion",
-    "zkp-criterion-utils",
-]
+bench = []
 examples = [
     "zkp-primefield/use_rand",
     "zkp-logging-allocator",
     "zkp-elliptic-curve",
-    "zkp-elliptic-curve-crypto",
-    "env_logger",
-    "structopt",
-    "rand",
-    "rand_xoshiro",
+    "zkp-elliptic-curve-crypto"
 ]
 prover = [
     "std", # TODO: Make prove run in no-std wasm.
-    "zkp-merkle-tree/prover",
+    "zkp-merkle-tree/prover"
 ]
 
 # Allow math in docs

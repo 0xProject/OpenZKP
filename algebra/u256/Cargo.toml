@@ -25,12 +25,9 @@ hex = { version = "0.4.0", optional = true }
 quickcheck = { version = "0.9", optional = true }
 serde = { version = "1.0", features = ["derive"], optional = true}
 
-# HACK: Criterion is really a dev-dependency, but it's important that it's
-# optional, or it will enable the `std` flag on various dependencies. Cargo
-# does not allow dev-dependencies to be optional.
-criterion = { version = "0.3.0", optional = true }
-quickcheck_macros = {version = "0.8", optional = true }
-
+[dev-dependencies]
+criterion = "0.3.0"
+quickcheck_macros = "0.8"
 
 [[bench]]
 name = "benchmark"
@@ -42,15 +39,9 @@ default = [
     "std",
     "inline"
 ]
-bench = [
-    "test",
-    "criterion",
-    "use_rand",
-]
+bench = []
 test = [
-    "std",
-    "quickcheck",
-    "quickcheck_macros"
+    "quickcheck"
 ]
 std = [
     "zkp-macros-decl/std",

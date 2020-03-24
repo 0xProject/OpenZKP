@@ -20,7 +20,6 @@ num-traits = { version = "0.2.10", default_features = false }
 rand = { version = "0.7.2", optional = true }
 rayon = { version = "1.3.0", optional = true }
 log = "0.4.8"
-
 no-std-compat = { version = "0.1.0", features = [ "alloc" ] }
 hex = { version = "0.4.0", optional = true }
 itertools = { version = "0.8.0", default_features = false }
@@ -28,20 +27,18 @@ crunchy = { version = "0.2.2", default_features = false }
 quickcheck = { version = "0.9", optional = true}
 serde = { version = "1.0", features = ["derive"], optional = true}
 
-# HACK: Criterion is really a dev-dependency, but it's important that it's
-# optional, or it will enable the `std` flag on various dependencies. Cargo
-# does not allow dev-dependencies to be optional.
-criterion = { version = "0.3.0", optional = true }
-zkp-criterion-utils = { version = "0.1.0", path = "../../utils/criterion-utils", optional = true }
-quickcheck_macros = { version = "0.8", optional = true }
-proptest = { version = "0.9.5", optional = true }
-structopt = { version = "0.3", optional = true }
-env_logger = { version = "0.7.1", optional = true }
-num_cpus = { version = "1.12.0", optional = true }
-zkp-mmap-vec = { version = "0.1.0", path = "../../utils/mmap-vec", optional = true }
-zkp-logging-allocator = { version = "0.1.0", path = "../../utils/logging-allocator", optional = true }
-rand_xoshiro = { version = "0.4.0", optional = true }
-raw-cpuid = { version = "7.0.3", optional = true }
+[dev-dependencies]
+quickcheck_macros = "0.8"
+criterion = "0.3.0"
+zkp-criterion-utils = { version = "0.1.0", path = "../../utils/criterion-utils" }
+proptest = "0.9.5"
+structopt = "0.3"
+env_logger = "0.7.1"
+num_cpus = "1.12.0"
+zkp-mmap-vec = { version = "0.1.0", path = "../../utils/mmap-vec" }
+zkp-logging-allocator = { version = "0.1.0", path = "../../utils/logging-allocator" }
+rand_xoshiro = "0.4.0"
+raw-cpuid = "7.0.3"
 
 [[bench]]
 name = "benchmark"
@@ -62,30 +59,16 @@ std = [
     "num-traits/std",
     "hex",
     "serde",
-    "structopt",
-    "env_logger",
-    "num_cpus",
-    "zkp-mmap-vec",
-    "zkp-logging-allocator",
-    "rand_xoshiro",
-    "raw-cpuid",
-    "rayon",
+    "rayon"
 ]
 test = [
-    "std",
-    "use_rand",
-    "criterion",
-    "zkp-criterion-utils",
     "quickcheck",
-    "quickcheck_macros",
-    "proptest",
-    "zkp-u256/test"
+    "use_rand",
+    "zkp-u256/quickcheck"
 ]
 bench = [
     "std",
-    "use_rand",
-    "criterion",
-    "zkp-criterion-utils",
+    "use_rand"
 ]
 # HACK: Cargo does not allow features with the same name as dependencies.
 # this is fine (since optional dependencies are their own feature) but not

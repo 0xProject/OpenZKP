@@ -23,11 +23,9 @@ tiny-keccak = "1.5.0"
 quickcheck = { version = "0.9", optional = true }
 hex = { version = "0.4.0", optional = true }
 
-# HACK: Criterion is really a dev-dependency, but it's important that it's
-# optional, or it will enable the `std` flag on various dependencies. Cargo
-# does not allow dev-dependencies to be optional.
-criterion = { version = "0.3.0", optional = true }
-quickcheck_macros = { version = "0.8", optional = true }
+[dev-dependencies]
+criterion = "0.3.0"
+quickcheck_macros = "0.8"
 
 [features]
 default = [ "std" ]
@@ -39,8 +37,7 @@ std = [
     "hex"
 ]
 test = [
-    "quickcheck",
-    "quickcheck_macros",
+    "quickcheck"
 ]
 
 # Allow math in docs
