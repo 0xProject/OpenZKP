@@ -59,8 +59,6 @@ std = [
     "zkp-mmap-vec/std",
     "zkp-u256/std",
     "zkp-primefield/std",
-    "zkp-elliptic-curve/std",
-    "zkp-elliptic-curve-crypto/std",
     "zkp-hash/std",
     "zkp-merkle-tree/std",
     "no-std-compat/std",
@@ -72,7 +70,6 @@ std = [
 inline = [
     "zkp-u256/inline",
     "zkp-primefield/inline",
-    "zkp-elliptic-curve/inline"
 ]
 prover = [
     "std", # TODO: Make prove run in no-std wasm.
