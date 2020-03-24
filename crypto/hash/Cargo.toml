@@ -36,9 +36,6 @@ std = [
     "no-std-compat/std",
     "hex"
 ]
-test = [
-    "quickcheck"
-]
 
 # Allow math in docs
 [package.metadata.docs.rs]

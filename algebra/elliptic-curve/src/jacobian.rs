@@ -231,10 +231,10 @@ curve_operations!(Jacobian);
 commutative_binop!(Jacobian, Add, add, AddAssign, add_assign);
 noncommutative_binop!(Jacobian, Sub, sub, SubAssign, sub_assign);
 
-#[cfg(test)]
+#[cfg(any(test, feature = "quickcheck"))]
 use quickcheck::{Arbitrary, Gen};
 
-#[cfg(test)]
+#[cfg(any(test, feature = "quickcheck"))]
 impl Arbitrary for Jacobian {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         // To force Z to be non trivial we add two points.
@@ -244,8 +244,6 @@ impl Arbitrary for Jacobian {
     }
 }
 
-// TODO: Replace literals with u256h!
-#[allow(clippy::unreadable_literal)]
 #[cfg(test)]
 mod tests {
     use super::*;

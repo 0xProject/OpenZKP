@@ -1,5 +1,5 @@
 use crate::{ScalarFieldElement, BETA};
-#[cfg(feature = "std")]
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
@@ -9,7 +9,8 @@ use zkp_primefield::{FieldElement, NegInline, One, Zero};
 use zkp_u256::{commutative_binop, noncommutative_binop};
 
 #[derive(PartialEq, Eq, Clone)]
-#[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
+#[cfg_attr(feature = "std", derive(Debug))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Affine {
     Zero, // Neutral element, point at infinity, additive identity, etc.
     Point { x: FieldElement, y: FieldElement },
@@ -194,10 +195,10 @@ curve_operations!(Affine);
 commutative_binop!(Affine, Add, add, AddAssign, add_assign);
 noncommutative_binop!(Affine, Sub, sub, SubAssign, sub_assign);
 
-#[cfg(test)]
+#[cfg(any(test, feature = "quickcheck"))]
 use quickcheck::{Arbitrary, Gen};
 
-#[cfg(test)]
+#[cfg(any(test, feature = "quickcheck"))]
 impl Arbitrary for Affine {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         if u8::arbitrary(g) < 50 {

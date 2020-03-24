@@ -354,7 +354,7 @@ pub fn compose_folded(mut a: Component, mut b: Component) -> Component {
     }
 }
 
-#[cfg(feature = "test")]
+#[cfg(test)]
 impl Component {
     /// Creates an example constraint system of given size
     ///

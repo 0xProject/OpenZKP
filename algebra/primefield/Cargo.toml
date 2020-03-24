@@ -28,8 +28,11 @@ quickcheck = { version = "0.9", optional = true}
 serde = { version = "1.0", features = ["derive"], optional = true}
 
 [dev-dependencies]
+rand = "0.7.2"
+quickcheck = "0.9"
 quickcheck_macros = "0.8"
 criterion = "0.3.0"
+zkp-u256 =  { version = "0.1.0", path = "../u256", features = ["quickcheck"] }
 zkp-criterion-utils = { version = "0.1.0", path = "../../utils/criterion-utils" }
 proptest = "0.9.5"
 structopt = "0.3"
@@ -43,11 +46,11 @@ raw-cpuid = "7.0.3"
 [[bench]]
 name = "benchmark"
 harness = false
-required-features = ["bench"]
 
 [features]
 default = [
     "std",
+    "rand",
     "inline"
 ]
 std = [
@@ -60,22 +63,6 @@ std = [
     "hex",
     "serde",
     "rayon"
-]
-test = [
-    "quickcheck",
-    "use_rand",
-    "zkp-u256/quickcheck"
-]
-bench = [
-    "std",
-    "use_rand"
-]
-# HACK: Cargo does not allow features with the same name as dependencies.
-# this is fine (since optional dependencies are their own feature) but not
-# if we need to enable other features as a consequence.
-use_rand = [
-    "rand",
-    "zkp-u256/use_rand",
 ]
 inline = [
     "zkp-u256/inline",
