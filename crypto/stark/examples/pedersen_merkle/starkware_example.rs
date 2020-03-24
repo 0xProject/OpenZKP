@@ -8,7 +8,7 @@ use zkp_primefield::FieldElement;
 use zkp_stark::{prove, Constraints};
 use zkp_u256::U256;
 
-pub fn starkware_example() {
+pub(crate) fn starkware_example() {
     info!("Constructing claim");
     let claim = STARKWARE_CLAIM;
     info!("Claim: {:?}", claim);
@@ -74,13 +74,13 @@ pub fn starkware_example() {
     );
 }
 
-pub const STARKWARE_CLAIM: Claim = Claim {
+pub(crate) const STARKWARE_CLAIM: Claim = Claim {
     path_length: 8192,
     leaf:        field_element!("07232be75984588334afbec4006d672a67977ac7d6114cca9d957370df49a52d"),
     root:        field_element!("0779aed4d3452b88d754ff4eed01b257e63384752782b7efde2e0a9e6eb03423"),
 };
 
-pub fn starkware_witness() -> Witness {
+pub(crate) fn starkware_witness() -> Witness {
     Witness {
         directions: STARKWARE_DIRECTIONS.to_vec(),
         path:       STARKWARE_PATH.to_vec(),
