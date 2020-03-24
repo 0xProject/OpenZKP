@@ -44,14 +44,9 @@ rand_xoshiro = { version = "0.4.0", optional = true }
 raw-cpuid = { version = "7.0.3", optional = true }
 
 [[bench]]
-name = "main"
+name = "benchmark"
 harness = false
-required-features = [
-    "std",
-    "use_rand",
-    "criterion",
-    "zkp-criterion-utils",
-]
+required-features = ["bench"]
 
 [features]
 default = [
@@ -85,6 +80,12 @@ test = [
     "quickcheck_macros",
     "proptest",
     "zkp-u256/test"
+]
+bench = [
+    "std",
+    "use_rand",
+    "criterion",
+    "zkp-criterion-utils",
 ]
 # HACK: Cargo does not allow features with the same name as dependencies.
 # this is fine (since optional dependencies are their own feature) but not
