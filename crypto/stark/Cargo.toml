@@ -51,7 +51,6 @@ zkp-logging-allocator = { version = "0.1.0", path = "../../utils/logging-allocat
 [[bench]]
 name = "benchmark"
 harness = false
-required-features = ["bench"]
 
 [features]
 default = [ "std", "inline", "prover" ]

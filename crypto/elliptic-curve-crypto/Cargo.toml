@@ -34,7 +34,6 @@ zkp-primefield = { version = "0.1.0", path = "../../algebra/primefield", feature
 [[bench]]
 name = "benchmark"
 harness = false
-required-features = ["bench"]
 
 [features]
 default = [ "std" ]

@@ -38,7 +38,6 @@ zkp-u256 = { version = "0.1.0", path = "../../algebra/u256", features = ["quickc
 [[bench]]
 name = "benchmark"
 harness = false
-required-features = ["bench"]
 
 [features]
 default = ["std", "prover"] # Default to using the std

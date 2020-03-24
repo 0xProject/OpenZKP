@@ -33,7 +33,6 @@ quickcheck_macros = "0.8"
 [[bench]]
 name = "benchmark"
 harness = false
-required-features = ["bench"]
 
 [features]
 default = [
