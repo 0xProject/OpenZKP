@@ -2,20 +2,20 @@ pragma solidity ^0.6.4;
 
 import '@nomiclabs/buidler/console.sol';
 
-contract RingBuffer {
+// This struct is a queeue with a fixed length, reading indexed pairs.
+// NOTE - This struct does NOT implement bounds checking, pushing
+// too much into the array will result in memory corruption.
+// NOTE - Reading an empty buffer returns zero values.
+struct IndexRingBuffer {
+    uint front;
+    uint back;
+    uint[] indexes;
+    bytes32[] data;
+    bool is_empty;
+}
 
-    // This struct is a queeue with a fixed length, reading indexed pairs.
-    // NOTE - This struct does NOT implement bounds checking, pushing
-    // too much into the array will result in memory corruption.
-    // NOTE - Reading an empty buffer returns zero values.
-    struct IndexRingBuffer {
-        uint front;
-        uint back;
-        uint[] indexes;
-        bytes32[] data;
-        bool is_empty;
-    }
 
+library RingBuffer {
     // Adds an element to the buffer by pushing to the array and
     // and wrapping around if the back is at the end of the array.
     function add_to_rear(IndexRingBuffer memory buffer, uint index, bytes32 data) internal pure {
