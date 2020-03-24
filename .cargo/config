@@ -2,11 +2,11 @@
 t = "hack test --all-targets --ignore-unknown-features --features test"
 b = "hack build --all-targets --ignore-unknown-features --features test"
 lint = "hack clippy --all-targets --ignore-unknown-features --features test -- -D warnings"
-nostd = "check --lib --bins --no-default-features --target=thumbv7m-none-eabi"
+nostd = "hack check --lib --bins --no-default-features --target=thumbv7m-none-eabi"
 perf = "bench --all-features --bench benchmark --package"
 
 # Build for the current CPU by default
-[build]
+[target.'cfg(target_arch = "x86_64")']
 rustflags = [ "-C", "target-cpu=native" ]
 
 # Cross compile to Linux
