@@ -49,6 +49,7 @@ perf_all = """
     --exclude zkp-error-utils
     --exclude zkp-logging-allocator
     --exclude zkp-mmap-vec
+    --exclude zkp-hash
     """
 
 # Build for the current CPU by default
