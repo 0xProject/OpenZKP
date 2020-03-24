@@ -187,7 +187,7 @@ jobs:
               echo "No previous results cached"
             for bench in ./$CIRCLE_BUILD_NUM/*; do
               # Note: works better if gnuplot is installed on the machine
-              ssh $SSH_OPT $HOST $bench --color always
+              ssh $SSH_OPT $HOST $bench --bench --color always
             done
             ssh $SSH_OPT $HOST tar czf ./criterion.tgz ./target/criterion
             scp $SSH_OPT -r $HOST:~/criterion.tgz .

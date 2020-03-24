@@ -40,12 +40,6 @@ nostd_all = """
     --exclude zkp-macros-decl
     --exclude zkp-logging-allocator
     """
-perf_build = """
-    hack build
-    --bench benchmark
-    --ignore-unknown-features
-    --features bench
-    """
 perf_all = """
     perf --workspace
     --exclude zkp-macros-lib
