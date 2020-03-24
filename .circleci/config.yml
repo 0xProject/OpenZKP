@@ -255,6 +255,8 @@ jobs:
       - run:
           name: Check for vulnerabilities in workspace
           command: |
+            # TODO: Add --deny-warnings
+            # Pending <https://github.com/rust-lang-nursery/lazy-static.rs/issues/163>
             cargo generate-lockfile
             cargo audit
       - run:
