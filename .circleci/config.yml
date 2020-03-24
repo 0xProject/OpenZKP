@@ -101,12 +101,12 @@ commands:
       - run:
           name: Run Codechecks
           command: |
-              pushd .circleci/codechecks
-              if [ -f $CIRCLE_JOB.yml ]; then
-                npx codechecks all-jobs.yml $CIRCLE_JOB.yml
-              else
-                npx codechecks all-jobs.yml
-              fi
+            pushd .circleci/codechecks
+            if [ -f $CIRCLE_JOB.yml ]; then
+              npx codechecks all-jobs.yml $CIRCLE_JOB.yml
+            else
+              npx codechecks all-jobs.yml
+            fi
 
 jobs:
   rebuild-docker:
@@ -143,25 +143,18 @@ jobs:
           command: |
             # Build with coverage settings from Dockerfile
             # TODO: Build and run tests from all targets
-            CARGO_INCREMENTAL=0 RUSTFLAGS="$COVFLAGS" cargo +$NIGHTLY build $PACKAGES --tests --all-features
+            CARGO_INCREMENTAL=0 RUSTFLAGS="$COVFLAGS" cargo +$NIGHTLY t --no-run
       - save-sccache-cache
       - run:
           name: Run tests
           command: |
             # TODO: Store test results in json `--format json`
-            CARGO_INCREMENTAL=0 RUSTFLAGS="$COVFLAGS" cargo +$NIGHTLY test $PACKAGES --all-features -- --nocapture
-      # TODO: Submit to CircleCI: https://circleci.com/docs/2.0/collect-test-data/
+            CARGO_INCREMENTAL=0 RUSTFLAGS="$COVFLAGS" cargo +$NIGHTLY t -- --nocapture
       - run:
           name: Combine coverage
           command: |
             zip -0 target/ccov.zip `find . \( -name "*.gc*" \) -print`
             grcov target/ccov.zip $GRCOVFLAGS -t lcov -o target/lcov.info
-      - run:
-          name: Submit to coveralls
-          command: |
-            grcov target/ccov.zip $GRCOVFLAGS -t coveralls+ --commit-sha $CIRCLE_SHA1 --service-name circleci --service-number $CIRCLE_BUILD_NUM --token $COVERALLS_SECRET -o target/coveralls.json
-            cat target/coveralls.json | jq .git.branch=\"$CIRCLE_BRANCH\" > target/coveralls.fix.json
-            curl -S -X POST -F "json_file=@target/coveralls.fix.json" "https://coveralls.io/api/v1/jobs"
       - run:
           name: Submit to codecov
           command: |
@@ -179,8 +172,8 @@ jobs:
           name: Build benchmarks in release mode on stable
           command: |
             # Clean out old builds (if any)
-            rm target/release/benchmark-* || true
-            cargo build --release --bench benchmark $PACKAGES --all-features
+            rm target/release/deps/benchmark-* || true
+            cargo perf_all --no-run
       - save-sccache-cache
       - run:
           name: Test benchmarks
@@ -188,19 +181,13 @@ jobs:
             # Actually running the benchmarks on CI is too noisy. The results
             # would be meaningless. Instead we just run it to make sure they work.
             # Exclude benchmarks that compare against external crates (pulls in a lot of deps)
-            # HACK: We add 'bench' as a feature so dev-dependencies can be included as optional
-            # regular dependencies behind a feature flag. This solves problems with feature
-            # unification.
-            # HACK: We can not specify --features=bench in a workspace environment, instead
-            # we enable all features (which makes sense from a test coverage perspective).
-            # TODO: We don't need an optimized build here, re-using debug build would be ok.
-            cargo bench --bench benchmark $PACKAGES --all-features -- --test
+            cargo perf_all -- --test
       - run:
           # The artifact glob would have picked these up
           name: Cleanup target folder for wokspace glob
-          command: rm target/release/benchmark-*.d
+          command: rm target/release/deps/benchmark-*.d
       - persist_to_workspace:
-          root: target/release
+          root: target/release/deps
           paths:
             - benchmark-*
       - codechecks
@@ -275,18 +262,9 @@ jobs:
           # This forces the build to fail if an accidental dependency on `std`
           # exists. Wasm has a working std, so is not a suitable target here.
           # See: https://forge.rust-lang.org/platform-support.html
-          # We only build libraries and binaries, as we are not interested in
-          # the tests/benchmarks/examples working in no_std
-          name: Check no std packages on nightly on a platform that has no std
+          name: Check no std build
           command: |
-            # HACK: We use a for loop here because cargo across multiple
-            # PACKAGES does not respect feature flags. This also helps
-            # identifying the failing project.
-            for i in $NO_STD_PACKAGES; do
-              pushd $i
-              cargo +$NIGHTLY check --lib --bins --no-default-features --target=thumbv7m-none-eabi
-              popd
-            done
+            cargo nostd_all
       - save-sccache-cache
       - codechecks
   clippy:
@@ -297,9 +275,7 @@ jobs:
       - run:
           name: Lint with clippy
           command: |
-            cargo clippy $PACKAGES --all-targets --all-features
-            # TODO: Run over wasm targets (which are not part of the workspace)
-            # TODO: Clippy different feature sets (std, test, bench, ...)
+            cargo lint
       - save-sccache-cache
       - codechecks
   analysis:
