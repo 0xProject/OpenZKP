@@ -65,5 +65,5 @@ RUN true \
     && cd $HOME/project \
     && CARGO_INCREMENTAL=0 RUSTFLAGS="$COVFLAGS" cargo +$NIGHTLY t --no-run \
     && cargo lint \
-    && cargo nostd_all \
+    && cargo +$NIGHTLY nostd_all \
     && cargo perf_all --no-run
