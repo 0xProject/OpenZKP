@@ -230,7 +230,7 @@ jobs:
           # See: https://forge.rust-lang.org/platform-support.html
           name: Check no std build
           command: |
-            cargo nostd_all
+            cargo +$NIGHTLY nostd_all
       - save-sccache-cache
   clippy:
     executor: docker-rust
