@@ -45,8 +45,7 @@
 // TODO: Provide two versions of hot functions `_inlined` and plain.
 #![allow(clippy::inline_always)]
 // TODO: Document errors
-// TODO: Toggle based on stable/nightly
-// #![allow(clippy::missing_errors_doc)]
+#![allow(clippy::missing_errors_doc)]
 
 // Some routines have assembly optimized versions available for some
 // architectures
