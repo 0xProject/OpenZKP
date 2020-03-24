@@ -51,7 +51,10 @@ inline = [
     "zkp-u256/inline",
     "zkp-primefield/inline"
 ]
-test = []
+test = [
+    "quickcheck",
+    "zkp-primefield/test"
+]
 bench = []
 unsafe_ecdsa = []
 

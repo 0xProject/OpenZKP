@@ -39,7 +39,10 @@ default = [
     "std",
     "inline"
 ]
-bench = []
+bench = [
+    "rand",
+    "use_rand",
+]
 test = [
     "quickcheck"
 ]
