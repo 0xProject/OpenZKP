@@ -1,16 +1,24 @@
 pragma solidity ^0.6.4;
 
 import './ring_buffer.sol';
+import './iterator.sol';
 
 contract MerkleVerifier {
     using RingBuffer for IndexRingBuffer;
+    using Iterators for IteratorBytes32;
 
+    // This function takes a set of data leaves and indexs which are the actual position of the leaf in the tree,
+    // ie relative position + 2^depth. The proof will be preformed in order so the leaves and coresponding indicies,
+    // should be in which ever order will allow them to verify the proof.
+    // NOTE - An empty claim will revert
     function verify_merkle_proof(
         bytes32 root,
         bytes32[] memory leaves,
         uint[] memory indices,
         bytes32[] memory decommitment)
     internal pure returns(bool) {
+        require(leaves.length > 0, "No claimed data");
+        // Setup our index buffer
         IndexRingBuffer memory buffer = IndexRingBuffer({
             front: 0,
             back: leaves.length-1,
@@ -18,18 +26,23 @@ contract MerkleVerifier {
             data: leaves,
             is_empty: false
         });
-        uint decommitment_index = 0;
+        // Setup our iterator
+        IteratorBytes32 memory decommitment_iter = Iterators.init_iterator(decommitment);
 
         while (true) {
            (uint index, bytes32 current_hash) = buffer.remove_front();
 
+            // If the index is one this node is the root so we need to check if the proposed root matches
             if (index == 1) {
                return(root == current_hash);
             }
 
             bool is_left = index % 2 == 0;
+            bool needs_new_node = true;
+            // If this is a left node then the node following it in the queue
+            // may be a sibbling which we want to hash with it.
             if (is_left) {
-                // If it exists we peak at the next node
+                // If it exists we peak at the next node in the queue
                 if (buffer.has_next()) {
                     (uint next_index, bytes32 next_hash) = buffer.peak_front();
 
@@ -42,47 +55,26 @@ contract MerkleVerifier {
                         // Because index is even it is the left hash so to get the next one we do:
                         bytes32 new_hash = merkleTreeHash(current_hash, next_hash);
                         buffer.add_to_rear(index/2, new_hash);
-                    } else {
-                        // Tries to read from decommitment and push new node, if it fails returns false
-                        if (!read_decommitment_and_push(
-                            is_left,
-                            buffer,
-                            decommitment,
-                            decommitment_index,
-                            current_hash,
-                            index
-                        )) {
-                            return false;
-                        }
-                        decommitment_index ++;
+                        // We indicate that a node was pushed, so that another won't be
+                        needs_new_node = false;
                     }
-                } else {
-                    // Tries to read from decommitment and push new node, if it fails returns false
-                    if (!read_decommitment_and_push(
-                        is_left,
-                        buffer,
-                        decommitment,
-                        decommitment_index,
-                        current_hash,
-                        index
-                    )) {
-                        return false;
-                    }
-                    decommitment_index ++;
                 }
-            } else {
-                // Tries to read from decommitment and push new node, if it fails returns false
-                if (!read_decommitment_and_push(
-                    is_left,
-                    buffer,
-                    decommitment,
-                    decommitment_index,
-                    current_hash,
-                    index
-                )) {
+            }
+
+            // Next we try to read from the decommitment and use that info to push a new hash into the queue
+            if (needs_new_node) {
+                // If we don't have more decommitment the proof fails
+                if (!decommitment_iter.has_next()) {
                     return false;
                 }
-                decommitment_index ++;
+                // Reads from decommitment and pushes a new node
+                read_decommitment_and_push(
+                    is_left,
+                    buffer,
+                    decommitment_iter,
+                    current_hash,
+                    index
+                );
             }
         }
     }
@@ -92,27 +84,21 @@ contract MerkleVerifier {
     function read_decommitment_and_push(
         bool is_left,
         IndexRingBuffer memory buffer,
-        bytes32[] memory decommitment,
-        uint decommitment_index,
+        IteratorBytes32 memory decommitment,
         bytes32 current_hash,
-        uint index) internal pure returns(bool) {
-            // We do not want a revert from reading too far into the decommitment.
-            if (decommitment_index >= decommitment.length) {
-                return false;
-            }
-
-            bytes32 new_hash;
-            // Preform the hash
-            if (is_left) {
-                new_hash = merkleTreeHash(current_hash, decommitment[decommitment_index]);
-            } else {
-                new_hash = merkleTreeHash(decommitment[decommitment_index], current_hash);
-            }
-            // Add the new node to the buffer.
-            // Note the buffer strictly shrinks in the algo so we can't overflow the size.
-            buffer.add_to_rear(index/2, new_hash);
-
-            return true;
+        uint index)
+    internal pure {
+        bytes32 next_decommitment = decommitment.next();
+        bytes32 new_hash;
+        // Preform the hash
+        if (is_left) {
+            new_hash = merkleTreeHash(current_hash, next_decommitment);
+        } else {
+            new_hash = merkleTreeHash(next_decommitment, current_hash);
+        }
+        // Add the new node to the buffer.
+        // Note the buffer strictly shrinks in the algo so we can't overflow the size.
+        buffer.add_to_rear(index/2, new_hash);
     }
 
     bytes32 constant HASH_MASK = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF000000000000000000000000;

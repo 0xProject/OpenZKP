@@ -9,7 +9,7 @@ import { MerkleVerifierTest } from "../typechain/MerkleVerifierTest";
 chai.use(solidity);
 const { expect } = chai;
 
-describe("Public coin testing", () => {
+describe("Merkle Testing testing", () => {
   let merkle_contract: any;
   const init_hex = "0x0123456789abcded";
 
@@ -43,6 +43,24 @@ describe("Public coin testing", () => {
       expect(data);
   });
 
+  it("It should verify a valid proof, with no decommitment", async function() {
+    let claimed_data = [
+        "0x00000000000000000000000000000000000000000000000000000000000003e8",
+        "0x0000000000000000000000000000000000000000000000000000000000000533",
+        "0x00000000000000000000000000000000000000000000000000000000000006c0",
+        "0x0000000000000000000000000000000000000000000000000000000000000895",
+        "0x0000000000000000000000000000000000000000000000000000000000000ab8",
+        "0x0000000000000000000000000000000000000000000000000000000000000d2f",
+        "0x0000000000000000000000000000000000000000000000000000000000001000",
+        "0x0000000000000000000000000000000000000000000000000000000000001331"];
+    let data_indexes = [0 + 8, 1 + 8, 2 + 8, 3 + 8, 4 + 8, 5 + 8, 6 + 8, 7 + 8];
+    let root = "0xa438a228f242643e8accf6466333b760095bfe34000000000000000000000000";
+    let decommitment: any[] = [];
+
+    let data = await merkle_contract.verify_merkle_proof_external(root, claimed_data, data_indexes, decommitment);
+    expect(data);
+});
+
   it("It should fail invalid a valid proofs", async function() {
     let claimed_data = [
         "0x0000000000000000000000000000000000000000000000000000000000000533",
@@ -71,6 +89,12 @@ describe("Public coin testing", () => {
     // Fails with wrong values
     data_indexes[0] = 64;
     data = await merkle_contract.verify_merkle_proof_external(root, claimed_data, data_indexes, decommitment.slice(1));
+    expect(!data);
+    // Reverts when called with no data
+    try {
+        await merkle_contract.verify_merkle_proof_external(root, [], [], decommitment);
+    } catch (err) {
+        expect(err.message).to.be.eq("VM Exception while processing transaction: revert No claimed data");
+    }
 });
-
 });
