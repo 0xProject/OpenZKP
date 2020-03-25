@@ -16,7 +16,11 @@ use zkp_u256::{Binary, U256};
 
 // TODO: Clean up redundant clones
 #[allow(clippy::redundant_clone)]
-pub fn tree_layer(leaf: &FieldElement, direction: bool, sibling: &FieldElement) -> Component {
+pub(crate) fn tree_layer(
+    leaf: &FieldElement,
+    direction: bool,
+    sibling: &FieldElement,
+) -> Component {
     use RationalExpression::*;
 
     // Compute trace table
@@ -123,9 +127,9 @@ pub fn tree_layer(leaf: &FieldElement, direction: bool, sibling: &FieldElement) 
 
     // Labels
     let mut labels = HashMap::default();
-    labels.insert("left".to_owned(), (0, Trace(0, 0)));
-    labels.insert("right".to_owned(), (0, Trace(4, 0)));
-    labels.insert("hash".to_owned(), (255, Trace(6, 0)));
+    let _ = labels.insert("left".to_owned(), (0, Trace(0, 0)));
+    let _ = labels.insert("right".to_owned(), (0, Trace(4, 0)));
+    let _ = labels.insert("hash".to_owned(), (255, Trace(6, 0)));
 
     Component {
         trace,
@@ -134,7 +138,7 @@ pub fn tree_layer(leaf: &FieldElement, direction: bool, sibling: &FieldElement) 
     }
 }
 
-pub fn pedersen_merkle(claim: &Claim, witness: &Witness) -> Component {
+pub(crate) fn pedersen_merkle(claim: &Claim, witness: &Witness) -> Component {
     use RationalExpression::*;
     info!("Constructing constraint system...");
 
