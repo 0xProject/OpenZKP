@@ -2,7 +2,7 @@ use crate::{
     polynomial::DensePolynomial, rational_expression::RationalExpression, trace_table::TraceTable,
 };
 use std::{cmp::min, ops::Neg, prelude::v1::*};
-use tiny_keccak::Keccak;
+use tiny_keccak::{Hasher, Keccak};
 use zkp_macros_decl::field_element;
 use zkp_primefield::{invert_batch_src_dst, FieldElement, Inv, One, Pow, Root, Zero};
 use zkp_u256::U256;
@@ -158,7 +158,7 @@ impl AlgebraicGraph {
     pub(crate) fn new(cofactor: &FieldElement, coset_size: usize, trace_blowup: usize) -> Self {
         assert!(coset_size.is_power_of_two());
         // Create seed out of parameters
-        let mut keccak = Keccak::new_keccak256();
+        let mut keccak = Keccak::v256();
         keccak.update(&cofactor.as_montgomery().to_bytes_be());
         keccak.update(&coset_size.to_be_bytes());
         Self {
@@ -182,7 +182,7 @@ impl AlgebraicGraph {
             Constant(a) => a.clone(),
             Trace(i, o) => {
                 // Value = hash(seed, i, o)
-                let mut keccak = Keccak::new_keccak256();
+                let mut keccak = Keccak::v256();
                 keccak.update(&self.seed.as_montgomery().to_bytes_be());
                 keccak.update(&i.to_be_bytes());
                 keccak.update(&o.to_be_bytes());
