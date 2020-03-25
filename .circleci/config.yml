@@ -102,6 +102,8 @@ jobs:
     # Requires nightly because of: https://github.com/rust-lang/rust/issues/42524
     # Requires non-incremental build.
     executor: docker-rust
+    # We need more resources to build the tests
+    resource_class: xlarge
     environment:
       GRCOVFLAGS: -s . --llvm --branch --ignore-not-existing --ignore "/*"
     steps:
@@ -119,7 +121,8 @@ jobs:
           command: |
             # TODO: Store test results in json `--format json`
             # TODO: Fix coverage on zkp-macros-lib
-            CARGO_INCREMENTAL=0 RUSTFLAGS="$COVFLAGS" cargo +$NIGHTLY t --workspace --exclude zkp-macros-lib -- --nocapture
+            # TODO: Enable --nocapture
+            CARGO_INCREMENTAL=0 RUSTFLAGS="$COVFLAGS" cargo +$NIGHTLY t --workspace --exclude zkp-macros-lib 
             cargo +$NIGHTLY t --package zkp-macros-lib
       - run:
           name: Combine coverage

@@ -1,36 +1,15 @@
 [alias]
-t = """
-    hack test
-    --all-targets
-    --ignore-unknown-features
-    --features test
-    """
-b = """
-    hack build
-    --all-targets
-    --ignore-unknown-features
-    --features test
-    """
-lint = """
-    hack clippy
-    --all-targets
-    --ignore-unknown-features
-    --features test
-    --
-    -D warnings
-    """
+t = "test --all-targets"
+b = "build --all-targets"
+lint = "clippy --all-targets -- -D warnings"
+perf = "bench --bench benchmark"
 nostd = """
     hack check
     --lib
     --bins
     --no-default-features
+    --no-dev-deps
     --target=thumbv7m-none-eabi
-    """
-perf = """
-    hack bench
-    --bench benchmark
-    --ignore-unknown-features
-    --features bench
     """
 nostd_all = """
     nostd --workspace

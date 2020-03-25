@@ -125,6 +125,7 @@ impl DensePolynomial {
 
 #[cfg(test)]
 use quickcheck::{Arbitrary, Gen};
+
 #[cfg(test)]
 impl Arbitrary for DensePolynomial {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
