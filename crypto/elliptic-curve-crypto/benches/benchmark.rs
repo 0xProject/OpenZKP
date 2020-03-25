@@ -1,5 +1,5 @@
 #![warn(clippy::all)]
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{black_box, Criterion};
 use zkp_elliptic_curve::ScalarFieldElement;
 use zkp_elliptic_curve_crypto::{private_to_public, sign, verify};
 use zkp_macros_decl::u256h;
@@ -31,10 +31,9 @@ fn ecdsa_verify(crit: &mut Criterion) {
     });
 }
 
-fn criterion_benchmark(c: &mut Criterion) {
-    ecdsa_sign(c);
-    ecdsa_verify(c);
+fn main() {
+    let crit = &mut Criterion::default().configure_from_args();
+    ecdsa_sign(crit);
+    ecdsa_verify(crit);
+    crit.final_summary();
 }
-
-criterion_group!(benches, criterion_benchmark);
-criterion_main!(benches);

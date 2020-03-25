@@ -1,5 +1,5 @@
 #![warn(clippy::all)]
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{black_box, Criterion};
 use rand::prelude::*;
 use zkp_macros_decl::u256h;
 use zkp_u256::{
@@ -177,26 +177,25 @@ fn montgomery_proth_mulmod(crit: &mut Criterion) {
     });
 }
 
-fn criterion_benchmark(c: &mut Criterion) {
-    and(c);
-    shl(c);
-    add(c);
-    sub(c);
-    sqr(c);
-    sqr_full(c);
-    mul(c);
-    mul_full(c);
-    invmod256(c);
-    invmod(c);
-    divrem(c);
-    mulmod(c);
-    montgomery_redc(c);
-    montgomery_mul_redc(c);
-    montgomery_mulmod(c);
-    montgomery_proth_redc(c);
-    montgomery_proth_mul_redc(c);
-    montgomery_proth_mulmod(c);
+fn main() {
+    let crit = &mut Criterion::default().configure_from_args();
+    and(crit);
+    shl(crit);
+    add(crit);
+    sub(crit);
+    sqr(crit);
+    sqr_full(crit);
+    mul(crit);
+    mul_full(crit);
+    invmod256(crit);
+    invmod(crit);
+    divrem(crit);
+    mulmod(crit);
+    montgomery_redc(crit);
+    montgomery_mul_redc(crit);
+    montgomery_mulmod(crit);
+    montgomery_proth_redc(crit);
+    montgomery_proth_mul_redc(crit);
+    montgomery_proth_mulmod(crit);
+    crit.final_summary();
 }
-
-criterion_group!(benches, criterion_benchmark);
-criterion_main!(benches);

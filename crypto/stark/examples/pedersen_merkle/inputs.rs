@@ -56,7 +56,7 @@ use zkp_macros_decl::field_element;
 use zkp_u256::U256;
 
 #[cfg(test)]
-pub const SHORT_CLAIM: Claim = Claim {
+pub(crate) const SHORT_CLAIM: Claim = Claim {
     path_length: 4,
     leaf:        field_element!("00"),
     root:        field_element!("0720d51348b23cb2ca2c3c279ad338b759cbe85aa986f1e3e6e5dad5fff30255"),
@@ -74,7 +74,7 @@ const SHORT_PATH: [FieldElement; 4] = [
 ];
 
 #[cfg(test)]
-pub fn short_witness() -> Witness {
+pub(crate) fn short_witness() -> Witness {
     Witness {
         directions: SHORT_DIRECTIONS.to_vec(),
         path:       SHORT_PATH.to_vec(),

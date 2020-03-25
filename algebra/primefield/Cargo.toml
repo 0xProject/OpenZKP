@@ -53,17 +53,6 @@ default = [
     "std",
     "inline"
 ]
-bench = [
-    "test",
-    "criterion",
-    "zkp-criterion-utils",
-]
-test = [
-    "quickcheck",
-    "quickcheck_macros",
-    "proptest",
-    "zkp-u256/test"
-]
 std = [
     "zkp-macros-decl/std",
     "zkp-u256/std",
@@ -81,6 +70,22 @@ std = [
     "rand_xoshiro",
     "raw-cpuid",
     "rayon",
+]
+test = [
+    "std",
+    "use_rand",
+    "criterion",
+    "zkp-criterion-utils",
+    "quickcheck",
+    "quickcheck_macros",
+    "proptest",
+    "zkp-u256/test"
+]
+bench = [
+    "std",
+    "use_rand",
+    "criterion",
+    "zkp-criterion-utils",
 ]
 # HACK: Cargo does not allow features with the same name as dependencies.
 # this is fine (since optional dependencies are their own feature) but not

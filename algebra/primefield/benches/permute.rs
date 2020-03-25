@@ -1,5 +1,5 @@
 #![warn(clippy::all)]
-use criterion::{black_box, criterion_group, Criterion};
+use criterion::{black_box, Criterion};
 use rand::prelude::*;
 use std::iter::repeat_with;
 use zkp_criterion_utils::log_size_bench;
@@ -8,7 +8,11 @@ use zkp_primefield::{
     FieldElement,
 };
 
+#[cfg(not(test))]
 const SIZES: [usize; 4] = [16_384, 262_144, 4_194_304, 16_777_216];
+
+#[cfg(test)]
+const SIZES: [usize; 1] = [16_384];
 
 fn bench_permute_index(crit: &mut Criterion) {
     crit.bench_function("Permute index", move |bench| {
@@ -25,4 +29,7 @@ fn bench_permute(crit: &mut Criterion) {
     });
 }
 
-criterion_group!(group, bench_permute_index, bench_permute);
+pub fn group(crit: &mut Criterion) {
+    bench_permute_index(crit);
+    bench_permute(crit);
+}
