@@ -1,18 +1,8 @@
 [alias]
-t = """
-    hack test
-    --all-targets
-    """
-b = """
-    hack build
-    --all-targets
-    """
-lint = """
-    hack clippy
-    --all-targets
-    --
-    -D warnings
-    """
+t = "test --all-targets"
+b = "build --all-targets"
+lint = "clippy --all-targets -- -D warnings"
+perf = "bench --bench benchmark"
 nostd = """
     hack check
     --lib
@@ -20,10 +10,6 @@ nostd = """
     --no-default-features
     --no-dev-deps
     --target=thumbv7m-none-eabi
-    """
-perf = """
-    hack bench
-    --bench benchmark
     """
 nostd_all = """
     nostd --workspace
