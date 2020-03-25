@@ -16,8 +16,8 @@ edition = "2018"
 [dependencies]
 crunchy = { version = "0.2.2", default_features = false }
 hex = { version = "0.4.0", optional = true }
-itertools = { version = "0.8.0", default_features = false }
-no-std-compat = { version = "0.1.0", features = [ "alloc" ] }
+itertools = { version = "0.9.0", default_features = false }
+no-std-compat = { version = "0.3.0", features = [ "alloc" ] }
 num-traits = { version = "0.2.10", default_features = false }
 quickcheck = { version = "0.9", optional = true }
 rand = { version = "0.7.2", optional = true }
@@ -27,7 +27,7 @@ zkp-macros-decl = { version = "0.1.0", path = "../../utils/macros-decl", default
 [dev-dependencies]
 criterion = "0.3.0"
 quickcheck = "0.9"
-quickcheck_macros = "0.8"
+quickcheck_macros = "0.9.1"
 
 [[bench]]
 name = "benchmark"

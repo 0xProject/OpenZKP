@@ -1,5 +1,5 @@
 use crate::hash::Hash;
-use tiny_keccak::Keccak;
+use tiny_keccak::{Hasher, Keccak};
 
 pub struct MaskedKeccak(Keccak);
 
@@ -8,7 +8,7 @@ impl MaskedKeccak {
 
     #[must_use]
     pub fn new() -> Self {
-        Self(Keccak::new_keccak256())
+        Self(Keccak::v256())
     }
 
     pub fn update(&mut self, input: &[u8]) {
