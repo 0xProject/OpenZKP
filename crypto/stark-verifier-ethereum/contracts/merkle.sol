@@ -77,8 +77,8 @@ contract MerkleVerifier {
         }
     }
 
-    // This function reads from decomitment and pushes the new node onto the buffer,
-    // It returns true if decommitnet data exists and false if it doesn't.
+    // This function reads from decommitment and pushes the new node onto the buffer,
+    // It returns true if decommitment data exists and false if it doesn't.
     function read_decommitment_and_push(
         bool is_left,
         IndexRingBuffer memory buffer,
