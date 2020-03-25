@@ -7,9 +7,7 @@ contract MerkleVerifier {
     using RingBuffer for IndexRingBuffer;
     using Iterators for IteratorBytes32;
 
-    // This function takes a set of data leaves and indexs which are the actual position of the leaf in the tree,
-    // ie relative position + 2^depth. The proof will be preformed in order so the leaves and coresponding indicies,
-    // should be in which ever order will allow them to verify the proof.
+    // This function takes a set of data leaves and indices are 2^depth + leaf index and must be sorted in ascending order.
     // NOTE - An empty claim will revert
     function verify_merkle_proof(
         bytes32 root,
