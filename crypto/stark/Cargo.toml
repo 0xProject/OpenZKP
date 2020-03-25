@@ -75,7 +75,7 @@ inline = [
 ]
 prover = [
     "std", # TODO: Make prove run in no-std wasm.
-    "zkp-merkle-tree/prover"
+    "zkp-merkle-tree/prover",
 ]
 
 # Allow math in docs
