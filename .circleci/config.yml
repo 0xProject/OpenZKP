@@ -1,29 +1,8 @@
 version: 2.1
 # Validate using `circleci config validate`
 
-# TODO: Build with profile guided optimization. Use benchmarks and select
-#  example projects as guides. This is probably only worthwhile on `master`.
-#  See https://doc.rust-lang.org/rustc/profile-guided-optimization.html
-
 # TODO: Push relevant packages to crates.io when a version of master is tagged.
 
-# TODO: Generate rustdoc and host somewhere
-# TODO: Report documentation coverage.
-# TODO: Codecheck on documentation coverage changes.
-# TODO: Codecheck on benchmark changes.
-# TODO: Submit all codecheck from `master` stats to Metabase.
-
-# TODO: Sync `TODO` and other comments.
-
-# TODO: Minimal version testing.
-#       https://doc.rust-lang.org/cargo/reference/unstable.html#minimal-versions
-
-# TODO: Configure Quickcheck to use more rounds and require passing tests.
-#       Using QUICKCHECK_TESTS, QUICKCHECK_MAX_TESTS, & QUICKCHECK_MIN_TESTS_PASSED
-#       https://github.com/BurntSushi/quickcheck#more-thorough-checking
-
-
-# OPT: Create docker images tailored for each job
 executors:
   minimal:
     docker:
@@ -36,7 +15,7 @@ executors:
       # Necessary for `docker manifest` subcommand
       DOCKER_CLI_EXPERIMENTAL: enabled
       # Bump the tag version whenever changes are made.
-      IMAGE: &build_image "0xchain/rust-build-env:9"
+      IMAGE: &build_image "0xchain/rust-build-env:10"
   docker-rust:
     docker:
       - image: *build_image
@@ -97,17 +76,6 @@ commands:
           key: sccache-cache-v4-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ epoch }}
           paths:
             - "~/.cache/sccache"
-  codechecks:
-    steps:
-      - run:
-          name: Run Codechecks
-          command: |
-              pushd .circleci/codechecks
-              if [ -f $CIRCLE_JOB.yml ]; then
-                npx codechecks all-jobs.yml $CIRCLE_JOB.yml
-              else
-                npx codechecks all-jobs.yml
-              fi
 
 jobs:
   rebuild-docker:
@@ -144,25 +112,20 @@ jobs:
           command: |
             # Build with coverage settings from Dockerfile
             # TODO: Build and run tests from all targets
-            CARGO_INCREMENTAL=0 RUSTFLAGS="$COVFLAGS" cargo +$NIGHTLY build $PACKAGES --tests --all-features
+            CARGO_INCREMENTAL=0 RUSTFLAGS="$COVFLAGS" cargo +$NIGHTLY t --no-run
       - save-sccache-cache
       - run:
           name: Run tests
           command: |
             # TODO: Store test results in json `--format json`
-            CARGO_INCREMENTAL=0 RUSTFLAGS="$COVFLAGS" cargo +$NIGHTLY test $PACKAGES --all-features -- --nocapture
-      # TODO: Submit to CircleCI: https://circleci.com/docs/2.0/collect-test-data/
+            # TODO: Fix coverage on zkp-macros-lib
+            CARGO_INCREMENTAL=0 RUSTFLAGS="$COVFLAGS" cargo +$NIGHTLY t --workspace --exclude zkp-macros-lib -- --nocapture
+            cargo +$NIGHTLY t --package zkp-macros-lib
       - run:
           name: Combine coverage
           command: |
             zip -0 target/ccov.zip `find . \( -name "*.gc*" \) -print`
             grcov target/ccov.zip $GRCOVFLAGS -t lcov -o target/lcov.info
-      - run:
-          name: Submit to coveralls
-          command: |
-            grcov target/ccov.zip $GRCOVFLAGS -t coveralls+ --commit-sha $CIRCLE_SHA1 --service-name circleci --service-number $CIRCLE_BUILD_NUM --token $COVERALLS_SECRET -o target/coveralls.json
-            cat target/coveralls.json | jq .git.branch=\"$CIRCLE_BRANCH\" > target/coveralls.fix.json
-            curl -S -X POST -F "json_file=@target/coveralls.fix.json" "https://coveralls.io/api/v1/jobs"
       - run:
           name: Submit to codecov
           command: |
@@ -170,7 +133,6 @@ jobs:
       - store_artifacts:
           path: target/lcov.info
           destination: lcov.info
-      - codechecks
   benchmarks:
     executor: docker-rust
     steps:
@@ -180,8 +142,8 @@ jobs:
           name: Build benchmarks in release mode on stable
           command: |
             # Clean out old builds (if any)
-            rm target/release/benchmark-* || true
-            cargo build --release --bench benchmark $PACKAGES --all-features
+            rm target/release/deps/benchmark-* || true
+            cargo perf_all --no-run
       - save-sccache-cache
       - run:
           name: Test benchmarks
@@ -189,22 +151,15 @@ jobs:
             # Actually running the benchmarks on CI is too noisy. The results
             # would be meaningless. Instead we just run it to make sure they work.
             # Exclude benchmarks that compare against external crates (pulls in a lot of deps)
-            # HACK: We add 'bench' as a feature so dev-dependencies can be included as optional
-            # regular dependencies behind a feature flag. This solves problems with feature
-            # unification.
-            # HACK: We can not specify --features=bench in a workspace environment, instead
-            # we enable all features (which makes sense from a test coverage perspective).
-            # TODO: We don't need an optimized build here, re-using debug build would be ok.
-            cargo bench --bench benchmark $PACKAGES --all-features -- --test
+            cargo perf_all -- --test
       - run:
           # The artifact glob would have picked these up
           name: Cleanup target folder for wokspace glob
-          command: rm target/release/benchmark-*.d
+          command: rm target/release/deps/benchmark-*.d
       - persist_to_workspace:
-          root: target/release
+          root: target/release/deps
           paths:
             - benchmark-*
-      - codechecks
   benchmark-ec2:
     # Run benchmarks on AWS EC2
     # See https://engineering.mongodb.com/post/reducing-variability-in-performance-tests-on-ec2-setup-and-key-results
@@ -232,7 +187,7 @@ jobs:
               echo "No previous results cached"
             for bench in ./$CIRCLE_BUILD_NUM/*; do
               # Note: works better if gnuplot is installed on the machine
-              ssh $SSH_OPT $HOST $bench --color always
+              ssh $SSH_OPT $HOST $bench --bench --color always
             done
             ssh $SSH_OPT $HOST tar czf ./criterion.tgz ./target/criterion
             scp $SSH_OPT -r $HOST:~/criterion.tgz .
@@ -264,7 +219,6 @@ jobs:
           name: Lint with rustformat nightly
           command: cargo +$NIGHTLY fmt --all -- --check
           # TODO: Run over wasm targets (which are not part of the workspace)
-      - codechecks
   build-no-std:
     executor: docker-rust
     steps:
@@ -276,20 +230,10 @@ jobs:
           # This forces the build to fail if an accidental dependency on `std`
           # exists. Wasm has a working std, so is not a suitable target here.
           # See: https://forge.rust-lang.org/platform-support.html
-          # We only build libraries and binaries, as we are not interested in
-          # the tests/benchmarks/examples working in no_std
-          name: Check no std packages on nightly on a platform that has no std
+          name: Check no std build
           command: |
-            # HACK: We use a for loop here because cargo across multiple
-            # PACKAGES does not respect feature flags. This also helps
-            # identifying the failing project.
-            for i in $NO_STD_PACKAGES; do
-              pushd $i
-              cargo +$NIGHTLY check --lib --bins --no-default-features --target=thumbv7m-none-eabi
-              popd
-            done
+            cargo +$NIGHTLY nostd_all
       - save-sccache-cache
-      - codechecks
   clippy:
     executor: docker-rust
     steps:
@@ -298,11 +242,8 @@ jobs:
       - run:
           name: Lint with clippy
           command: |
-            cargo clippy $PACKAGES --all-targets --all-features
-            # TODO: Run over wasm targets (which are not part of the workspace)
-            # TODO: Clippy different feature sets (std, test, bench, ...)
+            cargo lint
       - save-sccache-cache
-      - codechecks
   analysis:
     executor: docker-rust
     steps:
@@ -310,39 +251,22 @@ jobs:
       - run:
           name: Check lints.rs copies
           command: |
-            # Make sure all lib.rs and main.rs files start with the same prefix
-            correct=$(cat ./lints.rs)
-            lines=$(wc -l < ./lints.rs)
-            files=$(find . \( -name target -prune \) -o \( -name lib.rs -o -name main.rs \) -print)
-            for file in $files; do
-                start=$(head -n $lines $file)
-                if [ "$start" != "$correct" ]; then
-                    echo "Incorrect lints in $file:"
-                    echo "$start" | diff -wb -U3 --minimal --color - ./lints.rs || true
-                    echo ""
-                fi
-            done
+            ./lints_check.sh
       - run:
           name: Check for vulnerabilities in workspace
           command: |
+            # TODO: Add --deny-warnings
+            # Pending <https://github.com/rust-lang-nursery/lazy-static.rs/issues/163>
             cargo generate-lockfile
             cargo audit
-      # TODO: This step fails
-      # - run:
-      #     name: Check for use of unsafe in workspace
-      #     command: |
-      #       workspace=$(toml2json < ./Cargo.toml  | jq '.workspace.members[]' -r)
-      #       for member in $workspace; do
-      #         pushd $member
-      #         cargo geiger --all-features --all-targets
-      #         popd
-      #       done
-      - codechecks
-      # TODO: Fix
-      # - run:
-      #     name: Check for outdated dependencies
-      #     command: |
-      #       cargo outdated
+      - run:
+          name: Check for use of unsafe in workspace
+          command: |
+            cargo hack geiger
+      - run:
+          name: Check for outdated dependencies
+          command: |
+            cargo outdated
   accept:
     executor: minimal
     steps:

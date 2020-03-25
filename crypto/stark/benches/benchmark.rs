@@ -1,5 +1,5 @@
 #![warn(clippy::all)]
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{black_box, Criterion};
 use zkp_macros_decl::field_element;
 use zkp_primefield::{FieldElement, Root};
 use zkp_stark::{prove, verify, Constraints, Provable, RationalExpression, TraceTable, Verifiable};
@@ -90,14 +90,9 @@ fn bench_verify(crit: &mut Criterion) {
     });
 }
 
-fn criterion_benchmark(c: &mut Criterion) {
-    bench_verify(c);
+fn main() {
+    let crit = &mut Criterion::default().configure_from_args();
+    bench_verify(crit);
+    bench_prove(crit);
+    crit.final_summary();
 }
-
-criterion_group!(benches, criterion_benchmark);
-criterion_group! {
-   name = slow_benches;
-   config = Criterion::default().sample_size(20);
-   targets = bench_prove
-}
-criterion_main!(benches, slow_benches);

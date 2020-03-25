@@ -3,7 +3,7 @@
 // For clippy lints see: https://rust-lang.github.io/rust-clippy/master
 // For rustc lints see: https://doc.rust-lang.org/rustc/lints/index.html
 #![cfg_attr(not(feature = "std"), no_std)]
-// #![forbid(unsafe_code)] // Allocators are by nature unsafe
+#![forbid(unsafe_code)]
 #![warn(
     // Enable sets of warnings
     clippy::all,

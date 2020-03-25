@@ -1,9 +1,16 @@
 #![warn(clippy::all)]
-use criterion::criterion_main;
+use criterion::Criterion;
 
 mod fft;
 mod field;
 mod permute;
 mod transpose;
 
-criterion_main!(field::group, fft::group, transpose::group, permute::group);
+fn main() {
+    let crit = &mut Criterion::default().configure_from_args();
+    field::group(crit);
+    fft::group(crit);
+    transpose::group(crit);
+    permute::group(crit);
+    crit.final_summary();
+}

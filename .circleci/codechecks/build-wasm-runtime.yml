@@ -1,7 +1,0 @@
-checks:
-  - name: build-size-watcher
-    options:
-      name: runtime.wasm
-      gzip: false
-      files:
-        - path: "../../substrate-runtime-wasm/target/runtime.wasm"

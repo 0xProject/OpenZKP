@@ -1,5 +1,5 @@
 #![warn(clippy::all)]
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{black_box, Criterion};
 use zkp_elliptic_curve::{mul, Affine, Jacobian, ScalarFieldElement};
 use zkp_macros_decl::u256h;
 use zkp_primefield::FieldElement;
@@ -201,18 +201,17 @@ fn wnaf_mul_affine(crit: &mut Criterion) {
     });
 }
 
-fn criterion_benchmark(c: &mut Criterion) {
-    curve_add(c);
-    curve_dbl(c);
-    curve_mul(c);
-    jacobian_add(c);
-    jacobian_add_affine(c);
-    jacobian_dbl(c);
-    jacobian_mul(c);
-    jacobian_mul_affine(c);
-    jacobian_to_affine(c);
-    wnaf_mul_affine(c);
+fn main() {
+    let crit = &mut Criterion::default().configure_from_args();
+    curve_add(crit);
+    curve_dbl(crit);
+    curve_mul(crit);
+    jacobian_add(crit);
+    jacobian_add_affine(crit);
+    jacobian_dbl(crit);
+    jacobian_mul(crit);
+    jacobian_mul_affine(crit);
+    jacobian_to_affine(crit);
+    wnaf_mul_affine(crit);
+    crit.final_summary();
 }
-
-criterion_group!(benches, criterion_benchmark);
-criterion_main!(benches);
