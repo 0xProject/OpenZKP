@@ -102,16 +102,20 @@ jobs:
     # Requires nightly because of: https://github.com/rust-lang/rust/issues/42524
     # Requires non-incremental build.
     executor: docker-rust
+    # We need more resources to build the tests
+    resource_class: xlarge
     environment:
       GRCOVFLAGS: -s . --llvm --branch --ignore-not-existing --ignore "/*"
     steps:
       - checkout
+      - enable-sccache
       - run:
           name: Build tests with coverage
           command: |
             # Build with coverage settings from Dockerfile
             # TODO: Build and run tests from all targets
             CARGO_INCREMENTAL=0 RUSTFLAGS="$COVFLAGS" cargo +$NIGHTLY t --no-run
+      - save-sccache-cache
       - run:
           name: Run tests
           command: |
