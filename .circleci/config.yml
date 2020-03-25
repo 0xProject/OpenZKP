@@ -119,7 +119,8 @@ jobs:
           command: |
             # TODO: Store test results in json `--format json`
             # TODO: Fix coverage on zkp-macros-lib
-            CARGO_INCREMENTAL=0 RUSTFLAGS="$COVFLAGS" cargo +$NIGHTLY t --workspace --exclude zkp-macros-lib -- --nocapture
+            # TODO: Enable --nocapture
+            CARGO_INCREMENTAL=0 RUSTFLAGS="$COVFLAGS" cargo +$NIGHTLY t --workspace --exclude zkp-macros-lib 
             cargo +$NIGHTLY t --package zkp-macros-lib
       - run:
           name: Combine coverage
