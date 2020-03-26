@@ -38,4 +38,4 @@ node_modules
 yarn-error.log
 
 # Auto generated solidity files shouldn't be commited
-contracts/
+crypto/stark/contracts/

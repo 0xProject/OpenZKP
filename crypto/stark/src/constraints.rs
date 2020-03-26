@@ -85,6 +85,10 @@ impl Constraints {
         fri_layout
     }
 
+    // False positive
+    // TODO: Remove once [1] clears
+    // [1]: <https://github.com/rust-lang/rust-clippy/issues/5351>
+    #[allow(clippy::unused_self)]
     pub fn from_expressions(
         (trace_nrows, trace_ncolumns): (usize, usize),
         channel_seed: Vec<u8>,
@@ -107,6 +111,10 @@ impl Constraints {
         })
     }
 
+    // False positive
+    // TODO: Remove once [1] clears
+    // [1]: <https://github.com/rust-lang/rust-clippy/issues/5351>
+    #[allow(clippy::unused_self)]
     pub fn from_expressions_detailed(
         (trace_nrows, trace_ncolumns): (usize, usize),
         channel_seed: Vec<u8>,

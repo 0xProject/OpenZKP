@@ -822,7 +822,7 @@ fn decommit_fri_layers_and_trees(
 mod tests {
     use super::*;
     use crate::{traits::tests::Recurrance, verify, Provable, Verifiable};
-    use tiny_keccak::sha3_256;
+    use tiny_keccak::{Hasher, Sha3};
     use zkp_macros_decl::{field_element, hex, u256h};
     use zkp_primefield::{fft::permute_index, geometric_series::geometric_series};
     use zkp_u256::U256;
@@ -886,8 +886,13 @@ mod tests {
         constraints.num_queries = 20;
         constraints.fri_layout = vec![3, 2];
         let proof = prove(&constraints, &trace).unwrap();
+
+        let mut output = [0; 32];
+        let mut sha3 = Sha3::v256();
+        sha3.update(proof.as_bytes());
+        sha3.finalize(&mut output);
         assert_eq!(
-            sha3_256(proof.as_bytes()),
+            output,
             hex!("4e8896267a9649230ebb1ffbdc5c6e6a088a80a06073565e36437a5738745107")
         )
     }

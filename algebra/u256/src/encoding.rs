@@ -5,8 +5,6 @@ use std::prelude::v1::*;
 use std::{fmt, format};
 
 impl U256 {
-    // Can not use Self inside the macro
-    #[allow(clippy::use_self)]
     pub fn from_decimal_str(s: &str) -> Result<Self, ParseError> {
         // ceil(2^256 / 10)
         let max10: Self = Self::from_limbs([
