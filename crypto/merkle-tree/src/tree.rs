@@ -192,7 +192,7 @@ mod tests {
     use super::*;
     use quickcheck_macros::quickcheck;
     use zkp_macros_decl::hex;
-    use zkp_u256::{Pow, U256};
+    use zkp_u256::U256;
 
     #[test]
     fn test_explicit_values() {
