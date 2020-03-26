@@ -173,13 +173,11 @@ pub(crate) fn mul_redc_inline<M: MontgomeryParameters<UInt = U256>>(x: &U256, y:
     r
 }
 
-// Quickcheck requires pass-by-value
-#[allow(clippy::needless_pass_by_value)]
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::MontgomeryParameters;
-    use quickcheck_macros::quickcheck;
+    use proptest::prelude::*;
     use zkp_macros_decl::u256h;
 
     struct PrimeField();
@@ -198,13 +196,15 @@ mod tests {
         const R3: U256 = u256h!("038e5f79873c0a6df47d84f8363000187545706677ffcc06cc7177d1406df18e");
     }
 
-    #[quickcheck]
-    fn test_to_montgomery_const_consistent(n: U256) {
-        let result =
-            to_montgomery_const(&n, &PrimeField::MODULUS, PrimeField::M64, &PrimeField::R2);
-        let expected = mul_redc_inline::<PrimeField>(&n, &PrimeField::R2);
-        assert_eq!(result, expected);
-    }
+    proptest!(
+        #[test]
+        fn test_to_montgomery_const_consistent(n: U256) {
+            let result =
+                to_montgomery_const(&n, &PrimeField::MODULUS, PrimeField::M64, &PrimeField::R2);
+            let expected = mul_redc_inline::<PrimeField>(&n, &PrimeField::R2);
+            assert_eq!(result, expected);
+        }
+    );
 
     #[test]
     fn test_redc() {
