@@ -1,29 +1,30 @@
 pragma solidity ^0.6.4;
 
-// This memory pointer contains an index and a refrence to data
-// It will work as an iterator with a .next() function which returns
-// the next data, and a .has_next() which returns a bool;
-// NOTE - No solidity generics means we will need iterators for each type.
-struct IteratorBytes32 {
-    uint index;
-    bytes32[] data_pointer;
-}
 
 library Iterators {
+    // This memory pointer contains an index and a refrence to data
+    // It will work as an iterator with a .next() function which returns
+    // the next data, and a .has_next() which returns a bool;
+    // NOTE - No solidity generics means we will need iterators for each type.
+    struct IteratorBytes32 {
+        uint256 index;
+        bytes32[] data_pointer;
+    }
+
     // Creates a memory refrence to an interator which starts at the front of
     // this array.
-    function init_iterator(bytes32[] memory data) internal pure returns(IteratorBytes32 memory result) {
+    function init_iterator(bytes32[] memory data) internal pure returns (IteratorBytes32 memory result) {
         result.data_pointer = data;
         result.index = 0;
     }
 
     // Returns the next element in the array or reverts if called on an empty iterator.
-    function next(IteratorBytes32 memory iterator) internal pure returns(bytes32) {
+    function next(IteratorBytes32 memory iterator) internal pure returns (bytes32) {
         return iterator.data_pointer[iterator.index];
     }
 
     // Returns a bool indicating that this iterator has a next element.
-    function has_next(IteratorBytes32 memory iterator) internal pure returns(bool) {
+    function has_next(IteratorBytes32 memory iterator) internal pure returns (bool) {
         return iterator.index < iterator.data_pointer.length;
     }
 }
