@@ -3,6 +3,8 @@ use proptest_derive::Arbitrary;
 use std::{cmp::Ordering, prelude::v1::*, u64};
 
 #[derive(PartialEq, Eq, Clone, Default, Hash)]
+// TODO: Generate a quasi-random sequence.
+// See http://extremelearning.com.au/unreasonable-effectiveness-of-quasirandom-sequences/
 #[cfg_attr(any(test, feature = "proptest"), derive(Arbitrary))]
 #[cfg_attr(any(test, feature = "proptest"), proptest(no_params))]
 pub struct U256([u64; 4]);
