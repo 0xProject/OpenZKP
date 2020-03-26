@@ -1,7 +1,7 @@
-/* tslint:disable:custom-no-magic-numbers only-arrow-functions ordered-imports */
+/* tslint:disable:custom-no-magic-numbers */
+import {waffle} from '@nomiclabs/buidler';
 import chai from 'chai';
 import {deployContract, solidity} from 'ethereum-waffle';
-import {waffle} from '@nomiclabs/buidler';
 
 import MerkleVerifierTestArtifact from '../artifacts/MerkleVerifierTest.json';
 import {MerkleVerifierTest} from '../typechain/MerkleVerifierTest';
@@ -15,11 +15,11 @@ describe('Merkle Testing testing', () => {
     const provider = waffle.provider;
     const [wallet] = provider.getWallets();
 
-    before(async function(): Promise<any> {
+    before(async () => {
         merkle_contract = (await deployContract(wallet, MerkleVerifierTestArtifact)) as MerkleVerifierTest;
     });
 
-    it('It should verify a valid proof', async function(): Promise<any> {
+    it('It should verify a valid proof', async () => {
         const claimed_data = [
             '0x0000000000000000000000000000000000000000000000000000000000000533',
             '0x000000000000000000000000000000000000000000000000000000000000242d',
@@ -43,7 +43,7 @@ describe('Merkle Testing testing', () => {
         expect(data);
     });
 
-    it('It should verify a valid proof, with no decommitment', async function(): Promise<any> {
+    it('It should verify a valid proof, with no decommitment', async () => {
         const claimed_data = [
             '0x00000000000000000000000000000000000000000000000000000000000003e8',
             '0x0000000000000000000000000000000000000000000000000000000000000533',
@@ -62,7 +62,7 @@ describe('Merkle Testing testing', () => {
         expect(data);
     });
 
-    it('It should fail invalid a valid proofs', async function(): Promise<any> {
+    it('It should fail invalid a valid proofs', async () => {
         const claimed_data = [
             '0x0000000000000000000000000000000000000000000000000000000000000533',
             '0x000000000000000000000000000000000000000000000000000000000000242d',

@@ -43,6 +43,7 @@
     "prettier": "npm run-script prettier:sol && npm run-script prettier:ts",
     "prettier:ts": "prettier --write '**/*.ts' --config .prettierrc",
     "prettier:sol": "prettier --write **/*.sol",
+    "fix:ts": "tslint --fix --format stylish --project .",
     "solhint": "./node_modules/.bin/solhint -f table contracts/*.sol contracts/**/*.sol"
   },
   "author": "Paul Vienhage",

@@ -1,11 +1,11 @@
-/* tslint:disable:custom-no-magic-numbers only-arrow-functions ordered-imports */
-import {deployContract, solidity} from 'ethereum-waffle';
 import {waffle} from '@nomiclabs/buidler';
 import chai from 'chai';
-import {txToEventsAsync} from './test_utils';
+import {deployContract, solidity} from 'ethereum-waffle';
 
 import PublicCoinTestingArtifact from '../artifacts/PublicCoinTesting.json';
 import {PublicCoinTesting} from '../typechain/PublicCoinTesting';
+
+import {txToEventsAsync} from './test_utils';
 
 chai.use(solidity);
 const {expect} = chai;
@@ -17,11 +17,11 @@ describe('Public coin testing', () => {
     const provider = waffle.provider;
     const [wallet] = provider.getWallets();
 
-    before(async function(): Promise<any> {
+    before(async () => {
         coin_contract = (await deployContract(wallet, PublicCoinTestingArtifact)) as PublicCoinTesting;
     });
 
-    it('Should read the correct data from multiple reads', async function(): Promise<any> {
+    it('Should read the correct data from multiple reads', async () => {
         const events = await txToEventsAsync(coin_contract.init_and_read(init_hex, 3));
 
         expect(events[0].data).to.eq('0x7d84f75ca3e9328b92123c1790834ee0084e02c09b379c6f95c5d2ae8739b9c8');
@@ -29,7 +29,7 @@ describe('Public coin testing', () => {
         expect(events[2].data).to.eq('0x2389a47fe0e1e5f9c05d8dcb27b069b67b1c7ec61a5c0a3f54d81aea83d2c8f0');
     });
 
-    it('Should have the correct digest after a write', async function(): Promise<any> {
+    it('Should have the correct digest after a write', async () => {
         const events = await txToEventsAsync(
             coin_contract.init_and_write(
                 init_hex,
