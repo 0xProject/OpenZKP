@@ -1,7 +1,6 @@
 use super::traits::Component;
 use crate::{RationalExpression, TraceTable};
 use std::collections::HashMap;
-use zkp_primefield::{FieldElement, Root};
 struct Horizontal<Left, Right>
 where
     Left: Component,
@@ -45,18 +44,15 @@ where
     type Claim = (Left::Claim, Right::Claim);
     type Witness = (Left::Witness, Right::Witness);
 
-    fn constraints(
+    fn trace(
         &self,
         claim: &Self::Claim,
+        witness: &Self::Witness,
     ) -> (
-        (usize, usize),
         Vec<RationalExpression>,
         HashMap<String, (usize, RationalExpression)>,
+        TraceTable,
     ) {
-        unimplemented!()
-    }
-
-    fn trace(&self, claim: &Self::Claim, witness: &Self::Witness) -> TraceTable {
         unimplemented!()
     }
 }

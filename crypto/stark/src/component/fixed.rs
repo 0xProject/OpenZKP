@@ -17,23 +17,20 @@ impl Component for FixedComponent {
     type Claim = ();
     type Witness = ();
 
-    fn constraints(
+    fn trace(
         &self,
-        _claim: &Self::Claim,
+        claim: &Self::Claim,
+        witness: &Self::Witness,
     ) -> (
-        (usize, usize),
         Vec<RationalExpression>,
         HashMap<String, (usize, RationalExpression)>,
+        TraceTable,
     ) {
         (
             (self.trace.num_rows(), self.trace.num_columns()),
             self.constraints.clone(),
             self.labels.clone(),
         )
-    }
-
-    fn trace(&self, _claim: &Self::Claim, _witness: &Self::Witness) -> TraceTable {
-        self.trace.clone()
     }
 }
 
