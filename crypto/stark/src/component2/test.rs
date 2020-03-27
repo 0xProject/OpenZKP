@@ -105,19 +105,14 @@ mod tests {
     use proptest::prelude::*;
     use zkp_u256::U256;
 
-    pub(super) fn arb_field_element() -> impl Strategy<Value = FieldElement> {
-        (any::<u64>(), any::<u64>(), any::<u64>(), any::<u64>())
-            .prop_map(move |(a, b, c, d)| FieldElement::from(U256::from_limbs([a, b, c, d])))
-    }
-
     #[test]
     fn test_check() {
         proptest!(|(
             log_rows in 0_usize..10,
             cols in 0_usize..10,
-            seed in arb_field_element(),
-            claim in arb_field_element(),
-            witness in arb_field_element()
+            seed: FieldElement,
+            claim: FieldElement,
+            witness: FieldElement
         )| {
             let rows = 1 << log_rows;
             let component = Test::new(rows, cols, &seed);
@@ -131,9 +126,9 @@ mod tests {
         proptest!(config, |(
             log_rows in 1_usize..10,
             cols in 1_usize..10,
-            seed in arb_field_element(),
-            claim in arb_field_element(),
-            witness in arb_field_element()
+            seed: FieldElement,
+            claim: FieldElement,
+            witness: FieldElement
         )| {
             let rows = 1 << log_rows;
             let component = Test::new(rows, cols, &seed);
