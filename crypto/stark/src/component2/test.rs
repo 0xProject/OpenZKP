@@ -19,7 +19,7 @@ pub(crate) struct Test {
 }
 
 impl Test {
-    fn new(rows: usize, columns: usize, seed: &FieldElement) -> Test {
+    pub fn new(rows: usize, columns: usize, seed: &FieldElement) -> Test {
         let seed = seed.clone();
         Test {
             rows,

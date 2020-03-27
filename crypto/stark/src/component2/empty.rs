@@ -4,7 +4,7 @@ use crate::{RationalExpression, TraceTable};
 pub struct Empty(usize, usize);
 
 impl Empty {
-    fn new(rows: usize, columns: usize) -> Empty {
+    pub fn new(rows: usize, columns: usize) -> Empty {
         Empty(rows, columns)
     }
 }

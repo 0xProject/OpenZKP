@@ -16,15 +16,15 @@ where
     Left: Component,
     Right: Component,
 {
-    fn new(left: Left, right: Right) -> Self {
+    pub fn new(left: Left, right: Right) -> Self {
         Horizontal { left, right }
     }
 
-    fn left(&self) -> &Left {
+    pub fn left(&self) -> &Left {
         &self.left
     }
 
-    fn right(&self) -> &Right {
+    pub fn right(&self) -> &Right {
         &self.right
     }
 }
@@ -81,5 +81,31 @@ where
             }
         }
         trace
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{super::test::Test, *};
+    use proptest::prelude::*;
+    use zkp_u256::U256;
+
+    #[test]
+    fn test_check() {
+        proptest!(|(
+            log_rows in 0_usize..10,
+            cols in 0_usize..10,
+            seed: FieldElement,
+            claim: FieldElement,
+            witness: FieldElement
+        )| {
+            let rows = 1 << log_rows;
+            let left = Test::new(rows, cols, &seed);
+            let right = Test::new(rows, cols, &seed);
+            let component = Horizontal::new(left, right);
+            let claim = (claim.clone(), claim.clone());
+            let witness = (witness.clone(), witness.clone());
+            prop_assert_eq!(component.check(&claim, &witness), Ok(()));
+        });
     }
 }
