@@ -28,7 +28,7 @@ zkp-u256 = { version = "0.1.0", path = "../u256", default-features = false }
 criterion = "0.3.0"
 proptest = "0.9.5"
 zkp-primefield = { version = "0.1.0", path = "../primefield", features = ["proptest"]  }
-zkp-u256 = { version = "0.1.0", path = "../u256", features = ["proptest"]  }
+zkp-u256 = { version = "0.1.0", path = "../u256", features = ["proptest", "proptest-derive"]  }
 
 [[bench]]
 name = "benchmark"
