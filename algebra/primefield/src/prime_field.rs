@@ -434,8 +434,6 @@ where
     }
 }
 
-// We allow these in tests for readability/ease of editing
-#[allow(clippy::redundant_clone)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -558,7 +556,8 @@ mod tests {
 
         #[test]
         fn inverse_mul(a: FieldElement) {
-            match a.inv() {
+            let inverse = a.inv();
+            match inverse {
                 None => prop_assert!(a.is_zero()),
                 Some(ai) => prop_assert!((a * ai).is_one()),
             }
@@ -617,7 +616,6 @@ mod tests {
     fn roots_of_unity_squared() {
         let powers_of_two = (0..193).map(|n| U256::ONE << n);
         let roots_of_unity: Vec<_> = powers_of_two
-            .clone()
             .map(|n| FieldElement::root(&n).unwrap())
             .collect();
 
