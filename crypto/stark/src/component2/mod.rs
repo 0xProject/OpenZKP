@@ -1,4 +1,10 @@
-use crate::{constraint_check::check_constraints, Constraints, RationalExpression, TraceTable};
+use crate::{
+    constraint_check::check_constraints,
+    proof::Proof,
+    prover::prove,
+    verifier::{verify, Error as VerifierError},
+    Constraints, ProverError, RationalExpression, TraceTable,
+};
 
 pub trait Component {
     type Claim;
@@ -10,15 +16,23 @@ pub trait Component {
 
     fn trace(&self, claim: &Self::Claim, witness: &Self::Witness) -> TraceTable;
 
-    fn prove(&self, claim: &Self::Claim, witness: &Self::Witness) {
-        let _constraints = self.constraints(claim);
-        let _trace = self.trace(claim, witness);
-        unimplemented!()
+    fn prove(&self, claim: &Self::Claim, witness: &Self::Witness) -> Result<Proof, ProverError> {
+        let trace_nrows = self.dimensions();
+        let channel_seed = Vec::new();
+        let expressions = self.constraints(claim);
+        let trace = self.trace(claim, witness);
+        let constraints =
+            Constraints::from_expressions(trace_nrows, channel_seed, expressions).unwrap();
+        prove(&constraints, &trace)
     }
 
-    fn verify(&self, claim: &Self::Claim) {
-        let _constraints = self.constraints(claim);
-        unimplemented!()
+    fn verify(&self, claim: &Self::Claim, proof: &Proof) -> Result<(), VerifierError> {
+        let trace_nrows = self.dimensions();
+        let channel_seed = Vec::new();
+        let expressions = self.constraints(claim);
+        let constraints =
+            Constraints::from_expressions(trace_nrows, channel_seed, expressions).unwrap();
+        verify(&constraints, proof)
     }
 
     fn check(&self, claim: &Self::Claim, witness: &Self::Witness) -> Result<(), (usize, usize)> {
