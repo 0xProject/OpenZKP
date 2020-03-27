@@ -231,19 +231,6 @@ curve_operations!(Jacobian);
 commutative_binop!(Jacobian, Add, add, AddAssign, add_assign);
 noncommutative_binop!(Jacobian, Sub, sub, SubAssign, sub_assign);
 
-#[cfg(any(test, feature = "quickcheck"))]
-use quickcheck::{Arbitrary, Gen};
-
-#[cfg(any(test, feature = "quickcheck"))]
-impl Arbitrary for Jacobian {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
-        // To force Z to be non trivial we add two points.
-        let mut r = Self::from(Affine::arbitrary(g));
-        r += &Affine::arbitrary(g);
-        r
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

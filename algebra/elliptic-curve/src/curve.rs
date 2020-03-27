@@ -195,24 +195,6 @@ curve_operations!(Affine);
 commutative_binop!(Affine, Add, add, AddAssign, add_assign);
 noncommutative_binop!(Affine, Sub, sub, SubAssign, sub_assign);
 
-#[cfg(any(test, feature = "quickcheck"))]
-use quickcheck::{Arbitrary, Gen};
-
-#[cfg(any(test, feature = "quickcheck"))]
-impl Arbitrary for Affine {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
-        if u8::arbitrary(g) < 50 {
-            Self::Zero
-        } else {
-            // TODO: Make sure it is on the curve
-            Self::Point {
-                x: FieldElement::arbitrary(g),
-                y: FieldElement::arbitrary(g),
-            }
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
