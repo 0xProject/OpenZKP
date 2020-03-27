@@ -192,7 +192,7 @@ mod tests {
     use super::*;
     use quickcheck_macros::quickcheck;
     use zkp_macros_decl::hex;
-    use zkp_u256::{Pow, U256};
+    use zkp_u256::U256;
 
     #[test]
     fn test_explicit_values() {
@@ -264,7 +264,7 @@ mod tests {
     }
 
     #[quickcheck]
-    fn test_merkle_tree(depth: usize, skip: usize, indices: Vec<usize>, seed: U256) {
+    fn test_merkle_tree(depth: usize, skip: usize, indices: Vec<usize>, seed: usize) {
         // We want tests up to depth 8; adjust the input
         let depth = depth % 9;
         // We want to skip up to 3 layers; adjust the input
@@ -272,7 +272,7 @@ mod tests {
         let num_leaves = 1_usize << depth;
         let indices: Vec<_> = indices.iter().map(|&i| i % num_leaves).collect();
         let leaves: Vec<_> = (0..num_leaves)
-            .map(|i| (&seed + U256::from(i)).pow(3))
+            .map(|i| U256::from(seed + i.pow(3)))
             .collect();
 
         // Build the tree

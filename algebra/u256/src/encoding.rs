@@ -105,12 +105,10 @@ impl fmt::Debug for U256 {
 
 // TODO: Replace literals with u256h!
 #[allow(clippy::unreadable_literal)]
-// Quickcheck requires pass by value
-#[allow(clippy::needless_pass_by_value)]
 #[cfg(test)]
 mod tests {
     use super::*;
-    use quickcheck_macros::quickcheck;
+    use proptest::prelude::*;
     use zkp_macros_decl::u256h;
 
     #[test]
@@ -143,10 +141,12 @@ mod tests {
         assert!(U256::from_decimal_str("12a3").is_err());
     }
 
-    #[quickcheck]
-    fn test_decimal_to_from(n: U256) -> bool {
-        let decimal = n.clone().to_decimal_str();
-        let m = U256::from_decimal_str(&decimal).unwrap();
-        n == m
-    }
+    proptest!(
+        #[test]
+        fn test_decimal_to_from(n: U256) {
+            let decimal = n.clone().to_decimal_str();
+            let m = U256::from_decimal_str(&decimal).unwrap();
+            prop_assert_eq!(n, m)
+        }
+    );
 }

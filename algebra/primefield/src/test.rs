@@ -1,14 +1,18 @@
-use crate::{Parameters, PrimeField, UInt};
+use crate::{u256::U256, Parameters, PrimeField};
 use quickcheck::{Arbitrary, Gen};
 
-impl<U, P> Arbitrary for PrimeField<P>
+impl<P> Arbitrary for PrimeField<P>
 where
-    U: UInt + Arbitrary,
-    P: Parameters<UInt = U>,
+    P: Parameters<UInt = U256>,
 {
     #[inline(always)]
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
-        Self::from_uint_reduce(&U::arbitrary(g))
+        Self::from_uint_reduce(&U256::from_limbs([
+            u64::arbitrary(g),
+            u64::arbitrary(g),
+            u64::arbitrary(g),
+            u64::arbitrary(g),
+        ]))
     }
 }
 

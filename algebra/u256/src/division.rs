@@ -139,12 +139,11 @@ noncommutative_binop!(U256, Rem, rem, RemAssign, rem_assign);
 
 // TODO: Replace literals with u256h!
 #[allow(clippy::unreadable_literal)]
-// Quickcheck requires pass by value
-#[allow(clippy::needless_pass_by_value)]
 #[cfg(test)]
 mod tests {
     use super::*;
-    use quickcheck_macros::quickcheck;
+    use num_traits::identities::{One, Zero};
+    use proptest::prelude::*;
 
     #[test]
     fn test_invmod256() {
@@ -197,27 +196,38 @@ mod tests {
         assert_eq!(i, r);
     }
 
-    #[quickcheck]
-    fn test_divrem_u64(a: U256, b: u64) -> bool {
-        match a.div_rem(b) {
-            None => b == 0,
-            Some((q, r)) => r < b && q * &U256::from(b) + &U256::from(r) == a,
+    proptest!(
+        #[test]
+        fn test_divrem_u64(a: U256, b: u64) {
+            let result = a.div_rem(b);
+            match result {
+                None => prop_assert!(b.is_zero()),
+                Some((q, r)) => {
+                    prop_assert!(r < b);
+                    prop_assert_eq!(q * U256::from(b) + U256::from(r), a)
+                }
+            }
         }
-    }
 
-    #[quickcheck]
-    fn test_divrem(a: U256, b: U256) -> bool {
-        match a.div_rem(&b) {
-            None => b == U256::ZERO,
-            Some((q, r)) => r < b && q * &b + &r == a,
+        #[test]
+        fn test_divrem(a: U256, b: U256) {
+            let result = a.div_rem(&b);
+            match result {
+                None => prop_assert!(b.is_zero()),
+                Some((q, r)) => {
+                    prop_assert!(r < b);
+                    prop_assert_eq!(q * b + r, a)
+                }
+            }
         }
-    }
 
-    #[quickcheck]
-    fn invmod256(a: U256) -> bool {
-        match a.inv() {
-            None => true,
-            Some(i) => a * &i == U256::ONE,
+        #[test]
+        fn invmod_us256(a: U256) {
+            let result = a.inv();
+            match result {
+                None => prop_assert!((a % U256::from(2)).is_zero()),
+                Some(i) => prop_assert!((a * &i).is_one()),
+            }
         }
-    }
+    );
 }

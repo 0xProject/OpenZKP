@@ -173,7 +173,7 @@ pub fn divrem_nbym(numerator: &mut [u64], divisor: &mut [u64]) {
 mod tests {
     use super::*;
     use crate::u256::U256;
-    use quickcheck_macros::quickcheck;
+    use proptest::prelude::*;
     use zkp_macros_decl::u256h;
 
     const HALF: u64 = 1_u64 << 63;
@@ -253,13 +253,15 @@ mod tests {
         assert_eq!(quotient, 1);
     }
 
-    #[quickcheck]
-    fn div_3by2_correct(q: u64, d0: u64, d1: u64) -> bool {
-        // TODO: Add remainder
-        let d1 = d1 | (1 << 63);
-        let n = U256::from_limbs([d0, d1, 0, 0]) * &U256::from(q);
-        debug_assert!(n.limb(3) == 0);
-        let qhat = div_3by2(&[n.limb(0), n.limb(1), n.limb(2)], &[d0, d1]);
-        qhat == q
-    }
+    proptest!(
+        #[test]
+        fn div_3by2_correct(q: u64, d0: u64, d1: u64) {
+            // TODO: Add remainder
+            let d1 = d1 | (1 << 63);
+            let n = U256::from_limbs([d0, d1, 0, 0]) * &U256::from(q);
+            debug_assert!(n.limb(3) == 0);
+            let qhat = div_3by2(&[n.limb(0), n.limb(1), n.limb(2)], &[d0, d1]);
+            prop_assert_eq!(qhat, q);
+        }
+    );
 }
