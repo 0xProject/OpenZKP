@@ -306,24 +306,20 @@ jobs:
       - checkout
       - run:
           name: Install the npm packages
-          command: |
-            cd ./crypto/stark-verifier-ethereum
-            npm i
+          working_directory: ./crypto/stark-verifier-ethereum
+          command: npm i
       - run:
           name: Compile the contracts
-          command: |
-            cd ./crypto/stark-verifier-ethereum
-            npm run-script build
+          working_directory: ./crypto/stark-verifier-ethereum
+          command: npm run-script build
       - run:
           name: Run the tests
-          command: |
-            cd ./crypto/stark-verifier-ethereum
-            npm run-script test
+          working_directory: ./crypto/stark-verifier-ethereum
+          command: npm run-script test
       - run:
           name: Run the linter
-          command: |
-            cd ./crypto/stark-verifier-ethereum
-            npm run-script lint
+          working_directory: ./crypto/stark-verifier-ethereum
+          command: npm run-script lint
 
 workflows:
   version: 2
