@@ -59,6 +59,8 @@ mod algebraic_dag;
 #[cfg(feature = "prover")]
 mod component;
 #[cfg(feature = "prover")]
+mod component2;
+#[cfg(feature = "prover")]
 mod constraint_check;
 #[cfg(feature = "prover")]
 mod prover;
@@ -66,7 +68,6 @@ mod prover;
 pub mod solidity_encode;
 #[cfg(feature = "prover")]
 mod trace_table;
-
 // TODO: Have unconditional Debug trait on all types
 
 // In no std mode, substitute no_std_compat
