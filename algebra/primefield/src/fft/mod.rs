@@ -24,7 +24,7 @@ pub use radix_sqrt::radix_sqrt;
 pub use recursive::fft_vec_recursive;
 pub use transpose::transpose_square_stretch;
 
-/// 
+///
 /// * D. H. Bailey (1990). FFTs in external or hierarchical memory. <https://www.davidhbailey.com/dhbpapers/fftq.pdf>
 /// * W. M. Gentleman & G. Sande (1966). Fast Fourier Transforms: for fun and
 ///   profit. <https://doi.org/10.1145/1464291.1464352> <http://cis.rit.edu/class/simg716/FFT_Fun_Profit.pdf>
@@ -116,8 +116,6 @@ where
     twiddles
 }
 
-// We don't care about this in tests
-#[allow(clippy::redundant_clone)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -193,11 +191,11 @@ mod tests {
 
         #[test]
         fn fft_ref(values in arb_vec()) {
-            let mut expect = values.clone();
-            ref_fft_permuted(&mut expect);
-            let mut result = values.clone();
+            let mut expected = values.clone();
+            ref_fft_permuted(&mut expected);
+            let mut result = values;
             result.fft();
-            prop_assert_eq!(result, expect);
+            prop_assert_eq!(result, expected);
         }
     }
 
@@ -233,7 +231,7 @@ mod tests {
             field_element!("048bad0760f8b52ee4f9a46964bcf1ba9439a9467b2576176b1319cec9f12db0"),
         ]);
 
-        let mut res = vector.clone();
+        let mut res = vector;
         res.fft_cofactor(&cofactor);
         permute(&mut res);
 
