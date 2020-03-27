@@ -116,16 +116,11 @@ where
     twiddles
 }
 
-// Quickcheck needs pass by value
-#[allow(clippy::needless_pass_by_value)]
-// We don't care about this in tests
-#[allow(clippy::redundant_clone)]
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::{FieldElement, One, Root, Zero};
     use proptest::prelude::*;
-    use quickcheck_macros::quickcheck;
     use zkp_macros_decl::field_element;
     use zkp_u256::U256;
 
@@ -196,11 +191,11 @@ mod tests {
 
         #[test]
         fn fft_ref(values in arb_vec()) {
-            let mut expect = values.clone();
-            ref_fft_permuted(&mut expect);
-            let mut result = values.clone();
+            let mut expected = values.clone();
+            ref_fft_permuted(&mut expected);
+            let mut result = values;
             result.fft();
-            prop_assert_eq!(result, expect);
+            prop_assert_eq!(result, expected);
         }
     }
 
@@ -236,7 +231,7 @@ mod tests {
             field_element!("048bad0760f8b52ee4f9a46964bcf1ba9439a9467b2576176b1319cec9f12db0"),
         ]);
 
-        let mut res = vector.clone();
+        let mut res = vector;
         res.fft_cofactor(&cofactor);
         permute(&mut res);
 
@@ -252,17 +247,19 @@ mod tests {
         ]);
     }
 
-    #[quickcheck]
-    fn ifft_is_inverse(v: Vec<FieldElement>) -> bool {
-        if v.is_empty() {
-            return true;
+    proptest!(
+        #[test]
+        fn ifft_is_inverse(v: Vec<FieldElement>) {
+            prop_assume!(!v.is_empty());
+
+            let truncated = &v[0..(1 + v.len()).next_power_of_two() / 2].to_vec();
+            let mut result = truncated.clone();
+            result.fft();
+            permute(&mut result);
+            result.ifft();
+            permute(&mut result);
+
+            prop_assert_eq!(&result, truncated);
         }
-        let truncated = &v[0..(1 + v.len()).next_power_of_two() / 2].to_vec();
-        let mut result = truncated.clone();
-        result.fft();
-        permute(&mut result);
-        result.ifft();
-        permute(&mut result);
-        &result == truncated
-    }
+    );
 }
