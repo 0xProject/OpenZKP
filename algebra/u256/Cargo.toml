@@ -22,12 +22,14 @@ num-traits = { version = "0.2.10", default_features = false }
 quickcheck = { version = "0.9", optional = true }
 rand = { version = "0.7.2", optional = true }
 serde = { version = "1.0", features = ["derive"], optional = true}
+proptest = { version = "0.9.4", optional = true }
+proptest-derive = { version = "0.1.2", optional = true }
 zkp-macros-decl = { version = "0.1.0", path = "../../utils/macros-decl", default_features = false }
 
 [dev-dependencies]
 criterion = "0.3.0"
-quickcheck = "0.9"
-quickcheck_macros = "0.9.1"
+proptest = "0.9.5"
+proptest-derive = "0.1.2"
 
 [[bench]]
 name = "benchmark"

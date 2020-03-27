@@ -1,6 +1,12 @@
+#[cfg(any(test, feature = "proptest"))]
+use proptest_derive::Arbitrary;
 use std::{cmp::Ordering, prelude::v1::*, u64};
 
 #[derive(PartialEq, Eq, Clone, Default, Hash)]
+// TODO: Generate a quasi-random sequence.
+// See http://extremelearning.com.au/unreasonable-effectiveness-of-quasirandom-sequences/
+#[cfg_attr(any(test, feature = "proptest"), derive(Arbitrary))]
+#[cfg_attr(any(test, feature = "proptest"), proptest(no_params))]
 pub struct U256([u64; 4]);
 
 // TODO: impl core::iter::Step so we have ranges
@@ -49,10 +55,6 @@ impl U256 {
             panic!("Limb out of range.")
         }
     }
-
-    pub fn is_zero(&self) -> bool {
-        *self == Self::ZERO
-    }
 }
 
 impl PartialOrd for U256 {
@@ -83,27 +85,6 @@ impl Ord for U256 {
     }
 }
 
-#[cfg(any(test, feature = "quickcheck"))]
-use quickcheck::{Arbitrary, Gen};
-
-// TODO: Generate a quasi-random sequence.
-// See http://extremelearning.com.au/unreasonable-effectiveness-of-quasirandom-sequences/
-#[cfg(any(test, feature = "quickcheck"))]
-impl Arbitrary for U256 {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
-        Self::from_limbs([
-            u64::arbitrary(g),
-            u64::arbitrary(g),
-            u64::arbitrary(g),
-            u64::arbitrary(g),
-        ])
-    }
-}
-
-// TODO: Replace literals with u256h!
-#[allow(clippy::unreadable_literal)]
-// Quickcheck requires pass by value
-#[allow(clippy::needless_pass_by_value)]
 #[cfg(test)]
 mod tests {
     use super::*;

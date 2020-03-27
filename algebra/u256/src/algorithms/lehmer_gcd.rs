@@ -21,7 +21,7 @@ impl Matrix {
 /// Computes a double linear combination efficiently in place.
 ///
 /// Simulataneously computes
-/// 
+///
 /// ```text
 ///   a' = q00 a - q01 b
 ///   b' = q11 b - q10 a
@@ -479,7 +479,8 @@ pub(crate) fn inv_mod(modulus: &U256, num: &U256) -> Option<U256> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use quickcheck_macros::quickcheck;
+    use num_traits::identities::{One, Zero};
+    use proptest::prelude::*;
     use zkp_macros_decl::u256h;
 
     #[test]
@@ -530,76 +531,73 @@ mod tests {
         );
     }
 
-    #[quickcheck]
-    // We shadow t for readability.
-    #[allow(clippy::shadow_unrelated)]
-    fn test_lehmer_loop_match_gcd(mut a: u64, mut b: u64) -> bool {
-        const LIMIT: u64 = 1_u64 << 32;
+    proptest!(
+        #[test]
+        // We shadow t for readability.
+        #[allow(clippy::shadow_unrelated)]
+        fn test_lehmer_loop_match_gcd(mut a: u64, mut b: u64) {
+            const LIMIT: u64 = 1_u64 << 32;
 
-        // Prepare valid inputs
-        a |= 1_u64 << 63;
-        if b > a {
-            core::mem::swap(&mut a, &mut b)
-        }
-
-        // Call the function under test
-        let update_matrix = lehmer_loop(a, b);
-
-        // Verify outputs
-        assert!(update_matrix.0 < LIMIT);
-        assert!(update_matrix.1 < LIMIT);
-        assert!(update_matrix.2 < LIMIT);
-        assert!(update_matrix.3 < LIMIT);
-        if update_matrix == Matrix::IDENTITY {
-            return true;
-        }
-        assert!(update_matrix.0 <= update_matrix.2);
-        assert!(update_matrix.2 <= update_matrix.3);
-        assert!(update_matrix.1 <= update_matrix.3);
-
-        // Compare with simple GCD
-        let mut a0 = a;
-        let mut a1 = b;
-        let mut s0 = 1;
-        let mut s1 = 0;
-        let mut t0 = 0;
-        let mut t1 = 1;
-        let mut even = true;
-        while a1 > 0 {
-            let r = a0 / a1;
-            let t = a0 - r * a1;
-            a0 = a1;
-            a1 = t;
-            let t = s0 + r * s1;
-            s0 = s1;
-            s1 = t;
-            let t = t0 + r * t1;
-            t0 = t1;
-            t1 = t;
-            even = !even;
-            if update_matrix == Matrix(s0, t0, s1, t1, even) {
-                return true;
+            // Prepare valid inputs
+            a |= 1_u64 << 63;
+            if b > a {
+                core::mem::swap(&mut a, &mut b)
             }
-        }
-        false
-    }
 
-    #[quickcheck]
-    fn test_mat_mul_match_formula(
-        a: U256,
-        b: U256,
-        q00: u64,
-        q01: u64,
-        q10: u64,
-        q11: u64,
-    ) -> bool {
-        let a_expected = q00 * a.clone() - q01 * b.clone();
-        let b_expected = q11 * b.clone() - q10 * a.clone();
-        let mut a_result = a;
-        let mut b_result = b;
-        mat_mul(&mut a_result, &mut b_result, (q00, q01, q10, q11));
-        a_result == a_expected && b_result == b_expected
-    }
+            // Call the function under test
+            let update_matrix = lehmer_loop(a, b);
+
+            // Verify outputs
+            assert!(update_matrix.0 < LIMIT);
+            assert!(update_matrix.1 < LIMIT);
+            assert!(update_matrix.2 < LIMIT);
+            assert!(update_matrix.3 < LIMIT);
+            prop_assume!(update_matrix != Matrix::IDENTITY);
+
+            assert!(update_matrix.0 <= update_matrix.2);
+            assert!(update_matrix.2 <= update_matrix.3);
+            assert!(update_matrix.1 <= update_matrix.3);
+
+            // Compare with simple GCD
+            let mut a0 = a;
+            let mut a1 = b;
+            let mut s0 = 1;
+            let mut s1 = 0;
+            let mut t0 = 0;
+            let mut t1 = 1;
+            let mut even = true;
+            let mut result = false;
+            while a1 > 0 {
+                let r = a0 / a1;
+                let t = a0 - r * a1;
+                a0 = a1;
+                a1 = t;
+                let t = s0 + r * s1;
+                s0 = s1;
+                s1 = t;
+                let t = t0 + r * t1;
+                t0 = t1;
+                t1 = t;
+                even = !even;
+                if update_matrix == Matrix(s0, t0, s1, t1, even) {
+                    result = true;
+                    break;
+                }
+            }
+            prop_assert!(result)
+        }
+
+        #[test]
+        fn test_mat_mul_match_formula(a: U256, b: U256, q00: u64, q01: u64, q10: u64, q11: u64) {
+            let a_expected = q00 * a.clone() - q01 * b.clone();
+            let b_expected = q11 * b.clone() - q10 * a.clone();
+            let mut a_result = a;
+            let mut b_result = b;
+            mat_mul(&mut a_result, &mut b_result, (q00, q01, q10, q11));
+            prop_assert_eq!(a_result, a_expected);
+            prop_assert_eq!(b_result, b_expected);
+        }
+    );
 
     #[test]
     fn test_lehmer_double() {
@@ -711,22 +709,29 @@ mod tests {
         assert_eq!(gcd, v * b - u * a);
     }
 
-    #[quickcheck]
-    fn test_gcd_lehmer_extended(a: U256, b: U256) -> bool {
-        let (gcd, u, v, even) = gcd_extended(a.clone(), b.clone());
-        &a % &gcd == U256::ZERO
-            && &b % &gcd == U256::ZERO
-            && gcd == if even { u * a - v * b } else { v * b - u * a }
-    }
+    proptest!(
+        #[test]
+        fn test_gcd_lehmer_extended(a: U256, b: U256) {
+            let (gcd, u, v, even) = gcd_extended(a.clone(), b.clone());
+            prop_assert!((&a % &gcd).is_zero());
+            prop_assert!((&b % &gcd).is_zero());
 
-    #[quickcheck]
-    fn test_inv_lehmer(mut a: U256) -> bool {
-        const MODULUS: U256 =
-            u256h!("0800000000000011000000000000000000000000000000000000000000000001");
-        a %= MODULUS;
-        match inv_mod(&MODULUS, &a) {
-            None => a == U256::ZERO,
-            Some(a_inv) => a.mulmod(&a_inv, &MODULUS) == U256::ONE,
+            if even {
+                prop_assert_eq!(gcd, u * a - v * b);
+            } else {
+                prop_assert_eq!(gcd, v * b - u * a);
+            }
         }
-    }
+
+        #[test]
+        fn test_inv_lehmer(mut a: U256) {
+            const MODULUS: U256 =
+                u256h!("0800000000000011000000000000000000000000000000000000000000000001");
+            a %= MODULUS;
+            match inv_mod(&MODULUS, &a) {
+                None => prop_assert!(a.is_zero()),
+                Some(a_inv) => prop_assert!(a.mulmod(&a_inv, &MODULUS).is_one()),
+            }
+        }
+    );
 }

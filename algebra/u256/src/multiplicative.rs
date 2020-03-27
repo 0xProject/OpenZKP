@@ -238,12 +238,10 @@ impl core::iter::Product for U256 {
 
 // TODO: Replace literals with u256h!
 #[allow(clippy::unreadable_literal)]
-// Quickcheck requires pass by value
-#[allow(clippy::needless_pass_by_value)]
 #[cfg(test)]
 mod tests {
     use super::*;
-    use quickcheck_macros::quickcheck;
+    use proptest::prelude::*;
 
     #[test]
     fn test_mul() {
@@ -330,15 +328,17 @@ mod tests {
         assert_eq!(r, e);
     }
 
-    #[quickcheck]
-    fn mul_full_lo(a: U256, b: U256) -> bool {
-        let r = a.clone() * &b;
-        let (lo, _hi) = a.mul_full(&b);
-        r == lo
-    }
+    proptest!(
+        #[test]
+        fn mul_full_lo(a: U256, b: U256) {
+            let r = a.clone() * &b;
+            let (lo, _hi) = a.mul_full(&b);
+            prop_assert_eq!(r, lo);
+        }
 
-    #[quickcheck]
-    fn square(a: U256) -> bool {
-        a.square_full() == a.mul_full(&a)
-    }
+        #[test]
+        fn square(a: U256) {
+            prop_assert_eq!(a.square_full(), a.mul_full(&a));
+        }
+    );
 }
