@@ -217,7 +217,7 @@ impl Arbitrary for Affine {
 mod tests {
     use super::*;
     use crate::ScalarFieldElement;
-    use quickcheck_macros::quickcheck;
+    use proptest::prelude::*;
     use zkp_macros_decl::{field_element, u256h};
     use zkp_u256::U256;
 
@@ -268,13 +268,15 @@ mod tests {
         assert_eq!(result, expected);
     }
 
-    #[quickcheck]
-    fn add_commutative(a: Affine, b: Affine) -> bool {
-        &a + &b == b + a
-    }
+    proptest!(
+        #[test]
+        fn add_commutative(a: Affine, b: Affine) {
+            prop_assert_eq!(&a + &b, b + a)
+        }
 
-    #[quickcheck]
-    fn distributivity(p: Affine, a: ScalarFieldElement, b: ScalarFieldElement) -> bool {
-        (&p * &a) + (&p * &b) == p * (a + b)
-    }
+        #[test]
+        fn distributivity(p: Affine, a: ScalarFieldElement, b: ScalarFieldElement) {
+            prop_assert_eq!(&p * &a + &p * &b, p * (a + b));
+        }
+    );
 }

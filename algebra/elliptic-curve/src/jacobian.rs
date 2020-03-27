@@ -248,7 +248,7 @@ impl Arbitrary for Jacobian {
 mod tests {
     use super::*;
     use crate::ScalarFieldElement;
-    use quickcheck_macros::quickcheck;
+    use proptest::prelude::*;
     use zkp_macros_decl::u256h;
 
     #[test]
@@ -297,13 +297,15 @@ mod tests {
         assert_eq!(a * b, c);
     }
 
-    #[quickcheck]
-    fn add_commutative(a: Jacobian, b: Jacobian) -> bool {
-        &a + &b == b + a
-    }
+    proptest!(
+        #[test]
+        fn add_commutative(a: Jacobian, b: Jacobian) {
+            prop_assert_eq!(&a + &b, b + a)
+        }
 
-    #[quickcheck]
-    fn distributivity(p: Jacobian, a: ScalarFieldElement, b: ScalarFieldElement) -> bool {
-        &p * &a + &p * &b == p * (a + b)
-    }
+        #[test]
+        fn distributivity(p: Jacobian, a: ScalarFieldElement, b: ScalarFieldElement) {
+            prop_assert_eq!(&p * &a + &p * &b, p * (a + b));
+        }
+    );
 }
