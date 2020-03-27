@@ -16,9 +16,9 @@ edition = "2018"
 [dependencies]
 crunchy = { version = "0.2.2", default_features = false }
 hex = { version = "0.4.0", optional = true }
-itertools = { version = "0.8.0", default_features = false }
+itertools = { version = "0.9.0", default_features = false }
 log = "0.4.8"
-no-std-compat = { version = "0.1.0", features = [ "alloc" ] }
+no-std-compat = { version = "0.3.0", features = [ "alloc" ] }
 num-traits = { version = "0.2.10", default_features = false }
 quickcheck = { version = "0.9", optional = true}
 rand = { version = "0.7.2", optional = true }
@@ -33,7 +33,7 @@ env_logger = "0.7.1"
 num_cpus = "1.12.0"
 proptest = "0.9.5"
 quickcheck = "0.9"
-quickcheck_macros = "0.8"
+quickcheck_macros = "0.9.1"
 rand = "0.7.2"
 rand_xoshiro = "0.4.0"
 raw-cpuid = "7.0.3"

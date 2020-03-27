@@ -45,7 +45,7 @@
 
 use lazy_static::*;
 use std::prelude::v1::*;
-use tiny_keccak::sha3_256;
+use tiny_keccak::{Hasher, Sha3};
 use zkp_elliptic_curve::{
     base_mul, double_base_mul, window_table_affine, Affine, ScalarFieldElement, GENERATOR,
 };
@@ -105,15 +105,18 @@ fn get_k(
     digest: &ScalarFieldElement,
     nonce: u64,
 ) -> ScalarFieldElement {
-    U256::from_bytes_be(&sha3_256(
+    let mut output = [0; 32];
+    let mut sha3 = Sha3::v256();
+    sha3.update(
         &[
             private_key.to_uint().to_bytes_be(),
             digest.to_uint().to_bytes_be(),
             U256::from(nonce).to_bytes_be(),
         ]
         .concat(),
-    ))
-    .into()
+    );
+    sha3.finalize(&mut output);
+    U256::from_bytes_be(&output).into()
 }
 
 pub fn verify(digest: &ScalarFieldElement, signature: &Signature, public_key: &Affine) -> bool {

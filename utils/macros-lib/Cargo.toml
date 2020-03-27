@@ -14,10 +14,10 @@ license = "Apache-2.0"
 edition = "2018"
 
 [dependencies]
-proc-macro2 = "1.0"
-syn = { version = "1.0", features = ["full"] }
-quote = "1.0"
 hex = "0.4.0"
+proc-macro2 = "1.0.9"
+quote = "1.0"
+syn = { version = "1.0", features = ["full"] }
 
 [features]
 default = ["std"]

@@ -2,7 +2,7 @@
 #![allow(clippy::module_name_repetitions)]
 use crate::proof_of_work;
 use std::{convert::TryInto, prelude::v1::*};
-use tiny_keccak::Keccak;
+use tiny_keccak::{Hasher, Keccak};
 use zkp_hash::Hash;
 use zkp_macros_decl::u256h;
 use zkp_merkle_tree;
@@ -50,7 +50,7 @@ pub(crate) struct VerifierChannel {
 
 impl PublicCoin {
     pub(crate) fn seed(&mut self, seed: &[u8]) {
-        let mut keccak = Keccak::new_keccak256();
+        let mut keccak = Keccak::v256();
         keccak.update(seed);
         keccak.finalize(&mut self.digest);
         self.counter = 0;
@@ -174,7 +174,7 @@ impl RandomGenerator<U256> for PublicCoin {
 impl RandomGenerator<[u8; 32]> for PublicCoin {
     fn get_random(&mut self) -> [u8; 32] {
         let mut result = [0; 32];
-        let mut keccak = Keccak::new_keccak256();
+        let mut keccak = Keccak::v256();
         keccak.update(&self.digest);
         keccak.update(&[0_u8; 24]);
         keccak.update(&self.counter.to_be_bytes());
@@ -205,7 +205,7 @@ where
 impl Writable<&[u8]> for PublicCoin {
     fn write(&mut self, data: &[u8]) {
         let mut result: [u8; 32] = [0; 32];
-        let mut keccak = Keccak::new_keccak256();
+        let mut keccak = Keccak::v256();
         keccak.update(&self.digest);
         keccak.update(data);
         keccak.finalize(&mut result);
