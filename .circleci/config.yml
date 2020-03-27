@@ -32,6 +32,9 @@ executors:
         crypto/merkle-tree
         crypto/elliptic-curve-crypto
         crypto/stark
+  docker-npm:
+    docker:
+      - image: node:latest
 commands:
   stop-if-image-exists:
     steps:
@@ -122,7 +125,7 @@ jobs:
             # TODO: Store test results in json `--format json`
             # TODO: Fix coverage on zkp-macros-lib
             # TODO: Enable --nocapture
-            CARGO_INCREMENTAL=0 RUSTFLAGS="$COVFLAGS" cargo +$NIGHTLY t --workspace --exclude zkp-macros-lib 
+            CARGO_INCREMENTAL=0 RUSTFLAGS="$COVFLAGS" cargo +$NIGHTLY t --workspace --exclude zkp-macros-lib
             cargo +$NIGHTLY t --package zkp-macros-lib
       - run:
           name: Combine coverage
@@ -297,6 +300,26 @@ jobs:
             else
               DRY_RUN=true python3 .circleci/issue_tracker.py
             fi
+  solidity-checking:
+    executor: docker-npm
+    steps:
+      - checkout
+      - run:
+          name: Install the npm packages
+          working_directory: ./crypto/stark-verifier-ethereum
+          command: npm i
+      - run:
+          name: Compile the contracts
+          working_directory: ./crypto/stark-verifier-ethereum
+          command: npm run-script build
+      - run:
+          name: Run the tests
+          working_directory: ./crypto/stark-verifier-ethereum
+          command: npm run-script test
+      - run:
+          name: Run the linter
+          working_directory: ./crypto/stark-verifier-ethereum
+          command: npm run-script lint
 
 workflows:
   version: 2
@@ -343,6 +366,7 @@ workflows:
           filters:
             branches:
               only: master
+      - solidity-checking
       - update-issues
       # `accept` is a phony job which requires every check for a commit.
       # This allows us to set a single 'required status check' in GitHub.
@@ -355,3 +379,4 @@ workflows:
             - benchmarks
             - build-no-std
             - update-issues
+            - solidity-checking
