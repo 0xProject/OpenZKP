@@ -1,3 +1,6 @@
+mod empty;
+mod test;
+
 use crate::{
     constraint_check::check_constraints,
     proof::Proof,
@@ -45,46 +48,4 @@ pub trait Component {
         let table = self.trace(claim, witness);
         check_constraints(&constraints, &table)
     }
-}
-
-pub struct Empty(usize, usize);
-
-impl Empty {
-    fn new(rows: usize, columns: usize) -> Empty {
-        Empty(rows, columns)
-    }
-}
-
-impl Component for Empty {
-    type Claim = ();
-    type Witness = ();
-
-    fn dimensions(&self) -> (usize, usize) {
-        (self.0, self.1)
-    }
-
-    fn constraints(&self, claim: &Self::Claim) -> Vec<RationalExpression> {
-        Vec::new()
-    }
-
-    fn trace(&self, claim: &Self::Claim, witness: &Self::Witness) -> TraceTable {
-        TraceTable::new(self.0, self.1)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use proptest::prelude::*;
-
-    proptest!(
-        #[test]
-        fn test_empty(log_rows in 0_usize..10, cols in 0_usize..10) {
-            let rows = 1 << log_rows;
-            let component = Empty::new(rows, cols);
-            let claim = ();
-            let witness = ();
-            prop_assert_eq!(component.check(&claim, &witness), Ok(()));
-        }
-    );
 }
