@@ -12,14 +12,12 @@ use zkp_primefield::{FieldElement, Root};
 /// This sequence is then layed out in row-first order
 /// across the trace dimension and constraints are produced
 /// to match
-#[cfg(test)]
 pub(crate) struct Test {
     rows:    usize,
     columns: usize,
     seed:    FieldElement,
 }
 
-#[cfg(test)]
 impl Test {
     fn new(rows: usize, columns: usize, seed: &FieldElement) -> Test {
         let seed = seed.clone();
@@ -31,7 +29,6 @@ impl Test {
     }
 }
 
-#[cfg(test)]
 impl Component for Test {
     type Claim = FieldElement;
     type Witness = FieldElement;
@@ -108,40 +105,41 @@ mod tests {
     use proptest::prelude::*;
     use zkp_u256::U256;
 
-    /// Generates an arbitrary field element
-    // TODO: Rejection sample
     pub(super) fn arb_field_element() -> impl Strategy<Value = FieldElement> {
         (any::<u64>(), any::<u64>(), any::<u64>(), any::<u64>())
             .prop_map(move |(a, b, c, d)| FieldElement::from(U256::from_limbs([a, b, c, d])))
     }
 
-    proptest!(
-        #[test]
-        fn test_check(
+    #[test]
+    fn test_check() {
+        proptest!(|(
             log_rows in 0_usize..10,
             cols in 0_usize..10,
             seed in arb_field_element(),
             claim in arb_field_element(),
             witness in arb_field_element()
-        ) {
+        )| {
             let rows = 1 << log_rows;
             let component = Test::new(rows, cols, &seed);
             prop_assert_eq!(component.check(&claim, &witness), Ok(()));
-        }
+        });
+    }
 
-        #[test]
-        fn test_proof_verify(
+    #[test]
+    fn test_proof_verify() {
+        let config = ProptestConfig::with_cases(10);
+        proptest!(config, |(
             log_rows in 1_usize..10,
             cols in 1_usize..10,
             seed in arb_field_element(),
             claim in arb_field_element(),
             witness in arb_field_element()
-        ) {
+        )| {
             let rows = 1 << log_rows;
             let component = Test::new(rows, cols, &seed);
             let proof = component.prove(&claim, &witness).unwrap();
             let result = component.verify(&claim, &proof);
             prop_assert_eq!(result, Ok(()));
-        }
-    );
+        });
+    }
 }

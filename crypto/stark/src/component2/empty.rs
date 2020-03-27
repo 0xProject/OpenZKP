@@ -31,14 +31,14 @@ mod tests {
     use super::*;
     use proptest::prelude::*;
 
-    proptest!(
-        #[test]
-        fn test_empty_check(log_rows in 0_usize..10, cols in 0_usize..10) {
+    #[test]
+    fn test_empty_check() {
+        proptest!(|(log_rows in 0_usize..10, cols in 0_usize..10)| {
             let rows = 1 << log_rows;
             let component = Empty::new(rows, cols);
             let claim = ();
             let witness = ();
             prop_assert_eq!(component.check(&claim, &witness), Ok(()));
-        }
-    );
+        });
+    }
 }
