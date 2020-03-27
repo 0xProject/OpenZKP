@@ -51,6 +51,8 @@ pub mod geometric_series;
 mod invert_batch;
 mod ops;
 mod prime_field;
+#[cfg(any(test, feature = "proptest"))]
+mod proptest;
 mod proth_field;
 #[cfg(feature = "rand")]
 mod rand;
