@@ -6,31 +6,46 @@
   "directories": {
     "test": "test"
   },
-  "dependencies": {},
+  "dependencies": {
+    "solc": "^0.6.4"
+  },
   "devDependencies": {
+    "@0x/tslint-config": "^4.0.0",
     "@nomiclabs/buidler": "^1.2.0",
     "@nomiclabs/buidler-ethers": "^1.2.0",
     "@nomiclabs/buidler-waffle": "^1.2.0",
     "@types/chai": "^4.2.11",
     "@types/mocha": "^7.0.2",
-    "@types/node": "^13.9.1",
+    "@types/node": "^13.9.4",
     "buidler-typechain": "^0.0.5",
     "chai": "^4.2.0",
     "ethereum-waffle": "^2.4.0",
     "ethers": "^4.0.46",
     "husky": "^4.2.3",
+    "prettier": "^1.19.1",
+    "prettier-plugin-solidity": "^1.0.0-alpha.47",
+    "solhint": "^2.3.1",
+    "solhint-plugin-prettier": "0.0.4",
     "ts-generator": "^0.0.8",
-    "ts-node": "^8.6.2",
+    "ts-node": "^8.8.1",
+    "tslint": "^5.20.1",
+    "tslint-config-prettier": "^1.18.0",
     "typechain": "^1.0.5",
-    "typechain-target-ethers": "^1.0.3",
+    "typechain-target-ethers": "^1.0.4",
     "typechain-target-truffle": "^1.0.2",
     "typechain-target-web3-v1": "^1.0.4",
     "typescript": "^3.8.3"
   },
   "scripts": {
     "test": "npx buidler test",
-    "build": "npx buidler compile && npx buidler typechain"
+    "build": "npx buidler compile && npx buidler typechain",
+    "lint": "tslint --format stylish --project . && npm run-script solhint",
+    "prettier": "npm run-script prettier:sol && npm run-script prettier:ts",
+    "prettier:ts": "prettier --write '**/*.ts' --config .prettierrc",
+    "prettier:sol": "prettier --write **/*.sol",
+    "fix:ts": "tslint --fix --format stylish --project .",
+    "solhint": "./node_modules/.bin/solhint -f table contracts/*.sol contracts/**/*.sol"
   },
-  "author": "",
+  "author": "Paul Vienhage",
   "license": "ISC"
 }
