@@ -1,9 +1,4 @@
-use crate::{
-    constraint_check::check_constraints, Constraints, Provable, RationalExpression, TraceTable,
-    Verifiable,
-};
-use std::collections::HashMap;
-use zkp_primefield::{FieldElement, Pow, Root};
+use crate::{constraint_check::check_constraints, Constraints, RationalExpression, TraceTable};
 
 pub trait Component {
     type Claim;
@@ -26,8 +21,15 @@ pub trait Component {
         unimplemented!()
     }
 
-    fn check(&self, claim: &Self::Claim, witness: &Self::Witness) {
-        unimplemented!()
+    fn check(&self, claim: &Self::Claim, witness: &Self::Witness) -> Result<(), (usize, usize)> {
+        let trace_nrows = self.dimensions();
+        let channel_seed = Vec::new();
+        let expressions = self.constraints(claim);
+        // TODO: Error handling
+        let constraints =
+            Constraints::from_expressions(trace_nrows, channel_seed, expressions).unwrap();
+        let table = self.trace(claim, witness);
+        check_constraints(&constraints, &table)
     }
 }
 
@@ -57,4 +59,18 @@ impl Component for Empty {
 }
 
 #[cfg(test)]
-mod tests {}
+mod tests {
+    use super::*;
+    use proptest::prelude::*;
+
+    proptest!(
+        #[test]
+        fn test_empty(log_rows in 0_usize..10, cols in 0_usize..10) {
+            let rows = 1 << log_rows;
+            let component = Empty::new(rows, cols);
+            let claim = ();
+            let witness = ();
+            prop_assert_eq!(component.check(&claim, &witness), Ok(()));
+        }
+    );
+}
