@@ -306,16 +306,24 @@ jobs:
       - checkout
       - run:
           name: Install the npm packages
-          command: cd ./crypto/stark-verifier-ethereum && npm i
+          command: |
+            cd ./crypto/stark-verifier-ethereum
+            npm i
       - run:
           name: Compile the contracts
-          command: cd ./crypto/stark-verifier-ethereum && npm run-script build
+          command: |
+            cd ./crypto/stark-verifier-ethereum
+            npm run-script build
       - run:
           name: Run the tests
-          command: cd ./crypto/stark-verifier-ethereum && npm run-script test
+          command: |
+            cd ./crypto/stark-verifier-ethereum
+            npm run-script test
       - run:
           name: Run the linter
-          command: cd ./crypto/stark-verifier-ethereum && npm run-script lint
+          command: |
+            cd ./crypto/stark-verifier-ethereum
+            npm run-script lint
 
 workflows:
   version: 2
@@ -362,9 +370,7 @@ workflows:
           filters:
             branches:
               only: master
-      - solidity-checking:
-          requires:
-            - build-docker
+      - solidity-checking
       - update-issues
       # `accept` is a phony job which requires every check for a commit.
       # This allows us to set a single 'required status check' in GitHub.
