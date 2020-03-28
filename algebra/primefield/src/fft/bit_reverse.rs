@@ -42,8 +42,9 @@ mod tests {
     proptest!(
         #[test]
         fn check_permute(size: usize, index: usize) {
-            let size = size.next_power_of_two();
             prop_assume!(size != 0);
+            prop_assume!(size <= usize::max_value() / 2);
+            let size = size.next_power_of_two();
             let index = index % size;
             let permuted = permute_index(size, index);
             prop_assert!(permuted < size);
