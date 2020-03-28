@@ -12,6 +12,7 @@ use zkp_primefield::{FieldElement, Root};
 /// This sequence is then layed out in row-first order
 /// across the trace dimension and constraints are produced
 /// to match
+#[derive(Clone, PartialEq, Eq)]
 pub(crate) struct Test {
     rows:    usize,
     columns: usize,

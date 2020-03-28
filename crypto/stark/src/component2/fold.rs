@@ -139,6 +139,43 @@ mod tests {
         });
     }
 
-    // TODO: Test `Fold::new(A, 0) == A`
-    // TODO: Test `Fold::new(Fold::new(A, m), n) == Fold::new(A, m + n)`
+    // Test `Fold::new(A, 0) == A`
+    #[test]
+    fn test_zero() {
+        proptest!(|(
+            log_rows in 0_usize..10,
+            cols in 0_usize..10,
+            seed: FieldElement,
+            claim: FieldElement,
+            witness: FieldElement
+        )| {
+            let rows = 1 << log_rows;
+            let element = Test::new(rows, cols, &seed);
+            let component = Fold::new(element.clone(), 0);
+            prop_assert_eq!(component.constraints(&claim), element.constraints(&claim));
+            prop_assert_eq!(component.trace(&claim, &witness), element.trace(&claim, &witness));
+        });
+    }
+
+    // Test `Fold::new(Fold::new(A, m), n) == Fold::new(A, m + n)`
+    #[test]
+    fn test_compose() {
+        proptest!(|(
+            log_rows in 0_usize..10,
+            cols in 0_usize..20,
+            inner_folds in 0_usize..4,
+            outer_folds in 0_usize..4,
+            seed: FieldElement,
+            claim: FieldElement,
+            witness: FieldElement
+        )| {
+            let rows = 1 << log_rows;
+            let element = Test::new(rows, cols, &seed);
+            let inner = Fold::new(element.clone(), inner_folds);
+            let outer = Fold::new(inner, outer_folds);
+            let combined = Fold::new(element, inner_folds + outer_folds);
+            prop_assert_eq!(outer.constraints(&claim), combined.constraints(&claim));
+            prop_assert_eq!(outer.trace(&claim, &witness), combined.trace(&claim, &witness));
+        });
+    }
 }
