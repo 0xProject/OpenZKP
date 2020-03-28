@@ -1,4 +1,5 @@
 mod empty;
+mod fold;
 mod horizontal;
 mod test;
 mod vertical;
