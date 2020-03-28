@@ -1,6 +1,7 @@
 mod empty;
 mod horizontal;
 mod test;
+mod vertical;
 
 use crate::{
     constraint_check::check_constraints,
