@@ -294,5 +294,10 @@ mod tests {
         fn distributivity(p: Jacobian, a: ScalarFieldElement, b: ScalarFieldElement) {
             prop_assert_eq!(&p * &a + &p * &b, p * (a + b));
         }
+
+        #[test]
+        fn affine_jacobian(j: Jacobian) {
+            prop_assert_eq!(Jacobian::from(Affine::from(&j)), j);
+        }
     );
 }
