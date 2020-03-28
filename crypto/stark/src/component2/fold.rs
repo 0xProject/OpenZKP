@@ -46,6 +46,9 @@ where
 
     fn dimensions(&self) -> (usize, usize) {
         let (rows, columns) = self.element.dimensions();
+        dbg!(columns);
+        dbg!(1 << self.folds);
+        dbg!(ceil_div(columns, 1 << self.folds));
         (rows << self.folds, ceil_div(columns, 1 << self.folds))
     }
 
@@ -59,7 +62,7 @@ where
                 expression.map(&|node| {
                     match node {
                         Trace(column, row_offset) => {
-                            let column_offset = permute_index(reduction, column);
+                            let column_offset = permute_index(reduction, column % reduction);
                             Trace(
                                 column / reduction,
                                 (reduction as isize) * row_offset + (column_offset as isize),
@@ -75,6 +78,7 @@ where
     fn trace(&self, claim: &Self::Claim, witness: &Self::Witness) -> TraceTable {
         let element_trace = self.element.trace(claim, witness);
         let (rows, columns) = self.dimensions();
+        dbg!(rows, columns);
         let mut trace = TraceTable::new(rows, columns);
         for i in 0..element_trace.num_rows() {
             for j in 0..element_trace.num_columns() {
@@ -87,7 +91,11 @@ where
 
 fn ceil_div(numerator: usize, denominator: usize) -> usize {
     assert!(denominator > 0);
-    (numerator.wrapping_sub(1) / denominator).wrapping_add(1)
+    if numerator == 0 {
+        0
+    } else {
+        1 + (numerator - 1) / denominator
+    }
 }
 
 #[cfg(test)]
@@ -97,14 +105,19 @@ mod tests {
 
     #[test]
     fn test_ceil_div() {
-        proptest!(|(numerator: usize, denominator:usize)| {
-            prop_assume!(denominator > 0);
+        // ceil(0 / a) = 0
+        proptest!(|(a in 1_usize..)| {
+            prop_assert_eq!(ceil_div(0, a), 0);
+        });
+
+        proptest!(|(numerator in 1_usize.., denominator in 1_usize..)| {
             let result = ceil_div(numerator, denominator);
-            if result > 0 {
-                prop_assert!((result - 1) * denominator < numerator);
-                prop_assert!(numerator - (result - 1) * denominator < denominator);
+            let floored = numerator / denominator;
+            let exact = numerator % denominator == 0;
+            if exact {
+                prop_assert_eq!(result, floored);
             } else {
-                prop_assert!(numerator == 0);
+                prop_assert_eq!(result, floored + 1);
             }
         });
     }
