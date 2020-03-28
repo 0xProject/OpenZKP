@@ -9,11 +9,9 @@ impl Arbitrary for Affine {
     fn arbitrary_with(_: Self::Parameters) -> Self::Strategy {
         <(bool, FieldElement)>::arbitrary()
             .prop_filter_map("x not on curve", |(sign, x)| {
-                let y = (x.pow(3_usize) + &x + BETA).square_root();
-                match y {
-                    Some(y) => Some(Affine::new(x, if sign { y } else { -y })),
-                    None => None,
-                }
+                (x.pow(3_usize) + &x + BETA)
+                    .square_root()
+                    .map(|y| Affine::new(x, if sign { y } else { -y }))
             })
             .boxed()
     }
