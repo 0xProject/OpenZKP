@@ -7,13 +7,15 @@ impl Arbitrary for Affine {
     type Strategy = BoxedStrategy<Self>;
 
     fn arbitrary_with(_: Self::Parameters) -> Self::Strategy {
-        <(bool, FieldElement)>::arbitrary()
-            .prop_filter_map("x not on curve", |(sign, x)| {
+        prop_oneof![
+            Just(Affine::Zero),
+            <(bool, FieldElement)>::arbitrary().prop_filter_map("x not on curve", |(sign, x)| {
                 (x.pow(3_usize) + &x + BETA)
                     .square_root()
                     .map(|y| Affine::new(x, if sign { y } else { -y }))
             })
-            .boxed()
+        ]
+        .boxed()
     }
 }
 
