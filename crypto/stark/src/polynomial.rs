@@ -124,23 +124,6 @@ impl DensePolynomial {
 }
 
 #[cfg(test)]
-use quickcheck::{Arbitrary, Gen};
-
-#[cfg(test)]
-impl Arbitrary for DensePolynomial {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
-        let mut coefficients = Vec::<FieldElement>::arbitrary(g);
-        let length = coefficients.len();
-        coefficients.extend_from_slice(&vec![
-            FieldElement::zero();
-            length.next_power_of_two() - length
-        ]);
-        assert!(coefficients.len().is_power_of_two());
-        Self::new(&coefficients)
-    }
-}
-
-#[cfg(test)]
 mod tests {
     use super::*;
 
