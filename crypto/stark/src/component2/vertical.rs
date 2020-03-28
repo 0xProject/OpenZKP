@@ -108,4 +108,8 @@ mod tests {
             prop_assert_eq!(component.check(&claim, &witness), Ok(()));
         });
     }
+
+    // TODO: Test `Vertical::new(A, 1) == A`
+    // TODO: Test `Vertical::new(Vertical::new(A, n), m) == Vertical::new(A, n *
+    // m)`
 }

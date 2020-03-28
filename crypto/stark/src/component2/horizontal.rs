@@ -108,4 +108,7 @@ mod tests {
             prop_assert_eq!(component.check(&claim, &witness), Ok(()));
         });
     }
+
+    // TODO: Test `Horizontal::new(Horizontal(A, B), C) == Horizontal::new(A,
+    // Horizontal::new(B, C))`
 }
