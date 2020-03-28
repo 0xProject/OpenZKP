@@ -7,7 +7,8 @@ pub struct Vertical<Element>
 where
     Element: Component,
 {
-    elements: Vec<Element>,
+    element: Element,
+    size:    usize,
 }
 
 // TODO: Validate that element constraint systems are compatible.
@@ -15,20 +16,13 @@ impl<Element> Vertical<Element>
 where
     Element: Component,
 {
-    pub fn new(elements: Vec<Element>) -> Self {
-        assert!(elements.len().is_power_of_two());
-        // TODO: Validate that all constraint systems have the same dimensions
-        // and the same constraints.
-        Vertical { elements }
+    pub fn new(element: Element, size: usize) -> Self {
+        assert!(size.is_power_of_two());
+        Vertical { element, size }
     }
 
-    pub fn elements(&self) -> &[Element] {
-        &self.elements
-    }
-
-    // TODO: Implement Index
-    pub fn element(&self, index: usize) -> &Element {
-        &self.elements[0]
+    pub fn element(&self) -> &Element {
+        &self.element
     }
 }
 
@@ -36,51 +30,44 @@ impl<Element> Component for Vertical<Element>
 where
     Element: Component,
 {
-    // TODO: Avoid `Vec<_>`
+    // TODO: Avoid `Vec<_>`, maybe `IntoIter<_>`?
     type Claim = Vec<Element::Claim>;
     type Witness = Vec<Element::Witness>;
 
     fn dimensions(&self) -> (usize, usize) {
-        if let Some(first) = self.elements.first() {
-            let (rows, columns) = first.dimensions();
-            (self.elements.len() * rows, columns)
-        } else {
-            (0, 0)
-        }
+        let (rows, columns) = self.element.dimensions();
+        (self.size * rows, columns)
     }
 
+    // Note: Element can not have constraints depend on the claim!
+    // TODO: Vectorize the claim? Encode claim in a lookup polynomial?
     fn constraints(&self, claim: &Self::Claim) -> Vec<RationalExpression> {
-        assert_eq!(claim.len(), self.elements.len());
-        let size = self.elements.len();
-        if let Some(first) = self.elements.first() {
-            first
-                .constraints(&claim[0])
-                .into_iter()
-                .map(|expression| {
-                    expression.map(&|node| {
-                        match node {
-                            X => X.pow(size),
-                            other => other,
-                        }
-                    })
+        use RationalExpression::*;
+        self.element
+            // TODO: Avoid `unwrap`
+            .constraints(claim.first().unwrap())
+            .into_iter()
+            .map(|expression| {
+                expression.map(&|node| {
+                    match node {
+                        X => X.pow(self.size),
+                        other => other,
+                    }
                 })
-                .collect::<Vec<_>>()
-        } else {
-            Vec::new()
-        }
+            })
+            .collect::<Vec<_>>()
     }
 
     fn trace(&self, claim: &Self::Claim, witness: &Self::Witness) -> TraceTable {
-        assert_eq!(claim.len(), self.elements.len());
-        assert_eq!(witness.len(), self.elements.len());
-        if self.elements.is_empty() {
-            return TraceTable::new(0, 0);
-        }
-        let (rows, columns) = self.dimensions();
-        let element_rows = rows / self.elements.len();
+        assert_eq!(claim.len(), self.size);
+        assert_eq!(witness.len(), self.size);
+        let (element_rows, columns) = self.element.dimensions();
+        let rows = element_rows * self.size;
         let mut trace = TraceTable::new(rows, columns);
-        izip!(self.elements().iter(), claim.iter(), witness.iter())
-            .map(|(element, claim, witness)| element.trace(claim, witness))
+        claim
+            .iter()
+            .zip(witness.iter())
+            .map(|(claim, witness)| self.element.trace(claim, witness))
             .enumerate()
             .for_each(|(i, element_trace)| {
                 assert_eq!(element_trace.num_rows(), element_rows);
@@ -99,25 +86,25 @@ where
 #[cfg(test)]
 mod tests {
     use super::{super::test::Test, *};
-    use proptest::prelude::*;
+    use proptest::{collection::vec, prelude::*};
     use zkp_u256::U256;
 
     #[test]
     fn test_check() {
+        let witness =
+            (0_usize..5).prop_flat_map(|log_size| vec(any::<FieldElement>(), 1 << log_size));
         proptest!(|(
-            log_rows in 0_usize..10,
+            log_rows in 0_usize..5,
             cols in 0_usize..10,
             seed: FieldElement,
             claim: FieldElement,
-            witness: Vec<FieldElement>
+            witness in witness,
         )| {
-            // TODO: This different column sizes
-            let rows = 1 << log_rows;
-            let left = Test::new(rows, cols, &seed);
-            let right = Test::new(rows, cols, &seed);
-            let component = Horizontal::new(left, right);
-            let claim = (claim.clone(), claim.clone());
-            let witness = (witness.clone(), witness.clone());
+            let size = witness.len();
+            let element_rows = 1 << log_rows;
+            let element = Test::new(element_rows, cols, &seed);
+            let component = Vertical::new(element, size);
+            let claim = vec![claim; size];
             prop_assert_eq!(component.check(&claim, &witness), Ok(()));
         });
     }
