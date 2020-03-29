@@ -300,12 +300,12 @@ pub(crate) mod tests {
         type Strategy = BoxedStrategy<Self>;
 
         fn arbitrary_with(_: Self::Parameters) -> Self::Strategy {
-            (1usize..=12)
+            (1_usize..=12)
                 .prop_flat_map(|order| {
                     (
                         (order..order + 1000),
                         proptest_vec(FieldElement::arbitrary(), order),
-                        proptest_vec(0usize..16, order),
+                        proptest_vec(0_usize..16, order),
                         proptest_vec(FieldElement::arbitrary(), order),
                     )
                 })
