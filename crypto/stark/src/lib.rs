@@ -65,6 +65,8 @@ mod constraint_check;
 #[cfg(feature = "prover")]
 mod prover;
 #[cfg(feature = "prover")]
+mod rational_equality;
+#[cfg(feature = "prover")]
 pub mod solidity_encode;
 #[cfg(feature = "prover")]
 mod trace_table;
