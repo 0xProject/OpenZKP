@@ -1,6 +1,8 @@
 use super::Component;
 use crate::{RationalExpression, TraceTable};
 
+#[derive(Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "std", derive(Debug))]
 pub struct Empty(usize, usize);
 
 impl Empty {

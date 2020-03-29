@@ -1,10 +1,10 @@
 use super::Component;
 use crate::{RationalExpression, TraceTable};
-use itertools::izip;
-use std::cmp::min;
-use zkp_primefield::{fft::permute_index, FieldElement, Root};
+use zkp_primefield::fft::permute_index;
 
 /// Note: `Fold::new(Fold::new(A, m), n) == Fold::new(A, m + n)`
+#[derive(Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "std", derive(Debug))]
 pub struct Fold<Element>
 where
     Element: Component,
@@ -102,6 +102,7 @@ fn ceil_div(numerator: usize, denominator: usize) -> usize {
 mod tests {
     use super::{super::test::Test, *};
     use proptest::prelude::*;
+    use zkp_primefield::FieldElement;
 
     #[test]
     fn test_ceil_div() {

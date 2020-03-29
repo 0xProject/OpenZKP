@@ -14,7 +14,7 @@ use zkp_primefield::{FieldElement, Root};
 /// to match
 #[derive(Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "std", derive(Debug))]
-pub(crate) struct Test {
+pub struct Test {
     rows:    usize,
     columns: usize,
     seed:    FieldElement,
@@ -105,7 +105,6 @@ impl Component for Test {
 mod tests {
     use super::*;
     use proptest::prelude::*;
-    use zkp_u256::U256;
 
     #[test]
     fn test_check() {

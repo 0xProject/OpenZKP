@@ -1,8 +1,8 @@
 use super::Component;
 use crate::{RationalExpression, TraceTable};
-use itertools::izip;
-use zkp_primefield::{FieldElement, Root};
 
+#[derive(Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "std", derive(Debug))]
 pub struct Vertical<Element>
 where
     Element: Component,
@@ -87,7 +87,7 @@ where
 mod tests {
     use super::{super::test::Test, *};
     use proptest::{collection::vec, prelude::*};
-    use zkp_u256::U256;
+    use zkp_primefield::FieldElement;
 
     #[test]
     fn test_check() {

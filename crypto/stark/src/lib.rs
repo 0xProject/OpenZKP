@@ -59,7 +59,7 @@ mod algebraic_dag;
 #[cfg(feature = "prover")]
 mod component;
 #[cfg(feature = "prover")]
-mod component2;
+pub mod component2;
 #[cfg(feature = "prover")]
 mod constraint_check;
 #[cfg(feature = "prover")]

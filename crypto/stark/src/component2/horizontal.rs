@@ -1,7 +1,8 @@
 use super::Component;
 use crate::{RationalExpression, TraceTable};
-use zkp_primefield::{FieldElement, Root};
 
+#[derive(Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "std", derive(Debug))]
 pub struct Horizontal<Left, Right>
 where
     Left: Component,
@@ -88,7 +89,7 @@ where
 mod tests {
     use super::{super::test::Test, *};
     use proptest::prelude::*;
-    use zkp_u256::U256;
+    use zkp_primefield::FieldElement;
 
     fn component(
         rows: usize,

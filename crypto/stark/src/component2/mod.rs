@@ -12,6 +12,12 @@ use crate::{
     Constraints, ProverError, RationalExpression, TraceTable,
 };
 
+pub use empty::Empty;
+pub use fold::Fold;
+pub use horizontal::Horizontal;
+pub use test::Test;
+pub use vertical::Vertical;
+
 pub trait Component {
     type Claim;
     type Witness;
