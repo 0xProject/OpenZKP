@@ -1,6 +1,6 @@
 use crate::{Affine, Jacobian, BETA};
 use proptest::prelude::*;
-use zkp_primefield::{FieldElement, Inv, Pow, SquareInline, SquareRoot};
+use zkp_primefield::{FieldElement, Pow, SquareInline, SquareRoot, Zero};
 
 impl Arbitrary for Affine {
     type Parameters = ();
@@ -26,14 +26,16 @@ impl Arbitrary for Jacobian {
     fn arbitrary_with(_: Self::Parameters) -> Self::Strategy {
         <(FieldElement, Affine)>::arbitrary()
             .prop_filter_map("z is zero", |(z, a)| {
-                let mut j = Self::from(a);
-                z.inv().map(|inverse| {
-                    let square = inverse.square();
+                if z.is_zero() {
+                    None
+                } else {
+                    let mut j = Self::from(a);
+                    let square = z.square();
                     j.x *= &square;
-                    j.y *= square * &inverse;
-                    j.z *= inverse;
-                    j
-                })
+                    j.y *= square * &z;
+                    j.z *= z;
+                    Some(j)
+                }
             })
             .boxed()
     }
