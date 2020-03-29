@@ -33,6 +33,8 @@ mod tests {
     use super::*;
     use proptest::prelude::*;
 
+    // More readable being explicit
+    #[allow(clippy::let_unit_value)]
     #[test]
     fn test_empty_check() {
         proptest!(|(log_rows in 0_usize..10, cols in 0_usize..10)| {

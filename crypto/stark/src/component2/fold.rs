@@ -63,6 +63,8 @@ where
                     match node {
                         Trace(column, row_offset) => {
                             let column_offset = permute_index(reduction, column % reduction);
+                            // Reductions should be small enough
+                            #[allow(clippy::cast_possible_wrap)]
                             Trace(
                                 column / reduction,
                                 (reduction as isize) * row_offset + (column_offset as isize),

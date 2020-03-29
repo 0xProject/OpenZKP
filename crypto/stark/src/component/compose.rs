@@ -106,7 +106,7 @@ pub fn fold(a: Component) -> Component {
     result
 }
 
-pub fn compose_horizontal(mut a: Component, mut b: Component) -> Component {
+pub fn horizontal(mut a: Component, mut b: Component) -> Component {
     use RationalExpression::*;
     assert_eq!(a.trace.num_rows(), b.trace.num_rows());
     let mut result = Component::empty(
@@ -139,7 +139,7 @@ pub fn compose_horizontal(mut a: Component, mut b: Component) -> Component {
 
 // We allow this for symmetry
 #[allow(clippy::needless_pass_by_value)]
-pub fn compose_vertical(mut a: Component, mut b: Component) -> Component {
+pub fn vertical(mut a: Component, mut b: Component) -> Component {
     use RationalExpression::*;
     assert_eq!(a.trace.num_rows(), b.trace.num_rows());
     assert_eq!(a.trace.num_columns(), b.trace.num_columns());
@@ -175,7 +175,7 @@ pub fn fold_many(a: Component, folds: usize) -> Component {
     for _ in 0..folds {
         if result.trace.num_columns() % 2 == 1 {
             let rows = result.trace.num_rows();
-            result = compose_horizontal(result, Component::empty(rows, 1));
+            result = horizontal(result, Component::empty(rows, 1));
             result.labels = result
                 .labels
                 .into_iter()
@@ -190,7 +190,7 @@ pub fn fold_many(a: Component, folds: usize) -> Component {
 }
 
 /// Horizontally compose two components of potentially unequal length
-pub fn compose_folded(mut a: Component, mut b: Component) -> Component {
+pub fn folded(mut a: Component, mut b: Component) -> Component {
     use std::cmp::Ordering::*;
     let a_len = a.trace.num_rows();
     let b_len = b.trace.num_rows();
@@ -213,12 +213,12 @@ pub fn compose_folded(mut a: Component, mut b: Component) -> Component {
     match a_len.cmp(&b_len) {
         Less => {
             let folds = usize::try_from((b_len / a_len).trailing_zeros()).unwrap();
-            compose_horizontal(fold_many(a, folds), b)
+            horizontal(fold_many(a, folds), b)
         }
-        Equal => compose_horizontal(a, b),
+        Equal => horizontal(a, b),
         Greater => {
             let folds = usize::try_from((a_len / b_len).trailing_zeros()).unwrap();
-            compose_horizontal(a, fold_many(b, folds))
+            horizontal(a, fold_many(b, folds))
         }
     }
 }
@@ -352,9 +352,9 @@ mod tests {
         }
 
         #[test]
-        fn test_compose_horizontal((left, right) in arb_hor_components()) {
+        fn test_horizontal((left, right) in arb_hor_components()) {
             prop_assume!(left.trace.num_rows() == right.trace.num_rows());
-            let result = compose_horizontal(left.clone(), right.clone());
+            let result = horizontal(left.clone(), right.clone());
             assert!(result.check());
             assert_eq!(result.trace.num_rows(), left.trace.num_rows());
             assert_eq!(result.trace.num_columns(),
@@ -376,11 +376,11 @@ mod tests {
         }
 
         #[test]
-        fn test_compose_vertical((top, bottom) in arb_ver_components()) {
+        fn test_vertical((top, bottom) in arb_ver_components()) {
             prop_assume!(top.trace.num_rows() == bottom.trace.num_rows());
             prop_assume!(top.trace.num_columns() == bottom.trace.num_columns());
             prop_assume!(top.constraints.len() == bottom.constraints.len());
-            let result = compose_vertical(top.clone(), bottom.clone());
+            let result = vertical(top.clone(), bottom.clone());
             assert!(result.check());
             assert_eq!(result.trace.num_rows(), 2 * top.trace.num_rows());
             assert_eq!(result.trace.num_columns(), top.trace.num_columns());
@@ -400,8 +400,8 @@ mod tests {
         }
 
         #[test]
-        fn test_compose_folded(left in arb_component(), right in arb_component()) {
-            let result = compose_folded(left.clone(), right.clone());
+        fn test_folded(left in arb_component(), right in arb_component()) {
+            let result = folded(left.clone(), right.clone());
             assert!(result.check());
             assert_eq!(result.trace.num_rows(),
                 std::cmp::max(left.trace.num_rows(), right.trace.num_rows()));

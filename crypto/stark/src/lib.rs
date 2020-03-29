@@ -92,8 +92,8 @@ pub use verifier::{verify, Error as VerifierError};
 #[cfg(feature = "prover")]
 pub use component::{
     compose::{
-        compose_folded, compose_horizontal, compose_vertical, fold, fold_many, permute_columns,
-        shift,
+        fold, fold_many, folded as compose_folded, horizontal as compose_horizontal,
+        permute_columns, shift, vertical as compose_vertical,
     },
     Component,
 };
