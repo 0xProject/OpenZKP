@@ -129,5 +129,32 @@ mod tests {
 
     // TODO: Test `Horizontal::new(A, Empty) == Horizontal::new(Empty, A) == A`
 
+    // Test `Horizontal::new(Horizontal::new(A, B), C) == Horizontal::new(A,
     // Horizontal::new(B, C))`
+    #[test]
+    fn test_associative() {
+        // Generate three components with the same number of rows
+        let components = (0_usize..10).prop_flat_map(|log_rows| {
+            let rows = 1 << log_rows;
+            (component(rows), component(rows), component(rows))
+        });
+        proptest!(|(
+            (a, b, c) in components
+        )| {
+            let left = Horizontal::new(Horizontal::new(a.0.clone(), b.0.clone()), c.0.clone());
+            let left_claim = ((a.1.clone(), b.1.clone()), c.1.clone());
+            let left_witness = ((a.2.clone(), b.2.clone()), c.2.clone());
+            let right = Horizontal::new(a.0, Horizontal::new(b.0, c.0));
+            let right_claim = (a.1, (b.1, c.1));
+            let right_witness = (a.2, (b.2, c.2));
+            for (result, expected) in left.constraints(&left_claim).iter()
+                .zip(right.constraints(&right_claim).iter()) {
+                prop_assert!(result.equals(expected));
+            }
+            prop_assert_eq!(
+                left.trace(&left_claim, &left_witness),
+                right.trace(&right_claim, &right_witness)
+            );
+        });
+    }
 }
