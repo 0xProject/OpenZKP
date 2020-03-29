@@ -43,19 +43,25 @@ where
     // TODO: Vectorize the claim? Encode claim in a lookup polynomial?
     fn constraints(&self, claim: &Self::Claim) -> Vec<RationalExpression> {
         use RationalExpression::*;
-        self.element
+        let constraints = self
+            .element
             // TODO: Avoid `unwrap`
-            .constraints(claim.first().unwrap())
-            .into_iter()
-            .map(|expression| {
-                expression.map(&|node| {
-                    match node {
-                        X => X.pow(self.size),
-                        other => other,
-                    }
+            .constraints(claim.first().unwrap());
+        if self.size > 1 {
+            constraints
+                .into_iter()
+                .map(|expression| {
+                    expression.map(&|node| {
+                        match node {
+                            X => X.pow(self.size),
+                            other => other,
+                        }
+                    })
                 })
-            })
-            .collect::<Vec<_>>()
+                .collect::<Vec<_>>()
+        } else {
+            constraints
+        }
     }
 
     fn trace(&self, claim: &Self::Claim, witness: &Self::Witness) -> TraceTable {
@@ -109,7 +115,26 @@ mod tests {
         });
     }
 
-    // TODO: Test `Vertical::new(A, 1) == A`
+    // Test `Vertical::new(A, 1) == A`
+    #[test]
+    fn test_one() {
+        proptest!(|(
+            log_rows in 0_usize..5,
+            cols in 0_usize..10,
+            seed: FieldElement,
+            claim: FieldElement,
+            witness: FieldElement,
+        )| {
+            let element_rows = 1 << log_rows;
+            let element = Test::new(element_rows, cols, &seed);
+            let component = Vertical::new(element.clone(), 1);
+            let claim_vec = vec![claim.clone(); 1];
+            let witness_vec = vec![witness.clone(); 1];
+            prop_assert_eq!(component.constraints(&claim_vec), element.constraints(&claim));
+            prop_assert_eq!(component.trace(&claim_vec, &witness_vec), element.trace(&claim, &witness));
+        });
+    }
+
     // TODO: Test `Vertical::new(Vertical::new(A, n), m) == Vertical::new(A, n *
     // m)`
 }
