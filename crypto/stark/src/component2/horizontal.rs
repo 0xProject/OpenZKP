@@ -127,8 +127,6 @@ mod tests {
         });
     }
 
-    // TODO: Test `Horizontal::new(A, Empty) == Horizontal::new(Empty, A) == A`
-
     // Test `Horizontal::new(Horizontal::new(A, B), C) == Horizontal::new(A,
     // Horizontal::new(B, C))`
     #[test]
