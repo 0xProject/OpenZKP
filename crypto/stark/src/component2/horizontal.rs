@@ -90,25 +90,44 @@ mod tests {
     use proptest::prelude::*;
     use zkp_u256::U256;
 
+    fn component(
+        rows: usize,
+    ) -> impl Strategy<
+        Value = (
+            Test,
+            <Test as Component>::Claim,
+            <Test as Component>::Witness,
+        ),
+    > {
+        (
+            0_usize..10,
+            any::<FieldElement>(),
+            any::<FieldElement>(),
+            any::<FieldElement>(),
+        )
+            .prop_map(move |(columns, seed, claim, witness)| {
+                (Test::new(rows, columns, &seed), claim, witness)
+            })
+    }
+
     #[test]
     fn test_check() {
-        proptest!(|(
-            log_rows in 0_usize..10,
-            cols in 0_usize..10,
-            seed: FieldElement,
-            claim: FieldElement,
-            witness: FieldElement
-        )| {
+        // Generate two components with the same number of rows
+        let components = (0_usize..10).prop_flat_map(|log_rows| {
             let rows = 1 << log_rows;
-            let left = Test::new(rows, cols, &seed);
-            let right = Test::new(rows, cols, &seed);
-            let component = Horizontal::new(left, right);
-            let claim = (claim.clone(), claim.clone());
-            let witness = (witness.clone(), witness.clone());
+            (component(rows), component(rows))
+        });
+        proptest!(|(
+            (a, b) in components
+        )| {
+            let component = Horizontal::new(a.0, b.0);
+            let claim = (a.1, b.1);
+            let witness = (a.2, b.2);
             prop_assert_eq!(component.check(&claim, &witness), Ok(()));
         });
     }
 
-    // TODO: Test `Horizontal::new(Horizontal(A, B), C) == Horizontal::new(A,
+    // TODO: Test `Horizontal::new(A, Empty) == Horizontal::new(Empty, A) == A`
+
     // Horizontal::new(B, C))`
 }

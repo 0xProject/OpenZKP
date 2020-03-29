@@ -13,6 +13,7 @@ use zkp_primefield::{FieldElement, Root};
 /// across the trace dimension and constraints are produced
 /// to match
 #[derive(Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "std", derive(Debug))]
 pub(crate) struct Test {
     rows:    usize,
     columns: usize,
