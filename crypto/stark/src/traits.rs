@@ -44,7 +44,7 @@ pub trait Provable<T>: Verifiable {
 pub(crate) mod tests {
     use super::*;
     use crate::RationalExpression;
-    use proptest::prelude::*;
+    use proptest::{collection::vec as proptest_vec, prelude::*};
     use std::convert::TryInto;
     use zkp_primefield::{FieldElement, One, Pow, Root, Zero};
 
@@ -285,16 +285,15 @@ pub(crate) mod tests {
             <(usize, FieldElement, usize)>::arbitrary()
                 .prop_map(|(a, initial_value, b)| {
                     Self {
-                        index: 1 + a % 1000,
+                        index: 1 + a % 10,
                         initial_value,
-                        exponent: b % 16,
+                        exponent: b % 6,
                     }
                 })
                 .boxed()
         }
     }
 
-    use proptest::collection::vec as proptest_vec;
     impl Arbitrary for Recurrance2 {
         type Parameters = ();
         type Strategy = BoxedStrategy<Self>;
@@ -303,9 +302,9 @@ pub(crate) mod tests {
             (1_usize..=12)
                 .prop_flat_map(|order| {
                     (
-                        (order..order + 1000),
+                        (order..order + 10),
                         proptest_vec(FieldElement::arbitrary(), order),
-                        proptest_vec(0_usize..16, order),
+                        proptest_vec(0_usize..6, order),
                         proptest_vec(FieldElement::arbitrary(), order),
                     )
                 })
