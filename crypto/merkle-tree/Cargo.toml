@@ -30,7 +30,7 @@ proptest = "0.9.5"
 proptest-derive = "0.1.2"
 zkp-criterion-utils = { version = "0.1.0", path = "../../utils/criterion-utils" }
 zkp-macros-decl = { version = "0.1.0", path = "../../utils/macros-decl" }
-zkp-u256 = { version = "0.1.0", path = "../../algebra/u256", features = ["proptest"] }
+zkp-u256 = { version = "0.1.0", path = "../../algebra/u256", features = ["proptest", "proptest-derive"] }
 
 [[bench]]
 name = "benchmark"
