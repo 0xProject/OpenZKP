@@ -77,7 +77,7 @@ where
             }
             let shift = left.num_columns();
             for j in 0..right.num_columns() {
-                trace[(i, j + shift)] = left[(i, j)].clone();
+                trace[(i, j + shift)] = right[(i, j)].clone();
             }
         }
         trace
