@@ -45,6 +45,8 @@
 
 mod curve;
 mod jacobian;
+#[cfg(any(test, feature = "proptest"))]
+mod proptest;
 mod scalar_field;
 mod wnaf;
 

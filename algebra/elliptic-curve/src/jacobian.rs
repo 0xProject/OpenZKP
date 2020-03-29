@@ -231,24 +231,11 @@ curve_operations!(Jacobian);
 commutative_binop!(Jacobian, Add, add, AddAssign, add_assign);
 noncommutative_binop!(Jacobian, Sub, sub, SubAssign, sub_assign);
 
-#[cfg(any(test, feature = "quickcheck"))]
-use quickcheck::{Arbitrary, Gen};
-
-#[cfg(any(test, feature = "quickcheck"))]
-impl Arbitrary for Jacobian {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
-        // To force Z to be non trivial we add two points.
-        let mut r = Self::from(Affine::arbitrary(g));
-        r += &Affine::arbitrary(g);
-        r
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::ScalarFieldElement;
-    use quickcheck_macros::quickcheck;
+    use proptest::prelude::*;
     use zkp_macros_decl::u256h;
 
     #[test]
@@ -297,13 +284,20 @@ mod tests {
         assert_eq!(a * b, c);
     }
 
-    #[quickcheck]
-    fn add_commutative(a: Jacobian, b: Jacobian) -> bool {
-        &a + &b == b + a
-    }
+    proptest!(
+        #[test]
+        fn add_commutative(a: Jacobian, b: Jacobian) {
+            prop_assert_eq!(&a + &b, b + a)
+        }
 
-    #[quickcheck]
-    fn distributivity(p: Jacobian, a: ScalarFieldElement, b: ScalarFieldElement) -> bool {
-        &p * &a + &p * &b == p * (a + b)
-    }
+        #[test]
+        fn distributivity(p: Jacobian, a: ScalarFieldElement, b: ScalarFieldElement) {
+            prop_assert_eq!(&p * &a + &p * &b, p * (a + b));
+        }
+
+        #[test]
+        fn affine_jacobian(j: Jacobian) {
+            prop_assert_eq!(Jacobian::from(Affine::from(&j)), j);
+        }
+    );
 }
