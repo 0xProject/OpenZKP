@@ -18,11 +18,11 @@ cargo clippy
 
 We follow the
 
--   ["Rust style guide"][rustfmt],
--   ["Rust API Guidelines"][rustapi],
--   ["Rust Book"][rustbook],
--   ["Secure Rust Guideline"][sec-rs], and
--   ["Libra Coding Guidelines"][libra].
+* ["Rust style guide"][rustfmt],
+* ["Rust API Guidelines"][rustapi],
+* ["Rust Book"][rustbook],
+* ["Secure Rust Guideline"][sec-rs], and
+* ["Libra Coding Guidelines"][libra].
 
 [rustfmt]: https://github.com/rust-dev-tools/fmt-rfcs/blob/master/guide/guide.md
 [rustapi]: https://rust-lang-nursery.github.io/api-guidelines/about.html
@@ -32,8 +32,8 @@ We follow the
 
 Except,
 
--   Unit tests are in the same file as the code covered and not in separate files.
--   We use `proptest` for property based testing.
+* Unit tests are in the same file as the code covered and not in separate files.
+* We use `proptest` for property based testing.
 
 In addition to the above, we use [Criterion][criterion] extensively for statistical
 benchmarking. See the section below for what is expected.
