@@ -1,4 +1,6 @@
 use crate::{Error, Result};
+#[cfg(any(test, feature = "proptest"))]
+use proptest_derive::Arbitrary;
 use std::{convert::TryFrom, ops::RangeInclusive};
 use zkp_error_utils::require;
 
@@ -33,6 +35,11 @@ const USIZE_BITS: usize = 0_usize.count_zeros() as usize;
 // the path to the node, stating with `1` at the root and then `0` for left and
 // `1` for right.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(
+    any(test, feature = "proptest"),
+    proptest(no_params),
+    derive(Arbitrary)
+)]
 pub struct Index(usize);
 
 impl Index {
@@ -91,7 +98,7 @@ impl Index {
 
     pub fn depth(self) -> usize {
         let next_layer = (self.0 + 1).next_power_of_two();
-        // Usize should always be able to hold it's number of bits
+        // Usize should always be able to hold its number of bits
         let next_depth = usize::try_from(next_layer.trailing_zeros()).unwrap();
         next_depth - 1
     }
@@ -208,43 +215,38 @@ impl Iterator for LayerIter {
     }
 }
 
-#[cfg(any(test, feature = "quickcheck"))]
-use quickcheck::{Arbitrary, Gen};
-
-#[cfg(any(test, feature = "quickcheck"))]
-impl Arbitrary for Index {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
-        Self(usize::arbitrary(g) + 1)
-    }
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
-    use quickcheck_macros::quickcheck;
+    use proptest::prelude::*;
 
-    #[quickcheck]
-    fn test_depth_offset_roundtrip(depth: usize, offset: usize) -> bool {
-        let depth = depth % (Index::max_size().trailing_zeros() as usize);
-        let offset = offset % Index::size_at_depth(depth);
-        let index = Index::from_size_offset(1_usize << depth, offset).unwrap();
-        index.depth() == depth && index.offset() == offset
-    }
+    proptest!(
+        #[test]
+        fn test_depth_offset_roundtrip(depth: usize, offset: usize) {
+            let depth = depth % (Index::max_size().trailing_zeros() as usize);
+            let offset = offset % Index::size_at_depth(depth);
+            let index = Index::from_size_offset(1_usize << depth, offset).unwrap();
+            prop_assert_eq!(index.depth(), depth);
+            prop_assert_eq!(index.offset(), offset);
+        }
 
-    #[quickcheck]
-    fn test_children(parent: Index) {
-        let left = parent.left_child();
-        let right = parent.right_child();
-        assert!(left.is_left());
-        assert!(right.is_right());
-        assert_eq!(left.depth(), right.depth());
-        assert_eq!(left.depth(), parent.depth() + 1);
-        assert_eq!(left.offset() + 1, right.offset());
-        assert_eq!(left.parent().unwrap(), parent);
-        assert_eq!(right.parent().unwrap(), parent);
-        assert_eq!(left.right_neighbor().unwrap(), right);
-        assert_eq!(right.left_neighbor().unwrap(), left);
-        assert_eq!(left.sibling().unwrap(), right);
-        assert_eq!(right.sibling().unwrap(), left);
-    }
+        #[test]
+        fn test_children(parent: Index) {
+            prop_assume!(parent.depth() != 63);
+
+            let left = parent.left_child();
+            let right = parent.right_child();
+            prop_assert!(left.is_left());
+            prop_assert!(right.is_right());
+            prop_assert_eq!(left.depth(), right.depth());
+            prop_assert_eq!(left.depth(), parent.depth() + 1);
+            prop_assert_eq!(left.offset() + 1, right.offset());
+            prop_assert_eq!(left.parent().unwrap(), parent);
+            prop_assert_eq!(right.parent().unwrap(), parent);
+            prop_assert_eq!(left.right_neighbor().unwrap(), right);
+            prop_assert_eq!(right.left_neighbor().unwrap(), left);
+            prop_assert_eq!(left.sibling().unwrap(), right);
+            prop_assert_eq!(right.sibling().unwrap(), left);
+        }
+    );
 }

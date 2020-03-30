@@ -25,10 +25,9 @@ zkp-u256 = { version = "0.1.0", path = "../../algebra/u256", default-features = 
 
 [dev-dependencies]
 criterion = "0.3.0"
-quickcheck = "0.9"
-quickcheck_macros = "0.9.1"
-zkp-primefield = { version = "0.1.0", path = "../../algebra/primefield", features = ["quickcheck"] }
-zkp-u256 = { version = "0.1.0", path = "../../algebra/u256", features = ["quickcheck"] }
+proptest = "0.9.4"
+zkp-primefield = { version = "0.1.0", path = "../../algebra/primefield", features = ["proptest"] }
+zkp-u256 = { version = "0.1.0", path = "../../algebra/u256", features = ["proptest", "proptest-derive"] }
 
 [[bench]]
 name = "benchmark"

@@ -531,29 +531,29 @@ mod tests {
         traits::tests::{Recurrance, Recurrance2},
         Provable, Verifiable,
     };
-    use quickcheck_macros::quickcheck;
+    use proptest::prelude::*;
 
-    #[quickcheck]
-    #[allow(clippy::needless_pass_by_value)] // Cleaner than adding lifetime annotations.
-    fn verify_recurrance(r: Recurrance) -> bool {
-        let public = r.claim();
-        let private = r.witness();
+    proptest!(
+        #[test]
+        fn verify_recurrance(r: Recurrance) {
+            let public = r.claim();
+            let private = r.witness();
 
-        let constraints = public.constraints();
-        let trace = public.trace(&private);
+            let constraints = public.constraints();
+            let trace = public.trace(&private);
 
-        verify(&constraints, &prove(&constraints, &trace).unwrap()).is_ok()
-    }
+            prop_assert!(verify(&constraints, &prove(&constraints, &trace).unwrap()).is_ok());
+        }
 
-    #[quickcheck]
-    #[allow(clippy::needless_pass_by_value)] // Cleaner than adding lifetime annotations.
-    fn verify_recurrance2(r: Recurrance2) -> bool {
-        let public = r.claim();
-        let private = r.witness();
+        #[test]
+        fn verify_recurrance2(r: Recurrance2) {
+            let public = r.claim();
+            let private = r.witness();
 
-        let constraints = public.constraints();
-        let trace = public.trace(&private);
+            let constraints = public.constraints();
+            let trace = public.trace(&private);
 
-        verify(&constraints, &prove(&constraints, &trace).unwrap()).is_ok()
-    }
+            prop_assert!(verify(&constraints, &prove(&constraints, &trace).unwrap()).is_ok());
+        }
+    );
 }

@@ -292,7 +292,7 @@ mod test {
         },
         *,
     };
-    use quickcheck_macros::quickcheck;
+    use proptest::prelude::*;
     use rand::{
         distributions::{Distribution, Uniform},
         Rng, SeedableRng,
@@ -318,17 +318,19 @@ mod test {
         assert_eq!(&component.eval_label("hash"), &hash);
     }
 
-    #[quickcheck]
-    fn test_tree_layer(leaf: FieldElement, direction: bool, sibling: FieldElement) {
-        let component = tree_layer(&leaf, direction, &sibling);
-        let hash = if direction {
-            merkle_hash(&sibling, &leaf)
-        } else {
-            merkle_hash(&leaf, &sibling)
-        };
-        assert!(component.check());
-        assert_eq!(component.eval_label("hash"), hash);
-    }
+    proptest!(
+        #[test]
+        fn test_tree_layer(leaf: FieldElement, direction: bool, sibling: FieldElement) {
+            let component = tree_layer(&leaf, direction, &sibling);
+            let hash = if direction {
+                merkle_hash(&sibling, &leaf)
+            } else {
+                merkle_hash(&leaf, &sibling)
+            };
+            prop_assert!(component.check());
+            prop_assert_eq!(component.eval_label("hash"), hash);
+        }
+    );
 
     #[test]
     fn test_pedersen_merkle_small_proof() {
@@ -367,16 +369,18 @@ mod test {
         );
     }
 
-    #[quickcheck]
-    fn test_pedersen_merkle(seed: u64) {
-        let mut rng = Xoshiro256PlusPlus::seed_from_u64(seed);
-        let size = 1 << Uniform::from(0..4).sample(&mut rng);
-        let witness = Witness {
-            directions: (0..size).map(|_| rng.gen()).collect(),
-            path:       (0..size).map(|_| rng.gen()).collect(),
-        };
-        let claim = Claim::from_leaf_witness(rng.gen(), &witness);
-        let component = pedersen_merkle(&claim, &witness);
-        assert!(component.check());
-    }
+    proptest!(
+        #[test]
+        fn test_pedersen_merkle(seed: u64) {
+            let mut rng = Xoshiro256PlusPlus::seed_from_u64(seed);
+            let size = 1 << Uniform::from(0..4).sample(&mut rng);
+            let witness = Witness {
+                directions: (0..size).map(|_| rng.gen()).collect(),
+                path:       (0..size).map(|_| rng.gen()).collect(),
+            };
+            let claim = Claim::from_leaf_witness(rng.gen(), &witness);
+            let component = pedersen_merkle(&claim, &witness);
+            prop_assert!(component.check());
+        }
+    );
 }

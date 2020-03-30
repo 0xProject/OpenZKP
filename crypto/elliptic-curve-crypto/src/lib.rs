@@ -137,12 +137,10 @@ pub fn verify(digest: &ScalarFieldElement, signature: &Signature, public_key: &A
     }
 }
 
-// Quickcheck needs pass by value
-#[allow(clippy::needless_pass_by_value)]
 #[cfg(test)]
 mod tests {
     use super::*;
-    use quickcheck_macros::quickcheck;
+    use proptest::prelude::*;
     use zkp_macros_decl::{field_element, u256h};
     use zkp_primefield::FieldElement;
 
@@ -198,10 +196,12 @@ mod tests {
         assert!(verify(&digest, &signature, &public_key));
     }
 
-    #[quickcheck]
-    fn test_ecdsa(digest: ScalarFieldElement, private_key: ScalarFieldElement) -> bool {
-        let public_key = private_to_public(&private_key);
-        let signature = sign(&digest, &private_key);
-        verify(&digest, &signature, &public_key)
-    }
+    proptest!(
+        #[test]
+        fn test_ecdsa(digest: ScalarFieldElement, private_key: ScalarFieldElement) {
+            let public_key = private_to_public(&private_key);
+            let signature = sign(&digest, &private_key);
+            prop_assert!(verify(&digest, &signature, &public_key));
+        }
+    );
 }

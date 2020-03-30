@@ -44,7 +44,7 @@ pub trait Provable<T>: Verifiable {
 pub(crate) mod tests {
     use super::*;
     use crate::RationalExpression;
-    use quickcheck::{Arbitrary, Gen};
+    use proptest::{collection::vec as proptest_vec, prelude::*};
     use std::convert::TryInto;
     use zkp_primefield::{FieldElement, One, Pow, Root, Zero};
 
@@ -105,17 +105,6 @@ pub(crate) mod tests {
                 seed.extend_from_slice(&self.exponent.to_be_bytes());
             }
             seed
-        }
-    }
-
-    impl Arbitrary for Recurrance {
-        fn arbitrary<G: Gen>(g: &mut G) -> Self {
-            Self {
-                // TODO: handle 1 row trace tables.
-                index:         1 + usize::arbitrary(g),
-                initial_value: FieldElement::arbitrary(g),
-                exponent:      1 + usize::arbitrary(g) % 16,
-            }
         }
     }
 
@@ -232,22 +221,6 @@ pub(crate) mod tests {
         }
     }
 
-    impl Arbitrary for Recurrance2 {
-        fn arbitrary<G: Gen>(g: &mut G) -> Self {
-            let order = 1 + usize::arbitrary(g) % 12;
-            let initial_values = (0..order).map(|_| FieldElement::arbitrary(g)).collect();
-            let exponents = (0..order).map(|_| usize::arbitrary(g) % 16).collect();
-            let coefficients = (0..order).map(|_| FieldElement::arbitrary(g)).collect();
-
-            Self {
-                index: order + usize::arbitrary(g) % 1000,
-                initial_values,
-                exponents,
-                coefficients,
-            }
-        }
-    }
-
     impl Verifiable for Claim2 {
         fn constraints(&self) -> Constraints {
             use RationalExpression::*;
@@ -300,6 +273,50 @@ pub(crate) mod tests {
                 trace_table[(i, 0)] = next_value;
             }
             trace_table
+        }
+    }
+
+    impl Arbitrary for Recurrance {
+        type Parameters = ();
+        type Strategy = BoxedStrategy<Self>;
+
+        // TODO: handle 1 row trace tables.
+        fn arbitrary_with(_: Self::Parameters) -> Self::Strategy {
+            <(usize, FieldElement, usize)>::arbitrary()
+                .prop_map(|(a, initial_value, b)| {
+                    Self {
+                        index: 1 + a % 10,
+                        initial_value,
+                        exponent: b % 6,
+                    }
+                })
+                .boxed()
+        }
+    }
+
+    impl Arbitrary for Recurrance2 {
+        type Parameters = ();
+        type Strategy = BoxedStrategy<Self>;
+
+        fn arbitrary_with(_: Self::Parameters) -> Self::Strategy {
+            (1_usize..=12)
+                .prop_flat_map(|order| {
+                    (
+                        (order..order + 10),
+                        proptest_vec(FieldElement::arbitrary(), order),
+                        proptest_vec(0_usize..6, order),
+                        proptest_vec(FieldElement::arbitrary(), order),
+                    )
+                })
+                .prop_map(|(index, initial_values, exponents, coefficients)| {
+                    Self {
+                        index,
+                        initial_values,
+                        exponents,
+                        coefficients,
+                    }
+                })
+                .boxed()
         }
     }
 }

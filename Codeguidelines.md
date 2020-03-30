@@ -33,7 +33,7 @@ We follow the
 Except,
 
 * Unit tests are in the same file as the code covered and not in separate files.
-* We use `quickcheck` for property based testing.
+* We use `proptest` for property based testing.
 
 In addition to the above, we use [Criterion][criterion] extensively for statistical
 benchmarking. See the section below for what is expected.

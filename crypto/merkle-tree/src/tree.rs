@@ -190,7 +190,7 @@ impl<Container: VectorCommitment> Tree<Container> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use quickcheck_macros::quickcheck;
+    use proptest::prelude::*;
     use zkp_macros_decl::hex;
     use zkp_u256::U256;
 
@@ -263,28 +263,30 @@ mod tests {
         proof.verify(&select_leaves).unwrap();
     }
 
-    #[quickcheck]
-    fn test_merkle_tree(depth: usize, skip: usize, indices: Vec<usize>, seed: usize) {
-        // We want tests up to depth 8; adjust the input
-        let depth = depth % 9;
-        // We want to skip up to 3 layers; adjust the input
-        let skip = skip % 4;
-        let num_leaves = 1_usize << depth;
-        let indices: Vec<_> = indices.iter().map(|&i| i % num_leaves).collect();
-        let leaves: Vec<_> = (0..num_leaves)
-            .map(|i| U256::from(seed + i.pow(3)))
-            .collect();
+    proptest!(
+        #[test]
+        fn test_merkle_tree(depth: usize, skip: usize, indices: Vec<usize>, seed: usize) {
+            // We want tests up to depth 8; adjust the input
+            let depth = depth % 9;
+            // We want to skip up to 3 layers; adjust the input
+            let skip = skip % 4;
+            let num_leaves = 1_usize << depth;
+            let indices: Vec<_> = indices.iter().map(|&i| i % num_leaves).collect();
+            let leaves: Vec<_> = (0..num_leaves)
+                .map(|i| U256::from(seed + i.pow(3)))
+                .collect();
 
-        // Build the tree
-        let tree = Tree::from_leaves_skip_layers(leaves, skip).unwrap();
-        let root = tree.commitment();
+            // Build the tree
+            let tree = Tree::from_leaves_skip_layers(leaves, skip).unwrap();
+            let root = tree.commitment();
 
-        // Open indices
-        let proof = tree.open(&indices).unwrap();
-        assert_eq!(root.proof_size(&indices).unwrap(), proof.hashes().len());
+            // Open indices
+            let proof = tree.open(&indices).unwrap();
+            prop_assert_eq!(root.proof_size(&indices).unwrap(), proof.hashes().len());
 
-        // Verify proof
-        let select_leaves: Vec<_> = indices.iter().map(|&i| (i, tree.leaf(i))).collect();
-        proof.verify(&select_leaves).unwrap();
-    }
+            // Verify proof
+            let select_leaves: Vec<_> = indices.iter().map(|&i| (i, tree.leaf(i))).collect();
+            prop_assert!(proof.verify(&select_leaves).is_ok());
+        }
+    );
 }
