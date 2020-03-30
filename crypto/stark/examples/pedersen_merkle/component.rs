@@ -292,12 +292,7 @@ mod test {
         },
         *,
     };
-    use proptest::prelude::*;
-    use rand::{
-        distributions::{Distribution, Uniform},
-        Rng, SeedableRng,
-    };
-    use rand_xoshiro::Xoshiro256PlusPlus;
+    use proptest::{collection::vec as proptest_vec, prelude::*};
     use zkp_macros_decl::field_element;
     use zkp_stark::{prove, Constraints};
     use zkp_u256::U256;
@@ -369,16 +364,27 @@ mod test {
         );
     }
 
+    fn arbitrary_witness() -> impl Strategy<Value = Witness> {
+        (0_usize..4)
+            .prop_flat_map(|log_length| {
+                let length = 1 << log_length;
+                (
+                    proptest_vec(bool::arbitrary(), length),
+                    proptest_vec(FieldElement::arbitrary(), length),
+                )
+            })
+            .prop_map(|(directions, path)| Witness { directions, path })
+    }
+
+    fn arbitrary_witness_and_claim() -> impl Strategy<Value = (Witness, Claim)> {
+        (arbitrary_witness(), FieldElement::arbitrary())
+            .prop_map(|(witness, leaf)| (witness.clone(), Claim::from_leaf_witness(leaf, &witness)))
+    }
+
     proptest!(
         #[test]
-        fn test_pedersen_merkle(seed: u64) {
-            let mut rng = Xoshiro256PlusPlus::seed_from_u64(seed);
-            let size = 1 << Uniform::from(0..4).sample(&mut rng);
-            let witness = Witness {
-                directions: (0..size).map(|_| rng.gen()).collect(),
-                path:       (0..size).map(|_| rng.gen()).collect(),
-            };
-            let claim = Claim::from_leaf_witness(rng.gen(), &witness);
+        fn test_pedersen_merkle(witness_and_claim in arbitrary_witness_and_claim()) {
+            let (witness, claim) = witness_and_claim;
             let component = pedersen_merkle(&claim, &witness);
             prop_assert!(component.check());
         }
