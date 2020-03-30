@@ -26,4 +26,23 @@ impl RationalExpression {
     }
 }
 
-// TODO: Tests
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_equal() {
+        use RationalExpression::*;
+        let left = X;
+        let right = X.pow(2) / X;
+        assert!(left.equals(&right));
+    }
+
+    #[test]
+    fn test_unequal() {
+        use RationalExpression::*;
+        let left = X;
+        let right = X.pow(3) / X;
+        assert!(!left.equals(&right));
+    }
+}
