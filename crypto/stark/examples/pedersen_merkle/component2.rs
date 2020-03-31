@@ -1,5 +1,5 @@
 use super::inputs::{Claim, Witness};
-use zkp_primefield::FieldElement;
+use zkp_primefield::{FieldElement, One, Pow, Root};
 use zkp_stark::{component2::Component, RationalExpression, TraceTable};
 
 struct MerkleTreeLayer;
@@ -18,8 +18,93 @@ impl Component for MerkleTreeLayer {
         (256, 8)
     }
 
-    fn constraints(&self, _claim: &Self::Claim) -> Vec<RationalExpression> {
-        unimplemented!()
+    fn constraints(&self, (leaf, hash): &Self::Claim) -> Vec<RationalExpression> {
+        use crate::{
+            pedersen_points::SHIFT_POINT,
+            periodic_columns::{
+                LEFT_X_COEFFICIENTS_REF, LEFT_Y_COEFFICIENTS_REF, RIGHT_X_COEFFICIENTS_REF,
+                RIGHT_Y_COEFFICIENTS_REF,
+            },
+        };
+        use zkp_elliptic_curve::Affine;
+        use zkp_stark::DensePolynomial;
+        use RationalExpression::*;
+
+        // Constraints
+        let field_element_bits = 252;
+        let (shift_point_x, shift_point_y) = match SHIFT_POINT {
+            Affine::Zero => panic!(),
+            Affine::Point { x, y } => (x, y),
+        };
+
+        // Periodic columns
+        let periodic = |coefficients| Polynomial(DensePolynomial::new(coefficients), Box::new(X));
+        let periodic_left_x = periodic(LEFT_X_COEFFICIENTS_REF);
+        let periodic_left_y = periodic(LEFT_Y_COEFFICIENTS_REF);
+        let periodic_right_x = periodic(RIGHT_X_COEFFICIENTS_REF);
+        let periodic_right_y = periodic(RIGHT_Y_COEFFICIENTS_REF);
+
+        // Repeating patterns
+        let omega = FieldElement::root(256).unwrap();
+        let omega_i = |i: usize| Constant(omega.pow(i));
+        let row = |i| X - omega_i(i);
+        let all_rows = || X.pow(256) - 1.into();
+        let on_no_hash_rows = |a: RationalExpression| a / row(255);
+        let on_hash_start_rows = |a: RationalExpression| a / row(0);
+        let on_hash_loop_rows = |a: RationalExpression| a * row(255) / all_rows();
+        let on_fe_end_rows = |a: RationalExpression| a / row(field_element_bits);
+
+        // Common sub-expressions
+        let left_bit = Trace(0, 0) - Trace(0, 1) * 2.into();
+        let right_bit = Trace(4, 0) - Trace(4, 1) * 2.into();
+
+        let constraints = vec![
+            on_hash_start_rows(Trace(6, 0) - Constant(shift_point_x.clone())),
+            on_hash_start_rows(Trace(7, 0) - Constant(shift_point_y.clone())),
+            on_hash_loop_rows(left_bit.clone() * (left_bit.clone() - 1.into())),
+            on_hash_loop_rows(
+                left_bit.clone() * (Trace(7, 0) - periodic_left_y.clone())
+                    - Trace(1, 1) * (Trace(6, 0) - periodic_left_x.clone()),
+            ),
+            on_hash_loop_rows(
+                Trace(1, 1) * Trace(1, 1)
+                    - left_bit.clone() * (Trace(6, 0) + periodic_left_x.clone() + Trace(2, 1)),
+            ),
+            on_hash_loop_rows(
+                left_bit.clone() * (Trace(7, 0) + Trace(3, 1))
+                    - Trace(1, 1) * (Trace(6, 0) - Trace(2, 1)),
+            ),
+            on_hash_loop_rows(
+                (Constant(FieldElement::one()) - left_bit.clone()) * (Trace(6, 0) - Trace(2, 1)),
+            ),
+            on_hash_loop_rows(
+                (Constant(FieldElement::one()) - left_bit.clone()) * (Trace(7, 0) - Trace(3, 1)),
+            ),
+            on_fe_end_rows(Trace(0, 0)),
+            on_no_hash_rows(Trace(0, 0)),
+            on_hash_loop_rows(right_bit.clone() * (right_bit.clone() - 1.into())),
+            on_hash_loop_rows(
+                right_bit.clone() * (Trace(3, 1) - periodic_right_y.clone())
+                    - Trace(5, 1) * (Trace(2, 1) - periodic_right_x.clone()),
+            ),
+            on_hash_loop_rows(
+                Trace(5, 1) * Trace(5, 1)
+                    - right_bit.clone() * (Trace(2, 1) + periodic_right_x.clone() + Trace(6, 1)),
+            ),
+            on_hash_loop_rows(
+                right_bit.clone() * (Trace(3, 1) + Trace(7, 1))
+                    - Trace(5, 1) * (Trace(2, 1) - Trace(6, 1)),
+            ),
+            on_hash_loop_rows(
+                (Constant(FieldElement::one()) - right_bit.clone()) * (Trace(2, 1) - Trace(6, 1)),
+            ),
+            on_hash_loop_rows(
+                (Constant(FieldElement::one()) - right_bit.clone()) * (Trace(3, 1) - Trace(7, 1)),
+            ),
+            on_fe_end_rows(Trace(4, 0)),
+            on_no_hash_rows(Trace(4, 0)),
+        ];
+        constraints
     }
 
     fn trace(
