@@ -1,7 +1,7 @@
 use crate::{Error, Result};
 #[cfg(any(test, feature = "proptest"))]
 use proptest_derive::Arbitrary;
-use std::{convert::TryFrom, ops::RangeInclusive};
+use std::ops::RangeInclusive;
 use zkp_error_utils::require;
 
 #[cfg(feature = "std")]
