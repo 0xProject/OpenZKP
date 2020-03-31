@@ -315,7 +315,8 @@ mod test {
 
     #[test]
     fn test_tree_layer() {
-        proptest!(|(leaf: FieldElement, direction: bool, sibling: FieldElement)| {
+        let config = ProptestConfig::with_cases(10);
+        proptest!(config, |(leaf: FieldElement, direction: bool, sibling: FieldElement)| {
             let component = tree_layer(&leaf, direction, &sibling);
             let hash = if direction {
                 merkle_hash(&sibling, &leaf)
