@@ -293,11 +293,6 @@ mod test {
         *,
     };
     use proptest::{collection::vec as prop_vec, prelude::*};
-    use rand::{
-        distributions::{Distribution, Uniform},
-        Rng, SeedableRng,
-    };
-    use rand_xoshiro::Xoshiro256PlusPlus;
     use zkp_macros_decl::field_element;
     use zkp_stark::{prove, Constraints};
     use zkp_u256::U256;
@@ -374,16 +369,17 @@ mod test {
         let config = ProptestConfig::with_cases(10);
         let witness = (0_usize..4)
             .prop_flat_map(|log_size| {
+                let size = 1 << log_size;
                 (
-                    prop_vec(any::<bool>(), 1 << log_size),
-                    prop_vec(any::<FieldElement>(), 1 << log_size),
+                    prop_vec(bool::arbitrary(), size),
+                    prop_vec(FieldElement::arbitrary(), size),
                 )
             })
             .prop_map(|(directions, path)| Witness { directions, path });
         proptest!(config, |(witness in witness, claim: FieldElement)| {
             let claim = Claim::from_leaf_witness(claim, &witness);
             let component = pedersen_merkle(&claim, &witness);
-            assert!(component.check());
+            prop_assert!(component.check());
         });
     }
 }
