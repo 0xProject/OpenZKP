@@ -40,6 +40,7 @@
 #![allow(clippy::multiple_crate_versions)]
 
 mod component;
+mod component2;
 mod inputs;
 mod pedersen_points;
 mod periodic_columns;
