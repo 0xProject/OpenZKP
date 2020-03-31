@@ -1,6 +1,11 @@
 use super::inputs::{Claim, Witness};
+use crate::pedersen_points::merkle_hash;
+use itertools::izip;
 use zkp_primefield::{FieldElement, One, Pow, Root};
-use zkp_stark::{component2::Component, RationalExpression, TraceTable};
+use zkp_stark::{
+    component2::{Component, Vertical},
+    RationalExpression, TraceTable,
+};
 
 struct MerkleTreeLayer;
 
@@ -8,17 +13,32 @@ impl MerkleTreeLayer {
     fn new() -> MerkleTreeLayer {
         MerkleTreeLayer {}
     }
+
+    fn left(&self) -> (usize, RationalExpression) {
+        use RationalExpression::*;
+        (0, Trace(0, 0))
+    }
+
+    fn right(&self) -> (usize, RationalExpression) {
+        use RationalExpression::*;
+        (0, Trace(4, 0))
+    }
+
+    fn hash(&self) -> (usize, RationalExpression) {
+        use RationalExpression::*;
+        (255, Trace(6, 0))
+    }
 }
 
 impl Component for MerkleTreeLayer {
-    type Claim = (FieldElement, FieldElement);
-    type Witness = (FieldElement, bool);
+    type Claim = ();
+    type Witness = (FieldElement, FieldElement, bool);
 
     fn dimensions(&self) -> (usize, usize) {
         (256, 8)
     }
 
-    fn constraints(&self, (leaf, hash): &Self::Claim) -> Vec<RationalExpression> {
+    fn constraints(&self, _: &Self::Claim) -> Vec<RationalExpression> {
         use crate::{
             pedersen_points::SHIFT_POINT,
             periodic_columns::{
@@ -107,11 +127,10 @@ impl Component for MerkleTreeLayer {
         constraints
     }
 
-    fn trace(
-        &self,
-        (leaf, _hash): &Self::Claim,
-        (sibling, direction): &Self::Witness,
-    ) -> TraceTable {
+    fn trace(&self, _: &Self::Claim, (leaf, sibling, direction): &Self::Witness) -> TraceTable {
+        let mut data = vec!["a", "bcd", "ef", "ghij"];
+        data.sort_by_key(|a| usize::max_value() - a.len());
+
         use crate::component::{get_coordinates, hash_next_bit, initialize_hash};
 
         let mut trace = TraceTable::new(256, 8);
@@ -142,11 +161,16 @@ impl Component for MerkleTreeLayer {
     }
 }
 
-struct MerkleTree;
+struct MerkleTree {
+    layers: Vertical<MerkleTreeLayer>,
+}
 
 impl MerkleTree {
-    fn new() -> MerkleTree {
-        MerkleTree {}
+    fn new(depth: usize) -> MerkleTree {
+        let layer = MerkleTreeLayer::new();
+        MerkleTree {
+            layers: Vertical::new(layer, depth),
+        }
     }
 }
 
@@ -155,15 +179,29 @@ impl Component for MerkleTree {
     type Witness = Witness;
 
     fn dimensions(&self) -> (usize, usize) {
-        unimplemented!()
+        self.layers.dimensions()
     }
 
-    fn constraints(&self, _claim: &Self::Claim) -> Vec<RationalExpression> {
-        unimplemented!()
+    fn constraints(&self, claim: &Self::Claim) -> Vec<RationalExpression> {
+        let claim = vec![(); self.layers.size()];
+        self.layers.constraints(&claim)
     }
 
-    fn trace(&self, _claim: &Self::Claim, _witness: &Self::Witness) -> TraceTable {
-        unimplemented!()
+    fn trace(&self, claim: &Self::Claim, witness: &Self::Witness) -> TraceTable {
+        let witness = izip!(witness.directions.iter(), witness.path.iter())
+            .scan(claim.leaf.clone(), |leaf, (direction, sibling)| {
+                let layer: <MerkleTreeLayer as Component>::Witness =
+                    (leaf.clone(), sibling.clone(), *direction);
+                *leaf = if *direction {
+                    merkle_hash(&sibling, &leaf)
+                } else {
+                    merkle_hash(&leaf, &sibling)
+                };
+                Some(layer)
+            })
+            .collect::<Vec<_>>();
+        let claim = vec![(); self.layers.size()];
+        self.layers.trace(&claim, &witness)
     }
 }
 
@@ -184,8 +222,8 @@ mod test {
                 merkle_hash(&leaf, &sibling)
             };
             let component = MerkleTreeLayer::new();
-            let claim = (leaf, hash);
-            let witness = (sibling, direction);
+            let claim = ();
+            let witness = (leaf, sibling, direction);
             prop_assert_eq!(component.check(&claim, &witness), Ok(()));
             // TODO:
             // assert_eq!(component.eval_label("hash"), hash);
@@ -206,7 +244,7 @@ mod test {
             .prop_map(|(directions, path)| Witness { directions, path });
         proptest!(config, |(witness in witness, claim: FieldElement)| {
             let claim = Claim::from_leaf_witness(claim, &witness);
-            let component = MerkleTree::new();
+            let component = MerkleTree::new(witness.path.len());
             prop_assert_eq!(component.check(&claim, &witness), Ok(()));
         });
     }
