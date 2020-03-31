@@ -208,10 +208,14 @@ impl Component for MerkleTree {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::pedersen_points::merkle_hash;
+    use crate::{
+        inputs::{short_witness, SHORT_CLAIM},
+        pedersen_points::merkle_hash,
+    };
     use proptest::{collection::vec as prop_vec, prelude::*};
     use zkp_macros_decl::field_element;
     use zkp_primefield::FieldElement;
+    use zkp_stark::{prove, verify, Constraints};
     use zkp_u256::U256;
 
     // TODO: Move to TraceTable or RationalExpression?
@@ -260,6 +264,45 @@ mod test {
             prop_assert_eq!(component.check(&claim, &witness), Ok(()));
             prop_assert_eq!(&eval(&trace, component.hash()), &hash);
         });
+    }
+
+    #[test]
+    fn test_pedersen_merkle_small_proof() {
+        let claim = SHORT_CLAIM;
+        let witness = short_witness();
+        let component = MerkleTree::new(witness.path.len());
+        let constraints = component.constraints(&claim);
+        let trace = component.trace(&claim, &witness);
+        let mut constraints = Constraints::from_expressions(
+            (trace.num_rows(), trace.num_columns()),
+            (&claim).into(),
+            constraints,
+        )
+        .unwrap();
+        constraints.blowup = 16;
+        constraints.pow_bits = 0;
+        constraints.num_queries = 13;
+        constraints.fri_layout = vec![3, 2];
+        let proof = prove(&constraints, &trace).unwrap();
+
+        assert_eq!(
+            hex::encode(proof.as_bytes()[0..32].to_vec()),
+            "e2c4e35c37e33aa3b439592f2f3c5c82f464f026000000000000000000000000"
+        );
+        assert_eq!(
+            hex::encode(proof.as_bytes()[32..64].to_vec()),
+            "c5df989253ac4c3eff4fdb4130f832db1d2a9826000000000000000000000000"
+        );
+
+        // FRI commitments
+        assert_eq!(
+            hex::encode(proof.as_bytes()[640..672].to_vec()),
+            "744f04f8bcd9c5aafb8907586428fbe9dd81b976000000000000000000000000"
+        );
+        assert_eq!(
+            hex::encode(proof.as_bytes()[672..704].to_vec()),
+            "ce329839a5eccb8009ffebf029312989e68f1cde000000000000000000000000"
+        );
     }
 
     #[test]
