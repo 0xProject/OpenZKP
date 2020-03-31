@@ -1,20 +1,13 @@
-use super::{
-    inputs::{Claim, Witness},
-    pedersen_points::{PEDERSEN_POINTS, SHIFT_POINT},
-    periodic_columns::{
-        LEFT_X_COEFFICIENTS_REF, LEFT_Y_COEFFICIENTS_REF, RIGHT_X_COEFFICIENTS_REF,
-        RIGHT_Y_COEFFICIENTS_REF,
-    },
-};
-use itertools::Itertools;
-use log::info;
-use std::collections::HashMap;
-use zkp_elliptic_curve::Affine;
-use zkp_primefield::{FieldElement, One, Pow, Root, Zero};
-use zkp_stark::{component2::Component, DensePolynomial, RationalExpression, TraceTable};
-use zkp_u256::{Binary, U256};
+use super::inputs::{Claim, Witness};
+use zkp_stark::{component2::Component, RationalExpression, TraceTable};
 
 struct MerkleTree;
+
+impl MerkleTree {
+    fn new() -> MerkleTree {
+        MerkleTree {}
+    }
+}
 
 impl Component for MerkleTree {
     type Claim = Claim;
@@ -24,21 +17,37 @@ impl Component for MerkleTree {
         unimplemented!()
     }
 
-    fn constraints(&self, claim: &Self::Claim) -> Vec<RationalExpression> {
+    fn constraints(&self, _claim: &Self::Claim) -> Vec<RationalExpression> {
         unimplemented!()
     }
 
-    fn trace(&self, claim: &Self::Claim, witness: &Self::Witness) -> TraceTable {
+    fn trace(&self, _claim: &Self::Claim, _witness: &Self::Witness) -> TraceTable {
         unimplemented!()
     }
 }
 
 #[cfg(test)]
 mod test {
-    use super::{
-        *,
-    };
+    use super::*;
     use proptest::{collection::vec as prop_vec, prelude::*};
+    use zkp_primefield::FieldElement;
 
-    
+    #[test]
+    fn test_pedersen_merkle() {
+        let config = ProptestConfig::with_cases(10);
+        let witness = (0_usize..4)
+            .prop_flat_map(|log_size| {
+                let size = 1 << log_size;
+                (
+                    prop_vec(bool::arbitrary(), size),
+                    prop_vec(FieldElement::arbitrary(), size),
+                )
+            })
+            .prop_map(|(directions, path)| Witness { directions, path });
+        proptest!(config, |(witness in witness, claim: FieldElement)| {
+            let claim = Claim::from_leaf_witness(claim, &witness);
+            let component = MerkleTree::new();
+            prop_assert_eq!(component.check(&claim, &witness), Ok(()));
+        });
+    }
 }
