@@ -1,5 +1,31 @@
 use super::inputs::{Claim, Witness};
+use zkp_primefield::FieldElement;
 use zkp_stark::{component2::Component, RationalExpression, TraceTable};
+
+struct MerkleTreeLayer;
+
+impl MerkleTreeLayer {
+    fn new() -> MerkleTreeLayer {
+        MerkleTreeLayer {}
+    }
+}
+
+impl Component for MerkleTreeLayer {
+    type Claim = (FieldElement, FieldElement);
+    type Witness = (FieldElement, bool);
+
+    fn dimensions(&self) -> (usize, usize) {
+        unimplemented!()
+    }
+
+    fn constraints(&self, _claim: &Self::Claim) -> Vec<RationalExpression> {
+        unimplemented!()
+    }
+
+    fn trace(&self, _claim: &Self::Claim, _witness: &Self::Witness) -> TraceTable {
+        unimplemented!()
+    }
+}
 
 struct MerkleTree;
 
@@ -29,8 +55,27 @@ impl Component for MerkleTree {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::pedersen_points::merkle_hash;
     use proptest::{collection::vec as prop_vec, prelude::*};
     use zkp_primefield::FieldElement;
+
+    #[test]
+    fn test_tree_layer() {
+        let config = ProptestConfig::with_cases(10);
+        proptest!(config, |(leaf: FieldElement, direction: bool, sibling: FieldElement)| {
+            let hash = if direction {
+                merkle_hash(&sibling, &leaf)
+            } else {
+                merkle_hash(&leaf, &sibling)
+            };
+            let component = MerkleTreeLayer::new();
+            let claim = (leaf, hash);
+            let witness = (sibling, direction);
+            prop_assert_eq!(component.check(&claim, &witness), Ok(()));
+            // TODO:
+            // assert_eq!(component.eval_label("hash"), hash);
+        });
+    }
 
     #[test]
     fn test_pedersen_merkle() {
