@@ -292,7 +292,7 @@ mod test {
         },
         *,
     };
-    use proptest::{collection::vec as proptest_vec, prelude::*};
+    use proptest::{collection::vec as prop_vec, prelude::*};
     use zkp_macros_decl::field_element;
     use zkp_stark::{prove, Constraints};
     use zkp_u256::U256;
@@ -369,8 +369,8 @@ mod test {
             .prop_flat_map(|log_length| {
                 let length = 1 << log_length;
                 (
-                    proptest_vec(bool::arbitrary(), length),
-                    proptest_vec(FieldElement::arbitrary(), length),
+                    prop_vec(bool::arbitrary(), length),
+                    prop_vec(FieldElement::arbitrary(), length),
                 )
             })
             .prop_map(|(directions, path)| Witness { directions, path })
