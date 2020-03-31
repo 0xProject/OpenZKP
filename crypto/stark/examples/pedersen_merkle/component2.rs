@@ -210,7 +210,39 @@ mod test {
     use super::*;
     use crate::pedersen_points::merkle_hash;
     use proptest::{collection::vec as prop_vec, prelude::*};
+    use zkp_macros_decl::field_element;
     use zkp_primefield::FieldElement;
+    use zkp_u256::U256;
+
+    // TODO: Move to TraceTable or RationalExpression?
+    fn eval(trace: &TraceTable, label: (usize, RationalExpression)) -> FieldElement {
+        label.1.evaluate(
+            &FieldElement::root(trace.num_rows()).unwrap().pow(label.0),
+            &|column, row_offset| {
+                let row = ((label.0 as isize) + row_offset) as usize;
+                trace[(row, column)].clone()
+            },
+        )
+    }
+
+    #[test]
+    fn test_tree_layer_example() {
+        let component = MerkleTreeLayer::new();
+        let leaf =
+            field_element!("061af4ecd745b4c67e476860ce382ae8696dc1e258d02c59557bb7abcf66f1e8");
+        let direction = true;
+        let sibling =
+            field_element!("0465da90a0487ff6d4ea63658db7439f4023957b750f3ae8a5e0a18edef453b1");
+        let hash =
+            field_element!("02fe7d53bedb42fbc905d7348bd5d61302882ba48a27377b467a9005d6e8d3fd");
+        let claim = ();
+        let witness = (leaf.clone(), sibling.clone(), direction);
+        let trace = component.trace(&claim, &witness);
+        assert_eq!(component.check(&claim, &witness), Ok(()));
+        assert_eq!(&eval(&trace, component.left()), &sibling);
+        assert_eq!(&eval(&trace, component.right()), &leaf);
+        assert_eq!(&eval(&trace, component.hash()), &hash);
+    }
 
     #[test]
     fn test_tree_layer() {
