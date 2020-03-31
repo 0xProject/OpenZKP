@@ -256,9 +256,9 @@ mod test {
             let component = MerkleTreeLayer::new();
             let claim = ();
             let witness = (leaf, sibling, direction);
+            let trace = component.trace(&claim, &witness);
             prop_assert_eq!(component.check(&claim, &witness), Ok(()));
-            // TODO:
-            // assert_eq!(component.eval_label("hash"), hash);
+            prop_assert_eq!(&eval(&trace, component.hash()), &hash);
         });
     }
 
