@@ -210,7 +210,7 @@ pub(crate) fn pedersen_merkle(claim: &Claim, witness: &Witness) -> Component {
     component
 }
 
-fn initialize_hash(left_source: U256, right_source: U256) -> Row {
+pub(crate) fn initialize_hash(left_source: U256, right_source: U256) -> Row {
     let mut row: Row = Row::default();
     row.left.source = left_source;
     row.right.source = right_source;
@@ -218,7 +218,7 @@ fn initialize_hash(left_source: U256, right_source: U256) -> Row {
     row
 }
 
-fn hash_next_bit(row: &Row, bit_index: usize) -> Row {
+pub(crate) fn hash_next_bit(row: &Row, bit_index: usize) -> Row {
     let mut next_row = Row {
         left:  Subrow {
             source: row.left.source.clone() >> 1,
@@ -246,15 +246,15 @@ fn hash_next_bit(row: &Row, bit_index: usize) -> Row {
 }
 
 #[derive(Default)]
-struct Row {
-    left:  Subrow,
-    right: Subrow,
+pub(crate) struct Row {
+    pub(crate) left:  Subrow,
+    pub(crate) right: Subrow,
 }
 
-struct Subrow {
-    source: U256,
-    slope:  FieldElement,
-    point:  Affine,
+pub(crate) struct Subrow {
+    pub(crate) source: U256,
+    pub(crate) slope:  FieldElement,
+    pub(crate) point:  Affine,
 }
 
 impl Default for Subrow {
@@ -276,7 +276,7 @@ fn get_slope(p_1: &Affine, p_2: &Affine) -> FieldElement {
     (y_1 - y_2) / (x_1 - x_2)
 }
 
-fn get_coordinates(p: &Affine) -> (&FieldElement, &FieldElement) {
+pub(crate) fn get_coordinates(p: &Affine) -> (&FieldElement, &FieldElement) {
     match p {
         Affine::Zero => panic!(),
         Affine::Point { x, y } => (x, y),

@@ -15,15 +15,45 @@ impl Component for MerkleTreeLayer {
     type Witness = (FieldElement, bool);
 
     fn dimensions(&self) -> (usize, usize) {
-        unimplemented!()
+        (256, 8)
     }
 
     fn constraints(&self, _claim: &Self::Claim) -> Vec<RationalExpression> {
         unimplemented!()
     }
 
-    fn trace(&self, _claim: &Self::Claim, _witness: &Self::Witness) -> TraceTable {
-        unimplemented!()
+    fn trace(
+        &self,
+        (leaf, _hash): &Self::Claim,
+        (sibling, direction): &Self::Witness,
+    ) -> TraceTable {
+        use crate::component::{get_coordinates, hash_next_bit, initialize_hash};
+
+        let mut trace = TraceTable::new(256, 8);
+        let mut row = if *direction {
+            initialize_hash(sibling.into(), leaf.into())
+        } else {
+            initialize_hash(leaf.into(), sibling.into())
+        };
+        for bit_index in 0..256 {
+            if bit_index > 0 {
+                row = hash_next_bit(&row, bit_index);
+            }
+
+            let (left_x, left_y) = get_coordinates(&row.left.point);
+            trace[(bit_index, 0)] = FieldElement::from(row.left.source.clone());
+            trace[(bit_index, 1)] = row.left.slope.clone();
+            trace[(bit_index, 2)] = left_x.clone();
+            trace[(bit_index, 3)] = left_y.clone();
+
+            let (right_x, right_y) = get_coordinates(&row.right.point);
+            trace[(bit_index, 4)] = FieldElement::from(row.right.source.clone());
+            trace[(bit_index, 5)] = row.right.slope.clone();
+            trace[(bit_index, 6)] = right_x.clone();
+            trace[(bit_index, 7)] = right_y.clone();
+        }
+        // TODO: Check hash
+        trace
     }
 }
 
