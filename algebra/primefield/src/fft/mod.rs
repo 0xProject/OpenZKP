@@ -24,7 +24,7 @@ pub use radix_sqrt::radix_sqrt;
 pub use recursive::fft_vec_recursive;
 pub use transpose::transpose_square_stretch;
 
-/// 
+/// Relevant papers:
 /// * D. H. Bailey (1990). FFTs in external or hierarchical memory. <https://www.davidhbailey.com/dhbpapers/fftq.pdf>
 /// * W. M. Gentleman & G. Sande (1966). Fast Fourier Transforms: for fun and
 ///   profit. <https://doi.org/10.1145/1464291.1464352> <http://cis.rit.edu/class/simg716/FFT_Fun_Profit.pdf>

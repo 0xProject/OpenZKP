@@ -44,7 +44,7 @@ pub trait Provable<T>: Verifiable {
 pub(crate) mod tests {
     use super::*;
     use crate::RationalExpression;
-    use proptest::{collection::vec as proptest_vec, prelude::*};
+    use proptest::{collection::vec as prop_vec, prelude::*};
     use std::convert::TryInto;
     use zkp_primefield::{FieldElement, One, Pow, Root, Zero};
 
@@ -303,9 +303,9 @@ pub(crate) mod tests {
                 .prop_flat_map(|order| {
                     (
                         (order..order + 10),
-                        proptest_vec(FieldElement::arbitrary(), order),
-                        proptest_vec(0_usize..6, order),
-                        proptest_vec(FieldElement::arbitrary(), order),
+                        prop_vec(FieldElement::arbitrary(), order),
+                        prop_vec(0_usize..6, order),
+                        prop_vec(FieldElement::arbitrary(), order),
                     )
                 })
                 .prop_map(|(index, initial_values, exponents, coefficients)| {
