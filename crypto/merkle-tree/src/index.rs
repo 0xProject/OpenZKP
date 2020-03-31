@@ -97,10 +97,7 @@ impl Index {
     }
 
     pub fn depth(self) -> usize {
-        let next_layer = (self.0 + 1).next_power_of_two();
-        // Usize should always be able to hold its number of bits
-        let next_depth = usize::try_from(next_layer.trailing_zeros()).unwrap();
-        next_depth - 1
+        (0_usize.count_zeros() - self.0.leading_zeros() - 1) as usize
     }
 
     pub fn offset(self) -> usize {
@@ -232,7 +229,7 @@ mod test {
 
         #[test]
         fn test_children(parent: Index) {
-            prop_assume!(parent.depth() != 63);
+            prop_assume!(parent.depth() < (0_usize.count_zeros() - 1) as usize);
 
             let left = parent.left_child();
             let right = parent.right_child();
