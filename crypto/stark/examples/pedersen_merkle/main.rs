@@ -111,7 +111,7 @@ impl Drop for Timer {
 }
 
 // cargo t -p zkp-stark -- test_pedersen_merkle_small_proof --nocapture
-// cargo b --release && target/release/examples/pedersen_merkle -vv
+// cargo run --release --package zkp-stark --example pedersen_merkle -- -vvv
 // --large-example
 
 fn main() {
