@@ -364,29 +364,22 @@ mod test {
         );
     }
 
-    fn arbitrary_witness() -> impl Strategy<Value = Witness> {
-        (0_usize..4)
-            .prop_flat_map(|log_length| {
-                let length = 1 << log_length;
+    #[test]
+    fn test_pedersen_merkle() {
+        let config = ProptestConfig::with_cases(10);
+        let witness = (0_usize..4)
+            .prop_flat_map(|log_size| {
+                let size = 1 << log_size;
                 (
-                    prop_vec(bool::arbitrary(), length),
-                    prop_vec(FieldElement::arbitrary(), length),
+                    prop_vec(bool::arbitrary(), size),
+                    prop_vec(FieldElement::arbitrary(), size),
                 )
             })
-            .prop_map(|(directions, path)| Witness { directions, path })
-    }
-
-    fn arbitrary_witness_and_claim() -> impl Strategy<Value = (Witness, Claim)> {
-        (arbitrary_witness(), FieldElement::arbitrary())
-            .prop_map(|(witness, leaf)| (witness.clone(), Claim::from_leaf_witness(leaf, &witness)))
-    }
-
-    proptest!(
-        #[test]
-        fn test_pedersen_merkle(witness_and_claim in arbitrary_witness_and_claim()) {
-            let (witness, claim) = witness_and_claim;
+            .prop_map(|(directions, path)| Witness { directions, path });
+        proptest!(config, |(witness in witness, claim: FieldElement)| {
+            let claim = Claim::from_leaf_witness(claim, &witness);
             let component = pedersen_merkle(&claim, &witness);
             prop_assert!(component.check());
-        }
-    );
+        });
+    }
 }
