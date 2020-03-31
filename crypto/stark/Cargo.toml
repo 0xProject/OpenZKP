@@ -19,6 +19,7 @@ itertools = { version = "0.9.0", default_features = false }
 lazy_static = { version = "1.3.0", features = [ "spin_no_std" ] } # TODO: When `std` is set we want this feature off!
 log = { version = "0.4.8", default_features = false }
 no-std-compat = { version = "0.3.0", features = [ "alloc" ] }
+rand = { version = "0.7.2", optional = true }
 rayon = { version = "1.0.3", optional = true }
 tiny-keccak = { version = "2.0.1", features = ["keccak"] }
 zkp-hash = { version = "0.1.0", path = "../../crypto/hash", default-features = false }
@@ -72,6 +73,7 @@ inline = [
 ]
 prover = [
     "std", # TODO: Make prove run in no-std wasm.
+    "rand",
     "zkp-merkle-tree/prover",
 ]
 
