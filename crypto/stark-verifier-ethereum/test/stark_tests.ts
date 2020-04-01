@@ -78,11 +78,11 @@ describe('Stark Testing testing', () => {
         for (let i: number = 0; i < 1; i++) {
             verifier_contract
                 .leading_zeros_external((random_number.maskn(255 - i) as unknown) as utils.Arrayish)
-                .catch(() => {
-                    expect(false);
-                })
                 .then((result: any) => {
                     expect(result.toNumber()).to.eq(i);
+                })
+                .catch(() => {
+                    expect(false);
                 });
         }
     });

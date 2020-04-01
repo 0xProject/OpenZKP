@@ -7,7 +7,8 @@
     "test": "test"
   },
   "dependencies": {
-    "solc": "^0.6.4"
+    "solc": "^0.6.4",
+    "tslint-eslint-rules": "^5.4.0"
   },
   "devDependencies": {
     "@0x/tslint-config": "^4.0.0",
