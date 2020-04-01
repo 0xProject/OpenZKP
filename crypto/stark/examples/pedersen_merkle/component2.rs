@@ -183,8 +183,52 @@ impl Component for MerkleTree {
     }
 
     fn constraints(&self, claim: &Self::Claim) -> Vec<RationalExpression> {
-        let claim = vec![(); self.layers.size()];
-        self.layers.constraints(&claim)
+        use RationalExpression::*;
+        let fake_claim = vec![(); self.layers.size()];
+        let mut constraints = self.layers.constraints(&fake_claim);
+
+        // Construct constraints
+        let (rows, columns) = self.dimensions();
+        let path_length = self.layers.size();
+        let trace_length = rows;
+        let root = claim.root.clone();
+        let leaf = claim.leaf.clone();
+
+        // Repeating patterns
+        let omega = FieldElement::root(trace_length).unwrap();
+        let omega_i = |i| Constant(omega.pow(i));
+        let row = |i| X - omega_i(i);
+
+        // Connect components together
+        // TODO: How do we do this cleanly using labels?
+        constraints.insert(
+            0,
+            (Trace(6, 0) - Trace(0, 1)) * (Trace(6, 0) - Trace(4, 1)) * row(trace_length - 1)
+                / (X.pow(path_length) - omega_i(trace_length - path_length)),
+        );
+
+        // Add boundary constraints
+        // `leaf` is equals either left or right, they should be on the same row
+        let left = self.layers.element().left();
+        let right = self.layers.element().right();
+        assert_eq!(left.0, right.0);
+        constraints.insert(
+            0,
+            (Constant(leaf.clone()) - left.1.clone()) * (Constant(leaf) - right.1.clone())
+                / row(left.0),
+        );
+
+        // The final hash equals `root`
+        let hash = self.layers.element().hash();
+        let row_index = hash.0 + (path_length - 1) * self.layers.element().dimensions().0;
+        constraints.insert(1, (Constant(root) - hash.1.clone()) / row(row_index));
+
+        // Add column constraints
+        for i in 0..columns {
+            constraints.insert(i, Trace(i, 0));
+        }
+
+        constraints
     }
 
     fn trace(&self, claim: &Self::Claim, witness: &Self::Witness) -> TraceTable {
