@@ -5,12 +5,20 @@ import '../interfaces/ConstraintInterface.sol';
 import '../public_coin.sol';
 import '../stark_verifier.sol';
 
+
 // This trivial fibonachi system returns constant values which are true only for one proof
 // It should only be used for testing purposes
 contract TrivialFib is ConstraintSystem {
-
     // These constants are derived from the small fib example in rust
-    function initalize_system(bytes32[] calldata public_input) external view override returns(StarkVerifier.ConstraintParameters memory, PublicCoin.Coin memory) {
+    // TODO - The solidity prettier wants to delete all 'override' statements
+    // We should remove this ignore statement when that changes.
+    // prettier-ignore
+    function initalize_system(bytes32[] calldata public_input)
+        external
+        view
+        override
+        returns (StarkVerifier.ConstraintParameters memory, PublicCoin.Coin memory)
+    {
         PublicCoin.Coin memory coin = PublicCoin.Coin({
             digest: 0xc891a11ddbc6c425fad523a7a4aeafa505d7aa1638cfffbd5b747100bc69e367,
             counter: 0

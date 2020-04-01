@@ -42,7 +42,7 @@
     "lint": "tslint --format stylish --project . && npm run-script solhint",
     "prettier": "npm run-script prettier:sol && npm run-script prettier:ts",
     "prettier:ts": "prettier --write '**/*.ts' --config .prettierrc",
-    "prettier:sol": "prettier --write **/*.sol",
+    "prettier:sol": "prettier --write **/*.sol **/**/*.sol",
     "fix:ts": "tslint --fix --format stylish --project .",
     "solhint": "./node_modules/.bin/solhint -f table contracts/*.sol contracts/**/*.sol"
   },

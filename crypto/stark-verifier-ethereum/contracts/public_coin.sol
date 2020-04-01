@@ -26,7 +26,7 @@ library PublicCoin {
     function write_bytes(Coin memory coin, bytes memory to_be_written) internal pure {
         bytes32 new_hash = publicCoinHasher(abi.encodePacked(coin.digest, to_be_written));
         coin.digest = new_hash;
-        coin.counter =0;
+        coin.counter = 0;
     }
 
     // Uses the digest and counter of the coin to create a random number
@@ -38,9 +38,9 @@ library PublicCoin {
     }
 
     // Bulk Read, reads 'how_many' times
-    function read_many_bytes32(Coin memory coin, uint how_many) internal pure returns(bytes32[] memory) {
+    function read_many_bytes32(Coin memory coin, uint256 how_many) internal pure returns (bytes32[] memory) {
         bytes32[] memory result = new bytes32[](how_many);
-        for (uint256 i = 0;  i < how_many; i++) {
+        for (uint256 i = 0; i < how_many; i++) {
             result[i] = read_bytes32(coin);
         }
     }
