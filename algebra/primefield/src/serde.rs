@@ -1,9 +1,6 @@
-use crate::{
-    proth_field::{FieldElement, Proth},
-    Parameters,
-};
+use crate::{Parameters, PrimeField};
 use hex::{decode, encode};
-use std::fmt;
+use std::{fmt, marker::PhantomData};
 use zkp_u256::U256;
 
 use serde::{
@@ -11,29 +8,29 @@ use serde::{
     ser::{Serialize, Serializer},
 };
 
-impl Serialize for FieldElement {
+impl<P: Parameters<UInt = U256>> Serialize for PrimeField<P> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
+        let bytes = U256::from(self).to_bytes_be();
         if serializer.is_human_readable() {
-            serializer.serialize_str(&encode(&U256::from(self).to_bytes_be()))
+            serializer.serialize_str(&encode(&bytes))
         } else {
-            serializer.serialize_bytes(&U256::from(self).to_bytes_be())
+            serializer.serialize_bytes(&bytes)
         }
     }
 }
 
-struct FieldElementVisitor;
+struct PrimeFieldVisitor<P> {
+    _parameters: PhantomData<P>,
+}
 
-impl<'de> Visitor<'de> for FieldElementVisitor {
-    type Value = FieldElement;
+impl<'de, P: Parameters<UInt = U256>> Visitor<'de> for PrimeFieldVisitor<P> {
+    type Value = PrimeField<P>;
 
     fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            formatter,
-            "a byte array containing 32 bytes for field element deseralization"
-        )
+        write!(formatter, "an array of 32 bytes")
     }
 
     fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
@@ -45,13 +42,13 @@ impl<'de> Visitor<'de> for FieldElementVisitor {
             held_array.clone_from_slice(v);
             let parsed_uint = U256::from_bytes_be(&held_array);
             // Return a nice error message  if larger than the modulus
-            if parsed_uint > Proth::MODULUS {
+            if parsed_uint > P::MODULUS {
                 Err(E::custom(format!(
                     "Doesn't fit into the field: {:?}",
                     parsed_uint
                 )))
             } else {
-                Ok(FieldElement::from(parsed_uint))
+                Ok(PrimeField::from(parsed_uint))
             }
         } else {
             Err(E::custom(format!("Too many bytes: {}", v.len())))
@@ -70,7 +67,7 @@ impl<'de> Visitor<'de> for FieldElementVisitor {
 
         let mut held_array = [0_u8; 32];
         held_array.clone_from_slice(holder.as_slice());
-        Ok(FieldElement::from(U256::from_bytes_be(&held_array)))
+        Ok(Self::Value::from(U256::from_bytes_be(&held_array)))
     }
 
     fn visit_str<E>(self, v: &str) -> Result<Self::Value, E> {
@@ -93,19 +90,22 @@ impl<'de> Visitor<'de> for FieldElementVisitor {
 
         let mut held_array = [0_u8; 32];
         held_array.clone_from_slice(holder.as_slice());
-        Ok(FieldElement::from(U256::from_bytes_be(&held_array)))
+        Ok(PrimeField::from(U256::from_bytes_be(&held_array)))
     }
 }
 
-impl<'de> Deserialize<'de> for FieldElement {
+impl<'de, P: Parameters<UInt = U256>> Deserialize<'de> for PrimeField<P> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
+        let visitor = PrimeFieldVisitor::<P> {
+            _parameters: PhantomData,
+        };
         if deserializer.is_human_readable() {
-            deserializer.deserialize_str(FieldElementVisitor)
+            deserializer.deserialize_str(visitor)
         } else {
-            deserializer.deserialize_bytes(FieldElementVisitor)
+            deserializer.deserialize_bytes(visitor)
         }
     }
 }
@@ -113,13 +113,14 @@ impl<'de> Deserialize<'de> for FieldElement {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::proth_field::Proth;
     use proptest::prelude::*;
 
     #[test]
     fn test_serde() {
-        proptest!(|(x: FieldElement)| {
+        proptest!(|(x: PrimeField<Proth>)| {
             let serialized = serde_json::to_string(&x)?;
-            let deserialized: FieldElement = serde_json::from_str(&serialized)?;
+            let deserialized: PrimeField<Proth> = serde_json::from_str(&serialized)?;
             prop_assert_eq!(deserialized, x);
         });
     }
