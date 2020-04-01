@@ -195,29 +195,11 @@ curve_operations!(Affine);
 commutative_binop!(Affine, Add, add, AddAssign, add_assign);
 noncommutative_binop!(Affine, Sub, sub, SubAssign, sub_assign);
 
-#[cfg(any(test, feature = "quickcheck"))]
-use quickcheck::{Arbitrary, Gen};
-
-#[cfg(any(test, feature = "quickcheck"))]
-impl Arbitrary for Affine {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
-        if u8::arbitrary(g) < 50 {
-            Self::Zero
-        } else {
-            // TODO: Make sure it is on the curve
-            Self::Point {
-                x: FieldElement::arbitrary(g),
-                y: FieldElement::arbitrary(g),
-            }
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::ScalarFieldElement;
-    use quickcheck_macros::quickcheck;
+    use proptest::prelude::*;
     use zkp_macros_decl::{field_element, u256h};
     use zkp_u256::U256;
 
@@ -268,13 +250,15 @@ mod tests {
         assert_eq!(result, expected);
     }
 
-    #[quickcheck]
-    fn add_commutative(a: Affine, b: Affine) -> bool {
-        &a + &b == b + a
-    }
+    proptest!(
+        #[test]
+        fn add_commutative(a: Affine, b: Affine) {
+            prop_assert_eq!(&a + &b, b + a)
+        }
 
-    #[quickcheck]
-    fn distributivity(p: Affine, a: ScalarFieldElement, b: ScalarFieldElement) -> bool {
-        (&p * &a) + (&p * &b) == p * (a + b)
-    }
+        #[test]
+        fn distributivity(p: Affine, a: ScalarFieldElement, b: ScalarFieldElement) {
+            prop_assert_eq!(&p * &a + &p * &b, p * (a + b));
+        }
+    );
 }

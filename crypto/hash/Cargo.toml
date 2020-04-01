@@ -16,7 +16,6 @@ edition = "2018"
 [dependencies]
 hex = { version = "0.4.0", optional = true }
 no-std-compat = { version = "0.3.0", features = [ "alloc" ] }
-quickcheck = { version = "0.9", optional = true }
 tiny-keccak = { version = "2.0.1", features = ["keccak"] }
 zkp-macros-decl = { version = "0.1.0", path = "../../utils/macros-decl", default-features = false }
 zkp-primefield = { version = "0.1.0", path = "../../algebra/primefield", default-features = false }
@@ -24,7 +23,6 @@ zkp-u256 = { version = "0.1.0", path = "../../algebra/u256", default-features = 
 
 [dev-dependencies]
 criterion = "0.3.0"
-quickcheck_macros = "0.9.1"
 
 [features]
 default = [ "std" ]

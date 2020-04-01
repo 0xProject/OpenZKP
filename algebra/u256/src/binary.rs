@@ -298,8 +298,6 @@ commutative_binop!(U256, BitXor, bitxor, BitXorAssign, bitxor_assign);
 
 // TODO: Replace literals with u256h!
 #[allow(clippy::unreadable_literal)]
-// Quickcheck requires pass by value
-#[allow(clippy::needless_pass_by_value)]
 #[cfg(test)]
 mod tests {
     use super::*;

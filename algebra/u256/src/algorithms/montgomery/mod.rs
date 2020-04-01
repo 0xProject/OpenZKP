@@ -37,8 +37,6 @@ pub(crate) fn mul_redc_inline<M: MontgomeryParameters<UInt = U256>>(x: &U256, y:
     }
 }
 
-// Quickcheck requires pass-by-value
-#[allow(clippy::needless_pass_by_value)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -82,10 +80,4 @@ mod tests {
     // from_montgomery::<PrimeField>(&to_montgomery::<PrimeField>(&n)) == n
     // }
     //
-    // #[quickcheck]
-    // fn test_mulmod(a: U256, b: U256) -> bool {
-    // let r = mulmod::<PrimeField>(&a, &b);
-    // let e = a.mulmod(&b, &PrimeField::MODULUS);
-    // r == e
-    // }
 }

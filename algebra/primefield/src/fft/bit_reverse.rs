@@ -29,7 +29,7 @@ pub fn permute<T>(v: &mut [T]) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use quickcheck_macros::quickcheck;
+    use proptest::prelude::*;
 
     #[test]
     fn test_permute() {
@@ -39,12 +39,16 @@ mod tests {
         assert_eq!(permute_index(4, 3), 3);
     }
 
-    #[quickcheck]
-    fn check_permute(size: usize, index: usize) {
-        let size = size.next_power_of_two();
-        let index = index % size;
-        let permuted = permute_index(size, index);
-        assert!(permuted < size);
-        assert_eq!(permute_index(size, permuted), index);
-    }
+    proptest!(
+        #[test]
+        fn check_permute(size: usize, index: usize) {
+            prop_assume!(size != 0);
+            prop_assume!(size <= usize::max_value() / 2);
+            let size = size.next_power_of_two();
+            let index = index % size;
+            let permuted = permute_index(size, index);
+            prop_assert!(permuted < size);
+            prop_assert_eq!(permute_index(size, permuted), index);
+        }
+    );
 }

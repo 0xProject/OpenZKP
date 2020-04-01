@@ -34,23 +34,21 @@ where
     result
 }
 
-// Quickcheck needs pass by value
-#[allow(clippy::needless_pass_by_value)]
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::{FieldElement, Zero};
-    use quickcheck_macros::quickcheck;
+    use proptest::prelude::*;
 
-    #[quickcheck]
-    fn test_batch_inv(x: Vec<FieldElement>) -> bool {
-        if x.iter().any(FieldElement::is_zero) {
-            true
-        } else {
-            invert_batch(x.as_slice())
+    proptest!(
+        #[test]
+        fn test_batch_inv(x: Vec<FieldElement>) {
+            prop_assume!(!x.iter().any(FieldElement::is_zero));
+
+            prop_assert!(invert_batch(x.as_slice())
                 .iter()
                 .zip(x.iter())
-                .all(|(a_inv, a)| *a_inv == a.inv().unwrap())
+                .all(|(a_inv, a)| *a_inv == a.inv().unwrap()));
         }
-    }
+    );
 }

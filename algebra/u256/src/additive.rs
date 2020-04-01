@@ -107,12 +107,10 @@ impl core::iter::Sum for U256 {
 
 // TODO: Replace literals with u256h!
 #[allow(clippy::unreadable_literal)]
-// Quickcheck requires pass by value
-#[allow(clippy::needless_pass_by_value)]
 #[cfg(test)]
 mod tests {
     use super::*;
-    use quickcheck_macros::quickcheck;
+    use proptest::prelude::*;
     use zkp_macros_decl::u256h;
 
     #[test]
@@ -158,12 +156,10 @@ mod tests {
         assert_eq!(a, e);
     }
 
-    #[quickcheck]
-    fn commutative_add(a: U256, b: U256) -> bool {
-        let mut l = a.clone();
-        let mut r = b.clone();
-        l += &b;
-        r += &a;
-        l == r
-    }
+    proptest!(
+        #[test]
+        fn commutative_add(a: U256, b: U256) {
+            prop_assert_eq!(&a + &b, b + a);
+        }
+    );
 }
