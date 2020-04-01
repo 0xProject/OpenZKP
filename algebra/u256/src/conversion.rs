@@ -239,7 +239,6 @@ impl U256 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::proth_field::Proth;
     use proptest::prelude::*;
     use num_traits::identities::One;
 
@@ -247,7 +246,6 @@ mod tests {
     fn test_one() {
         let one = U256::one();
         let serialized = serde_json::to_string(&one).unwrap();
-        dbg!(serialized.clone());
         assert_eq!(serialized, "\"0000000000000000000000000000000000000000000000000000000000000001\"");
     }
 
@@ -255,7 +253,7 @@ mod tests {
     fn test_serde() {
         proptest!(|(x: U256)| {
             let serialized = serde_json::to_string(&x)?;
-            let deserialized: PrimeField<Proth> = serde_json::from_str(&serialized)?;
+            let deserialized: U256 = serde_json::from_str(&serialized)?;
             prop_assert_eq!(deserialized, x);
         });
     }

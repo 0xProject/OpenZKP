@@ -39,7 +39,7 @@ mod tests {
     use num_traits::identities::One;
 
     #[test]
-    fn test_one() {
+    fn test_one_string() {
         let one = PrimeField::<Proth>::one();
         let serialized = serde_json::to_string(&one).unwrap();
         assert_eq!(serialized, "\"0000000000000000000000000000000000000000000000000000000000000001\"");
