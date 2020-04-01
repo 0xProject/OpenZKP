@@ -212,7 +212,7 @@ pub fn verify(constraints: &Constraints, proof: &Proof) -> Result<()> {
     let mut eval_points: Vec<FieldElement> = Vec::with_capacity(constraints.fri_layout.len() + 1);
     let mut fri_size = eval_domain_size;
     // Get fri roots and eval points from the channel random
-    for &num_folds in constraints.fri_layout.iter() {
+    for &num_folds in &constraints.fri_layout {
         fri_size >>= num_folds;
         fri_commitments.push(Commitment::from_size_hash(fri_size, &channel.replay())?);
         eval_points.push(channel.get_random());
