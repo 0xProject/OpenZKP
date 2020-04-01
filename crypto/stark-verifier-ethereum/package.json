@@ -16,7 +16,7 @@
     "@nomiclabs/buidler-waffle": "^1.2.0",
     "@types/chai": "^4.2.11",
     "@types/mocha": "^7.0.2",
-    "@types/node": "^13.9.4",
+    "@types/node": "^13.9.8",
     "buidler-typechain": "^0.0.5",
     "chai": "^4.2.0",
     "ethereum-waffle": "^2.4.0",
