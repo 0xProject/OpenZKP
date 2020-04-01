@@ -59,14 +59,17 @@ mod algebraic_dag;
 #[cfg(feature = "prover")]
 mod component;
 #[cfg(feature = "prover")]
+pub mod component2;
+#[cfg(feature = "prover")]
 mod constraint_check;
 #[cfg(feature = "prover")]
 mod prover;
 #[cfg(feature = "prover")]
+mod rational_equality;
+#[cfg(feature = "prover")]
 pub mod solidity_encode;
 #[cfg(feature = "prover")]
 mod trace_table;
-
 // TODO: Have unconditional Debug trait on all types
 
 // In no std mode, substitute no_std_compat
@@ -88,7 +91,10 @@ pub use verifier::{verify, Error as VerifierError};
 // Exports for prover
 #[cfg(feature = "prover")]
 pub use component::{
-    compose_folded, compose_horizontal, compose_vertical, fold, fold_many, permute_columns, shift,
+    compose::{
+        fold, fold_many, folded as compose_folded, horizontal as compose_horizontal,
+        permute_columns, shift, vertical as compose_vertical,
+    },
     Component,
 };
 #[cfg(feature = "prover")]

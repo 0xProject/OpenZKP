@@ -101,13 +101,11 @@ pub(crate) fn mul_redc_inline(m3: u64, x: &U256, y: &U256) -> U256 {
     r
 }
 
-// Quickcheck requires pass-by-value
-#[allow(clippy::needless_pass_by_value)]
 #[cfg(test)]
 mod tests {
     use super::{super::generic, *};
     use crate::MontgomeryParameters;
-    use quickcheck_macros::quickcheck;
+    use proptest::prelude::*;
     use zkp_macros_decl::u256h;
 
     struct PrimeField();
@@ -140,26 +138,29 @@ mod tests {
         assert_eq!(mul_redc_inline(M3, &a, &b), c);
     }
 
-    #[quickcheck]
-    fn test_redc_generic_consistent(lo: U256, hi: U256) -> bool {
-        if hi >= PrimeField::MODULUS {
-            return true;
-        }
-        let result = redc_inline(M3, &lo, &hi);
-        let expected = generic::redc_inline::<PrimeField>(&lo, &hi);
-        result == expected
+    fn remainder(i: U256) -> U256 {
+        i % PrimeField::MODULUS
     }
 
-    #[quickcheck]
-    fn test_mul_redc_generic_consistent(x: U256, y: U256) -> bool {
-        if x >= PrimeField::MODULUS {
-            return true;
+    proptest!(
+        #[test]
+        fn test_redc_generic_consistent(
+            hi in U256::arbitrary().prop_map(remainder),
+            lo in U256::arbitrary().prop_map(remainder),
+        ) {
+            let result = redc_inline(M3, &lo, &hi);
+            let expected = generic::redc_inline::<PrimeField>(&lo, &hi);
+            prop_assert_eq!(result, expected);
         }
-        if y >= PrimeField::MODULUS {
-            return true;
+
+        #[test]
+        fn test_mul_redc_generic_consistent(
+            x in U256::arbitrary().prop_map(remainder),
+            y in U256::arbitrary().prop_map(remainder),
+        ){
+            let result = mul_redc_inline(M3, &x, &y);
+            let expected = generic::mul_redc_inline::<PrimeField>(&x, &y);
+            prop_assert_eq!(result, expected);
         }
-        let result = mul_redc_inline(M3, &x, &y);
-        let expected = generic::mul_redc_inline::<PrimeField>(&x, &y);
-        result == expected
-    }
+    );
 }

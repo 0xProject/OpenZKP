@@ -17,7 +17,7 @@ edition = "2018"
 itertools = { version = "0.9.0", default_features = false }
 lazy_static = { version = "1.3.0", features = [ "spin_no_std" ] } # TODO: When `std` is set we want this feature off!
 no-std-compat = { version = "0.3.0", features = [ "alloc" ] }
-quickcheck = { version = "0.9", optional = true}
+proptest = { version = "0.9.4", optional = true }
 serde = { version = "1.0", features = ["derive"], optional = true}
 tiny-keccak = { version = "2.0.1", features = ["keccak"] }
 zkp-macros-decl = { version = "0.1.0", path = "../../utils/macros-decl", default-features = false }
@@ -26,10 +26,9 @@ zkp-u256 = { version = "0.1.0", path = "../u256", default-features = false }
 
 [dev-dependencies]
 criterion = "0.3.0"
-quickcheck = "0.9"
-quickcheck_macros = "0.9.1"
-zkp-primefield = { version = "0.1.0", path = "../primefield", features = ["quickcheck"] }
-zkp-u256 = { version = "0.1.0", path = "../u256", features = ["quickcheck"] }
+proptest = "0.9.5"
+zkp-primefield = { version = "0.1.0", path = "../primefield", features = ["proptest"]  }
+zkp-u256 = { version = "0.1.0", path = "../u256", features = ["proptest", "proptest-derive"]  }
 
 [[bench]]
 name = "benchmark"

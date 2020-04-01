@@ -24,7 +24,7 @@ use zkp_u256::{
 /// For [`Root`] it should also implment [`Binary`] and [`DivRem`]. For
 /// [`SquareRoot`] it requires [`Binary`]  and [`Shr`]`<usize>`. For rand
 /// support it requires [`rand::distributions::uniform::SampleUniform`]. For
-/// `quickcheck` support `Parameters` needs to be `'static + Send` (which it
+/// `proptest` support `Parameters` needs to be `'static + Send` (which it
 /// really should anyway).
 // Derive fails for Clone, PartialEq, Eq, Hash
 pub struct PrimeField<P: Parameters> {
@@ -434,17 +434,13 @@ where
     }
 }
 
-// Quickcheck needs pass by value
-#[allow(clippy::needless_pass_by_value)]
-// We allow these in tests for readability/ease of editing
-#[allow(clippy::redundant_clone)]
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::FieldElement;
     use itertools::repeat_n;
     use num_traits::ToPrimitive;
-    use quickcheck_macros::quickcheck;
+    use proptest::prelude::*;
     use zkp_macros_decl::{field_element, u256h};
     use zkp_u256::U256;
 
@@ -511,103 +507,105 @@ mod tests {
         let c = field_element!("003a9a346e7103c74dfcddd0eeb4e16ca71d8887c2bed3d4ee718b62015e87b2");
         assert_eq!(a / b, c);
     }
-    #[quickcheck]
-    fn from_as_isize(n: isize) -> bool {
-        FieldElement::from(n).to_isize().unwrap() == n
-    }
 
-    #[quickcheck]
-    fn from_as_i128(n: i128) -> bool {
-        FieldElement::from(n).to_i128().unwrap() == n
-    }
-
-    #[quickcheck]
-    fn add_identity(a: FieldElement) -> bool {
-        &a + FieldElement::zero() == a
-    }
-
-    #[quickcheck]
-    fn mul_identity(a: FieldElement) -> bool {
-        &a * FieldElement::one() == a
-    }
-
-    #[quickcheck]
-    fn commutative_add(a: FieldElement, b: FieldElement) -> bool {
-        &a + &b == b + a
-    }
-
-    #[quickcheck]
-    fn commutative_mul(a: FieldElement, b: FieldElement) -> bool {
-        &a * &b == b * a
-    }
-
-    #[quickcheck]
-    fn associative_add(a: FieldElement, b: FieldElement, c: FieldElement) -> bool {
-        &a + (&b + &c) == (a + b) + c
-    }
-
-    #[quickcheck]
-    fn associative_mul(a: FieldElement, b: FieldElement, c: FieldElement) -> bool {
-        &a * (&b * &c) == (a * b) * c
-    }
-
-    #[quickcheck]
-    fn inverse_add(a: FieldElement) -> bool {
-        &a + a.neg() == FieldElement::zero()
-    }
-
-    #[quickcheck]
-    fn inverse_mul(a: FieldElement) -> bool {
-        match a.inv() {
-            None => a == FieldElement::zero(),
-            Some(ai) => a * ai == FieldElement::one(),
+    proptest!(
+        #[test]
+        fn from_as_isize(n: isize) {
+            prop_assert_eq!(FieldElement::from(n).to_isize().unwrap(), n)
         }
-    }
 
-    #[quickcheck]
-    fn distributivity(a: FieldElement, b: FieldElement, c: FieldElement) -> bool {
-        &a * (&b + &c) == (&a * b) + (a * c)
-    }
-
-    #[quickcheck]
-    fn square(a: FieldElement) -> bool {
-        a.square() == &a * &a
-    }
-
-    #[quickcheck]
-    fn pow_0(a: FieldElement) -> bool {
-        a.pow(0_usize) == FieldElement::one()
-    }
-
-    #[quickcheck]
-    fn pow_1(a: FieldElement) -> bool {
-        a.pow(1_usize) == a
-    }
-
-    #[quickcheck]
-    fn pow_2(a: FieldElement) -> bool {
-        a.pow(2_usize) == &a * &a
-    }
-
-    #[quickcheck]
-    fn pow_n(a: FieldElement, n: usize) -> bool {
-        if n > 512 {
-            return true;
+        #[test]
+        fn from_as_i128(n: i128) {
+            prop_assert_eq!(FieldElement::from(n).to_i128().unwrap(), n);
         }
-        a.pow(n) == repeat_n(a, n).product()
-    }
 
-    #[quickcheck]
-    fn fermats_little_theorem(a: FieldElement) -> bool {
-        a.pow(&FieldElement::MODULUS) == a
-    }
+        #[test]
+        fn add_identity(a: FieldElement) {
+            prop_assert_eq!(&a + FieldElement::zero(), a);
+        }
 
-    #[quickcheck]
-    fn square_root(a: FieldElement) -> bool {
-        let s = a.square();
-        let r = s.square_root().unwrap();
-        r == a || r == -a
-    }
+        #[test]
+        fn mul_identity(a: FieldElement) {
+            prop_assert_eq!(&a * FieldElement::one(), a);
+        }
+
+        #[test]
+        fn commutative_add(a: FieldElement, b: FieldElement) {
+            prop_assert_eq!(&a + &b, b + a);
+        }
+
+        #[test]
+        fn commutative_mul(a: FieldElement, b: FieldElement) {
+            prop_assert_eq!(&a * &b, b * a);
+        }
+
+        #[test]
+        fn associative_add(a: FieldElement, b: FieldElement, c: FieldElement) {
+            prop_assert_eq!(&a + (&b + &c), (a + b) + c);
+        }
+
+        #[test]
+        fn associative_mul(a: FieldElement, b: FieldElement, c: FieldElement) {
+            prop_assert_eq!(&a * (&b * &c), (a * b) * c);
+        }
+
+        #[test]
+        fn inverse_add(a: FieldElement) {
+            prop_assert!((&a + a.neg()).is_zero());
+        }
+
+        #[test]
+        fn inverse_mul(a: FieldElement) {
+            let inverse = a.inv();
+            match inverse {
+                None => prop_assert!(a.is_zero()),
+                Some(ai) => prop_assert!((a * ai).is_one()),
+            }
+        }
+
+        #[test]
+        fn distributivity(a: FieldElement, b: FieldElement, c: FieldElement) {
+            prop_assert_eq!(&a * (&b + &c), (&a * b) + (a * c));
+        }
+
+        #[test]
+        fn square(a: FieldElement) {
+            prop_assert_eq!(a.square(), &a * &a);
+        }
+
+        #[test]
+        fn pow_0(a: FieldElement) {
+            prop_assert!(a.pow(0_usize).is_one());
+        }
+
+        #[test]
+        fn pow_1(a: FieldElement) {
+            prop_assert_eq!(a.pow(1_usize), a);
+        }
+
+        #[test]
+        fn pow_2(a: FieldElement) {
+            prop_assert_eq!(a.pow(2_usize), &a * &a);
+        }
+
+        #[test]
+        fn pow_n(a: FieldElement, n: usize) {
+            let exponent = n % 512;
+            prop_assert_eq!(a.pow(exponent), repeat_n(a, exponent).product());
+        }
+
+        #[test]
+        fn fermats_little_theorem(a: FieldElement) {
+            prop_assert_eq!(a.pow(&FieldElement::MODULUS), a);
+        }
+
+        #[test]
+        fn square_root(a: FieldElement) {
+            let s = a.square();
+            let r = s.square_root().unwrap();
+            prop_assert!(r == a || r == -a);
+        }
+    );
 
     #[test]
     fn zeroth_root_of_unity() {
@@ -618,7 +616,6 @@ mod tests {
     fn roots_of_unity_squared() {
         let powers_of_two = (0..193).map(|n| U256::ONE << n);
         let roots_of_unity: Vec<_> = powers_of_two
-            .clone()
             .map(|n| FieldElement::root(&n).unwrap())
             .collect();
 
