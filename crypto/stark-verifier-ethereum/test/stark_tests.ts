@@ -76,10 +76,14 @@ describe('Stark Testing testing', () => {
     it('It correctly identify the number of leading zeros', async () => {
         const random_number = utils.bigNumberify('0xfffa751e9886b6eccc725754333f339b7bc9024f38a44e75468fb4b16e1709cc');
         for (let i: number = 0; i < 1; i++) {
-            // @ts-ignore
-            verifier_contract.leading_zeros_external(random_number.maskn(255 - i)).then((result: any) => {
-                expect(result.toNumber()).to.eq(i);
-            });
+            verifier_contract
+                .leading_zeros_external((random_number.maskn(255 - i) as unknown) as utils.Arrayish)
+                .catch(() => {
+                    expect(false);
+                })
+                .then((result: any) => {
+                    expect(result.toNumber()).to.eq(i);
+                });
         }
     });
 });
