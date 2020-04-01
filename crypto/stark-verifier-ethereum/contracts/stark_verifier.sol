@@ -78,7 +78,7 @@ contract StarkVerifier {
         require(check_proof_of_work(coin, proof.pow_nonce, constraint_parameters.pow_bits), 'POW Failed');
         // Read the query indecies from the coin
         uint8 eval_domain_log_size = constraint_parameters.log_trace_length + constraint_parameters.log_blowup;
-        uint64[] memory queries = get_queries(coin, eval_domain_log_size - 1, constraint_parameters.number_of_queries);
+        uint64[] memory queries = get_queries(coin, eval_domain_log_size, constraint_parameters.number_of_queries);
     }
 
     // This function write to the channel and reads from the channel to get the randomized data

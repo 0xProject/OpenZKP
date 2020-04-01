@@ -1,0 +1,8 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc fc58428363bac0ce470d9b7538445727c1926a621172c67b3ddb8fdf3bbe75b3 # shrinks to r = Recurrance { index: 1, initial_value: field_element!("u256h!("0000000000000000000000000000000000000000000000000000000000000000")"), exponent: 0 }
+cc d9631881e42b13ff3be4c17d0084396cc9ae48bfe6e424227b35b37594e8578c # shrinks to r = Recurrance2 { index: 4, initial_values: [field_element!("u256h!("0000000000000000000000000000000000000000000000000000000000000000")"), field_element!("u256h!("0000000000000000000000000000000000000000000000000000000000000000")"), field_element!("u256h!("0000000000000000000000000000000000000000000000000000000000000000")"), field_element!("u256h!("0000000000000000000000000000000000000000000000000000000000000000")")], coefficients: [field_element!("u256h!("02656dd2b5b000294cdd702cce57b88fa86b85e64d9607be0072c2056fd09205")"), field_element!("u256h!("04a00bd44c7860864c1977e72b729433fca4f7a519d7a5e6cb0d5b28b61550f9")"), field_element!("u256h!("036ef079e62ae1a9561b9cd69893b3150b95aae2fc0746d5294392aeb3ab8b89")"), field_element!("u256h!("0660e39be2e4e3088f3b014ea08682d57754ba840227e3f20de83d6a81a1a58d")")], exponents: [0, 0, 0, 0] }

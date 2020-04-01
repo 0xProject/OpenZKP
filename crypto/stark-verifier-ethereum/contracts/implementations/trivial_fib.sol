@@ -32,7 +32,7 @@ contract TrivialFib is ConstraintSystem {
             number_of_columns: 2,
             log_trace_length: 10,
             number_of_constraints: 4,
-            log_blowup: 5,
+            log_blowup: 4,
             constraint_degree: 1,
             pow_bits: 10,
             number_of_queries: 20,
