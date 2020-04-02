@@ -25,11 +25,26 @@ impl Affine {
     }
 
     #[must_use]
-    // TODO: return result
-    pub fn x(&self) -> FieldElement {
+    pub fn x(&self) -> Option<&FieldElement> {
         match self {
-            Self::Zero => panic!("no x coordinate for 0"),
-            Self::Point { x, .. } => x.clone(),
+            Self::Zero => None,
+            Self::Point { x, .. } => Some(x),
+        }
+    }
+
+    #[must_use]
+    pub fn y(&self) -> Option<&FieldElement> {
+        match self {
+            Self::Zero => None,
+            Self::Point { y, .. } => Some(y),
+        }
+    }
+
+    #[must_use]
+    pub fn coordinates(&self) -> Option<(&FieldElement, &FieldElement)> {
+        match self {
+            Self::Zero => None,
+            Self::Point { x, y, .. } => Some((x, y)),
         }
     }
 
