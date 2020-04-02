@@ -56,6 +56,8 @@ mod proptest;
 mod proth_field;
 #[cfg(feature = "rand")]
 mod rand;
+#[cfg(feature = "std")]
+mod serde;
 #[cfg(any(test, feature = "quickcheck"))]
 mod test;
 mod traits;
