@@ -46,41 +46,6 @@ fn get_slope(p_1: &Affine, p_2: &Affine) -> FieldElement {
     (y_1 - y_2) / (x_1 - x_2)
 }
 
-fn initialize_hash(left_source: U256, right_source: U256) -> Row {
-    let mut row: Row = Row::default();
-    row.left.source = left_source;
-    row.right.source = right_source;
-    row.right.point = SHIFT_POINT;
-    row
-}
-
-fn hash_next_bit(row: &Row, bit_index: usize) -> Row {
-    let mut next_row = Row {
-        left:  Subrow {
-            source: row.left.source.clone() >> 1,
-            point: row.right.point.clone(),
-            ..Subrow::default()
-        },
-        right: Subrow {
-            source: row.right.source.clone() >> 1,
-            ..Subrow::default()
-        },
-    };
-    if row.left.source.bit(0) {
-        let p = &PEDERSEN_POINTS[bit_index];
-        next_row.left.slope = get_slope(&next_row.left.point, &p);
-        next_row.left.point += p;
-    }
-
-    next_row.right.point = next_row.left.point.clone();
-    if row.right.source.bit(0) {
-        let p = &PEDERSEN_POINTS[bit_index + 252];
-        next_row.right.slope = get_slope(&next_row.right.point, &p);
-        next_row.right.point += p;
-    }
-    next_row
-}
-
 struct MerkleTreeLayer;
 
 impl MerkleTreeLayer {
@@ -210,7 +175,32 @@ impl Component for MerkleTreeLayer {
 
         for bit_index in 0..256 {
             if bit_index > 0 {
-                row = hash_next_bit(&row, bit_index);
+                row = {
+                    let mut next_row = Row {
+                        left:  Subrow {
+                            source: row.left.source.clone() >> 1,
+                            point: row.right.point.clone(),
+                            ..Subrow::default()
+                        },
+                        right: Subrow {
+                            source: row.right.source.clone() >> 1,
+                            ..Subrow::default()
+                        },
+                    };
+                    if row.left.source.bit(0) {
+                        let p = &PEDERSEN_POINTS[bit_index];
+                        next_row.left.slope = get_slope(&next_row.left.point, &p);
+                        next_row.left.point += p;
+                    }
+
+                    next_row.right.point = next_row.left.point.clone();
+                    if row.right.source.bit(0) {
+                        let p = &PEDERSEN_POINTS[bit_index + 252];
+                        next_row.right.slope = get_slope(&next_row.right.point, &p);
+                        next_row.right.point += p;
+                    }
+                    next_row
+                }
             }
 
             let (left_x, left_y) = row.left.point.coordinates().unwrap();
