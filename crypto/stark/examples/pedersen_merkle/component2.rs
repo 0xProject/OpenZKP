@@ -16,15 +16,15 @@ use zkp_stark::{
 use zkp_u256::{Binary, U256};
 
 #[derive(Default)]
-pub(crate) struct Row {
-    pub(crate) left:  Subrow,
-    pub(crate) right: Subrow,
+struct Row {
+    left:  Subrow,
+    right: Subrow,
 }
 
-pub(crate) struct Subrow {
-    pub(crate) source: U256,
-    pub(crate) slope:  FieldElement,
-    pub(crate) point:  Affine,
+struct Subrow {
+    source: U256,
+    slope:  FieldElement,
+    point:  Affine,
 }
 
 impl Default for Subrow {
@@ -41,19 +41,12 @@ impl Default for Subrow {
 }
 
 fn get_slope(p_1: &Affine, p_2: &Affine) -> FieldElement {
-    let (x_1, y_1) = get_coordinates(p_1);
-    let (x_2, y_2) = get_coordinates(p_2);
+    let (x_1, y_1) = p_1.coordinates().unwrap();
+    let (x_2, y_2) = p_2.coordinates().unwrap();
     (y_1 - y_2) / (x_1 - x_2)
 }
 
-pub(crate) fn get_coordinates(p: &Affine) -> (&FieldElement, &FieldElement) {
-    match p {
-        Affine::Zero => panic!(),
-        Affine::Point { x, y } => (x, y),
-    }
-}
-
-pub(crate) fn initialize_hash(left_source: U256, right_source: U256) -> Row {
+fn initialize_hash(left_source: U256, right_source: U256) -> Row {
     let mut row: Row = Row::default();
     row.left.source = left_source;
     row.right.source = right_source;
@@ -61,7 +54,7 @@ pub(crate) fn initialize_hash(left_source: U256, right_source: U256) -> Row {
     row
 }
 
-pub(crate) fn hash_next_bit(row: &Row, bit_index: usize) -> Row {
+fn hash_next_bit(row: &Row, bit_index: usize) -> Row {
     let mut next_row = Row {
         left:  Subrow {
             source: row.left.source.clone() >> 1,
@@ -220,13 +213,13 @@ impl Component for MerkleTreeLayer {
                 row = hash_next_bit(&row, bit_index);
             }
 
-            let (left_x, left_y) = get_coordinates(&row.left.point);
+            let (left_x, left_y) = row.left.point.coordinates().unwrap();
             trace[(bit_index, 0)] = FieldElement::from(row.left.source.clone());
             trace[(bit_index, 1)] = row.left.slope.clone();
             trace[(bit_index, 2)] = left_x.clone();
             trace[(bit_index, 3)] = left_y.clone();
 
-            let (right_x, right_y) = get_coordinates(&row.right.point);
+            let (right_x, right_y) = row.right.point.coordinates().unwrap();
             trace[(bit_index, 4)] = FieldElement::from(row.right.source.clone());
             trace[(bit_index, 5)] = row.right.slope.clone();
             trace[(bit_index, 6)] = right_x.clone();
