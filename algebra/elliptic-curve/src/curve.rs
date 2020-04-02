@@ -44,7 +44,7 @@ impl Affine {
     pub fn coordinates(&self) -> Option<(&FieldElement, &FieldElement)> {
         match self {
             Self::Zero => None,
-            Self::Point { x, y, .. } => Some((x, y)),
+            Self::Point { x, y } => Some((x, y)),
         }
     }
 
@@ -52,7 +52,7 @@ impl Affine {
     pub fn as_coordinates(self) -> Option<(FieldElement, FieldElement)> {
         match self {
             Self::Zero => None,
-            Self::Point { x, y, .. } => Some((x, y)),
+            Self::Point { x, y } => Some((x, y)),
         }
     }
 
