@@ -2,6 +2,7 @@ mod empty;
 mod fold;
 mod horizontal;
 mod test;
+mod transformed;
 mod vertical;
 
 use crate::{
@@ -11,12 +12,16 @@ use crate::{
     verifier::{verify, Error as VerifierError},
     Constraints, ProverError, RationalExpression, TraceTable,
 };
+use std::ops::{Index, IndexMut};
+use zkp_primefield::FieldElement;
 
 pub use empty::Empty;
 pub use fold::Fold;
 pub use horizontal::Horizontal;
 pub use test::Test;
 pub use vertical::Vertical;
+
+pub trait PolynomialBuilder: IndexMut<(usize, usize), Output = FieldElement> {}
 
 pub trait Component {
     type Claim;
@@ -25,6 +30,15 @@ pub trait Component {
     fn dimensions(&self) -> (usize, usize);
 
     fn constraints(&self, claim: &Self::Claim) -> Vec<RationalExpression>;
+
+    fn trace2<P: PolynomialBuilder>(
+        &self,
+        trace: &mut P,
+        claim: &Self::Claim,
+        witness: &Self::Witness,
+    ) {
+        unimplemented!()
+    }
 
     fn trace(&self, claim: &Self::Claim, witness: &Self::Witness) -> TraceTable;
 
