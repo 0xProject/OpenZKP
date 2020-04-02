@@ -23,6 +23,8 @@ fn get_slope(p_1: &Affine, p_2: &Affine) -> FieldElement {
 
 struct MerkleTreeLayer;
 
+// TODO: What convention do we want to follow for labels?
+#[allow(clippy::unused_self)]
 impl MerkleTreeLayer {
     fn new() -> MerkleTreeLayer {
         MerkleTreeLayer {}
@@ -84,16 +86,16 @@ impl Component for MerkleTreeLayer {
         let right_bit = Trace(4, 0) - Trace(4, 1) * 2.into();
 
         let constraints = vec![
-            on_hash_start_rows(Trace(6, 0) - Constant(shift_point_x.clone())),
-            on_hash_start_rows(Trace(7, 0) - Constant(shift_point_y.clone())),
+            on_hash_start_rows(Trace(6, 0) - Constant(shift_point_x)),
+            on_hash_start_rows(Trace(7, 0) - Constant(shift_point_y)),
             on_hash_loop_rows(left_bit.clone() * (left_bit.clone() - 1.into())),
             on_hash_loop_rows(
-                left_bit.clone() * (Trace(7, 0) - periodic_left_y.clone())
+                left_bit.clone() * (Trace(7, 0) - periodic_left_y)
                     - Trace(1, 1) * (Trace(6, 0) - periodic_left_x.clone()),
             ),
             on_hash_loop_rows(
                 Trace(1, 1) * Trace(1, 1)
-                    - left_bit.clone() * (Trace(6, 0) + periodic_left_x.clone() + Trace(2, 1)),
+                    - left_bit.clone() * (Trace(6, 0) + periodic_left_x + Trace(2, 1)),
             ),
             on_hash_loop_rows(
                 left_bit.clone() * (Trace(7, 0) + Trace(3, 1))
@@ -103,18 +105,18 @@ impl Component for MerkleTreeLayer {
                 (Constant(FieldElement::one()) - left_bit.clone()) * (Trace(6, 0) - Trace(2, 1)),
             ),
             on_hash_loop_rows(
-                (Constant(FieldElement::one()) - left_bit.clone()) * (Trace(7, 0) - Trace(3, 1)),
+                (Constant(FieldElement::one()) - left_bit) * (Trace(7, 0) - Trace(3, 1)),
             ),
             on_fe_end_rows(Trace(0, 0)),
             on_no_hash_rows(Trace(0, 0)),
             on_hash_loop_rows(right_bit.clone() * (right_bit.clone() - 1.into())),
             on_hash_loop_rows(
-                right_bit.clone() * (Trace(3, 1) - periodic_right_y.clone())
+                right_bit.clone() * (Trace(3, 1) - periodic_right_y)
                     - Trace(5, 1) * (Trace(2, 1) - periodic_right_x.clone()),
             ),
             on_hash_loop_rows(
                 Trace(5, 1) * Trace(5, 1)
-                    - right_bit.clone() * (Trace(2, 1) + periodic_right_x.clone() + Trace(6, 1)),
+                    - right_bit.clone() * (Trace(2, 1) + periodic_right_x + Trace(6, 1)),
             ),
             on_hash_loop_rows(
                 right_bit.clone() * (Trace(3, 1) + Trace(7, 1))
@@ -124,7 +126,7 @@ impl Component for MerkleTreeLayer {
                 (Constant(FieldElement::one()) - right_bit.clone()) * (Trace(2, 1) - Trace(6, 1)),
             ),
             on_hash_loop_rows(
-                (Constant(FieldElement::one()) - right_bit.clone()) * (Trace(3, 1) - Trace(7, 1)),
+                (Constant(FieldElement::one()) - right_bit) * (Trace(3, 1) - Trace(7, 1)),
             ),
             on_fe_end_rows(Trace(4, 0)),
             on_no_hash_rows(Trace(4, 0)),
@@ -165,12 +167,12 @@ impl Component for MerkleTreeLayer {
             }
             trace[(bit_index, 0)] = FieldElement::from(left_source.clone());
             trace[(bit_index, 1)] = left_slope.clone();
-            trace[(bit_index, 2)] = left_point.x().cloned().unwrap_or(FieldElement::zero());
-            trace[(bit_index, 3)] = left_point.y().cloned().unwrap_or(FieldElement::zero());
+            trace[(bit_index, 2)] = left_point.x().cloned().unwrap_or_else(FieldElement::zero);
+            trace[(bit_index, 3)] = left_point.y().cloned().unwrap_or_else(FieldElement::zero);
             trace[(bit_index, 4)] = FieldElement::from(right_source.clone());
             trace[(bit_index, 5)] = right_slope.clone();
-            trace[(bit_index, 6)] = right_point.x().cloned().unwrap_or(FieldElement::zero());
-            trace[(bit_index, 7)] = right_point.y().cloned().unwrap_or(FieldElement::zero());
+            trace[(bit_index, 6)] = right_point.x().cloned().unwrap_or_else(FieldElement::zero);
+            trace[(bit_index, 7)] = right_point.y().cloned().unwrap_or_else(FieldElement::zero);
         }
         // TODO: Check hash
         trace
@@ -229,14 +231,13 @@ impl Component for MerkleTree {
         assert_eq!(left.0, right.0);
         constraints.insert(
             0,
-            (Constant(leaf.clone()) - left.1.clone()) * (Constant(leaf) - right.1.clone())
-                / row(left.0),
+            (Constant(leaf.clone()) - left.1.clone()) * (Constant(leaf) - right.1) / row(left.0),
         );
 
         // The final hash equals `root`
         let hash = self.layers.element().hash();
         let row_index = hash.0 + (path_length - 1) * self.layers.element().dimensions().0;
-        constraints.insert(1, (Constant(root) - hash.1.clone()) / row(row_index));
+        constraints.insert(1, (Constant(root) - hash.1) / row(row_index));
 
         // Add column constraints
         for i in 0..columns {
