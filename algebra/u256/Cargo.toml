@@ -30,6 +30,7 @@ zkp-macros-decl = { version = "0.1.0", path = "../../utils/macros-decl", default
 criterion = "0.3.0"
 proptest = "0.9.5"
 proptest-derive = "0.1.2"
+serde_json = "1.0"
 
 [[bench]]
 name = "benchmark"

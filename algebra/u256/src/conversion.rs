@@ -39,10 +39,11 @@ impl Serialize for U256 {
     where
         S: Serializer,
     {
+        let bytes = self.to_bytes_be();
         if serializer.is_human_readable() {
-            serializer.serialize_str(&encode(&self.to_bytes_be()))
+            encode(&bytes).serialize(serializer)
         } else {
-            serializer.serialize_bytes(&self.to_bytes_be())
+            bytes.serialize(serializer)
         }
     }
 }
@@ -232,5 +233,31 @@ impl U256 {
     #[allow(clippy::cast_lossless)]
     pub fn as_i128(&self) -> i128 {
         (self.limb(0) as i128) | ((self.limb(1) as i128) << 64)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use num_traits::identities::One;
+    use proptest::prelude::*;
+
+    #[test]
+    fn test_one() {
+        let one = U256::one();
+        let serialized = serde_json::to_string(&one).unwrap();
+        assert_eq!(
+            serialized,
+            "\"0000000000000000000000000000000000000000000000000000000000000001\""
+        );
+    }
+
+    #[test]
+    fn test_serde() {
+        proptest!(|(x: U256)| {
+            let serialized = serde_json::to_string(&x)?;
+            let deserialized: U256 = serde_json::from_str(&serialized)?;
+            prop_assert_eq!(deserialized, x);
+        });
     }
 }
