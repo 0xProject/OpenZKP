@@ -1,7 +1,6 @@
 use super::inputs::{Claim, Witness};
 use crate::{
-    component::{get_coordinates, hash_next_bit, initialize_hash, Row},
-    pedersen_points::{merkle_hash, SHIFT_POINT},
+    pedersen_points::{merkle_hash, PEDERSEN_POINTS, SHIFT_POINT},
     periodic_columns::{
         LEFT_X_COEFFICIENTS_REF, LEFT_Y_COEFFICIENTS_REF, RIGHT_X_COEFFICIENTS_REF,
         RIGHT_Y_COEFFICIENTS_REF,
@@ -9,11 +8,85 @@ use crate::{
 };
 use itertools::izip;
 use zkp_elliptic_curve::Affine;
-use zkp_primefield::{FieldElement, One, Pow, Root};
+use zkp_primefield::{FieldElement, One, Pow, Root, Zero};
 use zkp_stark::{
     component2::{Component, Vertical},
     DensePolynomial, RationalExpression, TraceTable,
 };
+use zkp_u256::{Binary, U256};
+
+#[derive(Default)]
+pub(crate) struct Row {
+    pub(crate) left:  Subrow,
+    pub(crate) right: Subrow,
+}
+
+pub(crate) struct Subrow {
+    pub(crate) source: U256,
+    pub(crate) slope:  FieldElement,
+    pub(crate) point:  Affine,
+}
+
+impl Default for Subrow {
+    fn default() -> Self {
+        Self {
+            source: U256::ZERO,
+            slope:  FieldElement::zero(),
+            point:  Affine::Point {
+                x: FieldElement::zero(),
+                y: FieldElement::zero(),
+            },
+        }
+    }
+}
+
+fn get_slope(p_1: &Affine, p_2: &Affine) -> FieldElement {
+    let (x_1, y_1) = get_coordinates(p_1);
+    let (x_2, y_2) = get_coordinates(p_2);
+    (y_1 - y_2) / (x_1 - x_2)
+}
+
+pub(crate) fn get_coordinates(p: &Affine) -> (&FieldElement, &FieldElement) {
+    match p {
+        Affine::Zero => panic!(),
+        Affine::Point { x, y } => (x, y),
+    }
+}
+
+pub(crate) fn initialize_hash(left_source: U256, right_source: U256) -> Row {
+    let mut row: Row = Row::default();
+    row.left.source = left_source;
+    row.right.source = right_source;
+    row.right.point = SHIFT_POINT;
+    row
+}
+
+pub(crate) fn hash_next_bit(row: &Row, bit_index: usize) -> Row {
+    let mut next_row = Row {
+        left:  Subrow {
+            source: row.left.source.clone() >> 1,
+            point: row.right.point.clone(),
+            ..Subrow::default()
+        },
+        right: Subrow {
+            source: row.right.source.clone() >> 1,
+            ..Subrow::default()
+        },
+    };
+    if row.left.source.bit(0) {
+        let p = &PEDERSEN_POINTS[bit_index];
+        next_row.left.slope = get_slope(&next_row.left.point, &p);
+        next_row.left.point += p;
+    }
+
+    next_row.right.point = next_row.left.point.clone();
+    if row.right.source.bit(0) {
+        let p = &PEDERSEN_POINTS[bit_index + 252];
+        next_row.right.slope = get_slope(&next_row.right.point, &p);
+        next_row.right.point += p;
+    }
+    next_row
+}
 
 struct MerkleTreeLayer;
 
