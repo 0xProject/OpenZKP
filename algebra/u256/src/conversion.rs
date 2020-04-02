@@ -239,14 +239,17 @@ impl U256 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use proptest::prelude::*;
     use num_traits::identities::One;
+    use proptest::prelude::*;
 
     #[test]
     fn test_one() {
         let one = U256::one();
         let serialized = serde_json::to_string(&one).unwrap();
-        assert_eq!(serialized, "\"0000000000000000000000000000000000000000000000000000000000000001\"");
+        assert_eq!(
+            serialized,
+            "\"0000000000000000000000000000000000000000000000000000000000000001\""
+        );
     }
 
     #[test]

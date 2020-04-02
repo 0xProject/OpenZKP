@@ -35,14 +35,17 @@ where
 mod tests {
     use super::*;
     use crate::proth_field::Proth;
-    use proptest::prelude::*;
     use num_traits::identities::One;
+    use proptest::prelude::*;
 
     #[test]
     fn test_one_string() {
         let one = PrimeField::<Proth>::one();
         let serialized = serde_json::to_string(&one).unwrap();
-        assert_eq!(serialized, "\"0000000000000000000000000000000000000000000000000000000000000001\"");
+        assert_eq!(
+            serialized,
+            "\"0000000000000000000000000000000000000000000000000000000000000001\""
+        );
     }
 
     #[test]
