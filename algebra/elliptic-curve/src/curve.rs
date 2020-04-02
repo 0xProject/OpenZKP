@@ -41,7 +41,7 @@ impl Affine {
     }
 
     #[must_use]
-    pub fn coordinates(&self) -> Option<(&FieldElement, &FieldElement)> {
+    pub fn as_coordinates(&self) -> Option<(&FieldElement, &FieldElement)> {
         match self {
             Self::Zero => None,
             Self::Point { x, y } => Some((x, y)),
@@ -49,7 +49,7 @@ impl Affine {
     }
 
     #[must_use]
-    pub fn as_coordinates(self) -> Option<(FieldElement, FieldElement)> {
+    pub fn into_coordinates(self) -> Option<(FieldElement, FieldElement)> {
         match self {
             Self::Zero => None,
             Self::Point { x, y } => Some((x, y)),
@@ -57,7 +57,7 @@ impl Affine {
     }
 
     #[must_use]
-    pub fn on_curve(&self) -> bool {
+    pub fn is_on_curve(&self) -> bool {
         match self {
             Self::Zero => true,
             Self::Point { x, y } => y * y == x * x * x + x + BETA,
