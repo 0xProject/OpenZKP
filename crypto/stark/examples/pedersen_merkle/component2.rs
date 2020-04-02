@@ -165,12 +165,12 @@ impl Component for MerkleTreeLayer {
             }
             trace[(bit_index, 0)] = FieldElement::from(left_source.clone());
             trace[(bit_index, 1)] = left_slope.clone();
-            trace[(bit_index, 2)] = left_point.x().unwrap_or(&FieldElement::zero()).clone();
-            trace[(bit_index, 3)] = left_point.y().unwrap_or(&FieldElement::zero()).clone();
+            trace[(bit_index, 2)] = left_point.x().cloned().unwrap_or(FieldElement::zero());
+            trace[(bit_index, 3)] = left_point.y().cloned().unwrap_or(FieldElement::zero());
             trace[(bit_index, 4)] = FieldElement::from(right_source.clone());
             trace[(bit_index, 5)] = right_slope.clone();
-            trace[(bit_index, 6)] = right_point.x().unwrap_or(&FieldElement::zero()).clone();
-            trace[(bit_index, 7)] = right_point.y().unwrap_or(&FieldElement::zero()).clone();
+            trace[(bit_index, 6)] = right_point.x().cloned().unwrap_or(FieldElement::zero());
+            trace[(bit_index, 7)] = right_point.y().cloned().unwrap_or(FieldElement::zero());
         }
         // TODO: Check hash
         trace
