@@ -1,10 +1,18 @@
 use super::inputs::{Claim, Witness};
-use crate::pedersen_points::merkle_hash;
+use crate::{
+    component::{get_coordinates, hash_next_bit, initialize_hash, Row},
+    pedersen_points::{merkle_hash, SHIFT_POINT},
+    periodic_columns::{
+        LEFT_X_COEFFICIENTS_REF, LEFT_Y_COEFFICIENTS_REF, RIGHT_X_COEFFICIENTS_REF,
+        RIGHT_Y_COEFFICIENTS_REF,
+    },
+};
 use itertools::izip;
+use zkp_elliptic_curve::Affine;
 use zkp_primefield::{FieldElement, One, Pow, Root};
 use zkp_stark::{
     component2::{Component, Vertical},
-    RationalExpression, TraceTable,
+    DensePolynomial, RationalExpression, TraceTable,
 };
 
 struct MerkleTreeLayer;
@@ -39,15 +47,6 @@ impl Component for MerkleTreeLayer {
     }
 
     fn constraints(&self, _: &Self::Claim) -> Vec<RationalExpression> {
-        use crate::{
-            pedersen_points::SHIFT_POINT,
-            periodic_columns::{
-                LEFT_X_COEFFICIENTS_REF, LEFT_Y_COEFFICIENTS_REF, RIGHT_X_COEFFICIENTS_REF,
-                RIGHT_Y_COEFFICIENTS_REF,
-            },
-        };
-        use zkp_elliptic_curve::Affine;
-        use zkp_stark::DensePolynomial;
         use RationalExpression::*;
 
         // Constraints
@@ -131,14 +130,18 @@ impl Component for MerkleTreeLayer {
         let mut data = vec!["a", "bcd", "ef", "ghij"];
         data.sort_by_key(|a| usize::max_value() - a.len());
 
-        use crate::component::{get_coordinates, hash_next_bit, initialize_hash};
-
         let mut trace = TraceTable::new(256, 8);
-        let mut row = if *direction {
-            initialize_hash(sibling.into(), leaf.into())
+
+        let (left, right) = if *direction {
+            (sibling, leaf)
         } else {
-            initialize_hash(leaf.into(), sibling.into())
+            (leaf, sibling)
         };
+        let mut row: Row = Row::default();
+        row.left.source = left.into();
+        row.right.source = right.into();
+        row.right.point = SHIFT_POINT;
+
         for bit_index in 0..256 {
             if bit_index > 0 {
                 row = hash_next_bit(&row, bit_index);
