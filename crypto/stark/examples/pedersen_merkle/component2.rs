@@ -142,7 +142,7 @@ impl Component for MerkleTreeLayer {
         };
         let mut left_source: U256 = left.into();
         let mut right_source: U256 = right.into();
-        let mut left_point = Affine::new(FieldElement::zero(), FieldElement::zero());
+        let mut left_point = Affine::ZERO;
         let mut right_point = SHIFT_POINT;
         for bit_index in 0..256 {
             let mut left_slope = FieldElement::zero();
@@ -163,18 +163,14 @@ impl Component for MerkleTreeLayer {
                 left_source >>= 1;
                 right_source >>= 1;
             }
-
-            let (left_x, left_y) = left_point.coordinates().unwrap();
             trace[(bit_index, 0)] = FieldElement::from(left_source.clone());
             trace[(bit_index, 1)] = left_slope.clone();
-            trace[(bit_index, 2)] = left_x.clone();
-            trace[(bit_index, 3)] = left_y.clone();
-
-            let (right_x, right_y) = right_point.coordinates().unwrap();
+            trace[(bit_index, 2)] = left_point.x().unwrap_or(&FieldElement::zero()).clone();
+            trace[(bit_index, 3)] = left_point.y().unwrap_or(&FieldElement::zero()).clone();
             trace[(bit_index, 4)] = FieldElement::from(right_source.clone());
             trace[(bit_index, 5)] = right_slope.clone();
-            trace[(bit_index, 6)] = right_x.clone();
-            trace[(bit_index, 7)] = right_y.clone();
+            trace[(bit_index, 6)] = right_point.x().unwrap_or(&FieldElement::zero()).clone();
+            trace[(bit_index, 7)] = right_point.y().unwrap_or(&FieldElement::zero()).clone();
         }
         // TODO: Check hash
         trace
