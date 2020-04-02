@@ -40,14 +40,13 @@
 #![allow(clippy::multiple_crate_versions)]
 
 mod component;
-mod component2;
 mod inputs;
 mod pedersen_points;
 mod periodic_columns;
 mod starkware_example;
 
 use crate::{
-    component::pedersen_merkle,
+    component::MerkleTree,
     inputs::{Claim, Witness},
     starkware_example::starkware_example,
 };
@@ -57,7 +56,7 @@ use rand::{prelude::*, SeedableRng};
 use rand_xoshiro::Xoshiro256PlusPlus;
 use std::{num::ParseIntError, time::Instant};
 use structopt::StructOpt;
-use zkp_stark::{Provable, Verifiable};
+use zkp_stark::component2::Component;
 
 // Need to import to active the logging allocator
 #[allow(unused_imports)]
@@ -150,22 +149,23 @@ fn main() {
     let claim = Claim::from_leaf_witness(rng.gen(), &witness);
 
     info!("Constructing component...");
-    let component = pedersen_merkle(&claim, &witness);
+    let component = MerkleTree::new(witness.path.len());
     println!(
-        "Constructed {} by {} trace with {} constraints",
-        component.trace.num_rows(),
-        component.trace.num_columns(),
-        component.constraints.len(),
+        "Constructing {:?} trace with {} constraints",
+        component.dimensions(),
+        component.constraints(&claim).len(),
     );
 
     info!("Constructing proof...");
     let proof = {
         let _timer = Timer::default();
-        component.prove(())
+        component.prove(&claim, &witness)
     }
     .expect("failed to create proof");
     println!("Proof size is {}", proof.as_bytes().len());
 
     info!("Verifying proof...");
-    component.verify(&proof).expect("Verification failed");
+    component
+        .verify(&claim, &proof)
+        .expect("Verification failed");
 }
