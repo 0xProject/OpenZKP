@@ -16,8 +16,8 @@ use zkp_stark::{
 use zkp_u256::{Binary, U256};
 
 fn get_slope(p_1: &Affine, p_2: &Affine) -> FieldElement {
-    let (x_1, y_1) = p_1.coordinates().unwrap();
-    let (x_2, y_2) = p_2.coordinates().unwrap();
+    let (x_1, y_1) = p_1.as_coordinates().unwrap();
+    let (x_2, y_2) = p_2.as_coordinates().unwrap();
     (y_1 - y_2) / (x_1 - x_2)
 }
 
