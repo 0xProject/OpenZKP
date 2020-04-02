@@ -15,31 +15,6 @@ use zkp_stark::{
 };
 use zkp_u256::{Binary, U256};
 
-#[derive(Default)]
-struct Row {
-    left:  Subrow,
-    right: Subrow,
-}
-
-struct Subrow {
-    source: U256,
-    slope:  FieldElement,
-    point:  Affine,
-}
-
-impl Default for Subrow {
-    fn default() -> Self {
-        Self {
-            source: U256::ZERO,
-            slope:  FieldElement::zero(),
-            point:  Affine::Point {
-                x: FieldElement::zero(),
-                y: FieldElement::zero(),
-            },
-        }
-    }
-}
-
 fn get_slope(p_1: &Affine, p_2: &Affine) -> FieldElement {
     let (x_1, y_1) = p_1.coordinates().unwrap();
     let (x_2, y_2) = p_2.coordinates().unwrap();
@@ -158,9 +133,6 @@ impl Component for MerkleTreeLayer {
     }
 
     fn trace(&self, _: &Self::Claim, (leaf, sibling, direction): &Self::Witness) -> TraceTable {
-        let mut data = vec!["a", "bcd", "ef", "ghij"];
-        data.sort_by_key(|a| usize::max_value() - a.len());
-
         let mut trace = TraceTable::new(256, 8);
 
         let (left, right) = if *direction {
@@ -168,50 +140,39 @@ impl Component for MerkleTreeLayer {
         } else {
             (leaf, sibling)
         };
-        let mut row: Row = Row::default();
-        row.left.source = left.into();
-        row.right.source = right.into();
-        row.right.point = SHIFT_POINT;
-
+        let mut left_source: U256 = left.into();
+        let mut right_source: U256 = right.into();
+        let mut left_point = Affine::new(FieldElement::zero(), FieldElement::zero());
+        let mut right_point = SHIFT_POINT;
         for bit_index in 0..256 {
+            let mut left_slope = FieldElement::zero();
+            let mut right_slope = FieldElement::zero();
             if bit_index > 0 {
-                row = {
-                    let mut next_row = Row {
-                        left:  Subrow {
-                            source: row.left.source.clone() >> 1,
-                            point: row.right.point.clone(),
-                            ..Subrow::default()
-                        },
-                        right: Subrow {
-                            source: row.right.source.clone() >> 1,
-                            ..Subrow::default()
-                        },
-                    };
-                    if row.left.source.bit(0) {
-                        let p = &PEDERSEN_POINTS[bit_index];
-                        next_row.left.slope = get_slope(&next_row.left.point, &p);
-                        next_row.left.point += p;
-                    }
-
-                    next_row.right.point = next_row.left.point.clone();
-                    if row.right.source.bit(0) {
-                        let p = &PEDERSEN_POINTS[bit_index + 252];
-                        next_row.right.slope = get_slope(&next_row.right.point, &p);
-                        next_row.right.point += p;
-                    }
-                    next_row
+                left_point = right_point.clone();
+                if left_source.bit(0) {
+                    let p = &PEDERSEN_POINTS[bit_index];
+                    left_slope = get_slope(&left_point, &p);
+                    left_point += p;
                 }
+                right_point = left_point.clone();
+                if right_source.bit(0) {
+                    let p = &PEDERSEN_POINTS[bit_index + 252];
+                    right_slope = get_slope(&right_point, &p);
+                    right_point += p;
+                }
+                left_source >>= 1;
+                right_source >>= 1;
             }
 
-            let (left_x, left_y) = row.left.point.coordinates().unwrap();
-            trace[(bit_index, 0)] = FieldElement::from(row.left.source.clone());
-            trace[(bit_index, 1)] = row.left.slope.clone();
+            let (left_x, left_y) = left_point.coordinates().unwrap();
+            trace[(bit_index, 0)] = FieldElement::from(left_source.clone());
+            trace[(bit_index, 1)] = left_slope.clone();
             trace[(bit_index, 2)] = left_x.clone();
             trace[(bit_index, 3)] = left_y.clone();
 
-            let (right_x, right_y) = row.right.point.coordinates().unwrap();
-            trace[(bit_index, 4)] = FieldElement::from(row.right.source.clone());
-            trace[(bit_index, 5)] = row.right.slope.clone();
+            let (right_x, right_y) = right_point.coordinates().unwrap();
+            trace[(bit_index, 4)] = FieldElement::from(right_source.clone());
+            trace[(bit_index, 5)] = right_slope.clone();
             trace[(bit_index, 6)] = right_x.clone();
             trace[(bit_index, 7)] = right_y.clone();
         }
