@@ -1,4 +1,4 @@
-use super::Component;
+use super::{Component, PolyWriter};
 use crate::{RationalExpression, TraceTable};
 
 #[derive(Clone, PartialEq, Eq)]
@@ -6,8 +6,8 @@ use crate::{RationalExpression, TraceTable};
 pub struct Empty(usize, usize);
 
 impl Empty {
-    pub fn new(rows: usize, columns: usize) -> Empty {
-        Empty(rows, columns)
+    pub fn new(polynomials: usize, locations: usize) -> Empty {
+        Empty(polynomials, locations)
     }
 }
 
@@ -15,7 +15,7 @@ impl Component for Empty {
     type Claim = ();
     type Witness = ();
 
-    fn dimensions(&self) -> (usize, usize) {
+    fn dimensions2(&self) -> (usize, usize) {
         (self.0, self.1)
     }
 
@@ -23,8 +23,12 @@ impl Component for Empty {
         Vec::new()
     }
 
-    fn trace(&self, _claim: &Self::Claim, _witness: &Self::Witness) -> TraceTable {
-        TraceTable::new(self.0, self.1)
+    fn trace2<P: PolyWriter>(
+        &self,
+        _trace: &mut P,
+        _claim: &Self::Claim,
+        _witness: &Self::Witness,
+    ) {
     }
 }
 
@@ -37,9 +41,9 @@ mod tests {
     #[allow(clippy::let_unit_value)]
     #[test]
     fn test_empty_check() {
-        proptest!(|(log_rows in 0_usize..10, cols in 0_usize..10)| {
-            let rows = 1 << log_rows;
-            let component = Empty::new(rows, cols);
+        proptest!(|(log_locations in 0_usize..10, polynomials in 0_usize..10)| {
+            let locations = 1 << log_locations;
+            let component = Empty::new(polynomials, locations);
             let claim = ();
             let witness = ();
             prop_assert_eq!(component.check(&claim, &witness), Ok(()));
