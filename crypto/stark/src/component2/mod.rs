@@ -35,7 +35,7 @@ pub trait PolyWriter {
 
 impl PolyWriter for TraceTable {
     fn dimensions(&self) -> (usize, usize) {
-        TraceTable::dimensions(self)
+        (self.num_columns(), self.num_rows())
     }
 
     fn write(&mut self, polynomial: usize, location: usize, value: FieldElement) {
