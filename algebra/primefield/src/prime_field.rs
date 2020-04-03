@@ -9,7 +9,7 @@ use std::{
 };
 use zkp_u256::{
     AddInline, Binary, DivRem, Inv, Montgomery as _, MontgomeryParameters, MulInline, NegInline,
-    One, Pow, SquareInline, SubInline, Zero,
+    One, Pow, SquareInline, SubInline, Zero, U256,
 };
 
 /// A finite field of prime order.
@@ -431,6 +431,21 @@ where
             c.square_assign();
         }
         Some(root)
+    }
+}
+
+// TODO: Find a way to create generic implementations of these
+impl<P: Parameters<UInt = U256>> From<PrimeField<P>> for U256 {
+    #[inline(always)]
+    fn from(other: PrimeField<P>) -> Self {
+        other.to_uint()
+    }
+}
+
+impl<P: Parameters<UInt = U256>> From<&PrimeField<P>> for U256 {
+    #[inline(always)]
+    fn from(other: &PrimeField<P>) -> Self {
+        other.to_uint()
     }
 }
 
