@@ -3,7 +3,6 @@ mod fold;
 mod horizontal;
 mod mapped;
 mod test;
-mod transformed;
 mod vertical;
 
 use crate::{
@@ -20,7 +19,6 @@ pub use fold::Fold;
 pub use horizontal::Horizontal;
 pub use mapped::Mapped;
 pub use test::Test;
-pub use transformed::{Transform, Transformed};
 pub use vertical::Vertical;
 
 /// A set of Polynomials represented by their values at roots of unity.
