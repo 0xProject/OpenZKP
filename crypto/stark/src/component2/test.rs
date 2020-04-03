@@ -116,11 +116,9 @@ mod tests {
             log_rows in 0_usize..10,
             cols in 0_usize..10,
             seed: FieldElement,
-            claim: FieldElement,
-            witness: FieldElement
+            witness: (FieldElement, FieldElement)
         )| {
             let rows = 1 << log_rows;
-            let witness = (claim.clone(), witness);
             let component = Test::new(rows, cols, &seed);
             prop_assert_eq!(component.check(&witness), Ok(()));
         });
@@ -133,12 +131,11 @@ mod tests {
             log_rows in 1_usize..10,
             cols in 1_usize..10,
             seed: FieldElement,
-            claim: FieldElement,
-            witness: FieldElement
+            witness: (FieldElement, FieldElement)
         )| {
             let rows = 1 << log_rows;
-            let witness = (claim.clone(), witness);
             let component = Test::new(rows, cols, &seed);
+            let claim = component.claim(&witness);
             let proof = component.prove(&witness).unwrap();
             let result = component.verify(&claim, &proof);
             prop_assert_eq!(result, Ok(()));

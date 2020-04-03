@@ -15,9 +15,7 @@ impl Component for Empty {
     type Claim = ();
     type Witness = ();
 
-    fn claim(&self, _witness: &Self::Witness) -> Self::Claim {
-        ()
-    }
+    fn claim(&self, _witness: &Self::Witness) -> Self::Claim {}
 
     fn dimensions2(&self) -> (usize, usize) {
         (self.0, self.1)

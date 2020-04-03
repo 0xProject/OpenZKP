@@ -33,7 +33,7 @@ pub struct Transformed<'a, P: PolyWriter> {
 
 impl<'a, P: PolyWriter> Transformed<'a, P> {
     pub fn new(inner: &'a mut P, mapping: Vec<Transform>) -> Self {
-        assert!(mapping.iter().map(|t| t.size()).all_equal());
+        assert!(mapping.iter().map(Transform::size).all_equal());
         Self { inner, mapping }
     }
 
@@ -47,7 +47,7 @@ impl<P: PolyWriter> PolyWriter for Transformed<'_, P> {
     fn dimensions(&self) -> (usize, usize) {
         (
             self.mapping.len(),
-            self.mapping.first().map_or(0, |t| t.size()),
+            self.mapping.first().map_or(0, Transform::size),
         )
     }
 

@@ -10,7 +10,7 @@ use zkp_elliptic_curve::Affine;
 use zkp_primefield::{FieldElement, One, Pow, Root, Zero};
 use zkp_stark::{
     component2::{Component, PolyWriter, Vertical},
-    DensePolynomial, RationalExpression, TraceTable,
+    DensePolynomial, RationalExpression,
 };
 use zkp_u256::{Binary, U256};
 
@@ -49,9 +49,7 @@ impl Component for MerkleTreeLayer {
     type Claim = ();
     type Witness = (FieldElement, FieldElement, bool);
 
-    fn claim(&self, _witness: &Self::Witness) -> Self::Claim {
-        ()
-    }
+    fn claim(&self, _witness: &Self::Witness) -> Self::Claim {}
 
     fn dimensions2(&self) -> (usize, usize) {
         (8, 256)
@@ -296,7 +294,7 @@ mod test {
     use proptest::{collection::vec as prop_vec, prelude::*};
     use zkp_macros_decl::field_element;
     use zkp_primefield::FieldElement;
-    use zkp_stark::{prove, Constraints};
+    use zkp_stark::{prove, Constraints, TraceTable};
     use zkp_u256::U256;
 
     // TODO: Move to TraceTable or RationalExpression?

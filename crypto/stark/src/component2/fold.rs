@@ -132,11 +132,9 @@ mod tests {
             cols in 0_usize..20,
             folds in 0_usize..5,
             seed: FieldElement,
-            claim: FieldElement,
-            witness: FieldElement
+            witness: (FieldElement, FieldElement)
         )| {
             let rows = 1 << log_rows;
-            let witness = (claim.clone(), witness);
             let element = Test::new(rows, cols, &seed);
             let component = Fold::new(element, folds);
             prop_assert_eq!(component.check(&witness), Ok(()));
@@ -150,12 +148,11 @@ mod tests {
             log_rows in 0_usize..10,
             cols in 0_usize..10,
             seed: FieldElement,
-            claim: FieldElement,
-            witness: FieldElement
+            witness: (FieldElement, FieldElement)
         )| {
             let rows = 1 << log_rows;
-            let witness = (claim.clone(), witness);
             let element = Test::new(rows, cols, &seed);
+            let claim = element.claim(&witness);
             let component = Fold::new(element.clone(), 0);
             prop_assert_eq!(component.constraints(&claim), element.constraints(&claim));
             prop_assert_eq!(component.trace_table(&witness), element.trace_table(&witness));
@@ -171,12 +168,11 @@ mod tests {
             inner_folds in 0_usize..4,
             outer_folds in 0_usize..4,
             seed: FieldElement,
-            claim: FieldElement,
-            witness: FieldElement
+            witness: (FieldElement, FieldElement)
         )| {
             let rows = 1 << log_rows;
-            let witness = (claim.clone(), witness);
             let element = Test::new(rows, cols, &seed);
+            let claim = element.claim(&witness);
             let inner = Fold::new(element.clone(), inner_folds);
             let outer = Fold::new(inner, outer_folds);
             let combined = Fold::new(element, inner_folds + outer_folds);
