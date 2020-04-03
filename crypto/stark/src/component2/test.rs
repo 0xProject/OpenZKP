@@ -78,6 +78,8 @@ impl Component for Test {
     }
 
     fn trace2<P: PolyWriter>(&self, trace: &mut P, claim: &Self::Claim, witness: &Self::Witness) {
+        debug_assert_eq!(trace.dimensions(), self.dimensions2());
+
         // Generator for the sequence
         let mut x0 = self.seed.clone();
         let mut x1 = witness.clone();
