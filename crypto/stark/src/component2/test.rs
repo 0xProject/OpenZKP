@@ -1,5 +1,5 @@
 use super::{Component, PolyWriter};
-use crate::{RationalExpression, TraceTable};
+use crate::RationalExpression;
 use zkp_primefield::{FieldElement, Root};
 
 /// Test constraint system

@@ -45,11 +45,7 @@ mod pedersen_points;
 mod periodic_columns;
 mod starkware_example;
 
-use crate::{
-    component::MerkleTree,
-    inputs::{Claim, Witness},
-    starkware_example::starkware_example,
-};
+use crate::{component::MerkleTree, inputs::Witness, starkware_example::starkware_example};
 use env_logger;
 use log::info;
 use rand::{prelude::*, SeedableRng};

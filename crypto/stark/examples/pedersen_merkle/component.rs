@@ -6,7 +6,6 @@ use crate::{
         RIGHT_Y_COEFFICIENTS_REF,
     },
 };
-use itertools::izip;
 use zkp_elliptic_curve::Affine;
 use zkp_primefield::{FieldElement, One, Pow, Root, Zero};
 use zkp_stark::{
@@ -50,7 +49,7 @@ impl Component for MerkleTreeLayer {
     type Claim = ();
     type Witness = (FieldElement, FieldElement, bool);
 
-    fn claim(&self, witness: &Self::Witness) -> Self::Claim {
+    fn claim(&self, _witness: &Self::Witness) -> Self::Claim {
         ()
     }
 
@@ -58,7 +57,7 @@ impl Component for MerkleTreeLayer {
         (8, 256)
     }
 
-    fn constraints(&self, _: &Self::Claim) -> Vec<RationalExpression> {
+    fn constraints(&self, _claim: &Self::Claim) -> Vec<RationalExpression> {
         use RationalExpression::*;
 
         // Constraints
@@ -321,7 +320,6 @@ mod test {
             field_element!("0465da90a0487ff6d4ea63658db7439f4023957b750f3ae8a5e0a18edef453b1");
         let hash =
             field_element!("02fe7d53bedb42fbc905d7348bd5d61302882ba48a27377b467a9005d6e8d3fd");
-        let claim = ();
         let witness = (leaf.clone(), sibling.clone(), direction);
         let trace = component.trace_table(&witness);
         assert_eq!(component.check(&witness), Ok(()));
@@ -340,7 +338,6 @@ mod test {
                 merkle_hash(&leaf, &sibling)
             };
             let component = MerkleTreeLayer::new();
-            let claim = ();
             let witness = (leaf, sibling, direction);
             let trace = component.trace_table(&witness);
             prop_assert_eq!(component.check(&witness), Ok(()));
@@ -399,8 +396,7 @@ mod test {
                 )
             })
             .prop_map(|(leaf, path)| Witness::new(leaf, path));
-        proptest!(config, |(witness in witness, claim: FieldElement)| {
-            let claim = Claim::from_leaf_witness(claim, &witness);
+        proptest!(config, |(witness in witness)| {
             let component = MerkleTree::new(witness.path.len());
             prop_assert_eq!(component.check(&witness), Ok(()));
         });

@@ -17,7 +17,8 @@ pub(crate) fn starkware_example() {
     let witness = starkware_witness();
 
     info!("Verifying claim and witness...");
-    claim.verify(&witness);
+    let recomputed = Witness::new(witness.leaf.clone(), witness.path.clone());
+    assert_eq!(witness.root, recomputed.root);
 
     info!("Constructing component...");
     let component = MerkleTree::new(witness.path.len());

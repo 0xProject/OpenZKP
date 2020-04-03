@@ -53,29 +53,6 @@ impl From<&Claim> for Vec<u8> {
     }
 }
 
-impl Claim {
-    // TODO: Remove
-    pub fn from_leaf_witness(leaf: FieldElement, witness: &Witness) -> Self {
-        let mut root = leaf.clone();
-        for (direction, sibling) in witness.path.iter() {
-            root = if *direction {
-                merkle_hash(sibling, &root)
-            } else {
-                merkle_hash(&root, sibling)
-            }
-        }
-        Claim {
-            path_length: witness.path.len(),
-            leaf,
-            root,
-        }
-    }
-
-    pub fn verify(&self, witness: &Witness) {
-        assert_eq!(self, &Claim::from_leaf_witness(self.leaf.clone(), witness));
-    }
-}
-
 #[cfg(test)]
 use zkp_macros_decl::field_element;
 

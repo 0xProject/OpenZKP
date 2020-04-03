@@ -1,5 +1,5 @@
 use super::{Component, Mapped, PolyWriter};
-use crate::{RationalExpression, TraceTable};
+use crate::RationalExpression;
 use zkp_primefield::fft::permute_index;
 
 /// Note: `Fold::new(Fold::new(A, m), n) == Fold::new(A, m + n)`

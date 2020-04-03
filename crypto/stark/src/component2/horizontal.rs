@@ -1,5 +1,5 @@
 use super::{Component, Mapped, PolyWriter};
-use crate::{RationalExpression, TraceTable};
+use crate::RationalExpression;
 
 #[derive(Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "std", derive(Debug))]

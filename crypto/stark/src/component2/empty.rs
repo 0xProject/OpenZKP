@@ -1,5 +1,5 @@
 use super::{Component, PolyWriter};
-use crate::{RationalExpression, TraceTable};
+use crate::RationalExpression;
 
 #[derive(Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "std", derive(Debug))]
@@ -15,7 +15,7 @@ impl Component for Empty {
     type Claim = ();
     type Witness = ();
 
-    fn claim(&self, witness: &Self::Witness) -> Self::Claim {
+    fn claim(&self, _witness: &Self::Witness) -> Self::Claim {
         ()
     }
 

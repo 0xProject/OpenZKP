@@ -1,5 +1,5 @@
 use super::{Component, Mapped, PolyWriter};
-use crate::{RationalExpression, TraceTable};
+use crate::RationalExpression;
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "std", derive(Debug))]
@@ -103,7 +103,6 @@ mod tests {
             let element = Test::new(element_rows, cols, &seed);
             let component = Vertical::new(element, size);
             let witness = witness.into_iter().map(|witness| (claim.clone(), witness)).collect::<Vec<_>>();
-            let claim = vec![claim; size];
             prop_assert_eq!(component.check(&witness), Ok(()));
         });
     }

@@ -1,8 +1,9 @@
 use super::PolyWriter;
 use itertools::Itertools;
-use std::ops::{Index, IndexMut};
 use zkp_primefield::FieldElement;
 
+#[derive(Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "std", derive(Debug))]
 pub struct Transform {
     polynomial: usize,
     size:       usize,
@@ -21,6 +22,10 @@ impl Transform {
     }
 }
 
+#[derive(PartialEq, Eq)]
+#[cfg_attr(feature = "std", derive(Debug))]
+// False positive, lifetime needs to be explicit here
+#[allow(single_use_lifetimes)]
 pub struct Transformed<'a, P: PolyWriter> {
     inner:   &'a mut P,
     mapping: Vec<Transform>,
@@ -38,7 +43,7 @@ impl<'a, P: PolyWriter> Transformed<'a, P> {
     }
 }
 
-impl<'a, P: PolyWriter> PolyWriter for Transformed<'a, P> {
+impl<P: PolyWriter> PolyWriter for Transformed<'_, P> {
     fn dimensions(&self) -> (usize, usize) {
         (
             self.mapping.len(),

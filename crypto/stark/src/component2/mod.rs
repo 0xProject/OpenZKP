@@ -13,7 +13,6 @@ use crate::{
     verifier::{verify, Error as VerifierError},
     Constraints, ProverError, RationalExpression, TraceTable,
 };
-use std::ops::{Index, IndexMut};
 use zkp_primefield::FieldElement;
 
 pub use empty::Empty;
