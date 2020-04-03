@@ -49,26 +49,28 @@ pub trait Component {
     type Claim;
     type Witness;
 
+    fn claim(&self, witness: &Self::Witness) -> Self::Claim;
+
     fn dimensions2(&self) -> (usize, usize);
 
     fn constraints(&self, claim: &Self::Claim) -> Vec<RationalExpression>;
 
-    // TODO: Drop `claim` from `trace`
-    fn trace2<P: PolyWriter>(&self, trace: &mut P, claim: &Self::Claim, witness: &Self::Witness);
+    fn trace2<P: PolyWriter>(&self, trace: &mut P, witness: &Self::Witness);
 
     /// Construct a trace table
-    fn trace_table(&self, claim: &Self::Claim, witness: &Self::Witness) -> TraceTable {
+    fn trace_table(&self, witness: &Self::Witness) -> TraceTable {
         let (polynomials, size) = self.dimensions2();
         let mut trace_table = TraceTable::new(size, polynomials);
-        self.trace2(&mut trace_table, claim, witness);
+        self.trace2(&mut trace_table, witness);
         trace_table
     }
 
-    fn prove(&self, claim: &Self::Claim, witness: &Self::Witness) -> Result<Proof, ProverError> {
+    fn prove(&self, witness: &Self::Witness) -> Result<Proof, ProverError> {
         let (polynomials, size) = self.dimensions2();
+        let claim = self.claim(witness);
         let channel_seed = Vec::new();
-        let expressions = self.constraints(claim);
-        let trace = self.trace_table(claim, witness);
+        let expressions = self.constraints(&claim);
+        let trace = self.trace_table(witness);
         let constraints =
             Constraints::from_expressions((size, polynomials), channel_seed, expressions).unwrap();
         prove(&constraints, &trace)
@@ -83,14 +85,15 @@ pub trait Component {
         verify(&constraints, proof)
     }
 
-    fn check(&self, claim: &Self::Claim, witness: &Self::Witness) -> Result<(), (usize, usize)> {
+    fn check(&self, witness: &Self::Witness) -> Result<(), (usize, usize)> {
         let (polynomials, size) = self.dimensions2();
+        let claim = self.claim(witness);
         let channel_seed = Vec::new();
-        let expressions = self.constraints(claim);
+        let expressions = self.constraints(&claim);
         // TODO: Error handling
         let constraints =
             Constraints::from_expressions((size, polynomials), channel_seed, expressions).unwrap();
-        let trace = self.trace_table(claim, witness);
+        let trace = self.trace_table(witness);
         check_constraints(&constraints, &trace)
     }
 }

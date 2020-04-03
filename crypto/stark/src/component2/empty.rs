@@ -15,6 +15,10 @@ impl Component for Empty {
     type Claim = ();
     type Witness = ();
 
+    fn claim(&self, witness: &Self::Witness) -> Self::Claim {
+        ()
+    }
+
     fn dimensions2(&self) -> (usize, usize) {
         (self.0, self.1)
     }
@@ -23,13 +27,7 @@ impl Component for Empty {
         Vec::new()
     }
 
-    fn trace2<P: PolyWriter>(
-        &self,
-        _trace: &mut P,
-        _claim: &Self::Claim,
-        _witness: &Self::Witness,
-    ) {
-    }
+    fn trace2<P: PolyWriter>(&self, _trace: &mut P, _witness: &Self::Witness) {}
 }
 
 #[cfg(test)]
@@ -44,9 +42,8 @@ mod tests {
         proptest!(|(log_size in 0_usize..10, polynomials in 0_usize..10)| {
             let size = 1 << log_size;
             let component = Empty::new(polynomials, size);
-            let claim = ();
             let witness = ();
-            prop_assert_eq!(component.check(&claim, &witness), Ok(()));
+            prop_assert_eq!(component.check(&witness), Ok(()));
         });
     }
 }

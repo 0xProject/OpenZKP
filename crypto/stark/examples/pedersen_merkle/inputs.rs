@@ -13,8 +13,34 @@ pub struct Claim {
 #[derive(PartialEq, Clone)]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct Witness {
-    pub directions: Vec<bool>,
-    pub path:       Vec<FieldElement>,
+    pub path: Vec<(bool, FieldElement)>,
+    pub leaf: FieldElement,
+    pub root: FieldElement,
+}
+
+impl Witness {
+    pub fn new(leaf: FieldElement, path: Vec<(bool, FieldElement)>) -> Witness {
+        let root = path
+            .iter()
+            .fold(leaf.clone(), |leaf, (direction, sibling)| {
+                if *direction {
+                    merkle_hash(sibling, &leaf)
+                } else {
+                    merkle_hash(&leaf, sibling)
+                }
+            });
+        Witness { leaf, path, root }
+    }
+}
+
+impl From<&Witness> for Claim {
+    fn from(witness: &Witness) -> Self {
+        Claim {
+            path_length: witness.path.len(),
+            leaf:        witness.leaf.clone(),
+            root:        witness.root.clone(),
+        }
+    }
 }
 
 impl From<&Claim> for Vec<u8> {
@@ -28,9 +54,10 @@ impl From<&Claim> for Vec<u8> {
 }
 
 impl Claim {
+    // TODO: Remove
     pub fn from_leaf_witness(leaf: FieldElement, witness: &Witness) -> Self {
         let mut root = leaf.clone();
-        for (direction, sibling) in witness.directions.iter().zip(witness.path.iter()) {
+        for (direction, sibling) in witness.path.iter() {
             root = if *direction {
                 merkle_hash(sibling, &root)
             } else {
@@ -75,10 +102,12 @@ const SHORT_PATH: [FieldElement; 4] = [
 
 #[cfg(test)]
 pub(crate) fn short_witness() -> Witness {
-    Witness {
-        directions: SHORT_DIRECTIONS.to_vec(),
-        path:       SHORT_PATH.to_vec(),
-    }
+    let path = SHORT_DIRECTIONS
+        .iter()
+        .copied()
+        .zip(SHORT_PATH.iter().cloned())
+        .collect::<Vec<_>>();
+    Witness::new(field_element!("00"), path)
 }
 
 #[cfg(test)]

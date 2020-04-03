@@ -39,7 +39,7 @@ pub(crate) fn starkware_example() {
     constraints.pow_bits = 28;
     constraints.num_queries = 13;
     constraints.fri_layout = vec![3, 3, 3, 3, 2];
-    let trace = component.trace_table(&claim, &witness);
+    let trace = component.trace_table(&witness);
     let proof = prove(&constraints, &trace).unwrap();
 
     info!("Spot checking proof...");
@@ -83,8 +83,13 @@ pub(crate) const STARKWARE_CLAIM: Claim = Claim {
 
 pub(crate) fn starkware_witness() -> Witness {
     Witness {
-        directions: STARKWARE_DIRECTIONS.to_vec(),
-        path:       STARKWARE_PATH.to_vec(),
+        path: STARKWARE_DIRECTIONS
+            .iter()
+            .copied()
+            .zip(STARKWARE_PATH.iter().cloned())
+            .collect::<Vec<_>>(),
+        leaf: STARKWARE_CLAIM.leaf,
+        root: STARKWARE_CLAIM.root,
     }
 }
 

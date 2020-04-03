@@ -142,11 +142,10 @@ fn main() {
 
     // Generate a random merkle proof instance
     info!("Generating random instance of size {}...", options.size);
-    let witness = Witness {
-        directions: (0..options.size).map(|_| rng.gen()).collect(),
-        path:       (0..options.size).map(|_| rng.gen()).collect(),
-    };
-    let claim = Claim::from_leaf_witness(rng.gen(), &witness);
+    let leaf = rng.gen();
+    let path = (0..options.size).map(|_| rng.gen()).collect::<Vec<_>>();
+    let witness = Witness::new(leaf, path);
+    let claim = (&witness).into();
 
     info!("Constructing component...");
     let component = MerkleTree::new(witness.path.len());
@@ -159,7 +158,7 @@ fn main() {
     info!("Constructing proof...");
     let proof = {
         let _timer = Timer::default();
-        component.prove(&claim, &witness)
+        component.prove(&witness)
     }
     .expect("failed to create proof");
     println!("Proof size is {}", proof.as_bytes().len());

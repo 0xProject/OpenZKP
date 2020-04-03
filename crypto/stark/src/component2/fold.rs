@@ -44,6 +44,10 @@ where
     type Claim = Element::Claim;
     type Witness = Element::Witness;
 
+    fn claim(&self, witness: &Self::Witness) -> Self::Claim {
+        self.element.claim(witness)
+    }
+
     fn dimensions2(&self) -> (usize, usize) {
         let (polynomials, size) = self.element.dimensions2();
         let reduction = 1 << self.folds;
@@ -75,7 +79,7 @@ where
             .collect::<Vec<_>>()
     }
 
-    fn trace2<P: PolyWriter>(&self, trace: &mut P, claim: &Self::Claim, witness: &Self::Witness) {
+    fn trace2<P: PolyWriter>(&self, trace: &mut P, witness: &Self::Witness) {
         let reduction = 1 << self.folds;
         let mut trace = Mapped::new(trace, self.element.dimensions2(), |polynomial, location| {
             let polynomial_folded = permute_index(reduction, polynomial % reduction);
@@ -83,7 +87,7 @@ where
             let location = location * reduction + polynomial_folded;
             (polynomial, location)
         });
-        self.element.trace2(&mut trace, claim, witness)
+        self.element.trace2(&mut trace, witness)
     }
 }
 
@@ -132,9 +136,10 @@ mod tests {
             witness: FieldElement
         )| {
             let rows = 1 << log_rows;
+            let witness = (claim.clone(), witness);
             let element = Test::new(rows, cols, &seed);
             let component = Fold::new(element, folds);
-            prop_assert_eq!(component.check(&claim, &witness), Ok(()));
+            prop_assert_eq!(component.check(&witness), Ok(()));
         });
     }
 
@@ -149,10 +154,11 @@ mod tests {
             witness: FieldElement
         )| {
             let rows = 1 << log_rows;
+            let witness = (claim.clone(), witness);
             let element = Test::new(rows, cols, &seed);
             let component = Fold::new(element.clone(), 0);
             prop_assert_eq!(component.constraints(&claim), element.constraints(&claim));
-            prop_assert_eq!(component.trace_table(&claim, &witness), element.trace_table(&claim, &witness));
+            prop_assert_eq!(component.trace_table(&witness), element.trace_table(&witness));
         });
     }
 
@@ -169,12 +175,13 @@ mod tests {
             witness: FieldElement
         )| {
             let rows = 1 << log_rows;
+            let witness = (claim.clone(), witness);
             let element = Test::new(rows, cols, &seed);
             let inner = Fold::new(element.clone(), inner_folds);
             let outer = Fold::new(inner, outer_folds);
             let combined = Fold::new(element, inner_folds + outer_folds);
             prop_assert_eq!(outer.constraints(&claim), combined.constraints(&claim));
-            prop_assert_eq!(outer.trace_table(&claim, &witness), combined.trace_table(&claim, &witness));
+            prop_assert_eq!(outer.trace_table(&witness), combined.trace_table(&witness));
         });
     }
 }

@@ -50,6 +50,10 @@ impl Component for MerkleTreeLayer {
     type Claim = ();
     type Witness = (FieldElement, FieldElement, bool);
 
+    fn claim(&self, witness: &Self::Witness) -> Self::Claim {
+        ()
+    }
+
     fn dimensions2(&self) -> (usize, usize) {
         (8, 256)
     }
@@ -134,12 +138,7 @@ impl Component for MerkleTreeLayer {
         constraints
     }
 
-    fn trace2<P: PolyWriter>(
-        &self,
-        trace: &mut P,
-        _: &Self::Claim,
-        (leaf, sibling, direction): &Self::Witness,
-    ) {
+    fn trace2<P: PolyWriter>(&self, trace: &mut P, (leaf, sibling, direction): &Self::Witness) {
         let (left, right) = if *direction {
             (sibling, leaf)
         } else {
@@ -213,6 +212,10 @@ impl Component for MerkleTree {
     type Claim = Claim;
     type Witness = Witness;
 
+    fn claim(&self, witness: &Self::Witness) -> Self::Claim {
+        witness.into()
+    }
+
     fn dimensions2(&self) -> (usize, usize) {
         self.layers.dimensions2()
     }
@@ -265,9 +268,11 @@ impl Component for MerkleTree {
         constraints
     }
 
-    fn trace2<P: PolyWriter>(&self, trace: &mut P, claim: &Self::Claim, witness: &Self::Witness) {
-        let witness = izip!(witness.directions.iter(), witness.path.iter())
-            .scan(claim.leaf.clone(), |leaf, (direction, sibling)| {
+    fn trace2<P: PolyWriter>(&self, trace: &mut P, witness: &Self::Witness) {
+        let witness = witness
+            .path
+            .iter()
+            .scan(witness.leaf.clone(), |leaf, (direction, sibling)| {
                 let layer: <MerkleTreeLayer as Component>::Witness =
                     (leaf.clone(), sibling.clone(), *direction);
                 *leaf = if *direction {
@@ -278,8 +283,7 @@ impl Component for MerkleTree {
                 Some(layer)
             })
             .collect::<Vec<_>>();
-        let claim = vec![(); self.layers.size()];
-        self.layers.trace2(trace, &claim, &witness)
+        self.layers.trace2(trace, &witness)
     }
 }
 
@@ -319,8 +323,8 @@ mod test {
             field_element!("02fe7d53bedb42fbc905d7348bd5d61302882ba48a27377b467a9005d6e8d3fd");
         let claim = ();
         let witness = (leaf.clone(), sibling.clone(), direction);
-        let trace = component.trace_table(&claim, &witness);
-        assert_eq!(component.check(&claim, &witness), Ok(()));
+        let trace = component.trace_table(&witness);
+        assert_eq!(component.check(&witness), Ok(()));
         assert_eq!(&eval(&trace, component.left()), &sibling);
         assert_eq!(&eval(&trace, component.right()), &leaf);
         assert_eq!(&eval(&trace, component.hash()), &hash);
@@ -338,8 +342,8 @@ mod test {
             let component = MerkleTreeLayer::new();
             let claim = ();
             let witness = (leaf, sibling, direction);
-            let trace = component.trace_table(&claim, &witness);
-            prop_assert_eq!(component.check(&claim, &witness), Ok(()));
+            let trace = component.trace_table(&witness);
+            prop_assert_eq!(component.check(&witness), Ok(()));
             prop_assert_eq!(&eval(&trace, component.hash()), &hash);
         });
     }
@@ -350,7 +354,7 @@ mod test {
         let witness = short_witness();
         let component = MerkleTree::new(witness.path.len());
         let constraints = component.constraints(&claim);
-        let trace = component.trace_table(&claim, &witness);
+        let trace = component.trace_table(&witness);
         let mut constraints = Constraints::from_expressions(
             (trace.num_rows(), trace.num_columns()),
             (&claim).into(),
@@ -390,15 +394,15 @@ mod test {
             .prop_flat_map(|log_size| {
                 let size = 1 << log_size;
                 (
-                    prop_vec(bool::arbitrary(), size),
-                    prop_vec(FieldElement::arbitrary(), size),
+                    FieldElement::arbitrary(),
+                    prop_vec((bool::arbitrary(), FieldElement::arbitrary()), size),
                 )
             })
-            .prop_map(|(directions, path)| Witness { directions, path });
+            .prop_map(|(leaf, path)| Witness::new(leaf, path));
         proptest!(config, |(witness in witness, claim: FieldElement)| {
             let claim = Claim::from_leaf_witness(claim, &witness);
             let component = MerkleTree::new(witness.path.len());
-            prop_assert_eq!(component.check(&claim, &witness), Ok(()));
+            prop_assert_eq!(component.check(&witness), Ok(()));
         });
     }
 }

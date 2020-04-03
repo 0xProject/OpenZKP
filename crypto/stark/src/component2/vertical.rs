@@ -38,6 +38,13 @@ where
     type Claim = Vec<Element::Claim>;
     type Witness = Vec<Element::Witness>;
 
+    fn claim(&self, witness: &Self::Witness) -> Self::Claim {
+        witness
+            .iter()
+            .map(|witness| self.element.claim(witness))
+            .collect::<Vec<_>>()
+    }
+
     fn dimensions2(&self) -> (usize, usize) {
         let (polynomials, size) = self.element.dimensions2();
         (polynomials, self.size * size)
@@ -62,19 +69,15 @@ where
             .collect::<Vec<_>>()
     }
 
-    fn trace2<P: PolyWriter>(&self, trace: &mut P, claim: &Self::Claim, witness: &Self::Witness) {
+    fn trace2<P: PolyWriter>(&self, trace: &mut P, witness: &Self::Witness) {
         let (polynomials, size) = self.element.dimensions2();
-        claim
-            .iter()
-            .zip(witness.iter())
-            .enumerate()
-            .for_each(|(i, (claim, witness))| {
-                let mut transformed =
-                    Mapped::new(trace, (polynomials, size), |polynomial, location| {
-                        (polynomial, location + i * size)
-                    });
-                self.element.trace2(&mut transformed, claim, witness);
-            })
+        witness.iter().enumerate().for_each(|(i, witness)| {
+            let mut transformed =
+                Mapped::new(trace, (polynomials, size), |polynomial, location| {
+                    (polynomial, location + i * size)
+                });
+            self.element.trace2(&mut transformed, witness);
+        })
     }
 }
 
@@ -99,8 +102,9 @@ mod tests {
             let element_rows = 1 << log_rows;
             let element = Test::new(element_rows, cols, &seed);
             let component = Vertical::new(element, size);
+            let witness = witness.into_iter().map(|witness| (claim.clone(), witness)).collect::<Vec<_>>();
             let claim = vec![claim; size];
-            prop_assert_eq!(component.check(&claim, &witness), Ok(()));
+            prop_assert_eq!(component.check(&witness), Ok(()));
         });
     }
 
@@ -111,20 +115,20 @@ mod tests {
             log_rows in 0_usize..5,
             cols in 0_usize..10,
             seed: FieldElement,
-            claim: FieldElement,
-            witness: FieldElement,
+            witness: (FieldElement, FieldElement),
         )| {
             let element_rows = 1 << log_rows;
             let element = Test::new(element_rows, cols, &seed);
+            let claim = element.claim(&witness);
             let component = Vertical::new(element.clone(), 1);
-            let claim_vec = vec![claim.clone(); 1];
             let witness_vec = vec![witness.clone(); 1];
+            let claim_vec = vec![claim.clone(); 1];
             for (result, expected) in component.constraints(&claim_vec).iter()
                 .zip(element.constraints(&claim).iter()) {
                 // We expect extrinsic equality, but not intrinsic.
                 prop_assert!(result.equals(expected));
             }
-            prop_assert_eq!(component.trace_table(&claim_vec, &witness_vec), element.trace_table(&claim, &witness));
+            prop_assert_eq!(component.trace_table(&witness_vec), element.trace_table(&witness));
         });
     }
 
@@ -133,7 +137,10 @@ mod tests {
     fn test_compose() {
         let witness = (0_usize..4, 0_usize..4).prop_flat_map(|(log_inner_size, log_outer_size)| {
             vec(
-                vec(any::<FieldElement>(), 1 << log_inner_size),
+                vec(
+                    (any::<FieldElement>(), any::<FieldElement>()),
+                    1 << log_inner_size,
+                ),
                 1 << log_outer_size,
             )
         });
@@ -141,7 +148,6 @@ mod tests {
             log_rows in 0_usize..5,
             cols in 0_usize..10,
             seed: FieldElement,
-            claim: FieldElement,
             witness in witness,
         )| {
             let outer_size = witness.len();
@@ -152,14 +158,14 @@ mod tests {
             let inner = Vertical::new(element.clone(), inner_size);
             let outer = Vertical::new(inner, outer_size);
             let component = Vertical::new(element, outer_size * inner_size);
-            let claim_vec = vec![claim.clone(); outer_size * inner_size];
+            let claim = outer.claim(&witness);
             let witness_vec = witness.iter().flatten().cloned().collect::<Vec<_>>();
-            let claim = vec![vec![claim; inner_size]; outer_size];
+            let claim_vec = component.claim(&witness_vec);
             for (result, expected) in outer.constraints(&claim).iter()
                 .zip(component.constraints(&claim_vec).iter()) {
                 prop_assert!(result.equals(expected));
             }
-            prop_assert_eq!(outer.trace_table(&claim, &witness), component.trace_table(&claim_vec, &witness_vec));
+            prop_assert_eq!(outer.trace_table(&witness), component.trace_table(&witness_vec));
         });
     }
 }

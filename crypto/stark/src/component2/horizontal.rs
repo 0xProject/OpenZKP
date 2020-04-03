@@ -38,6 +38,10 @@ where
     type Claim = (<Left as Component>::Claim, <Right as Component>::Claim);
     type Witness = (<Left as Component>::Witness, <Right as Component>::Witness);
 
+    fn claim(&self, witness: &Self::Witness) -> Self::Claim {
+        (self.left.claim(&witness.0), self.right.claim(&witness.1))
+    }
+
     fn dimensions2(&self) -> (usize, usize) {
         let left = self.left().dimensions2();
         let right = self.right().dimensions2();
@@ -67,17 +71,17 @@ where
         result
     }
 
-    fn trace2<P: PolyWriter>(&self, trace: &mut P, claim: &Self::Claim, witness: &Self::Witness) {
+    fn trace2<P: PolyWriter>(&self, trace: &mut P, witness: &Self::Witness) {
         let left_dim = self.left.dimensions2();
         let right_dim = self.right.dimensions2();
         let mut left_trace = Mapped::new(trace, left_dim, |polynomial, location| {
             (polynomial, location)
         });
-        self.left.trace2(&mut left_trace, &claim.0, &witness.0);
+        self.left.trace2(&mut left_trace, &witness.0);
         let mut right_trace = Mapped::new(trace, right_dim, |polynomial, location| {
             (polynomial + left_dim.0, location)
         });
-        self.right.trace2(&mut right_trace, &claim.1, &witness.1)
+        self.right.trace2(&mut right_trace, &witness.1)
     }
 }
 
@@ -103,7 +107,11 @@ mod tests {
             any::<FieldElement>(),
         )
             .prop_map(move |(columns, seed, claim, witness)| {
-                (Test::new(rows, columns, &seed), claim, witness)
+                (
+                    Test::new(rows, columns, &seed),
+                    claim.clone(),
+                    (claim, witness),
+                )
             })
     }
 
@@ -118,9 +126,8 @@ mod tests {
             (a, b) in components
         )| {
             let component = Horizontal::new(a.0, b.0);
-            let claim = (a.1, b.1);
             let witness = (a.2, b.2);
-            prop_assert_eq!(component.check(&claim, &witness), Ok(()));
+            prop_assert_eq!(component.check(&witness), Ok(()));
         });
     }
 
@@ -146,10 +153,7 @@ mod tests {
                 .zip(right.constraints(&right_claim).iter()) {
                 prop_assert!(result.equals(expected));
             }
-            prop_assert_eq!(
-                left.trace_table(&left_claim, &left_witness),
-                right.trace_table(&right_claim, &right_witness)
-            );
+            prop_assert_eq!(left.trace_table(&left_witness), right.trace_table(&right_witness));
         });
     }
 }

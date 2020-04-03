@@ -33,7 +33,11 @@ impl Test {
 
 impl Component for Test {
     type Claim = FieldElement;
-    type Witness = FieldElement;
+    type Witness = (FieldElement, FieldElement);
+
+    fn claim(&self, witness: &Self::Witness) -> Self::Claim {
+        witness.0.clone()
+    }
 
     fn dimensions2(&self) -> (usize, usize) {
         (self.columns, self.rows)
@@ -77,15 +81,15 @@ impl Component for Test {
         constraints
     }
 
-    fn trace2<P: PolyWriter>(&self, trace: &mut P, claim: &Self::Claim, witness: &Self::Witness) {
+    fn trace2<P: PolyWriter>(&self, trace: &mut P, witness: &Self::Witness) {
         debug_assert_eq!(trace.dimensions(), self.dimensions2());
 
         // Generator for the sequence
         let mut x0 = self.seed.clone();
-        let mut x1 = witness.clone();
+        let mut x1 = witness.1.clone();
         let mut next = || {
             let result = x0.clone();
-            let x2 = &x0 * &x1 + claim;
+            let x2 = &x0 * &x1 + witness.0.clone();
             x0 = x1.clone();
             x1 = x2;
             result
@@ -116,8 +120,9 @@ mod tests {
             witness: FieldElement
         )| {
             let rows = 1 << log_rows;
+            let witness = (claim.clone(), witness);
             let component = Test::new(rows, cols, &seed);
-            prop_assert_eq!(component.check(&claim, &witness), Ok(()));
+            prop_assert_eq!(component.check(&witness), Ok(()));
         });
     }
 
@@ -132,8 +137,9 @@ mod tests {
             witness: FieldElement
         )| {
             let rows = 1 << log_rows;
+            let witness = (claim.clone(), witness);
             let component = Test::new(rows, cols, &seed);
-            let proof = component.prove(&claim, &witness).unwrap();
+            let proof = component.prove(&witness).unwrap();
             let result = component.verify(&claim, &proof);
             prop_assert_eq!(result, Ok(()));
         });
