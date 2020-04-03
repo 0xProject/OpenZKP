@@ -21,7 +21,8 @@ pub(crate) fn starkware_example() {
 
     info!("Constructing component...");
     let component = MerkleTree::new(witness.path.len());
-    info!("Constructed {:?} trace", component.dimensions());
+    let (polynomials, locations) = component.dimensions2();
+    info!("Constructed {:?} trace", (polynomials, locations));
     info!(
         "Constructed {:?} constraints",
         component.constraints(&claim).len()
@@ -29,7 +30,7 @@ pub(crate) fn starkware_example() {
 
     info!("Constructing proof...");
     let mut constraints = Constraints::from_expressions(
-        component.dimensions(),
+        (locations, polynomials),
         (&claim).into(),
         component.constraints(&claim),
     )

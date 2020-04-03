@@ -8,7 +8,7 @@ where
     Element: Component,
 {
     element: Element,
-    size:    usize,
+    size:    usize, // TODO: `repetitions`
 }
 
 // TODO: Validate that element constraint systems are compatible.
@@ -63,15 +63,15 @@ where
     }
 
     fn trace2<P: PolyWriter>(&self, trace: &mut P, claim: &Self::Claim, witness: &Self::Witness) {
-        let (element_rows, columns) = self.element.dimensions();
+        let (polynomials, locations) = self.element.dimensions2();
         claim
             .iter()
             .zip(witness.iter())
             .enumerate()
             .for_each(|(i, (claim, witness))| {
                 let mut transformed =
-                    Mapped::new(trace, (columns, element_rows), |polynomial, location| {
-                        (polynomial, location + i * element_rows)
+                    Mapped::new(trace, (polynomials, locations), |polynomial, location| {
+                        (polynomial, location + i * locations)
                     });
                 self.element.trace2(&mut transformed, claim, witness);
             })

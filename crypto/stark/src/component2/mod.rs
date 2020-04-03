@@ -49,16 +49,7 @@ pub trait Component {
     type Claim;
     type Witness;
 
-    // TODO: Remove
-    fn dimensions(&self) -> (usize, usize) {
-        let (polynomials, locations) = self.dimensions2();
-        (locations, polynomials)
-    }
-
-    fn dimensions2(&self) -> (usize, usize) {
-        let (locations, polynomials) = self.dimensions();
-        (polynomials, locations)
-    }
+    fn dimensions2(&self) -> (usize, usize);
 
     fn constraints(&self, claim: &Self::Claim) -> Vec<RationalExpression>;
 
@@ -77,8 +68,7 @@ pub trait Component {
         let (polynomials, locations) = self.dimensions2();
         let channel_seed = Vec::new();
         let expressions = self.constraints(claim);
-        let mut trace = TraceTable::new(locations, polynomials);
-        self.trace2(&mut trace, claim, witness);
+        let trace = self.trace_table(claim, witness);
         let constraints =
             Constraints::from_expressions((locations, polynomials), channel_seed, expressions)
                 .unwrap();
@@ -103,8 +93,7 @@ pub trait Component {
         let constraints =
             Constraints::from_expressions((locations, polynomials), channel_seed, expressions)
                 .unwrap();
-        let mut trace = TraceTable::new(locations, polynomials);
-        self.trace2(&mut trace, claim, witness);
+        let trace = self.trace_table(claim, witness);
         check_constraints(&constraints, &trace)
     }
 }

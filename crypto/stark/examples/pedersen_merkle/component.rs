@@ -223,9 +223,9 @@ impl Component for MerkleTree {
         let mut constraints = self.layers.constraints(&fake_claim);
 
         // Construct constraints
-        let (rows, columns) = self.dimensions();
+        let (polynomials, locations) = self.dimensions2();
         let path_length = self.layers.size();
-        let trace_length = rows;
+        let trace_length = locations;
         let root = claim.root.clone();
         let leaf = claim.leaf.clone();
 
@@ -254,11 +254,11 @@ impl Component for MerkleTree {
 
         // The final hash equals `root`
         let hash = self.layers.element().hash();
-        let row_index = hash.0 + (path_length - 1) * self.layers.element().dimensions().0;
+        let row_index = hash.0 + (path_length - 1) * self.layers.element().dimensions2().1;
         constraints.insert(1, (Constant(root) - hash.1) / row(row_index));
 
         // Add column constraints
-        for i in 0..columns {
+        for i in 0..polynomials {
             constraints.insert(i, Trace(i, 0));
         }
 

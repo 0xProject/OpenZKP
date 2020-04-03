@@ -47,7 +47,7 @@ where
 
     fn constraints(&self, claim: &Self::Claim) -> Vec<RationalExpression> {
         use RationalExpression::*;
-        let (_rows, left_columns) = self.left().dimensions();
+        let (left_polynomials, _) = self.left().dimensions2();
         let left = self.left().constraints(&claim.0);
         let right = self.right().constraints(&claim.1);
         let right = right
@@ -55,7 +55,7 @@ where
             .map(|expression| {
                 expression.map(&|node| {
                     match node {
-                        Trace(i, j) => Trace(i + left_columns, j),
+                        Trace(i, j) => Trace(i + left_polynomials, j),
                         other => other,
                     }
                 })
