@@ -41,12 +41,8 @@ describe('Proof of work testing', () => {
     });
 
     it('Should always pass a 0 bit proof of work', async () => {
-        expect(
-            await pow_contract.check_proof_of_work_external(
-                utils.randomBytes(32),
-                '0x000000000000008A',
-                0,
-            ),
-        ).to.eq(true);
+        expect(await pow_contract.check_proof_of_work_external(utils.randomBytes(32), '0x000000000000008A', 0)).to.eq(
+            true,
+        );
     });
 });

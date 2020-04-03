@@ -2,6 +2,7 @@
 import {waffle} from '@nomiclabs/buidler';
 import chai from 'chai';
 import {deployContract, solidity} from 'ethereum-waffle';
+import {BigNumber} from 'ethers/utils';
 
 import StarkDigestTestingArtifact from '../artifacts/StarkDigestTesting.json';
 import TrivialFibArtifact from '../artifacts/TrivialFib.json';
@@ -9,7 +10,6 @@ import {StarkDigestTesting} from '../typechain/StarkDigestTesting';
 import {TrivialFib} from '../typechain/TrivialFib';
 
 import testing_proof from './testing_proof.json';
-import { BigNumber } from 'ethers/utils';
 
 chai.use(solidity);
 const {expect} = chai;
