@@ -122,7 +122,7 @@ fn get_k(
 pub fn verify(digest: &ScalarFieldElement, signature: &Signature, public_key: &Affine) -> bool {
     assert!(!signature.r.is_zero());
     assert!(!signature.w.is_zero());
-    assert!(public_key.on_curve());
+    assert!(public_key.is_on_curve());
 
     let generator_factor = digest * &signature.w;
     let pubkey_factor = &signature.r * &signature.w;

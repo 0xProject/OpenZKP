@@ -24,6 +24,10 @@ where
     pub fn element(&self) -> &Element {
         &self.element
     }
+
+    pub fn size(&self) -> usize {
+        self.size
+    }
 }
 
 impl<Element> Component for Vertical<Element>

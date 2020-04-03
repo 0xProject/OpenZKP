@@ -25,16 +25,33 @@ impl Affine {
     }
 
     #[must_use]
-    // TODO: return result
-    pub fn x(&self) -> FieldElement {
+    pub fn x(&self) -> Option<&FieldElement> {
+        self.as_coordinates().map(|(x, _)| x)
+    }
+
+    #[must_use]
+    pub fn y(&self) -> Option<&FieldElement> {
+        self.as_coordinates().map(|(_, y)| y)
+    }
+
+    #[must_use]
+    pub fn as_coordinates(&self) -> Option<(&FieldElement, &FieldElement)> {
         match self {
-            Self::Zero => panic!("no x coordinate for 0"),
-            Self::Point { x, .. } => x.clone(),
+            Self::Zero => None,
+            Self::Point { x, y } => Some((x, y)),
         }
     }
 
     #[must_use]
-    pub fn on_curve(&self) -> bool {
+    pub fn into_coordinates(self) -> Option<(FieldElement, FieldElement)> {
+        match self {
+            Self::Zero => None,
+            Self::Point { x, y } => Some((x, y)),
+        }
+    }
+
+    #[must_use]
+    pub fn is_on_curve(&self) -> bool {
         match self {
             Self::Zero => true,
             Self::Point { x, y } => y * y == x * x * x + x + BETA,
