@@ -6,8 +6,8 @@ use crate::{RationalExpression, TraceTable};
 pub struct Empty(usize, usize);
 
 impl Empty {
-    pub fn new(polynomials: usize, locations: usize) -> Empty {
-        Empty(polynomials, locations)
+    pub fn new(polynomials: usize, size: usize) -> Empty {
+        Empty(polynomials, size)
     }
 }
 
@@ -41,9 +41,9 @@ mod tests {
     #[allow(clippy::let_unit_value)]
     #[test]
     fn test_empty_check() {
-        proptest!(|(log_locations in 0_usize..10, polynomials in 0_usize..10)| {
-            let locations = 1 << log_locations;
-            let component = Empty::new(polynomials, locations);
+        proptest!(|(log_size in 0_usize..10, polynomials in 0_usize..10)| {
+            let size = 1 << log_size;
+            let component = Empty::new(polynomials, size);
             let claim = ();
             let witness = ();
             prop_assert_eq!(component.check(&claim, &witness), Ok(()));

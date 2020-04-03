@@ -26,7 +26,7 @@ pub use vertical::Vertical;
 
 /// A set of Polynomials represented by their values at roots of unity.
 pub trait PolyWriter {
-    /// Returns (number of polynomials, number of locations)
+    /// Returns (number of polynomials, number of size)
     fn dimensions(&self) -> (usize, usize);
 
     /// Write to a given location
@@ -58,41 +58,38 @@ pub trait Component {
 
     /// Construct a trace table
     fn trace_table(&self, claim: &Self::Claim, witness: &Self::Witness) -> TraceTable {
-        let (polynomials, locations) = self.dimensions2();
-        let mut trace_table = TraceTable::new(locations, polynomials);
+        let (polynomials, size) = self.dimensions2();
+        let mut trace_table = TraceTable::new(size, polynomials);
         self.trace2(&mut trace_table, claim, witness);
         trace_table
     }
 
     fn prove(&self, claim: &Self::Claim, witness: &Self::Witness) -> Result<Proof, ProverError> {
-        let (polynomials, locations) = self.dimensions2();
+        let (polynomials, size) = self.dimensions2();
         let channel_seed = Vec::new();
         let expressions = self.constraints(claim);
         let trace = self.trace_table(claim, witness);
         let constraints =
-            Constraints::from_expressions((locations, polynomials), channel_seed, expressions)
-                .unwrap();
+            Constraints::from_expressions((size, polynomials), channel_seed, expressions).unwrap();
         prove(&constraints, &trace)
     }
 
     fn verify(&self, claim: &Self::Claim, proof: &Proof) -> Result<(), VerifierError> {
-        let (polynomials, locations) = self.dimensions2();
+        let (polynomials, size) = self.dimensions2();
         let channel_seed = Vec::new();
         let expressions = self.constraints(claim);
         let constraints =
-            Constraints::from_expressions((locations, polynomials), channel_seed, expressions)
-                .unwrap();
+            Constraints::from_expressions((size, polynomials), channel_seed, expressions).unwrap();
         verify(&constraints, proof)
     }
 
     fn check(&self, claim: &Self::Claim, witness: &Self::Witness) -> Result<(), (usize, usize)> {
-        let (polynomials, locations) = self.dimensions2();
+        let (polynomials, size) = self.dimensions2();
         let channel_seed = Vec::new();
         let expressions = self.constraints(claim);
         // TODO: Error handling
         let constraints =
-            Constraints::from_expressions((locations, polynomials), channel_seed, expressions)
-                .unwrap();
+            Constraints::from_expressions((size, polynomials), channel_seed, expressions).unwrap();
         let trace = self.trace_table(claim, witness);
         check_constraints(&constraints, &trace)
     }

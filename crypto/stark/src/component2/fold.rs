@@ -45,9 +45,9 @@ where
     type Witness = Element::Witness;
 
     fn dimensions2(&self) -> (usize, usize) {
-        let (polynomials, locations) = self.element.dimensions2();
+        let (polynomials, size) = self.element.dimensions2();
         let reduction = 1 << self.folds;
-        (ceil_div(polynomials, reduction), locations * reduction)
+        (ceil_div(polynomials, reduction), size * reduction)
     }
 
     fn constraints(&self, claim: &Self::Claim) -> Vec<RationalExpression> {

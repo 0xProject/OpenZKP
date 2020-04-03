@@ -39,8 +39,8 @@ where
     type Witness = Vec<Element::Witness>;
 
     fn dimensions2(&self) -> (usize, usize) {
-        let (polynomials, locations) = self.element.dimensions2();
-        (polynomials, self.size * locations)
+        let (polynomials, size) = self.element.dimensions2();
+        (polynomials, self.size * size)
     }
 
     // Note: Element can not have constraints depend on the claim!
@@ -63,15 +63,15 @@ where
     }
 
     fn trace2<P: PolyWriter>(&self, trace: &mut P, claim: &Self::Claim, witness: &Self::Witness) {
-        let (polynomials, locations) = self.element.dimensions2();
+        let (polynomials, size) = self.element.dimensions2();
         claim
             .iter()
             .zip(witness.iter())
             .enumerate()
             .for_each(|(i, (claim, witness))| {
                 let mut transformed =
-                    Mapped::new(trace, (polynomials, locations), |polynomial, location| {
-                        (polynomial, location + i * locations)
+                    Mapped::new(trace, (polynomials, size), |polynomial, location| {
+                        (polynomial, location + i * size)
                     });
                 self.element.trace2(&mut transformed, claim, witness);
             })
