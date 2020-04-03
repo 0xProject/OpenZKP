@@ -1,6 +1,7 @@
 mod empty;
 mod fold;
 mod horizontal;
+mod mapped;
 mod test;
 mod transformed;
 mod vertical;
@@ -18,6 +19,7 @@ use zkp_primefield::FieldElement;
 pub use empty::Empty;
 pub use fold::Fold;
 pub use horizontal::Horizontal;
+pub use mapped::Mapped;
 pub use test::Test;
 pub use transformed::{Transform, Transformed};
 pub use vertical::Vertical;
