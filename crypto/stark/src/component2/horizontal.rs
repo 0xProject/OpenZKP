@@ -1,4 +1,4 @@
-use super::Component;
+use super::{Component, Mapped, PolyWriter};
 use crate::{RationalExpression, TraceTable};
 
 #[derive(Clone, PartialEq, Eq)]
@@ -38,11 +38,11 @@ where
     type Claim = (<Left as Component>::Claim, <Right as Component>::Claim);
     type Witness = (<Left as Component>::Witness, <Right as Component>::Witness);
 
-    fn dimensions(&self) -> (usize, usize) {
-        let left = self.left().dimensions();
-        let right = self.right().dimensions();
-        assert_eq!(left.0, right.0);
-        (left.0, left.1 + right.1)
+    fn dimensions2(&self) -> (usize, usize) {
+        let left = self.left().dimensions2();
+        let right = self.right().dimensions2();
+        assert_eq!(left.1, right.1);
+        (left.0 + right.0, left.1)
     }
 
     fn constraints(&self, claim: &Self::Claim) -> Vec<RationalExpression> {
@@ -67,21 +67,14 @@ where
         result
     }
 
-    fn trace(&self, claim: &Self::Claim, witness: &Self::Witness) -> TraceTable {
-        let left = self.left().trace(&claim.0, &witness.0);
-        let right = self.right().trace(&claim.1, &witness.1);
-        assert_eq!(left.num_rows(), right.num_rows());
-        let mut trace = TraceTable::new(left.num_rows(), left.num_columns() + right.num_columns());
-        for i in 0..trace.num_rows() {
-            for j in 0..left.num_columns() {
-                trace[(i, j)] = left[(i, j)].clone();
-            }
-            let shift = left.num_columns();
-            for j in 0..right.num_columns() {
-                trace[(i, j + shift)] = right[(i, j)].clone();
-            }
-        }
-        trace
+    fn trace2<P: PolyWriter>(&self, trace: &mut P, claim: &Self::Claim, witness: &Self::Witness) {
+        let left_dim = self.left.dimensions2();
+        let right_dim = self.right.dimensions2();
+        self.left.trace2(trace, &claim.0, &witness.0);
+        let mut right_trace = Mapped::new(trace, right_dim, |polynomial, location| {
+            (polynomial + left_dim.0, location)
+        });
+        self.right.trace2(&mut right_trace, &claim.1, &witness.1)
     }
 }
 
