@@ -124,7 +124,7 @@ mod tests {
                 // We expect extrinsic equality, but not intrinsic.
                 prop_assert!(result.equals(expected));
             }
-            prop_assert_eq!(component.trace(&claim_vec, &witness_vec), element.trace(&claim, &witness));
+            prop_assert_eq!(component.trace_table(&claim_vec, &witness_vec), element.trace_table(&claim, &witness));
         });
     }
 
@@ -159,7 +159,7 @@ mod tests {
                 .zip(component.constraints(&claim_vec).iter()) {
                 prop_assert!(result.equals(expected));
             }
-            prop_assert_eq!(outer.trace(&claim, &witness), component.trace(&claim_vec, &witness_vec));
+            prop_assert_eq!(outer.trace_table(&claim, &witness), component.trace_table(&claim_vec, &witness_vec));
         });
     }
 }

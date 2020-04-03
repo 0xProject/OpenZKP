@@ -38,7 +38,7 @@ pub(crate) fn starkware_example() {
     constraints.pow_bits = 28;
     constraints.num_queries = 13;
     constraints.fri_layout = vec![3, 3, 3, 3, 2];
-    let trace = component.trace(&claim, &witness);
+    let trace = component.trace_table(&claim, &witness);
     let proof = prove(&constraints, &trace).unwrap();
 
     info!("Spot checking proof...");

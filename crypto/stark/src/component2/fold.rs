@@ -152,7 +152,7 @@ mod tests {
             let element = Test::new(rows, cols, &seed);
             let component = Fold::new(element.clone(), 0);
             prop_assert_eq!(component.constraints(&claim), element.constraints(&claim));
-            prop_assert_eq!(component.trace(&claim, &witness), element.trace(&claim, &witness));
+            prop_assert_eq!(component.trace_table(&claim, &witness), element.trace_table(&claim, &witness));
         });
     }
 
@@ -174,7 +174,7 @@ mod tests {
             let outer = Fold::new(inner, outer_folds);
             let combined = Fold::new(element, inner_folds + outer_folds);
             prop_assert_eq!(outer.constraints(&claim), combined.constraints(&claim));
-            prop_assert_eq!(outer.trace(&claim, &witness), combined.trace(&claim, &witness));
+            prop_assert_eq!(outer.trace_table(&claim, &witness), combined.trace_table(&claim, &witness));
         });
     }
 }

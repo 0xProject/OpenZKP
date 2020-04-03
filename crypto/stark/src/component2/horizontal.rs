@@ -147,8 +147,8 @@ mod tests {
                 prop_assert!(result.equals(expected));
             }
             prop_assert_eq!(
-                left.trace(&left_claim, &left_witness),
-                right.trace(&right_claim, &right_witness)
+                left.trace_table(&left_claim, &left_witness),
+                right.trace_table(&right_claim, &right_witness)
             );
         });
     }

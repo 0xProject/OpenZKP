@@ -319,7 +319,7 @@ mod test {
             field_element!("02fe7d53bedb42fbc905d7348bd5d61302882ba48a27377b467a9005d6e8d3fd");
         let claim = ();
         let witness = (leaf.clone(), sibling.clone(), direction);
-        let trace = component.trace(&claim, &witness);
+        let trace = component.trace_table(&claim, &witness);
         assert_eq!(component.check(&claim, &witness), Ok(()));
         assert_eq!(&eval(&trace, component.left()), &sibling);
         assert_eq!(&eval(&trace, component.right()), &leaf);
@@ -338,7 +338,7 @@ mod test {
             let component = MerkleTreeLayer::new();
             let claim = ();
             let witness = (leaf, sibling, direction);
-            let trace = component.trace(&claim, &witness);
+            let trace = component.trace_table(&claim, &witness);
             prop_assert_eq!(component.check(&claim, &witness), Ok(()));
             prop_assert_eq!(&eval(&trace, component.hash()), &hash);
         });
@@ -350,7 +350,7 @@ mod test {
         let witness = short_witness();
         let component = MerkleTree::new(witness.path.len());
         let constraints = component.constraints(&claim);
-        let trace = component.trace(&claim, &witness);
+        let trace = component.trace_table(&claim, &witness);
         let mut constraints = Constraints::from_expressions(
             (trace.num_rows(), trace.num_columns()),
             (&claim).into(),

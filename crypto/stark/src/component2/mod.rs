@@ -63,24 +63,14 @@ pub trait Component {
     fn constraints(&self, claim: &Self::Claim) -> Vec<RationalExpression>;
 
     // TODO: Drop `claim` from `trace`
-    fn trace2<P: PolyWriter>(&self, trace: &mut P, claim: &Self::Claim, witness: &Self::Witness) {
-        let trace_table = self.trace(claim, witness);
-        for location in 0..trace_table.num_rows() {
-            for polynomial in 0..trace_table.num_columns() {
-                trace.write(
-                    polynomial,
-                    location,
-                    trace_table[(location, polynomial)].clone(),
-                );
-            }
-        }
-    }
+    fn trace2<P: PolyWriter>(&self, trace: &mut P, claim: &Self::Claim, witness: &Self::Witness);
 
-    fn trace(&self, claim: &Self::Claim, witness: &Self::Witness) -> TraceTable {
-        let (locations, polynomials) = self.dimensions();
-        let mut trace = TraceTable::new(locations, polynomials);
-        self.trace2(&mut trace, claim, witness);
-        trace
+    /// Construct a trace table
+    fn trace_table(&self, claim: &Self::Claim, witness: &Self::Witness) -> TraceTable {
+        let (polynomials, locations) = self.dimensions2();
+        let mut trace_table = TraceTable::new(locations, polynomials);
+        self.trace2(&mut trace_table, claim, witness);
+        trace_table
     }
 
     fn prove(&self, claim: &Self::Claim, witness: &Self::Witness) -> Result<Proof, ProverError> {
