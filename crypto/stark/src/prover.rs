@@ -352,7 +352,6 @@ pub fn prove(constraints: &Constraints, trace: &TraceTable) -> Result<Proof> {
     //  * Trace table satisfies constraints (expensive check, should be optional)
 
     info!("Starting Stark proof.");
-    info!("Proof constraints: {:?}", constraints);
     // TODO: Use a proper size human formating function
     #[allow(clippy::cast_precision_loss)]
     let size_mb = (trace.num_rows() * trace.num_columns() * 32) as f64 / 1_000_000_f64;
