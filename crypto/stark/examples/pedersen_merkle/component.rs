@@ -10,7 +10,7 @@ use itertools::izip;
 use zkp_elliptic_curve::Affine;
 use zkp_primefield::{FieldElement, One, Pow, Root, Zero};
 use zkp_stark::{
-    component2::{Component, Vertical},
+    component2::{Component, PolyWriter, Vertical},
     DensePolynomial, RationalExpression, TraceTable,
 };
 use zkp_u256::{Binary, U256};
@@ -50,8 +50,8 @@ impl Component for MerkleTreeLayer {
     type Claim = ();
     type Witness = (FieldElement, FieldElement, bool);
 
-    fn dimensions(&self) -> (usize, usize) {
-        (256, 8)
+    fn dimensions2(&self) -> (usize, usize) {
+        (8, 256)
     }
 
     fn constraints(&self, _: &Self::Claim) -> Vec<RationalExpression> {
@@ -134,9 +134,12 @@ impl Component for MerkleTreeLayer {
         constraints
     }
 
-    fn trace(&self, _: &Self::Claim, (leaf, sibling, direction): &Self::Witness) -> TraceTable {
-        let mut trace = TraceTable::new(256, 8);
-
+    fn trace2<P: PolyWriter>(
+        &self,
+        trace: &mut P,
+        _: &Self::Claim,
+        (leaf, sibling, direction): &Self::Witness,
+    ) {
         let (left, right) = if *direction {
             (sibling, leaf)
         } else {
@@ -165,19 +168,34 @@ impl Component for MerkleTreeLayer {
                 left_source >>= 1;
                 right_source >>= 1;
             }
-            trace[(bit_index, 0)] = FieldElement::from(left_source.clone());
-            trace[(bit_index, 1)] = left_slope.clone();
-            trace[(bit_index, 2)] = left_point.x().cloned().unwrap_or_else(FieldElement::zero);
-            trace[(bit_index, 3)] = left_point.y().cloned().unwrap_or_else(FieldElement::zero);
-            trace[(bit_index, 4)] = FieldElement::from(right_source.clone());
-            trace[(bit_index, 5)] = right_slope.clone();
-            trace[(bit_index, 6)] = right_point.x().cloned().unwrap_or_else(FieldElement::zero);
-            trace[(bit_index, 7)] = right_point.y().cloned().unwrap_or_else(FieldElement::zero);
+            trace.write(0, bit_index, FieldElement::from(left_source.clone()));
+            trace.write(1, bit_index, left_slope.clone());
+            trace.write(
+                2,
+                bit_index,
+                left_point.x().cloned().unwrap_or_else(FieldElement::zero),
+            );
+            trace.write(
+                3,
+                bit_index,
+                left_point.y().cloned().unwrap_or_else(FieldElement::zero),
+            );
+            trace.write(4, bit_index, FieldElement::from(right_source.clone()));
+            trace.write(5, bit_index, right_slope.clone());
+            trace.write(
+                6,
+                bit_index,
+                right_point.x().cloned().unwrap_or_else(FieldElement::zero),
+            );
+            trace.write(
+                7,
+                bit_index,
+                right_point.y().cloned().unwrap_or_else(FieldElement::zero),
+            );
         }
-        // TODO: Check hash
-        trace
     }
 }
+
 pub(crate) struct MerkleTree {
     layers: Vertical<MerkleTreeLayer>,
 }
@@ -195,8 +213,8 @@ impl Component for MerkleTree {
     type Claim = Claim;
     type Witness = Witness;
 
-    fn dimensions(&self) -> (usize, usize) {
-        self.layers.dimensions()
+    fn dimensions2(&self) -> (usize, usize) {
+        self.layers.dimensions2()
     }
 
     fn constraints(&self, claim: &Self::Claim) -> Vec<RationalExpression> {
@@ -247,7 +265,7 @@ impl Component for MerkleTree {
         constraints
     }
 
-    fn trace(&self, claim: &Self::Claim, witness: &Self::Witness) -> TraceTable {
+    fn trace2<P: PolyWriter>(&self, trace: &mut P, claim: &Self::Claim, witness: &Self::Witness) {
         let witness = izip!(witness.directions.iter(), witness.path.iter())
             .scan(claim.leaf.clone(), |leaf, (direction, sibling)| {
                 let layer: <MerkleTreeLayer as Component>::Witness =
@@ -261,7 +279,7 @@ impl Component for MerkleTree {
             })
             .collect::<Vec<_>>();
         let claim = vec![(); self.layers.size()];
-        self.layers.trace(&claim, &witness)
+        self.layers.trace2(trace, &claim, &witness)
     }
 }
 
