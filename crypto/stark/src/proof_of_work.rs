@@ -8,7 +8,6 @@ use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
 use tiny_keccak::{Hasher, Keccak};
 use zkp_macros_decl::hex;
 use zkp_u256::{Binary, U256};
-use hex::encode;
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "std", derive(Debug))]
