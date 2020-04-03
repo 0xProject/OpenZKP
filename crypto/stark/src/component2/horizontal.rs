@@ -70,7 +70,10 @@ where
     fn trace2<P: PolyWriter>(&self, trace: &mut P, claim: &Self::Claim, witness: &Self::Witness) {
         let left_dim = self.left.dimensions2();
         let right_dim = self.right.dimensions2();
-        self.left.trace2(trace, &claim.0, &witness.0);
+        let mut left_trace = Mapped::new(trace, left_dim, |polynomial, location| {
+            (polynomial, location)
+        });
+        self.left.trace2(&mut left_trace, &claim.0, &witness.0);
         let mut right_trace = Mapped::new(trace, right_dim, |polynomial, location| {
             (polynomial + left_dim.0, location)
         });
