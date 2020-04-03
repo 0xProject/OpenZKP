@@ -1,3 +1,4 @@
+/* tslint:disable:custom-no-magic-numbers */
 import {waffle} from '@nomiclabs/buidler';
 import chai from 'chai';
 import {deployContract, solidity} from 'ethereum-waffle';
@@ -9,7 +10,7 @@ chai.use(solidity);
 const {expect} = chai;
 
 describe('Proof of work testing', () => {
-    let  pow_contract: any;
+    let pow_contract: any;
 
     const provider = waffle.provider;
     const [wallet] = provider.getWallets();
@@ -19,6 +20,12 @@ describe('Proof of work testing', () => {
     });
 
     it('Should validate a correct proof of work', async () => {
-
+        expect(
+            await pow_contract.check_proof_of_work_external(
+                '0x0123456789abcded0123456789abcded0123456789abcded0123456789abcded',
+                '0x000000000000008A',
+                8,
+            ),
+        );
     });
 });

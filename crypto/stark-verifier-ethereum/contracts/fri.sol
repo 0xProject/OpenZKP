@@ -2,6 +2,7 @@ pragma solidity 0.6.4;
 
 import './public_coin.sol';
 
+
 contract Fri {
     using PublicCoin for PublicCoin.Coin;
 
@@ -39,7 +40,7 @@ contract Fri {
         for (uint256 i = 0; i < data.length; i++) {
             uint256 j = i;
             while (j > 0 && data[j] < data[j - 1]) {
-                (data[j], data[j - 1]) = (data[j-1], data[j]);
+                (data[j], data[j - 1]) = (data[j - 1], data[j]);
                 j--;
             }
         }

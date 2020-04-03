@@ -2,6 +2,7 @@ pragma solidity 0.6.4;
 
 import './public_coin.sol';
 
+
 contract ProofOfWork {
     using PublicCoin for PublicCoin.Coin;
 
@@ -15,6 +16,6 @@ contract ProofOfWork {
         bytes32 seed = keccak256(abi.encodePacked(hex'0123456789abcded', coin.digest, pow_bits));
         bytes32 response = keccak256(abi.encodePacked(seed, pow_nonce));
         coin.write_bytes(abi.encodePacked(pow_nonce));
-        return (response & ~(bytes32)((uint256(1)<<(255-pow_bits)) - 1)) == 0x0;
+        return (response & ~(bytes32)((uint256(1) << (255 - pow_bits)) - 1)) == 0x0;
     }
 }
