@@ -1,4 +1,4 @@
-use super::Component;
+use super::{Component, PolyWriter};
 use crate::{RationalExpression, TraceTable};
 use zkp_primefield::{FieldElement, Root};
 
@@ -35,8 +35,8 @@ impl Component for Test {
     type Claim = FieldElement;
     type Witness = FieldElement;
 
-    fn dimensions(&self) -> (usize, usize) {
-        (self.rows, self.columns)
+    fn dimensions2(&self) -> (usize, usize) {
+        (self.columns, self.rows)
     }
 
     fn constraints(&self, claim: &Self::Claim) -> Vec<RationalExpression> {
@@ -77,7 +77,7 @@ impl Component for Test {
         constraints
     }
 
-    fn trace(&self, claim: &Self::Claim, witness: &Self::Witness) -> TraceTable {
+    fn trace2<P: PolyWriter>(&self, trace: &mut P, claim: &Self::Claim, witness: &Self::Witness) {
         // Generator for the sequence
         let mut x0 = self.seed.clone();
         let mut x1 = witness.clone();
@@ -91,13 +91,11 @@ impl Component for Test {
 
         // Fill in the trace table with the sequence
         // the sequence is written left-to-right, then top-to-bottom.
-        let rows = self.rows;
-        let columns = self.columns;
-        let mut trace = TraceTable::new(rows, columns);
-        for i in 0..(rows * columns) {
-            trace[(i / columns, i % columns)] = next();
+        for i in 0..(self.rows * self.columns) {
+            let polynomial = i % self.columns;
+            let location = i / self.columns;
+            trace.write(polynomial, location, &next());
         }
-        trace
     }
 }
 
