@@ -38,9 +38,9 @@ where
     type Claim = Vec<Element::Claim>;
     type Witness = Vec<Element::Witness>;
 
-    fn dimensions(&self) -> (usize, usize) {
-        let (rows, columns) = self.element.dimensions();
-        (self.size * rows, columns)
+    fn dimensions2(&self) -> (usize, usize) {
+        let (polynomials, locations) = self.element.dimensions2();
+        (polynomials, self.size * locations)
     }
 
     // Note: Element can not have constraints depend on the claim!
@@ -70,7 +70,7 @@ where
             .enumerate()
             .for_each(|(i, (claim, witness))| {
                 let mut transformed =
-                    Mapped::new(trace, (element_rows, columns), |polynomial, location| {
+                    Mapped::new(trace, (columns, element_rows), |polynomial, location| {
                         (polynomial, location + i * element_rows)
                     });
                 self.element.trace2(&mut transformed, claim, witness);
