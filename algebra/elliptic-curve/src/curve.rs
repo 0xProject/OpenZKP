@@ -26,18 +26,12 @@ impl Affine {
 
     #[must_use]
     pub fn x(&self) -> Option<&FieldElement> {
-        match self {
-            Self::Zero => None,
-            Self::Point { x, .. } => Some(x),
-        }
+        self.as_coordinates().map(|(x, _)| x)
     }
 
     #[must_use]
     pub fn y(&self) -> Option<&FieldElement> {
-        match self {
-            Self::Zero => None,
-            Self::Point { y, .. } => Some(y),
-        }
+        self.as_coordinates().map(|(_, y)| y)
     }
 
     #[must_use]
