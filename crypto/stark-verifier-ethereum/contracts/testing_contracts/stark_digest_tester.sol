@@ -8,11 +8,6 @@ import '../stark_verifier.sol';
 // if the functions change they will have to change too. Unfortunately, it is
 // dificult to get access to data in any other way inside of a verify_proof call.
 contract StarkDigestTesting is StarkVerifier {
-    // External handle to the leading zeros function
-    function leading_zeros_external(bytes32 data) external pure returns (uint8) {
-        return leading_zeros(data);
-    }
-
     // Takes a proof and returns the coin digest after reading and writing
     function digest_read(StarkProof memory proof, ConstraintSystem constraints) public view returns (bytes32) {
         (ConstraintParameters memory constraint_parameters, PublicCoin.Coin memory coin) = constraints.initalize_system(

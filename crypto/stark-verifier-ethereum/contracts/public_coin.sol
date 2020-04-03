@@ -15,7 +15,7 @@ library PublicCoin {
         coin.digest = hashed;
     }
 
-    // Writes a list of bytes32 with each byte written individually
+    // Writes a list of bytes32 with each bytes32 written individually
     function write_many_bytes32(Coin memory coin, bytes32[] memory to_be_written) internal pure {
         for (uint256 i = 0; i < to_be_written.length; i++) {
             write_bytes32(coin, to_be_written[i]);

@@ -13,7 +13,7 @@ contract TrivialFib is ConstraintSystem {
     // TODO - The solidity prettier wants to delete all 'override' statements
     // We should remove this ignore statement when that changes.
     // prettier-ignore
-    function initalize_system(bytes32[] calldata public_input)
+    function initalize_system(bytes calldata public_input)
         external
         view
         override

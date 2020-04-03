@@ -1,10 +1,13 @@
+import { utils } from 'ethers';
+
 // Note - This proof corresponds to the small fib example in rust.
 // It is not full of accurate data yet.
+
 export const testing_proof: any = {
-    public_inputs: [
+    public_inputs: utils.arrayify(utils.defaultAbiCoder.encode(['bytes32[]'], [[
         '0x03E8000000000000000000000000000000000000000000000000000000000000',
-        '0x0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f',
-    ],
+        '0x0142c45e5d743d10eae7ebb70f1526c65de7dbcdb65b322b6ddc36a812591e8f']
+    ])),
     trace_root: '0x018dc61f748b1a6c440827876f30f63cb6c4c188000000000000000000000000',
     constraint_root: '0xe276ce1357d4030a4c84cdfdb4dd77845d3f80e9000000000000000000000000',
     trace_oods_values: [
