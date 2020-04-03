@@ -54,7 +54,7 @@ mod tests {
 
     #[test]
     fn test_pubkey() {
-        let private_key = PrivateKey::new(u256h!(
+        let private_key = PrivateKey::from(u256h!(
             "03c1e9550e66958296d11b60f8e8e7a7ad990d07fa65d5f7652c4a6c87d4e3cc"
         ));
         let expected = PublicKey::new(

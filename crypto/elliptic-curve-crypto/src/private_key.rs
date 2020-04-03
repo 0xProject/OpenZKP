@@ -16,10 +16,6 @@ use serde::{Deserialize, Serialize};
 pub struct PrivateKey(pub ScalarFieldElement);
 
 impl PrivateKey {
-    pub fn new<T: Into<ScalarFieldElement>>(i: T) -> Self {
-        Self(i.into())
-    }
-
     pub fn sign(&self, digest: &ScalarFieldElement) -> Signature {
         for nonce in 0..1000 {
             let k = self.get_k(digest, nonce);
@@ -60,6 +56,12 @@ impl PrivateKey {
     }
 }
 
+impl<T: Into<ScalarFieldElement>> From<T> for PrivateKey {
+    fn from(i: T) -> Self {
+        Self(i.into())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -71,7 +73,7 @@ mod tests {
         let digest = ScalarFieldElement::from(u256h!(
             "01921ce52df68f0185ade7572776513304bdd4a07faf6cf28cefc65a86fc496c"
         ));
-        let private_key = PrivateKey::new(u256h!(
+        let private_key = PrivateKey::from(u256h!(
             "03c1e9550e66958296d11b60f8e8e7a7ad990d07fa65d5f7652c4a6c87d4e3cc"
         ));
         let expected = Signature::new(
