@@ -17,7 +17,7 @@ contract TrivialFib is ConstraintSystem {
         external
         view
         override
-        returns (StarkVerifier.ConstraintParameters memory, PublicCoin.Coin memory)
+        returns (StarkVerifier.ProofParameters memory, PublicCoin.Coin memory)
     {
         PublicCoin.Coin memory coin = PublicCoin.Coin({
             digest: 0xc891a11ddbc6c425fad523a7a4aeafa505d7aa1638cfffbd5b747100bc69e367,
@@ -28,7 +28,7 @@ contract TrivialFib is ConstraintSystem {
         fri_layout[1] = 3;
         fri_layout[2] = 2;
 
-        StarkVerifier.ConstraintParameters memory params = StarkVerifier.ConstraintParameters({
+        StarkVerifier.ProofParameters memory params = StarkVerifier.ProofParameters({
             number_of_columns: 2,
             log_trace_length: 10,
             number_of_constraints: 4,

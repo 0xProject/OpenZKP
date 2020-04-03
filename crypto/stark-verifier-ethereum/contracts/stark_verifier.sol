@@ -49,7 +49,7 @@ contract StarkVerifier is ProofOfWork, Fri {
 
     // This struct contains the relevent information about the constraint system
     // It will be returned from a callout to the constraint system contract.
-    struct ConstraintParameters {
+    struct ProofParameters {
         uint8 number_of_columns;
         uint8 log_trace_length;
         uint64 number_of_constraints;
@@ -65,7 +65,7 @@ contract StarkVerifier is ProofOfWork, Fri {
     // it calls through to an internal function with proof as memory.
     function verify_proof(StarkProof memory proof, ConstraintSystem constraints) public view returns (bool) {
         // Initalize the coin and constraint system
-        (ConstraintParameters memory constraint_parameters, PublicCoin.Coin memory coin) = constraints.initalize_system(
+        (ProofParameters memory constraint_parameters, PublicCoin.Coin memory coin) = constraints.initalize_system(
             proof.public_inputs
         );
         // Write data to the coin and read random data from it
@@ -85,7 +85,7 @@ contract StarkVerifier is ProofOfWork, Fri {
     // This function write to the channel and reads from the channel to get the randomized data
     function write_data_and_read_random(
         StarkProof memory proof,
-        ConstraintParameters memory constraint_parameters,
+        ProofParameters memory constraint_parameters,
         PublicCoin.Coin memory coin
     ) internal pure returns (bytes32[] memory, bytes32, bytes32[] memory, bytes32[] memory) {
         // Write the trace root to the coin

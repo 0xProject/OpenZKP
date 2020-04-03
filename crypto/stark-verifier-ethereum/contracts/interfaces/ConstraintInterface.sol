@@ -10,5 +10,5 @@ interface ConstraintSystem {
     function initalize_system(bytes calldata public_input)
         external
         view
-        returns (StarkVerifier.ConstraintParameters memory, PublicCoin.Coin memory);
+        returns (StarkVerifier.ProofParameters memory, PublicCoin.Coin memory);
 }
