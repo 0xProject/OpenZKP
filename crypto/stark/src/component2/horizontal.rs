@@ -42,16 +42,16 @@ where
         (self.left.claim(&witness.0), self.right.claim(&witness.1))
     }
 
-    fn dimensions2(&self) -> (usize, usize) {
-        let left = self.left().dimensions2();
-        let right = self.right().dimensions2();
+    fn dimensions(&self) -> (usize, usize) {
+        let left = self.left().dimensions();
+        let right = self.right().dimensions();
         assert_eq!(left.1, right.1);
         (left.0 + right.0, left.1)
     }
 
     fn constraints(&self, claim: &Self::Claim) -> Vec<RationalExpression> {
         use RationalExpression::*;
-        let (left_polynomials, _) = self.left().dimensions2();
+        let (left_polynomials, _) = self.left().dimensions();
         let left = self.left().constraints(&claim.0);
         let right = self.right().constraints(&claim.1);
         let right = right
@@ -71,17 +71,17 @@ where
         result
     }
 
-    fn trace2<P: PolyWriter>(&self, trace: &mut P, witness: &Self::Witness) {
-        let left_dim = self.left.dimensions2();
-        let right_dim = self.right.dimensions2();
+    fn trace<P: PolyWriter>(&self, trace: &mut P, witness: &Self::Witness) {
+        let left_dim = self.left.dimensions();
+        let right_dim = self.right.dimensions();
         let mut left_trace = Mapped::new(trace, left_dim, |polynomial, location| {
             (polynomial, location)
         });
-        self.left.trace2(&mut left_trace, &witness.0);
+        self.left.trace(&mut left_trace, &witness.0);
         let mut right_trace = Mapped::new(trace, right_dim, |polynomial, location| {
             (polynomial + left_dim.0, location)
         });
-        self.right.trace2(&mut right_trace, &witness.1)
+        self.right.trace(&mut right_trace, &witness.1)
     }
 }
 

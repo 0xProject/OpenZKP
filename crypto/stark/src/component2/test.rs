@@ -39,7 +39,7 @@ impl Component for Test {
         witness.0.clone()
     }
 
-    fn dimensions2(&self) -> (usize, usize) {
+    fn dimensions(&self) -> (usize, usize) {
         (self.columns, self.rows)
     }
 
@@ -81,8 +81,8 @@ impl Component for Test {
         constraints
     }
 
-    fn trace2<P: PolyWriter>(&self, trace: &mut P, witness: &Self::Witness) {
-        debug_assert_eq!(trace.dimensions(), self.dimensions2());
+    fn trace<P: PolyWriter>(&self, trace: &mut P, witness: &Self::Witness) {
+        debug_assert_eq!(trace.dimensions(), self.dimensions());
 
         // Generator for the sequence
         let mut x0 = self.seed.clone();

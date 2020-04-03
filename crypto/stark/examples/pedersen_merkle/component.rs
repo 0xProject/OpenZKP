@@ -51,7 +51,7 @@ impl Component for MerkleTreeLayer {
 
     fn claim(&self, _witness: &Self::Witness) -> Self::Claim {}
 
-    fn dimensions2(&self) -> (usize, usize) {
+    fn dimensions(&self) -> (usize, usize) {
         (8, 256)
     }
 
@@ -135,7 +135,7 @@ impl Component for MerkleTreeLayer {
         constraints
     }
 
-    fn trace2<P: PolyWriter>(&self, trace: &mut P, (leaf, sibling, direction): &Self::Witness) {
+    fn trace<P: PolyWriter>(&self, trace: &mut P, (leaf, sibling, direction): &Self::Witness) {
         let (left, right) = if *direction {
             (sibling, leaf)
         } else {
@@ -213,8 +213,8 @@ impl Component for MerkleTree {
         witness.into()
     }
 
-    fn dimensions2(&self) -> (usize, usize) {
-        self.layers.dimensions2()
+    fn dimensions(&self) -> (usize, usize) {
+        self.layers.dimensions()
     }
 
     fn constraints(&self, claim: &Self::Claim) -> Vec<RationalExpression> {
@@ -223,7 +223,7 @@ impl Component for MerkleTree {
         let mut constraints = self.layers.constraints(&fake_claim);
 
         // Construct constraints
-        let (polynomials, size) = self.dimensions2();
+        let (polynomials, size) = self.dimensions();
         let path_length = self.layers.size();
         let trace_length = size;
         let root = claim.root.clone();
@@ -254,7 +254,7 @@ impl Component for MerkleTree {
 
         // The final hash equals `root`
         let hash = self.layers.element().hash();
-        let row_index = hash.0 + (path_length - 1) * self.layers.element().dimensions2().1;
+        let row_index = hash.0 + (path_length - 1) * self.layers.element().dimensions().1;
         constraints.insert(1, (Constant(root) - hash.1) / row(row_index));
 
         // Add column constraints
@@ -265,7 +265,7 @@ impl Component for MerkleTree {
         constraints
     }
 
-    fn trace2<P: PolyWriter>(&self, trace: &mut P, witness: &Self::Witness) {
+    fn trace<P: PolyWriter>(&self, trace: &mut P, witness: &Self::Witness) {
         let witness = witness
             .path
             .iter()
@@ -280,7 +280,7 @@ impl Component for MerkleTree {
                 Some(layer)
             })
             .collect::<Vec<_>>();
-        self.layers.trace2(trace, &witness)
+        self.layers.trace(trace, &witness)
     }
 }
 

@@ -22,7 +22,7 @@ pub(crate) fn starkware_example() {
 
     info!("Constructing component...");
     let component = MerkleTree::new(witness.path.len());
-    let (polynomials, size) = component.dimensions2();
+    let (polynomials, size) = component.dimensions();
     info!("Constructed {:?} trace", (polynomials, size));
     info!(
         "Constructed {:?} constraints",

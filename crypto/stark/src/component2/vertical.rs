@@ -45,8 +45,8 @@ where
             .collect::<Vec<_>>()
     }
 
-    fn dimensions2(&self) -> (usize, usize) {
-        let (polynomials, size) = self.element.dimensions2();
+    fn dimensions(&self) -> (usize, usize) {
+        let (polynomials, size) = self.element.dimensions();
         (polynomials, self.size * size)
     }
 
@@ -69,14 +69,14 @@ where
             .collect::<Vec<_>>()
     }
 
-    fn trace2<P: PolyWriter>(&self, trace: &mut P, witness: &Self::Witness) {
-        let (polynomials, size) = self.element.dimensions2();
+    fn trace<P: PolyWriter>(&self, trace: &mut P, witness: &Self::Witness) {
+        let (polynomials, size) = self.element.dimensions();
         witness.iter().enumerate().for_each(|(i, witness)| {
             let mut transformed =
                 Mapped::new(trace, (polynomials, size), |polynomial, location| {
                     (polynomial, location + i * size)
                 });
-            self.element.trace2(&mut transformed, witness);
+            self.element.trace(&mut transformed, witness);
         })
     }
 }

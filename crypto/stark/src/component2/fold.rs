@@ -48,8 +48,8 @@ where
         self.element.claim(witness)
     }
 
-    fn dimensions2(&self) -> (usize, usize) {
-        let (polynomials, size) = self.element.dimensions2();
+    fn dimensions(&self) -> (usize, usize) {
+        let (polynomials, size) = self.element.dimensions();
         let reduction = 1 << self.folds;
         (ceil_div(polynomials, reduction), size * reduction)
     }
@@ -79,15 +79,15 @@ where
             .collect::<Vec<_>>()
     }
 
-    fn trace2<P: PolyWriter>(&self, trace: &mut P, witness: &Self::Witness) {
+    fn trace<P: PolyWriter>(&self, trace: &mut P, witness: &Self::Witness) {
         let reduction = 1 << self.folds;
-        let mut trace = Mapped::new(trace, self.element.dimensions2(), |polynomial, location| {
+        let mut trace = Mapped::new(trace, self.element.dimensions(), |polynomial, location| {
             let polynomial_folded = permute_index(reduction, polynomial % reduction);
             let polynomial = polynomial / reduction;
             let location = location * reduction + polynomial_folded;
             (polynomial, location)
         });
-        self.element.trace2(&mut trace, witness)
+        self.element.trace(&mut trace, witness)
     }
 }
 

@@ -50,22 +50,22 @@ pub trait Component {
 
     fn claim(&self, witness: &Self::Witness) -> Self::Claim;
 
-    fn dimensions2(&self) -> (usize, usize);
+    fn dimensions(&self) -> (usize, usize);
 
     fn constraints(&self, claim: &Self::Claim) -> Vec<RationalExpression>;
 
-    fn trace2<P: PolyWriter>(&self, trace: &mut P, witness: &Self::Witness);
+    fn trace<P: PolyWriter>(&self, trace: &mut P, witness: &Self::Witness);
 
     /// Construct a trace table
     fn trace_table(&self, witness: &Self::Witness) -> TraceTable {
-        let (polynomials, size) = self.dimensions2();
+        let (polynomials, size) = self.dimensions();
         let mut trace_table = TraceTable::new(size, polynomials);
-        self.trace2(&mut trace_table, witness);
+        self.trace(&mut trace_table, witness);
         trace_table
     }
 
     fn prove(&self, witness: &Self::Witness) -> Result<Proof, ProverError> {
-        let (polynomials, size) = self.dimensions2();
+        let (polynomials, size) = self.dimensions();
         let claim = self.claim(witness);
         let channel_seed = Vec::new();
         let expressions = self.constraints(&claim);
@@ -76,7 +76,7 @@ pub trait Component {
     }
 
     fn verify(&self, claim: &Self::Claim, proof: &Proof) -> Result<(), VerifierError> {
-        let (polynomials, size) = self.dimensions2();
+        let (polynomials, size) = self.dimensions();
         let channel_seed = Vec::new();
         let expressions = self.constraints(claim);
         let constraints =
@@ -85,7 +85,7 @@ pub trait Component {
     }
 
     fn check(&self, witness: &Self::Witness) -> Result<(), (usize, usize)> {
-        let (polynomials, size) = self.dimensions2();
+        let (polynomials, size) = self.dimensions();
         let claim = self.claim(witness);
         let channel_seed = Vec::new();
         let expressions = self.constraints(&claim);

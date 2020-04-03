@@ -17,7 +17,7 @@ impl Component for Empty {
 
     fn claim(&self, _witness: &Self::Witness) -> Self::Claim {}
 
-    fn dimensions2(&self) -> (usize, usize) {
+    fn dimensions(&self) -> (usize, usize) {
         (self.0, self.1)
     }
 
@@ -25,7 +25,7 @@ impl Component for Empty {
         Vec::new()
     }
 
-    fn trace2<P: PolyWriter>(&self, _trace: &mut P, _witness: &Self::Witness) {}
+    fn trace<P: PolyWriter>(&self, _trace: &mut P, _witness: &Self::Witness) {}
 }
 
 #[cfg(test)]
