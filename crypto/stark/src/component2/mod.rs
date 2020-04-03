@@ -27,27 +27,21 @@ pub use vertical::Vertical;
 ///
 /// ```
 /// ```
-pub trait Polynomials: IndexMut<(usize, usize), Output = FieldElement> {
-    /// The number of Polynomials in the set.
-    fn count(&self) -> usize;
+pub trait PolyWriter {
+    /// Returns (number of polynomials, number of locations)
+    fn dimensions(&self) -> (usize, usize);
 
-    /// The size of the `n`-th Polynomial
-    ///
-    /// A polynomial's `size` is $\deg(P) + 1$ and represents the number of
-    /// distinct values it can represent.
-    ///
-    /// Panics if `n > count()`.
-    fn size(&self, n: usize) -> usize;
+    /// Write to a given location
+    fn write(&mut self, polynomial: usize, location: usize, value: &FieldElement);
 }
 
-impl PolynomialBuilder for TraceTable {
-    fn count(&self) -> usize {
-        self.num_columns()
+impl PolyWriter for TraceTable {
+    fn dimensions(&self) -> (usize, usize) {
+        TraceTable::dimensions(self)
     }
 
-    fn size(&self, n: usize) -> usize {
-        assert!(n < self.num_columns());
-        self.num_rows()
+    fn write(&mut self, polynomial: usize, location: usize, value: &FieldElement) {
+        self[(location, polynomial)] = value.clone()
     }
 }
 
