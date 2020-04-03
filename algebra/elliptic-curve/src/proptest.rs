@@ -47,14 +47,14 @@ mod tests {
     proptest!(
         #[test]
         fn affine_on_curve(a: Affine) {
-            prop_assert!(a.on_curve());
+            prop_assert!(a.is_on_curve());
         }
     );
 
     proptest!(
         #[test]
         fn jacobian_on_curve(j: Jacobian) {
-            prop_assert!(j.on_curve());
+            prop_assert!(j.is_on_curve());
         }
     );
 }

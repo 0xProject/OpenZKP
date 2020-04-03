@@ -25,9 +25,9 @@ impl Jacobian {
     };
 
     #[must_use]
-    pub fn on_curve(&self) -> bool {
+    pub fn is_on_curve(&self) -> bool {
         // TODO: Compute without inverting Z
-        Affine::from(self).on_curve()
+        Affine::from(self).is_on_curve()
     }
 
     pub fn double_assign(&mut self) {
