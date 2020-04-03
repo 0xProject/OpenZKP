@@ -19,6 +19,7 @@ pub use empty::Empty;
 pub use fold::Fold;
 pub use horizontal::Horizontal;
 pub use test::Test;
+pub use transformed::{Transform, Transformed};
 pub use vertical::Vertical;
 
 /// A set of Polynomials represented by their values at roots of unity.

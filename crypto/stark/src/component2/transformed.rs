@@ -1,7 +1,8 @@
-use super::PolynomialBuilder;
+use super::PolyWriter;
+use itertools::Itertools;
 use std::ops::{Index, IndexMut};
 
-struct Transform {
+pub struct Transform {
     polynomial: usize,
     size:       usize,
     offset:     usize,
@@ -13,51 +14,39 @@ impl Transform {
         self.size
     }
 
-    fn map(&self, index: usize) -> (usize, usize) {
-        assert!(index < self.size);
-        (self.polynomial, self.offset + self.stride * index)
+    fn map(&self, location: usize) -> (usize, usize) {
+        assert!(location < self.size);
+        (self.polynomial, self.offset + self.stride * location)
     }
 }
 
-pub struct Transformed<P: PolynomialBuilder> {
-    inner:       P,
-    polynomials: Vec<Transform>,
+pub struct Transformed<'a, P: PolyWriter> {
+    inner:   &'a mut P,
+    mapping: Vec<Transform>,
 }
 
-impl<P: PolynomialBuilder> Transformed<P> {
-    pub fn take(self) -> P {
-        self.inner
+impl<'a, P: PolyWriter> Transformed<'a, P> {
+    pub fn new(inner: &'a mut P, mapping: Vec<Transform>) -> Self {
+        assert!(mapping.iter().map(|t| t.size()).all_equal());
+        Self { inner, mapping }
+    }
+
+    pub fn map(&self, polynomial: usize, location: usize) -> (usize, usize) {
+        assert!(polynomial < self.mapping.len());
+        self.mapping[polynomial].map(location)
     }
 }
 
-impl<P: PolynomialBuilder> Transformed<P> {
-    fn map(&self, (polynomial, index): (usize, usize)) -> (usize, usize) {
-        assert!(polynomial < self.polynomials.len());
-        self.polynomials[polynomial].map(index)
-    }
-}
-
-impl<P: PolynomialBuilder> Index<(usize, usize)> for Transformed<P> {
-    type Output = <P as Index<(usize, usize)>>::Output;
-
-    fn index(&self, index: (usize, usize)) -> &Self::Output {
-        self.inner.index(self.map(index))
-    }
-}
-
-impl<P: PolynomialBuilder> IndexMut<(usize, usize)> for Transformed<P> {
-    fn index_mut(&mut self, index: (usize, usize)) -> &mut Self::Output {
-        self.inner.index_mut(self.map(index))
-    }
-}
-
-impl<P: PolynomialBuilder> PolynomialBuilder for Transformed<P> {
-    fn count(&self) -> usize {
-        self.polynomials.len()
+impl<'a, P: PolyWriter> PolyWriter for Transformed<'a, P> {
+    fn dimensions(&self) -> (usize, usize) {
+        (
+            self.mapping.len(),
+            self.mapping.first().map_or(0, |t| t.size()),
+        )
     }
 
-    fn size(&self, polynomial: usize) -> std::primitive::usize {
-        assert!(polynomial < self.polynomials.len());
-        self.polynomials[polynomial].size()
+    fn write(&mut self, polynomial: usize, location: usize, value: &zkp_primefield::FieldElement) {
+        let (polynomial, location) = self.map(polynomial, location);
+        self.inner.write(polynomial, location, value)
     }
 }
