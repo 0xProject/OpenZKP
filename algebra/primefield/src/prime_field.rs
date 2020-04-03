@@ -434,6 +434,12 @@ where
     }
 }
 
+impl<P: Parameters> Default for PrimeField<P> {
+    fn default() -> Self {
+        Self::zero()
+    }
+}
+
 // TODO: Find a way to create generic implementations of these
 impl<P: Parameters<UInt = U256>> From<PrimeField<P>> for U256 {
     #[inline(always)]

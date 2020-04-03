@@ -1,5 +1,4 @@
 use crate::{Parameters, PrimeField};
-use num_traits::identities::Zero;
 use std::marker::PhantomData;
 use zkp_macros_decl::u256h;
 use zkp_u256::{to_montgomery_const, U256};
@@ -47,11 +46,5 @@ impl FieldElement {
             uint,
             _parameters: PhantomData,
         }
-    }
-}
-
-impl Default for FieldElement {
-    fn default() -> Self {
-        Self::zero()
     }
 }
