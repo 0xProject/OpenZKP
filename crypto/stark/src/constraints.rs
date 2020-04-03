@@ -82,6 +82,7 @@ impl Constraints {
         if num_reductions % 3 != 0 {
             fri_layout.push(num_reductions % 3);
         }
+        fri_layout = vec![3, 3, 2];
         fri_layout
     }
 
@@ -105,8 +106,8 @@ impl Constraints {
             trace_ncolumns,
             expressions,
             blowup: 16,
-            pow_bits: 0,
-            num_queries: 45,
+            pow_bits: 10,
+            num_queries: 20,
             fri_layout: Self::default_fri_layout(trace_nrows),
         })
     }

@@ -6,7 +6,7 @@ import '../public_coin.sol';
 import '../stark_verifier.sol';
 
 
-// This trivial fibonachi system returns constant values which are true only for one proof
+// This trivial Fibonacci system returns constant values which are true only for one proof
 // It should only be used for testing purposes
 contract TrivialFib is ConstraintSystem {
     // These constants are derived from the small fib example in rust

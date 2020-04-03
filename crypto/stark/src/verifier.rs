@@ -10,6 +10,7 @@ use zkp_primefield::{
     fft, geometric_series::root_series, FieldElement, One, Pow, Root, SquareInline, Zero,
 };
 use zkp_u256::U256;
+use hex::encode;
 
 type Result<T> = std::result::Result<T, Error>;
 
@@ -221,6 +222,7 @@ pub fn verify(constraints: &Constraints, proof: &Proof) -> Result<()> {
     let last_layer_coefficients = channel.replay_fri_layer(fri_size / constraints.blowup);
 
     // Gets the proof of work from the proof.
+    println!("Iternal coin state {:?}", encode(channel.coin.digest));
     let pow_seed: proof_of_work::ChallengeSeed = channel.get_random();
     let pow_challenge = pow_seed.with_difficulty(constraints.pow_bits);
     let pow_response: proof_of_work::Response = channel.replay();
