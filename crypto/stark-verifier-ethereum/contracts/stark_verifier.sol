@@ -25,7 +25,7 @@ contract StarkVerifier is ProofOfWork, Fri {
         bytes32 trace_commitment;
         // The trace table evaluated constraint values at the the query indices.
         bytes32[] constraint_values;
-        // The commitmnet to thos constraint values
+        // The commitment to thos constraint values
         bytes32 constraint_commitment;
         // The trace values used for the oods point constraint evaluation
         bytes32[] trace_oods_values;
