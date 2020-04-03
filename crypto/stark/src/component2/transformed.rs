@@ -1,6 +1,7 @@
 use super::PolyWriter;
 use itertools::Itertools;
 use std::ops::{Index, IndexMut};
+use zkp_primefield::FieldElement;
 
 pub struct Transform {
     polynomial: usize,
@@ -45,7 +46,7 @@ impl<'a, P: PolyWriter> PolyWriter for Transformed<'a, P> {
         )
     }
 
-    fn write(&mut self, polynomial: usize, location: usize, value: &zkp_primefield::FieldElement) {
+    fn write(&mut self, polynomial: usize, location: usize, value: FieldElement) {
         let (polynomial, location) = self.map(polynomial, location);
         self.inner.write(polynomial, location, value)
     }

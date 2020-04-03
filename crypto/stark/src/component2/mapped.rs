@@ -24,7 +24,7 @@ impl<'a, P: PolyWriter, F: Fn(usize, usize) -> (usize, usize)> PolyWriter for Ma
         self.dimensions
     }
 
-    fn write(&mut self, polynomial: usize, location: usize, value: &FieldElement) {
+    fn write(&mut self, polynomial: usize, location: usize, value: FieldElement) {
         debug_assert!(polynomial < self.dimensions.0);
         debug_assert!(location < self.dimensions.1);
         let (polynomial, location) = (self.map)(polynomial, location);

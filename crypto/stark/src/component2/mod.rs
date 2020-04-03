@@ -25,17 +25,12 @@ pub use transformed::{Transform, Transformed};
 pub use vertical::Vertical;
 
 /// A set of Polynomials represented by their values at roots of unity.
-///
-/// $P_0, P_1, \dots P_{n-1}$ of individual degrees $\deg P_i$.
-///
-/// ```
-/// ```
 pub trait PolyWriter {
     /// Returns (number of polynomials, number of locations)
     fn dimensions(&self) -> (usize, usize);
 
     /// Write to a given location
-    fn write(&mut self, polynomial: usize, location: usize, value: &FieldElement);
+    fn write(&mut self, polynomial: usize, location: usize, value: FieldElement);
 }
 
 impl PolyWriter for TraceTable {
@@ -43,8 +38,8 @@ impl PolyWriter for TraceTable {
         TraceTable::dimensions(self)
     }
 
-    fn write(&mut self, polynomial: usize, location: usize, value: &FieldElement) {
-        self[(location, polynomial)] = value.clone()
+    fn write(&mut self, polynomial: usize, location: usize, value: FieldElement) {
+        self[(location, polynomial)] = value
     }
 }
 
@@ -70,7 +65,11 @@ pub trait Component {
         let trace_table = self.trace(claim, witness);
         for location in 0..trace_table.num_rows() {
             for polynomial in 0..trace_table.num_columns() {
-                trace.write(polynomial, location, &trace_table[(location, polynomial)]);
+                trace.write(
+                    polynomial,
+                    location,
+                    trace_table[(location, polynomial)].clone(),
+                );
             }
         }
     }

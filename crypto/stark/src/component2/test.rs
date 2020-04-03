@@ -94,7 +94,7 @@ impl Component for Test {
         for i in 0..(self.rows * self.columns) {
             let polynomial = i % self.columns;
             let location = i / self.columns;
-            trace.write(polynomial, location, &next());
+            trace.write(polynomial, location, next());
         }
     }
 }

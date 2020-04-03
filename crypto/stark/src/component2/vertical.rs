@@ -76,30 +76,6 @@ where
                 self.element.trace2(&mut transformed, claim, witness);
             })
     }
-
-    // fn trace(&self, claim: &Self::Claim, witness: &Self::Witness) -> TraceTable {
-    // assert_eq!(claim.len(), self.size);
-    // assert_eq!(witness.len(), self.size);
-    // let (element_rows, columns) = self.element.dimensions();
-    // let rows = element_rows * self.size;
-    // let mut trace = TraceTable::new(rows, columns);
-    // claim
-    // .iter()
-    // .zip(witness.iter())
-    // .map(|(claim, witness)| self.element.trace(claim, witness))
-    // .enumerate()
-    // .for_each(|(i, element_trace)| {
-    // assert_eq!(element_trace.num_rows(), element_rows);
-    // assert_eq!(element_trace.num_columns(), columns);
-    // let start = i * element_rows;
-    // for i in 0..element_rows {
-    // for j in 0..columns {
-    // trace[(start + i, j)] = element_trace[(i, j)].clone();
-    // }
-    // }
-    // });
-    // trace
-    // }
 }
 
 #[cfg(test)]
