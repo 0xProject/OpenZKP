@@ -49,20 +49,27 @@ pub trait Component {
     type Claim;
     type Witness;
 
+    // TODO: Order as (polynomials, locations)
     fn dimensions(&self) -> (usize, usize);
 
     fn constraints(&self, claim: &Self::Claim) -> Vec<RationalExpression>;
 
-    fn trace2<P: PolynomialBuilder>(
-        &self,
-        trace: &mut P,
-        claim: &Self::Claim,
-        witness: &Self::Witness,
-    ) {
-        unimplemented!()
+    fn trace2<P: PolyWriter>(&self, trace: &mut P, claim: &Self::Claim, witness: &Self::Witness) {
+        let trace_table = self.trace(claim, witness);
+        for location in 0..trace_table.num_rows() {
+            for polynomial in 0..trace_table.num_columns() {
+                trace.write(polynomial, location, &trace_table[(location, polynomial)]);
+            }
+        }
     }
 
-    fn trace(&self, claim: &Self::Claim, witness: &Self::Witness) -> TraceTable;
+    // TODO: Drop `claim` from `trace`
+    fn trace(&self, claim: &Self::Claim, witness: &Self::Witness) -> TraceTable {
+        let (locations, polynomials) = self.dimensions();
+        let mut trace = TraceTable::new(locations, polynomials);
+        self.trace2(&mut trace, claim, witness);
+        trace
+    }
 
     fn prove(&self, claim: &Self::Claim, witness: &Self::Witness) -> Result<Proof, ProverError> {
         let trace_nrows = self.dimensions();
