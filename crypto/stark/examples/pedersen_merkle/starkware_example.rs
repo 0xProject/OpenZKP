@@ -1,11 +1,11 @@
 use crate::{
-    component::pedersen_merkle,
+    component::MerkleTree,
     inputs::{Claim, Witness},
 };
 use log::info;
 use zkp_macros_decl::{field_element, hex};
 use zkp_primefield::FieldElement;
-use zkp_stark::{prove, Constraints};
+use zkp_stark::{component2::Component, prove, Constraints};
 use zkp_u256::U256;
 
 pub(crate) fn starkware_example() {
@@ -20,26 +20,26 @@ pub(crate) fn starkware_example() {
     claim.verify(&witness);
 
     info!("Constructing component...");
-    let component = pedersen_merkle(&claim, &witness);
+    let component = MerkleTree::new(witness.path.len());
+    info!("Constructed {:?} trace", component.dimensions());
     info!(
-        "Constructed {:?}x{:?} trace",
-        component.trace.num_rows(),
-        component.trace.num_columns()
+        "Constructed {:?} constraints",
+        component.constraints(&claim).len()
     );
-    info!("Constructed {:?} constraints", component.constraints.len());
 
     info!("Constructing proof...");
     let mut constraints = Constraints::from_expressions(
-        (component.trace.num_rows(), component.trace.num_columns()),
+        component.dimensions(),
         (&claim).into(),
-        component.constraints,
+        component.constraints(&claim),
     )
     .expect("Could not create Constraint object");
     constraints.blowup = 16;
     constraints.pow_bits = 28;
     constraints.num_queries = 13;
     constraints.fri_layout = vec![3, 3, 3, 3, 2];
-    let proof = prove(&constraints, &component.trace).unwrap();
+    let trace = component.trace(&claim, &witness);
+    let proof = prove(&constraints, &trace).unwrap();
 
     info!("Spot checking proof...");
     assert_eq!(
