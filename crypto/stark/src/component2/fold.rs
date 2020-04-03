@@ -1,4 +1,4 @@
-use super::Component;
+use super::{Component, Mapped, PolyWriter};
 use crate::{RationalExpression, TraceTable};
 use zkp_primefield::fft::permute_index;
 
@@ -44,12 +44,10 @@ where
     type Claim = Element::Claim;
     type Witness = Element::Witness;
 
-    fn dimensions(&self) -> (usize, usize) {
-        let (rows, columns) = self.element.dimensions();
-        dbg!(columns);
-        dbg!(1 << self.folds);
-        dbg!(ceil_div(columns, 1 << self.folds));
-        (rows << self.folds, ceil_div(columns, 1 << self.folds))
+    fn dimensions2(&self) -> (usize, usize) {
+        let (polynomials, locations) = self.element.dimensions2();
+        let reduction = 1 << self.folds;
+        (ceil_div(polynomials, reduction), locations * reduction)
     }
 
     fn constraints(&self, claim: &Self::Claim) -> Vec<RationalExpression> {
@@ -77,17 +75,15 @@ where
             .collect::<Vec<_>>()
     }
 
-    fn trace(&self, claim: &Self::Claim, witness: &Self::Witness) -> TraceTable {
-        let element_trace = self.element.trace(claim, witness);
-        let (rows, columns) = self.dimensions();
-        dbg!(rows, columns);
-        let mut trace = TraceTable::new(rows, columns);
-        for i in 0..element_trace.num_rows() {
-            for j in 0..element_trace.num_columns() {
-                trace[self.map_up(i, j)] = element_trace[(i, j)].clone();
-            }
-        }
-        trace
+    fn trace2<P: PolyWriter>(&self, trace: &mut P, claim: &Self::Claim, witness: &Self::Witness) {
+        let reduction = 1 << self.folds;
+        let mut trace = Mapped::new(trace, self.element.dimensions2(), |polynomial, location| {
+            let polynomial_folded = permute_index(reduction, polynomial % reduction);
+            let polynomial = polynomial / reduction;
+            let location = location * reduction + polynomial_folded;
+            (polynomial, location)
+        });
+        self.element.trace2(&mut trace, claim, witness)
     }
 }
 
