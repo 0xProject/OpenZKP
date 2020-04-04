@@ -381,7 +381,7 @@ pub fn prove(constraints: &Constraints, trace: &TraceTable) -> Result<Proof> {
     );
     let trace_lde = PolyLDE(
         trace_polynomials
-            .par_iter()
+            .iter()
             .map(|p| p.low_degree_extension(constraints.blowup))
             .collect::<Vec<_>>(),
     );
@@ -418,7 +418,7 @@ pub fn prove(constraints: &Constraints, trace: &TraceTable) -> Result<Proof> {
     info!("Compute the low degree extension of constraint polynomials.");
     let constraint_lde = PolyLDE(
         constraint_polynomials
-            .par_iter()
+            .iter()
             .map(|p| p.low_degree_extension(constraints.blowup))
             .collect::<Vec<_>>(),
     );
@@ -961,7 +961,7 @@ mod tests {
         assert_eq!(TPn[0].evaluate(&g.pow(1000_usize)), trace[(1000, 0)]);
 
         let LDEn = PolyLDE(
-            TPn.par_iter()
+            TPn.iter()
                 .map(|p| p.low_degree_extension(constraints.blowup))
                 .collect::<Vec<_>>(),
         );
@@ -1030,7 +1030,7 @@ mod tests {
         assert_eq!(constraint_polynomials[0].len(), 1024);
         let CC = PolyLDE(
             constraint_polynomials
-                .par_iter()
+                .iter()
                 .map(|p| p.low_degree_extension(constraints.blowup))
                 .collect::<Vec<_>>(),
         );
