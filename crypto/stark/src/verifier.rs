@@ -210,23 +210,14 @@ pub fn verify(constraints: &Constraints, proof: &Proof) -> Result<()> {
 
     let mut fri_commitments: Vec<Commitment> = Vec::with_capacity(constraints.fri_layout.len() + 1);
     let mut eval_points: Vec<FieldElement> = Vec::with_capacity(constraints.fri_layout.len() + 1);
-    let mut fri_size = eval_domain_size >> constraints.fri_layout[0];
-    // Get first fri root:
-    fri_commitments.push(Commitment::from_size_hash(fri_size, &channel.replay())?);
+    let mut fri_size = eval_domain_size;
     // Get fri roots and eval points from the channel random
-    for &x in constraints.fri_layout.iter().skip(1) {
-        fri_size >>= x;
-        // TODO: When is x equal to zero?
-        let eval_point = if x == 0 {
-            FieldElement::one()
-        } else {
-            channel.get_random()
-        };
-        eval_points.push(eval_point);
+    for &num_folds in &constraints.fri_layout {
+        fri_size >>= num_folds;
         fri_commitments.push(Commitment::from_size_hash(fri_size, &channel.replay())?);
+        eval_points.push(channel.get_random());
     }
-    // Gets the last layer and the polynomial coefficients
-    eval_points.push(channel.get_random());
+    // Gets the last layer coeffiencts
     let last_layer_coefficients = channel.replay_fri_layer(fri_size / constraints.blowup);
 
     // Gets the proof of work from the proof.
