@@ -10,6 +10,7 @@ use zkp_primefield::{
     fft, geometric_series::root_series, FieldElement, One, Pow, Root, SquareInline, Zero,
 };
 use zkp_u256::U256;
+use log::trace;
 
 type Result<T> = std::result::Result<T, Error>;
 
@@ -172,6 +173,7 @@ impl From<MerkleError> for Error {
 // TODO: Refactor into smaller function
 #[allow(clippy::too_many_lines)]
 pub fn verify(constraints: &Constraints, proof: &Proof) -> Result<()> {
+    trace!("BEGIN Verify");
     let proof = proof.as_bytes();
     let trace_length = constraints.trace_nrows();
     let trace_cols = constraints.trace_ncolumns();
@@ -383,6 +385,7 @@ pub fn verify(constraints: &Constraints, proof: &Proof) -> Result<()> {
     {
         return Err(Error::OodsMismatch);
     }
+    trace!("END Verify");
     Ok(())
 }
 

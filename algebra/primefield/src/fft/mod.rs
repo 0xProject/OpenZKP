@@ -68,29 +68,35 @@ where
             .inv()
             .expect("No inverse length for empty list");
         self.fft_root(&inverse_root);
+        trace!("BEGIN Inverse shift");
         for e in self.iter_mut() {
             *e *= &inverse_length;
         }
+        trace!("END Inverse shift");
     }
 
     fn fft_cofactor(&mut self, cofactor: &Field) {
         // TODO: This patterns happens often, abstract?
+        trace!("BEGIN Cofactor shift");
         let mut c = Field::one();
         for element in self.iter_mut() {
             *element *= &c;
             c *= cofactor;
         }
+        trace!("END Cofactor shift");
         self.fft();
     }
 
     fn ifft_cofactor(&mut self, cofactor: &Field) {
         self.ifft();
         let cofactor = cofactor.inv().expect("Can not invert cofactor");
+        trace!("BEGIN Cofactor shift");
         let mut c = Field::one();
         for element in self.iter_mut() {
             *element *= &c;
             c *= &cofactor;
         }
+        trace!("END Cofactor shift");
     }
 
     fn fft_root(&mut self, root: &Field) {
@@ -114,9 +120,11 @@ where
 {
     debug_assert!(size.is_power_of_two());
     debug_assert!(root.pow(size).is_one());
+    trace!("BEGIN FFT Twiddles");
     trace!("Computing {} twiddles", size / 2);
     let mut twiddles = (0..size / 2).map(|i| root.pow(i)).collect::<Vec<_>>();
     permute(&mut twiddles);
+    trace!("END FFT Twiddles");
     twiddles
 }
 

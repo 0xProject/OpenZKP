@@ -16,12 +16,14 @@ pub fn transpose_square_stretch<T>(matrix: &mut [T], size: usize, stretch: usize
         size,
         stretch
     );
+    trace!("BEGIN Transpose");
     assert_eq!(matrix.len(), size * size * stretch);
     match stretch {
         1 => transpose_square_1(matrix, size),
         2 => transpose_square_2(matrix, size),
         _ => unimplemented!("Only stretch sizes 1 and 2 are supported"),
     }
+    trace!("END Transpose");
 }
 
 // TODO: Handle odd sizes

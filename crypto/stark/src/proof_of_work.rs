@@ -1,5 +1,5 @@
 #[cfg(all(feature = "std", feature = "prover"))]
-use log::info;
+use log::{info, trace};
 #[cfg(all(feature = "std", feature = "prover"))]
 use rayon::prelude::*;
 use std::convert::TryFrom;
@@ -80,6 +80,7 @@ impl Challenge {
             "Solving {} bit proof of work with {} threads.",
             self.difficulty, num_threads
         );
+        trace!("BEGIN Proof of work");
         let first_nonce = AtomicU64::new(u64::max_value());
         (0..num_threads as u64).into_par_iter().for_each(|offset| {
             for nonce in (offset..).step_by(num_threads) {
@@ -91,6 +92,7 @@ impl Challenge {
                 }
             }
         });
+        trace!("END Proof of work");
         Response {
             nonce: first_nonce.into_inner(),
         }

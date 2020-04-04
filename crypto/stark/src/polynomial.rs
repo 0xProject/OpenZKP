@@ -7,6 +7,7 @@ use zkp_mmap_vec::MmapVec;
 use zkp_primefield::{fft::permute_index, Fft, Pow, Root};
 use zkp_primefield::{FieldElement, Zero};
 use zkp_u256::U256;
+use log::trace;
 
 #[derive(Clone)]
 pub struct DensePolynomial(MmapVec<FieldElement>);
@@ -85,6 +86,7 @@ impl DensePolynomial {
 
     #[cfg(feature = "std")]
     pub fn low_degree_extension(&self, blowup: usize) -> MmapVec<FieldElement> {
+        trace!("BEGIN Low degree extension");
         // TODO: shift polynomial by FieldElement::generator() outside of this function.
         // TODO: Parameterize cofactor
         let shift_factor: FieldElement = FieldElement::generator();
@@ -103,9 +105,12 @@ impl DensePolynomial {
             .enumerate()
             .for_each(|(i, slice)| {
                 let cofactor = &shift_factor * generator.pow(permute_index(blowup, i));
+                trace!("BEGIN Copy");
                 slice.clone_from_slice(&self.coefficients());
+                trace!("END Copy");
                 slice.fft_cofactor(&cofactor);
             });
+        trace!("END Low degree extension");
         result
     }
 
