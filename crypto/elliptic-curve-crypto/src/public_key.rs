@@ -38,7 +38,9 @@ impl PublicKey {
             &pubkey_factor,
         ))
         .x()
-        .map_or(false, |x| &ScalarFieldElement::from(x.to_uint()) == signature.r())
+        .map_or(false, |x| {
+            &ScalarFieldElement::from(x.to_uint()) == signature.r()
+        })
     }
 }
 

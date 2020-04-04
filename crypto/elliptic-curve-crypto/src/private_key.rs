@@ -18,7 +18,7 @@ pub struct PrivateKey(pub ScalarFieldElement);
 impl PrivateKey {
     pub fn sign(&self, digest: &ScalarFieldElement) -> Signature {
         for nonce in 0..1000 {
-            let k = self.get_k(digest, nonce);
+            let k = self.hash(digest, nonce);
             if k.is_zero() {
                 continue;
             }
@@ -40,7 +40,7 @@ impl PrivateKey {
         panic!("Could not find k for ECDSA after 1000 tries.")
     }
 
-    fn get_k(&self, digest: &ScalarFieldElement, nonce: u64) -> ScalarFieldElement {
+    fn hash(&self, digest: &ScalarFieldElement, nonce: u64) -> ScalarFieldElement {
         let mut output = [0; 32];
         let mut sha3 = Sha3::v256();
         sha3.update(
