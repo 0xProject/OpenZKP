@@ -105,10 +105,8 @@ impl DensePolynomial {
             .enumerate()
             .for_each(|(i, slice)| {
                 let cofactor = &shift_factor * generator.pow(permute_index(blowup, i));
-                trace!("BEGIN Copy");
-                slice.clone_from_slice(&self.coefficients());
-                trace!("END Copy");
-                slice.fft_cofactor(&cofactor);
+                slice.clone_shifted(&self.coefficients(), &cofactor);
+                slice.fft();
             });
         trace!("END Low degree extension");
         result

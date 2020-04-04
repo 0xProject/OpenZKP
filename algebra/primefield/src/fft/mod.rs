@@ -75,6 +75,17 @@ where
         trace!("END Inverse shift");
     }
 
+    fn clone_shifted(&mut self, source: &[Field], cofactor: &Field) {
+        trace!("BEGIN Clone shifted");
+        self.clone_from_slice(source);
+        let mut c = Field::one();
+        for element in self.iter_mut() {
+            *element *= &c;
+            c *= cofactor;
+        }
+        trace!("END Clone shifted");
+    }
+
     fn fft_cofactor(&mut self, cofactor: &Field) {
         // TODO: This patterns happens often, abstract?
         trace!("BEGIN Cofactor shift");
