@@ -20,6 +20,10 @@ impl PublicKey {
         self.0.x()
     }
 
+    pub fn affine(&self) -> &Affine {
+        &self.0
+    }
+
     pub fn verify(&self, digest: &ScalarFieldElement, signature: &Signature) -> bool {
         assert!(!signature.r().is_zero());
         assert!(!signature.w().is_zero());
@@ -27,15 +31,14 @@ impl PublicKey {
 
         let generator_factor = digest * signature.w();
         let pubkey_factor = signature.r() * signature.w();
-        match Affine::from(&double_base_mul(
+        Affine::from(&double_base_mul(
             &*GENERATOR_TABLE,
             &generator_factor,
             &self.0,
             &pubkey_factor,
-        )) {
-            Affine::Zero => false,
-            Affine::Point { x, .. } => &ScalarFieldElement::from(x.to_uint()) == signature.r(),
-        }
+        ))
+        .x()
+        .map_or(false, |x| &ScalarFieldElement::from(x.to_uint()) == signature.r())
     }
 }
 
