@@ -15,6 +15,7 @@ mod radix_sqrt;
 use crate::{Fft, FieldLike, Inv, Pow, RefFieldLike};
 use log::trace;
 use std::prelude::v1::*;
+use rayon::prelude::*;
 
 // Re-exports
 // TODO: Only re-export for bench
@@ -76,13 +77,17 @@ where
     }
 
     fn clone_shifted(&mut self, source: &[Field], cofactor: &Field) {
+        // TODO: Write benchmark and tune chunk size
+        const CHUNK_SIZE: usize = 1024;
         trace!("BEGIN Clone shifted");
-        self.clone_from_slice(source);
-        let mut c = Field::one();
-        for element in self.iter_mut() {
-            *element *= &c;
-            c *= cofactor;
-        }
+        let chunks = self.par_chunks_mut(CHUNK_SIZE).zip(source.par_chunks(CHUNK_SIZE));
+        chunks.enumerate().for_each(|(i, (destination, source))| {
+            let mut c = cofactor.pow(i * CHUNK_SIZE);
+            for (destination, source) in destination.iter_mut().zip(source.iter()) {
+                *destination = source * &c;
+                c *= cofactor;
+            }
+        });
         trace!("END Clone shifted");
     }
 
