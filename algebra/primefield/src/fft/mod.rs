@@ -13,6 +13,7 @@ mod transpose;
 mod radix_sqrt;
 
 use crate::{Fft, FieldLike, Inv, Pow, RefFieldLike};
+use log::trace;
 use std::prelude::v1::*;
 
 // Re-exports
@@ -99,11 +100,13 @@ where
             radix_sqrt(self, root);
         } else {
             let twiddles = get_twiddles(root, self.len());
+            trace!("Recursive FFT of size {}", self.len());
             fft_vec_recursive(self, &twiddles, 0, 1, 1);
         }
     }
 }
 
+// TODO: Memoize
 pub fn get_twiddles<Field>(root: &Field, size: usize) -> Vec<Field>
 where
     Field: FieldLike,
@@ -111,6 +114,7 @@ where
 {
     debug_assert!(size.is_power_of_two());
     debug_assert!(root.pow(size).is_one());
+    trace!("Computing {} twiddles", size / 2);
     let mut twiddles = (0..size / 2).map(|i| root.pow(i)).collect::<Vec<_>>();
     permute(&mut twiddles);
     twiddles

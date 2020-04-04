@@ -15,6 +15,7 @@ where
     Field: FieldLike + Send + Sync,
     for<'a> &'a Field: RefFieldLike<Field>,
 {
+    trace!("Radix FFT of size {}", values.len());
     if values.len() <= 1 {
         return;
     }

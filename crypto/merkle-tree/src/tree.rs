@@ -1,4 +1,5 @@
 use crate::{Commitment, Error, Index, Node, Proof, Result, VectorCommitment};
+use log::info;
 use std::collections::VecDeque;
 use zkp_error_utils::require;
 use zkp_hash::{Hash, Hashable};
@@ -55,6 +56,11 @@ impl<Container: VectorCommitment> Tree<Container> {
     }
 
     pub fn from_leaves_skip_layers(leaves: Container, skip_layers: usize) -> Result<Self> {
+        info!(
+            "Computing Merkle tree of size {} ({} skip layer)",
+            leaves.len(),
+            skip_layers
+        );
         let size = leaves.len();
         if size == 0 {
             return Ok(Self {

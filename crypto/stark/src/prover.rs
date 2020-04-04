@@ -6,7 +6,7 @@ use crate::{
     proof_of_work, verify, Proof, TraceTable, VerifierError,
 };
 use itertools::Itertools;
-use log::info;
+use log::{info, trace};
 use rayon::prelude::*;
 use std::{fmt, prelude::v1::*, vec};
 use zkp_hash::{Hash, Hashable, MaskedKeccak};
@@ -554,14 +554,19 @@ fn get_constraint_polynomials(
         trace_coset.num_rows(),
         eval_degree,
     );
+    trace!("Convert to DAG");
     let result = dag.expression(combined_constraints);
+
+    trace!("Compute lookup tables");
     dag.lookup_tables();
+
+    trace!("Tree-shake DAG");
     // TODO: Track and use result reference.
     let _ = dag.tree_shake(result);
     dag.init(0);
 
     // Evaluate on the coset trace table
-    info!("Evaluate on the coset trace table");
+    info!("Evaluate DAG on the coset trace table");
     let mut result: MmapVec<FieldElement> = MmapVec::with_capacity(coset_size);
     result.resize(coset_size, FieldElement::zero());
     let values = &mut result;

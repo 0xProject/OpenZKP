@@ -17,6 +17,7 @@ edition = "2018"
 crunchy = { version = "0.2.2", default_features = false }
 hex = { version = "0.4.0", optional = true }
 itertools = { version = "0.9.0", default_features = false }
+log = { version = "0.4.8", default_features = false }
 no-std-compat = { version = "0.3.0", features = [ "alloc" ] }
 rayon = { version = "1.0.3", optional = true }
 zkp-error-utils = { version = "0.1.0", path = "../../utils/error-utils", default_features = false }
@@ -42,6 +43,7 @@ std = [
     "crunchy/std",
     "hex",
     "itertools/use_std",
+    "log/std",
     "no-std-compat/std",
     "rayon",
     "zkp-error-utils/std",
