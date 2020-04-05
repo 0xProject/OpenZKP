@@ -507,19 +507,30 @@ pub fn prove(constraints: &Constraints, trace: &TraceTable) -> Result<Proof> {
     Ok(proof)
 }
 
+
+// Constructs a trace table on a coset domain of `size`.
 fn extract_trace_coset(trace_lde: &PolyLDE, size: usize) -> TraceTable {
     let trace_lde: &[MmapVec<FieldElement>] = &trace_lde.0;
     let lde_size = trace_lde[0].len();
-    let mut trace_coset = TraceTable::new(size, trace_lde.len());
+    let stride = lde_size / size;
     trace!("BEGIN Extract Trace Coset");
+    let mut trace_coset = TraceTable::new(size, trace_lde.len());
+    let mut column = MmapVec::with_capacity(size);
     let columns = trace_lde.len();
-    // OPT: Benchmark with flipped order of loops
-    for i in 0..trace_coset.num_rows() {
-        let index = i * lde_size / size;
-        let index = permute_index(lde_size, index);
-        for (j, lde) in trace_lde.iter().enumerate() {
-            trace_coset[(i, j)] = lde[index].clone();
+    // Column at a time: Copy from LDE to temp, permute temp, copy to trace.
+    for (j, lde) in trace_lde.iter().enumerate() {
+        trace!("BEGIN Column clone");
+        column.extend_from_slice(&lde[0..size]);
+        trace!("END Column clone");
+        trace!("BEGIN Column permute");
+        permute(&mut column);
+        trace!("END Column permute");
+        trace!("BEGIN Column to trace");
+        for (i, value) in column.iter().enumerate() {
+            trace_coset[(i,j)] = value.clone();
         }
+        trace!("END Column to trace");
+        column.resize(0, FieldElement::zero());
     }
     trace!("END Extract Trace Coset");
     trace_coset
