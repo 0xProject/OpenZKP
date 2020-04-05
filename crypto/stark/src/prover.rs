@@ -511,15 +511,16 @@ fn extract_trace_coset(trace_lde: &PolyLDE, size: usize) -> TraceTable {
     let trace_lde: &[MmapVec<FieldElement>] = &trace_lde.0;
     let lde_size = trace_lde[0].len();
     let mut trace_coset = TraceTable::new(size, trace_lde.len());
+    trace!("BEGIN Extract Trace Coset");
     // OPT: Benchmark with flipped order of loops
-    for i in 0..trace_coset.num_rows() {
+    for (i, lde) in trace_lde.iter().enumerate() {
+        let index = i * lde_size / size;
+        let index = permute_index(lde.len(), index);
         for j in 0..trace_coset.num_columns() {
-            let lde = &trace_lde[j];
-            let index = i * lde_size / size;
-            let index = permute_index(lde.len(), index);
             trace_coset[(i, j)] = lde[index].clone();
         }
     }
+    trace!("END Extract Trace Coset");
     trace_coset
 }
 
@@ -579,6 +580,7 @@ fn get_constraint_polynomials(
 
     // Evaluate on the coset trace table
     info!("Evaluate DAG on the coset trace table");
+    trace!("BEGIN Evaluate");
     let mut result: MmapVec<FieldElement> = MmapVec::with_capacity(coset_size);
     result.resize(coset_size, FieldElement::zero());
     let values = &mut result;
@@ -594,6 +596,7 @@ fn get_constraint_polynomials(
                 i += 1;
             }
         });
+    trace!("END Evaluate");
 
     info!("Convert from values to coefficients");
     // TODO: Re-use interpolation function form TraceTable

@@ -167,5 +167,5 @@ fn main() {
         .verify(&claim, &proof)
         .expect("Verification failed");
 
-    trace!("BEGIN Pedersen-Merkle");
+    trace!("END Pedersen-Merkle");
 }

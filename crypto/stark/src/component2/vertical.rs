@@ -70,6 +70,7 @@ where
     }
 
     fn trace<P: PolyWriter>(&self, trace: &mut P, witness: &Self::Witness) {
+        // TODO: Parallel witness generation
         let (polynomials, size) = self.element.dimensions();
         witness.iter().enumerate().for_each(|(i, witness)| {
             let mut transformed =

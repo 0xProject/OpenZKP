@@ -13,6 +13,7 @@ use crate::{
     Constraints, ProverError, RationalExpression, TraceTable,
 };
 use zkp_primefield::FieldElement;
+use log::trace;
 
 pub use empty::Empty;
 pub use fold::Fold;
@@ -56,9 +57,11 @@ pub trait Component {
 
     /// Construct a trace table
     fn trace_table(&self, witness: &Self::Witness) -> TraceTable {
+        trace!("BEGIN Component Trace");
         let (polynomials, size) = self.dimensions();
         let mut trace_table = TraceTable::new(size, polynomials);
         self.trace(&mut trace_table, witness);
+        trace!("END Component Trace");
         trace_table
     }
 
