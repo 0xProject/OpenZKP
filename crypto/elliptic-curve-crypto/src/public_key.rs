@@ -5,22 +5,14 @@ use zkp_primefield::*;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-#[derive(PartialEq, Eq, Clone)]
+#[derive(PartialEq, Eq, Clone, Default)]
 #[cfg_attr(feature = "std", derive(Debug))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct PublicKey(Affine);
 use crate::GENERATOR_TABLE;
 
 impl PublicKey {
-    pub fn new(x: FieldElement, y: FieldElement) -> Self {
-        Self(Affine::new(x, y))
-    }
-
-    pub fn x(&self) -> Option<&FieldElement> {
-        self.0.x()
-    }
-
-    pub fn affine(&self) -> &Affine {
+    pub fn as_affine(&self) -> &Affine {
         &self.0
     }
 
@@ -47,6 +39,12 @@ impl PublicKey {
 impl From<&PrivateKey> for PublicKey {
     fn from(private_key: &PrivateKey) -> Self {
         Self(Affine::from(&base_mul(&*GENERATOR_TABLE, &private_key.0)))
+    }
+}
+
+impl From<Affine> for PublicKey {
+    fn from(a: Affine) -> Self {
+        Self(a)
     }
 }
 
