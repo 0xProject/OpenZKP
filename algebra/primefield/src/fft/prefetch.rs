@@ -11,7 +11,7 @@
 use std::arch::x86_64::{_mm_prefetch, _MM_HINT_T0};
 use memadvise::{advise};
 use std::mem::size_of_val;
-pub use memadvise::Advice;
+use memadvise::Advice;
 
 pub trait Prefetch {
     /// Prefetch for reading
@@ -23,7 +23,7 @@ pub trait Prefetch {
 }
 
 pub trait Madvise {
-    fn madvise(&self, advice: Advice);
+    fn madvise(&mut self, advice: Advice);
 }
 
 pub trait PrefetchIndex<I>
@@ -66,21 +66,15 @@ impl<T> Prefetch for T {
 }
 
 impl<T> Madvise for [T] {
-    fn madvise(&self, advice: Advice) {
+    // TODO: Does this need to be `&mut self`?
+    fn madvise(&mut self, advice: Advice) {
         let length = size_of_val(self);
         if length == 0 {
             return;
         }
-        #[allow(unsafe_code)]
-        unsafe {
-            #[allow(trivial_casts)] // False positive
-            // TODO: Address must be page aligned
-            // TODO: Avoid transmuting so much
-            let address = self.as_ptr();
-            let address = std::mem::transmute::<*const T, usize>(address);
-            let address = std::mem::transmute::<usize, *mut ()>(address);
-            advise(address, length, advice).unwrap_or_else(|e| panic!("MADVISE failed"));
-        }
+        // TODO: Address must be page aligned
+        let address = self.as_mut_ptr() as *mut ();
+        advise(address, length, advice).unwrap_or_else(|_| panic!("MADVISE failed"));
     }
 }
 
