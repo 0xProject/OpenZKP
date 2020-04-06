@@ -512,35 +512,15 @@ pub fn prove(constraints: &Constraints, trace: &TraceTable) -> Result<Proof> {
 fn extract_trace_coset(trace_lde: &PolyLDE, size: usize) -> TraceTable {
     let trace_lde: &[MmapVec<FieldElement>] = &trace_lde.0;
     let lde_size = trace_lde[0].len();
-    let stride = lde_size / size;
-    trace!("BEGIN Extract Trace Coset");
     let mut trace_coset = TraceTable::new(size, trace_lde.len());
-    let mut column = MmapVec::with_capacity(size);
+    trace!("BEGIN Extract Trace Coset");
     let columns = trace_lde.len();
-    // Hint the virtual memory manager
-    for lde in trace_lde.iter() {
-        use zkp_primefield::fft::{Madvise, Advice};
-        lde[0..size].madvise(Advice::Sequential);
-        lde[size..].madvise(Advice::DontNeed);
-    }
-    // Column at a time: Copy from LDE to temp, permute temp, copy to trace.
-    for (j, lde) in trace_lde.iter().enumerate() {
-        trace!("BEGIN Column clone");
-        column.extend_from_slice(&lde[0..size]);
-        trace!("END Column clone");
-        trace!("BEGIN Column permute");
-        permute(&mut column);
-        trace!("END Column permute");
-        trace!("BEGIN Column to trace");
-        for (i, value) in column.iter().enumerate() {
-            trace_coset[(i,j)] = value.clone();
+    for i in 0..trace_coset.num_rows() {
+        let index = i * lde_size / size;
+        let index = permute_index(lde_size, index);
+        for (j, lde) in trace_lde.iter().enumerate() {
+            trace_coset[(i, j)] = lde[index].clone();
         }
-        trace!("END Column to trace");
-        column.resize(0, FieldElement::zero());
-    }
-    for lde in trace_lde.iter() {
-        use zkp_primefield::fft::{Madvise, Advice};
-        lde.madvise(Advice::Normal);
     }
     trace!("END Extract Trace Coset");
     trace_coset
