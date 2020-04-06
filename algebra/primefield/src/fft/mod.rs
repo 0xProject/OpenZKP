@@ -78,11 +78,12 @@ where
 
     fn clone_shifted(&mut self, source: &[Field], cofactor: &Field) {
         // TODO: Write benchmark and tune chunk size
-        const CHUNK_SIZE: usize = 1024;
+        const MIN_CHUNK_SIZE: usize = 1024;
         trace!("BEGIN Clone shifted");
-        let chunks = self.par_chunks_mut(CHUNK_SIZE).zip(source.par_chunks(CHUNK_SIZE));
+        let chunk_size = max(MIN_CHUNK_SIZE, source.len() / current_num_threads());
+        let chunks = self.par_chunks_mut(chunk_size).zip(source.par_chunks(chunk_size));
         chunks.enumerate().for_each(|(i, (destination, source))| {
-            let mut c = cofactor.pow(i * CHUNK_SIZE);
+            let mut c = cofactor.pow(i * chunk_size);
             for (destination, source) in destination.iter_mut().zip(source.iter()) {
                 *destination = source * &c;
                 c *= cofactor;
