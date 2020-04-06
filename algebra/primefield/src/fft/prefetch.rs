@@ -67,19 +67,19 @@ impl<T> Prefetch for T {
 
 impl<T> Madvise for [T] {
     fn madvise(&self, advice: Advice) {
-        let length = dbg!(size_of_val(self));
+        let length = size_of_val(self);
+        if length == 0 {
+            return;
+        }
         #[allow(unsafe_code)]
         unsafe {
             #[allow(trivial_casts)] // False positive
             // TODO: Address must be page aligned
+            // TODO: Avoid transmuting so much
             let address = self.as_ptr();
             let address = std::mem::transmute::<*const T, usize>(address);
-            dbg!(address);
             let address = std::mem::transmute::<usize, *mut ()>(address);
-            if length > 0 {
-                // TODO: Handle result
-                advise(address, length, advice).unwrap_or_else(|e| panic!("MADVISE failed"));
-            }
+            advise(address, length, advice).unwrap_or_else(|e| panic!("MADVISE failed"));
         }
     }
 }
