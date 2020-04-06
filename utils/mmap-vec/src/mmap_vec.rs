@@ -10,6 +10,7 @@ use std::{
     ops::{Deref, DerefMut},
     prelude::v1::*,
     slice,
+    ptr::drop_in_place
 };
 use tempfile::tempfile;
 
@@ -78,6 +79,30 @@ impl<T: Clone> MmapVec<T> {
         let end = self.length;
         self.length += 1;
         self[end] = next;
+    }
+
+    pub fn clear(&mut self) {
+        self.truncate(0)
+    }
+
+    pub fn truncate(&mut self, length: usize) {
+        if length >= self.length {
+            return;
+        }
+        #[allow(unsafe_code)]
+        unsafe {
+            // Modified from std::vec::Vec::truncate, which has this comment:
+            // This is safe because:
+            //
+            // * the slice passed to `drop_in_place` is valid; the `len > self.len`
+            //   case avoids creating an invalid slice, and
+            // * the `len` of the vector is shrunk before calling `drop_in_place`,
+            //   such that no value will be dropped twice in case `drop_in_place`
+            //   were to panic once (if it panics twice, the program aborts).
+            let slice_pointer = &mut self.as_mut_slice()[length..] as *mut [T];
+            self.length = length;
+            drop_in_place(slice_pointer);
+        }
     }
 
     pub fn resize(&mut self, size: usize, fill: T) {
