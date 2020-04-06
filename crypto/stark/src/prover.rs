@@ -514,7 +514,6 @@ fn extract_trace_coset(trace_lde: &PolyLDE, size: usize) -> TraceTable {
     let lde_size = trace_lde[0].len();
     let mut trace_coset = TraceTable::new(size, trace_lde.len());
     trace!("BEGIN Extract Trace Coset");
-    let columns = trace_lde.len();
     for i in 0..trace_coset.num_rows() {
         let index = i * lde_size / size;
         let index = permute_index(lde_size, index);

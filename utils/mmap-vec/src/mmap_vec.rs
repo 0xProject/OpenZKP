@@ -12,7 +12,6 @@ use std::{
     slice,
     ptr::drop_in_place
 };
-use tempfile::tempfile;
 
 // TODO: Variant of MmapVec where it switched between Vec and Mmap after
 //       a treshold size.
@@ -99,7 +98,7 @@ impl<T: Clone> MmapVec<T> {
             // * the `len` of the vector is shrunk before calling `drop_in_place`,
             //   such that no value will be dropped twice in case `drop_in_place`
             //   were to panic once (if it panics twice, the program aborts).
-            let slice_pointer = &mut self.as_mut_slice()[length..] as *mut [T];
+            let slice_pointer: *mut [T] = &mut self.as_mut_slice()[length..];
             self.length = length;
             drop_in_place(slice_pointer);
         }

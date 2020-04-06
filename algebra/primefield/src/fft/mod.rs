@@ -21,8 +21,9 @@ use rayon::current_num_threads;
 
 // Re-exports
 // TODO: Only re-export for bench
+pub use memadvise::Advice;
 pub use bit_reverse::{permute, permute_index};
-pub use prefetch::{Prefetch, PrefetchIndex, Advice, Madvise};
+pub use prefetch::{Prefetch, PrefetchIndex, Madvise};
 #[cfg(feature = "std")]
 pub use radix_sqrt::radix_sqrt;
 pub use recursive::fft_vec_recursive;
