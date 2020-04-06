@@ -38,7 +38,10 @@ impl PublicKey {
 
 impl From<&PrivateKey> for PublicKey {
     fn from(private_key: &PrivateKey) -> Self {
-        Self(Affine::from(&base_mul(&*GENERATOR_TABLE, private_key.as_scalar_field_element())))
+        Self(Affine::from(&base_mul(
+            &*GENERATOR_TABLE,
+            private_key.as_scalar_field_element(),
+        )))
     }
 }
 
