@@ -9,6 +9,9 @@
 // Use the _mm_prefetch intrinsic from stable for now.
 #[cfg(target_arch = "x86_64")]
 use std::arch::x86_64::{_mm_prefetch, _MM_HINT_T0};
+use memadvise::{advise};
+use std::mem::size_of_val;
+pub use memadvise::Advice;
 
 pub trait Prefetch {
     /// Prefetch for reading
@@ -17,6 +20,10 @@ pub trait Prefetch {
     /// Prefetch for writing.
     /// (We don't need `&mut` here because we are not yet changing anything)
     fn prefetch_write(&self);
+}
+
+pub trait Madvise {
+    fn madvise(&self, advice: Advice);
 }
 
 pub trait PrefetchIndex<I>
@@ -55,6 +62,25 @@ impl<T> Prefetch for T {
     fn prefetch_write(&self) {
         // Currently no intrinsic available, so do a read prefetch instead.
         self.prefetch_read()
+    }
+}
+
+impl<T> Madvise for [T] {
+    fn madvise(&self, advice: Advice) {
+        let length = dbg!(size_of_val(self));
+        #[allow(unsafe_code)]
+        unsafe {
+            #[allow(trivial_casts)] // False positive
+            // TODO: Address must be page aligned
+            let address = self.as_ptr();
+            let address = std::mem::transmute::<*const T, usize>(address);
+            dbg!(address);
+            let address = std::mem::transmute::<usize, *mut ()>(address);
+            if length > 0 {
+                // TODO: Handle result
+                advise(address, length, advice).unwrap_or_else(|e| panic!("MADVISE failed"));
+            }
+        }
     }
 }
 

@@ -16,11 +16,13 @@ use crate::{Fft, FieldLike, Inv, Pow, RefFieldLike};
 use log::trace;
 use std::prelude::v1::*;
 use rayon::prelude::*;
+use std::cmp::max;
+use rayon::current_num_threads;
 
 // Re-exports
 // TODO: Only re-export for bench
 pub use bit_reverse::{permute, permute_index};
-pub use prefetch::{Prefetch, PrefetchIndex};
+pub use prefetch::{Prefetch, PrefetchIndex, Advice, Madvise};
 #[cfg(feature = "std")]
 pub use radix_sqrt::radix_sqrt;
 pub use recursive::fft_vec_recursive;
