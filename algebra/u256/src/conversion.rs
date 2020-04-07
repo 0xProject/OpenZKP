@@ -1,8 +1,5 @@
 use crate::U256;
-use serde::{
-    de::{Deserialize, Deserializer},
-    ser::{Serialize, Serializer},
-};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::{prelude::v1::*, u64};
 
 impl U256 {
