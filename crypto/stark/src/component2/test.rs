@@ -1,5 +1,5 @@
-use super::Component;
-use crate::{RationalExpression, TraceTable};
+use super::{Component, PolynomialWriter};
+use crate::RationalExpression;
 use zkp_primefield::{FieldElement, Root};
 
 /// Test constraint system
@@ -33,10 +33,18 @@ impl Test {
 
 impl Component for Test {
     type Claim = FieldElement;
-    type Witness = FieldElement;
+    type Witness = (FieldElement, FieldElement);
 
-    fn dimensions(&self) -> (usize, usize) {
-        (self.rows, self.columns)
+    fn num_polynomials(&self) -> usize {
+        self.columns
+    }
+
+    fn polynomial_size(&self) -> usize {
+        self.rows
+    }
+
+    fn claim(&self, witness: &Self::Witness) -> Self::Claim {
+        witness.0.clone()
     }
 
     fn constraints(&self, claim: &Self::Claim) -> Vec<RationalExpression> {
@@ -77,13 +85,16 @@ impl Component for Test {
         constraints
     }
 
-    fn trace(&self, claim: &Self::Claim, witness: &Self::Witness) -> TraceTable {
+    fn trace<P: PolynomialWriter>(&self, trace: &mut P, witness: &Self::Witness) {
+        debug_assert_eq!(trace.num_polynomials(), self.num_polynomials());
+        debug_assert_eq!(trace.polynomial_size(), self.polynomial_size());
+
         // Generator for the sequence
         let mut x0 = self.seed.clone();
-        let mut x1 = witness.clone();
+        let mut x1 = witness.1.clone();
         let mut next = || {
             let result = x0.clone();
-            let x2 = &x0 * &x1 + claim;
+            let x2 = &x0 * &x1 + witness.0.clone();
             x0 = x1.clone();
             x1 = x2;
             result
@@ -91,13 +102,11 @@ impl Component for Test {
 
         // Fill in the trace table with the sequence
         // the sequence is written left-to-right, then top-to-bottom.
-        let rows = self.rows;
-        let columns = self.columns;
-        let mut trace = TraceTable::new(rows, columns);
-        for i in 0..(rows * columns) {
-            trace[(i / columns, i % columns)] = next();
+        for i in 0..(self.rows * self.columns) {
+            let polynomial = i % self.columns;
+            let location = i / self.columns;
+            trace.write(polynomial, location, next());
         }
-        trace
     }
 }
 
@@ -112,12 +121,11 @@ mod tests {
             log_rows in 0_usize..10,
             cols in 0_usize..10,
             seed: FieldElement,
-            claim: FieldElement,
-            witness: FieldElement
+            witness: (FieldElement, FieldElement)
         )| {
             let rows = 1 << log_rows;
             let component = Test::new(rows, cols, &seed);
-            prop_assert_eq!(component.check(&claim, &witness), Ok(()));
+            prop_assert_eq!(component.check(&witness), Ok(()));
         });
     }
 
@@ -128,12 +136,12 @@ mod tests {
             log_rows in 1_usize..10,
             cols in 1_usize..10,
             seed: FieldElement,
-            claim: FieldElement,
-            witness: FieldElement
+            witness: (FieldElement, FieldElement)
         )| {
             let rows = 1 << log_rows;
             let component = Test::new(rows, cols, &seed);
-            let proof = component.prove(&claim, &witness).unwrap();
+            let claim = component.claim(&witness);
+            let proof = component.prove(&witness).unwrap();
             let result = component.verify(&claim, &proof);
             prop_assert_eq!(result, Ok(()));
         });

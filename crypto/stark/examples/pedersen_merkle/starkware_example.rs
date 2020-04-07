@@ -17,11 +17,14 @@ pub(crate) fn starkware_example() {
     let witness = starkware_witness();
 
     info!("Verifying claim and witness...");
-    claim.verify(&witness);
+    let recomputed = Witness::new(witness.leaf.clone(), witness.path.clone());
+    assert_eq!(witness.root, recomputed.root);
 
     info!("Constructing component...");
     let component = MerkleTree::new(witness.path.len());
-    info!("Constructed {:?} trace", component.dimensions());
+    let polynomials = component.num_polynomials();
+    let size = component.polynomial_size();
+    info!("Constructed {:?} trace", (polynomials, size));
     info!(
         "Constructed {:?} constraints",
         component.constraints(&claim).len()
@@ -29,7 +32,7 @@ pub(crate) fn starkware_example() {
 
     info!("Constructing proof...");
     let mut constraints = Constraints::from_expressions(
-        component.dimensions(),
+        (size, polynomials),
         (&claim).into(),
         component.constraints(&claim),
     )
@@ -38,7 +41,7 @@ pub(crate) fn starkware_example() {
     constraints.pow_bits = 28;
     constraints.num_queries = 13;
     constraints.fri_layout = vec![3, 3, 3, 3, 2];
-    let trace = component.trace(&claim, &witness);
+    let trace = component.trace_table(&witness);
     let proof = prove(&constraints, &trace).unwrap();
 
     info!("Spot checking proof...");
@@ -82,8 +85,13 @@ pub(crate) const STARKWARE_CLAIM: Claim = Claim {
 
 pub(crate) fn starkware_witness() -> Witness {
     Witness {
-        directions: STARKWARE_DIRECTIONS.to_vec(),
-        path:       STARKWARE_PATH.to_vec(),
+        path: STARKWARE_DIRECTIONS
+            .iter()
+            .copied()
+            .zip(STARKWARE_PATH.iter().cloned())
+            .collect::<Vec<_>>(),
+        leaf: STARKWARE_CLAIM.leaf,
+        root: STARKWARE_CLAIM.root,
     }
 }
 

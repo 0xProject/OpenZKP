@@ -1,5 +1,5 @@
-use super::Component;
-use crate::{RationalExpression, TraceTable};
+use super::{Component, Mapped, PolynomialWriter};
+use crate::RationalExpression;
 
 #[derive(Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "std", derive(Debug))]
@@ -38,16 +38,24 @@ where
     type Claim = (<Left as Component>::Claim, <Right as Component>::Claim);
     type Witness = (<Left as Component>::Witness, <Right as Component>::Witness);
 
-    fn dimensions(&self) -> (usize, usize) {
-        let left = self.left().dimensions();
-        let right = self.right().dimensions();
-        assert_eq!(left.0, right.0);
-        (left.0, left.1 + right.1)
+    fn num_polynomials(&self) -> usize {
+        self.left().num_polynomials() + self.right().num_polynomials()
+    }
+
+    fn polynomial_size(&self) -> usize {
+        let left = self.left().polynomial_size();
+        let right = self.right().polynomial_size();
+        assert_eq!(left, right);
+        left
+    }
+
+    fn claim(&self, witness: &Self::Witness) -> Self::Claim {
+        (self.left.claim(&witness.0), self.right.claim(&witness.1))
     }
 
     fn constraints(&self, claim: &Self::Claim) -> Vec<RationalExpression> {
         use RationalExpression::*;
-        let (_rows, left_columns) = self.left().dimensions();
+        let left_polynomials = self.left().num_polynomials();
         let left = self.left().constraints(&claim.0);
         let right = self.right().constraints(&claim.1);
         let right = right
@@ -55,7 +63,7 @@ where
             .map(|expression| {
                 expression.map(&|node| {
                     match node {
-                        Trace(i, j) => Trace(i + left_columns, j),
+                        Trace(i, j) => Trace(i + left_polynomials, j),
                         other => other,
                     }
                 })
@@ -67,21 +75,22 @@ where
         result
     }
 
-    fn trace(&self, claim: &Self::Claim, witness: &Self::Witness) -> TraceTable {
-        let left = self.left().trace(&claim.0, &witness.0);
-        let right = self.right().trace(&claim.1, &witness.1);
-        assert_eq!(left.num_rows(), right.num_rows());
-        let mut trace = TraceTable::new(left.num_rows(), left.num_columns() + right.num_columns());
-        for i in 0..trace.num_rows() {
-            for j in 0..left.num_columns() {
-                trace[(i, j)] = left[(i, j)].clone();
-            }
-            let shift = left.num_columns();
-            for j in 0..right.num_columns() {
-                trace[(i, j + shift)] = right[(i, j)].clone();
-            }
-        }
-        trace
+    fn trace<P: PolynomialWriter>(&self, trace: &mut P, witness: &Self::Witness) {
+        let mut left_trace = Mapped::new(
+            trace,
+            self.left.num_polynomials(),
+            self.left.polynomial_size(),
+            |polynomial, location| (polynomial, location),
+        );
+        self.left.trace(&mut left_trace, &witness.0);
+        let left_polys = self.left.num_polynomials();
+        let mut right_trace = Mapped::new(
+            trace,
+            self.right.num_polynomials(),
+            self.right.polynomial_size(),
+            |polynomial, location| (polynomial + left_polys, location),
+        );
+        self.right.trace(&mut right_trace, &witness.1)
     }
 }
 
@@ -107,7 +116,11 @@ mod tests {
             any::<FieldElement>(),
         )
             .prop_map(move |(columns, seed, claim, witness)| {
-                (Test::new(rows, columns, &seed), claim, witness)
+                (
+                    Test::new(rows, columns, &seed),
+                    claim.clone(),
+                    (claim, witness),
+                )
             })
     }
 
@@ -122,9 +135,8 @@ mod tests {
             (a, b) in components
         )| {
             let component = Horizontal::new(a.0, b.0);
-            let claim = (a.1, b.1);
             let witness = (a.2, b.2);
-            prop_assert_eq!(component.check(&claim, &witness), Ok(()));
+            prop_assert_eq!(component.check(&witness), Ok(()));
         });
     }
 
@@ -150,10 +162,7 @@ mod tests {
                 .zip(right.constraints(&right_claim).iter()) {
                 prop_assert!(result.equals(expected));
             }
-            prop_assert_eq!(
-                left.trace(&left_claim, &left_witness),
-                right.trace(&right_claim, &right_witness)
-            );
+            prop_assert_eq!(left.trace_table(&left_witness), right.trace_table(&right_witness));
         });
     }
 }

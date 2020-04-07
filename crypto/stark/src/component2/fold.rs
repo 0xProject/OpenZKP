@@ -1,5 +1,5 @@
-use super::Component;
-use crate::{RationalExpression, TraceTable};
+use super::{Component, Mapped, PolynomialWriter};
+use crate::RationalExpression;
 use zkp_primefield::fft::permute_index;
 
 /// Note: `Fold::new(Fold::new(A, m), n) == Fold::new(A, m + n)`
@@ -44,12 +44,18 @@ where
     type Claim = Element::Claim;
     type Witness = Element::Witness;
 
-    fn dimensions(&self) -> (usize, usize) {
-        let (rows, columns) = self.element.dimensions();
-        dbg!(columns);
-        dbg!(1 << self.folds);
-        dbg!(ceil_div(columns, 1 << self.folds));
-        (rows << self.folds, ceil_div(columns, 1 << self.folds))
+    fn num_polynomials(&self) -> usize {
+        let reduction = 1 << self.folds;
+        ceil_div(self.element.num_polynomials(), reduction)
+    }
+
+    fn polynomial_size(&self) -> usize {
+        let reduction = 1 << self.folds;
+        self.element.polynomial_size() * reduction
+    }
+
+    fn claim(&self, witness: &Self::Witness) -> Self::Claim {
+        self.element.claim(witness)
     }
 
     fn constraints(&self, claim: &Self::Claim) -> Vec<RationalExpression> {
@@ -77,17 +83,20 @@ where
             .collect::<Vec<_>>()
     }
 
-    fn trace(&self, claim: &Self::Claim, witness: &Self::Witness) -> TraceTable {
-        let element_trace = self.element.trace(claim, witness);
-        let (rows, columns) = self.dimensions();
-        dbg!(rows, columns);
-        let mut trace = TraceTable::new(rows, columns);
-        for i in 0..element_trace.num_rows() {
-            for j in 0..element_trace.num_columns() {
-                trace[self.map_up(i, j)] = element_trace[(i, j)].clone();
-            }
-        }
-        trace
+    fn trace<P: PolynomialWriter>(&self, trace: &mut P, witness: &Self::Witness) {
+        let reduction = 1 << self.folds;
+        let mut trace = Mapped::new(
+            trace,
+            self.element.num_polynomials(),
+            self.element.polynomial_size(),
+            |polynomial, location| {
+                let polynomial_folded = permute_index(reduction, polynomial % reduction);
+                let polynomial = polynomial / reduction;
+                let location = location * reduction + polynomial_folded;
+                (polynomial, location)
+            },
+        );
+        self.element.trace(&mut trace, witness)
     }
 }
 
@@ -132,13 +141,12 @@ mod tests {
             cols in 0_usize..20,
             folds in 0_usize..5,
             seed: FieldElement,
-            claim: FieldElement,
-            witness: FieldElement
+            witness: (FieldElement, FieldElement)
         )| {
             let rows = 1 << log_rows;
             let element = Test::new(rows, cols, &seed);
             let component = Fold::new(element, folds);
-            prop_assert_eq!(component.check(&claim, &witness), Ok(()));
+            prop_assert_eq!(component.check(&witness), Ok(()));
         });
     }
 
@@ -149,14 +157,14 @@ mod tests {
             log_rows in 0_usize..10,
             cols in 0_usize..10,
             seed: FieldElement,
-            claim: FieldElement,
-            witness: FieldElement
+            witness: (FieldElement, FieldElement)
         )| {
             let rows = 1 << log_rows;
             let element = Test::new(rows, cols, &seed);
+            let claim = element.claim(&witness);
             let component = Fold::new(element.clone(), 0);
             prop_assert_eq!(component.constraints(&claim), element.constraints(&claim));
-            prop_assert_eq!(component.trace(&claim, &witness), element.trace(&claim, &witness));
+            prop_assert_eq!(component.trace_table(&witness), element.trace_table(&witness));
         });
     }
 
@@ -169,16 +177,16 @@ mod tests {
             inner_folds in 0_usize..4,
             outer_folds in 0_usize..4,
             seed: FieldElement,
-            claim: FieldElement,
-            witness: FieldElement
+            witness: (FieldElement, FieldElement)
         )| {
             let rows = 1 << log_rows;
             let element = Test::new(rows, cols, &seed);
+            let claim = element.claim(&witness);
             let inner = Fold::new(element.clone(), inner_folds);
             let outer = Fold::new(inner, outer_folds);
             let combined = Fold::new(element, inner_folds + outer_folds);
             prop_assert_eq!(outer.constraints(&claim), combined.constraints(&claim));
-            prop_assert_eq!(outer.trace(&claim, &witness), combined.trace(&claim, &witness));
+            prop_assert_eq!(outer.trace_table(&witness), combined.trace_table(&witness));
         });
     }
 }
