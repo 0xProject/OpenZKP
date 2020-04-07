@@ -47,7 +47,7 @@ mod starkware_example;
 
 use crate::{component::MerkleTree, inputs::Witness, starkware_example::starkware_example};
 use env_logger;
-use log::info;
+use log::{info, trace};
 use rand::{prelude::*, SeedableRng};
 use rand_xoshiro::Xoshiro256PlusPlus;
 use std::{num::ParseIntError, time::Instant};
@@ -132,6 +132,7 @@ fn main() {
         starkware_example();
         return;
     }
+    trace!("BEGIN Pedersen-Merkle");
 
     // Initialize a reproducible random number generator
     let seed = options.seed.unwrap_or_else(random);
@@ -166,4 +167,6 @@ fn main() {
     component
         .verify(&claim, &proof)
         .expect("Verification failed");
+
+    trace!("END Pedersen-Merkle");
 }

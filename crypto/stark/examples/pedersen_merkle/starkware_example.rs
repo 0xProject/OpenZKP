@@ -2,13 +2,14 @@ use crate::{
     component::MerkleTree,
     inputs::{Claim, Witness},
 };
-use log::info;
+use log::{info, trace};
 use zkp_macros_decl::{field_element, hex};
 use zkp_primefield::FieldElement;
 use zkp_stark::{component2::Component, prove, Constraints};
 use zkp_u256::U256;
 
 pub(crate) fn starkware_example() {
+    trace!("BEGIN Pedersen-Merkle Starkware Example");
     info!("Constructing claim");
     let claim = STARKWARE_CLAIM;
     info!("Claim: {:?}", claim);
@@ -31,7 +32,9 @@ pub(crate) fn starkware_example() {
     info!("Constructed {:?} constraints", constraints.len());
 
     info!("Constructing {:?} trace", (polynomials, size));
+    trace!("BEGIN Generate trace");
     let trace = component.trace_table(&witness);
+    trace!("END Generate trace");
 
     info!("Constructing proof parameters...");
     let mut constraints =
@@ -76,6 +79,7 @@ pub(crate) fn starkware_example() {
         proof.as_bytes()[768..800],
         hex!("8af79c56d74b9252c3c542fc2b56d4692c608c98000000000000000000000000")
     );
+    trace!("END Pedersen-Merkle Starkware Example");
 }
 
 pub(crate) const STARKWARE_CLAIM: Claim = Claim {

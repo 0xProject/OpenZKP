@@ -1,5 +1,7 @@
 // TODO: Naming?
 #![allow(clippy::module_name_repetitions)]
+#[cfg(feature = "std")]
+use log::trace;
 use std::prelude::v1::*;
 use zkp_macros_decl::field_element;
 use zkp_mmap_vec::MmapVec;
@@ -85,6 +87,7 @@ impl DensePolynomial {
 
     #[cfg(feature = "std")]
     pub fn low_degree_extension(&self, blowup: usize) -> MmapVec<FieldElement> {
+        trace!("BEGIN Low degree extension");
         // TODO: shift polynomial by FieldElement::generator() outside of this function.
         // TODO: Parameterize cofactor
         let shift_factor: FieldElement = FieldElement::generator();
@@ -103,9 +106,10 @@ impl DensePolynomial {
             .enumerate()
             .for_each(|(i, slice)| {
                 let cofactor = &shift_factor * generator.pow(permute_index(blowup, i));
-                slice.clone_from_slice(&self.coefficients());
-                slice.fft_cofactor(&cofactor);
+                slice.clone_shifted(&self.coefficients(), &cofactor);
+                slice.fft();
             });
+        trace!("END Low degree extension");
         result
     }
 

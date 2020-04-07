@@ -1,5 +1,5 @@
 use crate::{Commitment, Error, Index, Node, Proof, Result, VectorCommitment};
-use log::info;
+use log::{info, trace};
 use std::collections::VecDeque;
 use zkp_error_utils::require;
 use zkp_hash::{Hash, Hashable};
@@ -61,6 +61,7 @@ impl<Container: VectorCommitment> Tree<Container> {
             leaves.len(),
             skip_layers
         );
+        trace!("BEGIN Merkle Tree");
         let size = leaves.len();
         if size == 0 {
             return Ok(Self {
@@ -119,6 +120,7 @@ impl<Container: VectorCommitment> Tree<Container> {
             nodes[0].clone()
         };
         let commitment = Commitment::from_size_hash(size, &root_hash).unwrap();
+        trace!("END Merkle Tree");
         Ok(Self {
             commitment,
             nodes,

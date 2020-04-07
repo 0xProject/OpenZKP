@@ -1,6 +1,7 @@
 use crate::{
     channel::*, constraints::Constraints, polynomial::DensePolynomial, proof_of_work, Proof,
 };
+use log::trace;
 #[cfg(feature = "std")]
 use std::error;
 use std::{collections::BTreeMap, fmt, prelude::v1::*};
@@ -172,6 +173,7 @@ impl From<MerkleError> for Error {
 // TODO: Refactor into smaller function
 #[allow(clippy::too_many_lines)]
 pub fn verify(constraints: &Constraints, proof: &Proof) -> Result<()> {
+    trace!("BEGIN Verify");
     let proof = proof.as_bytes();
     let trace_length = constraints.trace_nrows();
     let trace_cols = constraints.trace_ncolumns();
@@ -383,6 +385,7 @@ pub fn verify(constraints: &Constraints, proof: &Proof) -> Result<()> {
     {
         return Err(Error::OodsMismatch);
     }
+    trace!("END Verify");
     Ok(())
 }
 

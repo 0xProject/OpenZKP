@@ -15,6 +15,7 @@ where
     Field: FieldLike + Send + Sync,
     for<'a> &'a Field: RefFieldLike<Field>,
 {
+    trace!("BEGIN FFT Radix SQRT");
     trace!("Radix FFT of size {}", values.len());
     if values.len() <= 1 {
         return;
@@ -39,9 +40,11 @@ where
     // 2. Apply inner FFTs contiguously
     // 2. Apply twiddle factors
     trace!("Parallel {} x inner FFT size {}", outer, inner);
+    trace!("BEGIN FFT Batch Recursive");
     values
         .par_chunks_mut(outer)
         .for_each(|row| fft_vec_recursive(row, &twiddles, 0, stretch, stretch));
+    trace!("END FFT Batch Recursive");
 
     // 4. Transpose inner x inner x stretch square matrix
     transpose_square_stretch(values, inner, stretch);
@@ -52,6 +55,7 @@ where
         outer,
         inner
     );
+    trace!("BEGIN FFT Batch Recursive twiddles");
     values
         .par_chunks_mut(outer)
         .enumerate()
@@ -67,6 +71,8 @@ where
             }
             fft_vec_recursive(row, &twiddles, 0, 1, 1)
         });
+    trace!("END FFT Batch Recursive twiddles");
+    trace!("END FFT Radix SQRT");
 }
 
 #[cfg(test)]

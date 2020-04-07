@@ -1,4 +1,5 @@
 use crate::polynomial::DensePolynomial;
+use log::trace;
 use std::{
     ops::{Index, IndexMut},
     prelude::v1::*,
@@ -65,7 +66,8 @@ impl TraceTable {
     }
 
     pub fn interpolate(&self) -> Vec<DensePolynomial> {
-        (0..self.num_columns())
+        trace!("BEGIN Interpolate");
+        let result = (0..self.num_columns())
             // OPT: Use and FFT that can transform the entire table in one pass,
             // working on whole rows at a time. That is, it is vectorized over rows.
             // OPT: Use an in-place FFT. We don't need the trace table after this,
@@ -82,7 +84,9 @@ impl TraceTable {
                 permute(&mut vec);
                 DensePolynomial::from_mmap_vec(vec)
             })
-            .collect::<Vec<DensePolynomial>>()
+            .collect::<Vec<DensePolynomial>>();
+        trace!("END Interpolate");
+        result
     }
 }
 

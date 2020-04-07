@@ -352,6 +352,7 @@ pub fn prove(constraints: &Constraints, trace: &TraceTable) -> Result<Proof> {
     //  * Trace table satisfies constraints (expensive check, should be optional)
 
     info!("Starting Stark proof.");
+    trace!("BEGIN Stark proof");
     // TODO: Use a proper size human formating function
     #[allow(clippy::cast_precision_loss)]
     let size_mb = (trace.num_rows() * trace.num_columns() * 32) as f64 / 1_000_000_f64;
@@ -368,6 +369,7 @@ pub fn prove(constraints: &Constraints, trace: &TraceTable) -> Result<Proof> {
     proof.initialize(constraints.channel_seed());
 
     // 1. Trace commitment.
+    trace!("BEGIN Trace commitment");
 
     // Compute the low degree extension of the trace table.
     info!("Compute the low degree extension of the trace table.");
@@ -391,8 +393,10 @@ pub fn prove(constraints: &Constraints, trace: &TraceTable) -> Result<Proof> {
     info!("Construct a merkle tree over the LDE trace and write the root to the channel.");
     let (commitment, tree) = trace_lde.commit()?;
     proof.write(&commitment);
+    trace!("END Trace commitment");
 
     // 2. Constraint commitment
+    trace!("BEGIN Constraint commitment");
 
     // Read constraint coefficients from the channel.
     info!("Read constraint coefficients from the channel.");
@@ -427,19 +431,23 @@ pub fn prove(constraints: &Constraints, trace: &TraceTable) -> Result<Proof> {
     info!("Compute the merkle tree over the LDE constraint polynomials.");
     let (commitment, c_tree) = constraint_lde.commit()?;
     proof.write(&commitment);
+    trace!("END Constraint commitment");
 
     // 3. Out of domain sampling
     info!("Divide out OODS point and combine polynomials.");
+    trace!("BEGIN Out of domain sampling");
     let oods_polynomial = oods_combine(
         &mut proof,
         &trace_polynomials,
         &constraints.trace_arguments(),
         &constraint_polynomials,
     );
+    trace!("END Out of domain sampling");
     info!("Oods poly degree: {}", oods_polynomial.degree());
 
     // 4. FRI layers with trees
     info!("LDE extension of final polynomial.");
+    trace!("BEGIN FRI commitment");
     let first_fri_layer = oods_polynomial.low_degree_extension(constraints.blowup);
     info!("Fri layers.");
     let fri_trees = perform_fri_layering(
@@ -448,6 +456,7 @@ pub fn prove(constraints: &Constraints, trace: &TraceTable) -> Result<Proof> {
         &constraints.fri_layout,
         constraints.blowup,
     )?;
+    trace!("END FRI commitment");
 
     // 5. Proof of work
     info!("Proof of work.");
@@ -493,22 +502,25 @@ pub fn prove(constraints: &Constraints, trace: &TraceTable) -> Result<Proof> {
     // TODO: Rename channel / transcript object
     let proof = Proof::from_bytes(proof.proof);
     verify(constraints, &proof)?;
+
+    trace!("END Stark proof");
     Ok(proof)
 }
 
+// Constructs a trace table on a coset domain of `size`.
 fn extract_trace_coset(trace_lde: &PolyLDE, size: usize) -> TraceTable {
     let trace_lde: &[MmapVec<FieldElement>] = &trace_lde.0;
     let lde_size = trace_lde[0].len();
     let mut trace_coset = TraceTable::new(size, trace_lde.len());
-    // OPT: Benchmark with flipped order of loops
+    trace!("BEGIN Extract Trace Coset");
     for i in 0..trace_coset.num_rows() {
-        for j in 0..trace_coset.num_columns() {
-            let lde = &trace_lde[j];
-            let index = i * lde_size / size;
-            let index = permute_index(lde.len(), index);
+        let index = i * lde_size / size;
+        let index = permute_index(lde_size, index);
+        for (j, lde) in trace_lde.iter().enumerate() {
             trace_coset[(i, j)] = lde[index].clone();
         }
     }
+    trace!("END Extract Trace Coset");
     trace_coset
 }
 
@@ -538,6 +550,7 @@ fn get_constraint_polynomials(
     // independently. This will make all periods and therefore lookup tables
     // smaller.
     const CHUNK_SIZE: usize = 65536;
+    trace!("BEGIN Compute constraint polynomials");
 
     // We need to evaluate on a power of two degree
     let constraint_degree = constraints.degree();
@@ -567,6 +580,7 @@ fn get_constraint_polynomials(
 
     // Evaluate on the coset trace table
     info!("Evaluate DAG on the coset trace table");
+    trace!("BEGIN Evaluate");
     let mut result: MmapVec<FieldElement> = MmapVec::with_capacity(coset_size);
     result.resize(coset_size, FieldElement::zero());
     let values = &mut result;
@@ -582,10 +596,14 @@ fn get_constraint_polynomials(
                 i += 1;
             }
         });
+    trace!("END Evaluate");
 
     info!("Convert from values to coefficients");
+    // TODO: Re-use interpolation function form TraceTable
+    trace!("BEGIN Interpolate");
     values.ifft();
     permute(values);
+    trace!("END Interpolate");
     // OPT: Merge with even-odd separation loop.
     for (f, y) in geometric_series(
         &FieldElement::one(),
@@ -607,10 +625,12 @@ fn get_constraint_polynomials(
             constraint_polynomials[i].push(coefficient.clone());
         }
     }
-    constraint_polynomials
+    let result = constraint_polynomials
         .into_iter()
         .map(DensePolynomial::from_mmap_vec)
-        .collect()
+        .collect();
+    trace!("END Compute constraint polynomials");
+    result
 }
 
 fn oods_combine(

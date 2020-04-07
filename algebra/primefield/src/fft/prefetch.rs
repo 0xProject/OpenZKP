@@ -6,9 +6,13 @@
 
 // TODO: implement IndexPrefetch<I> for Index<I>
 
+#[cfg(feature = "memadvise")]
+use memadvise::{advise, Advice};
 // Use the _mm_prefetch intrinsic from stable for now.
 #[cfg(target_arch = "x86_64")]
 use std::arch::x86_64::{_mm_prefetch, _MM_HINT_T0};
+#[cfg(feature = "memadvise")]
+use std::mem::size_of_val;
 
 pub trait Prefetch {
     /// Prefetch for reading
@@ -17,6 +21,11 @@ pub trait Prefetch {
     /// Prefetch for writing.
     /// (We don't need `&mut` here because we are not yet changing anything)
     fn prefetch_write(&self);
+}
+
+#[cfg(feature = "memadvise")]
+pub trait MemoryAdvise {
+    fn memory_advise(&mut self, advice: Advice);
 }
 
 pub trait PrefetchIndex<I>
@@ -55,6 +64,21 @@ impl<T> Prefetch for T {
     fn prefetch_write(&self) {
         // Currently no intrinsic available, so do a read prefetch instead.
         self.prefetch_read()
+    }
+}
+
+#[cfg(feature = "memadvise")]
+impl<T> MemoryAdvise for [T] {
+    // TODO: Does this need to be `&mut self`?
+    fn memory_advise(&mut self, advice: Advice) {
+        let length = size_of_val(self);
+        if length == 0 {
+            return;
+        }
+        // TODO: Address must be page aligned
+        let address = self.as_mut_ptr() as *mut ();
+        // TODO: Error handling
+        advise(address, length, advice).unwrap_or_else(|_| panic!("MADVISE failed"));
     }
 }
 

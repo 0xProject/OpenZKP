@@ -113,6 +113,9 @@ pub trait Fft<T> {
     /// will be in permuted order.
     fn ifft(&mut self);
 
+    /// Copy values from source multiplied by powers of cofactor.
+    fn clone_shifted(&mut self, source: &[T], cofactor: &T);
+
     /// In-place permuted FFT with a cofactor.
     fn fft_cofactor(&mut self, cofactor: &T);
 
