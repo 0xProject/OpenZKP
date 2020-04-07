@@ -1,7 +1,6 @@
-use crate::{PrivateKey, Signature};
+use crate::{PrivateKey, Signature, GENERATOR_TABLE};
 use zkp_elliptic_curve::{base_mul, double_base_mul, Affine, ScalarFieldElement};
 use zkp_primefield::*;
-use crate::GENERATOR_TABLE;
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
