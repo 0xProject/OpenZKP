@@ -54,7 +54,7 @@ impl U256 {
     }
 
     pub fn to_hex_string(&self) -> String {
-        hex::encode(self.to_bytes_be())
+        "0x".to_owned() + &hex::encode(self.to_bytes_be())
     }
 
     pub fn from_hex_str(s: &str) -> Self {
