@@ -6,7 +6,7 @@ use crate::{
     proof_of_work, verify, Proof, TraceTable, VerifierError,
 };
 use itertools::Itertools;
-use log::info;
+use log::{info, trace};
 use rayon::prelude::*;
 use std::{fmt, prelude::v1::*, vec};
 use zkp_hash::{Hash, Hashable, MaskedKeccak};
@@ -352,7 +352,6 @@ pub fn prove(constraints: &Constraints, trace: &TraceTable) -> Result<Proof> {
     //  * Trace table satisfies constraints (expensive check, should be optional)
 
     info!("Starting Stark proof.");
-    info!("Proof constraints: {:?}", constraints);
     // TODO: Use a proper size human formating function
     #[allow(clippy::cast_precision_loss)]
     let size_mb = (trace.num_rows() * trace.num_columns() * 32) as f64 / 1_000_000_f64;
@@ -382,7 +381,7 @@ pub fn prove(constraints: &Constraints, trace: &TraceTable) -> Result<Proof> {
     );
     let trace_lde = PolyLDE(
         trace_polynomials
-            .par_iter()
+            .iter()
             .map(|p| p.low_degree_extension(constraints.blowup))
             .collect::<Vec<_>>(),
     );
@@ -419,7 +418,7 @@ pub fn prove(constraints: &Constraints, trace: &TraceTable) -> Result<Proof> {
     info!("Compute the low degree extension of constraint polynomials.");
     let constraint_lde = PolyLDE(
         constraint_polynomials
-            .par_iter()
+            .iter()
             .map(|p| p.low_degree_extension(constraints.blowup))
             .collect::<Vec<_>>(),
     );
@@ -555,14 +554,19 @@ fn get_constraint_polynomials(
         trace_coset.num_rows(),
         eval_degree,
     );
+    trace!("Convert to DAG");
     let result = dag.expression(combined_constraints);
+
+    trace!("Compute lookup tables");
     dag.lookup_tables();
+
+    trace!("Tree-shake DAG");
     // TODO: Track and use result reference.
     let _ = dag.tree_shake(result);
     dag.init(0);
 
     // Evaluate on the coset trace table
-    info!("Evaluate on the coset trace table");
+    info!("Evaluate DAG on the coset trace table");
     let mut result: MmapVec<FieldElement> = MmapVec::with_capacity(coset_size);
     result.resize(coset_size, FieldElement::zero());
     let values = &mut result;
@@ -962,7 +966,7 @@ mod tests {
         assert_eq!(TPn[0].evaluate(&g.pow(1000_usize)), trace[(1000, 0)]);
 
         let LDEn = PolyLDE(
-            TPn.par_iter()
+            TPn.iter()
                 .map(|p| p.low_degree_extension(constraints.blowup))
                 .collect::<Vec<_>>(),
         );
@@ -1031,7 +1035,7 @@ mod tests {
         assert_eq!(constraint_polynomials[0].len(), 1024);
         let CC = PolyLDE(
             constraint_polynomials
-                .par_iter()
+                .iter()
                 .map(|p| p.low_degree_extension(constraints.blowup))
                 .collect::<Vec<_>>(),
         );

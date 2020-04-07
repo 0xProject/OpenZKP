@@ -96,7 +96,7 @@ impl DensePolynomial {
         #[allow(unsafe_code)]
         let mut result: MmapVec<FieldElement> = unsafe { MmapVec::zero_initialized(length) };
 
-        // Compute cosets in parallel
+        // Compute cosets
         result
             .as_mut_slice()
             .chunks_mut(self.len())

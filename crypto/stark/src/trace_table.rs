@@ -1,5 +1,4 @@
 use crate::polynomial::DensePolynomial;
-use rayon::prelude::*;
 use std::{
     ops::{Index, IndexMut},
     prelude::v1::*,
@@ -67,7 +66,6 @@ impl TraceTable {
 
     pub fn interpolate(&self) -> Vec<DensePolynomial> {
         (0..self.num_columns())
-            .into_par_iter()
             // OPT: Use and FFT that can transform the entire table in one pass,
             // working on whole rows at a time. That is, it is vectorized over rows.
             // OPT: Use an in-place FFT. We don't need the trace table after this,

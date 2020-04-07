@@ -27,7 +27,6 @@ pub fn transpose_square_stretch<T>(matrix: &mut [T], size: usize, stretch: usize
 // TODO: Handle odd sizes
 fn transpose_square_1<T>(matrix: &mut [T], size: usize) {
     const PREFETCH_STRIDE: usize = 4;
-    trace!("Transposing {} x {} square matrix", size, size);
     debug_assert_eq!(matrix.len(), size * size);
     if size % 2 != 0 {
         unimplemented!("Odd sizes are not supported");
@@ -58,7 +57,6 @@ fn transpose_square_1<T>(matrix: &mut [T], size: usize) {
 
 fn transpose_square_2<T>(matrix: &mut [T], size: usize) {
     const PREFETCH_STRIDE: usize = 8;
-    trace!("Transposing {} x {} 2-square matrix", size, size);
     debug_assert_eq!(matrix.len(), 2 * size * size);
 
     // Iterate over upper-left triangle, working in 1x2 blocks

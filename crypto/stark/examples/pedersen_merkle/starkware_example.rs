@@ -24,24 +24,25 @@ pub(crate) fn starkware_example() {
     let component = MerkleTree::new(witness.path.len());
     let polynomials = component.num_polynomials();
     let size = component.polynomial_size();
-    info!("Constructed {:?} trace", (polynomials, size));
-    info!(
-        "Constructed {:?} constraints",
-        component.constraints(&claim).len()
-    );
+    info!("Component has {:?} trace", (polynomials, size));
 
-    info!("Constructing proof...");
-    let mut constraints = Constraints::from_expressions(
-        (size, polynomials),
-        (&claim).into(),
-        component.constraints(&claim),
-    )
-    .expect("Could not create Constraint object");
+    info!("Constructing constraints...");
+    let constraints = component.constraints(&claim);
+    info!("Constructed {:?} constraints", constraints.len());
+
+    info!("Constructing {:?} trace", (polynomials, size));
+    let trace = component.trace_table(&witness);
+
+    info!("Constructing proof parameters...");
+    let mut constraints =
+        Constraints::from_expressions((size, polynomials), (&claim).into(), constraints)
+            .expect("Could not create Constraint object");
     constraints.blowup = 16;
     constraints.pow_bits = 28;
     constraints.num_queries = 13;
     constraints.fri_layout = vec![3, 3, 3, 3, 2];
-    let trace = component.trace_table(&witness);
+
+    info!("Constructing proofs...");
     let proof = prove(&constraints, &trace).unwrap();
 
     info!("Spot checking proof...");

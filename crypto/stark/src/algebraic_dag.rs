@@ -1,6 +1,7 @@
 use crate::{
     polynomial::DensePolynomial, rational_expression::RationalExpression, trace_table::TraceTable,
 };
+use log::info;
 use std::{cmp::min, ops::Neg, prelude::v1::*};
 use tiny_keccak::{Hasher, Keccak};
 use zkp_macros_decl::field_element;
@@ -377,6 +378,7 @@ impl AlgebraicGraph {
 
     pub(crate) fn lookup_tables(&mut self) {
         use Operation::*;
+        info!("Computing DAG Lookup tables");
         // OPT: Don't create a bunch of lookup tables just to throw them away
         // later. Analyze which nodes will be needed.
         let treshold = min(LOOKUP_SIZE, self.coset_size / 2);

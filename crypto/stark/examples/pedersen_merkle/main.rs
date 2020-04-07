@@ -117,11 +117,13 @@ fn main() {
     // Initialize logging
     env_logger::Builder::new()
         .filter_level(match options.verbose {
-            0 => log::LevelFilter::Warn,
-            1 => log::LevelFilter::Info,
-            2 => log::LevelFilter::Debug,
-            _ => log::LevelFilter::Off,
+            0 => log::LevelFilter::Error,
+            1 => log::LevelFilter::Warn,
+            2 => log::LevelFilter::Info,
+            3 => log::LevelFilter::Debug,
+            _ => log::LevelFilter::Trace,
         })
+        .format_timestamp_micros()
         .init();
 
     // Run specific large example if requested
