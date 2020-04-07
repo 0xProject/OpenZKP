@@ -1,11 +1,9 @@
+use serde::{Deserialize, Serialize};
 use zkp_elliptic_curve::ScalarFieldElement;
 
-#[cfg(feature = "std")]
-use serde::{Deserialize, Serialize};
-
 // TODO (SECURITY): The signatures are malleable in w -> -w.
-#[derive(PartialEq, Eq, Clone, Hash)]
-#[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
+#[derive(PartialEq, Eq, Clone, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "std", derive(Debug))]
 pub struct Signature {
     r: ScalarFieldElement,
     w: ScalarFieldElement,

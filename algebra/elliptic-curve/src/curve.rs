@@ -1,5 +1,4 @@
 use crate::{ScalarFieldElement, BETA};
-#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
@@ -8,8 +7,8 @@ use std::{
 use zkp_primefield::{FieldElement, NegInline, One, Zero};
 use zkp_u256::{commutative_binop, noncommutative_binop};
 
-#[derive(PartialEq, Eq, Clone)]
-#[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
+#[derive(PartialEq, Eq, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "std", derive(Debug))]
 pub enum Affine {
     Zero, // Neutral element, point at infinity, additive identity, etc.
     Point { x: FieldElement, y: FieldElement },
