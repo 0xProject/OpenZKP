@@ -26,7 +26,7 @@ pub use bit_reverse::{permute, permute_index};
 #[cfg(feature = "memadvise")]
 pub use memadvise::Advice;
 #[cfg(feature = "memadvise")]
-pub use prefetch::Madvise;
+pub use prefetch::MemoryAdvise;
 pub use prefetch::{Prefetch, PrefetchIndex};
 #[cfg(feature = "std")]
 pub use radix_sqrt::radix_sqrt;

@@ -24,8 +24,8 @@ pub trait Prefetch {
 }
 
 #[cfg(feature = "memadvise")]
-pub trait Madvise {
-    fn madvise(&mut self, advice: Advice);
+pub trait MemoryAdvise {
+    fn memory_advise(&mut self, advice: Advice);
 }
 
 pub trait PrefetchIndex<I>
@@ -68,9 +68,9 @@ impl<T> Prefetch for T {
 }
 
 #[cfg(feature = "memadvise")]
-impl<T> Madvise for [T] {
+impl<T> MemoryAdvise for [T] {
     // TODO: Does this need to be `&mut self`?
-    fn madvise(&mut self, advice: Advice) {
+    fn memory_advise(&mut self, advice: Advice) {
         let length = size_of_val(self);
         if length == 0 {
             return;
