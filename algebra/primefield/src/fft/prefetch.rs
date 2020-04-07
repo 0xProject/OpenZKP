@@ -7,11 +7,10 @@
 // TODO: implement IndexPrefetch<I> for Index<I>
 
 // Use the _mm_prefetch intrinsic from stable for now.
+use memadvise::{advise, Advice};
 #[cfg(target_arch = "x86_64")]
 use std::arch::x86_64::{_mm_prefetch, _MM_HINT_T0};
-use memadvise::{advise};
 use std::mem::size_of_val;
-use memadvise::Advice;
 
 pub trait Prefetch {
     /// Prefetch for reading
@@ -74,6 +73,7 @@ impl<T> Madvise for [T] {
         }
         // TODO: Address must be page aligned
         let address = self.as_mut_ptr() as *mut ();
+        // TODO: Error handling
         advise(address, length, advice).unwrap_or_else(|_| panic!("MADVISE failed"));
     }
 }
