@@ -29,10 +29,7 @@ impl U256 {
 }
 
 impl Serialize for U256 {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         if serializer.is_human_readable() {
             self.to_hex_string().serialize(serializer)
         } else {
@@ -41,11 +38,8 @@ impl Serialize for U256 {
     }
 }
 
-impl<'de> Deserialize<'de> for U256 {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
+impl<'a> Deserialize<'a> for U256 {
+    fn deserialize<D: Deserializer<'a>>(deserializer: D) -> Result<Self, D::Error> {
         if deserializer.is_human_readable() {
             <&str>::deserialize(deserializer).map(U256::from_hex_str)
         } else {
