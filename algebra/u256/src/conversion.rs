@@ -1,6 +1,5 @@
 use crate::U256;
-#[cfg(feature = "std")]
-use hex::{decode, encode};
+use hex::{decode, encode as hex_encode};
 use serde::{
     de::{self, Deserialize, Deserializer, SeqAccess, Visitor},
     ser::{Serialize, Serializer},
@@ -39,17 +38,15 @@ impl Serialize for U256 {
     {
         let bytes = self.to_bytes_be();
         if serializer.is_human_readable() {
-            encode(&bytes).serialize(serializer)
+            hex_encode(bytes).serialize(serializer)
         } else {
             bytes.serialize(serializer)
         }
     }
 }
 
-#[cfg(feature = "std")]
 struct U256Visitor;
 
-#[cfg(feature = "std")]
 impl<'de> Visitor<'de> for U256Visitor {
     type Value = U256;
 
@@ -238,6 +235,7 @@ mod tests {
     use super::*;
     use num_traits::identities::One;
     use proptest::prelude::*;
+    use serde_json;
 
     #[test]
     fn test_one() {
@@ -250,7 +248,7 @@ mod tests {
     }
 
     #[test]
-    fn test_serde() {
+    fn test_serde_json() {
         proptest!(|(x: U256)| {
             let serialized = serde_json::to_string(&x)?;
             let deserialized: U256 = serde_json::from_str(&serialized)?;
