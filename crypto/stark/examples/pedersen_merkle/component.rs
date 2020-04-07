@@ -6,12 +6,11 @@ use crate::{
         RIGHT_Y_COEFFICIENTS_REF,
     },
 };
-use itertools::izip;
 use zkp_elliptic_curve::Affine;
 use zkp_primefield::{FieldElement, One, Pow, Root, Zero};
 use zkp_stark::{
-    component2::{Component, Vertical},
-    DensePolynomial, RationalExpression, TraceTable,
+    component2::{Component, PolynomialWriter, Vertical},
+    DensePolynomial, RationalExpression,
 };
 use zkp_u256::{Binary, U256};
 
@@ -50,11 +49,17 @@ impl Component for MerkleTreeLayer {
     type Claim = ();
     type Witness = (FieldElement, FieldElement, bool);
 
-    fn dimensions(&self) -> (usize, usize) {
-        (256, 8)
+    fn num_polynomials(&self) -> usize {
+        8
     }
 
-    fn constraints(&self, _: &Self::Claim) -> Vec<RationalExpression> {
+    fn polynomial_size(&self) -> usize {
+        256
+    }
+
+    fn claim(&self, _witness: &Self::Witness) -> Self::Claim {}
+
+    fn constraints(&self, _claim: &Self::Claim) -> Vec<RationalExpression> {
         use RationalExpression::*;
 
         // Constraints
@@ -134,9 +139,11 @@ impl Component for MerkleTreeLayer {
         constraints
     }
 
-    fn trace(&self, _: &Self::Claim, (leaf, sibling, direction): &Self::Witness) -> TraceTable {
-        let mut trace = TraceTable::new(256, 8);
-
+    fn trace<P: PolynomialWriter>(
+        &self,
+        trace: &mut P,
+        (leaf, sibling, direction): &Self::Witness,
+    ) {
         let (left, right) = if *direction {
             (sibling, leaf)
         } else {
@@ -165,19 +172,34 @@ impl Component for MerkleTreeLayer {
                 left_source >>= 1;
                 right_source >>= 1;
             }
-            trace[(bit_index, 0)] = FieldElement::from(left_source.clone());
-            trace[(bit_index, 1)] = left_slope.clone();
-            trace[(bit_index, 2)] = left_point.x().cloned().unwrap_or_else(FieldElement::zero);
-            trace[(bit_index, 3)] = left_point.y().cloned().unwrap_or_else(FieldElement::zero);
-            trace[(bit_index, 4)] = FieldElement::from(right_source.clone());
-            trace[(bit_index, 5)] = right_slope.clone();
-            trace[(bit_index, 6)] = right_point.x().cloned().unwrap_or_else(FieldElement::zero);
-            trace[(bit_index, 7)] = right_point.y().cloned().unwrap_or_else(FieldElement::zero);
+            trace.write(0, bit_index, FieldElement::from(left_source.clone()));
+            trace.write(1, bit_index, left_slope.clone());
+            trace.write(
+                2,
+                bit_index,
+                left_point.x().cloned().unwrap_or_else(FieldElement::zero),
+            );
+            trace.write(
+                3,
+                bit_index,
+                left_point.y().cloned().unwrap_or_else(FieldElement::zero),
+            );
+            trace.write(4, bit_index, FieldElement::from(right_source.clone()));
+            trace.write(5, bit_index, right_slope.clone());
+            trace.write(
+                6,
+                bit_index,
+                right_point.x().cloned().unwrap_or_else(FieldElement::zero),
+            );
+            trace.write(
+                7,
+                bit_index,
+                right_point.y().cloned().unwrap_or_else(FieldElement::zero),
+            );
         }
-        // TODO: Check hash
-        trace
     }
 }
+
 pub(crate) struct MerkleTree {
     layers: Vertical<MerkleTreeLayer>,
 }
@@ -195,8 +217,16 @@ impl Component for MerkleTree {
     type Claim = Claim;
     type Witness = Witness;
 
-    fn dimensions(&self) -> (usize, usize) {
-        self.layers.dimensions()
+    fn num_polynomials(&self) -> usize {
+        self.layers.num_polynomials()
+    }
+
+    fn polynomial_size(&self) -> usize {
+        self.layers.polynomial_size()
+    }
+
+    fn claim(&self, witness: &Self::Witness) -> Self::Claim {
+        witness.into()
     }
 
     fn constraints(&self, claim: &Self::Claim) -> Vec<RationalExpression> {
@@ -205,9 +235,10 @@ impl Component for MerkleTree {
         let mut constraints = self.layers.constraints(&fake_claim);
 
         // Construct constraints
-        let (rows, columns) = self.dimensions();
+        let polynomials = self.num_polynomials();
+        let size = self.polynomial_size();
         let path_length = self.layers.size();
-        let trace_length = rows;
+        let trace_length = size;
         let root = claim.root.clone();
         let leaf = claim.leaf.clone();
 
@@ -236,20 +267,22 @@ impl Component for MerkleTree {
 
         // The final hash equals `root`
         let hash = self.layers.element().hash();
-        let row_index = hash.0 + (path_length - 1) * self.layers.element().dimensions().0;
+        let row_index = hash.0 + (path_length - 1) * self.layers.element().polynomial_size();
         constraints.insert(1, (Constant(root) - hash.1) / row(row_index));
 
         // Add column constraints
-        for i in 0..columns {
+        for i in 0..polynomials {
             constraints.insert(i, Trace(i, 0));
         }
 
         constraints
     }
 
-    fn trace(&self, claim: &Self::Claim, witness: &Self::Witness) -> TraceTable {
-        let witness = izip!(witness.directions.iter(), witness.path.iter())
-            .scan(claim.leaf.clone(), |leaf, (direction, sibling)| {
+    fn trace<P: PolynomialWriter>(&self, trace: &mut P, witness: &Self::Witness) {
+        let witness = witness
+            .path
+            .iter()
+            .scan(witness.leaf.clone(), |leaf, (direction, sibling)| {
                 let layer: <MerkleTreeLayer as Component>::Witness =
                     (leaf.clone(), sibling.clone(), *direction);
                 *leaf = if *direction {
@@ -260,8 +293,7 @@ impl Component for MerkleTree {
                 Some(layer)
             })
             .collect::<Vec<_>>();
-        let claim = vec![(); self.layers.size()];
-        self.layers.trace(&claim, &witness)
+        self.layers.trace(trace, &witness)
     }
 }
 
@@ -275,7 +307,7 @@ mod test {
     use proptest::{collection::vec as prop_vec, prelude::*};
     use zkp_macros_decl::field_element;
     use zkp_primefield::FieldElement;
-    use zkp_stark::{prove, Constraints};
+    use zkp_stark::{prove, Constraints, TraceTable};
     use zkp_u256::U256;
 
     // TODO: Move to TraceTable or RationalExpression?
@@ -299,10 +331,9 @@ mod test {
             field_element!("0465da90a0487ff6d4ea63658db7439f4023957b750f3ae8a5e0a18edef453b1");
         let hash =
             field_element!("02fe7d53bedb42fbc905d7348bd5d61302882ba48a27377b467a9005d6e8d3fd");
-        let claim = ();
         let witness = (leaf.clone(), sibling.clone(), direction);
-        let trace = component.trace(&claim, &witness);
-        assert_eq!(component.check(&claim, &witness), Ok(()));
+        let trace = component.trace_table(&witness);
+        assert_eq!(component.check(&witness), Ok(()));
         assert_eq!(&eval(&trace, component.left()), &sibling);
         assert_eq!(&eval(&trace, component.right()), &leaf);
         assert_eq!(&eval(&trace, component.hash()), &hash);
@@ -318,10 +349,9 @@ mod test {
                 merkle_hash(&leaf, &sibling)
             };
             let component = MerkleTreeLayer::new();
-            let claim = ();
             let witness = (leaf, sibling, direction);
-            let trace = component.trace(&claim, &witness);
-            prop_assert_eq!(component.check(&claim, &witness), Ok(()));
+            let trace = component.trace_table(&witness);
+            prop_assert_eq!(component.check(&witness), Ok(()));
             prop_assert_eq!(&eval(&trace, component.hash()), &hash);
         });
     }
@@ -332,7 +362,7 @@ mod test {
         let witness = short_witness();
         let component = MerkleTree::new(witness.path.len());
         let constraints = component.constraints(&claim);
-        let trace = component.trace(&claim, &witness);
+        let trace = component.trace_table(&witness);
         let mut constraints = Constraints::from_expressions(
             (trace.num_rows(), trace.num_columns()),
             (&claim).into(),
@@ -372,15 +402,14 @@ mod test {
             .prop_flat_map(|log_size| {
                 let size = 1 << log_size;
                 (
-                    prop_vec(bool::arbitrary(), size),
-                    prop_vec(FieldElement::arbitrary(), size),
+                    FieldElement::arbitrary(),
+                    prop_vec((bool::arbitrary(), FieldElement::arbitrary()), size),
                 )
             })
-            .prop_map(|(directions, path)| Witness { directions, path });
-        proptest!(config, |(witness in witness, claim: FieldElement)| {
-            let claim = Claim::from_leaf_witness(claim, &witness);
+            .prop_map(|(leaf, path)| Witness::new(leaf, path));
+        proptest!(config, |(witness in witness)| {
             let component = MerkleTree::new(witness.path.len());
-            prop_assert_eq!(component.check(&claim, &witness), Ok(()));
+            prop_assert_eq!(component.check(&witness), Ok(()));
         });
     }
 }
