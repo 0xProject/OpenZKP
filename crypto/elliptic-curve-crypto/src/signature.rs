@@ -1,7 +1,5 @@
-use zkp_elliptic_curve::ScalarFieldElement;
-
-#[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
+use zkp_elliptic_curve::ScalarFieldElement;
 
 // TODO (SECURITY): The signatures are malleable in w -> -w.
 #[derive(PartialEq, Eq, Clone, Hash, Serialize, Deserialize)]
