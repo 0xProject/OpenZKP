@@ -9,8 +9,8 @@ use std::{
     mem::size_of,
     ops::{Deref, DerefMut},
     prelude::v1::*,
+    ptr::drop_in_place,
     slice,
-    ptr::drop_in_place
 };
 
 // TODO: Variant of MmapVec where it switched between Vec and Mmap after
@@ -31,7 +31,9 @@ impl<T: Clone> MmapVec<T> {
         // Note: mmaped files can not be empty, so we use at leas one byte.
         let size = max(1, capacity * size_of::<T>());
         trace!("Allocating {} MB in anonymous mmap", size / 1_000_000);
-        let mmap = MmapOptions::new().len(size).map_anon()
+        let mmap = MmapOptions::new()
+            .len(size)
+            .map_anon()
             .expect("cannot access memory mapped file");
         Self {
             mmap,
@@ -93,11 +95,11 @@ impl<T: Clone> MmapVec<T> {
             // Modified from std::vec::Vec::truncate, which has this comment:
             // This is safe because:
             //
-            // * the slice passed to `drop_in_place` is valid; the `len > self.len`
-            //   case avoids creating an invalid slice, and
-            // * the `len` of the vector is shrunk before calling `drop_in_place`,
-            //   such that no value will be dropped twice in case `drop_in_place`
-            //   were to panic once (if it panics twice, the program aborts).
+            // * the slice passed to `drop_in_place` is valid; the `len > self.len` case
+            //   avoids creating an invalid slice, and
+            // * the `len` of the vector is shrunk before calling `drop_in_place`, such that
+            //   no value will be dropped twice in case `drop_in_place` were to panic once
+            //   (if it panics twice, the program aborts).
             let slice_pointer: *mut [T] = &mut self.as_mut_slice()[length..];
             self.length = length;
             drop_in_place(slice_pointer);

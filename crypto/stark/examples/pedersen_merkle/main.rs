@@ -47,7 +47,7 @@ mod starkware_example;
 
 use crate::{component::MerkleTree, inputs::Witness, starkware_example::starkware_example};
 use env_logger;
-use log::{trace, info};
+use log::{info, trace};
 use rand::{prelude::*, SeedableRng};
 use rand_xoshiro::Xoshiro256PlusPlus;
 use std::{num::ParseIntError, time::Instant};

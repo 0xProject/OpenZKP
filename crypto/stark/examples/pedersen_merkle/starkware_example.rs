@@ -2,7 +2,7 @@ use crate::{
     component::MerkleTree,
     inputs::{Claim, Witness},
 };
-use log::{trace, info};
+use log::{info, trace};
 use zkp_macros_decl::{field_element, hex};
 use zkp_primefield::FieldElement;
 use zkp_stark::{component2::Component, prove, Constraints};

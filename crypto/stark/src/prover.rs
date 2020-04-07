@@ -507,7 +507,6 @@ pub fn prove(constraints: &Constraints, trace: &TraceTable) -> Result<Proof> {
     Ok(proof)
 }
 
-
 // Constructs a trace table on a coset domain of `size`.
 fn extract_trace_coset(trace_lde: &PolyLDE, size: usize) -> TraceTable {
     let trace_lde: &[MmapVec<FieldElement>] = &trace_lde.0;
@@ -632,7 +631,6 @@ fn get_constraint_polynomials(
         .collect();
     trace!("END Compute constraint polynomials");
     result
-
 }
 
 fn oods_combine(

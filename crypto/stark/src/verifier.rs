@@ -1,6 +1,7 @@
 use crate::{
     channel::*, constraints::Constraints, polynomial::DensePolynomial, proof_of_work, Proof,
 };
+use log::trace;
 #[cfg(feature = "std")]
 use std::error;
 use std::{collections::BTreeMap, fmt, prelude::v1::*};
@@ -10,7 +11,6 @@ use zkp_primefield::{
     fft, geometric_series::root_series, FieldElement, One, Pow, Root, SquareInline, Zero,
 };
 use zkp_u256::U256;
-use log::trace;
 
 type Result<T> = std::result::Result<T, Error>;
 
