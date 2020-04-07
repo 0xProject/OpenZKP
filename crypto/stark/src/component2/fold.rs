@@ -1,4 +1,4 @@
-use super::{Component, Mapped, PolyWriter};
+use super::{Component, Mapped, PolynomialWriter};
 use crate::RationalExpression;
 use zkp_primefield::fft::permute_index;
 
@@ -44,14 +44,18 @@ where
     type Claim = Element::Claim;
     type Witness = Element::Witness;
 
-    fn claim(&self, witness: &Self::Witness) -> Self::Claim {
-        self.element.claim(witness)
+    fn num_polynomials(&self) -> usize {
+        let reduction = 1 << self.folds;
+        ceil_div(self.element.num_polynomials(), reduction)
     }
 
-    fn dimensions(&self) -> (usize, usize) {
-        let (polynomials, size) = self.element.dimensions();
+    fn polynomial_size(&self) -> usize {
         let reduction = 1 << self.folds;
-        (ceil_div(polynomials, reduction), size * reduction)
+        self.element.polynomial_size() * reduction
+    }
+
+    fn claim(&self, witness: &Self::Witness) -> Self::Claim {
+        self.element.claim(witness)
     }
 
     fn constraints(&self, claim: &Self::Claim) -> Vec<RationalExpression> {
@@ -79,14 +83,19 @@ where
             .collect::<Vec<_>>()
     }
 
-    fn trace<P: PolyWriter>(&self, trace: &mut P, witness: &Self::Witness) {
+    fn trace<P: PolynomialWriter>(&self, trace: &mut P, witness: &Self::Witness) {
         let reduction = 1 << self.folds;
-        let mut trace = Mapped::new(trace, self.element.dimensions(), |polynomial, location| {
-            let polynomial_folded = permute_index(reduction, polynomial % reduction);
-            let polynomial = polynomial / reduction;
-            let location = location * reduction + polynomial_folded;
-            (polynomial, location)
-        });
+        let mut trace = Mapped::new(
+            trace,
+            self.element.num_polynomials(),
+            self.element.polynomial_size(),
+            |polynomial, location| {
+                let polynomial_folded = permute_index(reduction, polynomial % reduction);
+                let polynomial = polynomial / reduction;
+                let location = location * reduction + polynomial_folded;
+                (polynomial, location)
+            },
+        );
         self.element.trace(&mut trace, witness)
     }
 }

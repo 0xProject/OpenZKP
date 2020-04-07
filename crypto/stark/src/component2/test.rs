@@ -1,4 +1,4 @@
-use super::{Component, PolyWriter};
+use super::{Component, PolynomialWriter};
 use crate::RationalExpression;
 use zkp_primefield::{FieldElement, Root};
 
@@ -35,12 +35,16 @@ impl Component for Test {
     type Claim = FieldElement;
     type Witness = (FieldElement, FieldElement);
 
-    fn claim(&self, witness: &Self::Witness) -> Self::Claim {
-        witness.0.clone()
+    fn num_polynomials(&self) -> usize {
+        self.columns
     }
 
-    fn dimensions(&self) -> (usize, usize) {
-        (self.columns, self.rows)
+    fn polynomial_size(&self) -> usize {
+        self.rows
+    }
+
+    fn claim(&self, witness: &Self::Witness) -> Self::Claim {
+        witness.0.clone()
     }
 
     fn constraints(&self, claim: &Self::Claim) -> Vec<RationalExpression> {
@@ -81,8 +85,9 @@ impl Component for Test {
         constraints
     }
 
-    fn trace<P: PolyWriter>(&self, trace: &mut P, witness: &Self::Witness) {
-        debug_assert_eq!(trace.dimensions(), self.dimensions());
+    fn trace<P: PolynomialWriter>(&self, trace: &mut P, witness: &Self::Witness) {
+        debug_assert_eq!(trace.num_polynomials(), self.num_polynomials());
+        debug_assert_eq!(trace.polynomial_size(), self.polynomial_size());
 
         // Generator for the sequence
         let mut x0 = self.seed.clone();
