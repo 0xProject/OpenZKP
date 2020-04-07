@@ -1,7 +1,6 @@
 use crate::U256;
 #[cfg(feature = "std")]
 use hex::{decode, encode};
-#[cfg(feature = "std")]
 use serde::{
     de::{self, Deserialize, Deserializer, SeqAccess, Visitor},
     ser::{Serialize, Serializer},
@@ -33,7 +32,6 @@ impl U256 {
     }
 }
 
-#[cfg(feature = "std")]
 impl Serialize for U256 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -111,7 +109,6 @@ impl<'de> Visitor<'de> for U256Visitor {
     }
 }
 
-#[cfg(feature = "std")]
 impl<'de> Deserialize<'de> for U256 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
