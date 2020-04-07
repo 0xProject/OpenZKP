@@ -1,5 +1,7 @@
 // TODO: Naming?
 #![allow(clippy::module_name_repetitions)]
+#[cfg(feature = "std")]
+use log::trace;
 use std::prelude::v1::*;
 use zkp_macros_decl::field_element;
 use zkp_mmap_vec::MmapVec;
@@ -7,7 +9,6 @@ use zkp_mmap_vec::MmapVec;
 use zkp_primefield::{fft::permute_index, Fft, Pow, Root};
 use zkp_primefield::{FieldElement, Zero};
 use zkp_u256::U256;
-use log::trace;
 
 #[derive(Clone)]
 pub struct DensePolynomial(MmapVec<FieldElement>);

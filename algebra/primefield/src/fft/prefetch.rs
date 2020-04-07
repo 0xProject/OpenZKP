@@ -6,10 +6,12 @@
 
 // TODO: implement IndexPrefetch<I> for Index<I>
 
-// Use the _mm_prefetch intrinsic from stable for now.
+#[cfg(feature = "memadvise")]
 use memadvise::{advise, Advice};
+// Use the _mm_prefetch intrinsic from stable for now.
 #[cfg(target_arch = "x86_64")]
 use std::arch::x86_64::{_mm_prefetch, _MM_HINT_T0};
+#[cfg(feature = "memadvise")]
 use std::mem::size_of_val;
 
 pub trait Prefetch {
@@ -21,6 +23,7 @@ pub trait Prefetch {
     fn prefetch_write(&self);
 }
 
+#[cfg(feature = "memadvise")]
 pub trait Madvise {
     fn madvise(&mut self, advice: Advice);
 }
@@ -64,6 +67,7 @@ impl<T> Prefetch for T {
     }
 }
 
+#[cfg(feature = "memadvise")]
 impl<T> Madvise for [T] {
     // TODO: Does this need to be `&mut self`?
     fn madvise(&mut self, advice: Advice) {
