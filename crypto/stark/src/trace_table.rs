@@ -1,11 +1,11 @@
 use crate::polynomial::DensePolynomial;
+use log::trace;
 use std::{
     ops::{Index, IndexMut},
     prelude::v1::*,
 };
 use zkp_mmap_vec::MmapVec;
 use zkp_primefield::{fft::permute, Fft, FieldElement, Root, Zero};
-use log::trace;
 
 #[derive(Clone, PartialEq)]
 #[cfg_attr(feature = "std", derive(Debug))]

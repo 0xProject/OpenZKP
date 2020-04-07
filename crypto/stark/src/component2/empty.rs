@@ -1,4 +1,4 @@
-use super::{Component, PolyWriter};
+use super::{Component, PolynomialWriter};
 use crate::RationalExpression;
 
 #[derive(Clone, PartialEq, Eq)]
@@ -15,17 +15,21 @@ impl Component for Empty {
     type Claim = ();
     type Witness = ();
 
-    fn claim(&self, _witness: &Self::Witness) -> Self::Claim {}
-
-    fn dimensions(&self) -> (usize, usize) {
-        (self.0, self.1)
+    fn num_polynomials(&self) -> usize {
+        self.0
     }
+
+    fn polynomial_size(&self) -> usize {
+        self.1
+    }
+
+    fn claim(&self, _witness: &Self::Witness) -> Self::Claim {}
 
     fn constraints(&self, _claim: &Self::Claim) -> Vec<RationalExpression> {
         Vec::new()
     }
 
-    fn trace<P: PolyWriter>(&self, _trace: &mut P, _witness: &Self::Witness) {}
+    fn trace<P: PolynomialWriter>(&self, _trace: &mut P, _witness: &Self::Witness) {}
 }
 
 #[cfg(test)]

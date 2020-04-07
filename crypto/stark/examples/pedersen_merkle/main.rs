@@ -149,8 +149,9 @@ fn main() {
     info!("Constructing component...");
     let component = MerkleTree::new(witness.path.len());
     println!(
-        "Constructing {:?} trace with {} constraints",
-        component.dimensions(),
+        "Constructing {} x {} trace with {} constraints",
+        component.num_polynomials(),
+        component.polynomial_size(),
         component.constraints(&claim).len(),
     );
 

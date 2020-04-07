@@ -9,7 +9,7 @@ use crate::{
 use zkp_elliptic_curve::Affine;
 use zkp_primefield::{FieldElement, One, Pow, Root, Zero};
 use zkp_stark::{
-    component2::{Component, PolyWriter, Vertical},
+    component2::{Component, PolynomialWriter, Vertical},
     DensePolynomial, RationalExpression,
 };
 use zkp_u256::{Binary, U256};
@@ -49,11 +49,15 @@ impl Component for MerkleTreeLayer {
     type Claim = ();
     type Witness = (FieldElement, FieldElement, bool);
 
-    fn claim(&self, _witness: &Self::Witness) -> Self::Claim {}
-
-    fn dimensions(&self) -> (usize, usize) {
-        (8, 256)
+    fn num_polynomials(&self) -> usize {
+        8
     }
+
+    fn polynomial_size(&self) -> usize {
+        256
+    }
+
+    fn claim(&self, _witness: &Self::Witness) -> Self::Claim {}
 
     fn constraints(&self, _claim: &Self::Claim) -> Vec<RationalExpression> {
         use RationalExpression::*;
@@ -135,7 +139,11 @@ impl Component for MerkleTreeLayer {
         constraints
     }
 
-    fn trace<P: PolyWriter>(&self, trace: &mut P, (leaf, sibling, direction): &Self::Witness) {
+    fn trace<P: PolynomialWriter>(
+        &self,
+        trace: &mut P,
+        (leaf, sibling, direction): &Self::Witness,
+    ) {
         let (left, right) = if *direction {
             (sibling, leaf)
         } else {
@@ -209,12 +217,16 @@ impl Component for MerkleTree {
     type Claim = Claim;
     type Witness = Witness;
 
-    fn claim(&self, witness: &Self::Witness) -> Self::Claim {
-        witness.into()
+    fn num_polynomials(&self) -> usize {
+        self.layers.num_polynomials()
     }
 
-    fn dimensions(&self) -> (usize, usize) {
-        self.layers.dimensions()
+    fn polynomial_size(&self) -> usize {
+        self.layers.polynomial_size()
+    }
+
+    fn claim(&self, witness: &Self::Witness) -> Self::Claim {
+        witness.into()
     }
 
     fn constraints(&self, claim: &Self::Claim) -> Vec<RationalExpression> {
@@ -223,7 +235,8 @@ impl Component for MerkleTree {
         let mut constraints = self.layers.constraints(&fake_claim);
 
         // Construct constraints
-        let (polynomials, size) = self.dimensions();
+        let polynomials = self.num_polynomials();
+        let size = self.polynomial_size();
         let path_length = self.layers.size();
         let trace_length = size;
         let root = claim.root.clone();
@@ -254,7 +267,7 @@ impl Component for MerkleTree {
 
         // The final hash equals `root`
         let hash = self.layers.element().hash();
-        let row_index = hash.0 + (path_length - 1) * self.layers.element().dimensions().1;
+        let row_index = hash.0 + (path_length - 1) * self.layers.element().polynomial_size();
         constraints.insert(1, (Constant(root) - hash.1) / row(row_index));
 
         // Add column constraints
@@ -265,7 +278,7 @@ impl Component for MerkleTree {
         constraints
     }
 
-    fn trace<P: PolyWriter>(&self, trace: &mut P, witness: &Self::Witness) {
+    fn trace<P: PolynomialWriter>(&self, trace: &mut P, witness: &Self::Witness) {
         let witness = witness
             .path
             .iter()

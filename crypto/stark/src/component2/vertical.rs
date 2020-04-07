@@ -1,4 +1,4 @@
-use super::{Component, Mapped, PolyWriter};
+use super::{Component, Mapped, PolynomialWriter};
 use crate::RationalExpression;
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -38,16 +38,19 @@ where
     type Claim = Vec<Element::Claim>;
     type Witness = Vec<Element::Witness>;
 
+    fn num_polynomials(&self) -> usize {
+        self.element.num_polynomials()
+    }
+
+    fn polynomial_size(&self) -> usize {
+        self.element.polynomial_size() * self.size
+    }
+
     fn claim(&self, witness: &Self::Witness) -> Self::Claim {
         witness
             .iter()
             .map(|witness| self.element.claim(witness))
             .collect::<Vec<_>>()
-    }
-
-    fn dimensions(&self) -> (usize, usize) {
-        let (polynomials, size) = self.element.dimensions();
-        (polynomials, self.size * size)
     }
 
     // Note: Element can not have constraints depend on the claim!
@@ -69,14 +72,16 @@ where
             .collect::<Vec<_>>()
     }
 
-    fn trace<P: PolyWriter>(&self, trace: &mut P, witness: &Self::Witness) {
-        // TODO: Parallel witness generation
-        let (polynomials, size) = self.element.dimensions();
+    fn trace<P: PolynomialWriter>(&self, trace: &mut P, witness: &Self::Witness) {
+        let num_polynomials = self.element.num_polynomials();
+        let polynomial_size = self.element.polynomial_size();
         witness.iter().enumerate().for_each(|(i, witness)| {
-            let mut transformed =
-                Mapped::new(trace, (polynomials, size), |polynomial, location| {
-                    (polynomial, location + i * size)
-                });
+            let mut transformed = Mapped::new(
+                trace,
+                num_polynomials,
+                polynomial_size,
+                |polynomial, location| (polynomial, location + i * polynomial_size),
+            );
             self.element.trace(&mut transformed, witness);
         })
     }

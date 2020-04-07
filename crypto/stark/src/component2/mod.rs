@@ -12,8 +12,8 @@ use crate::{
     verifier::{verify, Error as VerifierError},
     Constraints, ProverError, RationalExpression, TraceTable,
 };
-use zkp_primefield::FieldElement;
 use log::trace;
+use zkp_primefield::FieldElement;
 
 pub use empty::Empty;
 pub use fold::Fold;
@@ -23,19 +23,25 @@ pub use test::Test;
 pub use vertical::Vertical;
 
 /// A set of Polynomials represented by their values at roots of unity.
-pub trait PolyWriter {
-    /// Returns (number of polynomials, number of size)
-    fn dimensions(&self) -> (usize, usize);
+pub trait PolynomialWriter {
+    /// Number of polynomials to commit to.
+    fn num_polynomials(&self) -> usize;
+
+    /// The size of the polynomials, i.e. the number of distinct locations that
+    /// can be set.
+    fn polynomial_size(&self) -> usize;
 
     /// Write to a given location
     fn write(&mut self, polynomial: usize, location: usize, value: FieldElement);
 }
 
-impl PolyWriter for TraceTable {
-    // Returns the number of polynomials and the size of the polynomials. All
-    // polynomials have the same size.
-    fn dimensions(&self) -> (usize, usize) {
-        (self.num_columns(), self.num_rows())
+impl PolynomialWriter for TraceTable {
+    fn num_polynomials(&self) -> usize {
+        self.num_columns()
+    }
+
+    fn polynomial_size(&self) -> usize {
+        self.num_rows()
     }
 
     fn write(&mut self, polynomial: usize, location: usize, value: FieldElement) {
@@ -49,16 +55,22 @@ pub trait Component {
 
     fn claim(&self, witness: &Self::Witness) -> Self::Claim;
 
-    fn dimensions(&self) -> (usize, usize);
+    /// Number of polynomials to commit to.
+    fn num_polynomials(&self) -> usize;
+
+    /// The size of the polynomials, i.e. the number of distinct locations that
+    /// can be set.
+    fn polynomial_size(&self) -> usize;
 
     fn constraints(&self, claim: &Self::Claim) -> Vec<RationalExpression>;
 
-    fn trace<P: PolyWriter>(&self, trace: &mut P, witness: &Self::Witness);
+    fn trace<P: PolynomialWriter>(&self, trace: &mut P, witness: &Self::Witness);
 
     /// Construct a trace table
     fn trace_table(&self, witness: &Self::Witness) -> TraceTable {
         trace!("BEGIN Component Trace");
-        let (polynomials, size) = self.dimensions();
+        let polynomials = self.num_polynomials();
+        let size = self.polynomial_size();
         let mut trace_table = TraceTable::new(size, polynomials);
         self.trace(&mut trace_table, witness);
         trace!("END Component Trace");
@@ -66,7 +78,8 @@ pub trait Component {
     }
 
     fn prove(&self, witness: &Self::Witness) -> Result<Proof, ProverError> {
-        let (polynomials, size) = self.dimensions();
+        let polynomials = self.num_polynomials();
+        let size = self.polynomial_size();
         let claim = self.claim(witness);
         let channel_seed = Vec::new();
         let expressions = self.constraints(&claim);
@@ -77,7 +90,8 @@ pub trait Component {
     }
 
     fn verify(&self, claim: &Self::Claim, proof: &Proof) -> Result<(), VerifierError> {
-        let (polynomials, size) = self.dimensions();
+        let polynomials = self.num_polynomials();
+        let size = self.polynomial_size();
         let channel_seed = Vec::new();
         let expressions = self.constraints(claim);
         let constraints =
@@ -86,7 +100,8 @@ pub trait Component {
     }
 
     fn check(&self, witness: &Self::Witness) -> Result<(), (usize, usize)> {
-        let (polynomials, size) = self.dimensions();
+        let polynomials = self.num_polynomials();
+        let size = self.polynomial_size();
         let claim = self.claim(witness);
         let channel_seed = Vec::new();
         let expressions = self.constraints(&claim);
