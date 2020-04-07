@@ -233,6 +233,7 @@ impl U256 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use bincode;
     use num_traits::identities::One;
     use proptest::prelude::*;
     use serde_json;
@@ -252,6 +253,15 @@ mod tests {
         proptest!(|(x: U256)| {
             let serialized = serde_json::to_string(&x)?;
             let deserialized: U256 = serde_json::from_str(&serialized)?;
+            prop_assert_eq!(deserialized, x);
+        });
+    }
+
+    #[test]
+    fn test_serde_bincode() {
+        proptest!(|(x: U256)| {
+            let serialized = bincode::serialize(&x)?;
+            let deserialized: U256 = bincode::deserialize(&serialized)?;
             prop_assert_eq!(deserialized, x);
         });
     }
