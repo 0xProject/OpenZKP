@@ -47,7 +47,7 @@ impl<'de> Deserialize<'de> for U256 {
         D: Deserializer<'de>,
     {
         if deserializer.is_human_readable() {
-            String::deserialize(deserializer).map(|s| U256::from_hex_str(&s))
+            <&str>::deserialize(deserializer).map(U256::from_hex_str)
         } else {
             <[u8; 32]>::deserialize(deserializer).map(|b| U256::from_bytes_be(&b))
         }

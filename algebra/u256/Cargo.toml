@@ -21,9 +21,17 @@ no-std-compat = { version = "0.3.0", features = [ "alloc" ] }
 num-traits = { version = "0.2.10", default_features = false }
 quickcheck = { version = "0.9", optional = true }
 rand = { version = "0.7.2", optional = true }
-serde = { version = "1.0", default_features = false, features = ["derive", "alloc"] }
+serde = { version = "1.0", default_features = false }
 proptest = { version = "0.9.4", optional = true }
 proptest-derive = { version = "0.1.2", optional = true }
+
+[dev-dependencies]
+bincode = "1.2.1"
+criterion = "0.3.0"
+proptest = "0.9.5"
+proptest-derive = "0.1.2"
+serde_json = "1.0"
+zkp-macros-decl = { version = "0.1.0", path = "../../utils/macros-decl" }
 
 [[bench]]
 name = "benchmark"
