@@ -1,7 +1,6 @@
 // This module abstracts low-level `unsafe` behaviour
 #![allow(unsafe_code)]
 use log::*;
-use memadvise::{advise, Advice};
 use memmap::{MmapMut, MmapOptions};
 use std::{
     cmp::max,
@@ -41,12 +40,6 @@ impl<T: Clone> MmapVec<T> {
             capacity,
             _t: PhantomData,
         }
-    }
-
-    /// Provide advice to the operating system.
-    pub fn advise(&mut self, advice: Advice) {
-        let ptr = self.mmap.as_mut_ptr() as *mut ();
-        advise(ptr, self.mmap.len(), advice).unwrap_or_else(|_| panic!("madvise failed"));
     }
 
     /// # Safety
