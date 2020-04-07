@@ -1,4 +1,5 @@
 use crate::U256;
+use hex;
 use std::prelude::v1::*;
 
 #[cfg(feature = "std")]
@@ -34,7 +35,7 @@ impl U256 {
         Ok(result)
     }
 
-    pub fn to_decimal_str(&self) -> String {
+    pub fn to_decimal_string(&self) -> String {
         if *self == Self::ZERO {
             return "0".to_string();
         }
@@ -52,15 +53,21 @@ impl U256 {
         result.chars().rev().collect()
     }
 
-    #[cfg(feature = "std")]
+    pub fn to_hex_string(&self) -> String {
+        hex::encode(self.to_bytes_be())
+    }
+
     pub fn from_hex_str(s: &str) -> Self {
         let byte_string = format!("{:0>64}", s.trim_start_matches("0x"));
+        // TODO: error
         let bytes = hex::decode(byte_string).unwrap();
         let mut array = [0_u8; 32];
         array.copy_from_slice(&bytes[..32]);
         Self::from_bytes_be(&array)
     }
 }
+
+// TODO: Implement FromStr using hex
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ParseError {
@@ -144,7 +151,7 @@ mod tests {
     proptest!(
         #[test]
         fn test_decimal_to_from(n: U256) {
-            let decimal = n.clone().to_decimal_str();
+            let decimal = n.clone().to_decimal_string();
             let m = U256::from_decimal_str(&decimal).unwrap();
             prop_assert_eq!(n, m)
         }
