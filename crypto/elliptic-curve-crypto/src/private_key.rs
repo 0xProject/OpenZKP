@@ -13,9 +13,13 @@ use serde::{Deserialize, Serialize};
 #[cfg_attr(feature = "std", derive(Debug))]
 #[cfg_attr(test, derive(Arbitrary))]
 #[cfg_attr(test, proptest(no_params))]
-pub struct PrivateKey(pub ScalarFieldElement);
+pub struct PrivateKey(ScalarFieldElement);
 
 impl PrivateKey {
+    pub fn as_scalar_field_element(&self) -> &ScalarFieldElement {
+        &self.0
+    }
+
     pub fn sign(&self, digest: &ScalarFieldElement) -> Signature {
         for nonce in 0..1000 {
             let k = self.hash(digest, nonce);
