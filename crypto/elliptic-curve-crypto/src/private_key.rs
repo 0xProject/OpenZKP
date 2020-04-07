@@ -6,8 +6,6 @@ use zkp_u256::U256;
 
 #[cfg(any(test, feature = "proptest"))]
 use proptest_derive::Arbitrary;
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
 
 #[derive(PartialEq, Eq, Clone, Hash)]
 #[cfg_attr(feature = "std", derive(Debug))]

@@ -1,15 +1,13 @@
-use crate::{PrivateKey, Signature};
+use crate::{PrivateKey, Signature, GENERATOR_TABLE};
 use zkp_elliptic_curve::{base_mul, double_base_mul, Affine, ScalarFieldElement};
 use zkp_primefield::*;
 
-#[cfg(feature = "serde")]
+#[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
 #[derive(PartialEq, Eq, Clone, Default)]
-#[cfg_attr(feature = "std", derive(Debug))]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
 pub struct PublicKey(Affine);
-use crate::GENERATOR_TABLE;
 
 impl PublicKey {
     pub fn as_affine(&self) -> &Affine {

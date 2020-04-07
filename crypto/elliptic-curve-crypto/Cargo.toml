@@ -38,6 +38,7 @@ harness = false
 [features]
 default = [ "std" ]
 std = [
+    "serde",
     "itertools/use_std",
     "no-std-compat/std",
     "zkp-elliptic-curve/std",
