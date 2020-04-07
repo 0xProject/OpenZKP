@@ -37,10 +37,10 @@ harness = false
 [features]
 default = [
     "inline",
-    "serde",
     "std",
 ]
 std = [
+    "serde",
     "itertools/use_std",
     "no-std-compat/std",
     "zkp-macros-decl/std",
