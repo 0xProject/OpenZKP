@@ -1,0 +1,22 @@
+[package]
+name = "zkp-macros-decl"
+version = "0.1.0"
+description = "Procedural macros"
+repository = "https://github.com/0xProject/starkcrypto/tree/master/utils/macros-decl"
+keywords = ["proc_macro_hack"]
+categories = ["rust-patterns"]
+authors = [
+    "Remco Bloemen <remco@0x.org>",
+    "Mason Liang <mason@0x.org>",
+    "Paul Vienhage <paul@0x.org>"]
+readme = "Readme.md"
+license = "Apache-2.0"
+edition = "2018"
+
+[dependencies]
+proc-macro-hack = "0.5"
+zkp-macros-impl = { version = "0.1.0", path = "../macros-impl" }
+
+[features]
+default = ["std"]
+std = []

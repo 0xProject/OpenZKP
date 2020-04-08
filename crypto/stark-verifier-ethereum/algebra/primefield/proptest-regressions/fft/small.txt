@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 0ffa280936d79774e88675362b589df0d047a10c54c927d644d99bd2cb5849b4 # shrinks to values = [field_element!("u256h!("0000000000000000000000000000000000000000000000000000000000000000")"), field_element!("u256h!("0000000000000000000000000000000000000000000000000000000000000000")"), field_element!("u256h!("0000000000000000000000000000000000000000000000000000000000000000")"), field_element!("u256h!("0000000000000000000000000000000000000000000000000000000000000000")"), field_element!("u256h!("00d62d5ccc2c4d08daa9218dab82fedb0245223cec49e0a3000000aaf66ad115")"), field_element!("u256h!("053e6e41f1932847985e7fd0b09a1492664eb42495eccd564b7f3b76b61ab8bb")"), field_element!("u256h!("076159784dfb9bfd8bcc588abbeda3c7534424688fb4f6a2d74cedadf1525d3d")"), field_element!("u256h!("059cf8f1118bf4f46eb3a0fab36cf02bdc5533996838c5ec210a293fe270b80d")")]
