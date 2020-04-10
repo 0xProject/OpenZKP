@@ -1,5 +1,5 @@
 [book]
-authors = ["Remco Bloemen"]
+authors = ["Remco Bloemen <remco@0x.org>"]
 language = "en"
 multilingual = false
 src = "src"
