@@ -222,10 +222,16 @@ jobs:
     steps:
       - checkout
       - run:
+          # TODO: Move to docker image
+          name: Install mdbook
+          command: cargo install mdbook
+      - run:
           name: Build book
+          working_directory: ./book
           command: mdbook build
       - run:
           name: Compile examples
+          working_directory: ./book
           command: mdbook test
   rustformat:
     executor: docker-rust
@@ -315,6 +321,7 @@ jobs:
     steps:
       - checkout
       - run:
+          # TODO: Move to docker image
           name: Install the npm packages
           working_directory: ./crypto/stark-verifier-ethereum
           command: npm i
