@@ -13,6 +13,5 @@ cargo install mdbook
 ## Read locally with update-on-change
 
 ```
-cd guide
 mdbook serve --open
 ```
