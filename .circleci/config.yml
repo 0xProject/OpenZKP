@@ -217,6 +217,19 @@ jobs:
           key: benchmark-criterion-v1-{{ epoch }}
           paths:
             - ./criterion.tgz
+  doc:
+    executor: docker-rust
+    steps:
+      - checkout
+      - run:
+          name: Build docs
+          command: cargo d
+      - store_artifacts:
+          path: ./target/doc
+          destination: doc
+      - run:
+          name: Test examples
+          command: cargo d --test
   book:
     executor: docker-rust
     steps:
@@ -228,12 +241,10 @@ jobs:
       - run:
           name: Build book
           working_directory: ./book
-          command: |
-            mdbook build
-            tar cvzf ./book.tgz ./book
+          command: mdbook build
       - store_artifacts:
           path: ./book/book
-          destination: book.tgz
+          destination: book
       - run:
           name: Compile examples
           working_directory: ./book
@@ -367,6 +378,9 @@ workflows:
       - benchmarks:
           requires:
             - build-docker
+      - doc:
+          requires:
+            - build-docker
       - book:
           requires:
             - build-docker
@@ -402,6 +416,7 @@ workflows:
             - analysis
             - tests
             - benchmarks
+            - doc
             - book
             - build-no-std
             - update-issues
