@@ -1,0 +1,6 @@
+[book]
+authors = ["Remco Bloemen"]
+language = "en"
+multilingual = false
+src = "src"
+title = "The OpenZKP Book"
