@@ -9,7 +9,14 @@ if len(sys.argv) > 1:
 
 katex = '\n' + open('../.cargo/katex-header.html', 'r').read()
 context, book = json.load(sys.stdin)
-for section in book['sections']:
-    if 'Chapter' in section:
-        section['Chapter']['content'] += katex
+
+
+def fix(items):
+    for section in items:
+        if 'Chapter' in section:
+            section['Chapter']['content'] += katex
+            fix(section['Chapter']['sub_items'])
+
+
+fix(book['sections'])
 json.dump(book, sys.stdout)
