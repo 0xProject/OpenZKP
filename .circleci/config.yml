@@ -388,7 +388,7 @@ workflows:
       - benchmark-store:
           requires:
             - benchmark-ec2
-      - update-issues
+      - update-issues:
           filters:
             branches:
               only: master
