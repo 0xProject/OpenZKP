@@ -383,11 +383,11 @@ workflows:
       - benchmark-store:
           requires:
             - benchmark-ec2
+      - update-issues
           filters:
             branches:
               only: master
       - solidity-checking
-      - update-issues
       # `accept` is a phony job which requires every check for a commit.
       # This allows us to set a single 'required status check' in GitHub.
       - accept:
