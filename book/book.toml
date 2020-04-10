@@ -4,3 +4,7 @@ language = "en"
 multilingual = false
 src = "src"
 title = "The OpenZKP Book"
+
+[preprocessor.katex]
+command = "python3 katex.py"
+renderer = ["html"]
