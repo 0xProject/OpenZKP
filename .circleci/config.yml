@@ -217,6 +217,16 @@ jobs:
           key: benchmark-criterion-v1-{{ epoch }}
           paths:
             - ./criterion.tgz
+  book:
+    executor: docker-rust
+    steps:
+      - checkout
+      - run:
+          name: Build book
+          command: mdbook build
+      - run:
+          name: Compile examples
+          command: mdbook test
   rustformat:
     executor: docker-rust
     steps:
