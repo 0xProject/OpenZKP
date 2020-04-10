@@ -1,7 +1,7 @@
 [alias]
 t = "test --all-targets"
 b = "build --all-targets"
-d = "hack rustdoc --all-features -- --html-in-header .cargo/katex-header.html"
+d = "hack rustdoc -- --html-in-header .cargo/katex-header.html"
 lint = "clippy --all-targets -- -D warnings"
 perf = "bench --bench benchmark"
 nostd = """
