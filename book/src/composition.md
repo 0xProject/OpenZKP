@@ -148,7 +148,7 @@ Using the above three lemmas, a single low-degree test can verify arbitrary degr
 
 # AIR Composibility
 
-```rust
+```rust,ignore
 struct AirComponent {
     trace:       TraceTable,
     constraints: Vec<RationalExpression>,
@@ -165,7 +165,7 @@ struct AirComponent {
 
 ## Air component combinators
 
-```rust
+```rust,ignore
 fn compose_horizontal(A: AirComponent, B: AirComponent) -> AirComponent {
     require(A.rows == B.rows);
 
@@ -176,7 +176,7 @@ fn compose_horizontal(A: AirComponent, B: AirComponent) -> AirComponent {
 }
 ```
 
-```rust
+```rust,ignore
 fn compose_vertical(A: AirComponent, B: AirComponent) -> AirComponent {
     require(A.rows == B.rows);
     require(A.cols == B.cols);
@@ -190,7 +190,7 @@ fn compose_vertical(A: AirComponent, B: AirComponent) -> AirComponent {
 }
 ```
 
-```rust
+```rust,ignore
 fn compose_interleaved(A: AirComponent, B: AirComponent) -> AirComponent {
     require(A.rows == B.rows);
     require(A.cols == B.cols);
@@ -211,7 +211,7 @@ fn compose_interleaved(A: AirComponent, B: AirComponent) -> AirComponent {
 }
 ```
 
-```rust
+```rust,ignore
 fn fold(A: AirComponent) -> AirComponent {
     require(A.cols % 2 == 0);
 
@@ -232,19 +232,19 @@ fn fold(A: AirComponent) -> AirComponent {
 
 It's useful to add a helper function creating no-op components. This allows doing things like `fold(compose_horizontal(A, empty(A.rows, 1))` to do a fold where `A` has an odd number of columns.
 
-```rust
+```rust,ignore
 fn empty(rows: usize, cols: usize) -> AirComponent;
 ```
 
 Using these, we can implement more complex operations:
 
-```rust
+```rust,ignore
 fn fold_padded(A: AirComponent, repeats: usize) -> AirComponent {
     
 }
 ```
 
-```rust
+```rust,ignore
 fn fit_horizontal(A: AirComponent, B: AirComponent) -> AirComponent {
     // Same as compose_horizontal, but it will do whatever folds
     // and paddings are necessary to make A.rows == B.rows.
@@ -254,7 +254,7 @@ fn fit_horizontal(A: AirComponent, B: AirComponent) -> AirComponent {
 
 ## Example
 
-```rust
+```rust,ignore
 
 fn transaction(
     initial_balances: Balances,
@@ -318,7 +318,7 @@ fn starkdex(
 
 ---
 
-```rust
+```rust,ignore
 struct Projection {
 
 }
