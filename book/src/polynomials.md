@@ -474,3 +474,188 @@ G_2(X) - G(X)^2 &= H(X) Z_2(X) \\\\
 G_k(X) - G(X)^2 &= H(X) Z_k(X) \\\\
 \end{aligned}
 $$
+
+## Bivariate polynomials
+
+$$
+\def\F{\mathbb F}
+$$
+
+**Goal.** Simulate a form of (random access) memory using bivariate polynomials $P\in\F[X,Y]$.
+
+Intuitively, we lay out the memory with time on the $X$ axis and space (addresses) on the $Y$ axis.
+
+---
+
+## Stack
+
+Start with a simple stack where $P(ω_n^i, ω_m^j)$ is the value of stack location $j$ at time $i$.
+
+The initial polynomial is the zero polynomial on our basis $ω^j$
+
+$$
+P(0, Y) = Y^m - 1
+$$
+
+**Note.** It looks like we can handle the memory sparsely, both in the polyonmial form and in the merkle trees.
+
+
+$$
+L_{m,j}(Y) = \frac{ω_m^j}{m} \frac{Y^m - 1}{Y-ω_m^j}
+$$
+
+### Push & Pop
+
+**Constraint.** *(Push). Rotate all elements to the right, add an element $x$. Has the following constraints:*
+
+$$
+\begin{aligned}
+P(X, ω_m^{m-1}) &= 0 \\\\
+P(ω_n ⋅ X, Y) &= P(X, ω_m ⋅ Y) + x ⋅ L_0(Y)
+\end{aligned}
+$$
+
+**Constraint.** *(Pop). Operate the push constraint in reverse.*
+
+### Random access
+
+**Constraint.** *(Compare and swap). Replace the value at $j$ from $a$ to $b$.*
+
+$$
+\begin{aligned}
+P(X, ω_m^j) &= a \\\\
+P(ω_n ⋅ X, Y) &= P(X, Y) + (b - a) ⋅ L_j(Y)
+\end{aligned}
+$$
+
+The problem here is that we need to encode the $j$ somehow, either in a precomputed polynomial or as a column. Since all usage of $j$ will be in the form $ω_m^j$ we will use that instead. the final constraint will look like:
+
+$$
+\begin{aligned}
+P(X, Q(X)) &= a \\\\
+P(ω_n ⋅ X, Y) &= P(X, Y) + (b - a) ⋅ \frac{Q(X)}{m} \frac{Y^m - 1}{Y-Q(X)}
+\end{aligned}
+$$
+
+**To do.** What if $Q(X)$ is not of the form $ω_m^j$?
+
+The first constraint has a degree bound of $(\deg P)⋅(\deg Q) = n^2 m$. So far we have only handle constant constraint bounds. How do we LDE test this efficiently?
+
+> We could add a temporary value? $t = Q(X), P(X, t) = a$?
+
+In addition, to force $Q(X)$ to be a root of unity, we can add a constraint
+
+$$
+Q(X)^m = 1
+$$
+
+which has degree bound $m\deg Q = nm$. Again, how do we LDE-test this efficiently?
+
+---
+
+## Polynomial composition
+
+Both approaches above hit the problem that we need to low-degree-test an expression of the form $P(Q(X))$. The straightforward approach has degree bound $(\deg P)(\deg Q)$ which is quadratic. This will kill prover performance and more than double proof size.
+
+**Goal.** *Find a way to LDE test polynomial compositions efficiently.*
+
+**To do.** Specify goal more concretely.
+
+https://en.wikipedia.org/wiki/Polynomial_decomposition
+
+https://www.math.mcgill.ca/rickards/PDFs/amer.math.monthly.118.04.358-rickards.pdf
+
+https://www.cs.cornell.edu/~kozen/Papers/poly.pdf
+
+Chebyshev polynomials have the nesting property $T_n(T_m(X)) = T_{mn}(X)$.
+
+https://dspace.mit.edu/bitstream/handle/1721.1/71792/Kedlaya-2011-FAST%20POLYNOMIAL%20FACT.pdf?sequence=1&isAllowed=y
+https://www.cse.iitk.ac.in/users/nitin/courses/CS681-2016-17-II/pdfs/slides-dwivedi.pdf
+Evaluates $f(g(x)) \mod h(x)$ in less then $\mathcal O(n^2)$ time using FFTs. => Read.
+http://users.cms.caltech.edu/~umans/papers/U07.pdf
+
+https://www.cse.iitk.ac.in/users/nitin/courses/CS681-2016-17-II/pdfs/slides-dwivedi.pdf
+
+https://citeseer.ist.psu.edu/viewdoc/download;jsessionid=611B98690C1028968AED2736F9E1E77C?doi=10.1.1.51.3154&rep=rep1&type=pdf
+
+https://arxiv.org/pdf/0807.3578.pdf
+
+
+---
+
+
+Aside: https://en.wikipedia.org/wiki/Bruun's_FFT_algorithm
+
+## Composition proof
+
+$$
+\def\F{\mathbb F}
+$$
+
+**Context.** Are values are from a 
+
+**Goal.** *Given $P\in\F_{< N}[X]$ Proof the following constraint using Schwartz-Sippel and a $\le N$ low degree test:*
+
+$$
+F(G(X)) \mod H(X) = 0
+$$
+
+
+
+$$
+\frac{P(X)^{2^{64}} - 1}{X^N - 1}
+$$
+
+**Lemma.** *Polynomials satisfying the above constraint satisfy $P(\omega_N^i) = \omega_{2^{64}}^{k_i}$ for $i \in [0,N)$.*
+
+**Definition.** *$\F_{< N}[X] \sim \F[X]/ X^N$*
+
+---
+
+Assume for the moment $N = 2^{64}$, we can generalize later
+
+$$
+\frac{P(X)^N - 1}{X^N - 1}
+$$
+
+This puts some constraints on the coefficients of $P$.
+
+$$
+P(X) = \sum_{i\in[0,N)} p_i X^i
+$$
+
+$$
+\frac{P(X)^N - 1}{X^N - 1} =
+\frac{\left(\sum_{i\in[0,N)} p_i X^i\right)^N - 1}{X^N - 1}
+$$
+
+We can now expand using something like the https://en.wikipedia.org/wiki/Binomial_theorem, i.e. https://en.wikipedia.org/wiki/Multinomial_theorem.
+
+**To do.** Look into differentials.
+
+### Simplifications
+
+We can further restrict the problem to the case $h(x) = x^n - 1$. This can help because we can now factor $h$ as
+
+$$
+h(x) = (x - ω_n^0) (x - ω_n^1) (x - ω_n^2) \cdots (x - ω_n^{n-1})
+$$
+
+or (thanks Yan Zhang)
+
+$$
+h(x) = (x - 1) (x + 1) (x^2 + 1) (x^4 + 1) \cdots (x^n + 1)
+$$
+
+The problem could be broken solved modulo these factors and then invoke CRT.
+
+---
+
+### References
+
+* J. F. Ritt (1921). "Prime and Composite Polynomials".
+  [link](https://www.ams.org/journals/tran/1922-023-01/S0002-9947-1922-1501189-9/S0002-9947-1922-1501189-9.pdf).
+* Raoul Blankertz (2014). "A polynomial time algorithm for computing all minimal decompositions of a polynomial"
+  [link](https://web.archive.org/web/20150924101735/http://www.sigsam.org/bulletin/articles/187/Polynomial_time_decomposition_pp13-23.pdf)
+* K. S. Kedlaya, C. Umans (2011). "Fast polynomial factorization and modular composition"
+ [link](http://users.cms.caltech.edu/~umans/papers/KU08-final.pdf)
