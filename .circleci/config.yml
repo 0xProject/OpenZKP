@@ -228,7 +228,12 @@ jobs:
       - run:
           name: Build book
           working_directory: ./book
-          command: mdbook build
+          command: |
+            mdbook build
+            tar cvzf ./book.tgz ./book
+      - store_artifacts:
+          path: ./book/book
+          destination: book.tgz
       - run:
           name: Compile examples
           working_directory: ./book
