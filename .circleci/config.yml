@@ -355,6 +355,9 @@ workflows:
       - benchmarks:
           requires:
             - build-docker
+      - book:
+          requires:
+            - build-docker
       - rustformat:
           requires:
             - build-docker
@@ -387,6 +390,7 @@ workflows:
             - analysis
             - tests
             - benchmarks
+            - book
             - build-no-std
             - update-issues
             - solidity-checking
