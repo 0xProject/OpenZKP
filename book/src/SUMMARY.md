@@ -1,5 +1,5 @@
 # Summary
 
 - [introduction](./introduction.md)
-- [Chapter 1](./chapter_1.md)
+- [Polynomials](./polynomials.md)
 - [Permutation check](./permutation_check.md)
