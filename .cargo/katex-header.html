@@ -9,10 +9,14 @@
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         renderMathInElement(document.body, {
-            fleqn: true,
+            fleqn: false,
             macros: {
                 "\\F": "\\mathbb{F}",
                 "\\O": "\\mathcal{O}",
+                "\\(": "\\left(",
+                "\\)": "\\right)",
+                "\\norm": "\\left\\vert #1 \\right\\vert",
+                "\\set": "\\mathcal{ #1 }",
             },
             delimiters: [
                 { left: "$$", right: "$$", display: true },
