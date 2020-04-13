@@ -72,12 +72,4 @@ mod tests {
         let c = u256h!("012b854fc6321976d374ad069cfdec8bb7b2bd184259dae8f530cbb28f0805b4");
         assert_eq!(mul_redc_inline::<PrimeField>(&a, &b), c);
     }
-
-    // TODO
-    // #[quickcheck]
-    // fn test_to_from(mut n: U256) -> bool {
-    // n %= PrimeField::MODULUS;
-    // from_montgomery::<PrimeField>(&to_montgomery::<PrimeField>(&n)) == n
-    // }
-    //
 }
