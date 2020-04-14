@@ -2,7 +2,7 @@ pragma solidity ^0.6.4;
 pragma experimental ABIEncoderV2;
 
 import '../stark_verifier.sol';
-import '../public_coin.sol';
+import '../proof_types.sol';
 
 
 interface ConstraintSystem {
@@ -10,5 +10,7 @@ interface ConstraintSystem {
     function initalize_system(bytes calldata public_input)
         external
         view
-        returns (StarkVerifier.ProofParameters memory, PublicCoin.Coin memory);
+        returns (ProofTypes.ProofParameters memory, PublicCoin.Coin memory);
+
+    function calculate_commited_polynomial_points(ProofTypes.StarkProof calldata proof, ProofTypes.ProofParameters calldata params, uint64[] calldata queries, bytes32 oods_point, bytes32[] calldata constraint_coeffiencts) external view returns(bytes32[] memory, bytes32[] memory);
 }

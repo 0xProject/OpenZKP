@@ -5,65 +5,15 @@ import './interfaces/ConstraintInterface.sol';
 import './public_coin.sol';
 import './proof_of_work.sol';
 import './fri.sol';
+import './proof_types.sol';
 
 
-contract StarkVerifier is ProofOfWork, Fri {
+contract StarkVerifier is ProofOfWork, Fri, ProofTypes {
     using PublicCoin for PublicCoin.Coin;
-
-    // This struct contains all of the componets of the STARK proof.
-    // Please note that any input which would be a 'FieldElement' in rust,
-    // should be the montgomery bytes encoded field element
-    struct StarkProof {
-        // An array with the public inputs to the STARK
-        bytes public_inputs;
-        // An array with the flatened trace table decommitments
-        // For a trace table with n coloums it will be length num_queries*n
-        // and it will be laid out as:
-        // [[query 1 col 1][query 1 col 2]...[query 1 col n]]...[[query q col 1]...[query q col n]]
-        bytes32[] trace_values;
-        // The commitment to those trace values
-        bytes32 trace_commitment;
-        // The trace table evaluated constraint values at the the query indices.
-        bytes32[] constraint_values;
-        // The commitment to thos constraint values
-        bytes32 constraint_commitment;
-        // The trace values used for the oods point constraint evaluation
-        bytes32[] trace_oods_values;
-        // The constraint values used for the oods point constraint evaluation
-        bytes32[] constraint_oods_values;
-        // The nonce used for the proof of work
-        bytes8 pow_nonce;
-        // The merkle decomitment for the trace values
-        bytes32[] trace_decommitment;
-        // The merkle decomitment for the constraint evaluated queries
-        bytes32[] constraint_decommitment;
-        // The values to complete each coset of fri at each layer.
-        bytes32[][] fri_values;
-        // The roots for each fri decommitment
-        bytes32[] fri_commitments;
-        // The merkle proof decommitment at each fri layer
-        bytes32[][] fri_decommitments;
-        // The coeffiencts of the last fri layer
-        bytes32[] last_layer_coeffiencts;
-    }
-
-    // This struct contains the relevent information about the constraint system
-    // It will be returned from a callout to the constraint system contract.
-    struct ProofParameters {
-        uint8 number_of_columns;
-        uint8 log_trace_length;
-        uint64 number_of_constraints;
-        uint8 log_blowup;
-        uint8 constraint_degree;
-        uint8 pow_bits;
-        uint8 number_of_queries;
-        // TODO - Does the smaller size give us a real advantage
-        uint8[] fri_layout;
-    }
 
     // TODO - Figure out why making this external causes 'UnimplementedFeatureError' only when
     // it calls through to an internal function with proof as memory.
-    function verify_proof(StarkProof memory proof, ConstraintSystem constraints) public view returns (bool) {
+    function verify_proof(StarkProof memory proof, ConstraintSystem constraints) public returns (bool) {
         // Initalize the coin and constraint system
         (ProofParameters memory constraint_parameters, PublicCoin.Coin memory coin) = constraints.initalize_system(
             proof.public_inputs
@@ -80,6 +30,120 @@ contract StarkVerifier is ProofOfWork, Fri {
         // Read the query indices from the coin
         uint8 eval_domain_log_size = constraint_parameters.log_trace_length + constraint_parameters.log_blowup;
         uint64[] memory queries = get_queries(coin, eval_domain_log_size, constraint_parameters.number_of_queries);
+        // Get the actual polynomial points which were commited too, and the inverses of the x_points where they were evaluated
+        (bytes32[] memory fri_top_layer, bytes32[] memory x_inv_vals) = constraints.calculate_commited_polynomial_points(proof, constraint_parameters, queries, oods_point, constraint_coeffiencents);
+
+        uint8 log_eval_domain_size = constraint_parameters.log_trace_length + constraint_parameters.log_blowup;
+        uint8[] memory fri_layout = constraint_parameters.fri_layout;
+
+        // This hack is horific and shoulnd't exist
+        // uint256[] memory ptrs = new uint256[](7);
+        {
+            stack_hack_encode(proof,
+                              fri_layout,
+                              x_inv_vals,
+                              eval_points,
+                              queries);
+        }
+
+    }
+
+    function stack_depth_fri_hack(uint256[7] memory pointers, uint8 log_eval_domain_size, bytes32[] memory fri_top_layer) internal {
+        bytes32[][] memory fri_values;
+        uint256 ptr = pointers[0];
+        assembly {
+            fri_values := ptr
+        }
+        bytes32[] memory fri_commitments;
+        ptr = pointers[1];
+        assembly {
+            fri_commitments := ptr
+        }
+        bytes32[][] memory fri_decommitments;
+        ptr = pointers[2];
+        assembly {
+            fri_decommitments := ptr
+        }
+        uint8[] memory fri_layout;
+        ptr = pointers[3];
+        assembly {
+            fri_layout := ptr
+        }
+        bytes32[] memory x_inv_vals;
+        ptr = pointers[4];
+        assembly {
+            x_inv_vals := ptr
+        }
+        bytes32[] memory eval_points;
+        ptr = pointers[5];
+        assembly {
+            eval_points := ptr
+        }
+        uint64[] memory queries;
+        ptr = pointers[6];
+        assembly {
+            queries := ptr
+        }
+
+        fold_and_check_fri_layers(
+            fri_values,
+            fri_commitments,
+            fri_decommitments,
+            fri_layout,
+            x_inv_vals,
+            eval_points,
+            log_eval_domain_size,
+            queries,
+            fri_top_layer
+        );
+    }
+
+    // This function forces the solidity complier to write the pointers to memory
+    // It then returns their memory location
+    function stack_hack_encode(ProofTypes.StarkProof memory proof,
+        uint8[] memory fri_layout,
+        bytes32[] memory x_inv_vals,
+        bytes32[] memory eval_points,
+        uint64[] memory queries) internal returns(uint256[] memory result) {
+
+        uint256 ptr;
+        bytes32[][] memory unwraped_reference = proof.fri_values;
+        assembly {
+            ptr := unwraped_reference
+        }
+        result[0] = ptr;
+
+        bytes32[] memory unwraped_reference_2 = proof.fri_commitments;
+        assembly {
+            ptr := unwraped_reference_2
+        }
+        result[1] = ptr;
+
+        unwraped_reference = proof.fri_decommitments;
+        assembly {
+            ptr := unwraped_reference
+        }
+        result[2] = ptr;
+
+        assembly {
+            ptr := fri_layout
+        }
+        result[3] = ptr;
+
+        assembly {
+            ptr := x_inv_vals
+        }
+        result[4] = ptr;
+
+        assembly {
+            ptr := eval_points
+        }
+        result[5] = ptr;
+
+        assembly {
+            ptr := queries
+        }
+        result[6] = ptr;
     }
 
     // This function write to the channel and reads from the channel to get the randomized data

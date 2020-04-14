@@ -1,7 +1,7 @@
 pragma solidity ^0.6.4;
 
 
-contract PrimeField {
+library PrimeField {
     uint256 internal constant MODULUS = 0x800000000000011000000000000000000000000000000000000000000000001;
     uint256 internal constant MODULUS_MASK = 0x0fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
     uint256 internal constant MONTGOMERY_R = 0x7fffffffffffdf0ffffffffffffffffffffffffffffffffffffffffffffffe1;
@@ -33,12 +33,28 @@ contract PrimeField {
         return mulmod(a, b, MODULUS);
     }
 
+    function fmul(bytes32 a, bytes32 b) internal pure returns (bytes32) {
+        return (bytes32)(mulmod((uint256)(a), (uint256)(b), MODULUS));
+    }
+
     function fadd(uint256 a, uint256 b) internal pure returns (uint256) {
         return addmod(a, b, MODULUS);
     }
 
+    function fadd(bytes32 a, bytes32 b) internal pure returns (bytes32) {
+        return (bytes32)(addmod((uint256)(a), (uint256)(b), MODULUS));
+    }
+
+    function fsub(bytes32 a, bytes32 b) internal pure returns (bytes32) {
+        return (bytes32)(addmod((uint256)(a), MODULUS - (uint256)(b), MODULUS));
+    }
+
     function fsub(uint256 a, uint256 b) internal pure returns (uint256) {
         return addmod(a, MODULUS - b, MODULUS);
+    }
+
+    function fpow(bytes32 value, uint256 exp) internal returns (bytes32) {
+        return (bytes32)(expmod((uint256)(value), exp, MODULUS));
     }
 
     function fpow(uint256 value, uint256 exp) internal returns (uint256) {
@@ -47,6 +63,8 @@ contract PrimeField {
 
     // There's still no native call to the exp mod precompile in solidity
     function expmod(uint256 base, uint256 exponent, uint256 modulus) internal returns (uint256 result) {
+        // TODO - Check if gas is based on absolute input length or on indicated length
+        // that will have massive gas implications [13k for a square vs 50]
         assembly {
             let p := mload(0x40)
             mstore(p, 0x20) // Length of Base
@@ -64,6 +82,14 @@ contract PrimeField {
     }
 
     function inverse(uint256 value) internal returns (uint256) {
+        // The expmod version here costs 13758 gas
         return expmod(value, MODULUS - 2, MODULUS);
+    }
+
+    // Reverts if unavailable
+    function field_root(uint8 log_order) internal returns(uint256) {
+        uint256 maybe_exact = (MODULUS-1)/(uint256(2)**log_order);
+        require(maybe_exact*(uint256(2)**log_order) == (MODULUS-1), "Root unavailable");
+        return expmod(GENERATOR, maybe_exact, MODULUS);
     }
 }
