@@ -1,4 +1,5 @@
 pragma solidity 0.6.4;
+pragma experimental ABIEncoderV2;
 
 import './public_coin.sol';
 import './iterator.sol';
@@ -12,6 +13,24 @@ contract Fri is MerkleVerifier {
     using PublicCoin for PublicCoin.Coin;
     using Iterators for Iterators.IteratorBytes32;
     using PrimeField for *;
+
+    struct FriContext {
+        bytes32[][] fri_values;
+        bytes32[] fri_commitments;
+        bytes32[][] fri_decommitments;
+        uint8[] fri_layout;
+        bytes32[] x_inv_vals;
+        bytes32[] eval_points;
+        uint8 log_eval_domain_size;
+        uint64[] queries;
+        bytes32[] polynomial_at_queries;
+    }
+
+    struct LayerContext {
+        uint64 coset_size;
+        uint64 step;
+        uint64 len;
+    }
 
     // The Eval_X struct will lookup powers of x inside of the eval domain
     // It simplifies the interface, and can be made much more gas efficent
@@ -58,62 +77,74 @@ contract Fri is MerkleVerifier {
         return queries;
     }
 
+    // Unwraping endpoint because the main function has too deep of a stack otherwise
+    function fri_layers(ProofTypes.StarkProof memory proof,
+            uint8[] memory fri_layout,
+            bytes32[] memory x_inv_vals,
+            bytes32[] memory eval_points,
+            uint8 log_eval_domain_size,
+            uint64[] memory queries,
+            bytes32[] memory polynomial_at_queries) internal {
+                fold_and_check_fri_layers(FriContext(
+                    proof.fri_values,
+                    proof.fri_commitments,
+                    proof.fri_decommitments,
+                    fri_layout,
+                    x_inv_vals,
+                    eval_points,
+                    log_eval_domain_size,
+                    queries,
+                    polynomial_at_queries
+                ));
+            }
+
     // This function takes in fri values, decommitments, and layout and checks the folding and merkle proofs
     // Note the final layer folded values will live in the
     function fold_and_check_fri_layers(
-        bytes32[][] memory fri_layer_values,
-        bytes32[] memory fri_layer_roots,
-        bytes32[][] memory fri_layer_decommitments,
-        uint8[] memory fri_layout,
-        bytes32[] memory x_inv_vals,
-        bytes32[] memory eval_points,
-        uint8 log_eval_domain_size,
-        uint64[] memory queries,
-        bytes32[] memory polynomial_at_queries
-    ) internal {
-        Eval_X memory eval = init_eval(log_eval_domain_size);
-        uint64 len = uint64(2)**(log_eval_domain_size);
-        uint64 step = 1;
-        uint256[] memory merkle_ind = new uint256[](queries.length);
-        bytes32[] memory merkle_val = new bytes32[](queries.length);
+        FriContext memory fri_data
+    ) public {
+        Eval_X memory eval = init_eval(fri_data.log_eval_domain_size);
+        LayerContext memory layer_context = LayerContext({
+            len: uint64(2)**(fri_data.log_eval_domain_size),
+            step: 1,
+            coset_size: 0});
+        uint256[] memory merkle_ind = new uint256[](fri_data.queries.length);
+        bytes32[] memory merkle_val = new bytes32[](fri_data.queries.length);
 
-        for(uint256 i = 0; i < fri_layout.length; i ++) {
-            uint256 coset_size = uint64(2)**(fri_layout[i]);
+        for(uint256 i = 0; i < fri_data.fri_layout.length; i ++) {
+            layer_context.coset_size = uint64(2)**(fri_data.fri_layout[i]);
             // Overwrites and resizes the data array and the querry index array
             // They will contain the folded points and indexes
             // TODO - Doesn't change the x_invs, do they need to be raised to a power?
             fold_layer(
-                polynomial_at_queries,
-                queries,
-                Iterators.init_iterator(fri_layer_values[i]),
+                fri_data.polynomial_at_queries,
+                fri_data.queries,
+                Iterators.init_iterator(fri_data.fri_values[i]),
                 eval,
-                eval_points[i],
-                coset_size,
-                step,
-                len,
-                x_inv_vals,
-                polynomial_at_queries,
-                queries
+                fri_data.eval_points[i],
+                layer_context,
+                fri_data.x_inv_vals
             );
             // Merkle verification is in place but we need unchanged data in the next loop.
-            deep_copy_and_convert(queries, merkle_ind);
-            deep_copy(polynomial_at_queries, merkle_val);
+            deep_copy_and_convert(fri_data.queries, merkle_ind);
+            deep_copy(fri_data.polynomial_at_queries, merkle_val);
             // Since these two arrays only shrink we can safely resize them
-            if (queries.length != merkle_ind.length) {
+            if (fri_data.queries.length != merkle_ind.length) {
+                uint256 num_queries = fri_data.queries.length;
                 assembly {
-                    mstore(merkle_ind, mload(queries))
-                    mstore(polynomial_at_queries, mload(queries))
+                    mstore(merkle_ind, num_queries)
+                    mstore(merkle_val, num_queries)
                 }
             }
             // We now check that the folded indecies and values verify against thier decommitment
             require(verify_merkle_proof(
-                fri_layer_roots[i],
+                fri_data.fri_commitments[i],
                 merkle_val,
                 merkle_ind,
-                fri_layer_decommitments[i]
+                fri_data.fri_decommitments[i]
             ), "Fri merkle verification failed");
-            len /= uint64(coset_size);
-            step *= uint64(coset_size);
+            layer_context.len /= uint64(layer_context.coset_size);
+            layer_context.step *= uint64(layer_context.coset_size);
         }
     }
 
@@ -125,26 +156,22 @@ contract Fri is MerkleVerifier {
             Iterators.IteratorBytes32 memory extra_coset_data,
             Eval_X memory eval_x,
             bytes32 eval_point,
-            uint256 coset_size,
-            uint64 step,
-            uint64 len,
-            bytes32[] memory x_inv_vals,
-            bytes32[] memory next_layer,
-            uint64[] memory next_indicies) internal {
+            LayerContext memory layer_context,
+            bytes32[] memory x_inv_vals) internal {
         // Reads how many of the cosets we've read from
         uint256 writes = 0;
         uint64 current_index;
-        bytes32[] memory next_coset = new bytes32[](coset_size);
+        bytes32[] memory next_coset = new bytes32[](layer_context.coset_size);
         uint256 i = 0;
         while (i < previous_layer.length) {
             current_index = previous_indicies[i];
             // Each coset length elements in the domain are one coset, so to find which one the current index is
             // we have to take it mod the length, to find the starting index we subtract the coset index from the
             // current one.
-            uint64 min_coset_index = uint64((current_index) - (current_index%coset_size));
+            uint64 min_coset_index = uint64((current_index) - (current_index%layer_context.coset_size));
             bytes32 x_inv_at_provided_index;
             uint256 x_inverse_coset_index;
-            for(uint64 j = 0; j < coset_size; j++) {
+            for(uint64 j = 0; j < layer_context.coset_size; j++) {
                 // This check is if the current index is one which has data from the previous layer,
                 // or if it's one with data provided in the proof
                 if (current_index == j + min_coset_index) {
@@ -162,26 +189,27 @@ contract Fri is MerkleVerifier {
                 }
             }
             // Do the actual fold and write it to the next layer
-            next_layer[writes] = fold_coset(next_coset, eval_point, step, current_index, len, eval_x);
+            previous_layer[writes] = fold_coset(next_coset, eval_point, layer_context, current_index, eval_x);
             // Record the new index
-            next_indicies[writes] = uint64(min_coset_index/coset_size);
+            previous_indicies[writes] = uint64(min_coset_index/layer_context.coset_size);
             writes++;
         }
         // We need to manually resize the output arrays;
         assembly {
-            mstore(next_layer, writes)
-            mstore(next_indicies, writes)
+            mstore(previous_layer, writes)
+            mstore(previous_indicies, writes)
         }
     }
 
     function fold_coset(
         bytes32[] memory coset,
         bytes32 eval_point,
-        uint64 step,
+        LayerContext memory layer_context,
         uint64 index,
-        uint64 len,
         Eval_X memory eval_x
     ) internal returns(bytes32) {
+        uint64 len = layer_context.len;
+        uint64 step = layer_context.step;
         uint256 current_len = coset.length;
         while (current_len > 1) {
             for(uint i = 0; i < current_len; i += 2) {

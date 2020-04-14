@@ -13,6 +13,6 @@ contract FriTesting is Fri {
         uint64 len,
         Eval_X calldata eval_x
     ) external {
-        emit log_bytes32(fold_coset(coset, eval_point, step, index, len, eval_x));
+        emit log_bytes32(fold_coset(coset, eval_point, LayerContext(0, step, len), index, eval_x));
     }
 }
