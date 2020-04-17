@@ -20,7 +20,8 @@ library Iterators {
 
     // Returns the next element in the array or reverts if called on an empty iterator.
     function next(IteratorBytes32 memory iterator) internal pure returns (bytes32) {
-        return iterator.data_pointer[iterator.index];
+        iterator.index++;
+        return iterator.data_pointer[iterator.index - 1];
     }
 
     // Returns a bool indicating that this iterator has a next element.

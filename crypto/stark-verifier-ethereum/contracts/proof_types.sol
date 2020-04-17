@@ -1,6 +1,7 @@
 pragma solidity ^0.6.4;
 pragma experimental ABIEncoderV2;
 
+
 contract ProofTypes {
     // This struct contains all of the componets of the STARK proof.
     // Please note that any input which would be a 'FieldElement' in rust,

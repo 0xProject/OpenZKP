@@ -40,7 +40,7 @@ describe('Merkle Testing testing', () => {
         ];
 
         const data = await merkle_contract.verify_merkle_proof_external(root, claimed_data, data_indexes, decommitment);
-        expect(data);
+        expect(data).to.be.eq(true);
     });
 
     it('It should verify a valid proof, with no decommitment', async () => {
@@ -59,7 +59,7 @@ describe('Merkle Testing testing', () => {
         const decommitment: any[] = [];
 
         const data = await merkle_contract.verify_merkle_proof_external(root, claimed_data, data_indexes, decommitment);
-        expect(data);
+        expect(data).to.be.eq(true);
     });
 
     it('It should fail invalid a valid proofs', async () => {
@@ -89,7 +89,7 @@ describe('Merkle Testing testing', () => {
             data_indexes,
             decommitment,
         );
-        expect(!data);
+        expect(data).to.be.eq(false);
         // Fails with wrong decommitment
         data = await merkle_contract.verify_merkle_proof_external(
             root,
@@ -97,7 +97,7 @@ describe('Merkle Testing testing', () => {
             data_indexes,
             decommitment.slice(1),
         );
-        expect(!data);
+        expect(data).to.be.eq(false);
         // Fails with wrong values
         data_indexes[0] = 64;
         data = await merkle_contract.verify_merkle_proof_external(
@@ -106,7 +106,7 @@ describe('Merkle Testing testing', () => {
             data_indexes,
             decommitment.slice(1),
         );
-        expect(!data);
+        expect(data).to.be.eq(false);
         // Reverts when called with no data
         try {
             await merkle_contract.verify_merkle_proof_external(root, [], [], decommitment);

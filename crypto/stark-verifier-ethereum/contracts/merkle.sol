@@ -3,6 +3,8 @@ pragma solidity ^0.6.4;
 import './ring_buffer.sol';
 import './iterator.sol';
 
+import '@nomiclabs/buidler/console.sol';
+
 
 contract MerkleVerifier {
     using RingBuffer for RingBuffer.IndexRingBuffer;
@@ -15,7 +17,7 @@ contract MerkleVerifier {
         bytes32[] memory leaves,
         uint256[] memory indices,
         bytes32[] memory decommitment
-    ) internal pure returns (bool) {
+    ) internal view returns (bool) {
         require(leaves.length > 0, 'No claimed data');
         // Setup our index buffer
         RingBuffer.IndexRingBuffer memory buffer = RingBuffer.IndexRingBuffer({
@@ -98,5 +100,13 @@ contract MerkleVerifier {
 
     function merkleTreeHash(bytes32 preimage_a, bytes32 preimage_b) internal pure returns (bytes32) {
         return keccak256(abi.encodePacked(preimage_a, preimage_b)) & HASH_MASK;
+    }
+
+    function merkleLeafHash(bytes32[] memory leaf) internal view returns (bytes32) {
+        if (leaf.length == 1) {
+            return leaf[0];
+        } else {
+            return keccak256(abi.encodePacked(leaf)) & HASH_MASK;
+        }
     }
 }

@@ -6,19 +6,27 @@ import './public_coin.sol';
 import './proof_of_work.sol';
 import './fri.sol';
 import './proof_types.sol';
+import './utils.sol';
+
+import '@nomiclabs/buidler/console.sol';
 
 
 contract StarkVerifier is ProofOfWork, Fri, ProofTypes {
     using PublicCoin for PublicCoin.Coin;
+    using Utils for *;
 
     // TODO - Figure out why making this external causes 'UnimplementedFeatureError' only when
     // it calls through to an internal function with proof as memory.
+    // Profiling - 687267 gas used by the call and copy into memory
+    // Profiling - 436384 gas used when the proof isn't copied into memory,
+    // making the memory copy much higher than estimates
     function verify_proof(StarkProof memory proof, ConstraintSystem constraints) public returns (bool) {
         // Initalize the coin and constraint system
         (ProofParameters memory constraint_parameters, PublicCoin.Coin memory coin) = constraints.initalize_system(
             proof.public_inputs
         );
         // Write data to the coin and read random data from it
+        // Profiling - uses around 30k gas
         (
             bytes32[] memory constraint_coeffiencents,
             bytes32 oods_point,
@@ -31,19 +39,20 @@ contract StarkVerifier is ProofOfWork, Fri, ProofTypes {
         uint8 eval_domain_log_size = constraint_parameters.log_trace_length + constraint_parameters.log_blowup;
         uint64[] memory queries = get_queries(coin, eval_domain_log_size, constraint_parameters.number_of_queries);
         // Get the actual polynomial points which were commited too, and the inverses of the x_points where they were evaluated
-        (bytes32[] memory fri_top_layer, bytes32[] memory x_inv_vals) = constraints.calculate_commited_polynomial_points(proof, constraint_parameters, queries, oods_point, constraint_coeffiencents);
+        // Profiling - uses 266873 gas extra for this call with data as compared to without
+        (bytes32[] memory fri_top_layer, bytes32 constraint_evaluated_oods_point) = constraints.constraint_calculations(
+            proof,
+            constraint_parameters,
+            queries,
+            oods_point,
+            constraint_coeffiencents
+        );
 
         uint8 log_eval_domain_size = constraint_parameters.log_trace_length + constraint_parameters.log_blowup;
+        check_commitments(proof, constraint_parameters, queries, log_eval_domain_size);
 
-        fri_layers(
-            proof,
-            constraint_parameters.fri_layout,
-            x_inv_vals,
-            eval_points,
-            log_eval_domain_size,
-            queries,
-            fri_top_layer
-        );
+        // Profiling - 1086362 gas used for small fib before this call [includes the 250k used by the callout]
+        fri_check(proof, constraint_parameters.fri_layout, eval_points, log_eval_domain_size, queries, fri_top_layer, oods_point, constraint_evaluated_oods_point);
     }
 
     // This function write to the channel and reads from the channel to get the randomized data
@@ -51,7 +60,7 @@ contract StarkVerifier is ProofOfWork, Fri, ProofTypes {
         StarkProof memory proof,
         ProofParameters memory constraint_parameters,
         PublicCoin.Coin memory coin
-    ) internal pure returns (bytes32[] memory, bytes32, bytes32[] memory, bytes32[] memory) {
+    ) internal view returns (bytes32[] memory, bytes32, bytes32[] memory, bytes32[] memory) {
         // Write the trace root to the coin
         coin.write_bytes32(proof.trace_commitment);
         // Read random constraint coefficentrs from the coin
@@ -61,7 +70,7 @@ contract StarkVerifier is ProofOfWork, Fri, ProofTypes {
         // Write the evaluated constraint root to the coin
         coin.write_bytes32(proof.constraint_commitment);
         // Read the oods point from the coin
-        bytes32 oods_point = coin.read_bytes32();
+        bytes32 oods_point = coin.read_field_element();
         // Write the trace oods values to the coin
         coin.write_many_bytes32(proof.trace_oods_values);
         // Write the constraint oods values to the coin
@@ -75,11 +84,76 @@ contract StarkVerifier is ProofOfWork, Fri, ProofTypes {
         bytes32[] memory eval_points = new bytes32[](constraint_parameters.fri_layout.length);
         for (uint256 i; i < constraint_parameters.fri_layout.length; i++) {
             coin.write_bytes32(proof.fri_commitments[i]);
-            eval_points[i] = coin.read_bytes32();
+            eval_points[i] = coin.read_field_element();
         }
         // Write the claimed last layer points a set of coeffient for the final layer fri check
         // NOTE - This is a fri layer so we have to write the whole thing at once
         coin.write_bytes(abi.encodePacked(proof.last_layer_coeffiencts));
         return (constraint_coeffiencents, oods_point, oods_coefficients, eval_points);
+    }
+
+    // TODO - We can move the hashing abstraction into the merkle tree and avoid this extra allocation
+    // Profiling - Apears to add around 900k gas! even ~600k with the optimizer on!
+    function check_commitments(
+        StarkProof memory proof,
+        ProofParameters memory constraint_parameters,
+        uint64[] memory queries,
+        uint8 log_eval_domain_size
+    ) internal view {
+        bytes32[] memory merkle_hashes = new bytes32[](constraint_parameters.number_of_queries);
+        uint256[] memory query_copy = new uint256[](queries.length);
+        uint256 eval_domain_size = uint256(2)**(log_eval_domain_size);
+
+        prepare_hashes_and_queries(
+            proof.trace_values,
+            uint256(constraint_parameters.number_of_columns),
+            queries,
+            eval_domain_size,
+            merkle_hashes,
+            query_copy
+        );
+        require(
+            verify_merkle_proof(proof.trace_commitment, merkle_hashes, query_copy, proof.trace_decommitment),
+            'Trace commitment proof failed'
+        );
+
+        prepare_hashes_and_queries(
+            proof.constraint_values,
+            uint256(constraint_parameters.constraint_degree),
+            queries,
+            eval_domain_size,
+            merkle_hashes,
+            query_copy
+        );
+        require(
+            verify_merkle_proof(proof.constraint_commitment, merkle_hashes, query_copy, proof.constraint_decommitment),
+            'Constraint commitment proof failed'
+        );
+    }
+
+    // Reads through the groups in the data and then hashes them and stores the hash in the output array
+    // Also copies the queries into the output and adjusts them to merkle tree indexes.
+    function prepare_hashes_and_queries(
+        bytes32[] memory data_groups,
+        uint256 data_group_size,
+        uint64[] memory queries,
+        uint256 eval_domain_size,
+        bytes32[] memory output_hashes,
+        uint256[] memory output_queries
+    ) internal view {
+        bytes32[] memory group = new bytes32[](data_group_size);
+        for (uint256 i = 0; i < data_groups.length / data_group_size; i++) {
+            for (uint256 j = 0; j < data_group_size; j++) {
+                group[j] = data_groups[i * data_group_size + j];
+            }
+            output_hashes[i] = merkleLeafHash(group);
+        }
+
+        queries.deep_copy_and_convert(output_queries);
+        // TODO - Go to depth indexing in merkle to remove this
+        for (uint256 i = 0; i < queries.length; i++) {
+            output_queries[i] = output_queries[i] + eval_domain_size;
+        }
+        delete group;
     }
 }

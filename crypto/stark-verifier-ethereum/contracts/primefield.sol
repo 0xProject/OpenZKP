@@ -25,8 +25,8 @@ library PrimeField {
         }
     }
 
-    function to_montgomery_int(uint256 value) internal pure returns (uint256) {
-        return mulmod(value, MONTGOMERY_R, MODULUS);
+    function to_montgomery(bytes32 value) internal pure returns (bytes32) {
+        return (bytes32)(mulmod((uint256)(value), MONTGOMERY_R, MODULUS));
     }
 
     function fmul(uint256 a, uint256 b) internal pure returns (uint256) {
@@ -35,6 +35,10 @@ library PrimeField {
 
     function fmul(bytes32 a, bytes32 b) internal pure returns (bytes32) {
         return (bytes32)(mulmod((uint256)(a), (uint256)(b), MODULUS));
+    }
+
+    function fmul_mont(bytes32 a, bytes32 b) internal pure returns (bytes32) {
+        return (bytes32)(mulmod(mulmod((uint256)(a), (uint256)(b), MODULUS), MONTGOMERY_R_INV, MODULUS));
     }
 
     function fadd(uint256 a, uint256 b) internal pure returns (uint256) {
@@ -87,9 +91,9 @@ library PrimeField {
     }
 
     // Reverts if unavailable
-    function field_root(uint8 log_order) internal returns(uint256) {
-        uint256 maybe_exact = (MODULUS-1)/(uint256(2)**log_order);
-        require(maybe_exact*(uint256(2)**log_order) == (MODULUS-1), "Root unavailable");
+    function field_root(uint8 log_order) internal returns (uint256) {
+        uint256 maybe_exact = (MODULUS - 1) / (uint256(2)**log_order);
+        require(maybe_exact * (uint256(2)**log_order) == (MODULUS - 1), 'Root unavailable');
         return expmod(GENERATOR, maybe_exact, MODULUS);
     }
 }

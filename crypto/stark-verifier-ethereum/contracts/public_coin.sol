@@ -1,5 +1,7 @@
 pragma solidity ^0.6.4;
 
+import './primefield.sol';
+
 
 library PublicCoin {
     struct Coin {
@@ -35,6 +37,14 @@ library PublicCoin {
         bytes32 hashed = publicCoinHash(coin.digest, bytes32(uint256(coin.counter)));
         coin.counter++;
         return hashed;
+    }
+
+    function read_field_element(Coin memory coin) internal pure returns (bytes32) {
+        bytes32 result = read_bytes32(coin) & (bytes32)(PrimeField.MODULUS_MASK);
+        while ((uint256)(result) >= (uint256)(PrimeField.MODULUS)) {
+            result = read_bytes32(coin) & (bytes32)(PrimeField.MODULUS_MASK);
+        }
+        return result;
     }
 
     // Bulk Read, reads 'how_many' times

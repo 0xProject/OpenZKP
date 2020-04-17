@@ -6,6 +6,10 @@ usePlugin('buidler-typechain');
 const config: BuidlerConfig = {
     solc: {
         version: '0.6.4',
+        optimizer: {
+            enabled: true,
+            runs: 100000000,
+        },
     },
     typechain: {
         outDir: 'typechain',

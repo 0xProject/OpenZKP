@@ -38,9 +38,11 @@ describe('Public coin testing', () => {
 
     it('Sould pow correctly', async () => {
         let res = await txToEventsAsync(field_contract.fpow_external(0x21, 2));
-        expect(res[0].data).to.eq("0x0000000000000000000000000000000000000000000000000000000000000441");
-        res = await txToEventsAsync(field_contract.fpow_external("0x0393a32b34832dbad650df250f673d7c5edd09f076fc314a3e5a42f0606082e1", 13825));
-        expect(res[0].data).to.eq("0x07b29494e473ce930b6238d02250fdbde4f31c35b05d1e7026e082c068ece7e7");
+        expect(res[0].data).to.eq('0x0000000000000000000000000000000000000000000000000000000000000441');
+        res = await txToEventsAsync(
+            field_contract.fpow_external('0x0393a32b34832dbad650df250f673d7c5edd09f076fc314a3e5a42f0606082e1', 13825),
+        );
+        expect(res[0].data).to.eq('0x07b29494e473ce930b6238d02250fdbde4f31c35b05d1e7026e082c068ece7e7');
     });
 
     it('Sould invert correctly', async () => {
