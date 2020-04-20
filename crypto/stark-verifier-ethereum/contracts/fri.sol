@@ -13,20 +13,20 @@ import '@nomiclabs/buidler/console.sol';
 
 contract Fri is MerkleVerifier {
     using PublicCoin for PublicCoin.Coin;
-    using Iterators for Iterators.IteratorBytes32;
+    using Iterators for Iterators.IteratorUint;
     using PrimeField for *;
     using Utils for *;
 
     struct FriContext {
-        bytes32[][] fri_values;
+        uint256[][] fri_values;
         bytes32[] fri_commitments;
         bytes32[][] fri_decommitments;
         uint8[] fri_layout;
-        bytes32[] eval_points;
+        uint256[] eval_points;
         uint8 log_eval_domain_size;
         uint64[] queries;
-        bytes32[] polynomial_at_queries;
-        bytes32[] last_layer_coeffiencts;
+        uint256[] polynomial_at_queries;
+        uint256[] last_layer_coeffiencts;
     }
 
     struct LayerContext {
@@ -46,15 +46,15 @@ contract Fri is MerkleVerifier {
 
     // Lookup data at an index
     // These lookups cost around 530k of gas overhead in the small fib proof
-    function lookup(Eval_X memory eval_x, uint256 index) internal returns (bytes32) {
-        return (bytes32)(eval_x.eval_domain_generator.fpow(index));
+    function lookup(Eval_X memory eval_x, uint256 index) internal returns (uint256) {
+        return eval_x.eval_domain_generator.fpow(index);
     }
 
     // Returns a memory object which allows lookups
     function init_eval(uint8 log_eval_domain_size) internal returns (Eval_X memory) {
         return
             Eval_X(
-                PrimeField.field_root(log_eval_domain_size),
+                PrimeField.generator_power(log_eval_domain_size),
                 log_eval_domain_size,
                 uint64(2)**(log_eval_domain_size)
             );
@@ -91,12 +91,12 @@ contract Fri is MerkleVerifier {
     function fri_check(
         ProofTypes.StarkProof memory proof,
         uint8[] memory fri_layout,
-        bytes32[] memory eval_points,
+        uint256[] memory eval_points,
         uint8 log_eval_domain_size,
         uint64[] memory queries,
-        bytes32[] memory polynomial_at_queries,
-        bytes32 oods_point,
-        bytes32 evaluated_oods_point
+        uint256[] memory polynomial_at_queries,
+        uint256 oods_point,
+        uint256 evaluated_oods_point
     ) internal {
         fold_and_check_fri_layers(
             FriContext(
@@ -114,8 +114,8 @@ contract Fri is MerkleVerifier {
 
         // The final check is that the constraints evaluated at the out of domain sample are
         // equal to the values commited constraint values
-        bytes32 result = 0;
-        bytes32 power  = (bytes32)(0x0000000000000000000000000000000000000000000000000000000000000001).to_montgomery();
+        uint256 result = 0;
+        uint256 power  = 0x0000000000000000000000000000000000000000000000000000000000000001.to_montgomery();
         for (uint256 i = 0; i < proof.constraint_oods_values.length; i++) {
             result = result.fadd(proof.constraint_oods_values[i].fmul_mont(power));
             power = power.fmul_mont(oods_point);
@@ -172,23 +172,23 @@ contract Fri is MerkleVerifier {
         }
 
         // Looks up a root of unity in the final domain
-        bytes32 interp_root = lookup(eval, eval.eval_domain_size/layer_context.len);
+        uint256 interp_root = lookup(eval, eval.eval_domain_size/layer_context.len);
 
         // We now test that the commited last layer values interpolate the final fri folding values
         for (uint256 i = 0; i < fri_data.polynomial_at_queries.length; i++) {
             // TODO - Better friendlier typing
-            bytes32 x = (bytes32)((uint256)(interp_root).fpow(fri_data.queries[i].bit_reverse(layer_context.len.bits_in())));
-            bytes32 calculated = horner_eval(fri_data.last_layer_coeffiencts, x);
+            uint256 x = interp_root.fpow(fri_data.queries[i].bit_reverse(layer_context.len.num_bits()));
+            uint256 calculated = horner_eval(fri_data.last_layer_coeffiencts, x);
             require(calculated == fri_data.polynomial_at_queries[i], "Last layer coeffients mismatch");
         }
     }
 
     // We assume that the coeffients are in montgomery form, but that x is not
     function horner_eval(
-        bytes32[] memory coefficents,
-        bytes32 x
-    ) internal pure returns(bytes32) {
-        bytes32 b = coefficents[coefficents.length - 1];
+        uint256[] memory coefficents,
+        uint256 x
+    ) internal pure returns(uint256) {
+        uint256 b = coefficents[coefficents.length - 1];
         for (uint i  = coefficents.length - 2; i > 0; i--) {
             b = coefficents[i].fadd(b.fmul(x));
         }
@@ -198,18 +198,18 @@ contract Fri is MerkleVerifier {
     // This function takes in a previous layer and fold and reads from it and writes new folded layers to the next layer.
     // It will overwrite any memory in that location.
     function fold_layer(
-        bytes32[] memory previous_layer,
+        uint256[] memory previous_layer,
         uint64[] memory previous_indicies,
-        Iterators.IteratorBytes32 memory extra_coset_data,
+        Iterators.IteratorUint memory extra_coset_data,
         Eval_X memory eval_x,
-        bytes32 eval_point,
+        uint256 eval_point,
         LayerContext memory layer_context,
         bytes32[] memory coset_hash_output
     ) internal {
         // Reads how many of the cosets we've read from
         uint256 writes = 0;
         uint64 current_index;
-        bytes32[] memory next_coset = new bytes32[](layer_context.coset_size);
+        uint256[] memory next_coset = new uint256[](layer_context.coset_size);
         uint256 i = 0;
         while (i < previous_layer.length) {
             current_index = previous_indicies[i];
@@ -251,21 +251,21 @@ contract Fri is MerkleVerifier {
     }
 
     function fold_coset(
-        bytes32[] memory coset,
-        bytes32 eval_point,
+        uint256[] memory coset,
+        uint256 eval_point,
         LayerContext memory layer_context,
         uint64 index,
         Eval_X memory eval_x
-    ) internal returns (bytes32) {
+    ) internal returns (uint256) {
         // TODO - This could likely be one varible and the eval domain size in the layer context
         uint64 len = layer_context.len;
         uint64 step = layer_context.step;
         uint256 current_len = coset.length;
         while (current_len > 1) {
             for (uint256 i = 0; i < current_len; i += 2) {
-                bytes32 x_inv = lookup(
+                uint256 x_inv = lookup(
                     eval_x,
-                    (eval_x.eval_domain_size - uint64(index + i / 2).bit_reverse((len / 2).bits_in()) * step) %
+                    (eval_x.eval_domain_size - uint64(index + i / 2).bit_reverse((len / 2).num_bits()) * step) %
                         eval_x.eval_domain_size
                 );
                 coset[i / 2] = coset[i].fadd(coset[i + 1]).fadd(

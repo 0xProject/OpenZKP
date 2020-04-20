@@ -28,10 +28,10 @@ contract StarkVerifier is ProofOfWork, Fri, ProofTypes {
         // Write data to the coin and read random data from it
         // Profiling - uses around 30k gas
         (
-            bytes32[] memory constraint_coeffiencents,
-            bytes32 oods_point,
-            bytes32[] memory oods_coefficients,
-            bytes32[] memory eval_points
+            uint256[] memory constraint_coeffiencents,
+            uint256 oods_point,
+            uint256[] memory oods_coefficients,
+            uint256[] memory eval_points
         ) = write_data_and_read_random(proof, constraint_parameters, coin);
         // Preform the proof of work check
         require(check_proof_of_work(coin, proof.pow_nonce, constraint_parameters.pow_bits), 'POW Failed');
@@ -40,7 +40,7 @@ contract StarkVerifier is ProofOfWork, Fri, ProofTypes {
         uint64[] memory queries = get_queries(coin, eval_domain_log_size, constraint_parameters.number_of_queries);
         // Get the actual polynomial points which were commited too, and the inverses of the x_points where they were evaluated
         // Profiling - uses 266873 gas extra for this call with data as compared to without
-        (bytes32[] memory fri_top_layer, bytes32 constraint_evaluated_oods_point) = constraints.constraint_calculations(
+        (uint256[] memory fri_top_layer, uint256 constraint_evaluated_oods_point) = constraints.constraint_calculations(
             proof,
             constraint_parameters,
             queries,
@@ -60,28 +60,28 @@ contract StarkVerifier is ProofOfWork, Fri, ProofTypes {
         StarkProof memory proof,
         ProofParameters memory constraint_parameters,
         PublicCoin.Coin memory coin
-    ) internal view returns (bytes32[] memory, bytes32, bytes32[] memory, bytes32[] memory) {
+    ) internal view returns (uint256[] memory, uint256, uint256[] memory, uint256[] memory) {
         // Write the trace root to the coin
         coin.write_bytes32(proof.trace_commitment);
         // Read random constraint coefficentrs from the coin
-        bytes32[] memory constraint_coeffiencents = coin.read_many_bytes32(
+        uint256[] memory constraint_coeffiencents = coin.read_many_field_elements(
             2 * constraint_parameters.number_of_constraints
         );
         // Write the evaluated constraint root to the coin
         coin.write_bytes32(proof.constraint_commitment);
         // Read the oods point from the coin
-        bytes32 oods_point = coin.read_field_element();
+        uint256 oods_point = coin.read_field_element();
         // Write the trace oods values to the coin
-        coin.write_many_bytes32(proof.trace_oods_values);
+        coin.write_many_field_elements(proof.trace_oods_values);
         // Write the constraint oods values to the coin
-        coin.write_many_bytes32(proof.constraint_oods_values);
+        coin.write_many_field_elements(proof.constraint_oods_values);
         // Read the oods coeffients from the random coin
-        bytes32[] memory oods_coefficients = coin.read_many_bytes32(
+        uint256[] memory oods_coefficients = coin.read_many_field_elements(
             proof.trace_oods_values.length + proof.constraint_oods_values.length
         );
 
         // Writes the fri merkle roots and reads eval points from the coin
-        bytes32[] memory eval_points = new bytes32[](constraint_parameters.fri_layout.length);
+        uint256[] memory eval_points = new uint256[](constraint_parameters.fri_layout.length);
         for (uint256 i; i < constraint_parameters.fri_layout.length; i++) {
             coin.write_bytes32(proof.fri_commitments[i]);
             eval_points[i] = coin.read_field_element();
@@ -134,14 +134,14 @@ contract StarkVerifier is ProofOfWork, Fri, ProofTypes {
     // Reads through the groups in the data and then hashes them and stores the hash in the output array
     // Also copies the queries into the output and adjusts them to merkle tree indexes.
     function prepare_hashes_and_queries(
-        bytes32[] memory data_groups,
+        uint256[] memory data_groups,
         uint256 data_group_size,
         uint64[] memory queries,
         uint256 eval_domain_size,
         bytes32[] memory output_hashes,
         uint256[] memory output_queries
     ) internal view {
-        bytes32[] memory group = new bytes32[](data_group_size);
+        uint256[] memory group = new uint256[](data_group_size);
         for (uint256 i = 0; i < data_groups.length / data_group_size; i++) {
             for (uint256 j = 0; j < data_group_size; j++) {
                 group[j] = data_groups[i * data_group_size + j];

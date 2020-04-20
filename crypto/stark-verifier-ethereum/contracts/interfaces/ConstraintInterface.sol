@@ -19,7 +19,7 @@ interface ConstraintSystem {
         ProofTypes.StarkProof calldata proof,
         ProofTypes.ProofParameters calldata params,
         uint64[] calldata queries,
-        bytes32 oods_point,
-        bytes32[] calldata constraint_coeffiencts
-    ) external view returns (bytes32[] memory, bytes32);
+        uint256 oods_point,
+        uint256[] calldata constraint_coeffiencts
+    ) external view returns (uint256[] memory, uint256);
 }

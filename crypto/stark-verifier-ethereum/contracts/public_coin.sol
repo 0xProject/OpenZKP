@@ -24,6 +24,12 @@ library PublicCoin {
         }
     }
 
+    function write_many_field_elements(Coin memory coin, uint256[] memory to_be_written) internal pure {
+        for (uint256 i = 0; i < to_be_written.length; i++) {
+            write_bytes32(coin, (bytes32)(to_be_written[i]));
+        }
+    }
+
     // Flexible method to write a byte string
     function write_bytes(Coin memory coin, bytes memory to_be_written) internal pure {
         bytes32 new_hash = publicCoinHasher(abi.encodePacked(coin.digest, to_be_written));
@@ -39,10 +45,18 @@ library PublicCoin {
         return hashed;
     }
 
-    function read_field_element(Coin memory coin) internal pure returns (bytes32) {
-        bytes32 result = read_bytes32(coin) & (bytes32)(PrimeField.MODULUS_MASK);
-        while ((uint256)(result) >= (uint256)(PrimeField.MODULUS)) {
-            result = read_bytes32(coin) & (bytes32)(PrimeField.MODULUS_MASK);
+    function read_field_element(Coin memory coin) internal pure returns (uint256) {
+        uint256 result = (uint256)(read_bytes32(coin) & (bytes32)(PrimeField.MODULUS_MASK));
+        while (result >= PrimeField.MODULUS) {
+            result = (uint256)(read_bytes32(coin) & (bytes32)(PrimeField.MODULUS_MASK));
+        }
+        return result;
+    }
+
+    function read_many_field_elements(Coin memory coin, uint256 how_many) internal pure returns (uint256[] memory) {
+        uint256[] memory result = new uint256[](how_many);
+        for (uint256 i = 0; i < how_many; i++) {
+            result[i] = read_field_element(coin);
         }
         return result;
     }

@@ -12,7 +12,7 @@ library Utils {
         return r;
     }
 
-    function bits_in(uint64 data) internal pure returns (uint8) {
+    function num_bits(uint64 data) internal pure returns (uint8) {
         uint8 result = 0;
         if (data >= (1 << 32)) {
             result += 32;
