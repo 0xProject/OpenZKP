@@ -75,7 +75,7 @@ library Utils {
     // ⚠️ WARNING ⚠️ - This method is not garunteded to work in new major versions and
     // any changes should be carefully considered ☢️ ☢️💥💥☢️ ☢️
     function shrink(bytes32[] memory data, uint256 to_len) internal pure {
-        require(data.length >= to_len, "Shrink Failed");
+        require(data.length >= to_len, 'Shrink Failed');
         assembly {
             mstore(data, to_len)
         }
@@ -83,7 +83,7 @@ library Utils {
 
     // Type alias of the above function
     function shrink(uint256[] memory data, uint256 to_len) internal pure {
-        require(data.length >= to_len, "Shrink Failed");
+        require(data.length >= to_len, 'Shrink Failed');
         assembly {
             mstore(data, to_len)
         }
@@ -91,7 +91,7 @@ library Utils {
 
     // Type alias of the above function
     function shrink(uint64[] memory data, uint256 to_len) internal pure {
-        require(data.length >= to_len, "Shrink Failed");
+        require(data.length >= to_len, 'Shrink Failed');
         assembly {
             mstore(data, to_len)
         }

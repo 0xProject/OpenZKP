@@ -52,14 +52,7 @@ contract StarkVerifier is ProofOfWork, Fri, ProofTypes {
         check_commitments(proof, constraint_parameters, queries, log_eval_domain_size);
 
         // Profiling - 1086362 gas used for small fib before this call [includes the 250k used by the callout]
-        fri_check(
-            proof,
-            constraint_parameters.fri_layout,
-            eval_points,
-            log_eval_domain_size,
-            queries,
-            fri_top_layer
-        );
+        fri_check(proof, constraint_parameters.fri_layout, eval_points, log_eval_domain_size, queries, fri_top_layer);
 
         check_out_of_domain_sample_result(proof, oods_point, constraint_evaluated_oods_point);
     }
@@ -166,7 +159,11 @@ contract StarkVerifier is ProofOfWork, Fri, ProofTypes {
         delete group;
     }
 
-    function check_out_of_domain_sample_result(ProofTypes.StarkProof memory proof, uint256 oods_point, uint256 evaluated_oods_point) internal pure {
+    function check_out_of_domain_sample_result(
+        ProofTypes.StarkProof memory proof,
+        uint256 oods_point,
+        uint256 evaluated_oods_point
+    ) internal pure {
         // The final check is that the constraints evaluated at the out of domain sample are
         // equal to the values commited constraint values
         uint256 result = 0;
