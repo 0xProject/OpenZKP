@@ -52,7 +52,16 @@ contract StarkVerifier is ProofOfWork, Fri, ProofTypes {
         check_commitments(proof, constraint_parameters, queries, log_eval_domain_size);
 
         // Profiling - 1086362 gas used for small fib before this call [includes the 250k used by the callout]
-        fri_check(proof, constraint_parameters.fri_layout, eval_points, log_eval_domain_size, queries, fri_top_layer, oods_point, constraint_evaluated_oods_point);
+        fri_check(
+            proof,
+            constraint_parameters.fri_layout,
+            eval_points,
+            log_eval_domain_size,
+            queries,
+            fri_top_layer,
+            oods_point,
+            constraint_evaluated_oods_point
+        );
     }
 
     // This function write to the channel and reads from the channel to get the randomized data

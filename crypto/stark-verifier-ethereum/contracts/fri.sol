@@ -115,12 +115,12 @@ contract Fri is MerkleVerifier {
         // The final check is that the constraints evaluated at the out of domain sample are
         // equal to the values commited constraint values
         uint256 result = 0;
-        uint256 power  = uint256(1).to_montgomery();
+        uint256 power = uint256(1).to_montgomery();
         for (uint256 i = 0; i < proof.constraint_oods_values.length; i++) {
             result = result.fadd(proof.constraint_oods_values[i].fmul_mont(power));
             power = power.fmul_mont(oods_point);
         }
-        require(result == evaluated_oods_point, "Oods mismatch");
+        require(result == evaluated_oods_point, 'Oods mismatch');
     }
 
     // This function takes in fri values, decommitments, and layout and checks the folding and merkle proofs
@@ -164,7 +164,12 @@ contract Fri is MerkleVerifier {
             }
             // We now check that the folded indices and values verify against their decommitment
             require(
-                verify_merkle_proof(fri_data.fri_commitments[i], merkle_val, merkle_indices, fri_data.fri_decommitments[i]),
+                verify_merkle_proof(
+                    fri_data.fri_commitments[i],
+                    merkle_val,
+                    merkle_indices,
+                    fri_data.fri_decommitments[i]
+                ),
                 'Fri merkle verification failed'
             );
             layer_context.len /= uint64(layer_context.coset_size);
@@ -172,13 +177,13 @@ contract Fri is MerkleVerifier {
         }
 
         // Looks up a root of unity in the final domain
-        uint256 interp_root = lookup(eval, eval.eval_domain_size/layer_context.len);
+        uint256 interp_root = lookup(eval, eval.eval_domain_size / layer_context.len);
 
         // We now test that the commited last layer values interpolate the final fri folding values
         for (uint256 i = 0; i < fri_data.polynomial_at_queries.length; i++) {
             uint256 x = interp_root.fpow(fri_data.queries[i].bit_reverse(layer_context.len.num_bits()));
             uint256 calculated = PrimeField.horner_eval(fri_data.last_layer_coeffiencts, x);
-            require(calculated == fri_data.polynomial_at_queries[i], "Last layer coeffients mismatch");
+            require(calculated == fri_data.polynomial_at_queries[i], 'Last layer coeffients mismatch');
         }
     }
 

@@ -3,6 +3,7 @@ pragma solidity ^0.6.4;
 import './ring_buffer.sol';
 import './iterator.sol';
 
+
 contract MerkleVerifier {
     using RingBuffer for RingBuffer.IndexRingBuffer;
     using Iterators for Iterators.IteratorBytes32;
