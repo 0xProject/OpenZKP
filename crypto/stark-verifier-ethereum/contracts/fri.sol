@@ -14,7 +14,7 @@ import '@nomiclabs/buidler/console.sol';
 contract Fri is MerkleVerifier {
     using PublicCoin for PublicCoin.Coin;
     using Iterators for Iterators.IteratorUint;
-    using PrimeField for *;
+    using PrimeField for uint256;
     using Utils for *;
 
     struct FriContext {
@@ -35,10 +35,10 @@ contract Fri is MerkleVerifier {
         uint64 len;
     }
 
-    // The Eval_X struct will lookup powers of x inside of the eval domain
+    // The EvalX struct will lookup powers of x inside of the eval domain
     // It simplifies the interface, and can be made much more gas efficent
     // TODO - Move this into an x evaluator libary for style and interface
-    struct Eval_X {
+    struct EvalX {
         uint256 eval_domain_generator;
         uint8 log_eval_domain_size;
         uint64 eval_domain_size;
@@ -46,14 +46,14 @@ contract Fri is MerkleVerifier {
 
     // Lookup data at an index
     // These lookups cost around 530k of gas overhead in the small fib proof
-    function lookup(Eval_X memory eval_x, uint256 index) internal returns (uint256) {
+    function lookup(EvalX memory eval_x, uint256 index) internal returns (uint256) {
         return eval_x.eval_domain_generator.fpow(index);
     }
 
     // Returns a memory object which allows lookups
-    function init_eval(uint8 log_eval_domain_size) internal returns (Eval_X memory) {
+    function init_eval(uint8 log_eval_domain_size) internal returns (EvalX memory) {
         return
-            Eval_X(
+            EvalX(
                 PrimeField.generator_power(log_eval_domain_size),
                 log_eval_domain_size,
                 uint64(2)**(log_eval_domain_size)
@@ -115,7 +115,7 @@ contract Fri is MerkleVerifier {
         // The final check is that the constraints evaluated at the out of domain sample are
         // equal to the values commited constraint values
         uint256 result = 0;
-        uint256 power  = 0x0000000000000000000000000000000000000000000000000000000000000001.to_montgomery();
+        uint256 power  = uint256(1).to_montgomery();
         for (uint256 i = 0; i < proof.constraint_oods_values.length; i++) {
             result = result.fadd(proof.constraint_oods_values[i].fmul_mont(power));
             power = power.fmul_mont(oods_point);
@@ -124,15 +124,15 @@ contract Fri is MerkleVerifier {
     }
 
     // This function takes in fri values, decommitments, and layout and checks the folding and merkle proofs
-    // Note the final layer folded values will live in the
+    // Note the final layer folded values will be overwritten to the input data locations.
     function fold_and_check_fri_layers(FriContext memory fri_data) internal {
-        Eval_X memory eval = init_eval(fri_data.log_eval_domain_size);
+        EvalX memory eval = init_eval(fri_data.log_eval_domain_size);
         LayerContext memory layer_context = LayerContext({
             len: uint64(2)**(fri_data.log_eval_domain_size),
             step: 1,
             coset_size: 0
         });
-        uint256[] memory merkle_ind = new uint256[](fri_data.queries.length);
+        uint256[] memory merkle_indices = new uint256[](fri_data.queries.length);
         bytes32[] memory merkle_val = new bytes32[](fri_data.queries.length);
 
         for (uint256 i = 0; i < fri_data.fri_layout.length; i++) {
@@ -149,22 +149,22 @@ contract Fri is MerkleVerifier {
                 merkle_val
             );
             // Merkle verification is in place but we need unchanged data in the next loop.
-            fri_data.queries.deep_copy_and_convert(merkle_ind);
+            fri_data.queries.deep_copy_and_convert(merkle_indices);
             // Since these two arrays only shrink we can safely resize them
-            if (fri_data.queries.length != merkle_ind.length) {
+            if (fri_data.queries.length != merkle_indices.length) {
                 uint256 num_queries = fri_data.queries.length;
                 assembly {
-                    mstore(merkle_ind, num_queries)
+                    mstore(merkle_indices, num_queries)
                     mstore(merkle_val, num_queries)
                 }
             }
             // TODO - Consider abstracting it up to a (depth, index) format like in the rust code.
-            for (uint256 j = 0; j < merkle_ind.length; j++) {
-                merkle_ind[j] += (layer_context.len / uint64(layer_context.coset_size));
+            for (uint256 j = 0; j < merkle_indices.length; j++) {
+                merkle_indices[j] += (layer_context.len / uint64(layer_context.coset_size));
             }
-            // We now check that the folded indecies and values verify against thier decommitment
+            // We now check that the folded indices and values verify against their decommitment
             require(
-                verify_merkle_proof(fri_data.fri_commitments[i], merkle_val, merkle_ind, fri_data.fri_decommitments[i]),
+                verify_merkle_proof(fri_data.fri_commitments[i], merkle_val, merkle_indices, fri_data.fri_decommitments[i]),
                 'Fri merkle verification failed'
             );
             layer_context.len /= uint64(layer_context.coset_size);
@@ -176,23 +176,10 @@ contract Fri is MerkleVerifier {
 
         // We now test that the commited last layer values interpolate the final fri folding values
         for (uint256 i = 0; i < fri_data.polynomial_at_queries.length; i++) {
-            // TODO - Better friendlier typing
             uint256 x = interp_root.fpow(fri_data.queries[i].bit_reverse(layer_context.len.num_bits()));
-            uint256 calculated = horner_eval(fri_data.last_layer_coeffiencts, x);
+            uint256 calculated = PrimeField.horner_eval(fri_data.last_layer_coeffiencts, x);
             require(calculated == fri_data.polynomial_at_queries[i], "Last layer coeffients mismatch");
         }
-    }
-
-    // We assume that the coeffients are in montgomery form, but that x is not
-    function horner_eval(
-        uint256[] memory coefficents,
-        uint256 x
-    ) internal pure returns(uint256) {
-        uint256 b = coefficents[coefficents.length - 1];
-        for (uint i  = coefficents.length - 2; i > 0; i--) {
-            b = coefficents[i].fadd(b.fmul(x));
-        }
-        return coefficents[0].fadd(b.fmul(x));
     }
 
     // This function takes in a previous layer and fold and reads from it and writes new folded layers to the next layer.
@@ -201,7 +188,7 @@ contract Fri is MerkleVerifier {
         uint256[] memory previous_layer,
         uint64[] memory previous_indicies,
         Iterators.IteratorUint memory extra_coset_data,
-        Eval_X memory eval_x,
+        EvalX memory eval_x,
         uint256 eval_point,
         LayerContext memory layer_context,
         bytes32[] memory coset_hash_output
@@ -237,7 +224,6 @@ contract Fri is MerkleVerifier {
             // Hash the coset and store it so we can do a merkle proof against it
             coset_hash_output[writes] = merkleLeafHash(next_coset);
             // Do the actual fold and write it to the next layer
-            // TODO - Mystery factor of two??
             previous_layer[writes] = fold_coset(next_coset, eval_point, layer_context, min_coset_index / 2, eval_x);
             // Record the new index
             previous_indicies[writes] = uint64(min_coset_index / layer_context.coset_size);
@@ -255,9 +241,9 @@ contract Fri is MerkleVerifier {
         uint256 eval_point,
         LayerContext memory layer_context,
         uint64 index,
-        Eval_X memory eval_x
+        EvalX memory eval_x
     ) internal returns (uint256) {
-        // TODO - This could likely be one varible and the eval domain size in the layer context
+        // TODO - This could likely be one variable and the eval domain size in the layer context
         uint64 len = layer_context.len;
         uint64 step = layer_context.step;
         uint256 current_len = coset.length;

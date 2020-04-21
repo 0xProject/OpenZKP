@@ -2,7 +2,7 @@ pragma solidity ^0.6.4;
 
 
 library PrimeField {
-    uint256 internal constant MODULUS = 0x800000000000011000000000000000000000000000000000000000000000001;
+    uint256 internal constant MODULUS = 0x0800000000000011000000000000000000000000000000000000000000000001;
     uint256 internal constant MODULUS_MASK = 0x0fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
     uint256 internal constant MONTGOMERY_R = 0x7fffffffffffdf0ffffffffffffffffffffffffffffffffffffffffffffffe1;
     uint256 internal constant MONTGOMERY_R_INV = 0x40000000000001100000000000012100000000000000000000000000000000;
@@ -79,5 +79,17 @@ library PrimeField {
         uint256 maybe_exact = (MODULUS - 1) / (uint256(2)**log_order);
         require(maybe_exact * (uint256(2)**log_order) == (MODULUS - 1), 'Root unavailable');
         return expmod(GENERATOR, maybe_exact, MODULUS);
+    }
+
+    // We assume that the coeffients are in montgomery form, but that x is not
+    function horner_eval(
+        uint256[] memory coefficents,
+        uint256 x
+    ) internal pure returns(uint256) {
+        uint256 b = coefficents[coefficents.length - 1];
+        for (uint i  = coefficents.length - 2; i > 0; i--) {
+            b = fadd(coefficents[i], fmul(b, x));
+        }
+        return fadd(coefficents[0], fmul(b,x));
     }
 }
