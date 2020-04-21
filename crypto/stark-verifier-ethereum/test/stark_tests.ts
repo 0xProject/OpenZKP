@@ -73,6 +73,6 @@ describe('Stark Testing testing', function(this: any): void {
         const events = await (await verifier_contract.verify_proof(testing_proof, constraint_contract.address)).wait();
         // TODO - Use better logging
         /* tslint:disable:no-console*/
-        console.log('Proof verification gas used : {}', events.gasUsed?.toNumber());
+        console.log('Proof verification gas used : ', events.gasUsed?.toNumber());
     });
 });

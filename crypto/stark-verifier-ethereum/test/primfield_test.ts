@@ -51,6 +51,6 @@ describe('Public coin testing', () => {
         expect(res[0].data).to.eq('0x0326c9b26c9b26d064d9364d9364d9364d9364d9364d9364d9364d9364d9364e');
         // TODO - Use better logging
         /* tslint:disable:no-console*/
-        console.log('Inverse gas used : {}', result.gasUsed.sub(22592).toNumber());
+        console.log('Inverse gas used : ', result.gasUsed.sub(22592).toNumber());
     });
 });

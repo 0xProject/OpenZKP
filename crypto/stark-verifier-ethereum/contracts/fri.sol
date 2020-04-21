@@ -153,10 +153,8 @@ contract Fri is MerkleVerifier {
             // Since these two arrays only shrink we can safely resize them
             if (fri_data.queries.length != merkle_indices.length) {
                 uint256 num_queries = fri_data.queries.length;
-                assembly {
-                    mstore(merkle_indices, num_queries)
-                    mstore(merkle_val, num_queries)
-                }
+                merkle_indices.shrink(num_queries);
+                merkle_val.shrink(num_queries);
             }
             // TODO - Consider abstracting it up to a (depth, index) format like in the rust code.
             for (uint256 j = 0; j < merkle_indices.length; j++) {
@@ -234,10 +232,9 @@ contract Fri is MerkleVerifier {
             previous_indicies[writes] = uint64(min_coset_index / layer_context.coset_size);
             writes++;
         }
-        // We need to manually resize the output arrays;
-        assembly {
-            mstore(previous_layer, writes)
-            mstore(previous_indicies, writes)
+        if (previous_layer.length > writes) {
+            previous_layer.shrink(writes);
+            previous_indicies.shrink(writes);
         }
     }
 
