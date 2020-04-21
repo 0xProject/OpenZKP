@@ -2,7 +2,7 @@ pragma solidity ^0.6.4;
 
 
 library Utils {
-    function bit_reverse(uint64 num, uint8 number_of_bits) internal view returns (uint256 num_reversed) {
+    function bit_reverse(uint64 num, uint8 number_of_bits) internal pure returns (uint256 num_reversed) {
         uint64 n = num;
         uint64 r = 0;
         for (uint8 k = 0; k < number_of_bits; k++) {

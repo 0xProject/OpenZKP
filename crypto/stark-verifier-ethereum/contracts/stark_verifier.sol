@@ -58,10 +58,10 @@ contract StarkVerifier is ProofOfWork, Fri, ProofTypes {
             eval_points,
             log_eval_domain_size,
             queries,
-            fri_top_layer,
-            oods_point,
-            constraint_evaluated_oods_point
+            fri_top_layer
         );
+
+        check_out_of_domain_sample_result(proof, oods_point, constraint_evaluated_oods_point);
     }
 
     // This function write to the channel and reads from the channel to get the randomized data
@@ -69,7 +69,7 @@ contract StarkVerifier is ProofOfWork, Fri, ProofTypes {
         StarkProof memory proof,
         ProofParameters memory constraint_parameters,
         PublicCoin.Coin memory coin
-    ) internal view returns (uint256[] memory, uint256, uint256[] memory, uint256[] memory) {
+    ) internal pure returns (uint256[] memory, uint256, uint256[] memory, uint256[] memory) {
         // Write the trace root to the coin
         coin.write_bytes32(proof.trace_commitment);
         // Read random constraint coefficentrs from the coin
@@ -108,7 +108,7 @@ contract StarkVerifier is ProofOfWork, Fri, ProofTypes {
         ProofParameters memory constraint_parameters,
         uint64[] memory queries,
         uint8 log_eval_domain_size
-    ) internal view {
+    ) internal pure {
         bytes32[] memory merkle_hashes = new bytes32[](constraint_parameters.number_of_queries);
         uint256[] memory query_copy = new uint256[](queries.length);
         uint256 eval_domain_size = uint256(2)**(log_eval_domain_size);
@@ -149,7 +149,7 @@ contract StarkVerifier is ProofOfWork, Fri, ProofTypes {
         uint256 eval_domain_size,
         bytes32[] memory output_hashes,
         uint256[] memory output_queries
-    ) internal view {
+    ) internal pure {
         uint256[] memory group = new uint256[](data_group_size);
         for (uint256 i = 0; i < data_groups.length / data_group_size; i++) {
             for (uint256 j = 0; j < data_group_size; j++) {
@@ -164,5 +164,17 @@ contract StarkVerifier is ProofOfWork, Fri, ProofTypes {
             output_queries[i] = output_queries[i] + eval_domain_size;
         }
         delete group;
+    }
+
+    function check_out_of_domain_sample_result(ProofTypes.StarkProof memory proof, uint256 oods_point, uint256 evaluated_oods_point) internal pure {
+        // The final check is that the constraints evaluated at the out of domain sample are
+        // equal to the values commited constraint values
+        uint256 result = 0;
+        uint256 power = uint256(1).to_montgomery();
+        for (uint256 i = 0; i < proof.constraint_oods_values.length; i++) {
+            result = result.fadd(proof.constraint_oods_values[i].fmul_mont(power));
+            power = power.fmul_mont(oods_point);
+        }
+        require(result == evaluated_oods_point, 'Oods mismatch');
     }
 }

@@ -94,9 +94,7 @@ contract Fri is MerkleVerifier {
         uint256[] memory eval_points,
         uint8 log_eval_domain_size,
         uint64[] memory queries,
-        uint256[] memory polynomial_at_queries,
-        uint256 oods_point,
-        uint256 evaluated_oods_point
+        uint256[] memory polynomial_at_queries
     ) internal {
         fold_and_check_fri_layers(
             FriContext(
@@ -111,16 +109,6 @@ contract Fri is MerkleVerifier {
                 proof.last_layer_coeffiencts
             )
         );
-
-        // The final check is that the constraints evaluated at the out of domain sample are
-        // equal to the values commited constraint values
-        uint256 result = 0;
-        uint256 power = uint256(1).to_montgomery();
-        for (uint256 i = 0; i < proof.constraint_oods_values.length; i++) {
-            result = result.fadd(proof.constraint_oods_values[i].fmul_mont(power));
-            power = power.fmul_mont(oods_point);
-        }
-        require(result == evaluated_oods_point, 'Oods mismatch');
     }
 
     // This function takes in fri values, decommitments, and layout and checks the folding and merkle proofs

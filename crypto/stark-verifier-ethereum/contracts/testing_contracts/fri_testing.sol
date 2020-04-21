@@ -27,7 +27,7 @@ contract FriTesting is Fri {
         uint64[] memory queries,
         uint256[] memory polynomial_at_queries
     ) public {
-        fri_check(proof, fri_layout, eval_points, log_eval_domain_size, queries, polynomial_at_queries, 0, 0);
+        fri_check(proof, fri_layout, eval_points, log_eval_domain_size, queries, polynomial_at_queries);
         // Because we use overwriting internal memory management this should now hold our outputs
         for (uint256 i = 0; i < polynomial_at_queries.length; i++) {
             emit log_bytes32((bytes32)(polynomial_at_queries[i]));

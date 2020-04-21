@@ -15,7 +15,7 @@ contract MerkleVerifier {
         bytes32[] memory leaves,
         uint256[] memory indices,
         bytes32[] memory decommitment
-    ) internal view returns (bool) {
+    ) internal pure returns (bool) {
         require(leaves.length > 0, 'No claimed data');
         // Setup our index buffer
         RingBuffer.IndexRingBuffer memory buffer = RingBuffer.IndexRingBuffer({
@@ -100,7 +100,7 @@ contract MerkleVerifier {
         return keccak256(abi.encodePacked(preimage_a, preimage_b)) & HASH_MASK;
     }
 
-    function merkleLeafHash(uint256[] memory leaf) internal view returns (bytes32) {
+    function merkleLeafHash(uint256[] memory leaf) internal pure returns (bytes32) {
         if (leaf.length == 1) {
             return (bytes32)(leaf[0]);
         } else {
