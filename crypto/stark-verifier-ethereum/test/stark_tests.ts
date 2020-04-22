@@ -1,4 +1,3 @@
-/* tslint:disable:custom-no-magic-numbers */
 import {waffle} from '@nomiclabs/buidler';
 import chai from 'chai';
 import {deployContract, solidity} from 'ethereum-waffle';
@@ -14,7 +13,9 @@ import testing_proof from './testing_proof.json';
 chai.use(solidity);
 const {expect} = chai;
 
-describe('Stark Testing testing', () => {
+describe('Stark Testing testing', function(this: any): void {
+    // Disables the timeouts
+    this.timeout(0);
     let constraint_contract: TrivialFib;
     let verifier_contract: StarkDigestTesting;
 
@@ -69,7 +70,9 @@ describe('Stark Testing testing', () => {
         // NOTE - Typescript has a very very hard time with the ethers js internal array types in struct encoding
         // in this case it's best for the code to ignore it because this is how ethers js understands these types.
         // @ts-ignore
-        const should_verify = await verifier_contract.verify_proof(testing_proof, constraint_contract.address);
-        expect(should_verify);
+        const events = await (await verifier_contract.verify_proof(testing_proof, constraint_contract.address)).wait();
+        // TODO - Use better logging
+        /* tslint:disable:no-console*/
+        console.log('Proof verification gas used : ', events.gasUsed?.toNumber());
     });
 });

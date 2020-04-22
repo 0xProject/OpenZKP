@@ -20,11 +20,35 @@ library Iterators {
 
     // Returns the next element in the array or reverts if called on an empty iterator.
     function next(IteratorBytes32 memory iterator) internal pure returns (bytes32) {
-        return iterator.data_pointer[iterator.index];
+        iterator.index++;
+        return iterator.data_pointer[iterator.index - 1];
     }
 
     // Returns a bool indicating that this iterator has a next element.
     function has_next(IteratorBytes32 memory iterator) internal pure returns (bool) {
+        return iterator.index < iterator.data_pointer.length;
+    }
+
+    struct IteratorUint {
+        uint256 index;
+        uint256[] data_pointer;
+    }
+
+    // Creates a memory refrence to an interator which starts at the front of
+    // this array.
+    function init_iterator(uint256[] memory data) internal pure returns (IteratorUint memory result) {
+        result.data_pointer = data;
+        result.index = 0;
+    }
+
+    // Returns the next element in the array or reverts if called on an empty iterator.
+    function next(IteratorUint memory iterator) internal pure returns (uint256) {
+        iterator.index++;
+        return iterator.data_pointer[iterator.index - 1];
+    }
+
+    // Returns a bool indicating that this iterator has a next element.
+    function has_next(IteratorUint memory iterator) internal pure returns (bool) {
         return iterator.index < iterator.data_pointer.length;
     }
 }

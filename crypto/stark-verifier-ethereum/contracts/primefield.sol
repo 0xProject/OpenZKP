@@ -1,8 +1,8 @@
 pragma solidity ^0.6.4;
 
 
-contract PrimeField {
-    uint256 internal constant MODULUS = 0x800000000000011000000000000000000000000000000000000000000000001;
+library PrimeField {
+    uint256 internal constant MODULUS = 0x0800000000000011000000000000000000000000000000000000000000000001;
     uint256 internal constant MODULUS_MASK = 0x0fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
     uint256 internal constant MONTGOMERY_R = 0x7fffffffffffdf0ffffffffffffffffffffffffffffffffffffffffffffffe1;
     uint256 internal constant MONTGOMERY_R_INV = 0x40000000000001100000000000012100000000000000000000000000000000;
@@ -25,12 +25,16 @@ contract PrimeField {
         }
     }
 
-    function to_montgomery_int(uint256 value) internal pure returns (uint256) {
+    function to_montgomery(uint256 value) internal pure returns (uint256) {
         return mulmod(value, MONTGOMERY_R, MODULUS);
     }
 
     function fmul(uint256 a, uint256 b) internal pure returns (uint256) {
         return mulmod(a, b, MODULUS);
+    }
+
+    function fmul_mont(uint256 a, uint256 b) internal pure returns (uint256) {
+        return fmul(fmul(a, b), MONTGOMERY_R_INV);
     }
 
     function fadd(uint256 a, uint256 b) internal pure returns (uint256) {
@@ -47,6 +51,8 @@ contract PrimeField {
 
     // There's still no native call to the exp mod precompile in solidity
     function expmod(uint256 base, uint256 exponent, uint256 modulus) internal returns (uint256 result) {
+        // TODO - Check if gas is based on absolute input length or on indicated length
+        // that will have massive gas implications [13k for a square vs 50]
         assembly {
             let p := mload(0x40)
             mstore(p, 0x20) // Length of Base
@@ -64,6 +70,25 @@ contract PrimeField {
     }
 
     function inverse(uint256 value) internal returns (uint256) {
+        // The expmod version here costs 13758 gas
         return expmod(value, MODULUS - 2, MODULUS);
+    }
+
+    // Reverts if unavailable
+    function generator_power(uint8 log_order) internal returns (uint256) {
+        uint256 maybe_exact = (MODULUS - 1) / (uint256(2)**log_order);
+        require(maybe_exact * (uint256(2)**log_order) == (MODULUS - 1), 'Root unavailable');
+        return expmod(GENERATOR, maybe_exact, MODULUS);
+    }
+
+    // We assume that the coeffients are in montgomery form, but that x is not
+    // Note that the coeffiecintes are assumed to be low degree to high degree
+    function horner_eval(uint256[] memory coefficents, uint256 x) internal pure returns (uint256) {
+        uint256 b = coefficents[coefficents.length - 1];
+        for (uint256 i = coefficents.length - 2; i > 0; i--) {
+            b = fmul(b, x);
+            b = fadd(b, coefficents[i]);
+        }
+        return fadd(coefficents[0], fmul(b, x));
     }
 }
