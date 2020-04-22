@@ -99,4 +99,12 @@ contract MerkleVerifier {
     function merkleTreeHash(bytes32 preimage_a, bytes32 preimage_b) internal pure returns (bytes32) {
         return keccak256(abi.encodePacked(preimage_a, preimage_b)) & HASH_MASK;
     }
+
+    function merkleLeafHash(uint256[] memory leaf) internal pure returns (bytes32) {
+        if (leaf.length == 1) {
+            return (bytes32)(leaf[0]);
+        } else {
+            return keccak256(abi.encodePacked(leaf)) & HASH_MASK;
+        }
+    }
 }
