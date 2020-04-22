@@ -89,4 +89,28 @@ library PrimeField {
         }
         return fadd(coefficents[0], fmul(b, x));
     }
+
+    // The EvalX struct will lookup powers of x inside of the eval domain
+    // It simplifies the interface, and can be made much more gas efficent
+    struct EvalX {
+        uint256 eval_domain_generator;
+        uint8 log_eval_domain_size;
+        uint64 eval_domain_size;
+    }
+
+    // Lookup data at an index
+    // These lookups cost around 530k of gas overhead in the small fib proof
+    function lookup(EvalX memory eval_x, uint256 index) internal returns (uint256) {
+        return fpow(eval_x.eval_domain_generator, index);
+    }
+
+    // Returns a memory object which allows lookups
+    function init_eval(uint8 log_eval_domain_size) internal returns (EvalX memory) {
+        return
+            EvalX(
+                PrimeField.generator_power(log_eval_domain_size),
+                log_eval_domain_size,
+                uint64(2)**(log_eval_domain_size)
+            );
+    }
 }

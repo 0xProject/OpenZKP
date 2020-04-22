@@ -15,6 +15,7 @@ contract Fri is MerkleVerifier {
     using PublicCoin for PublicCoin.Coin;
     using Iterators for Iterators.IteratorUint;
     using PrimeField for uint256;
+    using PrimeField for PrimeField.EvalX;
     using Utils for *;
 
     struct FriContext {
@@ -33,31 +34,6 @@ contract Fri is MerkleVerifier {
         uint64 coset_size;
         uint64 step;
         uint64 len;
-    }
-
-    // The EvalX struct will lookup powers of x inside of the eval domain
-    // It simplifies the interface, and can be made much more gas efficent
-    // TODO - Move this into an x evaluator libary for style and interface
-    struct EvalX {
-        uint256 eval_domain_generator;
-        uint8 log_eval_domain_size;
-        uint64 eval_domain_size;
-    }
-
-    // Lookup data at an index
-    // These lookups cost around 530k of gas overhead in the small fib proof
-    function lookup(EvalX memory eval_x, uint256 index) internal returns (uint256) {
-        return eval_x.eval_domain_generator.fpow(index);
-    }
-
-    // Returns a memory object which allows lookups
-    function init_eval(uint8 log_eval_domain_size) internal returns (EvalX memory) {
-        return
-            EvalX(
-                PrimeField.generator_power(log_eval_domain_size),
-                log_eval_domain_size,
-                uint64(2)**(log_eval_domain_size)
-            );
     }
 
     // Reads from channel random and returns a list of random queries
@@ -114,7 +90,7 @@ contract Fri is MerkleVerifier {
     // This function takes in fri values, decommitments, and layout and checks the folding and merkle proofs
     // Note the final layer folded values will be overwritten to the input data locations.
     function fold_and_check_fri_layers(FriContext memory fri_data) internal {
-        EvalX memory eval = init_eval(fri_data.log_eval_domain_size);
+        PrimeField.EvalX memory eval = PrimeField.init_eval(fri_data.log_eval_domain_size);
         LayerContext memory layer_context = LayerContext({
             len: uint64(2)**(fri_data.log_eval_domain_size),
             step: 1,
@@ -163,7 +139,7 @@ contract Fri is MerkleVerifier {
         }
 
         // Looks up a root of unity in the final domain
-        uint256 interp_root = lookup(eval, eval.eval_domain_size / layer_context.len);
+        uint256 interp_root = eval.lookup(eval.eval_domain_size / layer_context.len);
 
         // We now test that the commited last layer values interpolate the final fri folding values
         for (uint256 i = 0; i < fri_data.polynomial_at_queries.length; i++) {
@@ -179,7 +155,7 @@ contract Fri is MerkleVerifier {
         uint256[] memory previous_layer,
         uint64[] memory previous_indicies,
         Iterators.IteratorUint memory extra_coset_data,
-        EvalX memory eval_x,
+        PrimeField.EvalX memory eval_x,
         uint256 eval_point,
         LayerContext memory layer_context,
         bytes32[] memory coset_hash_output
@@ -231,7 +207,7 @@ contract Fri is MerkleVerifier {
         uint256 eval_point,
         LayerContext memory layer_context,
         uint64 index,
-        EvalX memory eval_x
+        PrimeField.EvalX memory eval_x
     ) internal returns (uint256) {
         // TODO - This could likely be one variable and the eval domain size in the layer context
         uint64 len = layer_context.len;
@@ -239,8 +215,7 @@ contract Fri is MerkleVerifier {
         uint256 current_len = coset.length;
         while (current_len > 1) {
             for (uint256 i = 0; i < current_len; i += 2) {
-                uint256 x_inv = lookup(
-                    eval_x,
+                uint256 x_inv = eval_x.lookup(
                     (eval_x.eval_domain_size - uint64(index + i / 2).bit_reverse((len / 2).num_bits()) * step) %
                         eval_x.eval_domain_size
                 );

@@ -13,7 +13,7 @@ interface ConstraintSystem {
         returns (ProofTypes.ProofParameters memory, PublicCoin.Coin memory);
 
     // This function should take all of the relevent function information and then return two things
-    // (1) the evaulation of the constraints on the oods point and
+    // (1) the evaluation of the constraints on the oods point and
     // (2) the calculation of the points on the polynomial which is commited too for fri
     function constraint_calculations(
         ProofTypes.StarkProof calldata proof,

@@ -2,6 +2,7 @@ pragma solidity ^0.6.4;
 pragma experimental ABIEncoderV2;
 
 import '../fri.sol';
+import '../primefield.sol';
 
 
 contract FriTesting is Fri {
@@ -13,7 +14,7 @@ contract FriTesting is Fri {
         uint64 step,
         uint64 index,
         uint64 len,
-        EvalX calldata eval_x
+        PrimeField.EvalX calldata eval_x
     ) external {
         emit log_bytes32((bytes32)(fold_coset(coset, eval_point, LayerContext(0, step, len), index, eval_x)));
     }
