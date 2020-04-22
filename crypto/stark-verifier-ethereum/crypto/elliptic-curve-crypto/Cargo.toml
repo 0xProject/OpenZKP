@@ -1,0 +1,51 @@
+[package]
+name = "zkp-elliptic-curve-crypto"
+version = "0.1.0"
+description = "Pedersen commitments and digital signatures"
+repository = "https://github.com/0xProject/starkcrypto/tree/master/crypto/elliptic-curve-crypto"
+keywords = ["elliptic", "ecdsa", "pedersen", "no-std", "wasm"]
+categories = ["cryptography", "algorithms", "no-std", "wasm"]
+authors = [
+    "Remco Bloemen <remco@0x.org>",
+    "Mason Liang <mason@0x.org>",
+    "Paul Vienhage <paul@0x.org>"]
+readme = "Readme.md"
+license = "Apache-2.0"
+edition = "2018"
+
+[dependencies]
+itertools = { version = "0.9.0", default_features = false }
+lazy_static = { version = "1.3.0", features = [ "spin_no_std" ] } # TODO: When `std` is set we want this feature off!
+no-std-compat = { version = "0.3.0", features = [ "alloc" ] }
+tiny-keccak = { version = "2.0.1", features = ["sha3"] }
+zkp-elliptic-curve = { version = "0.1.0", path = "../../algebra/elliptic-curve", default-features = false }
+zkp-macros-decl = { version = "0.1.0", path = "../../utils/macros-decl", default-features = false }
+zkp-primefield = { version = "0.1.0", path = "../../algebra/primefield", default-features = false }
+zkp-u256 = { version = "0.1.0", path = "../../algebra/u256", default-features = false }
+
+[dev-dependencies]
+criterion = "0.3.0"
+quickcheck = "0.9"
+quickcheck_macros = "0.9.1"
+zkp-primefield = { version = "0.1.0", path = "../../algebra/primefield", features = ["quickcheck"] }
+zkp-u256 = { version = "0.1.0", path = "../../algebra/u256", features = ["quickcheck"] }
+
+[[bench]]
+name = "benchmark"
+harness = false
+
+[features]
+default = [ "std" ]
+std = [
+    "itertools/use_std",
+    "no-std-compat/std",
+    "zkp-elliptic-curve/std",
+    "zkp-macros-decl/std",
+    "zkp-primefield/std",
+    "zkp-u256/std",
+]
+unsafe_ecdsa = []
+
+# Allow math in docs
+[package.metadata.docs.rs]
+rustdoc-args = ["--html-in-header", ".cargo/katex-header.html"]

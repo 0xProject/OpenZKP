@@ -16,6 +16,7 @@ contract Fri is MerkleVerifier {
     using Iterators for Iterators.IteratorUint;
     using PrimeField for uint256;
     using PrimeField for PrimeField.EvalX;
+    using PrimeField for uint256[];
     using Utils for *;
 
     struct FriContext {
@@ -114,11 +115,11 @@ contract Fri is MerkleVerifier {
             );
             // Merkle verification is in place but we need unchanged data in the next loop.
             fri_data.queries.deep_copy_and_convert(merkle_indices);
-            // Since these two arrays only shrink we can safely resize them
+            // Since these two arrays only truncate we can safely resize them
             if (fri_data.queries.length != merkle_indices.length) {
                 uint256 num_queries = fri_data.queries.length;
-                merkle_indices.shrink(num_queries);
-                merkle_val.shrink(num_queries);
+                merkle_indices.truncate(num_queries);
+                merkle_val.truncate(num_queries);
             }
             // TODO - Consider abstracting it up to a (depth, index) format like in the rust code.
             for (uint256 j = 0; j < merkle_indices.length; j++) {
@@ -139,14 +140,113 @@ contract Fri is MerkleVerifier {
         }
 
         // Looks up a root of unity in the final domain
-        uint256 interp_root = eval.lookup(eval.eval_domain_size / layer_context.len);
+        uint256 interp_root = lookup(eval, eval.eval_domain_size / layer_context.len);
 
         // We now test that the commited last layer values interpolate the final fri folding values
         for (uint256 i = 0; i < fri_data.polynomial_at_queries.length; i++) {
-            uint256 x = interp_root.fpow(fri_data.queries[i].bit_reverse(layer_context.len.num_bits()));
-            uint256 calculated = PrimeField.horner_eval(fri_data.last_layer_coeffiencts, x);
+            uint8 layer_num_bits = layer_context.len.num_bits();
+            uint256 reversed_query = fri_data.queries[i].bit_reverse(layer_num_bits);
+            uint256 x = interp_root.fpow(reversed_query);
+            uint256 calculated = fri_data.last_layer_coeffiencts.horner_eval(x);
             require(calculated == fri_data.polynomial_at_queries[i], 'Last layer coeffients mismatch');
         }
+    }
+
+    // This function takes in a previous layer and fold and reads from it and writes new folded layers to the next layer.
+    // It will overwrite any memory in that location.
+    function fold_layer(
+        uint256[] memory previous_layer,
+        uint64[] memory previous_indicies,
+        Iterators.IteratorUint memory extra_coset_data,
+        EvalX memory eval_x,
+        uint256 eval_point,
+        LayerContext memory layer_context,
+        bytes32[] memory coset_hash_output
+    ) internal {
+        // Reads how many of the cosets we've read from
+        uint256 writes = 0;
+        uint64 current_index;
+        uint256[] memory next_coset = new uint256[](layer_context.coset_size);
+        uint256 i = 0;
+        while (i < previous_layer.length) {
+            current_index = previous_indicies[i];
+            // Each coset length elements in the domain are one coset, so to find which one the current index is
+            // we have to take it mod the length, to find the starting index we subtract the coset index from the
+            // current one.
+            uint64 min_coset_index = uint64((current_index) - (current_index % layer_context.coset_size));
+            for (uint64 j = 0; j < layer_context.coset_size; j++) {
+                // This check is if the current index is one which has data from the previous layer,
+                // or if it's one with data provided in the proof
+                if (current_index == j + min_coset_index) {
+                    // Set this coset's data to the previous layer data at this index
+                    next_coset[uint256(j)] = previous_layer[i];
+                    // Advance the index from the read
+                    i++;
+                    if (i < previous_indicies.length) {
+                        // Set the current index to the next one
+                        current_index = previous_indicies[i];
+                    }
+                } else {
+                    // This happens if the data isn't in the previous layer so we use our extra data.
+                    next_coset[uint256(j)] = extra_coset_data.next();
+                }
+            }
+            // Hash the coset and store it so we can do a merkle proof against it
+            coset_hash_output[writes] = merkleLeafHash(next_coset);
+            // Do the actual fold and write it to the next layer
+            previous_layer[writes] = fold_coset(next_coset, eval_point, layer_context, min_coset_index / 2, eval_x);
+            // Record the new index
+            previous_indicies[writes] = uint64(min_coset_index / layer_context.coset_size);
+            writes++;
+        }
+        previous_layer.truncate(writes);
+        previous_indicies.truncate(writes);
+    }
+
+    function fold_coset(
+        uint256[] memory coset,
+        uint256 eval_point,
+        LayerContext memory layer_context,
+        uint64 index,
+        EvalX memory eval_x
+    ) internal returns (uint256) {
+        // TODO - This could likely be one variable and the eval domain size in the layer context
+        uint64 len = layer_context.len;
+        uint64 step = layer_context.step;
+        uint256 current_len = coset.length;
+        while (current_len > 1) {
+            for (uint256 i = 0; i < current_len; i += 2) {
+                // We know that because this is a root of a power of two domain
+                // we can lookup the x inverse using the following index manipulation
+                // and power
+                uint256 x_inv;
+                {
+                    uint64 half_i_plus_index = uint64(i / 2) + index;
+                    uint8 half_length_bits = (len / 2).num_bits();
+                    uint256 half_i_plus_index_reversed = half_i_plus_index.bit_reverse(half_length_bits);
+                    uint256 inverse_index = eval_x.eval_domain_size - half_i_plus_index_reversed * step;
+                    inverse_index = inverse_index % eval_x.eval_domain_size;
+                    x_inv = lookup(eval_x, inverse_index);
+                }
+
+                // We now do the actual fri folding operation
+                uint256 f_x_plus_f_neg_x = coset[i].fadd(coset[i + 1]);
+                uint256 eval_point_div_x = x_inv.fmul(eval_point);
+                uint256 f_x_sub_f_neg_x = coset[i].fsub(coset[i + 1]);
+                // Note - Both eval_point_div_x and f_x_sub_f_neg_x are montgomery so we
+                // have to use special multiplication
+                uint256 eval_over_x_times_f_x_sub_f_neg_x = eval_point_div_x.fmul_mont(f_x_sub_f_neg_x);
+                coset[i / 2] = f_x_plus_f_neg_x.fadd(eval_over_x_times_f_x_sub_f_neg_x);
+            }
+            len /= 2;
+            index /= 2;
+            step *= 2;
+            eval_point = eval_point.fmul_mont(eval_point);
+            current_len /= 2;
+        }
+
+        // We return the fri folded point and the inverse for the base layer, which is our x_inv on the next level
+        return (coset[0]);
     }
 
     // This function takes in a previous layer and fold and reads from it and writes new folded layers to the next layer.

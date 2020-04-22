@@ -34,7 +34,7 @@ library PrimeField {
     }
 
     function fmul_mont(uint256 a, uint256 b) internal pure returns (uint256) {
-        return mulmod(fmul(a, b), MONTGOMERY_R_INV, MODULUS);
+        return fmul(fmul(a, b), MONTGOMERY_R_INV);
     }
 
     function fadd(uint256 a, uint256 b) internal pure returns (uint256) {

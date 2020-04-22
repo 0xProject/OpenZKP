@@ -62,28 +62,35 @@ contract StarkVerifier is ProofOfWork, Fri, ProofTypes {
         StarkProof memory proof,
         ProofParameters memory constraint_parameters,
         PublicCoin.Coin memory coin
-    ) internal pure returns (uint256[] memory, uint256, uint256[] memory, uint256[] memory) {
+    )
+        internal
+        pure
+        returns (
+            uint256[] memory constraint_coeffiencents,
+            uint256 oods_point,
+            uint256[] memory oods_coefficients,
+            uint256[] memory eval_points
+        )
+    {
         // Write the trace root to the coin
         coin.write_bytes32(proof.trace_commitment);
         // Read random constraint coefficentrs from the coin
-        uint256[] memory constraint_coeffiencents = coin.read_many_field_elements(
-            2 * constraint_parameters.number_of_constraints
-        );
+        constraint_coeffiencents = coin.read_many_field_elements(2 * constraint_parameters.number_of_constraints);
         // Write the evaluated constraint root to the coin
         coin.write_bytes32(proof.constraint_commitment);
         // Read the oods point from the coin
-        uint256 oods_point = coin.read_field_element();
+        oods_point = coin.read_field_element();
         // Write the trace oods values to the coin
         coin.write_many_field_elements(proof.trace_oods_values);
         // Write the constraint oods values to the coin
         coin.write_many_field_elements(proof.constraint_oods_values);
         // Read the oods coeffients from the random coin
-        uint256[] memory oods_coefficients = coin.read_many_field_elements(
+        oods_coefficients = coin.read_many_field_elements(
             proof.trace_oods_values.length + proof.constraint_oods_values.length
         );
 
         // Writes the fri merkle roots and reads eval points from the coin
-        uint256[] memory eval_points = new uint256[](constraint_parameters.fri_layout.length);
+        eval_points = new uint256[](constraint_parameters.fri_layout.length);
         for (uint256 i; i < constraint_parameters.fri_layout.length; i++) {
             coin.write_bytes32(proof.fri_commitments[i]);
             eval_points[i] = coin.read_field_element();
@@ -169,7 +176,8 @@ contract StarkVerifier is ProofOfWork, Fri, ProofTypes {
         uint256 result = 0;
         uint256 power = uint256(1).to_montgomery();
         for (uint256 i = 0; i < proof.constraint_oods_values.length; i++) {
-            result = result.fadd(proof.constraint_oods_values[i].fmul_mont(power));
+            uint256 oods_value_times_power = proof.constraint_oods_values[i].fmul_mont(power);
+            result = result.fadd(oods_value_times_power);
             power = power.fmul_mont(oods_point);
         }
         require(result == evaluated_oods_point, 'Oods mismatch');
