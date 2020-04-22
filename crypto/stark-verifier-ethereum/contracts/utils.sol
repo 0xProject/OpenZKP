@@ -68,13 +68,13 @@ library Utils {
 
     // The following functions resize a memory array by reseting the
     // first element of the array in memory, which as per this documentation
-    // https://solidity.readthedocs.io/en/v0.6.4/assembly.html
+    // https://solidity.readthedocs.io/en/v0.6.4/assembly.html#conventions-in-solidity
     // is the place where the length is stored.
     // It will revert if the method is called in a way which would expand memory
     // because that would likely cause memory corruption.
-    // ⚠️ WARNING ⚠️ - This method is not garunteded to work in new major versions and
+    // ⚠️ WARNING ⚠️ - This method is not guaranteed to work and
     // any changes should be carefully considered ☢️ ☢️💥💥☢️ ☢️
-    function shrink(bytes32[] memory data, uint256 to_len) internal pure {
+    function truncate(bytes32[] memory data, uint256 to_len) internal pure {
         require(data.length >= to_len, 'Shrink Failed');
         assembly {
             mstore(data, to_len)
@@ -82,7 +82,7 @@ library Utils {
     }
 
     // Type alias of the above function
-    function shrink(uint256[] memory data, uint256 to_len) internal pure {
+    function truncate(uint256[] memory data, uint256 to_len) internal pure {
         require(data.length >= to_len, 'Shrink Failed');
         assembly {
             mstore(data, to_len)
@@ -90,7 +90,7 @@ library Utils {
     }
 
     // Type alias of the above function
-    function shrink(uint64[] memory data, uint256 to_len) internal pure {
+    function truncate(uint64[] memory data, uint256 to_len) internal pure {
         require(data.length >= to_len, 'Shrink Failed');
         assembly {
             mstore(data, to_len)

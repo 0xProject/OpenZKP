@@ -15,6 +15,7 @@ contract Fri is MerkleVerifier {
     using PublicCoin for PublicCoin.Coin;
     using Iterators for Iterators.IteratorUint;
     using PrimeField for uint256;
+    using PrimeField for uint256[];
     using Utils for *;
 
     struct FriContext {
@@ -138,11 +139,11 @@ contract Fri is MerkleVerifier {
             );
             // Merkle verification is in place but we need unchanged data in the next loop.
             fri_data.queries.deep_copy_and_convert(merkle_indices);
-            // Since these two arrays only shrink we can safely resize them
+            // Since these two arrays only truncate we can safely resize them
             if (fri_data.queries.length != merkle_indices.length) {
                 uint256 num_queries = fri_data.queries.length;
-                merkle_indices.shrink(num_queries);
-                merkle_val.shrink(num_queries);
+                merkle_indices.truncate(num_queries);
+                merkle_val.truncate(num_queries);
             }
             // TODO - Consider abstracting it up to a (depth, index) format like in the rust code.
             for (uint256 j = 0; j < merkle_indices.length; j++) {
@@ -167,8 +168,10 @@ contract Fri is MerkleVerifier {
 
         // We now test that the commited last layer values interpolate the final fri folding values
         for (uint256 i = 0; i < fri_data.polynomial_at_queries.length; i++) {
-            uint256 x = interp_root.fpow(fri_data.queries[i].bit_reverse(layer_context.len.num_bits()));
-            uint256 calculated = PrimeField.horner_eval(fri_data.last_layer_coeffiencts, x);
+            uint8 layer_num_bits = layer_context.len.num_bits();
+            uint256 reversed_query = fri_data.queries[i].bit_reverse(layer_num_bits);
+            uint256 x = interp_root.fpow(reversed_query);
+            uint256 calculated = fri_data.last_layer_coeffiencts.horner_eval(x);
             require(calculated == fri_data.polynomial_at_queries[i], 'Last layer coeffients mismatch');
         }
     }
@@ -220,10 +223,8 @@ contract Fri is MerkleVerifier {
             previous_indicies[writes] = uint64(min_coset_index / layer_context.coset_size);
             writes++;
         }
-        if (previous_layer.length > writes) {
-            previous_layer.shrink(writes);
-            previous_indicies.shrink(writes);
-        }
+        previous_layer.truncate(writes);
+        previous_indicies.truncate(writes);
     }
 
     function fold_coset(
@@ -239,14 +240,27 @@ contract Fri is MerkleVerifier {
         uint256 current_len = coset.length;
         while (current_len > 1) {
             for (uint256 i = 0; i < current_len; i += 2) {
-                uint256 x_inv = lookup(
-                    eval_x,
-                    (eval_x.eval_domain_size - uint64(index + i / 2).bit_reverse((len / 2).num_bits()) * step) %
-                        eval_x.eval_domain_size
-                );
-                coset[i / 2] = coset[i].fadd(coset[i + 1]).fadd(
-                    x_inv.fmul(eval_point).fmul_mont(coset[i].fsub(coset[i + 1]))
-                );
+                // We know that because this is a root of a power of two domain
+                // we can lookup the x inverse using the following index manipulation
+                // and power
+                uint256 x_inv;
+                {
+                    uint64 half_i_plus_index = uint64(i / 2) + index;
+                    uint8 half_length_bits = (len / 2).num_bits();
+                    uint256 half_i_plus_index_reversed = half_i_plus_index.bit_reverse(half_length_bits);
+                    uint256 inverse_index = eval_x.eval_domain_size - half_i_plus_index_reversed * step;
+                    inverse_index = inverse_index % eval_x.eval_domain_size;
+                    x_inv = lookup(eval_x, inverse_index);
+                }
+
+                // We now do the actual fri folding operation
+                uint256 f_x_plus_f_neg_x = coset[i].fadd(coset[i + 1]);
+                uint256 eval_point_div_x = x_inv.fmul(eval_point);
+                uint256 f_x_sub_f_neg_x = coset[i].fsub(coset[i + 1]);
+                // Note - Both eval_point_div_x and f_x_sub_f_neg_x are montgomery so we
+                // have to use special multiplication
+                uint256 eval_over_x_times_f_x_sub_f_neg_x = eval_point_div_x.fmul_mont(f_x_sub_f_neg_x);
+                coset[i / 2] = f_x_plus_f_neg_x.fadd(eval_over_x_times_f_x_sub_f_neg_x);
             }
             len /= 2;
             index /= 2;

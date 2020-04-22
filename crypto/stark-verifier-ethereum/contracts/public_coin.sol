@@ -26,7 +26,8 @@ library PublicCoin {
 
     function write_many_field_elements(Coin memory coin, uint256[] memory to_be_written) internal pure {
         for (uint256 i = 0; i < to_be_written.length; i++) {
-            write_bytes32(coin, (bytes32)(to_be_written[i]));
+            bytes32 element = (bytes32)(to_be_written[i]);
+            write_bytes32(coin, element);
         }
     }
 
@@ -46,9 +47,11 @@ library PublicCoin {
     }
 
     function read_field_element(Coin memory coin) internal pure returns (uint256) {
-        uint256 result = (uint256)(read_bytes32(coin) & (bytes32)(PrimeField.MODULUS_MASK));
+        uint256 result = (uint256)(read_bytes32(coin));
+        result &= PrimeField.MODULUS_MASK;
         while (result >= PrimeField.MODULUS) {
-            result = (uint256)(read_bytes32(coin) & (bytes32)(PrimeField.MODULUS_MASK));
+            result = (uint256)(read_bytes32(coin));
+            result &= PrimeField.MODULUS_MASK;
         }
         return result;
     }

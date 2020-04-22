@@ -34,7 +34,7 @@ library PrimeField {
     }
 
     function fmul_mont(uint256 a, uint256 b) internal pure returns (uint256) {
-        return mulmod(fmul(a, b), MONTGOMERY_R_INV, MODULUS);
+        return fmul(fmul(a, b), MONTGOMERY_R_INV);
     }
 
     function fadd(uint256 a, uint256 b) internal pure returns (uint256) {
@@ -82,10 +82,12 @@ library PrimeField {
     }
 
     // We assume that the coeffients are in montgomery form, but that x is not
+    // Note that the coeffiecintes are assumed to be low degree to high degree
     function horner_eval(uint256[] memory coefficents, uint256 x) internal pure returns (uint256) {
         uint256 b = coefficents[coefficents.length - 1];
         for (uint256 i = coefficents.length - 2; i > 0; i--) {
-            b = fadd(coefficents[i], fmul(b, x));
+            b = fmul(b, x);
+            b = fadd(b, coefficents[i]);
         }
         return fadd(coefficents[0], fmul(b, x));
     }
