@@ -48,8 +48,9 @@ contract TrivialFib is ConstraintSystem {
         ProofTypes.ProofParameters calldata params,
         uint64[] calldata queries,
         uint256 oods_point,
-        uint256[] calldata constraint_coeffiencts
-    ) external view override returns (uint256[] memory, uint256) {
+        uint256[] calldata constraint_coeffiencts,
+        uint256[] calldata oods_coeffiencts
+    ) external override returns (uint256[] memory, uint256) {
         uint256[20] memory data = [
             0x0278847872d28b671420b700e8472b61d6846def99dbf99a7a5399322e5a2b25,
             0x067cda05602e614e2c1b223c79da8baebac06b2d292fefb80ea4e86e18f943bc,

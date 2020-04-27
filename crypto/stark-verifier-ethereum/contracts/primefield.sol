@@ -83,8 +83,9 @@ library PrimeField {
 
     // We assume that the coeffients are in montgomery form, but that x is not
     function horner_eval(uint256[] memory coefficents, uint256 x) internal pure returns (uint256) {
-        uint256 b = coefficents[coefficents.length - 1];
-        for (uint256 i = coefficents.length - 2; i > 0; i--) {
+        require(coefficents.length > 0, "Evaluation undefined");
+        uint256 b = 0;
+        for (uint256 i = coefficents.length - 1; i > 0; i--) {
             b = fadd(coefficents[i], fmul(b, x));
         }
         return fadd(coefficents[0], fmul(b, x));

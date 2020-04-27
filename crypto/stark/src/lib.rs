@@ -51,6 +51,7 @@ mod proof_of_work;
 mod rational_expression;
 mod traits;
 mod verifier;
+mod solidity_seralizer;
 
 // Optional prover functionality. Note that prover requires std.
 // TODO: Make it work without std.
@@ -87,6 +88,7 @@ pub use proof::Proof;
 pub use rational_expression::RationalExpression;
 pub use traits::Verifiable;
 pub use verifier::{verify, Error as VerifierError};
+pub use solidity_seralizer::proof_serialize;
 
 // Exports for prover
 #[cfg(feature = "prover")]

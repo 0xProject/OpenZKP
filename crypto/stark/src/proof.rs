@@ -1,7 +1,7 @@
 use std::prelude::v1::*;
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct Proof(Vec<u8>);
+pub struct Proof(pub Vec<u8>);
 
 impl Proof {
     pub fn from_bytes(bytes: Vec<u8>) -> Self {
