@@ -18,8 +18,8 @@ const config: BuidlerConfig = {
     networks: {
         buidlerevm: {
             blockGasLimit: 100000000,
-        }
-    }
+        },
+    },
 };
 
 // tslint:disable-next-line:no-default-export

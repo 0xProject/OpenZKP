@@ -3,15 +3,14 @@ import chai from 'chai';
 import {deployContract, solidity} from 'ethereum-waffle';
 import {utils} from 'ethers';
 
-import StarkDigestTestingArtifact from '../artifacts/StarkDigestTesting.json';
 import RecuranceArtifact from '../artifacts/Recurance.json';
-import {StarkDigestTesting} from '../typechain/StarkDigestTesting';
+import StarkDigestTestingArtifact from '../artifacts/StarkDigestTesting.json';
 import {Recurance} from '../typechain/Recurance';
+import {StarkDigestTesting} from '../typechain/StarkDigestTesting';
 
 import recurance_proofs from './recurance_proofs.json';
 
 chai.use(solidity);
-const {expect} = chai;
 
 describe('Recurance testing', function(this: any): void {
     // Disables the timeouts
@@ -32,11 +31,16 @@ describe('Recurance testing', function(this: any): void {
         for (let i = 19; i < recurance_proofs.length; i++) {
             // We ts-ignore because it's connivent to abi encode here not in rust
             // @ts-ignore
-            recurance_proofs[i].public_inputs = utils.defaultAbiCoder.encode(["uint256", "uint64"], [recurance_proofs[i].public_inputs.value, recurance_proofs[i].public_inputs.index]);
+            recurance_proofs[i].public_inputs = utils.defaultAbiCoder.encode(
+                ['uint256', 'uint64'],
+                [recurance_proofs[i].public_inputs.value, recurance_proofs[i].public_inputs.index],
+            );
             // NOTE - Typescript has a very very hard time with the ethers js internal array types in struct encoding
             // in this case it's best for the code to ignore it because this is how ethers js understands these types.
             // @ts-ignore
-            const events = await (await verifier_contract.verify_proof(recurance_proofs[i], constraint_contract.address)).wait();
+            const events = await (
+                await verifier_contract.verify_proof(recurance_proofs[i], constraint_contract.address)
+            ).wait();
             // TODO - Use better logging
             /* tslint:disable:no-console*/
             console.log('Proof verification gas used : ', events.gasUsed?.toNumber());

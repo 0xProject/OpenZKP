@@ -33,6 +33,30 @@ contract Recurance is ConstraintSystem {
 
     uint8 NUM_COLUMNS = 2;
     uint8 CONSTRAINT_DEGREE = 2;
+    // TODO - Move this to a util file or default implementation
+    uint8 LOG2_TARGET = 8;
+
+    // prettier-ignore
+    function constraint_calculations(
+        ProofTypes.StarkProof calldata proof,
+        ProofTypes.ProofParameters calldata params,
+        uint64[] calldata queries,
+        uint256 oods_point,
+        uint256[] calldata constraint_coeffiencts,
+        uint256[] calldata oods_coeffiencts
+    ) external override returns (uint256[] memory, uint256) {
+        ProofData memory data = ProofData(
+            proof.trace_values,
+            PrimeField.init_eval(params.log_trace_length + 4),
+            proof.constraint_values, proof.trace_oods_values,
+            proof.constraint_oods_values,
+            params.log_trace_length);
+        PublicInput memory input = abi.decode(proof.public_inputs, (PublicInput));
+        uint256[] memory result = get_polynomial_points(data, oods_coeffiencts, queries, oods_point);
+
+        uint256 evaluated_point = evaluate_oods_point(oods_point, constraint_coeffiencts, data.eval, input, data);
+        return (result, evaluated_point);
+    }
 
     // These constants are derived from the small fib example in rust
     // TODO - The solidity prettier wants to delete all 'override' statements
@@ -67,59 +91,23 @@ contract Recurance is ConstraintSystem {
         return (params, coin);
     }
 
-    // TODO - Move this to a util file or default implementation
-    uint8 LOG2_TARGET = 8;
-
-    // This function produces the default fri layout from the trace length
-    function default_fri_layout(uint8 log_trace_len) internal view returns (uint8[] memory) {
-        uint256 num_reductions;
-        if (log_trace_len > LOG2_TARGET) {
-            num_reductions = log_trace_len - LOG2_TARGET;
-        } else {
-            num_reductions = log_trace_len;
-        }
-
-        uint8[] memory result;
-        if (num_reductions % 3 != 0) {
-            result = new uint8[](1 + (num_reductions / 3));
-            result[result.length - 1] = uint8(num_reductions % 3);
-        } else {
-            result = new uint8[](num_reductions / 3);
-        }
-        for (uint256 i = 0; i < (num_reductions / 3); i++) {
-            result[i] = 3;
-        }
-        return result;
-    }
-
-    // prettier-ignore
-    function constraint_calculations(
-        ProofTypes.StarkProof calldata proof,
-        ProofTypes.ProofParameters calldata params,
-        uint64[] calldata queries,
-        uint256 oods_point,
-        uint256[] calldata constraint_coeffiencts,
-        uint256[] calldata oods_coeffiencts
-    ) external override returns (uint256[] memory, uint256) {
-        ProofData memory data = ProofData(proof.trace_values, PrimeField.init_eval(params.log_trace_length + 4), proof.constraint_values, proof.trace_oods_values, proof.constraint_oods_values, params.log_trace_length);
-        PublicInput memory input = abi.decode(proof.public_inputs, (PublicInput));
-        uint256[] memory result = get_polynomial_points(data, oods_coeffiencts, queries, oods_point);
-
-        uint256 evaluated_point = evaluate_oods_point(oods_point, constraint_coeffiencts, data.eval, input, data);
-        return (result, evaluated_point);
-    }
-
     // (Trace(0, 1) - Trace(1, 0).pow(self.exponent)) * every_row(),
     // (Trace(1, 1) - Trace(0, 0) - Trace(1, 0)) * every_row(),
     // (Trace(0, 0) - 1.into()) * on_row(trace_length),
     // (Trace(0, 0) - (&self.value).into()) * on_row(self.index),
     // TODO - Use batch inversion
-    function evaluate_oods_point(uint256 oods_point, uint256[] memory constraint_coeffiencts, PrimeField.EvalX memory eval, PublicInput memory public_input, ProofData memory data) internal returns(uint256) {
+    function evaluate_oods_point(
+        uint256 oods_point,
+        uint256[] memory constraint_coeffiencts,
+        PrimeField.EvalX memory eval,
+        PublicInput memory public_input,
+        ProofData memory data
+    ) internal returns (uint256) {
         uint256 trace_length = uint256(1) << data.log_trace_length;
         // Note the blowup is fixed in this contract
         uint256 trace_generator = eval.eval_domain_generator.fpow(16);
         // NOTE - Constraint degree is fixed in this system
-        uint256 target_degree = 2*trace_length - 1; // 511
+        uint256 target_degree = 2 * trace_length - 1; // 511
         uint256 non_mont_oods = oods_point.fmul_mont(1);
 
         uint256 result = 0;
@@ -134,7 +122,9 @@ contract Recurance is ConstraintSystem {
             {
                 uint256 adjustment;
                 {
-                    uint256 adjustment_every_row_2 = non_mont_oods.fpow(degree_adjustment(target_degree, 2*trace_length - 1, trace_length));
+                    uint256 adjustment_every_row_2 = non_mont_oods.fpow(
+                        degree_adjustment(target_degree, 2 * trace_length - 1, trace_length)
+                    );
                     adjustment = constraint_coeffiencts[1].fmul(adjustment_every_row_2);
                     adjustment = adjustment.fadd(constraint_coeffiencts[0]);
                 }
@@ -146,10 +136,11 @@ contract Recurance is ConstraintSystem {
             }
             // Second constraint calculation block
             {
-
                 uint256 adjustment;
                 {
-                    uint256 adjustment_every_row_1 = non_mont_oods.fpow(degree_adjustment(target_degree, trace_length, trace_length));
+                    uint256 adjustment_every_row_1 = non_mont_oods.fpow(
+                        degree_adjustment(target_degree, trace_length, trace_length)
+                    );
                     adjustment = constraint_coeffiencts[3].fmul(adjustment_every_row_1);
                     adjustment = adjustment.fadd(constraint_coeffiencts[2]);
                 }
@@ -161,7 +152,7 @@ contract Recurance is ConstraintSystem {
             }
         }
         {
-            uint256 adjustment_fixed_row = non_mont_oods.fpow(degree_adjustment(target_degree, trace_length-1, 1));
+            uint256 adjustment_fixed_row = non_mont_oods.fpow(degree_adjustment(target_degree, trace_length - 1, 1));
             {
                 uint256 constraint_eval = data.trace_oods_values[0].fsub((uint256(1).to_montgomery()));
                 // TODO - Just make that one?
@@ -185,10 +176,6 @@ contract Recurance is ConstraintSystem {
         return result;
     }
 
-    function degree_adjustment(uint256 target_degree, uint256 numerator_degree, uint256 denominator_degree) internal pure returns(uint256) {
-        return target_degree + denominator_degree - numerator_degree;
-      }
-
     // This function calcluates the adjustments to each query point which are implied
     // by the offsets and degree of the constraint system
     // It returns the low degree polynomial points at the query indcies
@@ -197,8 +184,14 @@ contract Recurance is ConstraintSystem {
         uint256[] memory oods_coeffiecients,
         uint64[] memory queries,
         uint256 oods_point
-    ) internal returns(uint256[] memory) {
-        uint256[] memory inverses = oods_prepare_inverses(queries, data.eval, oods_point, data.log_trace_length + 4, data.log_trace_length);
+    ) internal returns (uint256[] memory) {
+        uint256[] memory inverses = oods_prepare_inverses(
+            queries,
+            data.eval,
+            oods_point,
+            data.log_trace_length + 4,
+            data.log_trace_length
+        );
         uint256[] memory results = new uint256[](queries.length);
         // Init an iterator over the oods coeffiecients
         Iterators.IteratorUint memory coeffiecients = Iterators.init_iterator(oods_coeffiecients);
@@ -206,20 +199,20 @@ contract Recurance is ConstraintSystem {
         for (uint256 i = 0; i < queries.length; i++) {
             uint256 result = 0;
             // Num col * num_rows [note this relation won't hold in other contraint systems]
-            uint256 len = NUM_COLUMNS*2;
+            uint256 len = NUM_COLUMNS * 2;
             for (uint256 j = 0; j < len; j++) {
-                uint256 numberator = data.trace_values[i*2+j/2].fsub(data.trace_oods_values[j]);
-                uint256 denominator_inv = inverses[i*3 + (j%2)];
+                uint256 numberator = data.trace_values[i * 2 + j / 2].fsub(data.trace_oods_values[j]);
+                uint256 denominator_inv = inverses[i * 3 + (j % 2)];
                 uint256 element = numberator.fmul(denominator_inv);
                 uint256 coef = coeffiecients.next();
                 uint256 next_term = element.fmul_mont(coef);
                 result = result.fadd(next_term);
             }
 
-            uint256 denominator_inv = inverses[i*3 + 2];
+            uint256 denominator_inv = inverses[i * 3 + 2];
             len = CONSTRAINT_DEGREE;
             for (uint256 j = 0; j < len; j++) {
-                uint256 numberator = data.constraint_values[i*len + j].fsub(data.constraint_oods_values[j]);
+                uint256 numberator = data.constraint_values[i * len + j].fsub(data.constraint_oods_values[j]);
                 uint256 element = numberator.fmul(denominator_inv);
                 uint256 coef = coeffiecients.next();
                 uint256 next_term = element.fmul_mont(coef);
@@ -238,10 +231,13 @@ contract Recurance is ConstraintSystem {
     // TODO - Attempt to make batch invert work in place
     // Note - This function should be auto generated along
     // TODO - Make generic over a constant trace layout, will that work with complex systems?
-    function oods_prepare_inverses(uint64[] memory queries, PrimeField.EvalX memory eval, uint256 oods_point, uint8 log_eval_domain_size, uint8 log_trace_len)
-        internal
-        returns (uint256[] memory)
-    {
+    function oods_prepare_inverses(
+        uint64[] memory queries,
+        PrimeField.EvalX memory eval,
+        uint256 oods_point,
+        uint8 log_eval_domain_size,
+        uint8 log_trace_len
+    ) internal returns (uint256[] memory) {
         oods_point = oods_point.from_montgomery();
         uint256 trace_generator = eval.eval_domain_generator.fpow(16);
         uint256[] memory batch_in = new uint256[](3 * queries.length);
@@ -270,10 +266,40 @@ contract Recurance is ConstraintSystem {
         uint256 inv_prod = carried.inverse();
 
         for (uint256 i = batch_out.length - 1; i > 0; i--) {
-            batch_out[i] = inv_prod.fmul(batch_out[i-1]);
+            batch_out[i] = inv_prod.fmul(batch_out[i - 1]);
             inv_prod = inv_prod.fmul(batch_in[i]);
         }
         batch_out[0] = inv_prod;
         return batch_out;
+    }
+
+    // This function produces the default fri layout from the trace length
+    function default_fri_layout(uint8 log_trace_len) internal view returns (uint8[] memory) {
+        uint256 num_reductions;
+        if (log_trace_len > LOG2_TARGET) {
+            num_reductions = log_trace_len - LOG2_TARGET;
+        } else {
+            num_reductions = log_trace_len;
+        }
+
+        uint8[] memory result;
+        if (num_reductions % 3 != 0) {
+            result = new uint8[](1 + (num_reductions / 3));
+            result[result.length - 1] = uint8(num_reductions % 3);
+        } else {
+            result = new uint8[](num_reductions / 3);
+        }
+        for (uint256 i = 0; i < (num_reductions / 3); i++) {
+            result[i] = 3;
+        }
+        return result;
+    }
+
+    function degree_adjustment(uint256 target_degree, uint256 numerator_degree, uint256 denominator_degree)
+        internal
+        pure
+        returns (uint256)
+    {
+        return target_degree + denominator_degree - numerator_degree;
     }
 }
