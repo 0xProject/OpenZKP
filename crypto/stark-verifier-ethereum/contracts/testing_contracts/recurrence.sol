@@ -11,7 +11,7 @@ import '../iterator.sol';
 
 // This trivial Fibonacci system returns constant values which are true only for one proof
 // It should only be used for testing purposes
-contract Recurance is ConstraintSystem {
+contract Recurrence is ConstraintSystem {
     using Iterators for Iterators.IteratorUint;
     using PrimeField for uint256;
     using PrimeField for PrimeField.EvalX;

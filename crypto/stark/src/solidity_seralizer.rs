@@ -27,7 +27,7 @@ impl SoliditySeralize for Hash {
 
 impl SoliditySeralize for Commitment {
     fn sol_encode(&self) -> String {
-        format!("\"0x{}\"", encode(self.hash().as_bytes()))
+        self.hash().sol_encode()
     }
 }
 
