@@ -220,6 +220,8 @@ $$
 
 replace some of the occurrences of $X$ with a new variable $Y$:
 
+**To do.** Why is this a valid move? Why these occurrences?
+
 $$
 g(X, Y) = \sum_i \gamma^{i -1} ⋅ (f_i(X) - r_i(Y)) ⋅ \bar z_i(Y) - f'(X) ⋅ z(Y)
 $$
