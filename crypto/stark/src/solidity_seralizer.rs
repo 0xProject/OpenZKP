@@ -296,7 +296,8 @@ mod tests {
     // #[test]
     // fn output_recurrances() {
     //     let mut initial_value =
-    //         field_element!("42f70183f3ed560b81c4cd49a8d5f27fdb747c17eaa93f41570b012649b5a47b");
+    //         field_element!("
+    // 42f70183f3ed560b81c4cd49a8d5f27fdb747c17eaa93f41570b012649b5a47b");
     //     let mut result_string = "[\n".to_string();
     //     for i in 0..20 {
     //         println!("{}", i);
@@ -346,8 +347,8 @@ mod tests {
     //     let path = Path::new("recurrence.json");
     //     let display = path.display();
     //     let mut file = match File::create(&path) {
-    //         Err(why) => panic!("couldn't create {}: {}", display, why.to_string()),
-    //         Ok(file) => file,
+    //         Err(why) => panic!("couldn't create {}: {}", display,
+    // why.to_string()),         Ok(file) => file,
     //     };
     //     writeln!(&mut file, "{}", result_string).unwrap();
     //     assert!(false);
