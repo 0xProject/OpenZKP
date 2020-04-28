@@ -70,6 +70,7 @@ fn parse_hex(src: &str) -> Result<u32, ParseIntError> {
 struct Options {
     // The number of occurrences of the `v/verbose` flag
     /// Verbose mode (-v, -vv, -vvv, etc.)
+    #[allow(clippy::cast_possible_truncation)]
     #[structopt(short, long, parse(from_occurrences))]
     verbose: u8,
 

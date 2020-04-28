@@ -49,6 +49,7 @@ mod polynomial;
 mod proof;
 mod proof_of_work;
 mod rational_expression;
+#[cfg(feature = "std")]
 mod solidity_seralizer;
 mod traits;
 mod verifier;

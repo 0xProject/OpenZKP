@@ -259,7 +259,6 @@ fn get_indices(num: usize, bits: u32, proof: &mut VerifierChannel) -> Vec<usize>
 mod tests {
     use super::*;
     use crate::{prove, traits::tests::Recurrance, Provable, Verifiable};
-    use std::{fs::File, io::prelude::*, path::Path};
     use zkp_macros_decl::field_element;
 
     #[test]
@@ -280,76 +279,77 @@ mod tests {
 
         let mut result_string = "".to_string();
         //&prove(&constraints, &trace).unwrap();
-        let _ = proof_serialize(
+        proof_serialize(
             &constraints,
             &prove(&constraints, &trace).unwrap(),
             &mut result_string,
         )
         .unwrap();
-        println!("{}", result_string);
-        assert!(false);
+        // println!("{}", result_string);
+        // assert!(false);
     }
 
     // Note this test is actually more like a binary which we want run so it
     // commented out, The Recurrance struct can't be exported to a binary or
     // example because it only lives in tests.
-    #[test]
-    fn output_recurrances() {
-        let mut initial_value =
-            field_element!("42f70183f3ed560b81c4cd49a8d5f27fdb747c17eaa93f41570b012649b5a47b");
-        let mut result_string = "[\n".to_string();
-        for i in 0..20 {
-            println!("{}", i);
-            let r = Recurrance {
-                index:         2_usize.pow(i) + 149,
-                initial_value: initial_value.clone(),
-                exponent:      2,
-            };
+    // use std::{fs::File, io::prelude::*, path::Path};
+    // #[test]
+    // fn output_recurrances() {
+    //     let mut initial_value =
+    //         field_element!("42f70183f3ed560b81c4cd49a8d5f27fdb747c17eaa93f41570b012649b5a47b");
+    //     let mut result_string = "[\n".to_string();
+    //     for i in 0..20 {
+    //         println!("{}", i);
+    //         let r = Recurrance {
+    //             index:         2_usize.pow(i) + 149,
+    //             initial_value: initial_value.clone(),
+    //             exponent:      2,
+    //         };
 
-            let public = r.claim();
-            println!("{:?}", public.value.as_montgomery());
-            let private = r.witness();
+    //         let public = r.claim();
+    //         println!("{:?}", public.value.as_montgomery());
+    //         let private = r.witness();
 
-            let mut constraints = public.constraints();
-            constraints.num_queries = 20;
-            constraints.num_queries = 10;
-            let trace = public.trace(&private);
+    //         let mut constraints = public.constraints();
+    //         constraints.num_queries = 20;
+    //         constraints.num_queries = 10;
+    //         let trace = public.trace(&private);
 
-            result_string.push_str(&format!(
-                "{{
-                \"public_inputs\": {{
-                    \"index\" : {},
-                    \"value\" : \"0x{}\"
-                }},",
-                r.index,
-                public.value.as_montgomery()
-            ));
+    //         result_string.push_str(&format!(
+    //             "{{
+    //             \"public_inputs\": {{
+    //                 \"index\" : {},
+    //                 \"value\" : \"0x{}\"
+    //             }},",
+    //             r.index,
+    //             public.value.as_montgomery()
+    //         ));
 
-            let _ = proof_serialize(
-                &constraints,
-                &prove(&constraints, &trace).unwrap(),
-                &mut result_string,
-            )
-            .unwrap();
+    //         let _ = proof_serialize(
+    //             &constraints,
+    //             &prove(&constraints, &trace).unwrap(),
+    //             &mut result_string,
+    //         )
+    //         .unwrap();
 
-            if i == 19 {
-                result_string.push_str("}\n");
-            } else {
-                result_string.push_str("},\n");
-            }
+    //         if i == 19 {
+    //             result_string.push_str("}\n");
+    //         } else {
+    //             result_string.push_str("},\n");
+    //         }
 
-            // This changes around the value in a slightly unpredictable way
-            initial_value *= initial_value.clone();
-        }
-        result_string.push_str("]");
+    //         // This changes around the value in a slightly unpredictable way
+    //         initial_value *= initial_value.clone();
+    //     }
+    //     result_string.push_str("]");
 
-        let path = Path::new("recurrence.json");
-        let display = path.display();
-        let mut file = match File::create(&path) {
-            Err(why) => panic!("couldn't create {}: {}", display, why.to_string()),
-            Ok(file) => file,
-        };
-        writeln!(&mut file, "{}", result_string).unwrap();
-        assert!(false);
-    }
+    //     let path = Path::new("recurrence.json");
+    //     let display = path.display();
+    //     let mut file = match File::create(&path) {
+    //         Err(why) => panic!("couldn't create {}: {}", display, why.to_string()),
+    //         Ok(file) => file,
+    //     };
+    //     writeln!(&mut file, "{}", result_string).unwrap();
+    //     assert!(false);
+    // }
 }

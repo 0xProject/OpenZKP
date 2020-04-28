@@ -39,6 +39,7 @@ describe('Recurance testing', function(this: any): void {
             // in this case it's best for the code to ignore it because this is how ethers js understands these types.
             // @ts-ignore
             const events = await (
+                // @ts-ignore
                 await verifier_contract.verify_proof(recurance_proofs[i], constraint_contract.address)
             ).wait();
             // TODO - Use better logging
