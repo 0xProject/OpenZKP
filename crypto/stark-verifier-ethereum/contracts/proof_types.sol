@@ -39,7 +39,7 @@ contract ProofTypes {
         // The merkle proof decommitment at each fri layer
         bytes32[][] fri_decommitments;
         // The coeffiencts of the last fri layer
-        uint256[] last_layer_coeffiencts;
+        uint256[] last_layer_coefficients;
     }
 
     // This struct contains the relevent information about the constraint system

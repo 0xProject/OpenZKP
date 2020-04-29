@@ -45,7 +45,8 @@ contract StarkVerifier is ProofOfWork, Fri, ProofTypes {
             constraint_parameters,
             queries,
             oods_point,
-            constraint_coeffiencents
+            constraint_coeffiencents,
+            oods_coefficients
         );
 
         uint8 log_eval_domain_size = constraint_parameters.log_trace_length + constraint_parameters.log_blowup;
@@ -97,7 +98,7 @@ contract StarkVerifier is ProofOfWork, Fri, ProofTypes {
         }
         // Write the claimed last layer points a set of coeffient for the final layer fri check
         // NOTE - This is a fri layer so we have to write the whole thing at once
-        coin.write_bytes(abi.encodePacked(proof.last_layer_coeffiencts));
+        coin.write_bytes(abi.encodePacked(proof.last_layer_coefficients));
         return (constraint_coeffiencents, oods_point, oods_coefficients, eval_points);
     }
 

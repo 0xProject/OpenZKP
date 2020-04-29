@@ -15,6 +15,11 @@ const config: BuidlerConfig = {
         outDir: 'typechain',
         target: 'ethers',
     },
+    networks: {
+        buidlerevm: {
+            blockGasLimit: 100000000,
+        },
+    },
 };
 
 // tslint:disable-next-line:no-default-export
