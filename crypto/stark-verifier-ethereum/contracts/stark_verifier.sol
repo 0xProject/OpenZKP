@@ -7,24 +7,14 @@ import './proof_of_work.sol';
 import './fri.sol';
 import './proof_types.sol';
 import './utils.sol';
+import './trace.sol';
 
 import '@nomiclabs/buidler/console.sol';
 
 
-contract StarkVerifier is ProofOfWork, Fri, ProofTypes {
+contract StarkVerifier is ProofOfWork, Fri, ProofTypes, Trace {
     using PublicCoin for PublicCoin.Coin;
     using Utils for *;
-
-    event LogTrace(string name, bool enter, uint256 gasLeft, uint256 allocated);
-
-    function trace(string memory name, bool enter) internal {
-        uint256 gas = gasleft();
-        uint256 allocated = 0;
-        assembly {
-            allocated := mload(0x40)
-        }
-        emit LogTrace(name, enter, gas, allocated);
-    }
 
     // TODO - Figure out why making this external causes 'UnimplementedFeatureError' only when
     // it calls through to an internal function with proof as memory.

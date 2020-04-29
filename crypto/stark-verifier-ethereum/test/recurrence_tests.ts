@@ -51,7 +51,8 @@ describe('Recurrence testing', function (this: any): void {
                     continue;
                 }
                 const direction = event.args.enter ? 'ENTER' : 'LEAVE';
-                console.log(`${direction} ${event.args.name} ${event.args.gasLeft} ${event.args.allocated}`);
+                const name = utils.parseBytes32String(event.args.name);
+                console.log(`${direction} ${name} ${event.args.gasLeft} ${event.args.allocated}`);
                 lastAlloc = event.args.allocated;
             }
             console.log(`LEAVE transaction ${INITIAL_GAS - receipt.gasUsed?.toNumber()} ${lastAlloc}`);
