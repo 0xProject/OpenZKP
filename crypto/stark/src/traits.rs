@@ -62,9 +62,9 @@ pub(crate) mod tests {
 
     #[derive(Clone, PartialEq, Debug)]
     pub(crate) struct Claim {
-        index:    usize,
-        value:    FieldElement,
-        exponent: usize,
+        index:            usize,
+        pub(crate) value: FieldElement,
+        exponent:         usize,
     }
 
     #[derive(Clone, PartialEq, Debug)]

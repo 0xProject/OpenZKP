@@ -1,5 +1,4 @@
-#Buidler files
-cache
+# Soldity artifacts
 artifacts
+cache
 typechain
-node_modules

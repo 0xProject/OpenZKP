@@ -82,13 +82,36 @@ library PrimeField {
     }
 
     // We assume that the coeffients are in montgomery form, but that x is not
-    // Note that the coeffiecintes are assumed to be low degree to high degree
     function horner_eval(uint256[] memory coefficents, uint256 x) internal pure returns (uint256) {
-        uint256 b = coefficents[coefficents.length - 1];
-        for (uint256 i = coefficents.length - 2; i > 0; i--) {
-            b = fmul(b, x);
-            b = fadd(b, coefficents[i]);
+        require(coefficents.length > 0, 'Evaluation undefined');
+        uint256 b = 0;
+        for (uint256 i = coefficents.length - 1; i > 0; i--) {
+            b = fadd(coefficents[i], fmul(b, x));
         }
         return fadd(coefficents[0], fmul(b, x));
+    }
+
+    // The EvalX struct will lookup powers of x inside of the eval domain
+    // It simplifies the interface, and can be made much more gas efficent
+    struct EvalX {
+        uint256 eval_domain_generator;
+        uint8 log_eval_domain_size;
+        uint64 eval_domain_size;
+    }
+
+    // Lookup data at an index
+    // These lookups cost around 530k of gas overhead in the small fib proof
+    function lookup(EvalX memory eval_x, uint256 index) internal returns (uint256) {
+        return fpow(eval_x.eval_domain_generator, index);
+    }
+
+    // Returns a memory object which allows lookups
+    function init_eval(uint8 log_eval_domain_size) internal returns (EvalX memory) {
+        return
+            EvalX(
+                PrimeField.generator_power(log_eval_domain_size),
+                log_eval_domain_size,
+                uint64(2)**(log_eval_domain_size)
+            );
     }
 }
