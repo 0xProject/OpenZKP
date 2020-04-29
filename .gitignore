@@ -39,7 +39,3 @@ yarn-error.log
 
 # Auto generated solidity files shouldn't be commited
 crypto/stark/contracts/
-# Soldity artifacts
-crypto/stark-verifier-ethereum/artifacts
-crypto/stark-verifier-ethereum/cache
-crypto/stark-verifier-ethereum/typechain
