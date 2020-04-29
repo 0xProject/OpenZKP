@@ -15,12 +15,25 @@ contract StarkVerifier is ProofOfWork, Fri, ProofTypes {
     using PublicCoin for PublicCoin.Coin;
     using Utils for *;
 
+    event LogTrace(string name, bool enter, uint256 gasLeft, uint256 allocated);
+
+    function trace(string memory name, bool enter) internal {
+        uint256 gas = gasleft();
+        uint256 allocated = 0;
+        assembly {
+            allocated := mload(0x40)
+        }
+        emit LogTrace(name, enter, gas, allocated);
+    }
+
     // TODO - Figure out why making this external causes 'UnimplementedFeatureError' only when
     // it calls through to an internal function with proof as memory.
     // Profiling - 687267 gas used by the call and copy into memory
     // Profiling - 436384 gas used when the proof isn't copied into memory,
     // making the memory copy much higher than estimates
     function verify_proof(StarkProof memory proof, ConstraintSystem constraints) public returns (bool) {
+        trace('verify_proof', true);
+
         // Initalize the coin and constraint system
         (ProofParameters memory constraint_parameters, PublicCoin.Coin memory coin) = constraints.initalize_system(
             proof.public_inputs
@@ -56,6 +69,8 @@ contract StarkVerifier is ProofOfWork, Fri, ProofTypes {
         fri_check(proof, constraint_parameters.fri_layout, eval_points, log_eval_domain_size, queries, fri_top_layer);
 
         check_out_of_domain_sample_result(proof, oods_point, constraint_evaluated_oods_point);
+
+        trace('verify_proof', false);
     }
 
     // This function write to the channel and reads from the channel to get the randomized data
