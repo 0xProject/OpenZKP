@@ -7,11 +7,12 @@ import './primefield.sol';
 import './merkle.sol';
 import './proof_types.sol';
 import './utils.sol';
+import './trace.sol';
 
 import '@nomiclabs/buidler/console.sol';
 
 
-contract Fri is MerkleVerifier {
+contract Fri is Trace, MerkleVerifier {
     using PublicCoin for PublicCoin.Coin;
     using Iterators for Iterators.IteratorUint;
     using PrimeField for uint256;
@@ -40,9 +41,10 @@ contract Fri is MerkleVerifier {
     // Reads from channel random and returns a list of random queries
     function get_queries(PublicCoin.Coin memory coin, uint8 max_bit_length, uint8 num_queries)
         internal
-        pure
         returns (uint64[] memory)
     {
+        trace('get_queries', true);
+
         uint64[] memory queries = new uint64[](num_queries);
         // This mask sets all digits to one below the bit length
         uint64 bit_mask = (uint64(2)**max_bit_length) - 1;
@@ -61,6 +63,7 @@ contract Fri is MerkleVerifier {
             }
         }
         queries.sort();
+        trace('get_queries', false);
         return queries;
     }
 
@@ -73,6 +76,7 @@ contract Fri is MerkleVerifier {
         uint64[] memory queries,
         uint256[] memory polynomial_at_queries
     ) internal {
+        trace('fri_check', true);
         fold_and_check_fri_layers(
             FriContext(
                 proof.fri_values,
@@ -86,11 +90,13 @@ contract Fri is MerkleVerifier {
                 proof.last_layer_coefficients
             )
         );
+        trace('fri_check', false);
     }
 
     // This function takes in fri values, decommitments, and layout and checks the folding and merkle proofs
     // Note the final layer folded values will be overwritten to the input data locations.
     function fold_and_check_fri_layers(FriContext memory fri_data) internal {
+        trace('fold_and_check_fri_layers', true);
         PrimeField.EvalX memory eval = PrimeField.init_eval(fri_data.log_eval_domain_size);
         LayerContext memory layer_context = LayerContext({
             len: uint64(2)**(fri_data.log_eval_domain_size),
@@ -143,6 +149,7 @@ contract Fri is MerkleVerifier {
         uint256 interp_root = eval.lookup(eval.eval_domain_size / layer_context.len);
 
         // We now test that the commited last layer values interpolate the final fri folding values
+        trace('last_layer', true);
         for (uint256 i = 0; i < fri_data.polynomial_at_queries.length; i++) {
             uint8 layer_num_bits = layer_context.len.num_bits();
             uint256 reversed_query = fri_data.queries[i].bit_reverse(layer_num_bits);
@@ -150,6 +157,8 @@ contract Fri is MerkleVerifier {
             uint256 calculated = fri_data.last_layer_coefficients.horner_eval(x);
             require(calculated == fri_data.polynomial_at_queries[i], 'Last layer coeffients mismatch');
         }
+        trace('last_layer', false);
+        trace('fold_and_check_fri_layers', false);
     }
 
     // This function takes in a previous layer and fold and reads from it and writes new folded layers to the next layer.
@@ -163,6 +172,7 @@ contract Fri is MerkleVerifier {
         LayerContext memory layer_context,
         bytes32[] memory coset_hash_output
     ) internal {
+        trace('fold_layer', true);
         // Reads how many of the cosets we've read from
         uint256 writes = 0;
         uint64 current_index;
@@ -201,6 +211,7 @@ contract Fri is MerkleVerifier {
         }
         previous_layer.truncate(writes);
         previous_indicies.truncate(writes);
+        trace('fold_layer', false);
     }
 
     function fold_coset(
@@ -210,6 +221,7 @@ contract Fri is MerkleVerifier {
         uint64 index,
         PrimeField.EvalX memory eval_x
     ) internal returns (uint256) {
+        trace('fold_coset', true);
         // TODO - This could likely be one variable and the eval domain size in the layer context
         uint64 len = layer_context.len;
         uint64 step = layer_context.step;
@@ -220,6 +232,7 @@ contract Fri is MerkleVerifier {
                 // we can lookup the x inverse using the following index manipulation
                 // and power
                 uint256 x_inv;
+                trace('x_inv', true);
                 {
                     uint64 half_i_plus_index = uint64(i / 2) + index;
                     uint8 half_length_bits = (len / 2).num_bits();
@@ -228,8 +241,10 @@ contract Fri is MerkleVerifier {
                     inverse_index = inverse_index % eval_x.eval_domain_size;
                     x_inv = eval_x.lookup(inverse_index);
                 }
+                trace('x_inv', false);
 
                 // We now do the actual fri folding operation
+                trace('fri_fold', true);
                 uint256 f_x_plus_f_neg_x = coset[i].fadd(coset[i + 1]);
                 uint256 eval_point_div_x = x_inv.fmul(eval_point);
                 uint256 f_x_sub_f_neg_x = coset[i].fsub(coset[i + 1]);
@@ -237,6 +252,7 @@ contract Fri is MerkleVerifier {
                 // have to use special multiplication
                 uint256 eval_over_x_times_f_x_sub_f_neg_x = eval_point_div_x.fmul_mont(f_x_sub_f_neg_x);
                 coset[i / 2] = f_x_plus_f_neg_x.fadd(eval_over_x_times_f_x_sub_f_neg_x);
+                trace('fri_fold', false);
             }
             len /= 2;
             index /= 2;
@@ -246,6 +262,7 @@ contract Fri is MerkleVerifier {
         }
 
         // We return the fri folded point and the inverse for the base layer, which is our x_inv on the next level
+        trace('fold_coset', false);
         return (coset[0]);
     }
 }
