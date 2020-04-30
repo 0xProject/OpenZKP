@@ -1,16 +1,16 @@
-import {waffle} from '@nomiclabs/buidler';
+import { waffle } from '@nomiclabs/buidler';
 import chai from 'chai';
-import {deployContract, solidity} from 'ethereum-waffle';
+import { deployContract, solidity } from 'ethereum-waffle';
 
 import FriTestingArtifact from '../artifacts/FriTesting.json';
-import {FriTesting} from '../typechain/FriTesting';
+import { FriTesting } from '../typechain/FriTesting';
 
-import {txToEventsAsync} from './test_utils';
+import { txToEventsAsync } from './test_utils';
 
 chai.use(solidity);
-const {expect} = chai;
+const { expect } = chai;
 
-describe('Public coin testing', () => {
+describe('Fri testing', () => {
     let fri_contract: FriTesting;
 
     const provider = waffle.provider;
@@ -41,7 +41,7 @@ describe('Public coin testing', () => {
                 },
             ),
         );
-        expect(result[0].data).to.be.eq('0x07ce58276a6663f522711bf9cce5bf737f296d73d32d6c8da3e17deccd459a2b');
+        expect(result[result.length - 1].data).to.be.eq('0x07ce58276a6663f522711bf9cce5bf737f296d73d32d6c8da3e17deccd459a2b');
 
         // Case with 8 in a middle layer
         result = await txToEventsAsync(
@@ -67,6 +67,6 @@ describe('Public coin testing', () => {
                 },
             ),
         );
-        expect(result[0].data).to.be.eq('0x0121a60f28684daf933d279d490f046286a4843b889a92902c90a7a69a7e5fab');
+        expect(result[result.length - 1].data).to.be.eq('0x0121a60f28684daf933d279d490f046286a4843b889a92902c90a7a69a7e5fab');
     });
 });

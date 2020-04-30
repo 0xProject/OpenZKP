@@ -2,9 +2,10 @@ pragma solidity ^0.6.4;
 
 import './ring_buffer.sol';
 import './iterator.sol';
+import './trace.sol';
 
 
-contract MerkleVerifier {
+contract MerkleVerifier is Trace {
     using RingBuffer for RingBuffer.IndexRingBuffer;
     using Iterators for Iterators.IteratorBytes32;
 
@@ -15,7 +16,8 @@ contract MerkleVerifier {
         bytes32[] memory leaves,
         uint256[] memory indices,
         bytes32[] memory decommitment
-    ) internal pure returns (bool) {
+    ) internal returns (bool) {
+        trace('verify_merkle_proof', true);
         require(leaves.length > 0, 'No claimed data');
         // Setup our index buffer
         RingBuffer.IndexRingBuffer memory buffer = RingBuffer.IndexRingBuffer({
@@ -33,7 +35,9 @@ contract MerkleVerifier {
 
             // If the index is one this node is the root so we need to check if the proposed root matches
             if (index == 1) {
-                return (root == current_hash);
+                bool valid = root == current_hash;
+                trace('verify_merkle_proof', false);
+                return valid;
             }
 
             bool is_left = index % 2 == 0;
@@ -64,12 +68,14 @@ contract MerkleVerifier {
             if (needs_new_node) {
                 // If we don't have more decommitment the proof fails
                 if (!decommitment_iter.has_next()) {
+                    trace('verify_merkle_proof', false);
                     return false;
                 }
                 // Reads from decommitment and pushes a new node
                 read_decommitment_and_push(is_left, buffer, decommitment_iter, current_hash, index);
             }
         }
+        trace('verify_merkle_proof', false);
     }
 
     // This function reads from decommitment and pushes the new node onto the buffer,
@@ -96,7 +102,7 @@ contract MerkleVerifier {
 
     bytes32 constant HASH_MASK = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF000000000000000000000000;
 
-    function merkleTreeHash(bytes32 preimage_a, bytes32 preimage_b) internal pure returns (bytes32) {
+    function merkleTreeHash(bytes32 preimage_a, bytes32 preimage_b) internal pure returns (bytes32 hash) {
         return keccak256(abi.encodePacked(preimage_a, preimage_b)) & HASH_MASK;
     }
 
