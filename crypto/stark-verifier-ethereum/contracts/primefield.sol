@@ -82,13 +82,32 @@ library PrimeField {
     }
 
     // We assume that the coeffients are in montgomery form, but that x is not
-    function horner_eval(uint256[] memory coefficents, uint256 x) internal pure returns (uint256) {
-        require(coefficents.length > 0, 'Evaluation undefined');
-        uint256 b = 0;
-        for (uint256 i = coefficents.length - 1; i > 0; i--) {
-            b = fadd(coefficents[i], fmul(b, x));
+    function horner_eval(uint256[] memory coefficients, uint256 x) internal pure returns (uint256 result) {
+        assembly {
+            result := 0
+            let len := mload(coefficients)
+            if len {
+                let start := add(coefficients, 0x20)
+                let end := add(start, mul(len, 0x20))
+                for {
+                    let index := sub(end, 0x20)
+                } gt(index, start) {
+                    index := sub(index, 0x20)
+                } {
+                    result := mulmod(result, x, MODULUS)
+                    result := add(result, mload(index))
+                }
+                result := mulmod(result, x, MODULUS)
+                result := addmod(result, mload(start), MODULUS)
+            }
         }
-        return fadd(coefficents[0], fmul(b, x));
+
+        /*
+        for (uint256 i = coefficients.length - 1; i > 0; i--) {
+            result = fadd(coefficients[i], fmul(b, x));
+        }
+        result = fadd(coefficients[0], fmul(b, x));
+        */
     }
 
     // The EvalX struct will lookup powers of x inside of the eval domain
