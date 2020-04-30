@@ -44,8 +44,19 @@ describe('Recurrence testing', function (this: any): void {
                 // @ts-ignore
                 await verifier_contract.verify_proof(recurrence_proofs[i], constraint_contract.address, { gasLimit: INITIAL_GAS })
             ).wait();
+
+            // Compute calldata cost
+            // @ts-ignore
+            const call_data = utils.arrayify(verifier_contract.interface.functions.verify_proof.encode([recurrence_proofs[i], constraint_contract.address]));
+            const call_data_length = call_data.length;
+            const call_data_zeros = call_data.filter(byte => byte == 0).length;
+            const calldata_cost = (call_data_length - call_data_zeros) * 16 + call_data_zeros * 4;
+
+            // Log gas consumption
             console.log(`ENTER transaction ${INITIAL_GAS} 0`);
-            var lastAlloc = 0;
+            console.log(`ENTER calldata ${INITIAL_GAS} 0`);
+            console.log(`LEAVE calldata ${INITIAL_GAS - calldata_cost} 0`);
+            var last_alloc = 0;
             for (const event of receipt.events) {
                 if (event.event != 'LogTrace') {
                     continue;
@@ -53,9 +64,10 @@ describe('Recurrence testing', function (this: any): void {
                 const direction = event.args.enter ? 'ENTER' : 'LEAVE';
                 const name = utils.parseBytes32String(event.args.name);
                 console.log(`${direction} ${name} ${event.args.gasLeft} ${event.args.allocated}`);
-                lastAlloc = event.args.allocated;
+                last_alloc = event.args.allocated;
             }
-            console.log(`LEAVE transaction ${INITIAL_GAS - receipt.gasUsed?.toNumber()} ${lastAlloc}`);
+            console.log(`LEAVE transaction ${INITIAL_GAS - receipt.gasUsed?.toNumber()} ${last_alloc}`);
+
             // TODO - Use better logging
             /* tslint:disable:no-console*/
             console.log('Proof verification gas used : ', receipt.gasUsed?.toNumber());
