@@ -13,9 +13,10 @@ import small_fib_proof from './small_fib_proof.json';
 chai.use(solidity);
 const { expect } = chai;
 
-describe('Stark Testing testing', (tests: any) => {
+// tslint:disable:space-before-function-paren typedef
+describe('Stark Testing testing', function (this: any) {
     // Disables the timeouts
-    tests.timeout(0);
+    this.timeout(0);
     let constraint_contract: TrivialFib;
     let verifier_contract: StarkDigestTesting;
 

@@ -15,9 +15,10 @@ const INITIAL_GAS = 100000000;
 
 chai.use(solidity);
 
-describe('Recurrence testing', (tests: any) => {
+// tslint:disable:space-before-function-paren typedef
+describe('Recurrence testing', function (this: any) {
     // Disables the timeouts
-    tests.timeout(0);
+    this.timeout(0);
     let constraint_contract: Recurrence;
     let verifier_contract: StarkDigestTesting;
 
