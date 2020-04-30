@@ -30,7 +30,7 @@ describe('Recurrence testing', function (this: any): void {
     });
 
     // Note - This checks the proof of work, but not the whole proof yet
-    it.only('It should validate a correct proof', async () => {
+    it('It should validate a correct proof', async () => {
         for (let i = 0; i < recurrence_proofs.length; i++) {
             // We ts-ignore because it's connivent to abi encode here not in rust
             // @ts-ignore
