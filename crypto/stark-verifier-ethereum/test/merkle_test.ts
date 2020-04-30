@@ -9,7 +9,7 @@ import { txToEventsAsync } from './test_utils';
 chai.use(solidity);
 const { expect } = chai;
 
-describe.only('Merkle Testing testing', () => {
+describe('Merkle Testing testing', () => {
     let merkle_contract: any;
 
     const provider = waffle.provider;
