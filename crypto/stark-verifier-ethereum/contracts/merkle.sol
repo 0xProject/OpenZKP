@@ -16,8 +16,8 @@ contract MerkleVerifier is Trace {
         bytes32[] memory leaves,
         uint256[] memory indices,
         bytes32[] memory decommitment
-    ) internal pure returns (bool) {
-        // trace('verify_merkle_proof', true);
+    ) internal returns (bool) {
+        trace('verify_merkle_proof', true);
         require(leaves.length > 0, 'No claimed data');
         // Setup our index buffer
         RingBuffer.IndexRingBuffer memory buffer = RingBuffer.IndexRingBuffer({
@@ -36,7 +36,7 @@ contract MerkleVerifier is Trace {
             // If the index is one this node is the root so we need to check if the proposed root matches
             if (index == 1) {
                 bool valid = root == current_hash;
-                // trace('verify_merkle_proof', false);
+                trace('verify_merkle_proof', false);
                 return valid;
             }
 
@@ -68,14 +68,14 @@ contract MerkleVerifier is Trace {
             if (needs_new_node) {
                 // If we don't have more decommitment the proof fails
                 if (!decommitment_iter.has_next()) {
-                    // trace('verify_merkle_proof', false);
+                    trace('verify_merkle_proof', false);
                     return false;
                 }
                 // Reads from decommitment and pushes a new node
                 read_decommitment_and_push(is_left, buffer, decommitment_iter, current_hash, index);
             }
         }
-        // trace('verify_merkle_proof', false);
+        trace('verify_merkle_proof', false);
     }
 
     // This function reads from decommitment and pushes the new node onto the buffer,
