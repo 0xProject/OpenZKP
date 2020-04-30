@@ -102,8 +102,17 @@ contract MerkleVerifier is Trace {
 
     bytes32 constant HASH_MASK = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF000000000000000000000000;
 
-    function merkleTreeHash(bytes32 preimage_a, bytes32 preimage_b) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(preimage_a, preimage_b)) & HASH_MASK;
+    function merkleTreeHash(bytes32 preimage_a, bytes32 preimage_b) internal pure returns (bytes32 hash) {
+        // The assembly is equivalent to the following:
+        // return keccak256(abi.encodePacked(preimage_a, preimage_b)) & HASH_MASK;
+        // but it avoids the costly `abi.encodePacked`.
+        assembly {
+            // The first 64 bytes of memory are available as scratch space
+            // See https://solidity.readthedocs.io/en/v0.6.6/assembly.html#conventions-in-solidity
+            mstore(0x00, preimage_a)
+            mstore(0x20, preimage_b)
+            hash := and(keccak256(0x00, 0x40), HASH_MASK)
+        }
     }
 
     function merkleLeafHash(uint256[] memory leaf) internal pure returns (bytes32) {
