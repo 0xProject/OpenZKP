@@ -15,9 +15,9 @@ const INITIAL_GAS = 100000000;
 
 chai.use(solidity);
 
-describe('Recurrence testing', function (this: any): void {
+describe('Recurrence testing', (tests: any) => {
     // Disables the timeouts
-    this.timeout(0);
+    tests.timeout(0);
     let constraint_contract: Recurrence;
     let verifier_contract: StarkDigestTesting;
 
@@ -50,17 +50,17 @@ describe('Recurrence testing', function (this: any): void {
             // @ts-ignore
             const call_data = utils.arrayify(verifier_contract.interface.functions.verify_proof.encode([recurrence_proofs[i], constraint_contract.address]));
             const call_data_length = call_data.length;
-            const call_data_zeros = call_data.filter(byte => byte == 0).length;
+            const call_data_zeros = call_data.filter(byte => byte === 0).length;
             const calldata_cost = (call_data_length - call_data_zeros) * 16 + call_data_zeros * 4;
 
             // Log gas consumption
-            var gas_log = '';
+            let gas_log = '';
             gas_log += `ENTER transaction ${INITIAL_GAS} 0\n`;
             gas_log += `ENTER calldata ${INITIAL_GAS} 0\n`;
             gas_log += `LEAVE calldata ${INITIAL_GAS - calldata_cost} 0\n`;
-            var last_alloc = 0;
+            let last_alloc = 0;
             for (const event of receipt.events) {
-                if (event.event != 'LogTrace') {
+                if (event.event !== 'LogTrace') {
                     continue;
                 }
                 const direction = event.args.enter ? 'ENTER' : 'LEAVE';
@@ -69,10 +69,15 @@ describe('Recurrence testing', function (this: any): void {
                 last_alloc = event.args.allocated;
             }
             gas_log += `LEAVE transaction ${INITIAL_GAS - receipt.gasUsed?.toNumber()} ${last_alloc}\n`;
-            fs.writeFile(`gas-${i}.log`, gas_log, err => err ? console.error(err) : null);
+            fs.writeFile(`gas-${i}.log`, gas_log, err => {
+                if (err) {
+                    // tslint:disable:no-console
+                    console.error(err);
+                }
+            });
 
             // TODO - Use better logging
-            /* tslint:disable:no-console*/
+            // tslint:disable:no-console
             console.log('Proof verification gas used : ', receipt.gasUsed?.toNumber());
         }
     });

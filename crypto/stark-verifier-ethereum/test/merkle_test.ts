@@ -4,6 +4,7 @@ import { deployContract, solidity } from 'ethereum-waffle';
 
 import MerkleVerifierTestArtifact from '../artifacts/MerkleVerifierTest.json';
 import { MerkleVerifierTest } from '../typechain/MerkleVerifierTest';
+
 import { txToEventsAsync } from './test_utils';
 
 chai.use(solidity);

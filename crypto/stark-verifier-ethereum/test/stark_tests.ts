@@ -13,9 +13,9 @@ import small_fib_proof from './small_fib_proof.json';
 chai.use(solidity);
 const { expect } = chai;
 
-describe('Stark Testing testing', function (this: any): void {
+describe('Stark Testing testing', (tests: any) => {
     // Disables the timeouts
-    this.timeout(0);
+    tests.timeout(0);
     let constraint_contract: TrivialFib;
     let verifier_contract: StarkDigestTesting;
 
@@ -74,7 +74,7 @@ describe('Stark Testing testing', function (this: any): void {
             // @ts-ignore
             (await verifier_contract.verify_proof(small_fib_proof, constraint_contract.address)).wait();
         // TODO - Use better logging
-        /* tslint:disable:no-console*/
+        // tslint:disable:no-console
         console.log('Proof verification gas used : ', events.gasUsed?.toNumber());
     });
 });
