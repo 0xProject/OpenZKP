@@ -81,33 +81,59 @@ library PrimeField {
         return expmod(GENERATOR, maybe_exact, MODULUS);
     }
 
-    // We assume that the coeffients are in montgomery form, but that x is not
+    // Evaluates the polynomial given by `coefficients` in `x`.
+    // `coefficients` in low-to-high order.
     function horner_eval(uint256[] memory coefficients, uint256 x) internal pure returns (uint256 result) {
+        // Assembly implementation of Horner evaluation for performance reasons.
         assembly {
             result := 0
+            let modulus := MODULUS
             let len := mload(coefficients)
             if len {
                 let start := add(coefficients, 0x20)
                 let end := add(start, mul(len, 0x20))
-                for {
-                    let index := sub(end, 0x20)
-                } gt(index, start) {
-                    index := sub(index, 0x20)
-                } {
+                let index := sub(end, 0x20)
+                // Eight times unrolled loop
+                for {} gt(len, 8) {} {
                     result := mulmod(result, x, MODULUS)
                     result := add(result, mload(index))
+                    index := sub(index, 0x20)
+                    result := mulmod(result, x, MODULUS)
+                    result := add(result, mload(index))
+                    index := sub(index, 0x20)
+                    result := mulmod(result, x, MODULUS)
+                    result := add(result, mload(index))
+                    index := sub(index, 0x20)
+                    result := mulmod(result, x, MODULUS)
+                    result := add(result, mload(index))
+                    index := sub(index, 0x20)
+                    result := mulmod(result, x, MODULUS)
+                    result := add(result, mload(index))
+                    index := sub(index, 0x20)
+                    result := mulmod(result, x, MODULUS)
+                    result := add(result, mload(index))
+                    index := sub(index, 0x20)
+                    result := mulmod(result, x, MODULUS)
+                    result := add(result, mload(index))
+                    index := sub(index, 0x20)
+                    result := mulmod(result, x, MODULUS)
+                    result := add(result, mload(index))
+                    index := sub(index, 0x20)
+                    len := sub(len, 8)
                 }
+                // Base loop
+                // The `add` can not overflow because modulus is less than 2^255.
+                // The next `mulmod` will handle the reduction.
+                for {} gt(index, start) {} {
+                    result := mulmod(result, x, MODULUS)
+                    result := add(result, mload(index))
+                    index := sub(index, 0x20)
+                }
+                // Last value, need to use `addmod` here so final result is reduced.
                 result := mulmod(result, x, MODULUS)
-                result := addmod(result, mload(start), MODULUS)
+                result := addmod(result, mload(start), modulus)
             }
         }
-
-        /*
-        for (uint256 i = coefficients.length - 1; i > 0; i--) {
-            result = fadd(coefficients[i], fmul(b, x));
-        }
-        result = fadd(coefficients[0], fmul(b, x));
-        */
     }
 
     // The EvalX struct will lookup powers of x inside of the eval domain
