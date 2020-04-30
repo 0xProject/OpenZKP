@@ -1,12 +1,12 @@
-import {waffle} from '@nomiclabs/buidler';
+import { waffle } from '@nomiclabs/buidler';
 import chai from 'chai';
-import {deployContract, solidity} from 'ethereum-waffle';
+import { deployContract, solidity } from 'ethereum-waffle';
 
 import MerkleVerifierTestArtifact from '../artifacts/MerkleVerifierTest.json';
-import {MerkleVerifierTest} from '../typechain/MerkleVerifierTest';
+import { MerkleVerifierTest } from '../typechain/MerkleVerifierTest';
 
 chai.use(solidity);
-const {expect} = chai;
+const { expect } = chai;
 
 describe('Merkle Testing testing', () => {
     let merkle_contract: any;
@@ -18,7 +18,7 @@ describe('Merkle Testing testing', () => {
         merkle_contract = (await deployContract(wallet, MerkleVerifierTestArtifact)) as MerkleVerifierTest;
     });
 
-    it('It should verify a valid proof', async () => {
+    it('Should verify a valid proof', async () => {
         const claimed_data = [
             '0x0000000000000000000000000000000000000000000000000000000000000533',
             '0x000000000000000000000000000000000000000000000000000000000000242d',
@@ -42,7 +42,7 @@ describe('Merkle Testing testing', () => {
         expect(data).to.be.eq(true);
     });
 
-    it('It should verify a valid proof, with no decommitment', async () => {
+    it('Should verify a valid proof, with no decommitment', async () => {
         const claimed_data = [
             '0x00000000000000000000000000000000000000000000000000000000000003e8',
             '0x0000000000000000000000000000000000000000000000000000000000000533',
@@ -61,7 +61,7 @@ describe('Merkle Testing testing', () => {
         expect(data).to.be.eq(true);
     });
 
-    it('It should fail invalid a valid proofs', async () => {
+    it('Should fail invalid a valid proofs', async () => {
         const claimed_data = [
             '0x0000000000000000000000000000000000000000000000000000000000000533',
             '0x000000000000000000000000000000000000000000000000000000000000242d',

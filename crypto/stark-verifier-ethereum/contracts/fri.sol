@@ -41,10 +41,9 @@ contract Fri is Trace, MerkleVerifier {
     // Reads from channel random and returns a list of random queries
     function get_queries(PublicCoin.Coin memory coin, uint8 max_bit_length, uint8 num_queries)
         internal
+        view
         returns (uint64[] memory)
     {
-        trace('get_queries', true);
-
         uint64[] memory queries = new uint64[](num_queries);
         // This mask sets all digits to one below the bit length
         uint64 bit_mask = (uint64(2)**max_bit_length) - 1;
@@ -63,7 +62,6 @@ contract Fri is Trace, MerkleVerifier {
             }
         }
         queries.sort();
-        trace('get_queries', false);
         return queries;
     }
 

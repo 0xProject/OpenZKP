@@ -74,6 +74,7 @@ contract StarkVerifier is Trace, ProofOfWork, Fri, ProofTypes {
         PublicCoin.Coin memory coin
     )
         internal
+        pure
         returns (
             uint256[] memory constraint_coeffiencents,
             uint256 oods_point,

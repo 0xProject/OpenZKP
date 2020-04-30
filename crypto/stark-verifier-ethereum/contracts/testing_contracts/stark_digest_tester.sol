@@ -9,7 +9,7 @@ import '../stark_verifier.sol';
 // dificult to get access to data in any other way inside of a verify_proof call.
 contract StarkDigestTesting is StarkVerifier {
     // Takes a proof and returns the coin digest after reading and writing
-    function digest_read(StarkProof memory proof, ConstraintSystem constraints) public returns (bytes32) {
+    function digest_read(StarkProof memory proof, ConstraintSystem constraints) public view returns (bytes32) {
         (ProofParameters memory constraint_parameters, PublicCoin.Coin memory coin) = constraints.initalize_system(
             proof.public_inputs
         );
@@ -19,7 +19,7 @@ contract StarkDigestTesting is StarkVerifier {
     }
 
     // Takes a proof and returns the queries after reading and writing
-    function queries_read(StarkProof memory proof, ConstraintSystem constraints) public returns (uint64[] memory) {
+    function queries_read(StarkProof memory proof, ConstraintSystem constraints) public view returns (uint64[] memory) {
         (ProofParameters memory constraint_parameters, PublicCoin.Coin memory coin) = constraints.initalize_system(
             proof.public_inputs
         );
