@@ -12,7 +12,7 @@ import './trace.sol';
 import '@nomiclabs/buidler/console.sol';
 
 
-contract StarkVerifier is ProofOfWork, Fri, ProofTypes, Trace {
+contract StarkVerifier is Trace, ProofOfWork, Fri, ProofTypes {
     using PublicCoin for PublicCoin.Coin;
     using Utils for *;
 
@@ -25,9 +25,11 @@ contract StarkVerifier is ProofOfWork, Fri, ProofTypes, Trace {
         trace('verify_proof', true);
 
         // Initalize the coin and constraint system
+        trace('initalize_system', true);
         (ProofParameters memory constraint_parameters, PublicCoin.Coin memory coin) = constraints.initalize_system(
             proof.public_inputs
         );
+        trace('initalize_system', false);
         // Write data to the coin and read random data from it
         // Profiling - uses around 30k gas
         (
@@ -43,6 +45,7 @@ contract StarkVerifier is ProofOfWork, Fri, ProofTypes, Trace {
         uint64[] memory queries = get_queries(coin, eval_domain_log_size, constraint_parameters.number_of_queries);
         // Get the actual polynomial points which were commited too, and the inverses of the x_points where they were evaluated
         // Profiling - uses 266873 gas extra for this call with data as compared to without
+        trace('constraint_calculations', true);
         (uint256[] memory fri_top_layer, uint256 constraint_evaluated_oods_point) = constraints.constraint_calculations(
             proof,
             constraint_parameters,
@@ -51,6 +54,7 @@ contract StarkVerifier is ProofOfWork, Fri, ProofTypes, Trace {
             constraint_coeffiencents,
             oods_coefficients
         );
+        trace('constraint_calculations', false);
 
         uint8 log_eval_domain_size = constraint_parameters.log_trace_length + constraint_parameters.log_blowup;
         check_commitments(proof, constraint_parameters, queries, log_eval_domain_size);
@@ -70,7 +74,6 @@ contract StarkVerifier is ProofOfWork, Fri, ProofTypes, Trace {
         PublicCoin.Coin memory coin
     )
         internal
-        pure
         returns (
             uint256[] memory constraint_coeffiencents,
             uint256 oods_point,
@@ -104,6 +107,7 @@ contract StarkVerifier is ProofOfWork, Fri, ProofTypes, Trace {
         // Write the claimed last layer points a set of coeffient for the final layer fri check
         // NOTE - This is a fri layer so we have to write the whole thing at once
         coin.write_bytes(abi.encodePacked(proof.last_layer_coefficients));
+
         return (constraint_coeffiencents, oods_point, oods_coefficients, eval_points);
     }
 
@@ -114,7 +118,9 @@ contract StarkVerifier is ProofOfWork, Fri, ProofTypes, Trace {
         ProofParameters memory constraint_parameters,
         uint64[] memory queries,
         uint8 log_eval_domain_size
-    ) internal pure {
+    ) internal {
+        trace('check_commitments', true);
+
         bytes32[] memory merkle_hashes = new bytes32[](constraint_parameters.number_of_queries);
         uint256[] memory query_copy = new uint256[](queries.length);
         uint256 eval_domain_size = uint256(2)**(log_eval_domain_size);
@@ -144,6 +150,7 @@ contract StarkVerifier is ProofOfWork, Fri, ProofTypes, Trace {
             verify_merkle_proof(proof.constraint_commitment, merkle_hashes, query_copy, proof.constraint_decommitment),
             'Constraint commitment proof failed'
         );
+        trace('check_commitments', false);
     }
 
     // Reads through the groups in the data and then hashes them and stores the hash in the output array
@@ -155,7 +162,7 @@ contract StarkVerifier is ProofOfWork, Fri, ProofTypes, Trace {
         uint256 eval_domain_size,
         bytes32[] memory output_hashes,
         uint256[] memory output_queries
-    ) internal pure {
+    ) internal {
         uint256[] memory group = new uint256[](data_group_size);
         for (uint256 i = 0; i < data_groups.length / data_group_size; i++) {
             for (uint256 j = 0; j < data_group_size; j++) {
@@ -176,7 +183,7 @@ contract StarkVerifier is ProofOfWork, Fri, ProofTypes, Trace {
         ProofTypes.StarkProof memory proof,
         uint256 oods_point,
         uint256 evaluated_oods_point
-    ) internal pure {
+    ) internal {
         // The final check is that the constraints evaluated at the out of domain sample are
         // equal to the values commited constraint values
         uint256 result = 0;

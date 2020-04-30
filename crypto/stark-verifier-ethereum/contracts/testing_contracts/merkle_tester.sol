@@ -9,7 +9,7 @@ contract MerkleVerifierTest is MerkleVerifier {
         bytes32[] calldata data_points,
         uint256[] calldata indices,
         bytes32[] calldata decommitment
-    ) external pure returns (bool) {
+    ) external returns (bool) {
         return verify_merkle_proof(root, data_points, indices, decommitment);
     }
 }

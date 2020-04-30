@@ -9,11 +9,11 @@ contract Trace {
     event LogTrace(bytes32 name, bool enter, uint256 gasLeft, uint256 allocated);
 
     function trace(bytes32 name, bool enter) internal {
-        uint256 gas = gasleft();
+        uint256 gas_left = gasleft();
         uint256 allocated = 0;
         assembly {
             allocated := mload(0x40)
         }
-        emit LogTrace(name, enter, gas, allocated);
+        emit LogTrace(name, enter, gas_left, allocated);
     }
 }
