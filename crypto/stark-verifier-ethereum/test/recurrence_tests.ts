@@ -2,6 +2,7 @@ import { waffle } from '@nomiclabs/buidler';
 import chai from 'chai';
 import { deployContract, solidity } from 'ethereum-waffle';
 import { utils } from 'ethers';
+import fs from 'fs';
 
 import RecurrenceArtifact from '../artifacts/Recurrence.json';
 import StarkDigestTestingArtifact from '../artifacts/StarkDigestTesting.json';
@@ -30,7 +31,7 @@ describe('Recurrence testing', function (this: any): void {
 
     // Note - This checks the proof of work, but not the whole proof yet
     it.only('It should validate a correct proof', async () => {
-        for (let i = 19; i < recurrence_proofs.length; i++) {
+        for (let i = 0; i < recurrence_proofs.length; i++) {
             // We ts-ignore because it's connivent to abi encode here not in rust
             // @ts-ignore
             recurrence_proofs[i].public_inputs = utils.defaultAbiCoder.encode(
@@ -53,9 +54,10 @@ describe('Recurrence testing', function (this: any): void {
             const calldata_cost = (call_data_length - call_data_zeros) * 16 + call_data_zeros * 4;
 
             // Log gas consumption
-            console.log(`ENTER transaction ${INITIAL_GAS} 0`);
-            console.log(`ENTER calldata ${INITIAL_GAS} 0`);
-            console.log(`LEAVE calldata ${INITIAL_GAS - calldata_cost} 0`);
+            var gas_log = '';
+            gas_log += `ENTER transaction ${INITIAL_GAS} 0\n`;
+            gas_log += `ENTER calldata ${INITIAL_GAS} 0\n`;
+            gas_log += `LEAVE calldata ${INITIAL_GAS - calldata_cost} 0\n`;
             var last_alloc = 0;
             for (const event of receipt.events) {
                 if (event.event != 'LogTrace') {
@@ -63,10 +65,11 @@ describe('Recurrence testing', function (this: any): void {
                 }
                 const direction = event.args.enter ? 'ENTER' : 'LEAVE';
                 const name = utils.parseBytes32String(event.args.name);
-                console.log(`${direction} ${name} ${event.args.gasLeft} ${event.args.allocated}`);
+                gas_log += `${direction} ${name} ${event.args.gasLeft} ${event.args.allocated}\n`;
                 last_alloc = event.args.allocated;
             }
-            console.log(`LEAVE transaction ${INITIAL_GAS - receipt.gasUsed?.toNumber()} ${last_alloc}`);
+            gas_log += `LEAVE transaction ${INITIAL_GAS - receipt.gasUsed?.toNumber()} ${last_alloc}\n`;
+            fs.writeFile(`gas-${i}.log`, gas_log, err => err ? console.error(err) : null);
 
             // TODO - Use better logging
             /* tslint:disable:no-console*/
