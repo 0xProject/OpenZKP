@@ -215,6 +215,7 @@ contract Fri is Trace, MerkleVerifier {
     // Gas: 6758062
     // Gas: 6458501
     // Gas: 6778861
+    // Gas: 6584701
     function fold_coset(
         uint256[] memory coset,
         uint256 eval_point,
@@ -257,7 +258,7 @@ contract Fri is Trace, MerkleVerifier {
                 uint256 x_inv;
                 {
                     uint256 half_i_plus_index = index + i / 2;
-                    uint256 half_i_plus_index_reversed = uint64(half_i_plus_index).bit_reverse(uint8(log_domain_size));
+                    uint256 half_i_plus_index_reversed = half_i_plus_index.bit_reverse2(log_domain_size);
                     uint256 inverse_index = domain_size - half_i_plus_index_reversed;
                     x_inv = generator.fpow(inverse_index);
                 }

@@ -12,6 +12,16 @@ library Utils {
         return r;
     }
 
+    function bit_reverse2(uint256 num, uint256 number_of_bits) internal pure returns (uint256 num_reversed) {
+        uint256 n = num;
+        uint256 r = 0;
+        for (uint256 k = 0; k < number_of_bits; k++) {
+            r = (r * 2) | (n % 2);
+            n = n / 2;
+        }
+        return r;
+    }
+
     function num_bits(uint64 data) internal pure returns (uint8) {
         uint8 result = 0;
         if (data >= (1 << 32)) {
