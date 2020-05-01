@@ -200,7 +200,7 @@ contract Fri is Trace, MerkleVerifier {
                 }
             }
             // Hash the coset and store it so we can do a merkle proof against it
-            coset_hash_output[writes] = merkleLeafHash(next_coset);
+            coset_hash_output[writes] = merkle_leaf_hash(next_coset);
             // Do the actual fold and write it to the next layer
             previous_layer[writes] = fold_coset(next_coset, eval_point, layer_context, min_coset_index / 2, eval_x);
             // Record the new index

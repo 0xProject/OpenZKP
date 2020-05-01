@@ -1,116 +1,103 @@
 pragma solidity ^0.6.4;
 
-import './ring_buffer.sol';
-import './iterator.sol';
 import './trace.sol';
 
 
 contract MerkleVerifier is Trace {
-    using RingBuffer for RingBuffer.IndexRingBuffer;
-    using Iterators for Iterators.IteratorBytes32;
+    bytes32 constant HASH_MASK = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF000000000000000000000000;
 
     // This function takes a set of data leaves and indices are 2^depth + leaf index and must be sorted in ascending order.
+    // Note: `leaves` and `indices` will be overwritten in the process
     // NOTE - An empty claim will revert
+    // TODO: Add high level algorithm documentation.
     function verify_merkle_proof(
         bytes32 root,
         bytes32[] memory leaves,
         uint256[] memory indices,
         bytes32[] memory decommitment
-    ) internal returns (bool) {
+    ) internal returns (bool valid) {
         trace('verify_merkle_proof', true);
+        require(leaves.length == indices.length, 'Invalid input');
         require(leaves.length > 0, 'No claimed data');
-        // Setup our index buffer
-        RingBuffer.IndexRingBuffer memory buffer = RingBuffer.IndexRingBuffer({
-            front: 0,
-            back: leaves.length - 1,
-            indexes: indices,
-            data: leaves,
-            is_empty: false
-        });
-        // Setup our iterator
-        Iterators.IteratorBytes32 memory decommitment_iter = Iterators.init_iterator(decommitment);
+        // This algorihm does a lot of array indexing and is a major hot path.
+        // It is implemented in assembly to avoid unecessary bounds checking.
+        // We rely on 64 bytes of scratch space being available in 0x00..0x40
+        // (this is where we will store left and right leave for hashing)
+        // We also rely on arrays having a length prefixed memory layout
+        // See <https://solidity.readthedocs.io/en/v0.6.6/assembly.html#conventions-in-solidity>
+        // Finally we make heavy use of the fact that left indices have their lowest
+        // bit zero, and right indices one.
+        // For the original non-assembly implementation, see <https://github.com/0xProject/OpenZKP/blob/480b69b9f82ee8319884ce8212682b0be7fa3f39/crypto/stark-verifier-ethereum/contracts/merkle.sol#L11>
+        assembly {
+            // Read length and get rid of the length prefices
+            let length := shl(5, mload(indices))
+            indices := add(indices, 0x20)
+            leaves := add(leaves, 0x20)
+            decommitment := add(decommitment, 0x20)
 
-        while (true) {
-            (uint256 index, bytes32 current_hash) = buffer.remove_front();
+            // Set up ring buffer
+            // Every next layer will have equal or fewer values, so write_index
+            // can never overrun read_index.
+            let read_index := 0
+            let write_index := 0
 
-            // If the index is one this node is the root so we need to check if the proposed root matches
-            if (index == 1) {
-                bool valid = root == current_hash;
-                trace('verify_merkle_proof', false);
-                return valid;
-            }
+            for {} 1 {} {
+                // Read the current index
+                let index := mload(add(indices, read_index))
+                // Store leaf hash in scratch space at 0x00 or 0x20 depending on
+                // the lower bit of index (which indicates left or right node)
+                mstore(shl(5, and(index, 1)), mload(add(leaves, read_index)))
+                // Increment read pointer, wrappering around the end
+                read_index := mod(add(read_index, 0x20), length)
 
-            bool is_left = index % 2 == 0;
-            bool needs_new_node = true;
-            // If this is a left node then the node following it in the queue
-            // may be a sibbling which we want to hash with it.
-            if (is_left) {
-                // If it exists we peak at the next node in the queue
-                if (buffer.has_next()) {
-                    (uint256 next_index, bytes32 next_hash) = buffer.peak_front();
-
-                    // This checks if the next index in the queue is the sibbling of this one
-                    // If it is we use the data, otherwise we try the decommitment queue
-                    if (next_index == index + 1) {
-                        // This force increments the front, may consider real method for this.
-                        (next_index, next_hash) = buffer.remove_front();
-
-                        // Because index is even it is the left hash so to get the next one we do:
-                        bytes32 new_hash = merkleTreeHash(current_hash, next_hash);
-                        buffer.add_to_rear(index / 2, new_hash);
-                        // We indicate that a node was pushed, so that another won't be
-                        needs_new_node = false;
-                    }
+                // Stop if we hit the root, which has index 1
+                if eq(index, 1) {
+                    // Root hash is stored right
+                    valid := eq(mload(0x20), root)
+                    break
                 }
-            }
 
-            // Next we try to read from the decommitment and use that info to push a new hash into the queue
-            if (needs_new_node) {
-                // If we don't have more decommitment the proof fails
-                if (!decommitment_iter.has_next()) {
-                    trace('verify_merkle_proof', false);
-                    return false;
+                // Check if the next index in the ring is the right sibbling.
+                // `index | 1` turns index into the right sibbling (no-op if it already is)
+                switch eq(or(index, 1), mload(add(indices, read_index)))
+                case 0 {
+                    // No merge with right sibbling, read a decommitment
+                    // Decommitment goes in left or right, opposite of the index bit.
+                    mstore(shl(5, and(not(index), 1)), mload(decommitment))
+                    // It doesn't matter if we read decommitment beyond the end,
+                    // we would read in garbage and not produce a valid root.
+                    decommitment := add(decommitment, 0x20)
                 }
-                // Reads from decommitment and pushes a new node
-                read_decommitment_and_push(is_left, buffer, decommitment_iter, current_hash, index);
+                default {
+                    // Merg with next item in ring buffer, which is the right sibbling.
+                    // Current must be a left. Right sibbling hash goes into 0x20.
+                    mstore(0x20, mload(add(leaves, read_index)))
+                    read_index := mod(add(read_index, 0x20), length)
+                }
+                // New node index is half the current index
+                mstore(add(indices, write_index), shr(1, index))
+                // New node left and right leaf are stored in 0x00..0x40
+                mstore(add(leaves, write_index), and(keccak256(0x00, 0x40), HASH_MASK))
+                // Increment and wrap the write pointer
+                write_index := mod(add(write_index, 0x20), length)
             }
         }
         trace('verify_merkle_proof', false);
     }
 
-    // This function reads from decommitment and pushes the new node onto the buffer,
-    // It returns true if decommitment data exists and false if it doesn't.
-    function read_decommitment_and_push(
-        bool is_left,
-        RingBuffer.IndexRingBuffer memory buffer,
-        Iterators.IteratorBytes32 memory decommitment,
-        bytes32 current_hash,
-        uint256 index
-    ) internal pure {
-        bytes32 next_decommitment = decommitment.next();
-        bytes32 new_hash;
-        // Preform the hash
-        if (is_left) {
-            new_hash = merkleTreeHash(current_hash, next_decommitment);
-        } else {
-            new_hash = merkleTreeHash(next_decommitment, current_hash);
-        }
-        // Add the new node to the buffer.
-        // Note the buffer strictly shrinks in the algo so we can't overflow the size.
-        buffer.add_to_rear(index / 2, new_hash);
-    }
-
-    bytes32 constant HASH_MASK = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF000000000000000000000000;
-
-    function merkleTreeHash(bytes32 preimage_a, bytes32 preimage_b) internal pure returns (bytes32 hash) {
-        return keccak256(abi.encodePacked(preimage_a, preimage_b)) & HASH_MASK;
-    }
-
-    function merkleLeafHash(uint256[] memory leaf) internal pure returns (bytes32) {
+    function merkle_leaf_hash(uint256[] memory leaf) internal pure returns (bytes32 hash) {
         if (leaf.length == 1) {
-            return (bytes32)(leaf[0]);
+            hash = (bytes32)(leaf[0]);
         } else {
-            return keccak256(abi.encodePacked(leaf)) & HASH_MASK;
+            // Equivalent to
+            // hash = keccak256(abi.encodePacked(leaf)) & HASH_MASK;
+            // Using assembly for performance
+            assembly {
+                // Arrays are stored length-prefixed.
+                // See <https://solidity.readthedocs.io/en/v0.6.6/assembly.html#conventions-in-solidity>
+                let len := mload(leaf)
+                hash := and(keccak256(add(leaf, 0x20), mul(len, 0x20)), HASH_MASK)
+            }
         }
     }
 }
