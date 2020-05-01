@@ -252,26 +252,27 @@ contract Fri is Trace, MerkleVerifier {
     // Gas: 4493150
     // Gas: 4468609
     // Gas: 4400230
+    // Gas: 4373689
     function fold_coset_inner(uint256[] memory coset, uint256 x0_inv, uint256 eval_point)
         internal
         returns (uint256 result)
     {
         trace('fold_coset_inner', true);
-        uint256 factor = eval_point.fmul(x0_inv);
+        uint256 factor = mulmod(eval_point, x0_inv, PrimeField.MODULUS);
         if (coset.length == 8) {
             uint256 a = fold(coset[0], coset[1], factor);
-            uint256 b = fold(coset[2], coset[3], factor.fmul(ROOT1));
-            uint256 c = fold(coset[4], coset[5], factor.fmul(ROOT2));
-            uint256 d = fold(coset[6], coset[7], factor.fmul(ROOT3));
-            factor = factor.fmul(factor);
+            uint256 b = fold(coset[2], coset[3], mulmod(factor, ROOT1, PrimeField.MODULUS));
+            uint256 c = fold(coset[4], coset[5], mulmod(factor, ROOT2, PrimeField.MODULUS));
+            uint256 d = fold(coset[6], coset[7], mulmod(factor, ROOT3, PrimeField.MODULUS));
+            factor = mulmod(factor, factor, PrimeField.MODULUS);
             a = fold(a, b, factor);
-            b = fold(c, d, factor.fmul(ROOT1));
-            factor = factor.fmul(factor);
+            b = fold(c, d, mulmod(factor, ROOT1, PrimeField.MODULUS));
+            factor = mulmod(factor, factor, PrimeField.MODULUS);
             result = fold(a, b, factor);
         } else if (coset.length == 4) {
             uint256 a = fold(coset[0], coset[1], factor);
-            uint256 b = fold(coset[2], coset[3], factor.fmul(ROOT1));
-            factor = factor.fmul(factor);
+            uint256 b = fold(coset[2], coset[3], mulmod(factor, ROOT1, PrimeField.MODULUS));
+            factor = mulmod(factor, factor, PrimeField.MODULUS);
             result = fold(a, b, factor);
         } else if (coset.length == 2) {
             result = fold(coset[0], coset[1], factor);
