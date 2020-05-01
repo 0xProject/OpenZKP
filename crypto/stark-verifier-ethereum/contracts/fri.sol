@@ -217,6 +217,7 @@ contract Fri is Trace, MerkleVerifier {
     // Gas: 6567801
     // Gas: 6538622
     // Gas: 6513462
+    // Gas: 6461821
     function fold_coset(
         uint256[] memory coset,
         uint256 eval_point,
@@ -228,9 +229,10 @@ contract Fri is Trace, MerkleVerifier {
 
         uint8 log_domain_size = layer_context.len.num_bits();
         uint256 coset_size = coset.length;
+        uint256 generator = eval_x.eval_domain_generator.fpow(layer_context.step);
+        uint256 domain_size = eval_x.eval_domain_size / layer_context.step;
 
         // TODO - This could likely be one variable and the eval domain size in the layer context
-        uint64 step = layer_context.step;
         while (coset_size > 1) {
             log_domain_size -= 1;
 
@@ -242,8 +244,8 @@ contract Fri is Trace, MerkleVerifier {
                 {
                     uint64 half_i_plus_index = uint64(i / 2) + index;
                     uint256 half_i_plus_index_reversed = half_i_plus_index.bit_reverse(log_domain_size);
-                    uint256 inverse_index = eval_x.eval_domain_size - half_i_plus_index_reversed * step;
-                    x_inv = eval_x.eval_domain_generator.fpow(inverse_index);
+                    uint256 inverse_index = domain_size - half_i_plus_index_reversed;
+                    x_inv = generator.fpow(inverse_index);
                 }
 
                 // We now do the actual fri folding operation
@@ -264,7 +266,8 @@ contract Fri is Trace, MerkleVerifier {
                 );
             }
             index /= 2;
-            step *= 2;
+            generator = generator.fmul(generator);
+            domain_size >>= 1;
             coset_size >>= 1;
 
             eval_point = eval_point.fmul_mont(eval_point);
