@@ -249,6 +249,7 @@ contract Fri is Trace, MerkleVerifier {
     // Gas: 4726841
     // Gas: 4652249
     // Gas: 4577169
+    // Gas: 4493150
     function fold_coset_inner(uint256[] memory coset, uint256 x0_inv, uint256 eval_point) internal returns (uint256) {
         trace('fold_coset_inner', true);
         uint256 coset_size = coset.length;
@@ -283,8 +284,8 @@ contract Fri is Trace, MerkleVerifier {
         // odd = f(x) - f(-x)   (without reduction)
         uint256 odd = positive + PrimeField.MODULUS - negative;
         // factor = eval_point / x
-        uint256 factor = eval_point.fmul(x_inv);
+        uint256 factor = mulmod(eval_point, x_inv, PrimeField.MODULUS);
         // result = even + factor * odd
-        return even.fadd(factor.fmul(odd));
+        return addmod(even, mulmod(factor, odd, PrimeField.MODULUS), PrimeField.MODULUS);
     }
 }
