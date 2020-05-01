@@ -237,11 +237,11 @@ contract Fri is Trace, MerkleVerifier {
         uint256 coset_size = coset.length;
         uint256 generator = eval_x.eval_domain_generator.fpow(layer_context.step);
         uint256 x0_inv = generator.fpow(domain_size - (index + 0).bit_reverse2(log_domain_size - 1));
-        fold_coset_inner(coset, x0_inv, eval_point);
+        uint256 result = fold_coset_inner(coset, x0_inv, eval_point);
 
         // We return the fri folded point and the inverse for the base layer, which is our x_inv on the next level
         trace('fold_coset', false);
-        return (coset[0]);
+        return result;
     }
 
     // Gas: 4888441
@@ -251,29 +251,32 @@ contract Fri is Trace, MerkleVerifier {
     // Gas: 4577169
     // Gas: 4493150
     // Gas: 4468609
-    function fold_coset_inner(uint256[] memory coset, uint256 x0_inv, uint256 eval_point) internal returns (uint256) {
+    // Gas: 4400230
+    function fold_coset_inner(uint256[] memory coset, uint256 x0_inv, uint256 eval_point)
+        internal
+        returns (uint256 result)
+    {
         trace('fold_coset_inner', true);
-        uint256 coset_size = coset.length;
         uint256 factor = eval_point.fmul(x0_inv);
-        if (coset_size == 8) {
-            coset[0] = fold(coset[0], coset[1], factor);
-            coset[1] = fold(coset[2], coset[3], factor.fmul(ROOT1));
-            coset[2] = fold(coset[4], coset[5], factor.fmul(ROOT2));
-            coset[3] = fold(coset[6], coset[7], factor.fmul(ROOT3));
-            coset_size = 4;
+        if (coset.length == 8) {
+            uint256 a = fold(coset[0], coset[1], factor);
+            uint256 b = fold(coset[2], coset[3], factor.fmul(ROOT1));
+            uint256 c = fold(coset[4], coset[5], factor.fmul(ROOT2));
+            uint256 d = fold(coset[6], coset[7], factor.fmul(ROOT3));
             factor = factor.fmul(factor);
-        }
-        if (coset_size == 4) {
-            coset[0] = fold(coset[0], coset[1], factor);
-            coset[1] = fold(coset[2], coset[3], factor.fmul(ROOT1));
-            coset_size = 2;
+            a = fold(a, b, factor);
+            b = fold(c, d, factor.fmul(ROOT1));
             factor = factor.fmul(factor);
-        }
-        if (coset_size == 2) {
-            coset[0] = fold(coset[0], coset[1], factor);
+            result = fold(a, b, factor);
+        } else if (coset.length == 4) {
+            uint256 a = fold(coset[0], coset[1], factor);
+            uint256 b = fold(coset[2], coset[3], factor.fmul(ROOT1));
+            factor = factor.fmul(factor);
+            result = fold(a, b, factor);
+        } else if (coset.length == 2) {
+            result = fold(coset[0], coset[1], factor);
         }
         trace('fold_coset_inner', false);
-        return coset[0];
     }
 
     // We now do the actual fri folding operation
