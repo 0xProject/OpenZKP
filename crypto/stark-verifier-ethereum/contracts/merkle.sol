@@ -31,8 +31,8 @@ contract MerkleVerifier is Trace {
             is_empty: false
         });
 
-        // Setup our iterator
-        Iterators.IteratorBytes32 memory decommitment_iter = Iterators.init_iterator(decommitment);
+        // Setup our decommitment iterator
+        uint256 decommitment_index = 0;
 
         while (true) {
             (uint256 index, bytes32 current_hash) = buffer.remove_front();
@@ -67,14 +67,15 @@ contract MerkleVerifier is Trace {
 
             // Next we try to read from the decommitment and use that info to push a new hash into the queue
             // If we don't have more decommitment the proof fails
-            if (!decommitment_iter.has_next()) {
+            if (decommitment_index >= decommitment.length) {
                 trace('verify_merkle_proof', false);
                 return false;
             }
 
             // Reads from decommitment and pushes a new node
             trace('read_decommitment_and_push', true);
-            bytes32 next_decommitment = decommitment_iter.next();
+            bytes32 next_decommitment = decommitment[decommitment_index];
+            decommitment_index += 1;
             bytes32 new_hash;
             // Preform the hash
             if (is_left) {
