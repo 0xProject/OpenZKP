@@ -2,3 +2,6 @@
 artifacts
 cache
 typechain
+
+# Gas logs
+*.log
