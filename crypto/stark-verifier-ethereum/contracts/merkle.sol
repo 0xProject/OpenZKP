@@ -11,6 +11,7 @@ contract MerkleVerifier is Trace {
     // Total saved 696516
     // Total saved 697200
     // Total saved 723228
+    // Total saved 727980
     function verify_merkle_proof(
         bytes32 root,
         bytes32[] memory leaves,
@@ -51,7 +52,7 @@ contract MerkleVerifier is Trace {
                     // No merge, read a decommitment
                     // It doesn't matter if we read decommitment beyond the end,
                     // we would read in garbage and not produce a valid root.
-                    mstore(shl(5, xor(and(index, 1), 1)), mload(decommitment))
+                    mstore(shl(5, and(not(index), 1)), mload(decommitment))
                     decommitment := add(decommitment, 0x20)
                 }
                 default {
