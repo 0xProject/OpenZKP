@@ -212,6 +212,8 @@ contract Fri is Trace, MerkleVerifier {
         trace('fold_layer', false);
     }
 
+    // Gas: 6758062
+    // Gas: 6590601
     function fold_coset(
         uint256[] memory coset,
         uint256 eval_point,
@@ -220,43 +222,44 @@ contract Fri is Trace, MerkleVerifier {
         PrimeField.EvalX memory eval_x
     ) internal returns (uint256) {
         trace('fold_coset', true);
+
+        uint8 log_domain_size = layer_context.len.num_bits();
+
         // TODO - This could likely be one variable and the eval domain size in the layer context
-        uint64 len = layer_context.len;
         uint64 step = layer_context.step;
         uint256 current_len = coset.length;
         while (current_len > 1) {
+            log_domain_size -= 1;
+
             for (uint256 i = 0; i < current_len; i += 2) {
                 // We know that because this is a root of a power of two domain
                 // we can lookup the x inverse using the following index manipulation
                 // and power
                 uint256 x_inv;
-                trace('x_inv', true);
                 {
                     uint64 half_i_plus_index = uint64(i / 2) + index;
-                    uint8 half_length_bits = (len / 2).num_bits();
-                    uint256 half_i_plus_index_reversed = half_i_plus_index.bit_reverse(half_length_bits);
+                    uint256 half_i_plus_index_reversed = half_i_plus_index.bit_reverse(log_domain_size);
                     uint256 inverse_index = eval_x.eval_domain_size - half_i_plus_index_reversed * step;
                     inverse_index = inverse_index % eval_x.eval_domain_size;
                     x_inv = eval_x.lookup(inverse_index);
                 }
-                trace('x_inv', false);
 
                 // We now do the actual fri folding operation
-                trace('fri_fold', true);
-                uint256 f_x_plus_f_neg_x = coset[i].fadd(coset[i + 1]);
-                uint256 eval_point_div_x = x_inv.fmul(eval_point);
-                uint256 f_x_sub_f_neg_x = coset[i].fsub(coset[i + 1]);
-                // Note - Both eval_point_div_x and f_x_sub_f_neg_x are montgomery so we
-                // have to use special multiplication
-                uint256 eval_over_x_times_f_x_sub_f_neg_x = eval_point_div_x.fmul_mont(f_x_sub_f_neg_x);
-                coset[i / 2] = f_x_plus_f_neg_x.fadd(eval_over_x_times_f_x_sub_f_neg_x);
-                trace('fri_fold', false);
+                {
+                    uint256 f_x_plus_f_neg_x = coset[i].fadd(coset[i + 1]);
+                    uint256 eval_point_div_x = x_inv.fmul(eval_point);
+                    uint256 f_x_sub_f_neg_x = coset[i].fsub(coset[i + 1]);
+                    // Note - Both eval_point_div_x and f_x_sub_f_neg_x are montgomery so we
+                    // have to use special multiplication
+                    uint256 eval_over_x_times_f_x_sub_f_neg_x = eval_point_div_x.fmul_mont(f_x_sub_f_neg_x);
+                    coset[i / 2] = f_x_plus_f_neg_x.fadd(eval_over_x_times_f_x_sub_f_neg_x);
+                }
             }
-            len /= 2;
             index /= 2;
             step *= 2;
-            eval_point = eval_point.fmul_mont(eval_point);
             current_len /= 2;
+
+            eval_point = eval_point.fmul_mont(eval_point);
         }
 
         // We return the fri folded point and the inverse for the base layer, which is our x_inv on the next level
