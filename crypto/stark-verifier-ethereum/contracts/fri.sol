@@ -171,6 +171,9 @@ contract Fri is Trace, MerkleVerifier {
         bytes32[] memory coset_hash_output
     ) internal {
         trace('fold_layer', true);
+        // Convert eval_point out of montgomery form
+        eval_point = eval_point.from_montgomery();
+
         // Reads how many of the cosets we've read from
         uint256 writes = 0;
         uint64 current_index;
@@ -243,6 +246,7 @@ contract Fri is Trace, MerkleVerifier {
     // Gas: 4888441
     // Gas: 4878902
     // Gas: 4726841
+    // Gas: 4652249
     function fold_coset_inner(uint256[] memory coset, uint256 x0_inv, uint256 eval_point) internal returns (uint256) {
         trace('fold_coset_inner', true);
         uint256 coset_size = coset.length;
@@ -253,14 +257,14 @@ contract Fri is Trace, MerkleVerifier {
             coset[3] = fold(coset[6], coset[7], eval_point, x0_inv.fmul(ROOT3));
             coset_size = 4;
             x0_inv = x0_inv.fmul(x0_inv);
-            eval_point = eval_point.fmul_mont(eval_point);
+            eval_point = eval_point.fmul(eval_point);
         }
         if (coset_size == 4) {
             coset[0] = fold(coset[0], coset[1], eval_point, x0_inv);
             coset[1] = fold(coset[2], coset[3], eval_point, x0_inv.fmul(ROOT1));
             coset_size = 2;
             x0_inv = x0_inv.fmul(x0_inv);
-            eval_point = eval_point.fmul_mont(eval_point);
+            eval_point = eval_point.fmul(eval_point);
         }
         if (coset_size == 2) {
             coset[0] = fold(coset[0], coset[1], x0_inv, eval_point);
@@ -278,7 +282,7 @@ contract Fri is Trace, MerkleVerifier {
         uint256 odd = positive.fsub(negative);
         // factor = eval_point / x
         uint256 factor = eval_point.fmul(x_inv);
-        // Both `eval_point` and `coset` are in montgomery form, so need mont-mul here.
-        return even.fadd(factor.fmul_mont(odd));
+        // result = even + factor * odd
+        return even.fadd(factor.fmul(odd));
     }
 }
