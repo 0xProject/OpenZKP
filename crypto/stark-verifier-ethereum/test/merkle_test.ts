@@ -1,12 +1,14 @@
-import {waffle} from '@nomiclabs/buidler';
+import { waffle } from '@nomiclabs/buidler';
 import chai from 'chai';
-import {deployContract, solidity} from 'ethereum-waffle';
+import { deployContract, solidity } from 'ethereum-waffle';
 
 import MerkleVerifierTestArtifact from '../artifacts/MerkleVerifierTest.json';
-import {MerkleVerifierTest} from '../typechain/MerkleVerifierTest';
+import { MerkleVerifierTest } from '../typechain/MerkleVerifierTest';
+
+import { txToEventsAsync } from './test_utils';
 
 chai.use(solidity);
-const {expect} = chai;
+const { expect } = chai;
 
 describe('Merkle Testing testing', () => {
     let merkle_contract: any;
@@ -18,7 +20,7 @@ describe('Merkle Testing testing', () => {
         merkle_contract = (await deployContract(wallet, MerkleVerifierTestArtifact)) as MerkleVerifierTest;
     });
 
-    it('It should verify a valid proof', async () => {
+    it('Should verify a valid proof', async () => {
         const claimed_data = [
             '0x0000000000000000000000000000000000000000000000000000000000000533',
             '0x000000000000000000000000000000000000000000000000000000000000242d',
@@ -38,11 +40,12 @@ describe('Merkle Testing testing', () => {
             '0xe108b7dc670810e8588c67c2fde7ec4cc00165e8000000000000000000000000',
         ];
 
-        const data = await merkle_contract.verify_merkle_proof_external(root, claimed_data, data_indexes, decommitment);
+        const log = await txToEventsAsync(merkle_contract.verify_merkle_proof_external(root, claimed_data, data_indexes, decommitment));
+        const data = log[log.length - 1].args.data;
         expect(data).to.be.eq(true);
     });
 
-    it('It should verify a valid proof, with no decommitment', async () => {
+    it('Should verify a valid proof, with no decommitment', async () => {
         const claimed_data = [
             '0x00000000000000000000000000000000000000000000000000000000000003e8',
             '0x0000000000000000000000000000000000000000000000000000000000000533',
@@ -57,11 +60,12 @@ describe('Merkle Testing testing', () => {
         const root = '0xa438a228f242643e8accf6466333b760095bfe34000000000000000000000000';
         const decommitment: any[] = [];
 
-        const data = await merkle_contract.verify_merkle_proof_external(root, claimed_data, data_indexes, decommitment);
+        const log = await txToEventsAsync(merkle_contract.verify_merkle_proof_external(root, claimed_data, data_indexes, decommitment));
+        const data = log[log.length - 1].args.data;
         expect(data).to.be.eq(true);
     });
 
-    it('It should fail invalid a valid proofs', async () => {
+    it('Should fail invalid a valid proofs', async () => {
         const claimed_data = [
             '0x0000000000000000000000000000000000000000000000000000000000000533',
             '0x000000000000000000000000000000000000000000000000000000000000242d',
@@ -82,29 +86,32 @@ describe('Merkle Testing testing', () => {
         ];
 
         // Fails with wrong root
-        let data = await merkle_contract.verify_merkle_proof_external(
+        let log = await txToEventsAsync(merkle_contract.verify_merkle_proof_external(
             '0xad112f44bc944f33e2567f86eea202350913b11c000000000000000000000000',
             claimed_data,
             data_indexes,
             decommitment,
-        );
+        ));
+        let data = log[log.length - 1].args.data;
         expect(data).to.be.eq(false);
         // Fails with wrong decommitment
-        data = await merkle_contract.verify_merkle_proof_external(
+        log = await txToEventsAsync(merkle_contract.verify_merkle_proof_external(
             root,
             claimed_data,
             data_indexes,
             decommitment.slice(1),
-        );
+        ));
+        data = log[log.length - 1].args.data;
         expect(data).to.be.eq(false);
         // Fails with wrong values
         data_indexes[0] = 64;
-        data = await merkle_contract.verify_merkle_proof_external(
+        log = await txToEventsAsync(merkle_contract.verify_merkle_proof_external(
             root,
             claimed_data,
             data_indexes,
             decommitment.slice(1),
-        );
+        ));
+        data = log[log.length - 1].args.data;
         expect(data).to.be.eq(false);
         // Reverts when called with no data
         try {
