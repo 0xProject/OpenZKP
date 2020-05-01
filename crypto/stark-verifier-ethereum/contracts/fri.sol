@@ -214,6 +214,7 @@ contract Fri is Trace, MerkleVerifier {
 
     // Gas: 6758062
     // Gas: 6458501
+    // Gas: 6778861
     function fold_coset(
         uint256[] memory coset,
         uint256 eval_point,
@@ -228,6 +229,24 @@ contract Fri is Trace, MerkleVerifier {
         uint256 coset_size = coset.length;
         uint256 generator = eval_x.eval_domain_generator.fpow(layer_context.step);
 
+        fold_coset_inner(coset, index, eval_point, domain_size, log_domain_size, generator);
+
+        // We return the fri folded point and the inverse for the base layer, which is our x_inv on the next level
+        trace('fold_coset', false);
+        return (coset[0]);
+    }
+
+    function fold_coset_inner(
+        uint256[] memory coset,
+        uint256 index,
+        uint256 eval_point,
+        uint256 domain_size,
+        uint256 log_domain_size,
+        uint256 generator
+    ) internal returns (uint256) {
+        trace('fold_coset_inner', true);
+
+        uint256 coset_size = coset.length;
         while (coset_size > 1) {
             log_domain_size -= 1;
 
@@ -237,8 +256,8 @@ contract Fri is Trace, MerkleVerifier {
                 // and power
                 uint256 x_inv;
                 {
-                    uint64 half_i_plus_index = uint64(i / 2) + index;
-                    uint256 half_i_plus_index_reversed = half_i_plus_index.bit_reverse(log_domain_size);
+                    uint256 half_i_plus_index = index + i / 2;
+                    uint256 half_i_plus_index_reversed = uint64(half_i_plus_index).bit_reverse(uint8(log_domain_size));
                     uint256 inverse_index = domain_size - half_i_plus_index_reversed;
                     x_inv = generator.fpow(inverse_index);
                 }
@@ -269,7 +288,7 @@ contract Fri is Trace, MerkleVerifier {
         }
 
         // We return the fri folded point and the inverse for the base layer, which is our x_inv on the next level
-        trace('fold_coset', false);
+        trace('fold_coset_inner', false);
         return (coset[0]);
     }
 }
