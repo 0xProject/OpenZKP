@@ -182,6 +182,9 @@ contract Fri is Trace, MerkleVerifier {
         // Convert eval_point out of montgomery form
         eval_point = eval_point.from_montgomery();
 
+        // Compute generator
+        uint256 generator = eval_x.eval_domain_generator.fpow(layer_context.step);
+
         // Reads how many of the cosets we've read from
         uint256 writes = 0;
         uint64 current_index;
@@ -213,7 +216,7 @@ contract Fri is Trace, MerkleVerifier {
             // Hash the coset and store it so we can do a merkle proof against it
             coset_hash_output[writes] = merkle_leaf_hash(next_coset);
             // Do the actual fold and write it to the next layer
-            previous_layer[writes] = fold_coset(next_coset, eval_point, layer_context, min_coset_index / 2, eval_x);
+            previous_layer[writes] = fold_coset(next_coset, eval_point, layer_context, min_coset_index / 2, generator);
             // Record the new index
             previous_indicies[writes] = uint64(min_coset_index / layer_context.coset_size);
             writes++;
@@ -225,19 +228,18 @@ contract Fri is Trace, MerkleVerifier {
 
     // Gas: 4373689
     // Gas: 4373190
+    // Gas: 4279777
     function fold_coset(
         uint256[] memory coset,
         uint256 eval_point,
         LayerContext memory layer_context,
         uint64 index,
-        PrimeField.EvalX memory eval_x
+        uint256 generator
     ) internal returns (uint256) {
         trace('fold_coset', true);
 
         uint256 domain_size = layer_context.len;
         uint8 log_domain_size = uint64(domain_size).num_bits();
-        uint256 coset_size = coset.length;
-        uint256 generator = eval_x.eval_domain_generator.fpow(layer_context.step);
         uint256 x0_inv = generator.fpow(domain_size - (index + 0).bit_reverse2(log_domain_size - 1));
         uint256 factor = mulmod(eval_point, x0_inv, PrimeField.MODULUS);
         uint256 result = fold_coset_inner(coset, factor);

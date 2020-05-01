@@ -16,7 +16,9 @@ contract FriTesting is Fri {
         uint64 len,
         PrimeField.EvalX calldata eval_x
     ) external {
-        emit log_bytes32((bytes32)(fold_coset(coset, eval_point, LayerContext(0, step, len), index, eval_x)));
+        uint256 generator = eval_x.eval_domain_generator.fpow(step);
+
+        emit log_bytes32((bytes32)(fold_coset(coset, eval_point, LayerContext(0, step, len), index, generator)));
     }
 
     // TODO - Unused function path
