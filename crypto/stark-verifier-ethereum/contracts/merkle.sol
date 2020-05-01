@@ -56,7 +56,7 @@ contract MerkleVerifier is Trace {
                         (next_index, next_hash) = buffer.remove_front();
 
                         // Because index is even it is the left hash so to get the next one we do:
-                        bytes32 new_hash = merkleTreeHash(current_hash, next_hash);
+                        bytes32 new_hash = merkle_tree_hash(current_hash, next_hash);
                         buffer.add_to_rear(index / 2, new_hash);
                         // We indicate that a node was pushed, so that another won't be
                         needs_new_node = false;
@@ -92,9 +92,9 @@ contract MerkleVerifier is Trace {
         bytes32 new_hash;
         // Preform the hash
         if (is_left) {
-            new_hash = merkleTreeHash(current_hash, next_decommitment);
+            new_hash = merkle_tree_hash(current_hash, next_decommitment);
         } else {
-            new_hash = merkleTreeHash(next_decommitment, current_hash);
+            new_hash = merkle_tree_hash(next_decommitment, current_hash);
         }
         // Add the new node to the buffer.
         // Note the buffer strictly shrinks in the algo so we can't overflow the size.
@@ -102,21 +102,20 @@ contract MerkleVerifier is Trace {
         trace('read_decommitment_and_push', false);
     }
 
-    bytes32 constant HASH_MASK = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF000000000000000000000000;
-
-    function merkleTreeHash(bytes32 preimage_a, bytes32 preimage_b) internal returns (bytes32 hash) {
+    function merkle_tree_hash(bytes32 preimage_a, bytes32 preimage_b) internal returns (bytes32 hash) {
         // Equivalent to
         // hash = keccak256(abi.encodePacked(preimage_a, preimage_b)) & HASH_MASK
         // Using assembly for performance
         assembly {
             // The first 64 bytes of memory are scratch space
+            // See <https://solidity.readthedocs.io/en/v0.6.6/assembly.html#conventions-in-solidity>
             mstore(0x00, preimage_a)
             mstore(0x20, preimage_b)
             hash := and(keccak256(0x00, 0x40), HASH_MASK)
         }
     }
 
-    function merkleLeafHash(uint256[] memory leaf) internal pure returns (bytes32) {
+    function merkle_leaf_hash(uint256[] memory leaf) internal pure returns (bytes32 hash) {
         if (leaf.length == 1) {
             return (bytes32)(leaf[0]);
         } else {

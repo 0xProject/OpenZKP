@@ -169,7 +169,7 @@ contract StarkVerifier is Trace, ProofOfWork, Fri, ProofTypes {
             for (uint256 j = 0; j < data_group_size; j++) {
                 group[j] = data_groups[i * data_group_size + j];
             }
-            output_hashes[i] = merkleLeafHash(group);
+            output_hashes[i] = merkle_leaf_hash(group);
         }
 
         queries.deep_copy_and_convert(output_queries);
