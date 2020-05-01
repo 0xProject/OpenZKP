@@ -252,15 +252,15 @@ contract Fri is Trace, MerkleVerifier {
 
         uint256 coset_size = coset.length;
 
+        uint256 x0_inv = generator.fpow(domain_size - (index + 0).bit_reverse2(log_domain_size - 1));
         uint256[4] memory x_inv = [uint256(0), 1, 2, 3];
 
         while (coset_size > 1) {
             log_domain_size -= 1;
-            x_inv[0] = generator.fpow(domain_size - (index + 0).bit_reverse2(log_domain_size));
-            x_inv[1] = x_inv[0].fmul(ROOT1);
-            x_inv[2] = x_inv[0].fmul(ROOT2);
-            x_inv[3] = x_inv[0].fmul(ROOT3);
-            // console.log(x_inv[0]);
+            x_inv[0] = x0_inv;
+            x_inv[1] = x0_inv.fmul(ROOT1);
+            x_inv[2] = x0_inv.fmul(ROOT2);
+            x_inv[3] = x0_inv.fmul(ROOT3);
 
             for (uint256 i = 0; i < coset_size; i += 2) {
                 // We know that because this is a root of a power of two domain
@@ -289,6 +289,7 @@ contract Fri is Trace, MerkleVerifier {
             domain_size >>= 1;
             coset_size >>= 1;
 
+            x0_inv = x0_inv.fmul(x0_inv);
             generator = generator.fmul(generator);
             eval_point = eval_point.fmul_mont(eval_point);
         }
