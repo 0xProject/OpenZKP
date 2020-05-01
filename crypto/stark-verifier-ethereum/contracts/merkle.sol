@@ -7,6 +7,7 @@ contract MerkleVerifier is Trace {
     bytes32 constant HASH_MASK = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF000000000000000000000000;
 
     // This function takes a set of data leaves and indices are 2^depth + leaf index and must be sorted in ascending order.
+    // Note: `leaves` and `indices` will be overwritten in the process
     // NOTE - An empty claim will revert
     function verify_merkle_proof(
         bytes32 root,
@@ -17,6 +18,14 @@ contract MerkleVerifier is Trace {
         trace('verify_merkle_proof', true);
         require(leaves.length == indices.length, 'Invalid input');
         require(leaves.length > 0, 'No claimed data');
+        // This algorihm does a lot of array indexing and is a major hot path.
+        // It is implemented in assembly to avoid unecessary bounds checking.
+        // We rely on 64 bytes of scratch space being available in 0x00..0x40
+        // (this is where we will store left and right leave for hashing)
+        // We also rely on arrays having a length prefixed memory layout
+        // See <https://solidity.readthedocs.io/en/v0.6.6/assembly.html#conventions-in-solidity>
+        // Finally we make heavy use of the fact that left indices have their lowest
+        // bit zero, and right indices one.
         assembly {
             // Read length and get rid of the length prefices
             let length := shl(5, mload(indices))
