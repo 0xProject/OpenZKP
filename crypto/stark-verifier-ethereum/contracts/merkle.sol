@@ -9,6 +9,8 @@ contract MerkleVerifier is Trace {
     using RingBuffer for RingBuffer.IndexRingBuffer;
     using Iterators for Iterators.IteratorBytes32;
 
+    bytes32 constant HASH_MASK = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF000000000000000000000000;
+
     // This function takes a set of data leaves and indices are 2^depth + leaf index and must be sorted in ascending order.
     // NOTE - An empty claim will revert
     function verify_merkle_proof(
@@ -117,9 +119,15 @@ contract MerkleVerifier is Trace {
 
     function merkle_leaf_hash(uint256[] memory leaf) internal pure returns (bytes32 hash) {
         if (leaf.length == 1) {
-            return (bytes32)(leaf[0]);
+            hash = (bytes32)(leaf[0]);
         } else {
-            return keccak256(abi.encodePacked(leaf)) & HASH_MASK;
+            // Equivalent to
+            // hash = keccak256(abi.encodePacked(leaf)) & HASH_MASK;
+            // Using assembly for performance
+            assembly {
+                let len := mload(leaf)
+                hash := and(keccak256(add(leaf, 0x20), mul(len, 0x20)), HASH_MASK)
+            }
         }
     }
 }
