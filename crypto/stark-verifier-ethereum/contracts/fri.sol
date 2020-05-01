@@ -16,7 +16,6 @@ contract Fri is Trace, MerkleVerifier {
     using PublicCoin for PublicCoin.Coin;
     using Iterators for Iterators.IteratorUint;
     using PrimeField for uint256;
-    using PrimeField for PrimeField.EvalX;
     using PrimeField for uint256[];
     using Utils for *;
 
@@ -105,12 +104,11 @@ contract Fri is Trace, MerkleVerifier {
     // Note the final layer folded values will be overwritten to the input data locations.
     function fold_and_check_fri_layers(FriContext memory fri_data) internal {
         trace('fold_and_check_fri_layers', true);
-        PrimeField.EvalX memory eval = PrimeField.init_eval(fri_data.log_eval_domain_size);
         LayerContext memory layer_context = LayerContext({
             len: uint64(2)**(fri_data.log_eval_domain_size),
             step: 1,
             coset_size: 0,
-            generator: eval.eval_domain_generator,
+            generator: PrimeField.generator_power(fri_data.log_eval_domain_size),
             log_domain_size: fri_data.log_eval_domain_size
         });
         uint256[] memory merkle_indices = new uint256[](fri_data.queries.length);
@@ -124,7 +122,6 @@ contract Fri is Trace, MerkleVerifier {
                 fri_data.polynomial_at_queries,
                 fri_data.queries,
                 Iterators.init_iterator(fri_data.fri_values[i]),
-                eval,
                 fri_data.eval_points[i],
                 layer_context,
                 merkle_val
@@ -158,7 +155,7 @@ contract Fri is Trace, MerkleVerifier {
         }
 
         // Looks up a root of unity in the final domain
-        uint256 interp_root = eval.lookup(eval.eval_domain_size / layer_context.len);
+        uint256 interp_root = layer_context.generator;
 
         // We now test that the commited last layer values interpolate the final fri folding values
         trace('last_layer', true);
@@ -179,7 +176,6 @@ contract Fri is Trace, MerkleVerifier {
         uint256[] memory previous_layer,
         uint64[] memory previous_indicies,
         Iterators.IteratorUint memory extra_coset_data,
-        PrimeField.EvalX memory eval_x,
         uint256 eval_point,
         LayerContext memory layer_context,
         bytes32[] memory coset_hash_output
@@ -234,6 +230,7 @@ contract Fri is Trace, MerkleVerifier {
     // Gas: 4279777
     // Gas: 4257556
     // Gas: 4257080
+    // Gas: 4254990
     function fold_coset(uint256[] memory coset, uint256 eval_point, LayerContext memory layer_context, uint64 index)
         internal
         returns (uint256)

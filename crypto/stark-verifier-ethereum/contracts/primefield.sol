@@ -75,6 +75,7 @@ library PrimeField {
     }
 
     // Reverts if unavailable
+    // TODO: Rename to root and remove log from arguments.
     function generator_power(uint8 log_order) internal returns (uint256) {
         uint256 maybe_exact = (MODULUS - 1) / (uint256(2)**log_order);
         require(maybe_exact * (uint256(2)**log_order) == (MODULUS - 1), 'Root unavailable');
