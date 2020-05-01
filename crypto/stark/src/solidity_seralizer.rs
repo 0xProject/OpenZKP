@@ -297,7 +297,7 @@ mod tests {
         )
         .unwrap();
         // println!("{}", result_string);
-        //assert!(false);
+        // assert!(false);
     }
 
     // Note this test is actually more like a binary which we want run so it

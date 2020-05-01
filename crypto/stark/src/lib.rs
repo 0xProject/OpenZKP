@@ -43,6 +43,7 @@
 // TODO: Add `must_use` attributes
 #![allow(clippy::must_use_candidate)]
 
+#[cfg(feature = "std")]
 mod autogen_sol;
 mod channel;
 mod constraints;
@@ -84,7 +85,6 @@ extern crate no_std_compat as std;
 pub use zkp_primefield as primefield;
 
 // Exports for verifier
-pub use autogen_sol::autogen2;
 pub use constraints::{Constraints, Error as ConstraintError};
 pub use polynomial::DensePolynomial;
 pub use proof::Proof;
@@ -93,6 +93,8 @@ pub use traits::Verifiable;
 pub use verifier::{verify, Error as VerifierError};
 
 // We want std for this so that we can use hex encode
+#[cfg(feature = "std")]
+pub use autogen_sol::autogen2;
 #[cfg(feature = "std")]
 pub use solidity_seralizer::proof_serialize;
 
