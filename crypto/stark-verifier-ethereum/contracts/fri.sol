@@ -38,6 +38,14 @@ contract Fri is Trace, MerkleVerifier {
         uint64 len;
     }
 
+    // First three bit reversered inverted eight order roots of unity
+    // 1 / omega_8^2 = omega_8^6
+    uint256 constant ROOT1 = 0x01dafdc6d65d66b5accedf99bcd607383ad971a9537cdf25d59e99d90becc81e;
+    // 1 / omega_8^1 = omega_8^7
+    uint256 constant ROOT2 = 0x0446ed3ce295dda2b5ea677394813e6eab8bfbc55397aacac8e6df6f4bc9ca34;
+    // 1 / omega_8^3 = omega_8^5
+    uint256 constant ROOT3 = 0x01cc9a01f2178b3736f524e1d06398916739deaa1bbed178c525a1e211901146;
+
     // Reads from channel random and returns a list of random queries
     function get_queries(PublicCoin.Coin memory coin, uint8 max_bit_length, uint8 num_queries)
         internal
@@ -236,17 +244,11 @@ contract Fri is Trace, MerkleVerifier {
         return (coset[0]);
     }
 
-    // 1 / omega_8^2 = omega_8^6
-    uint256 constant ROOT1 = 0x01dafdc6d65d66b5accedf99bcd607383ad971a9537cdf25d59e99d90becc81e;
-    // 1 / omega_8^1 = omega_8^7
-    uint256 constant ROOT2 = 0x0446ed3ce295dda2b5ea677394813e6eab8bfbc55397aacac8e6df6f4bc9ca34;
-    // 1 / omega_8^3 = omega_8^5
-    uint256 constant ROOT3 = 0x01cc9a01f2178b3736f524e1d06398916739deaa1bbed178c525a1e211901146;
-
     // Gas: 4888441
     // Gas: 4878902
     // Gas: 4726841
     // Gas: 4652249
+    // Gas: 4577169
     function fold_coset_inner(uint256[] memory coset, uint256 x0_inv, uint256 eval_point) internal returns (uint256) {
         trace('fold_coset_inner', true);
         uint256 coset_size = coset.length;
@@ -276,10 +278,10 @@ contract Fri is Trace, MerkleVerifier {
     // We now do the actual fri folding operation
     // f'(x) = (f(x) + f(-x)) + eval_point / x * (f(x) - f(-x))
     function fold(uint256 positive, uint256 negative, uint256 eval_point, uint256 x_inv) internal returns (uint256) {
-        // even = f(x) + f(-x)
-        uint256 even = positive.fadd(negative);
-        // odd = f(x) - f(-x)
-        uint256 odd = positive.fsub(negative);
+        // even = f(x) + f(-x)  (without reduction)
+        uint256 even = positive + negative;
+        // odd = f(x) - f(-x)   (without reduction)
+        uint256 odd = positive + PrimeField.MODULUS - negative;
         // factor = eval_point / x
         uint256 factor = eval_point.fmul(x_inv);
         // result = even + factor * odd
