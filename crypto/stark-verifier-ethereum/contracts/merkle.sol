@@ -13,80 +13,52 @@ contract MerkleVerifier is Trace {
         bytes32[] memory leaves,
         uint256[] memory indices,
         bytes32[] memory decommitment
-    ) internal returns (bool) {
+    ) internal returns (bool valid) {
         trace('verify_merkle_proof', true);
+        require(leaves.length == indices.length, 'Invalid input');
         require(leaves.length > 0, 'No claimed data');
-
-        // Setup our ring buffer
-        // Each next layer will be equally sized or smaller, so `write_index`
-        // will never overrun `read_index`.
-        uint256 read_index = 0;
-        uint256 write_index = 0;
-
-        // Setup our decommitment iterator
-        uint256 decommitment_index = 0;
-
-        while (true) {
-            uint256 index = indices[read_index];
-            bytes32 current_hash = leaves[read_index];
-            read_index += 1;
-            read_index %= leaves.length;
-
-            // If the index is one this node is the root so we need to check if the proposed root matches
-            if (index == 1) {
-                bool valid = root == current_hash;
-                trace('verify_merkle_proof', false);
-                return valid;
-            }
-
-            // Check if the next available index is the right sibbling.
-            // `index | 1` turns index it to the right sibbling (no-op if it already is)
-            if (indices[read_index] == index | 1) {
-                // We found the right neighbour, merge nodes
-                indices[write_index] = index / 2;
-                leaves[write_index] = merkle_tree_hash(current_hash, leaves[read_index]);
-                read_index += 1;
-                read_index %= leaves.length;
-                write_index += 1;
-                write_index %= leaves.length;
-                continue;
-            }
-
-            // Next we try to read from the decommitment and use that info to push a new hash into the queue
-            // If we don't have more decommitment the proof fails
-            if (decommitment_index >= decommitment.length) {
-                trace('verify_merkle_proof', false);
-                return false;
-            }
-
-            // Reads from decommitment and pushes a new node
-            bytes32 next_decommitment = decommitment[decommitment_index];
-            if (index & 1 == 0) {
-                // index is left
-                leaves[write_index] = merkle_tree_hash(current_hash, next_decommitment);
-            } else {
-                // index is right
-                leaves[write_index] = merkle_tree_hash(next_decommitment, current_hash);
-            }
-            indices[write_index] = index / 2;
-            decommitment_index += 1;
-            write_index += 1;
-            write_index %= leaves.length;
-        }
-        assert(false); // Unreachable
-    }
-
-    function merkle_tree_hash(bytes32 preimage_a, bytes32 preimage_b) internal returns (bytes32 hash) {
-        // Equivalent to
-        // hash = keccak256(abi.encodePacked(preimage_a, preimage_b)) & HASH_MASK
-        // Using assembly for performance
         assembly {
-            // The first 64 bytes of memory are scratch space
-            // See <https://solidity.readthedocs.io/en/v0.6.6/assembly.html#conventions-in-solidity>
-            mstore(0x00, preimage_a)
-            mstore(0x20, preimage_b)
-            hash := and(keccak256(0x00, 0x40), HASH_MASK)
+            // Read length and get rid of the length prefices
+            let len := shl(5, mload(indices))
+            indices := add(indices, 0x20)
+            leaves := add(leaves, 0x20)
+            decommitment := add(decommitment, 0x20)
+
+            // Set up ring buffer
+            let read_index := 0
+            let write_index := 0
+
+            for {} 1 {} {
+                // Read the current index and store leaf hash in scratch space
+                let index := shl(5, mload(add(indices, read_index)))
+                mstore(and(index, 0x20), mload(add(leaves, read_index)))
+                read_index := mod(add(read_index, 0x20), len)
+
+                // Stop if we hit the root
+                if eq(index, 0x20) {
+                    valid := eq(mload(0x20), root)
+                    break
+                }
+
+                // Check if the next available index is the right sibbling.
+                // `index | 1` turns index it to the right sibbling (no-op if it already is)
+                let merge := eq(or(index, 0x20), shl(5, mload(add(indices, read_index))))
+                if merge {
+                    mstore(0x20, mload(add(leaves, read_index)))
+                    read_index := mod(add(read_index, 0x20), len)
+                }
+                if iszero(merge) {
+                    // It doesn't matter if we read decommitment beyond the end,
+                    // we would read in garbage and not produce a valid root.
+                    mstore(xor(and(index, 0x20), 0x20), mload(decommitment))
+                    decommitment := add(decommitment, 0x20)
+                }
+                mstore(add(indices, write_index), shr(6, index))
+                mstore(add(leaves, write_index), and(keccak256(0x00, 0x40), HASH_MASK))
+                write_index := mod(add(write_index, 0x20), len)
+            }
         }
+        trace('verify_merkle_proof', false);
     }
 
     function merkle_leaf_hash(uint256[] memory leaf) internal pure returns (bytes32 hash) {
