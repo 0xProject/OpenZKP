@@ -8,10 +8,6 @@ contract MerkleVerifier is Trace {
 
     // This function takes a set of data leaves and indices are 2^depth + leaf index and must be sorted in ascending order.
     // NOTE - An empty claim will revert
-    // Total saved 696516
-    // Total saved 697200
-    // Total saved 723228
-    // Total saved 727980
     function verify_merkle_proof(
         bytes32 root,
         bytes32[] memory leaves,
