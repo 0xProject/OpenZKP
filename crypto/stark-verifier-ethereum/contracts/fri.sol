@@ -223,6 +223,8 @@ contract Fri is Trace, MerkleVerifier {
         trace('fold_layer', false);
     }
 
+    // Gas: 4373689
+    // Gas: 4373190
     function fold_coset(
         uint256[] memory coset,
         uint256 eval_point,
@@ -237,28 +239,16 @@ contract Fri is Trace, MerkleVerifier {
         uint256 coset_size = coset.length;
         uint256 generator = eval_x.eval_domain_generator.fpow(layer_context.step);
         uint256 x0_inv = generator.fpow(domain_size - (index + 0).bit_reverse2(log_domain_size - 1));
-        uint256 result = fold_coset_inner(coset, x0_inv, eval_point);
+        uint256 factor = mulmod(eval_point, x0_inv, PrimeField.MODULUS);
+        uint256 result = fold_coset_inner(coset, factor);
 
         // We return the fri folded point and the inverse for the base layer, which is our x_inv on the next level
         trace('fold_coset', false);
         return result;
     }
 
-    // Gas: 4888441
-    // Gas: 4878902
-    // Gas: 4726841
-    // Gas: 4652249
-    // Gas: 4577169
-    // Gas: 4493150
-    // Gas: 4468609
-    // Gas: 4400230
-    // Gas: 4373689
-    function fold_coset_inner(uint256[] memory coset, uint256 x0_inv, uint256 eval_point)
-        internal
-        returns (uint256 result)
-    {
+    function fold_coset_inner(uint256[] memory coset, uint256 factor) internal returns (uint256 result) {
         trace('fold_coset_inner', true);
-        uint256 factor = mulmod(eval_point, x0_inv, PrimeField.MODULUS);
         if (coset.length == 8) {
             uint256 a = fold(coset[0], coset[1], factor);
             uint256 b = fold(coset[2], coset[3], mulmod(factor, ROOT1, PrimeField.MODULUS));
