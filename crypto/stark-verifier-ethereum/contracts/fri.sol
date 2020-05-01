@@ -242,38 +242,36 @@ contract Fri is Trace, MerkleVerifier {
 
     // Gas: 4888441
     // Gas: 4878902
+    // Gas: 4726841
     function fold_coset_inner(uint256[] memory coset, uint256 x0_inv, uint256 eval_point) internal returns (uint256) {
         trace('fold_coset_inner', true);
-
         uint256 coset_size = coset.length;
-        uint256[4] memory x_inv = [uint256(0), 1, 2, 3];
-
-        while (coset_size > 1) {
-            x_inv[0] = x0_inv;
-            x_inv[1] = x0_inv.fmul(ROOT1);
-            x_inv[2] = x0_inv.fmul(ROOT2);
-            x_inv[3] = x0_inv.fmul(ROOT3);
-
-            for (uint256 i = 0; i < coset_size; i += 2) {
-                // We know that because this is a root of a power of two domain
-                // we can lookup the x inverse using the following index manipulation
-                // and power
-
-                coset[i / 2] = fold(coset[i], coset[i + 1], x_inv[i / 2], eval_point);
-            }
-            coset_size >>= 1;
+        if (coset_size == 8) {
+            coset[0] = fold(coset[0], coset[1], eval_point, x0_inv);
+            coset[1] = fold(coset[2], coset[3], eval_point, x0_inv.fmul(ROOT1));
+            coset[2] = fold(coset[4], coset[5], eval_point, x0_inv.fmul(ROOT2));
+            coset[3] = fold(coset[6], coset[7], eval_point, x0_inv.fmul(ROOT3));
+            coset_size = 4;
             x0_inv = x0_inv.fmul(x0_inv);
             eval_point = eval_point.fmul_mont(eval_point);
         }
-
-        // We return the fri folded point and the inverse for the base layer, which is our x_inv on the next level
+        if (coset_size == 4) {
+            coset[0] = fold(coset[0], coset[1], eval_point, x0_inv);
+            coset[1] = fold(coset[2], coset[3], eval_point, x0_inv.fmul(ROOT1));
+            coset_size = 2;
+            x0_inv = x0_inv.fmul(x0_inv);
+            eval_point = eval_point.fmul_mont(eval_point);
+        }
+        if (coset_size == 2) {
+            coset[0] = fold(coset[0], coset[1], x0_inv, eval_point);
+        }
         trace('fold_coset_inner', false);
-        return (coset[0]);
+        return coset[0];
     }
 
     // We now do the actual fri folding operation
     // f'(x) = (f(x) + f(-x)) + eval_point / x * (f(x) - f(-x))
-    function fold(uint256 positive, uint256 negative, uint256 x_inv, uint256 eval_point) internal returns (uint256) {
+    function fold(uint256 positive, uint256 negative, uint256 eval_point, uint256 x_inv) internal returns (uint256) {
         // even = f(x) + f(-x)
         uint256 even = positive.fadd(negative);
         // odd = f(x) - f(-x)
