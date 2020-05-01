@@ -5,9 +5,11 @@ import '../interfaces/ConstraintInterface.sol';
 import '../default_cs.sol';
 
 
-abstract contract RecurrenceTrace is
-    DefaultConstraintSystem(2, 2, 2, 16) // This lets us map rows -> inverse index,
-{
+// The linter doesn't understand 'abstract' and thinks it's indentation
+
+// solhint-disable-next-line indent
+abstract contract RecurrenceTrace is DefaultConstraintSystem(2, 2, 2, 16) {
+    // This lets us map rows -> inverse index,
     // In complex systems use a autogen binary search.
     function row_to_offset(uint256 row) internal override pure returns (uint256) {
         return row;

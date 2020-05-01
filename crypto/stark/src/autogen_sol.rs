@@ -81,6 +81,9 @@ pragma experimental ABIEncoderV2;
 import '../interfaces/ConstraintInterface.sol';
 import '../default_cs.sol';
 
+// The linter doesn't understand 'abstract' and thinks it's indendation
+
+// solhint-disable-next-line indent
 abstract contract RecurrenceTrace is DefaultConstraintSystem({}, {}, {}, {}) {{",
         constraint_degree,
         rows.len(),
@@ -90,7 +93,7 @@ abstract contract RecurrenceTrace is DefaultConstraintSystem({}, {}, {}, {}) {{"
 
     // This specifies the lookup function
     trace_layout_contract.push_str(
-        "    // This lets us map rows -> inverse index,
+        "\n    // This lets us map rows -> inverse index,
     // In complex systems use a autogen binary search.
     function row_to_offset(uint256 row) internal pure override returns(uint256) {",
     );
