@@ -16,7 +16,11 @@ library RingBuffer {
 
     // Adds an element to the buffer by pushing to the array and
     // and wrapping around if the back is at the end of the array.
-    function add_to_rear(IndexRingBuffer memory buffer, uint256 index, bytes32 data) internal pure {
+    function add_to_rear(
+        IndexRingBuffer memory buffer,
+        uint256 index,
+        bytes32 data
+    ) internal pure {
         // If the buffer is empty set it to a single element state.
         // Otherwise we push and move the back index mod the length.
         if (buffer.is_empty) {

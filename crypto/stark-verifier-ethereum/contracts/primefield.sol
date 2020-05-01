@@ -50,7 +50,11 @@ library PrimeField {
     }
 
     // There's still no native call to the exp mod precompile in solidity
-    function expmod(uint256 base, uint256 exponent, uint256 modulus) internal returns (uint256 result) {
+    function expmod(
+        uint256 base,
+        uint256 exponent,
+        uint256 modulus
+    ) internal returns (uint256 result) {
         // TODO - Check if gas is based on absolute input length or on indicated length
         // that will have massive gas implications [13k for a square vs 50]
         assembly {

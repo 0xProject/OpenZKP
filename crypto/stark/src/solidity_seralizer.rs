@@ -258,7 +258,7 @@ fn get_indices(num: usize, bits: u32, proof: &mut VerifierChannel) -> Vec<usize>
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{prove, traits::tests::Recurrance, Provable, Verifiable};
+    use crate::{autogen2, prove, traits::tests::Recurrance, Provable, Verifiable};
     use zkp_macros_decl::field_element;
 
     #[test]
@@ -274,7 +274,18 @@ mod tests {
         let public = r.claim();
         let private = r.witness();
 
-        let constraints = public.constraints();
+        let mut constraints = public.constraints();
+        constraints.num_queries = 20;
+        constraints.pow_bits = 10;
+
+        autogen2(
+            constraints.trace_nrows(),
+            &[],
+            constraints.expressions(),
+            constraints.trace_nrows(),
+            constraints.trace_ncolumns(),
+            16,
+        );
         let trace = public.trace(&private);
 
         let mut result_string = "".to_string();
@@ -286,7 +297,7 @@ mod tests {
         )
         .unwrap();
         // println!("{}", result_string);
-        // assert!(false);
+        //assert!(false);
     }
 
     // Note this test is actually more like a binary which we want run so it

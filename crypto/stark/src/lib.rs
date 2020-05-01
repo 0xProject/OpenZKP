@@ -43,6 +43,7 @@
 // TODO: Add `must_use` attributes
 #![allow(clippy::must_use_candidate)]
 
+mod autogen_sol;
 mod channel;
 mod constraints;
 mod polynomial;
@@ -83,6 +84,7 @@ extern crate no_std_compat as std;
 pub use zkp_primefield as primefield;
 
 // Exports for verifier
+pub use autogen_sol::autogen2;
 pub use constraints::{Constraints, Error as ConstraintError};
 pub use polynomial::DensePolynomial;
 pub use proof::Proof;

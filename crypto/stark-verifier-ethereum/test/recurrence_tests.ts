@@ -38,10 +38,8 @@ describe('Recurrence testing', function(this: any): void {
             // NOTE - Typescript has a very very hard time with the ethers js internal array types in struct encoding
             // in this case it's best for the code to ignore it because this is how ethers js understands these types.
             // @ts-ignore
-            const events = await (
-                // @ts-ignore
-                await verifier_contract.verify_proof(recurrence_proofs[i], constraint_contract.address)
-            ).wait();
+            const events = await // @ts-ignore
+            (await verifier_contract.verify_proof(recurrence_proofs[i], constraint_contract.address)).wait();
             // TODO - Use better logging
             /* tslint:disable:no-console*/
             console.log('Proof verification gas used : ', events.gasUsed?.toNumber());

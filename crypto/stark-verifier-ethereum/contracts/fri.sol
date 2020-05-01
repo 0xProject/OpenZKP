@@ -1,4 +1,4 @@
-pragma solidity 0.6.4;
+pragma solidity ^0.6.4;
 pragma experimental ABIEncoderV2;
 
 import './public_coin.sol';
@@ -38,11 +38,11 @@ contract Fri is MerkleVerifier {
     }
 
     // Reads from channel random and returns a list of random queries
-    function get_queries(PublicCoin.Coin memory coin, uint8 max_bit_length, uint8 num_queries)
-        internal
-        pure
-        returns (uint64[] memory)
-    {
+    function get_queries(
+        PublicCoin.Coin memory coin,
+        uint8 max_bit_length,
+        uint8 num_queries
+    ) internal pure returns (uint64[] memory) {
         uint64[] memory queries = new uint64[](num_queries);
         // This mask sets all digits to one below the bit length
         uint64 bit_mask = (uint64(2)**max_bit_length) - 1;
