@@ -9,6 +9,7 @@ contract MerkleVerifier is Trace {
     // This function takes a set of data leaves and indices are 2^depth + leaf index and must be sorted in ascending order.
     // Note: `leaves` and `indices` will be overwritten in the process
     // NOTE - An empty claim will revert
+    // TODO: Add high level algorithm documentation.
     function verify_merkle_proof(
         bytes32 root,
         bytes32[] memory leaves,
@@ -26,6 +27,7 @@ contract MerkleVerifier is Trace {
         // See <https://solidity.readthedocs.io/en/v0.6.6/assembly.html#conventions-in-solidity>
         // Finally we make heavy use of the fact that left indices have their lowest
         // bit zero, and right indices one.
+        // For the original non-assembly implementation, see <https://github.com/0xProject/OpenZKP/blob/480b69b9f82ee8319884ce8212682b0be7fa3f39/crypto/stark-verifier-ethereum/contracts/merkle.sol#L11>
         assembly {
             // Read length and get rid of the length prefices
             let length := shl(5, mload(indices))
