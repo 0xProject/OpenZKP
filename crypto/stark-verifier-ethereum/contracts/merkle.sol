@@ -1,14 +1,9 @@
 pragma solidity ^0.6.4;
 
-import './ring_buffer.sol';
-import './iterator.sol';
 import './trace.sol';
 
 
 contract MerkleVerifier is Trace {
-    using RingBuffer for RingBuffer.IndexRingBuffer;
-    using Iterators for Iterators.IteratorBytes32;
-
     bytes32 constant HASH_MASK = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF000000000000000000000000;
 
     // This function takes a set of data leaves and indices are 2^depth + leaf index and must be sorted in ascending order.
