@@ -216,6 +216,7 @@ contract Fri is Trace, MerkleVerifier {
     // Gas: 6458501
     // Gas: 6778861
     // Gas: 6584701
+    // Gas: 5862889
     function fold_coset(
         uint256[] memory coset,
         uint256 eval_point,
@@ -248,20 +249,25 @@ contract Fri is Trace, MerkleVerifier {
         trace('fold_coset_inner', true);
 
         uint256 coset_size = coset.length;
-        while (coset_size > 1) {
-            log_domain_size -= 1;
 
+        uint256[4] memory x_inv = [uint256(0), 1, 2, 3];
+
+        while (coset_size > 1) {
+            for (uint256 i = 0; i < 4; i += 1) {
+                // We know that because this is a root of a power of two domain
+                // we can lookup the x inverse using the following index manipulation
+                // and power
+                uint256 half_i_plus_index = index + i;
+                uint256 half_i_plus_index_reversed = half_i_plus_index.bit_reverse2(log_domain_size - 1);
+                uint256 inverse_index = domain_size - half_i_plus_index_reversed;
+                x_inv[i] = generator.fpow(inverse_index);
+            }
+
+            log_domain_size -= 1;
             for (uint256 i = 0; i < coset_size; i += 2) {
                 // We know that because this is a root of a power of two domain
                 // we can lookup the x inverse using the following index manipulation
                 // and power
-                uint256 x_inv;
-                {
-                    uint256 half_i_plus_index = index + i / 2;
-                    uint256 half_i_plus_index_reversed = half_i_plus_index.bit_reverse2(log_domain_size);
-                    uint256 inverse_index = domain_size - half_i_plus_index_reversed;
-                    x_inv = generator.fpow(inverse_index);
-                }
 
                 // We now do the actual fri folding operation
                 // f'(x) = (f(x) + f(-x)) + eval_point / x * (f(x) - f(-x))
@@ -271,7 +277,7 @@ contract Fri is Trace, MerkleVerifier {
                         coset[i].fadd(coset[i + 1])
                     .fadd(
                         // eval_point / x
-                        eval_point.fmul(x_inv)
+                        eval_point.fmul(x_inv[i / 2])
                         // Both `eval_point` and `coset` are in montgomery form, so need mont-mul here.
                         .fmul_mont(
                             // odd = f(x) - f(-x)
@@ -279,12 +285,13 @@ contract Fri is Trace, MerkleVerifier {
                         )
                     )
                 );
+                // x_inv[i / 2] = x_inv[i / 2].fmul(x_inv[i / 2]);
             }
             index /= 2;
-            generator = generator.fmul(generator);
             domain_size >>= 1;
             coset_size >>= 1;
 
+            generator = generator.fmul(generator);
             eval_point = eval_point.fmul_mont(eval_point);
         }
 
