@@ -250,27 +250,27 @@ contract Fri is Trace, MerkleVerifier {
     // Gas: 4652249
     // Gas: 4577169
     // Gas: 4493150
+    // Gas: 4468609
     function fold_coset_inner(uint256[] memory coset, uint256 x0_inv, uint256 eval_point) internal returns (uint256) {
         trace('fold_coset_inner', true);
         uint256 coset_size = coset.length;
+        uint256 factor = eval_point.fmul(x0_inv);
         if (coset_size == 8) {
-            coset[0] = fold(coset[0], coset[1], eval_point, x0_inv);
-            coset[1] = fold(coset[2], coset[3], eval_point, x0_inv.fmul(ROOT1));
-            coset[2] = fold(coset[4], coset[5], eval_point, x0_inv.fmul(ROOT2));
-            coset[3] = fold(coset[6], coset[7], eval_point, x0_inv.fmul(ROOT3));
+            coset[0] = fold(coset[0], coset[1], factor);
+            coset[1] = fold(coset[2], coset[3], factor.fmul(ROOT1));
+            coset[2] = fold(coset[4], coset[5], factor.fmul(ROOT2));
+            coset[3] = fold(coset[6], coset[7], factor.fmul(ROOT3));
             coset_size = 4;
-            x0_inv = x0_inv.fmul(x0_inv);
-            eval_point = eval_point.fmul(eval_point);
+            factor = factor.fmul(factor);
         }
         if (coset_size == 4) {
-            coset[0] = fold(coset[0], coset[1], eval_point, x0_inv);
-            coset[1] = fold(coset[2], coset[3], eval_point, x0_inv.fmul(ROOT1));
+            coset[0] = fold(coset[0], coset[1], factor);
+            coset[1] = fold(coset[2], coset[3], factor.fmul(ROOT1));
             coset_size = 2;
-            x0_inv = x0_inv.fmul(x0_inv);
-            eval_point = eval_point.fmul(eval_point);
+            factor = factor.fmul(factor);
         }
         if (coset_size == 2) {
-            coset[0] = fold(coset[0], coset[1], x0_inv, eval_point);
+            coset[0] = fold(coset[0], coset[1], factor);
         }
         trace('fold_coset_inner', false);
         return coset[0];
@@ -278,13 +278,11 @@ contract Fri is Trace, MerkleVerifier {
 
     // We now do the actual fri folding operation
     // f'(x) = (f(x) + f(-x)) + eval_point / x * (f(x) - f(-x))
-    function fold(uint256 positive, uint256 negative, uint256 eval_point, uint256 x_inv) internal returns (uint256) {
+    function fold(uint256 positive, uint256 negative, uint256 factor) internal returns (uint256) {
         // even = f(x) + f(-x)  (without reduction)
         uint256 even = positive + negative;
         // odd = f(x) - f(-x)   (without reduction)
         uint256 odd = positive + PrimeField.MODULUS - negative;
-        // factor = eval_point / x
-        uint256 factor = mulmod(eval_point, x_inv, PrimeField.MODULUS);
         // result = even + factor * odd
         return addmod(even, mulmod(factor, odd, PrimeField.MODULUS), PrimeField.MODULUS);
     }
