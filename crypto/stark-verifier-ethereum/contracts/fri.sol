@@ -215,6 +215,7 @@ contract Fri is Trace, MerkleVerifier {
     // Gas: 6758062
     // Gas: 6590601
     // Gas: 6567801
+    // Gas: 6538622
     function fold_coset(
         uint256[] memory coset,
         uint256 eval_point,
@@ -245,15 +246,21 @@ contract Fri is Trace, MerkleVerifier {
                 }
 
                 // We now do the actual fri folding operation
-                {
-                    uint256 f_x_plus_f_neg_x = coset[i].fadd(coset[i + 1]);
-                    uint256 eval_point_div_x = x_inv.fmul(eval_point);
-                    uint256 f_x_sub_f_neg_x = coset[i].fsub(coset[i + 1]);
-                    // Note - Both eval_point_div_x and f_x_sub_f_neg_x are montgomery so we
-                    // have to use special multiplication
-                    uint256 eval_over_x_times_f_x_sub_f_neg_x = eval_point_div_x.fmul_mont(f_x_sub_f_neg_x);
-                    coset[i / 2] = f_x_plus_f_neg_x.fadd(eval_over_x_times_f_x_sub_f_neg_x);
-                }
+                // f'(x) = (f(x) + f(-x)) + eval_point / x * (f(x) - f(-x))
+                // prettier-ignore
+                coset[i / 2] = (
+                        // even = f(x) + f(-x)
+                        coset[i].fadd(coset[i + 1])
+                    .fadd(
+                        // eval_point / x
+                        eval_point.fmul(x_inv)
+                        // Both `eval_point` and `coset` are in montgomery form, so need mont-mul here.
+                        .fmul_mont(
+                            // odd = f(x) - f(-x)
+                            coset[i].fsub(coset[i + 1])
+                        )
+                    )
+                );
             }
             index /= 2;
             step *= 2;
