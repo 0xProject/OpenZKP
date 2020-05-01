@@ -86,7 +86,8 @@ contract MerkleVerifier is Trace {
         Iterators.IteratorBytes32 memory decommitment,
         bytes32 current_hash,
         uint256 index
-    ) internal pure {
+    ) internal {
+        trace('read_decommitment_and_push', true);
         bytes32 next_decommitment = decommitment.next();
         bytes32 new_hash;
         // Preform the hash
@@ -98,12 +99,21 @@ contract MerkleVerifier is Trace {
         // Add the new node to the buffer.
         // Note the buffer strictly shrinks in the algo so we can't overflow the size.
         buffer.add_to_rear(index / 2, new_hash);
+        trace('read_decommitment_and_push', false);
     }
 
     bytes32 constant HASH_MASK = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF000000000000000000000000;
 
-    function merkleTreeHash(bytes32 preimage_a, bytes32 preimage_b) internal pure returns (bytes32 hash) {
-        return keccak256(abi.encodePacked(preimage_a, preimage_b)) & HASH_MASK;
+    function merkleTreeHash(bytes32 preimage_a, bytes32 preimage_b) internal returns (bytes32 hash) {
+        // Equivalent to
+        // hash = keccak256(abi.encodePacked(preimage_a, preimage_b)) & HASH_MASK
+        // Using assembly for performance
+        assembly {
+            // The first 64 bytes of memory are scratch space
+            mstore(0x00, preimage_a)
+            mstore(0x20, preimage_b)
+            hash := and(keccak256(0x00, 0x40), HASH_MASK)
+        }
     }
 
     function merkleLeafHash(uint256[] memory leaf) internal pure returns (bytes32) {
