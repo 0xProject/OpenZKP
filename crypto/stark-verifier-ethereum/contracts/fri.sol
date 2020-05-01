@@ -266,6 +266,8 @@ contract Fri is Trace, MerkleVerifier {
             result = fold(a, b, factor);
         } else if (coset.length == 2) {
             result = fold(coset[0], coset[1], factor);
+        } else {
+            result = coset[0];
         }
         trace('fold_coset_inner', false);
     }
