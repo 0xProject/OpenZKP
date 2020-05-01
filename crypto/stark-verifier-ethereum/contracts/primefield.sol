@@ -85,6 +85,7 @@ library PrimeField {
     // `coefficients` in low-to-high order.
     function horner_eval(uint256[] memory coefficients, uint256 x) internal pure returns (uint256 result) {
         // Assembly implementation of Horner evaluation for performance reasons.
+        // prettier-ignore
         assembly {
             result := 0
             let modulus := MODULUS
