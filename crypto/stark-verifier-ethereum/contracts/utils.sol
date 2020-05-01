@@ -17,19 +17,26 @@ library Utils {
     // 6579101
     // 6512701
     // 6026701
+    // 5866261
     function bit_reverse2(uint256 num, uint256 number_of_bits) internal pure returns (uint256 result) {
         // See <https://graphics.stanford.edu/~seander/bithacks.html#ReverseByteWith64BitsDiv>
         // OPT: Extend this method to use the full width of uint256.
-        for (; number_of_bits > 7; number_of_bits -= 8) {
-            result <<= 8;
-            result |= (((num & 0xff) * 0x0202020202) & 0x010884422010) % 1023;
-            num >>= 8;
-        }
-        for (; number_of_bits > 0; number_of_bits -= 1) {
-            result <<= 1;
-            result |= num & 1;
-            num >>= 1;
-        }
+        // Reverse the last 5 * 8 bits
+        result = (((num & 0xff) * 0x0202020202) & 0x010884422010) % 1023;
+        result <<= 8;
+        num >>= 8;
+        result |= (((num & 0xff) * 0x0202020202) & 0x010884422010) % 1023;
+        result <<= 8;
+        num >>= 8;
+        result |= (((num & 0xff) * 0x0202020202) & 0x010884422010) % 1023;
+        result <<= 8;
+        num >>= 8;
+        result |= (((num & 0xff) * 0x0202020202) & 0x010884422010) % 1023;
+        result <<= 8;
+        num >>= 8;
+        result |= ((num * 0x0202020202) & 0x010884422010) % 1023;
+        // We now reversed the last 40 bits. Adjust for requested number.
+        result >>= 40 - number_of_bits;
     }
 
     function num_bits(uint64 data) internal pure returns (uint8) {
