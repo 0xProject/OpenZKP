@@ -36,6 +36,8 @@ contract Fri is Trace, MerkleVerifier {
         uint64 coset_size;
         uint64 step;
         uint64 len;
+        uint256 generator;
+        uint256 log_domain_size;
     }
 
     // First three bit reversered inverted eight order roots of unity
@@ -107,7 +109,9 @@ contract Fri is Trace, MerkleVerifier {
         LayerContext memory layer_context = LayerContext({
             len: uint64(2)**(fri_data.log_eval_domain_size),
             step: 1,
-            coset_size: 0
+            coset_size: 0,
+            generator: eval.eval_domain_generator,
+            log_domain_size: fri_data.log_eval_domain_size
         });
         uint256[] memory merkle_indices = new uint256[](fri_data.queries.length);
         bytes32[] memory merkle_val = new bytes32[](fri_data.queries.length);
@@ -149,6 +153,8 @@ contract Fri is Trace, MerkleVerifier {
             );
             layer_context.len /= uint64(layer_context.coset_size);
             layer_context.step *= uint64(layer_context.coset_size);
+            layer_context.generator = layer_context.generator.fpow(layer_context.coset_size);
+            layer_context.log_domain_size -= fri_data.fri_layout[i];
         }
 
         // Looks up a root of unity in the final domain
@@ -182,10 +188,6 @@ contract Fri is Trace, MerkleVerifier {
         // Convert eval_point out of montgomery form
         eval_point = eval_point.from_montgomery();
 
-        // Compute generator
-        uint256 generator = eval_x.eval_domain_generator.fpow(layer_context.step);
-        uint256 log_domain_size = uint64(layer_context.len).num_bits();
-
         // Reads how many of the cosets we've read from
         uint256 writes = 0;
         uint64 current_index;
@@ -217,14 +219,7 @@ contract Fri is Trace, MerkleVerifier {
             // Hash the coset and store it so we can do a merkle proof against it
             coset_hash_output[writes] = merkle_leaf_hash(next_coset);
             // Do the actual fold and write it to the next layer
-            previous_layer[writes] = fold_coset(
-                next_coset,
-                eval_point,
-                layer_context,
-                log_domain_size,
-                min_coset_index / 2,
-                generator
-            );
+            previous_layer[writes] = fold_coset(next_coset, eval_point, layer_context, min_coset_index / 2);
             // Record the new index
             previous_indicies[writes] = uint64(min_coset_index / layer_context.coset_size);
             writes++;
@@ -238,19 +233,19 @@ contract Fri is Trace, MerkleVerifier {
     // Gas: 4373190
     // Gas: 4279777
     // Gas: 4257556
-    function fold_coset(
-        uint256[] memory coset,
-        uint256 eval_point,
-        LayerContext memory layer_context,
-        uint256 log_domain_size,
-        uint64 index,
-        uint256 generator
-    ) internal returns (uint256) {
+    // Gas: 4257080
+    function fold_coset(uint256[] memory coset, uint256 eval_point, LayerContext memory layer_context, uint64 index)
+        internal
+        returns (uint256)
+    {
         trace('fold_coset', true);
 
         uint256 domain_size = layer_context.len;
-        uint256 x0_inv = generator.fpow(domain_size - index.bit_reverse2(log_domain_size - 1));
+        uint256 x0_inv = layer_context.generator.fpow(
+            domain_size - index.bit_reverse2(layer_context.log_domain_size - 1)
+        );
         uint256 factor = mulmod(eval_point, x0_inv, PrimeField.MODULUS);
+
         uint256 result = fold_coset_inner(coset, factor);
 
         // We return the fri folded point and the inverse for the base layer, which is our x_inv on the next level
