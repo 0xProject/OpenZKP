@@ -8,6 +8,9 @@ contract MerkleVerifier is Trace {
 
     // This function takes a set of data leaves and indices are 2^depth + leaf index and must be sorted in ascending order.
     // NOTE - An empty claim will revert
+    // Total saved 696516
+    // Total saved 697200
+    // Total saved 723228
     function verify_merkle_proof(
         bytes32 root,
         bytes32[] memory leaves,
@@ -19,7 +22,7 @@ contract MerkleVerifier is Trace {
         require(leaves.length > 0, 'No claimed data');
         assembly {
             // Read length and get rid of the length prefices
-            let len := shl(5, mload(indices))
+            let length := shl(5, mload(indices))
             indices := add(indices, 0x20)
             leaves := add(leaves, 0x20)
             decommitment := add(decommitment, 0x20)
@@ -30,32 +33,35 @@ contract MerkleVerifier is Trace {
 
             for {} 1 {} {
                 // Read the current index and store leaf hash in scratch space
-                let index := shl(5, mload(add(indices, read_index)))
-                mstore(and(index, 0x20), mload(add(leaves, read_index)))
-                read_index := mod(add(read_index, 0x20), len)
+                let index := mload(add(indices, read_index))
+                mstore(shl(5, and(index, 1)), mload(add(leaves, read_index)))
+                read_index := mod(add(read_index, 0x20), length)
 
                 // Stop if we hit the root
-                if eq(index, 0x20) {
+                if eq(index, 1) {
+                    // Root hash is stored right.
                     valid := eq(mload(0x20), root)
                     break
                 }
 
                 // Check if the next available index is the right sibbling.
                 // `index | 1` turns index it to the right sibbling (no-op if it already is)
-                let merge := eq(or(index, 0x20), shl(5, mload(add(indices, read_index))))
-                if merge {
-                    mstore(0x20, mload(add(leaves, read_index)))
-                    read_index := mod(add(read_index, 0x20), len)
-                }
-                if iszero(merge) {
+                switch eq(or(index, 1), mload(add(indices, read_index)))
+                case 0 {
+                    // No merge, read a decommitment
                     // It doesn't matter if we read decommitment beyond the end,
                     // we would read in garbage and not produce a valid root.
-                    mstore(xor(and(index, 0x20), 0x20), mload(decommitment))
+                    mstore(shl(5, xor(and(index, 1), 1)), mload(decommitment))
                     decommitment := add(decommitment, 0x20)
                 }
-                mstore(add(indices, write_index), shr(6, index))
+                default {
+                    // Merging with next item in ring buffer
+                    mstore(0x20, mload(add(leaves, read_index)))
+                    read_index := mod(add(read_index, 0x20), length)
+                }
+                mstore(add(indices, write_index), shr(1, index))
                 mstore(add(leaves, write_index), and(keccak256(0x00, 0x40), HASH_MASK))
-                write_index := mod(add(write_index, 0x20), len)
+                write_index := mod(add(write_index, 0x20), length)
             }
         }
         trace('verify_merkle_proof', false);
