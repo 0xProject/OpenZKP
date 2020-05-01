@@ -43,28 +43,25 @@ contract MerkleVerifier is Trace {
                 trace('verify_merkle_proof', false);
                 return valid;
             }
-
             bool is_left = index % 2 == 0;
+
             // If this is a left node then the node following it in the queue
             // may be a sibbling which we want to hash with it.
-            if (is_left) {
-                // If it exists we peak at the next node in the queue
-                if (buffer.has_next()) {
-                    (uint256 next_index, bytes32 next_hash) = buffer.peak_front();
+            if (is_left && buffer.has_next()) {
+                (uint256 next_index, bytes32 next_hash) = buffer.peak_front();
 
-                    // This checks if the next index in the queue is the sibbling of this one
-                    // If it is we use the data, otherwise we try the decommitment queue
-                    if (next_index == index + 1) {
-                        // This force increments the front, may consider real method for this.
-                        (next_index, next_hash) = buffer.remove_front();
+                // This checks if the next index in the queue is the sibbling of this one
+                // If it is we use the data, otherwise we try the decommitment queue
+                if (next_index == index + 1) {
+                    // This force increments the front, may consider real method for this.
+                    (next_index, next_hash) = buffer.remove_front();
 
-                        // Because index is even it is the left hash so to get the next one we do:
-                        bytes32 new_hash = merkle_tree_hash(current_hash, next_hash);
-                        buffer.add_to_rear(index / 2, new_hash);
+                    // Because index is even it is the left hash so to get the next one we do:
+                    bytes32 new_hash = merkle_tree_hash(current_hash, next_hash);
+                    buffer.add_to_rear(index / 2, new_hash);
 
-                        // We indicate that a node was pushed, so that another won't be
-                        continue;
-                    }
+                    // We indicate that a node was pushed, so that another won't be
+                    continue;
                 }
             }
 
@@ -90,7 +87,7 @@ contract MerkleVerifier is Trace {
             buffer.add_to_rear(index / 2, new_hash);
             trace('read_decommitment_and_push', false);
         }
-        trace('verify_merkle_proof', false);
+        assert(false); // Unreachable
     }
 
     function merkle_tree_hash(bytes32 preimage_a, bytes32 preimage_b) internal returns (bytes32 hash) {
