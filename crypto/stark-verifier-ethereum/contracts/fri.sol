@@ -225,8 +225,8 @@ contract Fri is Trace, MerkleVerifier {
         uint8 log_domain_size = uint64(domain_size).num_bits();
         uint256 coset_size = coset.length;
         uint256 generator = eval_x.eval_domain_generator.fpow(layer_context.step);
-
-        fold_coset_inner(coset, index, eval_point, domain_size, log_domain_size, generator);
+        uint256 x0_inv = generator.fpow(domain_size - (index + 0).bit_reverse2(log_domain_size - 1));
+        fold_coset_inner(coset, x0_inv, eval_point);
 
         // We return the fri folded point and the inverse for the base layer, which is our x_inv on the next level
         trace('fold_coset', false);
@@ -240,23 +240,14 @@ contract Fri is Trace, MerkleVerifier {
     // 1 / omega_8^3 = omega_8^5
     uint256 constant ROOT3 = 0x01cc9a01f2178b3736f524e1d06398916739deaa1bbed178c525a1e211901146;
 
-    function fold_coset_inner(
-        uint256[] memory coset,
-        uint256 index,
-        uint256 eval_point,
-        uint256 domain_size,
-        uint256 log_domain_size,
-        uint256 generator
-    ) internal returns (uint256) {
+    function fold_coset_inner(uint256[] memory coset, uint256 x0_inv, uint256 eval_point) internal returns (uint256) {
         trace('fold_coset_inner', true);
 
         uint256 coset_size = coset.length;
 
-        uint256 x0_inv = generator.fpow(domain_size - (index + 0).bit_reverse2(log_domain_size - 1));
         uint256[4] memory x_inv = [uint256(0), 1, 2, 3];
 
         while (coset_size > 1) {
-            log_domain_size -= 1;
             x_inv[0] = x0_inv;
             x_inv[1] = x0_inv.fmul(ROOT1);
             x_inv[2] = x0_inv.fmul(ROOT2);
@@ -285,12 +276,8 @@ contract Fri is Trace, MerkleVerifier {
                 );
                 // x_inv[i / 2] = x_inv[i / 2].fmul(x_inv[i / 2]);
             }
-            index /= 2;
-            domain_size >>= 1;
             coset_size >>= 1;
-
             x0_inv = x0_inv.fmul(x0_inv);
-            generator = generator.fmul(generator);
             eval_point = eval_point.fmul_mont(eval_point);
         }
 
