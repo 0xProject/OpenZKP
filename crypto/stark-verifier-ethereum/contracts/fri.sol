@@ -212,11 +212,6 @@ contract Fri is Trace, MerkleVerifier {
         trace('fold_layer', false);
     }
 
-    // Gas: 6758062
-    // Gas: 6458501
-    // Gas: 6778861
-    // Gas: 6584701
-    // Gas: 5862889
     function fold_coset(
         uint256[] memory coset,
         uint256 eval_point,
@@ -238,6 +233,13 @@ contract Fri is Trace, MerkleVerifier {
         return (coset[0]);
     }
 
+    // 1 / omega_8^2 = omega_8^6
+    uint256 constant ROOT1 = 0x01dafdc6d65d66b5accedf99bcd607383ad971a9537cdf25d59e99d90becc81e;
+    // 1 / omega_8^1 = omega_8^7
+    uint256 constant ROOT2 = 0x0446ed3ce295dda2b5ea677394813e6eab8bfbc55397aacac8e6df6f4bc9ca34;
+    // 1 / omega_8^3 = omega_8^5
+    uint256 constant ROOT3 = 0x01cc9a01f2178b3736f524e1d06398916739deaa1bbed178c525a1e211901146;
+
     function fold_coset_inner(
         uint256[] memory coset,
         uint256 index,
@@ -253,17 +255,13 @@ contract Fri is Trace, MerkleVerifier {
         uint256[4] memory x_inv = [uint256(0), 1, 2, 3];
 
         while (coset_size > 1) {
-            for (uint256 i = 0; i < 4; i += 1) {
-                // We know that because this is a root of a power of two domain
-                // we can lookup the x inverse using the following index manipulation
-                // and power
-                uint256 half_i_plus_index = index + i;
-                uint256 half_i_plus_index_reversed = half_i_plus_index.bit_reverse2(log_domain_size - 1);
-                uint256 inverse_index = domain_size - half_i_plus_index_reversed;
-                x_inv[i] = generator.fpow(inverse_index);
-            }
-
             log_domain_size -= 1;
+            x_inv[0] = generator.fpow(domain_size - (index + 0).bit_reverse2(log_domain_size));
+            x_inv[1] = x_inv[0].fmul(ROOT1);
+            x_inv[2] = x_inv[0].fmul(ROOT2);
+            x_inv[3] = x_inv[0].fmul(ROOT3);
+            // console.log(x_inv[0]);
+
             for (uint256 i = 0; i < coset_size; i += 2) {
                 // We know that because this is a root of a power of two domain
                 // we can lookup the x inverse using the following index manipulation

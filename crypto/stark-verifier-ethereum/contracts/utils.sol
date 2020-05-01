@@ -13,11 +13,6 @@ library Utils {
     }
 
     // TODO: Switch all uints over to uint256
-    // 6584701
-    // 6579101
-    // 6512701
-    // 6026701
-    // 5866261
     function bit_reverse2(uint256 num, uint256 number_of_bits) internal pure returns (uint256 result) {
         // See <https://graphics.stanford.edu/~seander/bithacks.html#ReverseByteWith64BitsDiv>
         // OPT: Extend this method to use the full width of uint256.
