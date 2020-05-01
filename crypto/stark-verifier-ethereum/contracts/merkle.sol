@@ -21,6 +21,7 @@ contract MerkleVerifier is Trace {
     ) internal returns (bool) {
         trace('verify_merkle_proof', true);
         require(leaves.length > 0, 'No claimed data');
+
         // Setup our index buffer
         RingBuffer.IndexRingBuffer memory buffer = RingBuffer.IndexRingBuffer({
             front: 0,
@@ -29,6 +30,7 @@ contract MerkleVerifier is Trace {
             data: leaves,
             is_empty: false
         });
+
         // Setup our iterator
         Iterators.IteratorBytes32 memory decommitment_iter = Iterators.init_iterator(decommitment);
 
@@ -43,7 +45,6 @@ contract MerkleVerifier is Trace {
             }
 
             bool is_left = index % 2 == 0;
-            bool needs_new_node = true;
             // If this is a left node then the node following it in the queue
             // may be a sibbling which we want to hash with it.
             if (is_left) {
@@ -60,48 +61,36 @@ contract MerkleVerifier is Trace {
                         // Because index is even it is the left hash so to get the next one we do:
                         bytes32 new_hash = merkle_tree_hash(current_hash, next_hash);
                         buffer.add_to_rear(index / 2, new_hash);
+
                         // We indicate that a node was pushed, so that another won't be
-                        needs_new_node = false;
+                        continue;
                     }
                 }
             }
 
             // Next we try to read from the decommitment and use that info to push a new hash into the queue
-            if (needs_new_node) {
-                // If we don't have more decommitment the proof fails
-                if (!decommitment_iter.has_next()) {
-                    trace('verify_merkle_proof', false);
-                    return false;
-                }
-                // Reads from decommitment and pushes a new node
-                read_decommitment_and_push(is_left, buffer, decommitment_iter, current_hash, index);
+            // If we don't have more decommitment the proof fails
+            if (!decommitment_iter.has_next()) {
+                trace('verify_merkle_proof', false);
+                return false;
             }
+
+            // Reads from decommitment and pushes a new node
+            trace('read_decommitment_and_push', true);
+            bytes32 next_decommitment = decommitment_iter.next();
+            bytes32 new_hash;
+            // Preform the hash
+            if (is_left) {
+                new_hash = merkle_tree_hash(current_hash, next_decommitment);
+            } else {
+                new_hash = merkle_tree_hash(next_decommitment, current_hash);
+            }
+            // Add the new node to the buffer.
+            // Note the buffer strictly shrinks in the algo so we can't overflow the size.
+            buffer.add_to_rear(index / 2, new_hash);
+            trace('read_decommitment_and_push', false);
         }
         trace('verify_merkle_proof', false);
-    }
-
-    // This function reads from decommitment and pushes the new node onto the buffer,
-    // It returns true if decommitment data exists and false if it doesn't.
-    function read_decommitment_and_push(
-        bool is_left,
-        RingBuffer.IndexRingBuffer memory buffer,
-        Iterators.IteratorBytes32 memory decommitment,
-        bytes32 current_hash,
-        uint256 index
-    ) internal {
-        trace('read_decommitment_and_push', true);
-        bytes32 next_decommitment = decommitment.next();
-        bytes32 new_hash;
-        // Preform the hash
-        if (is_left) {
-            new_hash = merkle_tree_hash(current_hash, next_decommitment);
-        } else {
-            new_hash = merkle_tree_hash(next_decommitment, current_hash);
-        }
-        // Add the new node to the buffer.
-        // Note the buffer strictly shrinks in the algo so we can't overflow the size.
-        buffer.add_to_rear(index / 2, new_hash);
-        trace('read_decommitment_and_push', false);
     }
 
     function merkle_tree_hash(bytes32 preimage_a, bytes32 preimage_b) internal returns (bytes32 hash) {
@@ -125,6 +114,8 @@ contract MerkleVerifier is Trace {
             // hash = keccak256(abi.encodePacked(leaf)) & HASH_MASK;
             // Using assembly for performance
             assembly {
+                // Arrays are stored length-prefixed.
+                // See <https://solidity.readthedocs.io/en/v0.6.6/assembly.html#conventions-in-solidity>
                 let len := mload(leaf)
                 hash := and(keccak256(add(leaf, 0x20), mul(len, 0x20)), HASH_MASK)
             }
