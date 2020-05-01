@@ -213,11 +213,7 @@ contract Fri is Trace, MerkleVerifier {
     }
 
     // Gas: 6758062
-    // Gas: 6590601
-    // Gas: 6567801
-    // Gas: 6538622
-    // Gas: 6513462
-    // Gas: 6461821
+    // Gas: 6458501
     function fold_coset(
         uint256[] memory coset,
         uint256 eval_point,
@@ -227,12 +223,11 @@ contract Fri is Trace, MerkleVerifier {
     ) internal returns (uint256) {
         trace('fold_coset', true);
 
-        uint8 log_domain_size = layer_context.len.num_bits();
+        uint256 domain_size = layer_context.len;
+        uint8 log_domain_size = uint64(domain_size).num_bits();
         uint256 coset_size = coset.length;
         uint256 generator = eval_x.eval_domain_generator.fpow(layer_context.step);
-        uint256 domain_size = eval_x.eval_domain_size / layer_context.step;
 
-        // TODO - This could likely be one variable and the eval domain size in the layer context
         while (coset_size > 1) {
             log_domain_size -= 1;
 
