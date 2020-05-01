@@ -23,6 +23,8 @@ contract MerkleVerifier is Trace {
         require(leaves.length > 0, 'No claimed data');
 
         // Setup our ring buffer
+        // Each next layer will be equally sized or smaller, so `write_index`
+        // will never overrun `read_index`.
         uint256 read_index = 0;
         uint256 write_index = 0;
 
@@ -41,33 +43,18 @@ contract MerkleVerifier is Trace {
                 trace('verify_merkle_proof', false);
                 return valid;
             }
-            bool is_left = index % 2 == 0;
 
-            // If this is a left node then the node following it in the queue
-            // may be a sibbling which we want to hash with it.
-            if (is_left) {
-                // This might wrap arround and read from the next layer, but
-                // in that case the next_index won't be the right neighbour.
-                uint256 next_index = indices[read_index];
-                bytes32 next_hash = leaves[read_index];
-
-                // This checks if the next index in the queue is the sibbling of this one
-                // If it is we use the data, otherwise we try the decommitment queue
-                if (next_index == index + 1) {
-                    // We did find the right neighbour, increment the read pointer.
-                    read_index += 1;
-                    read_index %= leaves.length;
-
-                    // Because index is even it is the left hash so to get the next one we do:
-                    bytes32 new_hash = merkle_tree_hash(current_hash, next_hash);
-                    indices[write_index] = index / 2;
-                    leaves[write_index] = new_hash;
-                    write_index += 1;
-                    write_index %= leaves.length;
-
-                    // We indicate that a node was pushed, so that another won't be
-                    continue;
-                }
+            // Check if the next available index is the right sibbling.
+            // `index | 1` turns index it to the right sibbling (no-op if it already is)
+            if (indices[read_index] == index | 1) {
+                // We found the right neighbour, merge nodes
+                indices[write_index] = index / 2;
+                leaves[write_index] = merkle_tree_hash(current_hash, leaves[read_index]);
+                read_index += 1;
+                read_index %= leaves.length;
+                write_index += 1;
+                write_index %= leaves.length;
+                continue;
             }
 
             // Next we try to read from the decommitment and use that info to push a new hash into the queue
@@ -78,23 +65,18 @@ contract MerkleVerifier is Trace {
             }
 
             // Reads from decommitment and pushes a new node
-            trace('read_decommitment_and_push', true);
             bytes32 next_decommitment = decommitment[decommitment_index];
-            decommitment_index += 1;
-            bytes32 new_hash;
-            // Preform the hash
-            if (is_left) {
-                new_hash = merkle_tree_hash(current_hash, next_decommitment);
+            if (index & 1 == 0) {
+                // index is left
+                leaves[write_index] = merkle_tree_hash(current_hash, next_decommitment);
             } else {
-                new_hash = merkle_tree_hash(next_decommitment, current_hash);
+                // index is right
+                leaves[write_index] = merkle_tree_hash(next_decommitment, current_hash);
             }
-            // Add the new node to the buffer.
-            // Note the buffer strictly shrinks in the algo so we can't overflow the size.
             indices[write_index] = index / 2;
-            leaves[write_index] = new_hash;
+            decommitment_index += 1;
             write_index += 1;
             write_index %= leaves.length;
-            trace('read_decommitment_and_push', false);
         }
         assert(false); // Unreachable
     }
