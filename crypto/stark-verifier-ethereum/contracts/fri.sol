@@ -100,6 +100,9 @@ contract Fri is Trace, MerkleVerifier {
         trace('fri_check', false);
     }
 
+    // Gas: 4254990
+    // Gas: 4264969
+
     // This function takes in fri values, decommitments, and layout and checks the folding and merkle proofs
     // Note the final layer folded values will be overwritten to the input data locations.
     function fold_and_check_fri_layers(FriContext memory fri_data) internal {
@@ -215,7 +218,15 @@ contract Fri is Trace, MerkleVerifier {
             // Hash the coset and store it so we can do a merkle proof against it
             coset_hash_output[writes] = merkle_leaf_hash(next_coset);
             // Do the actual fold and write it to the next layer
-            previous_layer[writes] = fold_coset(next_coset, eval_point, layer_context, min_coset_index / 2);
+            {
+                (uint256 result, uint256 x_inv) = fold_coset(
+                    next_coset,
+                    eval_point,
+                    layer_context,
+                    min_coset_index / 2
+                );
+                previous_layer[writes] = result;
+            }
             // Record the new index
             previous_indicies[writes] = uint64(min_coset_index / layer_context.coset_size);
             writes++;
@@ -225,34 +236,38 @@ contract Fri is Trace, MerkleVerifier {
         trace('fold_layer', false);
     }
 
-    // Gas: 4373689
-    // Gas: 4373190
-    // Gas: 4279777
-    // Gas: 4257556
-    // Gas: 4257080
-    // Gas: 4254990
     function fold_coset(uint256[] memory coset, uint256 eval_point, LayerContext memory layer_context, uint64 index)
         internal
-        returns (uint256)
+        returns (uint256 result, uint256 x_inv)
     {
         trace('fold_coset', true);
 
         uint256 domain_size = layer_context.len;
-        uint256 x0_inv = layer_context.generator.fpow(
-            domain_size - index.bit_reverse2(layer_context.log_domain_size - 1)
-        );
-        uint256 factor = mulmod(eval_point, x0_inv, PrimeField.MODULUS);
+        x_inv = layer_context.generator.fpow(domain_size - index.bit_reverse2(layer_context.log_domain_size - 1));
+        uint256 factor = mulmod(eval_point, x_inv, PrimeField.MODULUS);
+        result = fold_coset_inner(coset, factor);
 
-        uint256 result = fold_coset_inner(coset, factor);
+        // Update x_inv
+        if (coset.length == 8) {
+            x_inv = mulmod(x_inv, x_inv, PrimeField.MODULUS);
+            x_inv = mulmod(x_inv, x_inv, PrimeField.MODULUS);
+            x_inv = mulmod(x_inv, x_inv, PrimeField.MODULUS);
+        } else if (coset.length == 4) {
+            x_inv = mulmod(x_inv, x_inv, PrimeField.MODULUS);
+            x_inv = mulmod(x_inv, x_inv, PrimeField.MODULUS);
+        } else if (coset.length == 2) {
+            x_inv = mulmod(x_inv, x_inv, PrimeField.MODULUS);
+        }
 
         // We return the fri folded point and the inverse for the base layer, which is our x_inv on the next level
         trace('fold_coset', false);
-        return result;
     }
 
     function fold_coset_inner(uint256[] memory coset, uint256 factor) internal returns (uint256 result) {
         trace('fold_coset_inner', true);
         if (coset.length == 8) {
+            // OPT: Could inline `fold`.
+            // OPT: Could use assembly to avoid bounds check on array. (if it's not optimized away)
             uint256 a = fold(coset[0], coset[1], factor);
             uint256 b = fold(coset[2], coset[3], mulmod(factor, ROOT1, PrimeField.MODULUS));
             uint256 c = fold(coset[4], coset[5], mulmod(factor, ROOT2, PrimeField.MODULUS));

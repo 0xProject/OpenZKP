@@ -24,7 +24,8 @@ contract FriTesting is Fri {
             log_domain_size: uint64(len).num_bits()
         });
 
-        emit log_bytes32((bytes32)(fold_coset(coset, eval_point, layer_context, index)));
+        (uint256 result, uint256 x_inv) = fold_coset(coset, eval_point, layer_context, index);
+        emit log_bytes32(bytes32(result));
     }
 
     // TODO - Unused function path
