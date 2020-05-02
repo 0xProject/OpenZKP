@@ -102,6 +102,7 @@ contract Fri is Trace, MerkleVerifier {
 
     // Gas: 4254990
     // Gas: 4264969
+    // Gas: 4266350
 
     // This function takes in fri values, decommitments, and layout and checks the folding and merkle proofs
     // Note the final layer folded values will be overwritten to the input data locations.
@@ -219,12 +220,11 @@ contract Fri is Trace, MerkleVerifier {
             coset_hash_output[writes] = merkle_leaf_hash(next_coset);
             // Do the actual fold and write it to the next layer
             {
-                (uint256 result, uint256 x_inv) = fold_coset(
-                    next_coset,
-                    eval_point,
-                    layer_context,
-                    min_coset_index / 2
+                uint64 index = min_coset_index / 2;
+                uint256 x_inv = layer_context.generator.fpow(
+                    layer_context.len - index.bit_reverse2(layer_context.log_domain_size - 1)
                 );
+                (uint256 result, uint256 new_x_inv) = fold_coset(next_coset, eval_point, layer_context, x_inv);
                 previous_layer[writes] = result;
             }
             // Record the new index
@@ -236,14 +236,15 @@ contract Fri is Trace, MerkleVerifier {
         trace('fold_layer', false);
     }
 
-    function fold_coset(uint256[] memory coset, uint256 eval_point, LayerContext memory layer_context, uint64 index)
-        internal
-        returns (uint256 result, uint256 x_inv)
-    {
+    function fold_coset(
+        uint256[] memory coset,
+        uint256 eval_point,
+        LayerContext memory layer_context,
+        uint256 current_x_inv
+    ) internal returns (uint256 result, uint256 x_inv) {
         trace('fold_coset', true);
 
-        uint256 domain_size = layer_context.len;
-        x_inv = layer_context.generator.fpow(domain_size - index.bit_reverse2(layer_context.log_domain_size - 1));
+        x_inv = current_x_inv;
         uint256 factor = mulmod(eval_point, x_inv, PrimeField.MODULUS);
         result = fold_coset_inner(coset, factor);
 
