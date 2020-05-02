@@ -126,11 +126,17 @@ contract Fri is Trace, MerkleVerifier {
 
         // Initialize x_inv
         trace('init_x_inv', true);
-        for (uint256 i = 0; i < layer_context.x_inv.length; i++) {
-            uint256 index = fri_data.queries[i] / 2;
-            layer_context.x_inv[i] = layer_context.generator.fpow(
-                layer_context.len - index.bit_reverse2(layer_context.log_domain_size - 1)
+        for (uint256 i = 0; i < fri_data.queries.length; i++) {
+            uint256 index = fri_data.queries[i];
+            console.log(index);
+            console.log(layer_context.len);
+            console.log(layer_context.log_domain_size);
+            uint256 x_inv = layer_context.generator.fpow(
+                layer_context.len - index.bit_reverse2(layer_context.log_domain_size)
             );
+            // x_inv = x_inv.fmul(x_inv);
+            layer_context.x_inv[i] = x_inv;
+            // TODO: FIX
         }
         trace('init_x_inv', false);
 
@@ -247,11 +253,14 @@ contract Fri is Trace, MerkleVerifier {
             // Do the actual fold and write it to the next layer
             {
                 console.log(x_inv);
-                uint64 index = min_coset_index / 2;
-                x_inv = layer_context.generator.fpow(
-                    layer_context.len - index.bit_reverse2(layer_context.log_domain_size - 1)
+                console.log(current_index);
+                console.log(min_coset_index / 2);
+                uint256 x_inv_old = layer_context.generator.fpow(
+                    layer_context.len - (min_coset_index / 2).bit_reverse2(layer_context.log_domain_size - 1)
                 );
-                console.log(x_inv);
+                console.log(x_inv_old);
+                // x_inv = x_inv_old;
+                require(x_inv == x_inv_old);
                 (uint256 result, uint256 new_x_inv) = fold_coset(next_coset, eval_point, layer_context, x_inv);
                 previous_layer[writes] = result;
                 layer_context.x_inv[writes] = new_x_inv;
