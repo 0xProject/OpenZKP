@@ -32,20 +32,24 @@ contract Fri is Trace, MerkleVerifier {
     }
 
     struct LayerContext {
+        uint256[] x_inv;
         uint64 coset_size;
         uint64 step;
         uint64 len;
         uint256 generator;
         uint256 log_domain_size;
+        uint256[8] roots;
     }
 
-    // First three bit reversered inverted eight order roots of unity
-    // 1 / omega_8^2 = omega_8^6
-    uint256 constant ROOT1 = 0x01dafdc6d65d66b5accedf99bcd607383ad971a9537cdf25d59e99d90becc81e;
-    // 1 / omega_8^1 = omega_8^7
-    uint256 constant ROOT2 = 0x0446ed3ce295dda2b5ea677394813e6eab8bfbc55397aacac8e6df6f4bc9ca34;
-    // 1 / omega_8^3 = omega_8^5
-    uint256 constant ROOT3 = 0x01cc9a01f2178b3736f524e1d06398916739deaa1bbed178c525a1e211901146;
+    // Eight order roots of unity
+    // omega_8^1 .. omega_8^7   (note omega_8^4 = -1)
+    uint256 constant OROOT1 = 0x063365fe0de874d9c90adb1e2f9c676e98c62155e4412e873ada5e1dee6feebb;
+    uint256 constant OROOT2 = 0x0625023929a2995b533120664329f8c7c5268e56ac8320da2a616626f41337e3;
+    uint256 constant OROOT3 = 0x03b912c31d6a226e4a15988c6b7ec1915474043aac68553537192090b43635cd;
+    uint256 constant OROOT4 = 0x0800000000000011000000000000000000000000000000000000000000000000;
+    uint256 constant OROOT5 = 0x01cc9a01f2178b3736f524e1d06398916739deaa1bbed178c525a1e211901146;
+    uint256 constant OROOT6 = 0x01dafdc6d65d66b5accedf99bcd607383ad971a9537cdf25d59e99d90becc81e;
+    uint256 constant OROOT7 = 0x0446ed3ce295dda2b5ea677394813e6eab8bfbc55397aacac8e6df6f4bc9ca34;
 
     // Reads from channel random and returns a list of random queries
     function get_queries(PublicCoin.Coin memory coin, uint8 max_bit_length, uint8 num_queries)
@@ -111,15 +115,30 @@ contract Fri is Trace, MerkleVerifier {
         LayerContext memory layer_context = LayerContext({
             len: uint64(2)**(fri_data.log_eval_domain_size),
             step: 1,
-            coset_size: 0,
+            coset_size: uint64(2)**(fri_data.fri_layout[0]),
             generator: PrimeField.generator_power(fri_data.log_eval_domain_size),
-            log_domain_size: fri_data.log_eval_domain_size
+            log_domain_size: fri_data.log_eval_domain_size,
+            x_inv: new uint256[](fri_data.queries.length),
+            roots: [1, OROOT4, OROOT2, OROOT6, OROOT1, OROOT5, OROOT3, OROOT7]
         });
         uint256[] memory merkle_indices = new uint256[](fri_data.queries.length);
         bytes32[] memory merkle_val = new bytes32[](fri_data.queries.length);
 
+        // Initialize x_inv
+        trace('init_x_inv', true);
+        for (uint256 i = 0; i < layer_context.x_inv.length; i++) {
+            uint256 index = fri_data.queries[i] / 2;
+            layer_context.x_inv[i] = layer_context.generator.fpow(
+                layer_context.len - index.bit_reverse2(layer_context.log_domain_size - 1)
+            );
+        }
+        trace('init_x_inv', false);
+
+        // Fold layers
         for (uint256 i = 0; i < fri_data.fri_layout.length; i++) {
+            console.log(i);
             layer_context.coset_size = uint64(2)**(fri_data.fri_layout[i]);
+            console.log(layer_context.coset_size);
             // Overwrites and resizes the data array and the querry index array
             // They will contain the folded points and indexes
             fold_layer(
@@ -167,7 +186,9 @@ contract Fri is Trace, MerkleVerifier {
             uint8 layer_num_bits = layer_context.len.num_bits();
             uint256 reversed_query = fri_data.queries[i].bit_reverse(layer_num_bits);
             uint256 x = interp_root.fpow(reversed_query);
+            trace('horner_eval', true);
             uint256 calculated = fri_data.last_layer_coefficients.horner_eval(x);
+            trace('horner_eval', false);
             require(calculated == fri_data.polynomial_at_queries[i], 'Last layer coeffients mismatch');
         }
         trace('last_layer', false);
@@ -195,10 +216,15 @@ contract Fri is Trace, MerkleVerifier {
         uint256 i = 0;
         while (i < previous_layer.length) {
             current_index = previous_indicies[i];
+            uint256 x_inv = layer_context.x_inv[i];
             // Each coset length elements in the domain are one coset, so to find which one the current index is
             // we have to take it mod the length, to find the starting index we subtract the coset index from the
             // current one.
+            console.log(current_index % layer_context.coset_size);
             uint64 min_coset_index = uint64((current_index) - (current_index % layer_context.coset_size));
+            // Adjust x_inv to the start of the coset using a root
+            x_inv = x_inv.fmul(layer_context.roots[current_index % layer_context.coset_size]);
+
             for (uint64 j = 0; j < layer_context.coset_size; j++) {
                 // This check is if the current index is one which has data from the previous layer,
                 // or if it's one with data provided in the proof
@@ -220,12 +246,15 @@ contract Fri is Trace, MerkleVerifier {
             coset_hash_output[writes] = merkle_leaf_hash(next_coset);
             // Do the actual fold and write it to the next layer
             {
+                console.log(x_inv);
                 uint64 index = min_coset_index / 2;
-                uint256 x_inv = layer_context.generator.fpow(
+                x_inv = layer_context.generator.fpow(
                     layer_context.len - index.bit_reverse2(layer_context.log_domain_size - 1)
                 );
+                console.log(x_inv);
                 (uint256 result, uint256 new_x_inv) = fold_coset(next_coset, eval_point, layer_context, x_inv);
                 previous_layer[writes] = result;
+                layer_context.x_inv[writes] = new_x_inv;
             }
             // Record the new index
             previous_indicies[writes] = uint64(min_coset_index / layer_context.coset_size);
@@ -270,17 +299,17 @@ contract Fri is Trace, MerkleVerifier {
             // OPT: Could inline `fold`.
             // OPT: Could use assembly to avoid bounds check on array. (if it's not optimized away)
             uint256 a = fold(coset[0], coset[1], factor);
-            uint256 b = fold(coset[2], coset[3], mulmod(factor, ROOT1, PrimeField.MODULUS));
-            uint256 c = fold(coset[4], coset[5], mulmod(factor, ROOT2, PrimeField.MODULUS));
-            uint256 d = fold(coset[6], coset[7], mulmod(factor, ROOT3, PrimeField.MODULUS));
+            uint256 b = fold(coset[2], coset[3], mulmod(factor, OROOT6, PrimeField.MODULUS));
+            uint256 c = fold(coset[4], coset[5], mulmod(factor, OROOT7, PrimeField.MODULUS));
+            uint256 d = fold(coset[6], coset[7], mulmod(factor, OROOT5, PrimeField.MODULUS));
             factor = mulmod(factor, factor, PrimeField.MODULUS);
             a = fold(a, b, factor);
-            b = fold(c, d, mulmod(factor, ROOT1, PrimeField.MODULUS));
+            b = fold(c, d, mulmod(factor, OROOT6, PrimeField.MODULUS));
             factor = mulmod(factor, factor, PrimeField.MODULUS);
             result = fold(a, b, factor);
         } else if (coset.length == 4) {
             uint256 a = fold(coset[0], coset[1], factor);
-            uint256 b = fold(coset[2], coset[3], mulmod(factor, ROOT1, PrimeField.MODULUS));
+            uint256 b = fold(coset[2], coset[3], mulmod(factor, OROOT6, PrimeField.MODULUS));
             factor = mulmod(factor, factor, PrimeField.MODULUS);
             result = fold(a, b, factor);
         } else if (coset.length == 2) {

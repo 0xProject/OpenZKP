@@ -21,8 +21,13 @@ contract FriTesting is Fri {
             step: step,
             len: len,
             generator: eval_x.eval_domain_generator.fpow(step),
-            log_domain_size: uint64(len).num_bits()
+            log_domain_size: uint64(len).num_bits(),
+            x_inv: new uint256[](1),
+            roots: [uint256(0), 0, 0, 0, 0, 0, 0, 0]
         });
+        layer_context.x_inv[0] = layer_context.generator.fpow(
+            layer_context.len - index.bit_reverse2(layer_context.log_domain_size - 1)
+        );
 
         (uint256 result, uint256 x_inv) = fold_coset(coset, eval_point, layer_context, index);
         emit log_bytes32(bytes32(result));
