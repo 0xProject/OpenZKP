@@ -104,11 +104,8 @@ contract Fri is Trace, MerkleVerifier {
         trace('fri_check', false);
     }
 
-    // Gas: 4254990
-    // Gas: 4264969
-    // Gas: 4266350
-    // Gas: 4164542
-    // Gas: 4138592 = 4216652
+    // Gas: 4216652
+    // Gas: 4209473 = 3896932
 
     // This function takes in fri values, decommitments, and layout and checks the folding and merkle proofs
     // Note the final layer folded values will be overwritten to the input data locations.
@@ -265,26 +262,6 @@ contract Fri is Trace, MerkleVerifier {
 
         x_inv = current_x_inv;
         uint256 factor = mulmod(eval_point, x_inv, PrimeField.MODULUS);
-        result = fold_coset_inner(coset, factor);
-
-        // Update x_inv
-        if (coset.length == 8) {
-            x_inv = mulmod(x_inv, x_inv, PrimeField.MODULUS);
-            x_inv = mulmod(x_inv, x_inv, PrimeField.MODULUS);
-            x_inv = mulmod(x_inv, x_inv, PrimeField.MODULUS);
-        } else if (coset.length == 4) {
-            x_inv = mulmod(x_inv, x_inv, PrimeField.MODULUS);
-            x_inv = mulmod(x_inv, x_inv, PrimeField.MODULUS);
-        } else if (coset.length == 2) {
-            x_inv = mulmod(x_inv, x_inv, PrimeField.MODULUS);
-        }
-
-        // We return the fri folded point and the inverse for the base layer, which is our x_inv on the next level
-        trace('fold_coset', false);
-    }
-
-    function fold_coset_inner(uint256[] memory coset, uint256 factor) internal returns (uint256 result) {
-        trace('fold_coset_inner', true);
         if (coset.length == 8) {
             // OPT: Could inline `fold`.
             // OPT: Could use assembly to avoid bounds check on array. (if it's not optimized away)
@@ -297,17 +274,25 @@ contract Fri is Trace, MerkleVerifier {
             b = fold(c, d, mulmod(factor, OROOT6, PrimeField.MODULUS));
             factor = mulmod(factor, factor, PrimeField.MODULUS);
             result = fold(a, b, factor);
+            x_inv = mulmod(x_inv, x_inv, PrimeField.MODULUS);
+            x_inv = mulmod(x_inv, x_inv, PrimeField.MODULUS);
+            x_inv = mulmod(x_inv, x_inv, PrimeField.MODULUS);
         } else if (coset.length == 4) {
             uint256 a = fold(coset[0], coset[1], factor);
             uint256 b = fold(coset[2], coset[3], mulmod(factor, OROOT6, PrimeField.MODULUS));
             factor = mulmod(factor, factor, PrimeField.MODULUS);
             result = fold(a, b, factor);
+            x_inv = mulmod(x_inv, x_inv, PrimeField.MODULUS);
+            x_inv = mulmod(x_inv, x_inv, PrimeField.MODULUS);
         } else if (coset.length == 2) {
             result = fold(coset[0], coset[1], factor);
+            x_inv = mulmod(x_inv, x_inv, PrimeField.MODULUS);
         } else {
             result = coset[0];
         }
-        trace('fold_coset_inner', false);
+
+        // We return the fri folded point and the inverse for the base layer, which is our x_inv on the next level
+        trace('fold_coset', false);
     }
 
     // We now do the actual fri folding operation
