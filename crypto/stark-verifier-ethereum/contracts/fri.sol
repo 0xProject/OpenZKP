@@ -2,7 +2,6 @@ pragma solidity 0.6.4;
 pragma experimental ABIEncoderV2;
 
 import './public_coin.sol';
-import './iterator.sol';
 import './primefield.sol';
 import './merkle.sol';
 import './proof_types.sol';
@@ -14,7 +13,6 @@ import '@nomiclabs/buidler/console.sol';
 
 contract Fri is Trace, MerkleVerifier {
     using PublicCoin for PublicCoin.Coin;
-    using Iterators for Iterators.IteratorUint;
     using PrimeField for uint256;
     using PrimeField for uint256[];
     using Utils for *;
@@ -109,6 +107,7 @@ contract Fri is Trace, MerkleVerifier {
 
     // Gas: 4198777
     // Gas: 4199048
+    // Gas: 4157896
 
     // This function takes in fri values, decommitments, and layout and checks the folding and merkle proofs
     // Note the final layer folded values will be overwritten to the input data locations.
@@ -205,11 +204,11 @@ contract Fri is Trace, MerkleVerifier {
         bytes32[] memory coset_hash_output
     ) internal {
         trace('fold_layer', true);
-        Iterators.IteratorUint memory extra_coset_data = Iterators.init_iterator(coset_completion);
 
         // Reads how many of the cosets we've read from
         uint256 writes = 0;
         uint256 current_index;
+        uint256 completion_index = 0;
         uint256[] memory next_coset = new uint256[](layer_context.coset_size);
 
         uint256 i = 0;
@@ -240,7 +239,8 @@ contract Fri is Trace, MerkleVerifier {
                     }
                 } else {
                     // This happens if the data isn't in the previous layer so we use our extra data.
-                    next_coset[j] = extra_coset_data.next();
+                    next_coset[j] = coset_completion[completion_index];
+                    completion_index += 1;
                 }
             }
             trace('fold_layer_collect', false);
