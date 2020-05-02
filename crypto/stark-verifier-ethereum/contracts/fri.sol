@@ -107,6 +107,7 @@ contract Fri is Trace, MerkleVerifier {
     // Gas: 4254990
     // Gas: 4264969
     // Gas: 4266350
+    // Gas: 4164542
 
     // This function takes in fri values, decommitments, and layout and checks the folding and merkle proofs
     // Note the final layer folded values will be overwritten to the input data locations.
@@ -128,23 +129,15 @@ contract Fri is Trace, MerkleVerifier {
         trace('init_x_inv', true);
         for (uint256 i = 0; i < fri_data.queries.length; i++) {
             uint256 index = fri_data.queries[i];
-            console.log(index);
-            console.log(layer_context.len);
-            console.log(layer_context.log_domain_size);
-            uint256 x_inv = layer_context.generator.fpow(
-                layer_context.len - index.bit_reverse2(layer_context.log_domain_size)
-            );
-            // x_inv = x_inv.fmul(x_inv);
-            layer_context.x_inv[i] = x_inv;
-            // TODO: FIX
+            index = index.bit_reverse2(layer_context.log_domain_size);
+            index = layer_context.len - index;
+            layer_context.x_inv[i] = layer_context.generator.fpow(index);
         }
         trace('init_x_inv', false);
 
         // Fold layers
         for (uint256 i = 0; i < fri_data.fri_layout.length; i++) {
-            console.log(i);
             layer_context.coset_size = uint64(2)**(fri_data.fri_layout[i]);
-            console.log(layer_context.coset_size);
             // Overwrites and resizes the data array and the querry index array
             // They will contain the folded points and indexes
             fold_layer(
@@ -192,9 +185,9 @@ contract Fri is Trace, MerkleVerifier {
             uint8 layer_num_bits = layer_context.len.num_bits();
             uint256 reversed_query = fri_data.queries[i].bit_reverse(layer_num_bits);
             uint256 x = interp_root.fpow(reversed_query);
-            trace('horner_eval', true);
+            //trace('horner_eval', true);
             uint256 calculated = fri_data.last_layer_coefficients.horner_eval(x);
-            trace('horner_eval', false);
+            //trace('horner_eval', false);
             require(calculated == fri_data.polynomial_at_queries[i], 'Last layer coeffients mismatch');
         }
         trace('last_layer', false);
@@ -226,7 +219,6 @@ contract Fri is Trace, MerkleVerifier {
             // Each coset length elements in the domain are one coset, so to find which one the current index is
             // we have to take it mod the length, to find the starting index we subtract the coset index from the
             // current one.
-            console.log(current_index % layer_context.coset_size);
             uint64 min_coset_index = uint64((current_index) - (current_index % layer_context.coset_size));
             // Adjust x_inv to the start of the coset using a root
             x_inv = x_inv.fmul(layer_context.roots[current_index % layer_context.coset_size]);
@@ -252,15 +244,6 @@ contract Fri is Trace, MerkleVerifier {
             coset_hash_output[writes] = merkle_leaf_hash(next_coset);
             // Do the actual fold and write it to the next layer
             {
-                console.log(x_inv);
-                console.log(current_index);
-                console.log(min_coset_index / 2);
-                uint256 x_inv_old = layer_context.generator.fpow(
-                    layer_context.len - (min_coset_index / 2).bit_reverse2(layer_context.log_domain_size - 1)
-                );
-                console.log(x_inv_old);
-                // x_inv = x_inv_old;
-                require(x_inv == x_inv_old);
                 (uint256 result, uint256 new_x_inv) = fold_coset(next_coset, eval_point, layer_context, x_inv);
                 previous_layer[writes] = result;
                 layer_context.x_inv[writes] = new_x_inv;
