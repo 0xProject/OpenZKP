@@ -32,7 +32,15 @@ library PublicCoin {
     }
 
     // Flexible method to write a byte string
-    function write_bytes(Coin memory coin, bytes memory to_be_written) internal pure {
+    function write_bytes8(Coin memory coin, bytes8 to_be_written) internal pure {
+        bytes32 new_hash = publicCoinHasher(abi.encodePacked(coin.digest, to_be_written));
+        coin.digest = new_hash;
+        coin.counter = 0;
+    }
+
+    // Flexible method to write a byte string
+    function write_layer(Coin memory coin, uint256[] memory to_be_written) internal pure {
+        // OPT: Could hash in place using asm by temporarily writing digest.
         bytes32 new_hash = publicCoinHasher(abi.encodePacked(coin.digest, to_be_written));
         coin.digest = new_hash;
         coin.counter = 0;
@@ -85,6 +93,6 @@ library PublicCoin {
     }
 
     function publicCoinHasher(bytes memory data) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(data));
+        return keccak256(data);
     }
 }

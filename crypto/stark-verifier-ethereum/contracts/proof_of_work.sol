@@ -15,7 +15,7 @@ contract ProofOfWork {
     {
         bytes32 seed = keccak256(abi.encodePacked(hex'0123456789abcded', coin.digest, pow_bits));
         bytes32 response = keccak256(abi.encodePacked(seed, pow_nonce));
-        coin.write_bytes(abi.encodePacked(pow_nonce));
+        coin.write_bytes8(pow_nonce);
         uint256 treshold = uint256(-1) >> pow_bits;
         return uint256(response) <= treshold;
     }

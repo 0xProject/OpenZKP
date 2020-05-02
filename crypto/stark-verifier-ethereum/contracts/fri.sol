@@ -55,7 +55,7 @@ contract Fri is Trace, MerkleVerifier {
     // Reads from channel random and returns a list of random queries
     function get_queries(PublicCoin.Coin memory coin, uint8 max_bit_length, uint8 num_queries)
         internal
-        view
+        pure
         returns (uint64[] memory)
     {
         uint64[] memory queries = new uint64[](num_queries);
