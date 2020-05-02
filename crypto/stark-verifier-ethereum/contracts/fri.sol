@@ -41,6 +41,9 @@ contract Fri is Trace, MerkleVerifier {
         uint256[8] roots;
     }
 
+    // Maximum supported coset size
+    uint256 constant MAX_COSET_SIZE = 8;
+
     // Eight order roots of unity
     // omega_8^1 .. omega_8^7   (note omega_8^4 = -1)
     uint256 constant OROOT1 = 0x063365fe0de874d9c90adb1e2f9c676e98c62155e4412e873ada5e1dee6feebb;
@@ -107,6 +110,7 @@ contract Fri is Trace, MerkleVerifier {
     // Gas: 4216652
     // Gas: 4209473 = 3896932
     // Gas: 3896532
+    // Gas: 3896169
 
     // This function takes in fri values, decommitments, and layout and checks the folding and merkle proofs
     // Note the final layer folded values will be overwritten to the input data locations.
@@ -137,6 +141,8 @@ contract Fri is Trace, MerkleVerifier {
         // Fold layers
         for (uint256 i = 0; i < fri_data.fri_layout.length; i++) {
             layer_context.coset_size = uint64(2)**(fri_data.fri_layout[i]);
+            require(layer_context.coset_size <= MAX_COSET_SIZE, 'Coset too large');
+
             // Overwrites and resizes the data array and the querry index array
             // They will contain the folded points and indexes
             fold_layer(
@@ -208,17 +214,20 @@ contract Fri is Trace, MerkleVerifier {
         uint256 writes = 0;
         uint64 current_index;
         uint256[] memory next_coset = new uint256[](layer_context.coset_size);
+
         uint256 i = 0;
         while (i < previous_layer.length) {
             current_index = previous_indicies[i];
-            uint256 x_inv = layer_context.x_inv[i];
             // Each coset length elements in the domain are one coset, so to find which one the current index is
             // we have to take it mod the length, to find the starting index we subtract the coset index from the
             // current one.
             uint64 min_coset_index = uint64((current_index) - (current_index % layer_context.coset_size));
+
             // Adjust x_inv to the start of the coset using a root
+            uint256 x_inv = layer_context.x_inv[i];
             x_inv = x_inv.fmul(layer_context.roots[current_index % layer_context.coset_size]);
 
+            // Collect remaining elements for the coset
             for (uint64 j = 0; j < layer_context.coset_size; j++) {
                 // This check is if the current index is one which has data from the previous layer,
                 // or if it's one with data provided in the proof
@@ -236,14 +245,17 @@ contract Fri is Trace, MerkleVerifier {
                     next_coset[uint256(j)] = extra_coset_data.next();
                 }
             }
+
             // Hash the coset and store it so we can do a merkle proof against it
             coset_hash_output[writes] = merkle_leaf_hash(next_coset);
+
             // Do the actual fold and write it to the next layer
             {
-                (uint256 result, uint256 new_x_inv) = fold_coset(next_coset, eval_point, x_inv);
+                (uint256 result, uint256 next_x_inv) = fold_coset(next_coset, x_inv, eval_point);
                 previous_layer[writes] = result;
-                layer_context.x_inv[writes] = new_x_inv;
+                layer_context.x_inv[writes] = next_x_inv;
             }
+
             // Record the new index
             previous_indicies[writes] = uint64(min_coset_index / layer_context.coset_size);
             writes++;
@@ -253,13 +265,13 @@ contract Fri is Trace, MerkleVerifier {
         trace('fold_layer', false);
     }
 
-    function fold_coset(uint256[] memory coset, uint256 eval_point, uint256 current_x_inv)
+    // Returns the fri folded point and the inverse for the base layer, which is x_inv on the next layer
+    function fold_coset(uint256[] memory coset, uint256 x_inv, uint256 eval_point)
         internal
-        returns (uint256 result, uint256 x_inv)
+        returns (uint256 result, uint256 next_x_inv)
     {
         trace('fold_coset', true);
 
-        x_inv = current_x_inv;
         uint256 factor = mulmod(eval_point, x_inv, PrimeField.MODULUS);
         if (coset.length == 8) {
             // OPT: Could inline `fold`.
@@ -275,28 +287,27 @@ contract Fri is Trace, MerkleVerifier {
             result = fold(a, b, factor);
             x_inv = mulmod(x_inv, x_inv, PrimeField.MODULUS);
             x_inv = mulmod(x_inv, x_inv, PrimeField.MODULUS);
-            x_inv = mulmod(x_inv, x_inv, PrimeField.MODULUS);
+            next_x_inv = mulmod(x_inv, x_inv, PrimeField.MODULUS);
         } else if (coset.length == 4) {
             uint256 a = fold(coset[0], coset[1], factor);
             uint256 b = fold(coset[2], coset[3], mulmod(factor, OROOT6, PrimeField.MODULUS));
             factor = mulmod(factor, factor, PrimeField.MODULUS);
             result = fold(a, b, factor);
             x_inv = mulmod(x_inv, x_inv, PrimeField.MODULUS);
-            x_inv = mulmod(x_inv, x_inv, PrimeField.MODULUS);
+            next_x_inv = mulmod(x_inv, x_inv, PrimeField.MODULUS);
         } else if (coset.length == 2) {
             result = fold(coset[0], coset[1], factor);
-            x_inv = mulmod(x_inv, x_inv, PrimeField.MODULUS);
+            next_x_inv = mulmod(x_inv, x_inv, PrimeField.MODULUS);
         } else {
             result = coset[0];
         }
 
-        // We return the fri folded point and the inverse for the base layer, which is our x_inv on the next level
         trace('fold_coset', false);
     }
 
     // We now do the actual fri folding operation
     // f'(x) = (f(x) + f(-x)) + eval_point / x * (f(x) - f(-x))
-    function fold(uint256 positive, uint256 negative, uint256 factor) internal returns (uint256) {
+    function fold(uint256 positive, uint256 negative, uint256 factor) internal pure returns (uint256) {
         // even = f(x) + f(-x)  (without reduction)
         uint256 even = positive + negative;
         // odd = f(x) - f(-x)   (without reduction)
