@@ -105,12 +105,6 @@ contract Fri is Trace, MerkleVerifier {
         trace('fri_check', false);
     }
 
-    // Gas: 4198777
-    // Gas: 4199048
-    // Gas: 4157896
-    // Gas: 4157873
-    // Gas: 4145052
-
     // This function takes in fri values, decommitments, and layout and checks the folding and merkle proofs
     // Note the final layer folded values will be overwritten to the input data locations.
     function fold_and_check_fri_layers(FriContext memory fri_data) internal {
