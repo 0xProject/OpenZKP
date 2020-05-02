@@ -107,11 +107,8 @@ contract Fri is Trace, MerkleVerifier {
         trace('fri_check', false);
     }
 
-    // Gas: 4216652
-    // Gas: 4209473 = 3896932
-    // Gas: 3896532
-    // Gas: 3896169
-    // Gas: 3879337
+    // Gas: 4198777
+    // Gas: 4199048
 
     // This function takes in fri values, decommitments, and layout and checks the folding and merkle proofs
     // Note the final layer folded values will be overwritten to the input data locations.
@@ -149,8 +146,8 @@ contract Fri is Trace, MerkleVerifier {
             fold_layer(
                 fri_data.polynomial_at_queries,
                 fri_data.queries,
-                Iterators.init_iterator(fri_data.fri_values[i]),
-                fri_data.eval_points[i],
+                fri_data.fri_values[i],
+                fri_data.eval_points[i].from_montgomery(),
                 layer_context,
                 merkle_val
             );
@@ -202,14 +199,13 @@ contract Fri is Trace, MerkleVerifier {
     function fold_layer(
         uint256[] memory previous_layer,
         uint64[] memory previous_indicies,
-        Iterators.IteratorUint memory extra_coset_data,
+        uint256[] memory coset_completion,
         uint256 eval_point,
         LayerContext memory layer_context,
         bytes32[] memory coset_hash_output
     ) internal {
         trace('fold_layer', true);
-        // Convert eval_point out of montgomery form
-        eval_point = eval_point.from_montgomery();
+        Iterators.IteratorUint memory extra_coset_data = Iterators.init_iterator(coset_completion);
 
         // Reads how many of the cosets we've read from
         uint256 writes = 0;
@@ -229,6 +225,7 @@ contract Fri is Trace, MerkleVerifier {
             x_inv = x_inv.fmul(layer_context.roots[current_index % layer_context.coset_size]);
 
             // Collect remaining elements for the coset
+            trace('fold_layer_collect', true);
             for (uint256 j = 0; j < layer_context.coset_size; j++) {
                 // This check is if the current index is one which has data from the previous layer,
                 // or if it's one with data provided in the proof
@@ -246,6 +243,7 @@ contract Fri is Trace, MerkleVerifier {
                     next_coset[j] = extra_coset_data.next();
                 }
             }
+            trace('fold_layer_collect', false);
 
             // Hash the coset and store it so we can do a merkle proof against it
             coset_hash_output[writes] = merkle_leaf_hash(next_coset);
