@@ -111,6 +111,7 @@ contract Fri is Trace, MerkleVerifier {
     // Gas: 4209473 = 3896932
     // Gas: 3896532
     // Gas: 3896169
+    // Gas: 3879337
 
     // This function takes in fri values, decommitments, and layout and checks the folding and merkle proofs
     // Note the final layer folded values will be overwritten to the input data locations.
@@ -212,7 +213,7 @@ contract Fri is Trace, MerkleVerifier {
 
         // Reads how many of the cosets we've read from
         uint256 writes = 0;
-        uint64 current_index;
+        uint256 current_index;
         uint256[] memory next_coset = new uint256[](layer_context.coset_size);
 
         uint256 i = 0;
@@ -221,19 +222,19 @@ contract Fri is Trace, MerkleVerifier {
             // Each coset length elements in the domain are one coset, so to find which one the current index is
             // we have to take it mod the length, to find the starting index we subtract the coset index from the
             // current one.
-            uint64 min_coset_index = uint64((current_index) - (current_index % layer_context.coset_size));
+            uint256 min_coset_index = current_index - (current_index % layer_context.coset_size);
 
             // Adjust x_inv to the start of the coset using a root
             uint256 x_inv = layer_context.x_inv[i];
             x_inv = x_inv.fmul(layer_context.roots[current_index % layer_context.coset_size]);
 
             // Collect remaining elements for the coset
-            for (uint64 j = 0; j < layer_context.coset_size; j++) {
+            for (uint256 j = 0; j < layer_context.coset_size; j++) {
                 // This check is if the current index is one which has data from the previous layer,
                 // or if it's one with data provided in the proof
                 if (current_index == j + min_coset_index) {
                     // Set this coset's data to the previous layer data at this index
-                    next_coset[uint256(j)] = previous_layer[i];
+                    next_coset[j] = previous_layer[i];
                     // Advance the index from the read
                     i++;
                     if (i < previous_indicies.length) {
@@ -242,7 +243,7 @@ contract Fri is Trace, MerkleVerifier {
                     }
                 } else {
                     // This happens if the data isn't in the previous layer so we use our extra data.
-                    next_coset[uint256(j)] = extra_coset_data.next();
+                    next_coset[j] = extra_coset_data.next();
                 }
             }
 
