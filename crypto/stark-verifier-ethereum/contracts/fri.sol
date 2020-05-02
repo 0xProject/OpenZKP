@@ -106,6 +106,7 @@ contract Fri is Trace, MerkleVerifier {
 
     // Gas: 4216652
     // Gas: 4209473 = 3896932
+    // Gas: 3896532
 
     // This function takes in fri values, decommitments, and layout and checks the folding and merkle proofs
     // Note the final layer folded values will be overwritten to the input data locations.
@@ -239,7 +240,7 @@ contract Fri is Trace, MerkleVerifier {
             coset_hash_output[writes] = merkle_leaf_hash(next_coset);
             // Do the actual fold and write it to the next layer
             {
-                (uint256 result, uint256 new_x_inv) = fold_coset(next_coset, eval_point, layer_context, x_inv);
+                (uint256 result, uint256 new_x_inv) = fold_coset(next_coset, eval_point, x_inv);
                 previous_layer[writes] = result;
                 layer_context.x_inv[writes] = new_x_inv;
             }
@@ -252,12 +253,10 @@ contract Fri is Trace, MerkleVerifier {
         trace('fold_layer', false);
     }
 
-    function fold_coset(
-        uint256[] memory coset,
-        uint256 eval_point,
-        LayerContext memory layer_context,
-        uint256 current_x_inv
-    ) internal returns (uint256 result, uint256 x_inv) {
+    function fold_coset(uint256[] memory coset, uint256 eval_point, uint256 current_x_inv)
+        internal
+        returns (uint256 result, uint256 x_inv)
+    {
         trace('fold_coset', true);
 
         x_inv = current_x_inv;

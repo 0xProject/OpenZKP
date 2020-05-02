@@ -29,7 +29,7 @@ contract FriTesting is Fri {
             layer_context.len - index.bit_reverse2(layer_context.log_domain_size - 1)
         );
 
-        (uint256 result, uint256 x_inv) = fold_coset(coset, eval_point, layer_context, index);
+        (uint256 result, uint256 x_inv) = fold_coset(coset, eval_point, layer_context.x_inv[0]);
         emit log_bytes32(bytes32(result));
     }
 
