@@ -109,6 +109,7 @@ contract Fri is Trace, MerkleVerifier {
     // Gas: 4199048
     // Gas: 4157896
     // Gas: 4157873
+    // Gas: 4145052
 
     // This function takes in fri values, decommitments, and layout and checks the folding and merkle proofs
     // Note the final layer folded values will be overwritten to the input data locations.
@@ -218,19 +219,20 @@ contract Fri is Trace, MerkleVerifier {
             // we have to take it mod the length, to find the starting index we subtract the coset index from the
             // current one.
             uint256 coset_start = next_index - (next_index % layer_context.coset_size);
+            uint256 coset_end = coset_start + layer_context.coset_size;
 
             // Adjust x_inv to the start of the coset using a root
             uint256 x_inv = layer_context.x_inv[read_index];
-            x_inv = x_inv.fmul(layer_context.roots[next_index % layer_context.coset_size]);
+            x_inv = x_inv.fmul(layer_context.roots[next_index - coset_start]);
 
-            // Collect remaining elements for the coset
+            // Collect the coset values
             trace('fold_layer_collect', true);
-            for (uint256 j = 0; j < layer_context.coset_size; j += 1) {
+            for (uint256 index = coset_start; index < coset_end; index += 1) {
                 // This check is if the current index is one which has data from the previous layer,
                 // or if it's one with data provided in the proof
-                if (next_index == j + coset_start) {
+                if (next_index == index) {
                     // Set this coset's data to the previous layer data at this index
-                    coset[j] = values[read_index];
+                    coset[index - coset_start] = values[read_index];
                     // Advance the index from the read
                     read_index += 1;
                     if (read_index < indices.length) {
@@ -239,7 +241,7 @@ contract Fri is Trace, MerkleVerifier {
                     }
                 } else {
                     // This happens if the data isn't in the previous layer so we use our extra data.
-                    coset[j] = coset_completion[completion_index];
+                    coset[index - coset_start] = coset_completion[completion_index];
                     completion_index += 1;
                 }
             }
@@ -249,11 +251,7 @@ contract Fri is Trace, MerkleVerifier {
             coset_hash_output[write_index] = merkle_leaf_hash(coset);
 
             // Do the actual fold and write it to the next layer
-            {
-                (uint256 result, uint256 next_x_inv) = fold_coset(coset, x_inv, eval_point);
-                values[write_index] = result;
-                layer_context.x_inv[write_index] = next_x_inv;
-            }
+            (values[write_index], layer_context.x_inv[write_index]) = fold_coset(coset, x_inv, eval_point);
 
             // Record the new index
             indices[write_index] = uint64(coset_start / layer_context.coset_size);
