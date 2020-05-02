@@ -108,6 +108,7 @@ contract Fri is Trace, MerkleVerifier {
     // Gas: 4198777
     // Gas: 4199048
     // Gas: 4157896
+    // Gas: 4157873
 
     // This function takes in fri values, decommitments, and layout and checks the folding and merkle proofs
     // Note the final layer folded values will be overwritten to the input data locations.
@@ -196,8 +197,8 @@ contract Fri is Trace, MerkleVerifier {
     // This function takes in a previous layer and fold and reads from it and writes new folded layers to the next layer.
     // It will overwrite any memory in that location.
     function fold_layer(
-        uint256[] memory previous_layer,
-        uint64[] memory previous_indicies,
+        uint256[] memory values,
+        uint64[] memory indices,
         uint256[] memory coset_completion,
         uint256 eval_point,
         LayerContext memory layer_context,
@@ -206,61 +207,60 @@ contract Fri is Trace, MerkleVerifier {
         trace('fold_layer', true);
 
         // Reads how many of the cosets we've read from
-        uint256 writes = 0;
-        uint256 current_index;
+        uint256 read_index = 0;
+        uint256 write_index = 0;
         uint256 completion_index = 0;
-        uint256[] memory next_coset = new uint256[](layer_context.coset_size);
+        uint256[] memory coset = new uint256[](layer_context.coset_size);
 
-        uint256 i = 0;
-        while (i < previous_layer.length) {
-            current_index = previous_indicies[i];
+        while (read_index < values.length) {
+            uint256 next_index = indices[read_index];
             // Each coset length elements in the domain are one coset, so to find which one the current index is
             // we have to take it mod the length, to find the starting index we subtract the coset index from the
             // current one.
-            uint256 min_coset_index = current_index - (current_index % layer_context.coset_size);
+            uint256 coset_start = next_index - (next_index % layer_context.coset_size);
 
             // Adjust x_inv to the start of the coset using a root
-            uint256 x_inv = layer_context.x_inv[i];
-            x_inv = x_inv.fmul(layer_context.roots[current_index % layer_context.coset_size]);
+            uint256 x_inv = layer_context.x_inv[read_index];
+            x_inv = x_inv.fmul(layer_context.roots[next_index % layer_context.coset_size]);
 
             // Collect remaining elements for the coset
             trace('fold_layer_collect', true);
-            for (uint256 j = 0; j < layer_context.coset_size; j++) {
+            for (uint256 j = 0; j < layer_context.coset_size; j += 1) {
                 // This check is if the current index is one which has data from the previous layer,
                 // or if it's one with data provided in the proof
-                if (current_index == j + min_coset_index) {
+                if (next_index == j + coset_start) {
                     // Set this coset's data to the previous layer data at this index
-                    next_coset[j] = previous_layer[i];
+                    coset[j] = values[read_index];
                     // Advance the index from the read
-                    i++;
-                    if (i < previous_indicies.length) {
+                    read_index += 1;
+                    if (read_index < indices.length) {
                         // Set the current index to the next one
-                        current_index = previous_indicies[i];
+                        next_index = indices[read_index];
                     }
                 } else {
                     // This happens if the data isn't in the previous layer so we use our extra data.
-                    next_coset[j] = coset_completion[completion_index];
+                    coset[j] = coset_completion[completion_index];
                     completion_index += 1;
                 }
             }
             trace('fold_layer_collect', false);
 
             // Hash the coset and store it so we can do a merkle proof against it
-            coset_hash_output[writes] = merkle_leaf_hash(next_coset);
+            coset_hash_output[write_index] = merkle_leaf_hash(coset);
 
             // Do the actual fold and write it to the next layer
             {
-                (uint256 result, uint256 next_x_inv) = fold_coset(next_coset, x_inv, eval_point);
-                previous_layer[writes] = result;
-                layer_context.x_inv[writes] = next_x_inv;
+                (uint256 result, uint256 next_x_inv) = fold_coset(coset, x_inv, eval_point);
+                values[write_index] = result;
+                layer_context.x_inv[write_index] = next_x_inv;
             }
 
             // Record the new index
-            previous_indicies[writes] = uint64(min_coset_index / layer_context.coset_size);
-            writes++;
+            indices[write_index] = uint64(coset_start / layer_context.coset_size);
+            write_index += 1;
         }
-        previous_layer.truncate(writes);
-        previous_indicies.truncate(writes);
+        values.truncate(write_index);
+        indices.truncate(write_index);
         trace('fold_layer', false);
     }
 
