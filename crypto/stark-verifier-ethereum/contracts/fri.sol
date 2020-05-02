@@ -108,6 +108,7 @@ contract Fri is Trace, MerkleVerifier {
     // Gas: 4264969
     // Gas: 4266350
     // Gas: 4164542
+    // Gas: 4138592 = 4216652
 
     // This function takes in fri values, decommitments, and layout and checks the folding and merkle proofs
     // Note the final layer folded values will be overwritten to the input data locations.
@@ -176,18 +177,15 @@ contract Fri is Trace, MerkleVerifier {
             layer_context.log_domain_size -= fri_data.fri_layout[i];
         }
 
-        // Looks up a root of unity in the final domain
-        uint256 interp_root = layer_context.generator;
-
         // We now test that the commited last layer values interpolate the final fri folding values
         trace('last_layer', true);
         for (uint256 i = 0; i < fri_data.polynomial_at_queries.length; i++) {
-            uint8 layer_num_bits = layer_context.len.num_bits();
-            uint256 reversed_query = fri_data.queries[i].bit_reverse(layer_num_bits);
-            uint256 x = interp_root.fpow(reversed_query);
-            //trace('horner_eval', true);
+            uint256 exponent = fri_data.queries[i];
+            exponent = exponent.bit_reverse2(layer_context.log_domain_size);
+            uint256 x = layer_context.generator.fpow(exponent);
+            trace('horner_eval', true);
             uint256 calculated = fri_data.last_layer_coefficients.horner_eval(x);
-            //trace('horner_eval', false);
+            trace('horner_eval', false);
             require(calculated == fri_data.polynomial_at_queries[i], 'Last layer coeffients mismatch');
         }
         trace('last_layer', false);
