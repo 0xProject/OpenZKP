@@ -23,6 +23,7 @@ pub enum RationalExpression {
     Constant(FieldElement),
     Trace(usize, isize),
     Polynomial(DensePolynomial, Box<RationalExpression>),
+    ClaimPolynomial(usize, Box<RationalExpression>),
     Add(Box<RationalExpression>, Box<RationalExpression>),
     Neg(Box<RationalExpression>),
     Mul(Box<RationalExpression>, Box<RationalExpression>),
@@ -53,6 +54,7 @@ impl RationalExpression {
         let e = match self {
             // Tree types are recursed first
             Polynomial(p, e) => Polynomial(p.clone(), Box::new(e.map(f))),
+            ClaimPolynomial(i, e) => ClaimPolynomial(*i, Box::new(e.map(f))),
             Add(a, b) => Add(Box::new(a.map(f)), Box::new(b.map(f))),
             Neg(a) => Neg(Box::new(a.map(f))),
             Mul(a, b) => Mul(Box::new(a.map(f)), Box::new(b.map(f))),
@@ -133,44 +135,49 @@ impl RationalExpression {
     /// Calculates an upper bound. Cancelations may occur.
     // Note: We can have trace polynomials of different degree here if we want.
     pub fn degree(&self, trace_degree: usize) -> (usize, usize) {
-        self.degree_impl(1, trace_degree)
+        self.degree_impl(1, trace_degree, &[]) // TODO
     }
 
     pub fn trace_degree(&self) -> (usize, usize) {
-        self.degree_impl(0, 1)
+        self.degree_impl(0, 1, &[]) // TODO
     }
 
     // TODO: do this with a generic function.
-    fn degree_impl(&self, x_degree: usize, trace_degree: usize) -> (usize, usize) {
+    fn degree_impl(&self, x_degree: usize, trace_degree: usize, claim_degrees: &[usize]) -> (usize, usize) {
         use RationalExpression::*;
         match self {
             X => (x_degree, 0),
             Constant(_) => (0, 0),
             Trace(..) => (trace_degree, 0),
             Polynomial(p, a) => {
-                let (n, d) = a.degree_impl(x_degree, trace_degree);
+                let (n, d) = a.degree_impl(x_degree, trace_degree, claim_degrees);
                 (p.degree() * n, p.degree() * d)
             }
+            ClaimPolynomial(i, a) => {
+                let claim_degree = claim_degrees[*i];
+                let (n, d) = a.degree_impl(x_degree, trace_degree, claim_degrees);
+                (claim_degree * n, claim_degree * d)
+            }
             Add(a, b) => {
-                let (a_numerator, a_denominator) = a.degree_impl(x_degree, trace_degree);
-                let (b_numerator, b_denominator) = b.degree_impl(x_degree, trace_degree);
+                let (a_numerator, a_denominator) = a.degree_impl(x_degree, trace_degree, claim_degrees);
+                let (b_numerator, b_denominator) = b.degree_impl(x_degree, trace_degree, claim_degrees);
                 (
                     std::cmp::max(a_numerator + b_denominator, b_numerator + a_denominator),
                     a_denominator + b_denominator,
                 )
             }
-            Neg(a) => a.degree_impl(x_degree, trace_degree),
+            Neg(a) => a.degree_impl(x_degree, trace_degree, claim_degrees),
             Mul(a, b) => {
-                let (an, ad) = a.degree_impl(x_degree, trace_degree);
-                let (bn, bd) = b.degree_impl(x_degree, trace_degree);
+                let (an, ad) = a.degree_impl(x_degree, trace_degree, claim_degrees);
+                let (bn, bd) = b.degree_impl(x_degree, trace_degree, claim_degrees);
                 (an + bn, ad + bd)
             }
             Inv(a) => {
-                let (n, d) = a.degree_impl(x_degree, trace_degree);
+                let (n, d) = a.degree_impl(x_degree, trace_degree, claim_degrees);
                 (d, n)
             }
             Exp(a, e) => {
-                let (n, d) = a.degree_impl(x_degree, trace_degree);
+                let (n, d) = a.degree_impl(x_degree, trace_degree, claim_degrees);
                 (e * n, e * d)
             }
         }
@@ -198,6 +205,9 @@ impl RationalExpression {
                 } else {
                     (FieldElement::one(), false)
                 }
+            }
+            ClaimPolynomial(..) => {
+                panic!()
             }
             Add(a, b) => {
                 let (res_a, a_ok) = a.check(x, trace);
@@ -274,6 +284,9 @@ impl RationalExpression {
             Constant(c) => c.clone(),
             &Trace(i, j) => trace(i, j),
             Polynomial(p, a) => p.evaluate(&a.evaluate(x, trace)),
+            ClaimPolynomial(..) => {
+                panic!()
+            }
             Add(a, b) => a.evaluate(x, trace) + b.evaluate(x, trace),
             Neg(a) => -&a.evaluate(x, trace),
             Mul(a, b) => a.evaluate(x, trace) * b.evaluate(x, trace),
@@ -300,6 +313,9 @@ impl RationalExpression {
                 a.trace_arguments_impl(s);
                 b.trace_arguments_impl(s);
             }
+            ClaimPolynomial(..) => {
+                panic!()
+            }
         }
     }
 
@@ -315,6 +331,9 @@ impl RationalExpression {
             }
             Constant(c) => format!("0x{}", U256::from(c).to_string()),
             Trace(..) | Polynomial(..) => memory_layout.get(self).unwrap().clone(),
+            ClaimPolynomial(..) => {
+                panic!()
+            }
             Add(a, b) => {
                 format!(
                     "addmod({}, {}, PRIME)",
@@ -370,6 +389,9 @@ impl RationalExpression {
                 first
             }
             Polynomial(_, a) | Inv(a) | Exp(a, _) | Neg(a) => a.trace_search(),
+            ClaimPolynomial(..) => {
+                panic!()
+            }
         }
     }
 
@@ -386,6 +408,9 @@ impl RationalExpression {
             }
             Inv(_) => [(self.clone(), true)].iter().cloned().collect(),
             Polynomial(_, a) | Exp(a, _) | Neg(a) => a.inv_search(),
+            ClaimPolynomial(..) => {
+                panic!()
+            }
         }
     }
 
@@ -402,6 +427,9 @@ impl RationalExpression {
                 first
             }
             Inv(a) | Exp(a, _) | Neg(a) => a.periodic_search(),
+            ClaimPolynomial(..) => {
+                panic!()
+            }
         }
     }
 }
@@ -453,6 +481,9 @@ impl Hash for RationalExpression {
                 "exp".hash(state);
                 a.hash(state);
                 e.hash(state);
+            }
+            ClaimPolynomial(..) => {
+                panic!()
             }
         }
     }

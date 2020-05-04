@@ -337,6 +337,9 @@ impl AlgebraicGraph {
                 let a = self.expression(*a);
                 self.op(Op::Poly(p, a))
             }
+            RE::ClaimPolynomial(..) => {
+                panic!()
+            }
             RE::Add(a, b) => {
                 let a = self.expression(*a);
                 let b = self.expression(*b);
