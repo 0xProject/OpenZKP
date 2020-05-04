@@ -30,13 +30,12 @@ contract Fri is Trace, MerkleVerifier {
     }
 
     struct LayerContext {
-        uint256[] x_inv;
-        uint64 coset_size;
-        uint64 step;
-        uint64 len;
-        uint256 generator;
-        uint256 log_domain_size;
         uint256[8] roots;
+        uint256[] x_inv;
+        uint256 size;
+        uint256 log_size;
+        uint256 coset_size;
+        uint256 generator;
     }
 
     // Maximum supported coset size
@@ -110,14 +109,14 @@ contract Fri is Trace, MerkleVerifier {
     function fold_and_check_fri_layers(FriContext memory fri_data) internal {
         trace('fold_and_check_fri_layers', true);
         LayerContext memory layer_context = LayerContext({
-            len: uint64(2)**(fri_data.log_eval_domain_size),
-            step: 1,
-            coset_size: uint64(2)**(fri_data.fri_layout[0]),
-            generator: PrimeField.generator_power(fri_data.log_eval_domain_size),
-            log_domain_size: fri_data.log_eval_domain_size,
+            roots: [1, OROOT4, OROOT2, OROOT6, OROOT1, OROOT5, OROOT3, OROOT7],
             x_inv: new uint256[](fri_data.queries.length),
-            roots: [1, OROOT4, OROOT2, OROOT6, OROOT1, OROOT5, OROOT3, OROOT7]
+            size: uint256(1) << fri_data.log_eval_domain_size,
+            log_size: fri_data.log_eval_domain_size,
+            coset_size: uint256(1) << fri_data.fri_layout[0],
+            generator: 0
         });
+        layer_context.generator = PrimeField.root(layer_context.size);
         uint256[] memory merkle_indices = new uint256[](fri_data.queries.length);
         bytes32[] memory merkle_val = new bytes32[](fri_data.queries.length);
 
@@ -125,15 +124,15 @@ contract Fri is Trace, MerkleVerifier {
         trace('init_x_inv', true);
         for (uint256 i = 0; i < fri_data.queries.length; i++) {
             uint256 index = fri_data.queries[i];
-            index = index.bit_reverse2(layer_context.log_domain_size);
-            index = layer_context.len - index;
+            index = index.bit_reverse2(layer_context.log_size);
+            index = layer_context.size - index;
             layer_context.x_inv[i] = layer_context.generator.fpow(index);
         }
         trace('init_x_inv', false);
 
         // Fold layers
         for (uint256 i = 0; i < fri_data.fri_layout.length; i++) {
-            layer_context.coset_size = uint64(2)**(fri_data.fri_layout[i]);
+            layer_context.coset_size = uint256(1) << fri_data.fri_layout[i];
             require(layer_context.coset_size <= MAX_COSET_SIZE, 'Coset too large');
 
             // Overwrites and resizes the data array and the querry index array
@@ -155,8 +154,9 @@ contract Fri is Trace, MerkleVerifier {
                 merkle_val.truncate(num_queries);
             }
             // TODO - Consider abstracting it up to a (depth, index) format like in the rust code.
+            uint256 next_layer_size = layer_context.size / layer_context.coset_size;
             for (uint256 j = 0; j < merkle_indices.length; j++) {
-                merkle_indices[j] += (layer_context.len / uint64(layer_context.coset_size));
+                merkle_indices[j] += next_layer_size;
             }
             // We now check that the folded indices and values verify against their decommitment
             require(
@@ -168,10 +168,11 @@ contract Fri is Trace, MerkleVerifier {
                 ),
                 'Fri merkle verification failed'
             );
-            layer_context.len /= uint64(layer_context.coset_size);
-            layer_context.step *= uint64(layer_context.coset_size);
+
+            // Update layer context
+            layer_context.size = next_layer_size;
+            layer_context.log_size -= fri_data.fri_layout[i];
             layer_context.generator = layer_context.generator.fpow(layer_context.coset_size);
-            layer_context.log_domain_size -= fri_data.fri_layout[i];
         }
 
         // We now test that the commited last layer values interpolate the final fri folding values
@@ -181,7 +182,7 @@ contract Fri is Trace, MerkleVerifier {
         trace('last_layer', true);
         for (uint256 i = 0; i < fri_data.polynomial_at_queries.length; i++) {
             uint256 exponent = fri_data.queries[i];
-            exponent = exponent.bit_reverse2(layer_context.log_domain_size);
+            exponent = exponent.bit_reverse2(layer_context.log_size);
             uint256 x = layer_context.generator.fpow(exponent);
             trace('horner_eval', true);
             uint256 calculated = fri_data.last_layer_coefficients.horner_eval(x);
