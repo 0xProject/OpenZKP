@@ -258,7 +258,7 @@ fn get_indices(num: usize, bits: u32, proof: &mut VerifierChannel) -> Vec<usize>
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{autogen2, prove, traits::tests::Recurrance, Provable, Verifiable};
+    use crate::{prove, traits::tests::Recurrance, Provable, Verifiable};
     use zkp_macros_decl::field_element;
 
     #[test]
