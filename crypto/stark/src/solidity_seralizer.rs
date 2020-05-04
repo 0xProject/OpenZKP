@@ -278,18 +278,18 @@ mod tests {
         constraints.num_queries = 20;
         constraints.pow_bits = 10;
 
-        autogen2(
-            constraints.trace_nrows(),
-            &[],
-            constraints.expressions(),
-            constraints.trace_nrows(),
-            constraints.trace_ncolumns(),
-            16,
-        );
+        // autogen2(
+        //     constraints.trace_nrows(),
+        //     &[],
+        //     constraints.expressions(),
+        //     constraints.trace_nrows(),
+        //     constraints.trace_ncolumns(),
+        //     16,
+        // );
         let trace = public.trace(&private);
 
         let mut result_string = "".to_string();
-        //&prove(&constraints, &trace).unwrap();
+        //  &prove(&constraints, &trace).unwrap();
         proof_serialize(
             &constraints,
             &prove(&constraints, &trace).unwrap(),
