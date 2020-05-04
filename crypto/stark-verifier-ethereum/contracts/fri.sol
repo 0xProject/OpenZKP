@@ -175,6 +175,9 @@ contract Fri is Trace, MerkleVerifier {
         }
 
         // We now test that the commited last layer values interpolate the final fri folding values
+        // Note: We could re-use x_inv and compute x^length * P(x_inv) with reversed coefficients.
+        // Observe here that x^length is a value that can be looked up from a `blowup` sized coset.
+        // This optimization does not seem worthwile though.
         trace('last_layer', true);
         for (uint256 i = 0; i < fri_data.polynomial_at_queries.length; i++) {
             uint256 exponent = fri_data.queries[i];
@@ -265,6 +268,7 @@ contract Fri is Trace, MerkleVerifier {
 
         uint256 factor = mulmod(eval_point, x_inv, PrimeField.MODULUS);
         if (coset.length == 8) {
+            // Note: We are using inlined field operations for performance reasons.
             // OPT: Could inline `fold`.
             // OPT: Could use assembly to avoid bounds check on array. (if it's not optimized away)
             uint256 a = fold(coset[0], coset[1], factor);
