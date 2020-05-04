@@ -10,7 +10,7 @@ import { txToEventsAsync } from './test_utils';
 chai.use(solidity);
 const { expect } = chai;
 
-describe('Fri testing', () => {
+describe.only('Fri testing', () => {
     let fri_contract: FriTesting;
 
     const provider = waffle.provider;
@@ -20,9 +20,9 @@ describe('Fri testing', () => {
         fri_contract = (await deployContract(wallet, FriTestingArtifact)) as FriTesting;
     });
 
-    it("Should correctly fold coset's of size 2 and three", async () => {
+    it('Should correctly fold cosets of size 4', async () => {
         // Case with 4 at top of folds
-        let result = await txToEventsAsync(
+        const result = await txToEventsAsync(
             fri_contract.fold_coset_external(
                 [
                     '0x0277280e06985e84a027013e4a1a7aebb7271a1a10e3fc280490771ba0942640',
@@ -42,9 +42,11 @@ describe('Fri testing', () => {
             ),
         );
         expect(result[result.length - 1].data).to.be.eq('0x07ce58276a6663f522711bf9cce5bf737f296d73d32d6c8da3e17deccd459a2b');
+    });
 
+    it('Should correctly fold cosets of size 8', async () => {
         // Case with 8 in a middle layer
-        result = await txToEventsAsync(
+        const result = await txToEventsAsync(
             fri_contract.fold_coset_external(
                 [
                     '0x03f20fe20206d860ed9bffb49511d31c66e2792ef31aa8d1673bb510dff5eba9',

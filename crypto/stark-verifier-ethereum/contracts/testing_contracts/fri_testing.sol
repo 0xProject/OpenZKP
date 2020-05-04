@@ -16,20 +16,23 @@ contract FriTesting is Fri {
         uint64 len,
         PrimeField.EvalX calldata eval_x
     ) external {
-        LayerContext memory layer_context = LayerContext({
-            coset_size: uint64(coset.length),
-            step: step,
-            len: len,
-            generator: eval_x.eval_domain_generator.fpow(step),
-            log_domain_size: uint64(len).num_bits(),
-            x_inv: new uint256[](1),
-            roots: [uint256(0), 0, 0, 0, 0, 0, 0, 0]
-        });
-        layer_context.x_inv[0] = layer_context.generator.fpow(
-            layer_context.len - index.bit_reverse2(layer_context.log_domain_size - 1)
-        );
+        uint256 log_len = len.num_bits();
+        uint256 generator = PrimeField.generator_power(uint8(log_len));
+        uint256 start_of_coset = index - (index % coset.length);
+        uint256 exp = len - index.bit_reverse2(log_len - 1);
+        uint256 x_inv = generator.fpow(exp);
+        uint256 result;
 
-        (uint256 result, uint256 x_inv) = fold_coset(coset, eval_point, layer_context.x_inv[0]);
+        for (uint256 i = 0; i < coset.length; i++) {
+            console.log(coset[i]);
+        }
+        console.log(eval_point);
+        console.log(x_inv);
+        x_inv = 0x07b29494e473ce930b6238d02250fdbde4f31c35b05d1e7026e082c068ece7e7;
+
+        (result, x_inv) = fold_coset(coset, eval_point, x_inv);
+
+        // 3481714190203691579718548732381424157610379293143349507665901524421608007655
         emit log_bytes32(bytes32(result));
     }
 
