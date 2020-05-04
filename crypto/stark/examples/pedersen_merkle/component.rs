@@ -9,7 +9,7 @@ use crate::{
 use zkp_elliptic_curve::Affine;
 use zkp_primefield::{FieldElement, One, Pow, Root, Zero};
 use zkp_stark::{
-    component2::{Component, PolynomialWriter, Vertical},
+    component::{Component, PolynomialWriter, Vertical},
     DensePolynomial, RationalExpression,
 };
 use zkp_u256::{Binary, U256};

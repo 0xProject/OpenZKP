@@ -59,9 +59,7 @@ mod verifier;
 #[cfg(feature = "prover")]
 mod algebraic_dag;
 #[cfg(feature = "prover")]
-mod component;
-#[cfg(feature = "prover")]
-pub mod component2;
+pub mod component;
 #[cfg(feature = "prover")]
 mod constraint_check;
 #[cfg(feature = "prover")]
@@ -95,14 +93,6 @@ pub use verifier::{verify, Error as VerifierError};
 pub use solidity_seralizer::proof_serialize;
 
 // Exports for prover
-#[cfg(feature = "prover")]
-pub use component::{
-    compose::{
-        fold, fold_many, folded as compose_folded, horizontal as compose_horizontal,
-        permute_columns, shift, vertical as compose_vertical,
-    },
-    Component,
-};
 #[cfg(feature = "prover")]
 pub use constraint_check::check_constraints;
 #[cfg(feature = "prover")]
