@@ -16,23 +16,16 @@ contract FriTesting is Fri {
         uint64 len,
         PrimeField.EvalX calldata eval_x
     ) external {
+        // Adjust input for new API
+        // TODO: Adjust test instead
+        eval_point = eval_point.from_montgomery();
         uint256 log_len = len.num_bits();
         uint256 generator = PrimeField.generator_power(uint8(log_len));
-        uint256 start_of_coset = index - (index % coset.length);
         uint256 exp = len - index.bit_reverse2(log_len - 1);
         uint256 x_inv = generator.fpow(exp);
         uint256 result;
 
-        for (uint256 i = 0; i < coset.length; i++) {
-            console.log(coset[i]);
-        }
-        console.log(eval_point);
-        console.log(x_inv);
-        x_inv = 0x07b29494e473ce930b6238d02250fdbde4f31c35b05d1e7026e082c068ece7e7;
-
         (result, x_inv) = fold_coset(coset, eval_point, x_inv);
-
-        // 3481714190203691579718548732381424157610379293143349507665901524421608007655
         emit log_bytes32(bytes32(result));
     }
 

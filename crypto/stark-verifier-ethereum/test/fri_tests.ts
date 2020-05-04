@@ -10,7 +10,7 @@ import { txToEventsAsync } from './test_utils';
 chai.use(solidity);
 const { expect } = chai;
 
-describe.only('Fri testing', () => {
+describe('Fri testing', () => {
     let fri_contract: FriTesting;
 
     const provider = waffle.provider;
