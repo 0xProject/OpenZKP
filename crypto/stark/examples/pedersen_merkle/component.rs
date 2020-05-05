@@ -87,8 +87,8 @@ impl Component for MerkleTreeLayer {
         let on_fe_end_rows = |a: RationalExpression| a / row(field_element_bits);
 
         // Common sub-expressions
-        let left_bit = Trace(0, 0) - Trace(0, 1) * 2.into();
-        let right_bit = Trace(4, 0) - Trace(4, 1) * 2.into();
+        let left_bit = Trace(0, 0) - Trace(0, 1) * 2;
+        let right_bit = Trace(4, 0) - Trace(4, 1) * 2;
 
         let constraints = vec![
             on_hash_start_rows(Trace(6, 0) - Constant(shift_point_x)),

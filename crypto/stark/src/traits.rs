@@ -240,7 +240,7 @@ pub(crate) mod tests {
                 self.coefficients.iter().zip(&self.exponents).enumerate()
             {
                 recurrance_constraint = recurrance_constraint
-                    + Trace(0, i.try_into().unwrap()).pow(*exponent) * coefficient.into();
+                    + Trace(0, i.try_into().unwrap()).pow(*exponent) * coefficient;
             }
             recurrance_constraint =
                 recurrance_constraint - Trace(0, self.coefficients.len().try_into().unwrap());
