@@ -31,17 +31,12 @@ impl Verifiable for Claim {
         let on_row = |index| (X - g.pow(index)).inv();
         let every_row = || (X - g.pow(trace_length - 1)) / (X.pow(trace_length) - 1.into());
 
-        Constraints::from_expressions(
-            (trace_length, 2),
-            seed,
-            vec![
-                (Trace(0, 1) - Trace(1, 0)) * every_row(),
-                (Trace(1, 1) - Trace(0, 0) - Trace(1, 0)) * every_row(),
-                (Trace(0, 0) - 1.into()) * on_row(0),
-                (Trace(0, 0) - (&self.value).into()) * on_row(self.index),
-            ],
-            vec![],
-        )
+        Constraints::from_expressions((trace_length, 2), seed, vec![
+            (Trace(0, 1) - Trace(1, 0)) * every_row(),
+            (Trace(1, 1) - Trace(0, 0) - Trace(1, 0)) * every_row(),
+            (Trace(0, 0) - 1.into()) * on_row(0),
+            (Trace(0, 0) - (&self.value).into()) * on_row(self.index),
+        ])
         .unwrap()
     }
 }

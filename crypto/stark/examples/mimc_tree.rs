@@ -188,37 +188,32 @@ impl Verifiable for Claim {
                     - Constant(trace_generator.pow((trace_length / loop_len) * shift)))
         };
 
-        Constraints::from_expressions(
-            (trace_length, 2),
-            seed,
-            vec![
-                ((Exp(Trace(0, 0).into(), 3)
-                    + Constant(3.into()) * Constant(Q) * Trace(0, 0) * Exp(Trace(1, 0).into(), 2)
-                    + k_coef)
-                    - Trace(0, 1))
-                    * on_loop_rows(128),
-                (Constant(3.into()) * Exp(Trace(0, 0).into(), 2)
-                    + Constant(Q) * Exp(Trace(1, 0).into(), 3)
-                    - Trace(1, 1))
-                    * on_loop_rows(256),
-                // Boundary constraints
-                // TODO - Replace this awkward switch with a long range 'OR' constraint
-                // If start left is one then the first hash is hash(node, element), so 'element' is
-                // in row 128
-                Constant(self.start_left.clone())
-                    * (Trace(0, 0) - Constant(self.element.clone()))
-                    * on_row(128),
-                // If it's zero it should be hash(element, node), so 'element' is in row 0
-                (Constant(self.start_left.clone()) - 1.into())
-                    * (Trace(0, 0) - Constant(self.element.clone()))
-                    * on_row(0),
-                // Binds the right to be inited to zero on the start rows.
-                Trace(1, 0) * on_loop_start_rows(256),
-                // Binds the final left to be the root
-                (Trace(0, 0) - Constant(self.root.clone())) * on_row(trace_length - 1),
-            ],
-            vec![],
-        )
+        Constraints::from_expressions((trace_length, 2), seed, vec![
+            ((Exp(Trace(0, 0).into(), 3)
+                + Constant(3.into()) * Constant(Q) * Trace(0, 0) * Exp(Trace(1, 0).into(), 2)
+                + k_coef)
+                - Trace(0, 1))
+                * on_loop_rows(128),
+            (Constant(3.into()) * Exp(Trace(0, 0).into(), 2)
+                + Constant(Q) * Exp(Trace(1, 0).into(), 3)
+                - Trace(1, 1))
+                * on_loop_rows(256),
+            // Boundary constraints
+            // TODO - Replace this awkward switch with a long range 'OR' constraint
+            // If start left is one then the first hash is hash(node, element), so 'element' is
+            // in row 128
+            Constant(self.start_left.clone())
+                * (Trace(0, 0) - Constant(self.element.clone()))
+                * on_row(128),
+            // If it's zero it should be hash(element, node), so 'element' is in row 0
+            (Constant(self.start_left.clone()) - 1.into())
+                * (Trace(0, 0) - Constant(self.element.clone()))
+                * on_row(0),
+            // Binds the right to be inited to zero on the start rows.
+            Trace(1, 0) * on_loop_start_rows(256),
+            // Binds the final left to be the root
+            (Trace(0, 0) - Constant(self.root.clone())) * on_row(trace_length - 1),
+        ])
         .unwrap()
     }
 }

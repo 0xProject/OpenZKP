@@ -38,7 +38,7 @@ pub(crate) fn starkware_example() {
 
     info!("Constructing proof parameters...");
     let mut constraints =
-        Constraints::from_expressions((size, polynomials), (&claim).into(), constraints, vec![])
+        Constraints::from_expressions((size, polynomials), (&claim).into(), constraints)
             .expect("Could not create Constraint object");
     constraints.blowup = 16;
     constraints.pow_bits = 28;

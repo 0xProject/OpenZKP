@@ -76,7 +76,7 @@ impl RationalExpression {
                             .get(i)
                             .expect("ClaimPolynomial index out of bounds")
                             .clone(),
-                        a.clone(),
+                        a,
                     )
                 }
                 _ => x.clone(),

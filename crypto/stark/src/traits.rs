@@ -120,17 +120,12 @@ pub(crate) mod tests {
             let every_row = || (X - g.pow(trace_length - 1)) / (X.pow(trace_length) - 1.into());
 
             // Constraints
-            Constraints::from_expressions(
-                (trace_length, 2),
-                self.seed(),
-                vec![
-                    (Trace(0, 1) - Trace(1, 0).pow(self.exponent)) * every_row(),
-                    (Trace(1, 1) - Trace(0, 0) - Trace(1, 0)) * every_row(),
-                    (Trace(0, 0) - 1.into()) * on_row(trace_length),
-                    (Trace(0, 0) - (&self.value).into()) * on_row(self.index),
-                ],
-                vec![],
-            )
+            Constraints::from_expressions((trace_length, 2), self.seed(), vec![
+                (Trace(0, 1) - Trace(1, 0).pow(self.exponent)) * every_row(),
+                (Trace(1, 1) - Trace(0, 0) - Trace(1, 0)) * every_row(),
+                (Trace(0, 0) - 1.into()) * on_row(trace_length),
+                (Trace(0, 0) - (&self.value).into()) * on_row(self.index),
+            ])
             .unwrap()
         }
     }
@@ -256,8 +251,7 @@ pub(crate) mod tests {
             }
             constraints.push(recurrance_constraint);
 
-            Constraints::from_expressions((trace_length, 1), self.seed(), constraints, vec![])
-                .unwrap()
+            Constraints::from_expressions((trace_length, 1), self.seed(), constraints).unwrap()
         }
     }
 

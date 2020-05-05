@@ -61,23 +61,18 @@ impl Verifiable for Claim {
         permute(&mut k_coef);
         let k_coef = periodic(&k_coef);
 
-        Constraints::from_expressions(
-            (trace_length, 3),
-            seed,
-            vec![
-                // Says x_1 = x_0^2
-                (Trace(0, 0) * Trace(0, 0) - Trace(1, 0)) * every_row(),
-                // Says x_2 = x_1*x_0
-                (Trace(0, 0) * Trace(1, 0) - Trace(2, 0)) * every_row(),
-                // Says next row's x_0 = prev row x_2 + k_this row
-                (Trace(0, 1) - (Trace(2, 0) + k_coef)) * every_row(),
-                // Says the first x_0 is the before
-                (Trace(0, 0) - (&self.before).into()) * on_row(0),
-                // Says the the x_0 on row ROUNDS
-                (Trace(0, 0) - (&self.after).into()) * on_row(trace_length - 1),
-            ],
-            vec![],
-        )
+        Constraints::from_expressions((trace_length, 3), seed, vec![
+            // Says x_1 = x_0^2
+            (Trace(0, 0) * Trace(0, 0) - Trace(1, 0)) * every_row(),
+            // Says x_2 = x_1*x_0
+            (Trace(0, 0) * Trace(1, 0) - Trace(2, 0)) * every_row(),
+            // Says next row's x_0 = prev row x_2 + k_this row
+            (Trace(0, 1) - (Trace(2, 0) + k_coef)) * every_row(),
+            // Says the first x_0 is the before
+            (Trace(0, 0) - (&self.before).into()) * on_row(0),
+            // Says the the x_0 on row ROUNDS
+            (Trace(0, 0) - (&self.after).into()) * on_row(trace_length - 1),
+        ])
         .unwrap()
     }
 }
