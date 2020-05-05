@@ -153,11 +153,11 @@ impl RationalExpression {
     /// Calculates an upper bound. Cancelations may occur.
     // Note: We can have trace polynomials of different degree here if we want.
     pub fn degree(&self, trace_degree: usize) -> (usize, usize) {
-        self.degree_impl(1, trace_degree, &[]) // TODO
+        self.degree_impl(1, trace_degree, &[]) // TODO for autogen
     }
 
     pub fn trace_degree(&self) -> (usize, usize) {
-        self.degree_impl(0, 1, &[]) // TODO
+        self.degree_impl(0, 1, &[]) // TODO for autogen
     }
 
     // TODO: do this with a generic function.
