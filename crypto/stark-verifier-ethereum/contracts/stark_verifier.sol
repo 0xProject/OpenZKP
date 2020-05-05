@@ -44,8 +44,7 @@ contract StarkVerifier is Trace, ProofOfWork, Fri, ProofTypes {
         uint64[] memory queries = get_queries(coin, eval_domain_log_size, constraint_parameters.number_of_queries);
         trace('get_queries', false);
         // Get the actual polynomial points which were commited too, and the inverses of the x_points where they were evaluated
-        trace('constraint_calculations', true);
-        (uint256[] memory fri_top_layer, uint256 constraint_evaluated_oods_point) = constraints.constraint_calculations(
+        (uint256[] memory fri_top_layer, uint256 constraint_evaluated_oods_point) = constraints.constraint_calculations{gas: trace_call('constraint_calculations_call')}(
             proof,
             constraint_parameters,
             queries,
@@ -53,7 +52,7 @@ contract StarkVerifier is Trace, ProofOfWork, Fri, ProofTypes {
             constraint_coeffiencents,
             oods_coefficients
         );
-        trace('constraint_calculations', false);
+        trace('constraint_calculations_call', false);
 
         uint8 log_eval_domain_size = constraint_parameters.log_trace_length + constraint_parameters.log_blowup;
         check_commitments(proof, constraint_parameters, queries, log_eval_domain_size);

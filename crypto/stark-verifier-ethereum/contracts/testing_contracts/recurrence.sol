@@ -7,11 +7,12 @@ import '../proof_types.sol';
 import '../utils.sol';
 import '../primefield.sol';
 import '../iterator.sol';
+import '../trace.sol';
 
 
 // This trivial Fibonacci system returns constant values which are true only for one proof
 // It should only be used for testing purposes
-contract Recurrence is ConstraintSystem {
+contract Recurrence is Trace, ConstraintSystem {
     using Iterators for Iterators.IteratorUint;
     using PrimeField for uint256;
     using PrimeField for PrimeField.EvalX;
@@ -45,6 +46,7 @@ contract Recurrence is ConstraintSystem {
         uint256[] calldata constraint_coeffiencts,
         uint256[] calldata oods_coeffiencts
     ) external override returns (uint256[] memory, uint256) {
+        trace('constraint_calculations', true);
         ProofData memory data = ProofData(
             proof.trace_values,
             PrimeField.init_eval(params.log_trace_length + 4),
@@ -55,6 +57,7 @@ contract Recurrence is ConstraintSystem {
         uint256[] memory result = get_polynomial_points(data, oods_coeffiencts, queries, oods_point);
 
         uint256 evaluated_point = evaluate_oods_point(oods_point, constraint_coeffiencts, data.eval, input, data);
+        trace('constraint_calculations', false);
         return (result, evaluated_point);
     }
 
