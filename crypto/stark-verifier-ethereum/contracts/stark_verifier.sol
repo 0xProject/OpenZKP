@@ -18,9 +18,6 @@ contract StarkVerifier is Trace, ProofOfWork, Fri, ProofTypes {
 
     // TODO - Figure out why making this external causes 'UnimplementedFeatureError' only when
     // it calls through to an internal function with proof as memory.
-    // Profiling - 687267 gas used by the call and copy into memory
-    // Profiling - 436384 gas used when the proof isn't copied into memory,
-    // making the memory copy much higher than estimates
     function verify_proof(StarkProof memory proof, ConstraintSystem constraints) public returns (bool) {
         trace('verify_proof', true);
 
@@ -31,20 +28,22 @@ contract StarkVerifier is Trace, ProofOfWork, Fri, ProofTypes {
         );
         trace('initalize_system', false);
         // Write data to the coin and read random data from it
-        // Profiling - uses around 30k gas
+        trace('write_data_and_read_random', true);
         (
             uint256[] memory constraint_coeffiencents,
             uint256 oods_point,
             uint256[] memory oods_coefficients,
             uint256[] memory eval_points
         ) = write_data_and_read_random(proof, constraint_parameters, coin);
+        trace('write_data_and_read_random', false);
         // Preform the proof of work check
         require(check_proof_of_work(coin, proof.pow_nonce, constraint_parameters.pow_bits), 'POW Failed');
         // Read the query indices from the coin
         uint8 eval_domain_log_size = constraint_parameters.log_trace_length + constraint_parameters.log_blowup;
+        trace('get_queries', true);
         uint64[] memory queries = get_queries(coin, eval_domain_log_size, constraint_parameters.number_of_queries);
+        trace('get_queries', false);
         // Get the actual polynomial points which were commited too, and the inverses of the x_points where they were evaluated
-        // Profiling - uses 266873 gas extra for this call with data as compared to without
         trace('constraint_calculations', true);
         (uint256[] memory fri_top_layer, uint256 constraint_evaluated_oods_point) = constraints.constraint_calculations(
             proof,
@@ -59,7 +58,6 @@ contract StarkVerifier is Trace, ProofOfWork, Fri, ProofTypes {
         uint8 log_eval_domain_size = constraint_parameters.log_trace_length + constraint_parameters.log_blowup;
         check_commitments(proof, constraint_parameters, queries, log_eval_domain_size);
 
-        // Profiling - 1086362 gas used for small fib before this call [includes the 250k used by the callout]
         fri_check(proof, constraint_parameters.fri_layout, eval_points, log_eval_domain_size, queries, fri_top_layer);
 
         check_out_of_domain_sample_result(proof, oods_point, constraint_evaluated_oods_point);
@@ -107,7 +105,8 @@ contract StarkVerifier is Trace, ProofOfWork, Fri, ProofTypes {
         }
         // Write the claimed last layer points a set of coeffient for the final layer fri check
         // NOTE - This is a fri layer so we have to write the whole thing at once
-        coin.write_bytes(abi.encodePacked(proof.last_layer_coefficients));
+        // OPT: This creates several copies of the already large last layer coefficients.
+        coin.write_layer(proof.last_layer_coefficients);
 
         return (constraint_coeffiencents, oods_point, oods_coefficients, eval_points);
     }
@@ -185,6 +184,7 @@ contract StarkVerifier is Trace, ProofOfWork, Fri, ProofTypes {
         uint256 oods_point,
         uint256 evaluated_oods_point
     ) internal {
+        trace('check_out_of_domain_sample', true);
         // The final check is that the constraints evaluated at the out of domain sample are
         // equal to the values commited constraint values
         uint256 result = 0;
@@ -195,5 +195,6 @@ contract StarkVerifier is Trace, ProofOfWork, Fri, ProofTypes {
             power = power.fmul_mont(oods_point);
         }
         require(result == evaluated_oods_point, 'Oods mismatch');
+        trace('check_out_of_domain_sample', false);
     }
 }

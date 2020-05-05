@@ -81,6 +81,12 @@ library PrimeField {
         return expmod(GENERATOR, maybe_exact, MODULUS);
     }
 
+    // Returns the primitive root of unity of a given order. Reverts if unavailable
+    function root(uint256 order) internal returns (uint256) {
+        require((MODULUS - 1) % order == 0, 'Root unavailable');
+        return expmod(GENERATOR, (MODULUS - 1) / order, MODULUS);
+    }
+
     // Evaluates the polynomial given by `coefficients` in `x`.
     // `coefficients` in low-to-high order.
     function horner_eval(uint256[] memory coefficients, uint256 x) internal pure returns (uint256 result) {
