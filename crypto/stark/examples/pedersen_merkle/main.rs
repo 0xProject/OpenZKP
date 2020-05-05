@@ -52,7 +52,7 @@ use rand::{prelude::*, SeedableRng};
 use rand_xoshiro::Xoshiro256PlusPlus;
 use std::{num::ParseIntError, time::Instant};
 use structopt::StructOpt;
-use zkp_stark::component2::Component;
+use zkp_stark::component::Component;
 
 // Need to import to active the logging allocator
 #[allow(unused_imports)]

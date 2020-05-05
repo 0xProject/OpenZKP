@@ -1,64 +1,66 @@
-use super::Component;
-use crate::{RationalExpression, TraceTable};
-use std::collections::HashMap;
+use super::{Component, PolynomialWriter};
+use crate::RationalExpression;
 use zkp_primefield::{FieldElement, Root};
 
-impl Component {
-    /// Creates an example constraint system of given size
-    ///
-    /// It takes two seed values, one to make the constraints unique
-    /// and one to make the witness unique.
-    pub fn example(
-        rows: usize,
-        columns: usize,
-        constraint_seed: &FieldElement,
-        witness_seed: &FieldElement,
-    ) -> Self {
+/// Test constraint system
+///
+/// Construct a sequence using the recurrence relation:
+///     x[0]   = seed        (part of constraints)
+///     x[1]   = witness     (not part of constraints)
+///     x[i+2] = x[i] * x[i + 1] + claim
+///
+/// This sequence is then layed out in row-first order
+/// across the trace dimension and constraints are produced
+/// to match
+#[derive(Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "std", derive(Debug))]
+pub struct Test {
+    rows:    usize,
+    columns: usize,
+    seed:    FieldElement,
+}
+
+impl Test {
+    pub fn new(rows: usize, columns: usize, seed: &FieldElement) -> Test {
+        let seed = seed.clone();
+        Test {
+            rows,
+            columns,
+            seed,
+        }
+    }
+}
+
+impl Component for Test {
+    type Claim = FieldElement;
+    type Witness = (FieldElement, FieldElement);
+
+    fn num_polynomials(&self) -> usize {
+        self.columns
+    }
+
+    fn polynomial_size(&self) -> usize {
+        self.rows
+    }
+
+    fn claim(&self, witness: &Self::Witness) -> Self::Claim {
+        witness.0.clone()
+    }
+
+    fn constraints(&self, claim: &Self::Claim) -> Vec<RationalExpression> {
         use RationalExpression::*;
 
-        // Construct a sequence using the quadratic recurrence relation:
-        //     x[0]   = constraint_seed     (part of constraints)
-        //     x[1]   = witness_seed        (not part of constraints)
-        //     x[i+2] = x[i] * x[i + 1] + constraint_seed
-        let mut x0 = constraint_seed.clone();
-        let mut x1 = witness_seed.clone();
-        let mut next = || {
-            let result = x0.clone();
-            let x2 = &x0 * &x1 + constraint_seed;
-            x0 = x1.clone();
-            x1 = x2;
-            result
-        };
-
-        // Fill in the trace table with the sequence
-        // the sequence is written left-to-right, then top-to-bottom.
-        let mut trace = TraceTable::new(rows, columns);
-        for i in 0..(rows * columns) {
-            trace[(i / columns, i % columns)] = next();
-        }
-
         // Construct the constraint system for the sequence.
+        let rows = self.rows;
+        let columns = self.columns;
+        let seed = Constant(self.seed.clone());
         let omega = Constant(FieldElement::root(rows).unwrap());
         let mut constraints = Vec::new();
-        let mut labels = HashMap::new();
-        // x[0] = start
+        // x[0] = seed
         if rows * columns >= 1 {
-            constraints.push((Trace(0, 0) - constraint_seed.into()) / (X - omega.pow(0)));
-            let _ = labels.insert("start".to_owned(), (0, Trace(0, 0)));
+            constraints.push((Trace(0, 0) - seed) / (X - omega.pow(0)));
         }
         if rows * columns >= 3 {
-            let _ = labels.insert("final".to_owned(), (rows - 1, Trace(columns - 1, 0)));
-            let _ = labels.insert(
-                "next".to_owned(),
-                (
-                    rows - 1,
-                    if columns == 1 {
-                        Trace(0, -1) * Trace(0, 0) + constraint_seed.into()
-                    } else {
-                        Trace(columns - 2, 0) * Trace(columns - 1, 0) + constraint_seed.into()
-                    },
-                ),
-            );
             // For each column we need to add a constraint
             for i in 0..columns {
                 // Find the previous two cells in the table
@@ -74,18 +76,74 @@ impl Component {
                     (0, _) | (1, _) => (X - omega.pow(0)),
                     (..) => 1.into(),
                 };
-                // x[i+2] = x[i] * x[i + 1] + offset
+                // x[i + 2] = x[i] * x[i + 1] + claim
                 constraints.push(
-                    (Trace(i, 0) - x0 * x1 - constraint_seed.into()) * exceptions
-                        / (X.pow(rows) - 1.into()),
+                    (Trace(i, 0) - x0 * x1 - claim.into()) * exceptions / (X.pow(rows) - 1.into()),
                 )
             }
         }
+        constraints
+    }
 
-        Self {
-            trace,
-            constraints,
-            labels,
+    fn trace<P: PolynomialWriter>(&self, trace: &mut P, witness: &Self::Witness) {
+        debug_assert_eq!(trace.num_polynomials(), self.num_polynomials());
+        debug_assert_eq!(trace.polynomial_size(), self.polynomial_size());
+
+        // Generator for the sequence
+        let mut x0 = self.seed.clone();
+        let mut x1 = witness.1.clone();
+        let mut next = || {
+            let result = x0.clone();
+            let x2 = &x0 * &x1 + witness.0.clone();
+            x0 = x1.clone();
+            x1 = x2;
+            result
+        };
+
+        // Fill in the trace table with the sequence
+        // the sequence is written left-to-right, then top-to-bottom.
+        for i in 0..(self.rows * self.columns) {
+            let polynomial = i % self.columns;
+            let location = i / self.columns;
+            trace.write(polynomial, location, next());
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use proptest::prelude::*;
+
+    #[test]
+    fn test_check() {
+        proptest!(|(
+            log_rows in 0_usize..10,
+            cols in 0_usize..10,
+            seed: FieldElement,
+            witness: (FieldElement, FieldElement)
+        )| {
+            let rows = 1 << log_rows;
+            let component = Test::new(rows, cols, &seed);
+            prop_assert_eq!(component.check(&witness), Ok(()));
+        });
+    }
+
+    #[test]
+    fn test_proof_verify() {
+        let config = ProptestConfig::with_cases(10);
+        proptest!(config, |(
+            log_rows in 1_usize..10,
+            cols in 1_usize..10,
+            seed: FieldElement,
+            witness: (FieldElement, FieldElement)
+        )| {
+            let rows = 1 << log_rows;
+            let component = Test::new(rows, cols, &seed);
+            let claim = component.claim(&witness);
+            let proof = component.prove(&witness).unwrap();
+            let result = component.verify(&claim, &proof);
+            prop_assert_eq!(result, Ok(()));
+        });
     }
 }
