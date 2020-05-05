@@ -78,21 +78,21 @@ impl From<&FieldElement> for RationalExpression {
     }
 }
 
-impl Add for RationalExpression {
+impl<T: Into<RationalExpression>> Add<T> for RationalExpression {
     type Output = Self;
 
-    fn add(self, other: Self) -> Self {
-        Self::Add(Box::new(self), Box::new(other))
+    fn add(self, other: T) -> Self {
+        Self::Add(Box::new(self), Box::new(other.into()))
     }
 }
 
 // Clippy false positive
 #[allow(clippy::suspicious_arithmetic_impl)]
-impl Sub for RationalExpression {
+impl<T: Into<RationalExpression>> Sub<T> for RationalExpression {
     type Output = Self;
 
-    fn sub(self, other: Self) -> Self {
-        self + other.neg()
+    fn sub(self, other: T) -> Self {
+        self + (other.into()).neg()
     }
 }
 

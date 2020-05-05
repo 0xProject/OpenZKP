@@ -48,7 +48,7 @@ impl Verifiable for Claim {
         let trace_generator = FieldElement::root(trace_length).unwrap();
         let g = Constant(trace_generator);
         let on_row = |index| (X - g.pow(index)).inv();
-        let every_row = || (X - g.pow(trace_length - 1)) / (X.pow(trace_length) - 1.into());
+        let every_row = || (X - g.pow(trace_length - 1)) / (X.pow(trace_length) - 1);
 
         let periodic = |coefficients| {
             Polynomial(
@@ -69,9 +69,9 @@ impl Verifiable for Claim {
             // Says next row's x_0 = prev row x_2 + k_this row
             (Trace(0, 1) - (Trace(2, 0) + k_coef)) * every_row(),
             // Says the first x_0 is the before
-            (Trace(0, 0) - (&self.before).into()) * on_row(0),
+            (Trace(0, 0) - &self.before) * on_row(0),
             // Says the the x_0 on row ROUNDS
-            (Trace(0, 0) - (&self.after).into()) * on_row(trace_length - 1),
+            (Trace(0, 0) - &self.after) * on_row(trace_length - 1),
         ])
         .unwrap()
     }
