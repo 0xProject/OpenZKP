@@ -1,4 +1,4 @@
-use crate::rational_expression::RationalExpression;
+use crate::{polynomial::DensePolynomial, rational_expression::RationalExpression};
 use itertools::Itertools;
 use std::{collections::BTreeSet, fmt, prelude::v1::*};
 use zkp_primefield::{FieldElement, Root};
@@ -93,12 +93,17 @@ impl Constraints {
         (trace_nrows, trace_ncolumns): (usize, usize),
         channel_seed: Vec<u8>,
         expressions: Vec<RationalExpression>,
+        claim_polynomials: Vec<DensePolynomial>,
     ) -> Result<Self, Error> {
         let _ = FieldElement::root(trace_nrows).ok_or(Error::InvalidTraceLength)?;
         // TODO: Hash expressions into channel seed
         // TODO - Examine if we want to up these security params further.
         // 22.5*4  + 0 queries = 90
         // TODO: Sensible default for pow_bits. For small proofs it should be small.
+        let expressions = expressions
+            .iter()
+            .map(|c| c.substitute_claim(&claim_polynomials))
+            .collect();
         Ok(Self {
             channel_seed,
             trace_nrows,
@@ -119,6 +124,7 @@ impl Constraints {
         (trace_nrows, trace_ncolumns): (usize, usize),
         channel_seed: Vec<u8>,
         expressions: Vec<RationalExpression>,
+        claim_polynomials: Vec<DensePolynomial>,
         op_blowup: Option<usize>,
         op_pow_bits: Option<usize>,
         op_num_queries: Option<usize>,
@@ -127,6 +133,10 @@ impl Constraints {
         let _ = FieldElement::root(trace_nrows).ok_or(Error::InvalidTraceLength)?;
         // TODO: Hash expressions into channel seed
         // 15*4 + 30 queries = 90
+        let expressions = expressions
+            .iter()
+            .map(|c| c.substitute_claim(&claim_polynomials))
+            .collect();
         Ok(Self {
             channel_seed,
             trace_nrows,

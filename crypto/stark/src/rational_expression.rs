@@ -66,6 +66,24 @@ impl RationalExpression {
         };
         f(e)
     }
+
+    pub fn substitute_claim(&self, claim_polynomials: &[DensePolynomial]) -> RationalExpression {
+        let f = |x: RationalExpression| {
+            match x {
+                RationalExpression::ClaimPolynomial(i, a) => {
+                    RationalExpression::Polynomial(
+                        claim_polynomials
+                            .get(i)
+                            .expect("ClaimPolynomial index out of bounds")
+                            .clone(),
+                        a.clone(),
+                    )
+                }
+                _ => x.clone(),
+            }
+        };
+        self.map(&f)
+    }
 }
 
 impl From<i32> for RationalExpression {
@@ -143,7 +161,12 @@ impl RationalExpression {
     }
 
     // TODO: do this with a generic function.
-    fn degree_impl(&self, x_degree: usize, trace_degree: usize, claim_degrees: &[usize]) -> (usize, usize) {
+    fn degree_impl(
+        &self,
+        x_degree: usize,
+        trace_degree: usize,
+        claim_degrees: &[usize],
+    ) -> (usize, usize) {
         use RationalExpression::*;
         match self {
             X => (x_degree, 0),
@@ -159,8 +182,10 @@ impl RationalExpression {
                 (claim_degree * n, claim_degree * d)
             }
             Add(a, b) => {
-                let (a_numerator, a_denominator) = a.degree_impl(x_degree, trace_degree, claim_degrees);
-                let (b_numerator, b_denominator) = b.degree_impl(x_degree, trace_degree, claim_degrees);
+                let (a_numerator, a_denominator) =
+                    a.degree_impl(x_degree, trace_degree, claim_degrees);
+                let (b_numerator, b_denominator) =
+                    b.degree_impl(x_degree, trace_degree, claim_degrees);
                 (
                     std::cmp::max(a_numerator + b_denominator, b_numerator + a_denominator),
                     a_denominator + b_denominator,
@@ -206,9 +231,7 @@ impl RationalExpression {
                     (FieldElement::one(), false)
                 }
             }
-            ClaimPolynomial(..) => {
-                panic!()
-            }
+            ClaimPolynomial(..) => panic!(),
             Add(a, b) => {
                 let (res_a, a_ok) = a.check(x, trace);
                 let (res_b, b_ok) = b.check(x, trace);
@@ -284,9 +307,7 @@ impl RationalExpression {
             Constant(c) => c.clone(),
             &Trace(i, j) => trace(i, j),
             Polynomial(p, a) => p.evaluate(&a.evaluate(x, trace)),
-            ClaimPolynomial(..) => {
-                panic!()
-            }
+            ClaimPolynomial(..) => panic!(),
             Add(a, b) => a.evaluate(x, trace) + b.evaluate(x, trace),
             Neg(a) => -&a.evaluate(x, trace),
             Mul(a, b) => a.evaluate(x, trace) * b.evaluate(x, trace),
@@ -313,9 +334,7 @@ impl RationalExpression {
                 a.trace_arguments_impl(s);
                 b.trace_arguments_impl(s);
             }
-            ClaimPolynomial(..) => {
-                panic!()
-            }
+            ClaimPolynomial(..) => panic!(),
         }
     }
 
@@ -331,9 +350,7 @@ impl RationalExpression {
             }
             Constant(c) => format!("0x{}", U256::from(c).to_string()),
             Trace(..) | Polynomial(..) => memory_layout.get(self).unwrap().clone(),
-            ClaimPolynomial(..) => {
-                panic!()
-            }
+            ClaimPolynomial(..) => panic!(),
             Add(a, b) => {
                 format!(
                     "addmod({}, {}, PRIME)",
@@ -389,9 +406,7 @@ impl RationalExpression {
                 first
             }
             Polynomial(_, a) | Inv(a) | Exp(a, _) | Neg(a) => a.trace_search(),
-            ClaimPolynomial(..) => {
-                panic!()
-            }
+            ClaimPolynomial(..) => panic!(),
         }
     }
 
@@ -408,9 +423,7 @@ impl RationalExpression {
             }
             Inv(_) => [(self.clone(), true)].iter().cloned().collect(),
             Polynomial(_, a) | Exp(a, _) | Neg(a) => a.inv_search(),
-            ClaimPolynomial(..) => {
-                panic!()
-            }
+            ClaimPolynomial(..) => panic!(),
         }
     }
 
@@ -427,9 +440,7 @@ impl RationalExpression {
                 first
             }
             Inv(a) | Exp(a, _) | Neg(a) => a.periodic_search(),
-            ClaimPolynomial(..) => {
-                panic!()
-            }
+            ClaimPolynomial(..) => panic!(),
         }
     }
 }
@@ -482,9 +493,7 @@ impl Hash for RationalExpression {
                 a.hash(state);
                 e.hash(state);
             }
-            ClaimPolynomial(..) => {
-                panic!()
-            }
+            ClaimPolynomial(..) => panic!(),
         }
     }
 }

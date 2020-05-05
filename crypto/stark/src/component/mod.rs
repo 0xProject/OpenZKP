@@ -85,7 +85,8 @@ pub trait Component {
         let expressions = self.constraints(&claim);
         let trace = self.trace_table(witness);
         let constraints =
-            Constraints::from_expressions((size, polynomials), channel_seed, expressions).unwrap();
+            Constraints::from_expressions((size, polynomials), channel_seed, expressions, vec![])
+                .unwrap();
         prove(&constraints, &trace)
     }
 
@@ -95,7 +96,8 @@ pub trait Component {
         let channel_seed = Vec::new();
         let expressions = self.constraints(claim);
         let constraints =
-            Constraints::from_expressions((size, polynomials), channel_seed, expressions).unwrap();
+            Constraints::from_expressions((size, polynomials), channel_seed, expressions, vec![])
+                .unwrap();
         verify(&constraints, proof)
     }
 
@@ -107,7 +109,8 @@ pub trait Component {
         let expressions = self.constraints(&claim);
         // TODO: Error handling
         let constraints =
-            Constraints::from_expressions((size, polynomials), channel_seed, expressions).unwrap();
+            Constraints::from_expressions((size, polynomials), channel_seed, expressions, vec![])
+                .unwrap();
         let trace = self.trace_table(witness);
         check_constraints(&constraints, &trace)
     }

@@ -213,7 +213,7 @@ impl Verifiable for Claim {
             Ok(()) => {}
             Err(error) => panic!("File io problem: {:?}", error),
         };
-        Constraints::from_expressions((trace_length, 2), seed, expressions).unwrap()
+        Constraints::from_expressions((trace_length, 2), seed, expressions, vec![]).unwrap()
     }
 }
 

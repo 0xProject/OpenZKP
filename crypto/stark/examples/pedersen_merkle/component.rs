@@ -367,6 +367,7 @@ mod test {
             (trace.num_rows(), trace.num_columns()),
             (&claim).into(),
             constraints,
+            vec![],
         )
         .unwrap();
         constraints.blowup = 16;
