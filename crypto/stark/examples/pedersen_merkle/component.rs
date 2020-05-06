@@ -80,20 +80,20 @@ impl Component for MerkleTreeLayer {
         let omega = FieldElement::root(256).unwrap();
         let omega_i = |i: usize| Constant(omega.pow(i));
         let row = |i| X - omega_i(i);
-        let all_rows = || X.pow(256) - 1.into();
+        let all_rows = || X.pow(256) - 1;
         let on_no_hash_rows = |a: RationalExpression| a / row(255);
         let on_hash_start_rows = |a: RationalExpression| a / row(0);
         let on_hash_loop_rows = |a: RationalExpression| a * row(255) / all_rows();
         let on_fe_end_rows = |a: RationalExpression| a / row(field_element_bits);
 
         // Common sub-expressions
-        let left_bit = Trace(0, 0) - Trace(0, 1) * 2.into();
-        let right_bit = Trace(4, 0) - Trace(4, 1) * 2.into();
+        let left_bit = Trace(0, 0) - Trace(0, 1) * 2;
+        let right_bit = Trace(4, 0) - Trace(4, 1) * 2;
 
         let constraints = vec![
             on_hash_start_rows(Trace(6, 0) - Constant(shift_point_x)),
             on_hash_start_rows(Trace(7, 0) - Constant(shift_point_y)),
-            on_hash_loop_rows(left_bit.clone() * (left_bit.clone() - 1.into())),
+            on_hash_loop_rows(left_bit.clone() * (left_bit.clone() - 1)),
             on_hash_loop_rows(
                 left_bit.clone() * (Trace(7, 0) - periodic_left_y)
                     - Trace(1, 1) * (Trace(6, 0) - periodic_left_x.clone()),
@@ -114,7 +114,7 @@ impl Component for MerkleTreeLayer {
             ),
             on_fe_end_rows(Trace(0, 0)),
             on_no_hash_rows(Trace(0, 0)),
-            on_hash_loop_rows(right_bit.clone() * (right_bit.clone() - 1.into())),
+            on_hash_loop_rows(right_bit.clone() * (right_bit.clone() - 1)),
             on_hash_loop_rows(
                 right_bit.clone() * (Trace(3, 1) - periodic_right_y)
                     - Trace(5, 1) * (Trace(2, 1) - periodic_right_x.clone()),

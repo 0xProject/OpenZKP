@@ -77,9 +77,7 @@ impl Component for Test {
                     (..) => 1.into(),
                 };
                 // x[i + 2] = x[i] * x[i + 1] + claim
-                constraints.push(
-                    (Trace(i, 0) - x0 * x1 - claim.into()) * exceptions / (X.pow(rows) - 1.into()),
-                )
+                constraints.push((Trace(i, 0) - x0 * x1 - claim) * exceptions / (X.pow(rows) - 1))
             }
         }
         constraints
