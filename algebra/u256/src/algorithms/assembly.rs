@@ -36,7 +36,7 @@ pub(crate) fn mul_1_asm(a: u64, b0: u64, b1: u64, b2: u64, b3: u64) -> (u64, u64
     // Binding `_lo` will not be used after assignment.
     #[allow(clippy::used_underscore_binding)]
     unsafe {
-        asm!(r"
+        llvm_asm!(r"
         mulx $7, $0, $1      // (r0, r1) = a * b0
 
         mulx $8, $5, $2      // (lo, r2) = a * b1
@@ -95,7 +95,7 @@ pub(crate) fn mul_add_1_asm(
     // Bindings `_lo` and `_hi` will not be used after assignment.
     #[allow(clippy::used_underscore_binding)]
     unsafe {
-        asm!(r"
+        llvm_asm!(r"
         xor $4, $4            // r4 = CF = OF 0
 
         mulx $8, $5, $6       // a * b0
@@ -158,7 +158,7 @@ pub(crate) fn reduce_1(
     let r2: u64;
     let r3: u64;
     unsafe {
-        asm!(r"
+        llvm_asm!(r"
         // Copy [s0..3] into [r0..3]
         // Subtract [m0..3] from [s0..3] in place
         mov $4, $0
@@ -233,7 +233,7 @@ pub(crate) fn mul_asm(x: &U256, y: &U256) -> U256 {
     let y = y.as_limbs();
     let mut r = MaybeUninit::<[u64; 4]>::uninit();
     unsafe {
-        asm!(r"
+        llvm_asm!(r"
         xor %rax, %rax               // CF, OF cleared
 
         // Set x[0] * y
@@ -302,7 +302,7 @@ pub(crate) fn full_mul_asm(x: &U256, y: &U256) -> (U256, U256) {
     let mut hi = MaybeUninit::<[u64; 4]>::uninit();
 
     unsafe {
-        asm!(r"
+        llvm_asm!(r"
         xor %rax, %rax               // CF, OF cleared
 
         // Set x[0] * y
@@ -400,7 +400,7 @@ pub(crate) fn proth_redc_asm(m3: u64, lo: &U256, hi: &U256) -> U256 {
     let hi = hi.as_limbs();
     let mut result = MaybeUninit::<[u64; 4]>::uninit();
     unsafe {
-        asm!(r"
+        llvm_asm!(r"
         // RDX contains M3 and we keep it there the whole time.
         // OPT: Use operand constraints to put it there.
         mov $4, %rdx
@@ -507,7 +507,7 @@ pub(crate) fn mul_redc<M: MontgomeryParameters<UInt = U256>>(a: &U256, b: &U256)
     // MULX dst_high, dst_low, src_b (src_a = %rdx)
     // src_b can be register or memory, not immediate
     unsafe {
-        asm!(r"
+        llvm_asm!(r"
             // Assembly from Aztec's Barretenberg implementation, see 
             // <https://github.com/AztecProtocol/barretenberg/blob/master/src/barretenberg/fields/asm_macros.hpp>
             movq 0($1), %rdx
