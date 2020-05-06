@@ -71,8 +71,6 @@ mod prover;
 #[cfg(feature = "prover")]
 mod rational_equality;
 #[cfg(feature = "prover")]
-pub mod solidity_encode;
-#[cfg(feature = "prover")]
 mod trace_table;
 // TODO: Have unconditional Debug trait on all types
 
@@ -94,7 +92,7 @@ pub use verifier::{verify, Error as VerifierError};
 
 // We want std for this so that we can use hex encode
 #[cfg(feature = "std")]
-pub use autogen_sol::autogen2;
+pub use autogen_sol::autogen;
 #[cfg(feature = "std")]
 pub use solidity_seralizer::proof_serialize;
 
@@ -111,8 +109,6 @@ pub use component::{
 pub use constraint_check::check_constraints;
 #[cfg(feature = "prover")]
 pub use prover::{prove, Error as ProverError};
-#[cfg(feature = "prover")]
-pub use solidity_encode::autogen;
 #[cfg(feature = "prover")]
 pub use trace_table::TraceTable;
 #[cfg(feature = "prover")]

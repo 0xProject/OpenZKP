@@ -4,8 +4,10 @@ import {deployContract, solidity} from 'ethereum-waffle';
 import {utils} from 'ethers';
 import fs from 'fs';
 
+import ConstraintPolyLen256Artifact from '../artifacts/ConstraintPolyLen256.json';
 import RecurrenceArtifact from '../artifacts/Recurrence.json';
 import StarkDigestTestingArtifact from '../artifacts/StarkDigestTesting.json';
+import {ConstraintPolyLen256} from '../typechain/ConstraintPolyLen256';
 import {Recurrence} from '../typechain/Recurrence';
 import {StarkDigestTesting} from '../typechain/StarkDigestTesting';
 
@@ -21,12 +23,14 @@ describe('Recurrence testing', function(this: any) {
     this.timeout(0);
     let constraint_contract: Recurrence;
     let verifier_contract: StarkDigestTesting;
+    let constraint256Contract: ConstraintPolyLen256;
 
     const provider = waffle.provider;
     const [wallet] = provider.getWallets();
 
     before(async () => {
-        constraint_contract = (await deployContract(wallet, RecurrenceArtifact)) as Recurrence;
+        constraint256Contract = (await deployContract(wallet, ConstraintPolyLen256Artifact)) as ConstraintPolyLen256;
+        constraint_contract = (await deployContract(wallet, RecurrenceArtifact, [constraint256Contract.address])) as Recurrence;
         verifier_contract = (await deployContract(wallet, StarkDigestTestingArtifact)) as StarkDigestTesting;
     });
 

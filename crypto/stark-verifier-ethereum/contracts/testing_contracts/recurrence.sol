@@ -9,6 +9,7 @@ import '../primefield.sol';
 import '../iterator.sol';
 import '../default_cs.sol';
 import './recurrence_trace.sol';
+import './recurence_constraint_256.sol';
 
 
 // This contract checks the recurance constraint system from the testing contract
@@ -17,6 +18,12 @@ contract Recurrence is RecurrenceTrace {
     using PrimeField for uint256;
     using PrimeField for PrimeField.EvalX;
     using Utils for *;
+
+    ConstraintPolyLen256 immutable constraint256;
+
+    constructor(ConstraintPolyLen256 constraint) public {
+        constraint256 = constraint;
+    }
 
     struct PublicInput {
         uint256 value;
@@ -41,7 +48,12 @@ contract Recurrence is RecurrenceTrace {
         PublicInput memory input = abi.decode(proof.public_inputs, (PublicInput));
         uint256[] memory result = get_polynomial_points(data, oods_coeffiencts, queries, oods_point);
 
-        uint256 evaluated_point = evaluate_oods_point(oods_point, constraint_coeffiencts, data.eval, input, data);
+        uint256 evaluated_point;
+        if (params.log_trace_length == 8 && input.index == 150) {
+            evaluated_point = evaluate_oods_point256(oods_point, constraint_coeffiencts, data.eval, input, data.trace_oods_values);
+        } else {
+            evaluated_point = evaluate_oods_point(oods_point, constraint_coeffiencts, data.eval, input, data);
+        }
         return (result, evaluated_point);
     }
 
@@ -159,6 +171,43 @@ contract Recurrence is RecurrenceTrace {
                 adjustment = adjustment.fadd(constraint_coeffiencts[6]);
                 result = result.fadd(adjustment.fmul_mont(constraint_eval));
             }
+        }
+        return result;
+    }
+
+    function evaluate_oods_point256(
+        uint256 oods_point,
+        uint256[] memory constraint_coeffiencts,
+        PrimeField.EvalX memory eval,
+        PublicInput memory public_input,
+        uint256[] memory trace_oods_values
+    ) internal returns (uint256) {
+        uint256[] memory call_context = new uint256[](15);
+        call_context[0] = oods_point.fmul_mont(1);
+        call_context[1] = public_input.index;
+        call_context[2] = public_input.value.from_montgomery();
+        uint256 current_index = 3;
+        for (uint256 i = 0; i < constraint_coeffiencts.length; i ++) {
+            call_context[current_index] = constraint_coeffiencts[i];
+            current_index++;
+        }
+        for (uint256 i = 0; i < trace_oods_values.length; i++) {
+            call_context[current_index] = trace_oods_values[i].fmul_mont(1);
+            current_index++;
+        }
+
+        // The contract we are calling out to is a pure assembly contract
+        // With its own hard coded memory structure so we use an assembly
+        // call to send a non abi encoded array that will be loaded dirrectly
+        // into memory
+        uint256 result;
+        ConstraintPolyLen256 local_contract_address = constraint256;
+        assembly {
+            let p := mload(0x40)
+            if iszero(call(not(0), local_contract_address, 0, add(call_context, 0x20), 0x1E0, p, 0x20)) {
+              revert(0, 0)
+            }
+            result := mload(p)
         }
         return result;
     }
