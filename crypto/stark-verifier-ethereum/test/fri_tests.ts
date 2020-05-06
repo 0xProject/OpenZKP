@@ -44,6 +44,7 @@ describe('Fri testing', () => {
         expect(result[result.length - 1].data).to.be.eq(
             '0x07ce58276a6663f522711bf9cce5bf737f296d73d32d6c8da3e17deccd459a2b',
         );
+    });
 
     it('Should correctly fold cosets of size 8', async () => {
         // Case with 8 in a middle layer
