@@ -5,7 +5,7 @@ use crate::{
 use log::{info, trace};
 use zkp_macros_decl::{field_element, hex};
 use zkp_primefield::FieldElement;
-use zkp_stark::{component2::Component, prove, Constraints};
+use zkp_stark::{component::Component, prove, Constraints};
 use zkp_u256::U256;
 
 pub(crate) fn starkware_example() {
