@@ -67,16 +67,17 @@ impl RationalExpression {
         f(e)
     }
 
-    pub fn substitute_claim(&self, claim_polynomials: &[DensePolynomial]) -> RationalExpression {
-        let f = |x: RationalExpression| {
+    pub fn substitute_claim(&self, claim_polynomials: &[DensePolynomial]) -> Self {
+        use RationalExpression::*;
+        let f = |x| {
             match x {
-                RationalExpression::ClaimPolynomial(i, degree_bound, a) => {
+                ClaimPolynomial(i, degree_bound, a) => {
                     let claim_polynomial = claim_polynomials
                         .get(i)
                         .expect("ClaimPolynomial index out of bounds")
                         .clone();
                     assert!(claim_polynomial.degree() <= degree_bound);
-                    RationalExpression::Polynomial(claim_polynomial, a)
+                    Polynomial(claim_polynomial, a)
                 }
                 _ => x.clone(),
             }

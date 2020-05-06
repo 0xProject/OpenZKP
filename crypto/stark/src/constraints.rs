@@ -85,6 +85,9 @@ impl Constraints {
         fri_layout
     }
 
+    /// Requires all instances of RationalExpression::ClaimPolynomial in the
+    /// expressions to have been replaced by
+    /// RationalExpression::DensePolynomial.
     // False positive
     // TODO: Remove once [1] clears
     // [1]: <https://github.com/rust-lang/rust-clippy/issues/5351>
@@ -92,9 +95,7 @@ impl Constraints {
     pub fn from_expressions(
         (trace_nrows, trace_ncolumns): (usize, usize),
         channel_seed: Vec<u8>,
-        expressions: Vec<RationalExpression>, /* Requires all
-                                               * RationalExpression::ClaimPolynomial have been
-                                               * replaced. */
+        expressions: Vec<RationalExpression>,
     ) -> Result<Self, Error> {
         let _ = FieldElement::root(trace_nrows).ok_or(Error::InvalidTraceLength)?;
         // TODO: Hash expressions into channel seed
@@ -113,6 +114,9 @@ impl Constraints {
         })
     }
 
+    /// Requires all instances of RationalExpression::ClaimPolynomial in the
+    /// expressions to have been replaced by
+    /// RationalExpression::DensePolynomial.
     // False positive
     // TODO: Remove once [1] clears
     // [1]: <https://github.com/rust-lang/rust-clippy/issues/5351>
@@ -120,9 +124,7 @@ impl Constraints {
     pub fn from_expressions_detailed(
         (trace_nrows, trace_ncolumns): (usize, usize),
         channel_seed: Vec<u8>,
-        expressions: Vec<RationalExpression>, /* Requires all
-                                               * RationalExpression::ClaimPolynomial have been
-                                               * replaced. */
+        expressions: Vec<RationalExpression>,
         op_blowup: Option<usize>,
         op_pow_bits: Option<usize>,
         op_num_queries: Option<usize>,
