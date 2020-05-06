@@ -1,4 +1,4 @@
-pragma solidity 0.6.4;
+pragma solidity ^0.6.4;
 pragma experimental ABIEncoderV2;
 
 import './public_coin.sol';
@@ -52,11 +52,11 @@ contract Fri is Trace, MerkleVerifier {
     uint256 constant OROOT7 = 0x0446ed3ce295dda2b5ea677394813e6eab8bfbc55397aacac8e6df6f4bc9ca34;
 
     // Reads from channel random and returns a list of random queries
-    function get_queries(PublicCoin.Coin memory coin, uint8 max_bit_length, uint8 num_queries)
-        internal
-        pure
-        returns (uint64[] memory)
-    {
+    function get_queries(
+        PublicCoin.Coin memory coin,
+        uint8 max_bit_length,
+        uint8 num_queries
+    ) internal pure returns (uint64[] memory) {
         uint64[] memory queries = new uint64[](num_queries);
         // This mask sets all digits to one below the bit length
         uint64 bit_mask = (uint64(2)**max_bit_length) - 1;
@@ -261,10 +261,11 @@ contract Fri is Trace, MerkleVerifier {
     }
 
     // Returns the fri folded point and the inverse for the base layer, which is x_inv on the next layer
-    function fold_coset(uint256[] memory coset, uint256 x_inv, uint256 eval_point)
-        internal
-        returns (uint256 result, uint256 next_x_inv)
-    {
+    function fold_coset(
+        uint256[] memory coset,
+        uint256 x_inv,
+        uint256 eval_point
+    ) internal returns (uint256 result, uint256 next_x_inv) {
         trace('fold_coset', true);
 
         uint256 factor = mulmod(eval_point, x_inv, PrimeField.MODULUS);
@@ -303,7 +304,11 @@ contract Fri is Trace, MerkleVerifier {
 
     // We now do the actual fri folding operation
     // f'(x) = (f(x) + f(-x)) + eval_point / x * (f(x) - f(-x))
-    function fold(uint256 positive, uint256 negative, uint256 factor) internal pure returns (uint256) {
+    function fold(
+        uint256 positive,
+        uint256 negative,
+        uint256 factor
+    ) internal pure returns (uint256) {
         // even = f(x) + f(-x)  (without reduction)
         uint256 even = positive + negative;
         // odd = f(x) - f(-x)   (without reduction)

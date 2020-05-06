@@ -51,6 +51,8 @@ mod proof_of_work;
 mod rational_expression;
 #[cfg(feature = "std")]
 mod solidity_seralizer;
+#[cfg(feature = "std")]
+mod solidity_verifier;
 mod traits;
 mod verifier;
 
@@ -66,8 +68,6 @@ mod constraint_check;
 mod prover;
 #[cfg(feature = "prover")]
 mod rational_equality;
-#[cfg(feature = "prover")]
-pub mod solidity_encode;
 #[cfg(feature = "prover")]
 mod trace_table;
 // TODO: Have unconditional Debug trait on all types
@@ -91,14 +91,14 @@ pub use verifier::{verify, Error as VerifierError};
 // We want std for this so that we can use hex encode
 #[cfg(feature = "std")]
 pub use solidity_seralizer::proof_serialize;
+#[cfg(feature = "std")]
+pub use solidity_verifier::generate;
 
 // Exports for prover
 #[cfg(feature = "prover")]
 pub use constraint_check::check_constraints;
 #[cfg(feature = "prover")]
 pub use prover::{prove, Error as ProverError};
-#[cfg(feature = "prover")]
-pub use solidity_encode::autogen;
 #[cfg(feature = "prover")]
 pub use trace_table::TraceTable;
 #[cfg(feature = "prover")]
