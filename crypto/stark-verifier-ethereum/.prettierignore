@@ -3,5 +3,3 @@ contracts/default_cs.sol
 contracts/testing_contracts/recurrence.sol
 # `break` keyword in assembly crashes the linter.
 contracts/merkle.sol
-# the linter doesn't seem to understand the assembly indents
-contracts/testing_contracts/recurence_constraint_256.sol

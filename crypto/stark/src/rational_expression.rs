@@ -1,9 +1,6 @@
 use crate::polynomial::DensePolynomial;
 #[cfg(feature = "std")]
-use std::{
-    cmp::Ordering,
-    collections::{hash_map::DefaultHasher, BTreeMap},
-};
+use std::{cmp::Ordering, collections::hash_map::DefaultHasher};
 use std::{
     collections::BTreeSet,
     hash::{Hash, Hasher},
@@ -300,108 +297,6 @@ impl RationalExpression {
                 a.trace_arguments_impl(s);
                 b.trace_arguments_impl(s);
             }
-        }
-    }
-
-    #[cfg(feature = "std")]
-    pub fn soldity_encode(&self, memory_layout: &BTreeMap<Self, String>) -> String {
-        use RationalExpression::*;
-
-        #[allow(clippy::match_same_arms)]
-        match self {
-            X => "mload(0x0)".to_owned(),
-            Constant(_) if memory_layout.contains_key(self) => {
-                memory_layout.get(self).unwrap().clone()
-            }
-            Constant(c) => format!("0x{}", U256::from(c).to_string()),
-            Trace(..) | Polynomial(..) => memory_layout.get(self).unwrap().clone(),
-            Add(a, b) => {
-                format!(
-                    "addmod({}, {}, PRIME)",
-                    a.soldity_encode(memory_layout),
-                    b.soldity_encode(memory_layout)
-                )
-            }
-            Neg(a) => format!("sub(PRIME , {})", a.soldity_encode(memory_layout)),
-            Mul(a, b) => {
-                format!(
-                    "mulmod({}, {}, PRIME)",
-                    a.soldity_encode(memory_layout),
-                    b.soldity_encode(memory_layout)
-                )
-            }
-            Inv(_) => memory_layout.get(self).unwrap().clone(),
-            Exp(a, e) => {
-                match e {
-                    0 => "0x01".to_owned(),
-                    1 => a.soldity_encode(memory_layout),
-                    _ => {
-                        // TODO - Check the gas to see what the real breaking point should be
-                        if *e < 10 {
-                            format!(
-                                "small_expmod({}, {}, PRIME)",
-                                a.soldity_encode(memory_layout),
-                                e.to_string()
-                            )
-                        } else {
-                            format!(
-                                "expmod({}, {}, PRIME)",
-                                a.soldity_encode(memory_layout),
-                                e.to_string()
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // TODO - DRY this by writing a generic search over subtypes
-    #[cfg(feature = "std")]
-    pub fn trace_search(&self) -> BTreeMap<Self, bool> {
-        use RationalExpression::*;
-
-        match self {
-            X | Constant(..) => BTreeMap::new(),
-            Trace(..) => [(self.clone(), true)].iter().cloned().collect(),
-            Add(a, b) | Mul(a, b) => {
-                let mut first = a.trace_search();
-                first.extend(b.trace_search());
-                first
-            }
-            Polynomial(_, a) | Inv(a) | Exp(a, _) | Neg(a) => a.trace_search(),
-        }
-    }
-
-    #[cfg(feature = "std")]
-    pub fn inv_search(&self) -> BTreeMap<Self, bool> {
-        use RationalExpression::*;
-
-        match self {
-            X | Constant(_) | Trace(..) => BTreeMap::new(),
-            Add(a, b) | Mul(a, b) => {
-                let mut first = a.inv_search();
-                first.extend(b.inv_search());
-                first
-            }
-            Inv(_) => [(self.clone(), true)].iter().cloned().collect(),
-            Polynomial(_, a) | Exp(a, _) | Neg(a) => a.inv_search(),
-        }
-    }
-
-    #[cfg(feature = "std")]
-    pub fn periodic_search(&self) -> BTreeMap<Self, bool> {
-        use RationalExpression::*;
-
-        match self {
-            X | Constant(_) | Trace(..) => BTreeMap::new(),
-            Polynomial(..) => [(self.clone(), true)].iter().cloned().collect(),
-            Add(a, b) | Mul(a, b) => {
-                let mut first = a.periodic_search();
-                first.extend(b.periodic_search());
-                first
-            }
-            Inv(a) | Exp(a, _) | Neg(a) => a.periodic_search(),
         }
     }
 }
