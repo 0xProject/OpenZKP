@@ -1,36 +1,10 @@
 use crate::rational_expression::*;
 use std::{
-    cmp::Ordering,
-    collections::{BTreeMap, BTreeSet},
-    fs::File,
-    io::prelude::*,
-    path::Path,
-    prelude::v1::*,
+    cmp::Ordering, collections::BTreeMap, fs::File, io::prelude::*, path::Path, prelude::v1::*,
 };
 use zkp_u256::U256;
 
 impl RationalExpression {
-    pub fn trace_arguments(&self) -> BTreeSet<(usize, isize)> {
-        let mut arguments = BTreeSet::new();
-        self.trace_arguments_impl(&mut arguments);
-        arguments
-    }
-
-    fn trace_arguments_impl(&self, s: &mut BTreeSet<(usize, isize)>) {
-        use RationalExpression::*;
-        match self {
-            &Trace(i, j) => {
-                let _ = s.insert((i, j));
-            }
-            X | Constant(_) => (),
-            Polynomial(_, a) | Exp(a, _) | Neg(a) | Inv(a) => a.trace_arguments_impl(s),
-            Add(a, b) | Mul(a, b) => {
-                a.trace_arguments_impl(s);
-                b.trace_arguments_impl(s);
-            }
-        }
-    }
-
     #[cfg(feature = "std")]
     pub fn soldity_encode(&self, memory_layout: &BTreeMap<Self, String>) -> String {
         use RationalExpression::*;
@@ -134,7 +108,7 @@ impl RationalExpression {
     }
 }
 
-pub fn generate_solidity_verifier(
+pub fn generate(
     trace_len: usize,
     public: &[&RationalExpression],
     constraints: &[RationalExpression],

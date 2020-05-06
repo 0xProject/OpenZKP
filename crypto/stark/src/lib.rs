@@ -92,7 +92,7 @@ pub use verifier::{verify, Error as VerifierError};
 #[cfg(feature = "std")]
 pub use solidity_seralizer::proof_serialize;
 #[cfg(feature = "std")]
-pub use solidity_verifier::generate_solidity_verifier;
+pub use solidity_verifier::generate;
 
 // Exports for prover
 #[cfg(feature = "prover")]

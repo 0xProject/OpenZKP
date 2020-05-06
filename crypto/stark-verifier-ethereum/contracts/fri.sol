@@ -261,10 +261,11 @@ contract Fri is Trace, MerkleVerifier {
     }
 
     // Returns the fri folded point and the inverse for the base layer, which is x_inv on the next layer
-    function fold_coset(uint256[] memory coset, uint256 x_inv, uint256 eval_point)
-        internal
-        returns (uint256 result, uint256 next_x_inv)
-    {
+    function fold_coset(
+        uint256[] memory coset,
+        uint256 x_inv,
+        uint256 eval_point
+    ) internal returns (uint256 result, uint256 next_x_inv) {
         trace('fold_coset', true);
 
         uint256 factor = mulmod(eval_point, x_inv, PrimeField.MODULUS);
@@ -303,7 +304,11 @@ contract Fri is Trace, MerkleVerifier {
 
     // We now do the actual fri folding operation
     // f'(x) = (f(x) + f(-x)) + eval_point / x * (f(x) - f(-x))
-    function fold(uint256 positive, uint256 negative, uint256 factor) internal pure returns (uint256) {
+    function fold(
+        uint256 positive,
+        uint256 negative,
+        uint256 factor
+    ) internal pure returns (uint256) {
         // even = f(x) + f(-x)  (without reduction)
         uint256 even = positive + negative;
         // odd = f(x) - f(-x)   (without reduction)
