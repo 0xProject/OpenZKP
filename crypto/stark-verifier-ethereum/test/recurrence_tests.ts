@@ -30,7 +30,9 @@ describe('Recurrence testing', function(this: any) {
 
     before(async () => {
         constraint256Contract = (await deployContract(wallet, ConstraintPolyLen256Artifact)) as ConstraintPolyLen256;
-        constraint_contract = (await deployContract(wallet, RecurrenceArtifact, [constraint256Contract.address])) as Recurrence;
+        constraint_contract = (await deployContract(wallet, RecurrenceArtifact, [
+            constraint256Contract.address,
+        ])) as Recurrence;
         verifier_contract = (await deployContract(wallet, StarkDigestTestingArtifact)) as StarkDigestTesting;
     });
 
@@ -46,8 +48,8 @@ describe('Recurrence testing', function(this: any) {
             // NOTE - Typescript has a very very hard time with the ethers js internal array types in struct encoding
             // in this case it's best for the code to ignore it because this is how ethers js understands these types.
             const receipt = await // @ts-ignore
+            // @ts-ignore
             (
-                // @ts-ignore
                 await verifier_contract.verify_proof(recurrence_proofs[i], constraint_contract.address, {
                     gasLimit: INITIAL_GAS,
                 })

@@ -43,8 +43,6 @@
 // TODO: Add `must_use` attributes
 #![allow(clippy::must_use_candidate)]
 
-#[cfg(feature = "std")]
-mod autogen_sol;
 mod channel;
 mod constraints;
 mod polynomial;
@@ -53,6 +51,8 @@ mod proof_of_work;
 mod rational_expression;
 #[cfg(feature = "std")]
 mod solidity_seralizer;
+#[cfg(feature = "std")]
+mod solidity_verifier;
 mod traits;
 mod verifier;
 
@@ -92,9 +92,9 @@ pub use verifier::{verify, Error as VerifierError};
 
 // We want std for this so that we can use hex encode
 #[cfg(feature = "std")]
-pub use autogen_sol::autogen;
-#[cfg(feature = "std")]
 pub use solidity_seralizer::proof_serialize;
+#[cfg(feature = "std")]
+pub use solidity_verifier::generate_solidity_verifier;
 
 // Exports for prover
 #[cfg(feature = "prover")]
