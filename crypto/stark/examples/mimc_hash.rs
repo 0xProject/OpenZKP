@@ -161,7 +161,7 @@ impl Verifiable for Claim {
         let trace_generator = FieldElement::root(trace_length).unwrap();
         let g = Constant(trace_generator.clone());
         let on_row = |index| (X - g.pow(index)).inv();
-        let every_row = || (X - g.pow(trace_length - 1)) / (X.pow(trace_length) - 1.into());
+        let every_row = || (X - g.pow(trace_length - 1)) / (X.pow(trace_length) - 1);
 
         let periodic = |coefficients| {
             Polynomial(
@@ -177,7 +177,7 @@ impl Verifiable for Claim {
         let on_loop_rows = |length: usize| {
             (X.pow(trace_length / length)
                 - Constant(trace_generator.pow((trace_length / length) * (trace_length - 1))))
-                / (X.pow(trace_length) - 1.into())
+                / (X.pow(trace_length) - 1)
         };
 
         let const_before_x = Constant(self.before_x.clone());
