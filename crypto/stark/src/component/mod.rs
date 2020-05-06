@@ -13,7 +13,7 @@ use crate::{
     Constraints, ProverError, RationalExpression, TraceTable,
 };
 use log::trace;
-use zkp_primefield::FieldElement;
+use zkp_primefield::{FieldElement, Root};
 
 pub use empty::Empty;
 pub use fold::Fold;
@@ -65,6 +65,12 @@ pub trait Component {
     fn constraints(&self, claim: &Self::Claim) -> Vec<RationalExpression>;
 
     fn trace<P: PolynomialWriter>(&self, trace: &mut P, witness: &Self::Witness);
+
+    fn trace_generator(&self) -> RationalExpression {
+        FieldElement::root(self.polynomial_size())
+            .expect("num_polynomials not power of 2.")
+            .into()
+    }
 
     /// Construct a trace table
     fn trace_table(&self, witness: &Self::Witness) -> TraceTable {
