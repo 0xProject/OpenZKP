@@ -12,7 +12,7 @@
   * [Fractal](iops/fractal.md)
 * [R1CS](r1cs.md)
 * [LDEs](LDES/index.md)
-  * [FRI](LDEs/fri.md)
+  * [DEEP-ALI](LDEs/deep-ali.md)
   * [Kate](LDEs/kate.md)
   * [DARK](LDEs/dark.md)
   * [Bra-Kate](LDEs/kate2.md)
