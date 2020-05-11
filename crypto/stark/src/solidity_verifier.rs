@@ -53,7 +53,7 @@ impl RationalExpression {
                             }
                         }
                     }
-                    _ => panic!("This should not happen....")
+                    _ => panic!("This should not happen...."),
                 }
             }
         }
@@ -72,7 +72,9 @@ impl RationalExpression {
                 first.extend(b.trace_search());
                 first
             }
-            ClaimPolynomial(_, _, a) | Polynomial(_, a) | Inv(a) | Exp(a, _) | Neg(a) => a.trace_search(),
+            ClaimPolynomial(_, _, a) | Polynomial(_, a) | Inv(a) | Exp(a, _) | Neg(a) => {
+                a.trace_search()
+            }
         }
     }
 
@@ -88,7 +90,7 @@ impl RationalExpression {
                 first
             }
             Inv(_) => [(self.clone(), true)].iter().cloned().collect(),
-            ClaimPolynomial(_, _, a) |Polynomial(_, a) | Exp(a, _) | Neg(a) => a.inv_search(),
+            ClaimPolynomial(_, _, a) | Polynomial(_, a) | Exp(a, _) | Neg(a) => a.inv_search(),
         }
     }
 
@@ -99,7 +101,7 @@ impl RationalExpression {
         match self {
             X | Constant(_) | Trace(..) => BTreeMap::new(),
             Polynomial(..) => [(self.clone(), true)].iter().cloned().collect(),
-            ClaimPolynomial(..) => panic!("TODO"), 
+            ClaimPolynomial(..) => panic!("TODO"),
             Add(a, b) | Mul(a, b) => {
                 let mut first = a.periodic_search();
                 first.extend(b.periodic_search());
