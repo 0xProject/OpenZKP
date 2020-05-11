@@ -274,11 +274,23 @@ mod tests {
         let public = r.claim();
         let private = r.witness();
 
-        let constraints = public.constraints();
+        let mut constraints = public.constraints();
+        constraints.num_queries = 20;
+        constraints.pow_bits = 10;
+
+        // autogen(
+        //     constraints.trace_nrows(),
+        //     &[&RationalExpression::Constant(150.into()),
+        // &RationalExpression::Constant((&public).value.clone())],
+        //     constraints.expressions(),
+        //     constraints.trace_nrows(),
+        //     16
+        // ).unwrap();
+
         let trace = public.trace(&private);
 
         let mut result_string = "".to_string();
-        //&prove(&constraints, &trace).unwrap();
+        //  &prove(&constraints, &trace).unwrap();
         proof_serialize(
             &constraints,
             &prove(&constraints, &trace).unwrap(),
@@ -299,21 +311,22 @@ mod tests {
     //         field_element!("
     // 42f70183f3ed560b81c4cd49a8d5f27fdb747c17eaa93f41570b012649b5a47b");
     //     let mut result_string = "[\n".to_string();
-    //     for i in 0..20 {
+    //     let mut index = 150;
+    //     for i in 0..15 {
     //         println!("{}", i);
     //         let r = Recurrance {
-    //             index:         2_usize.pow(i) + 149,
+    //             index:         index,
     //             initial_value: initial_value.clone(),
     //             exponent:      2,
     //         };
 
     //         let public = r.claim();
-    //         println!("{:?}", public.value.as_montgomery());
+    //         // println!("{:?}", public.value.as_montgomery());
     //         let private = r.witness();
 
     //         let mut constraints = public.constraints();
     //         constraints.num_queries = 20;
-    //         constraints.num_queries = 10;
+    //         constraints.pow_bits = 10;
     //         let trace = public.trace(&private);
 
     //         result_string.push_str(&format!(
@@ -341,6 +354,7 @@ mod tests {
 
     //         // This changes around the value in a slightly unpredictable way
     //         initial_value *= initial_value.clone();
+    //         index *= 2;
     //     }
     //     result_string.push_str("]");
 
@@ -351,6 +365,6 @@ mod tests {
     // why.to_string()),         Ok(file) => file,
     //     };
     //     writeln!(&mut file, "{}", result_string).unwrap();
-    //     assert!(false);
+    //     // assert!(false);
     // }
 }

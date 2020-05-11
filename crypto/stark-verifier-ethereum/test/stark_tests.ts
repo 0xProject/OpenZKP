@@ -1,20 +1,20 @@
-import { waffle } from '@nomiclabs/buidler';
+import {waffle} from '@nomiclabs/buidler';
 import chai from 'chai';
-import { deployContract, solidity } from 'ethereum-waffle';
-import { BigNumber } from 'ethers/utils';
+import {deployContract, solidity} from 'ethereum-waffle';
+import {BigNumber} from 'ethers/utils';
 
 import StarkDigestTestingArtifact from '../artifacts/StarkDigestTesting.json';
 import TrivialFibArtifact from '../artifacts/TrivialFib.json';
-import { StarkDigestTesting } from '../typechain/StarkDigestTesting';
-import { TrivialFib } from '../typechain/TrivialFib';
+import {StarkDigestTesting} from '../typechain/StarkDigestTesting';
+import {TrivialFib} from '../typechain/TrivialFib';
 
 import small_fib_proof from './small_fib_proof.json';
 
 chai.use(solidity);
-const { expect } = chai;
+const {expect} = chai;
 
 // tslint:disable:space-before-function-paren typedef
-describe('Stark Testing testing', function (this: any) {
+describe('Stark Testing testing', function(this: any) {
     // Disables the timeouts
     this.timeout(0);
     let constraint_contract: TrivialFib;
@@ -71,9 +71,8 @@ describe('Stark Testing testing', function (this: any) {
     it('Should validate a correct proof', async () => {
         // NOTE - Typescript has a very very hard time with the ethers js internal array types in struct encoding
         // in this case it's best for the code to ignore it because this is how ethers js understands these types.
-        const events = await
-            // @ts-ignore
-            (await verifier_contract.verify_proof(small_fib_proof, constraint_contract.address)).wait();
+        const events = await // @ts-ignore
+        (await verifier_contract.verify_proof(small_fib_proof, constraint_contract.address)).wait();
         // TODO - Use better logging
         // tslint:disable:no-console
         console.log('Proof verification gas used : ', events.gasUsed?.toNumber());

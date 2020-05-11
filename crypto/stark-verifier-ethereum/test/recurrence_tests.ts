@@ -1,13 +1,15 @@
-import { waffle } from '@nomiclabs/buidler';
+import {waffle} from '@nomiclabs/buidler';
 import chai from 'chai';
-import { deployContract, solidity } from 'ethereum-waffle';
-import { utils } from 'ethers';
+import {deployContract, solidity} from 'ethereum-waffle';
+import {utils} from 'ethers';
 import fs from 'fs';
 
+import ConstraintPolyLen256Artifact from '../artifacts/ConstraintPolyLen256.json';
 import RecurrenceArtifact from '../artifacts/Recurrence.json';
 import StarkDigestTestingArtifact from '../artifacts/StarkDigestTesting.json';
-import { Recurrence } from '../typechain/Recurrence';
-import { StarkDigestTesting } from '../typechain/StarkDigestTesting';
+import {ConstraintPolyLen256} from '../typechain/ConstraintPolyLen256';
+import {Recurrence} from '../typechain/Recurrence';
+import {StarkDigestTesting} from '../typechain/StarkDigestTesting';
 
 import recurrence_proofs from './recurrence_proofs.json';
 
@@ -16,17 +18,21 @@ const INITIAL_GAS = 100000000;
 chai.use(solidity);
 
 // tslint:disable:space-before-function-paren typedef
-describe('Recurrence testing', function (this: any) {
+describe('Recurrence testing', function(this: any) {
     // Disables the timeouts
     this.timeout(0);
     let constraint_contract: Recurrence;
     let verifier_contract: StarkDigestTesting;
+    let constraint256Contract: ConstraintPolyLen256;
 
     const provider = waffle.provider;
     const [wallet] = provider.getWallets();
 
     before(async () => {
-        constraint_contract = (await deployContract(wallet, RecurrenceArtifact)) as Recurrence;
+        constraint256Contract = (await deployContract(wallet, ConstraintPolyLen256Artifact)) as ConstraintPolyLen256;
+        constraint_contract = (await deployContract(wallet, RecurrenceArtifact, [
+            constraint256Contract.address,
+        ])) as Recurrence;
         verifier_contract = (await deployContract(wallet, StarkDigestTestingArtifact)) as StarkDigestTesting;
     });
 
@@ -41,15 +47,22 @@ describe('Recurrence testing', function (this: any) {
             );
             // NOTE - Typescript has a very very hard time with the ethers js internal array types in struct encoding
             // in this case it's best for the code to ignore it because this is how ethers js understands these types.
-            // @ts-ignore
-            const receipt = await (
+            const receipt = await
+            (
                 // @ts-ignore
-                await verifier_contract.verify_proof(recurrence_proofs[i], constraint_contract.address, { gasLimit: INITIAL_GAS })
+                await verifier_contract.verify_proof(recurrence_proofs[i], constraint_contract.address, {
+                    gasLimit: INITIAL_GAS,
+                })
             ).wait();
 
             // Compute calldata cost
-            // @ts-ignore
-            const call_data = utils.arrayify(verifier_contract.interface.functions.verify_proof.encode([recurrence_proofs[i], constraint_contract.address]));
+            const call_data = utils.arrayify(
+                verifier_contract.interface.functions.verify_proof.encode([
+                    // @ts-ignore
+                    recurrence_proofs[i],
+                    constraint_contract.address,
+                ]),
+            );
             const call_data_length = call_data.length;
             const call_data_zeros = call_data.filter(byte => byte === 0).length;
             const calldata_cost = (call_data_length - call_data_zeros) * 16 + call_data_zeros * 4;
