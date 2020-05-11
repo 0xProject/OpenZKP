@@ -9,50 +9,51 @@ impl RationalExpression {
     pub fn soldity_encode(&self, memory_layout: &BTreeMap<Self, String>) -> String {
         use RationalExpression::*;
 
-        #[allow(clippy::match_same_arms)]
-        match self {
-            X => "mload(0x0)".to_owned(),
-            Constant(_) if memory_layout.contains_key(self) => {
-                memory_layout.get(self).unwrap().clone()
-            }
-            Constant(c) => format!("0x{}", U256::from(c).to_string()),
-            Trace(..) | Polynomial(..) => memory_layout.get(self).unwrap().clone(),
-            Add(a, b) => {
-                format!(
-                    "addmod({}, {}, PRIME)",
-                    a.soldity_encode(memory_layout),
-                    b.soldity_encode(memory_layout)
-                )
-            }
-            Neg(a) => format!("sub(PRIME , {})", a.soldity_encode(memory_layout)),
-            Mul(a, b) => {
-                format!(
-                    "mulmod({}, {}, PRIME)",
-                    a.soldity_encode(memory_layout),
-                    b.soldity_encode(memory_layout)
-                )
-            }
-            Inv(_) => memory_layout.get(self).unwrap().clone(),
-            Exp(a, e) => {
-                match e {
-                    0 => "0x01".to_owned(),
-                    1 => a.soldity_encode(memory_layout),
-                    _ => {
-                        // TODO - Check the gas to see what the real breaking point should be
-                        if *e < 10 {
-                            format!(
-                                "small_expmod({}, {}, PRIME)",
-                                a.soldity_encode(memory_layout),
-                                e.to_string()
-                            )
-                        } else {
-                            format!(
-                                "expmod({}, {}, PRIME)",
-                                a.soldity_encode(memory_layout),
-                                e.to_string()
-                            )
+        match memory_layout.get(self) {
+            Some(s) => s.clone(),
+            None => {
+                match self {
+                    X => "mload(0x0)".to_owned(),
+                    Constant(c) => format!("0x{}", U256::from(c).to_string()),
+                    Add(a, b) => {
+                        format!(
+                            "addmod({}, {}, PRIME)",
+                            a.soldity_encode(memory_layout),
+                            b.soldity_encode(memory_layout)
+                        )
+                    }
+                    Neg(a) => format!("sub(PRIME , {})", a.soldity_encode(memory_layout)),
+                    Mul(a, b) => {
+                        format!(
+                            "mulmod({}, {}, PRIME)",
+                            a.soldity_encode(memory_layout),
+                            b.soldity_encode(memory_layout)
+                        )
+                    }
+                    Exp(a, e) => {
+                        match e {
+                            0 => "0x01".to_owned(),
+                            1 => a.soldity_encode(memory_layout),
+                            _ => {
+                                // TODO - Check the gas to see what the real breaking point should
+                                // be
+                                if *e < 10 {
+                                    format!(
+                                        "small_expmod({}, {}, PRIME)",
+                                        a.soldity_encode(memory_layout),
+                                        e.to_string()
+                                    )
+                                } else {
+                                    format!(
+                                        "expmod({}, {}, PRIME)",
+                                        a.soldity_encode(memory_layout),
+                                        e.to_string()
+                                    )
+                                }
+                            }
                         }
                     }
+                    _ => panic!("This should not happen...."),
                 }
             }
         }
@@ -71,7 +72,9 @@ impl RationalExpression {
                 first.extend(b.trace_search());
                 first
             }
-            Polynomial(_, a) | Inv(a) | Exp(a, _) | Neg(a) => a.trace_search(),
+            ClaimPolynomial(_, _, a) | Polynomial(_, a) | Inv(a) | Exp(a, _) | Neg(a) => {
+                a.trace_search()
+            }
         }
     }
 
@@ -87,7 +90,7 @@ impl RationalExpression {
                 first
             }
             Inv(_) => [(self.clone(), true)].iter().cloned().collect(),
-            Polynomial(_, a) | Exp(a, _) | Neg(a) => a.inv_search(),
+            ClaimPolynomial(_, _, a) | Polynomial(_, a) | Exp(a, _) | Neg(a) => a.inv_search(),
         }
     }
 
@@ -98,6 +101,7 @@ impl RationalExpression {
         match self {
             X | Constant(_) | Trace(..) => BTreeMap::new(),
             Polynomial(..) => [(self.clone(), true)].iter().cloned().collect(),
+            ClaimPolynomial(..) => panic!("TODO"),
             Add(a, b) | Mul(a, b) => {
                 let mut first = a.periodic_search();
                 first.extend(b.periodic_search());
