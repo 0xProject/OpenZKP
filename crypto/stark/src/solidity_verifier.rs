@@ -9,14 +9,13 @@ impl RationalExpression {
     pub fn soldity_encode(&self, memory_layout: &BTreeMap<Self, String>) -> String {
         use RationalExpression::*;
 
+        if memory_layout.contains_key(self) {
+            return memory_layout.get(self).unwrap().clone();
+        }
         #[allow(clippy::match_same_arms)]
         match self {
             X => "mload(0x0)".to_owned(),
-            Constant(_) if memory_layout.contains_key(self) => {
-                memory_layout.get(self).unwrap().clone()
-            }
             Constant(c) => format!("0x{}", U256::from(c).to_string()),
-            Trace(..) | Polynomial(..) => memory_layout.get(self).unwrap().clone(),
             Add(a, b) => {
                 format!(
                     "addmod({}, {}, PRIME)",
@@ -32,7 +31,6 @@ impl RationalExpression {
                     b.soldity_encode(memory_layout)
                 )
             }
-            Inv(_) => memory_layout.get(self).unwrap().clone(),
             Exp(a, e) => {
                 match e {
                     0 => "0x01".to_owned(),
@@ -55,6 +53,7 @@ impl RationalExpression {
                     }
                 }
             }
+            _ => {panic!("Unspecified rational expression encoding")},
         }
     }
 
