@@ -46,14 +46,10 @@ contract Recurrence is RecurrenceTrace {
             proof.constraint_oods_values,
             params.log_trace_length);
         PublicInput memory input = abi.decode(proof.public_inputs, (PublicInput));
-        uint256[] memory result = get_polynomial_points(data, oods_coeffiencts, queries, oods_point);
 
-        uint256 evaluated_point;
-        if (params.log_trace_length == 8 && input.index == 150) {
-            evaluated_point = evaluate_oods_point256(oods_point, constraint_coeffiencts, data.eval, input, data.trace_oods_values);
-        } else {
-            evaluated_point = evaluate_oods_point(oods_point, constraint_coeffiencts, data.eval, input, data);
-        }
+        uint256[] memory result = get_polynomial_points(data, oods_coeffiencts, queries, oods_point);
+        uint256 evaluated_point = evaluate_oods(oods_point, constraint_coeffiencts, data.eval, input, data.trace_oods_values);
+        
         return (result, evaluated_point);
     }
 
@@ -90,92 +86,7 @@ contract Recurrence is RecurrenceTrace {
         return (params, coin);
     }
 
-    // (Trace(0, 1) - Trace(1, 0).pow(self.exponent)) * every_row(),
-    // (Trace(1, 1) - Trace(0, 0) - Trace(1, 0)) * every_row(),
-    // (Trace(0, 0) - 1.into()) * on_row(trace_length),
-    // (Trace(0, 0) - (&self.value).into()) * on_row(self.index),
-    // TODO - Use batch inversion
-    function evaluate_oods_point(
-        uint256 oods_point,
-        uint256[] memory constraint_coeffiencts,
-        PrimeField.EvalX memory eval,
-        PublicInput memory public_input,
-        ProofData memory data
-    ) internal returns (uint256) {
-        uint256 trace_length = uint256(1) << data.log_trace_length;
-        // Note the blowup is fixed in this contract
-        uint256 trace_generator = eval.eval_domain_generator.fpow(16);
-        // NOTE - Constraint degree is fixed in this system
-        uint256 target_degree = 2 * trace_length - 1; // 511
-        uint256 non_mont_oods = oods_point.fmul_mont(1);
-
-        uint256 result = 0;
-        {
-            //  (X.pow(trace_length) - 1.into())
-            // Non mont form because the inverse is in native form
-            // NOTE - Stack depth errors prevent this from being spread
-            uint256 every_row_denom = (non_mont_oods.fpow(trace_length)).fsub(1);
-            every_row_denom = every_row_denom.inverse();
-            uint256 every_row_numb = non_mont_oods.fsub(trace_generator.fpow(trace_length - 1));
-            // First constraint calculation block
-            {
-                uint256 adjustment;
-                {
-                    uint256 adjustment_every_row_2 = non_mont_oods.fpow(
-                        degree_adjustment(target_degree, 2 * trace_length - 1, trace_length)
-                    );
-                    adjustment = constraint_coeffiencts[1].fmul(adjustment_every_row_2);
-                    adjustment = adjustment.fadd(constraint_coeffiencts[0]);
-                }
-                uint256 cell_squared = data.trace_oods_values[2].fmul_mont(data.trace_oods_values[2]);
-                uint256 constraint_eval = data.trace_oods_values[1].fsub(cell_squared);
-                constraint_eval = constraint_eval.fmul(every_row_numb);
-                constraint_eval = constraint_eval.fmul(every_row_denom);
-                result = adjustment.fmul_mont(constraint_eval);
-            }
-            // Second constraint calculation block
-            {
-                uint256 adjustment;
-                {
-                    uint256 adjustment_every_row_1 = non_mont_oods.fpow(
-                        degree_adjustment(target_degree, trace_length, trace_length)
-                    );
-                    adjustment = constraint_coeffiencts[3].fmul(adjustment_every_row_1);
-                    adjustment = adjustment.fadd(constraint_coeffiencts[2]);
-                }
-                uint256 constraint_eval = data.trace_oods_values[3].fsub(data.trace_oods_values[0]);
-                constraint_eval = constraint_eval.fsub(data.trace_oods_values[2]);
-                constraint_eval = constraint_eval.fmul(every_row_numb);
-                constraint_eval = constraint_eval.fmul(every_row_denom);
-                result = result.fadd(adjustment.fmul_mont(constraint_eval));
-            }
-        }
-        {
-            uint256 adjustment_fixed_row = non_mont_oods.fpow(degree_adjustment(target_degree, trace_length - 1, 1));
-            {
-                uint256 constraint_eval = data.trace_oods_values[0].fsub((uint256(1).to_montgomery()));
-                // TODO - Just make that one?
-                uint256 last_row_denom = (non_mont_oods.fsub(trace_generator.fpow(trace_length))).inverse();
-                constraint_eval = constraint_eval.fmul(last_row_denom);
-                uint256 adjustment = constraint_coeffiencts[5].fmul(adjustment_fixed_row);
-                adjustment = adjustment.fadd(constraint_coeffiencts[4]);
-                result = result.fadd(adjustment.fmul_mont(constraint_eval));
-            }
-
-            {
-                uint256 constraint_eval = data.trace_oods_values[0].fsub(public_input.value);
-                uint256 index_row_denom = non_mont_oods.fsub(trace_generator.fpow(public_input.index));
-                index_row_denom = index_row_denom.inverse();
-                constraint_eval = constraint_eval.fmul(index_row_denom);
-                uint256 adjustment = constraint_coeffiencts[7].fmul(adjustment_fixed_row);
-                adjustment = adjustment.fadd(constraint_coeffiencts[6]);
-                result = result.fadd(adjustment.fmul_mont(constraint_eval));
-            }
-        }
-        return result;
-    }
-
-    function evaluate_oods_point256(
+    function evaluate_oods(
         uint256 oods_point,
         uint256[] memory constraint_coeffiencts,
         PrimeField.EvalX memory eval,
