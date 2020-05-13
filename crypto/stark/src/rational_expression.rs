@@ -375,7 +375,12 @@ impl Hash for RationalExpression {
                 a.hash(state);
                 e.hash(state);
             }
-            ClaimPolynomial(..) => panic!("ClaimPolynomial should be substituted by Polynomial"),
+            ClaimPolynomial(i, n, a) => {
+                "claim_polynomial".hash(state);
+                i.hash(state);
+                n.hash(state);
+                a.hash(state);
+            }
         }
     }
 }
