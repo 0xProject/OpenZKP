@@ -4,10 +4,10 @@ import {deployContract, solidity} from 'ethereum-waffle';
 import {utils} from 'ethers';
 import fs from 'fs';
 
-import ConstraintPolyLen256Artifact from '../artifacts/ConstraintPolyLen256.json';
-import RecurrenceArtifact from '../artifacts/Recurrence.json';
+import ConstantOodsPolyArtifact from '../artifacts/ConstantOodsPoly.json';
+import ConstantArtifact from '../artifacts/Constant.json';
 import StarkDigestTestingArtifact from '../artifacts/StarkDigestTesting.json';
-import {ConstraintPolyLen256} from '../typechain/ConstraintPolyLen256';
+import {ConstantOodsPoly} from '../typechain/ConstantOodsPoly';
 import {Constant} from '../typechain/Constant';
 import {StarkDigestTesting} from '../typechain/StarkDigestTesting';
 
@@ -20,18 +20,18 @@ chai.use(solidity);
 // tslint:disable:space-before-function-paren typedef
 describe('Recurrence testing', function(this: any) {
     this.timeout(0);
-    let constraint_contract: Constant;
+    let constant: Constant;
     let verifier_contract: StarkDigestTesting;
-    let oods_constrat: Oods;
+    let oods: ConstantOodsPoly;
 
     const provider = waffle.provider;
     const [wallet] = provider.getWallets();
 
     before(async () => {
-        constraint256Contract = (await deployContract(wallet, ConstraintPolyLen256Artifact)) as ConstraintPolyLen256;
-        constraint_contract = (await deployContract(wallet, RecurrenceArtifact, [
-            constraint256Contract.address,
-        ])) as Recurrence;
+        oods = (await deployContract(wallet, ConstantOodsPolyArtifact)) as ConstantOodsPoly;
+        constant = (await deployContract(wallet, ConstantArtifact, [
+            oods.address,
+        ])) as Constant;
         verifier_contract = (await deployContract(wallet, StarkDigestTestingArtifact)) as StarkDigestTesting;
     });
 
@@ -49,7 +49,7 @@ describe('Recurrence testing', function(this: any) {
             const receipt = await
             (
                 // @ts-ignore
-                await verifier_contract.verify_proof(recurrence_proofs[i], constraint_contract.address, {
+                await verifier_contract.verify_proof(recurrence_proofs[i], constant.address, {
                     gasLimit: INITIAL_GAS,
                 })
             ).wait();
@@ -59,7 +59,7 @@ describe('Recurrence testing', function(this: any) {
                 verifier_contract.interface.functions.verify_proof.encode([
                     // @ts-ignore
                     recurrence_proofs[i],
-                    constraint_contract.address,
+                    constant.address,
                 ]),
             );
             const call_data_length = call_data.length;
