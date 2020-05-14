@@ -39,6 +39,12 @@ describe('Recurrence testing', function(this: any) {
 
     // Note - This checks the proof of work, but not the whole proof yet
     it('Should validate a correct proof', async () => {
+      // @ts-ignore
+      constant_proof.public_inputs = utils.defaultAbiCoder.encode(
+          ['uint256'],
+          [constant_proof.public_inputs.value],
+      );
+      // @ts-ignore
       (await verifier_contract.verify_proof(constant_proof, constant.address)).wait();
     });
 });

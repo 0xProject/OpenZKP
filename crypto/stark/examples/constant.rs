@@ -23,7 +23,7 @@ impl Provable<&Witness> for Claim {
     fn trace(&self, witness: &Witness) -> TraceTable {
         let mut trace = TraceTable::new(2, 1);
         trace[(0, 0)] = witness.0.clone();
-        trace[(1, 0)] = witness.0.clone();
+        trace[(1, 0)] = witness.0.clone() + FieldElement::from(100);
         trace
     }
 }
