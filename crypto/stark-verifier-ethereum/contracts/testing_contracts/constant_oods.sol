@@ -1,7 +1,7 @@
 pragma solidity ^0.6.6;
 
 
-contract OodsPoly {
+contract ConstantOodsPoly {
     fallback() external {
         assembly {
             let res := 0

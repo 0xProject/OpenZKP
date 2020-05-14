@@ -8,20 +8,20 @@ import '../utils.sol';
 import '../primefield.sol';
 import '../iterator.sol';
 import '../default_cs.sol';
-import './recurrence_trace.sol';
-import '../constant/ConstraintPoly.sol';
+import './constant_trace.sol';
+import './constant_oods.sol';
 
 
 // This contract checks the recurance constraint system from the testing contract
-contract Recurrence is RecurrenceTrace {
+contract Constant is ConstantTrace {
     using Iterators for Iterators.IteratorUint;
     using PrimeField for uint256;
     using PrimeField for PrimeField.EvalX;
     using Utils for *;
 
-    OodsPoly immutable constraint256;
+    ConstantOodsPoly immutable constraint256;
 
-    constructor(OodsPoly constraint) public {
+    constructor(ConstantOodsPoly constraint) public {
         constraint256 = constraint;
     }
 
@@ -112,7 +112,7 @@ contract Recurrence is RecurrenceTrace {
         // call to send a non abi encoded array that will be loaded dirrectly
         // into memory
         uint256 result;
-        OodsPoly local_contract_address = constraint256;
+        ConstantOodsPoly local_contract_address = constraint256;
         assembly {
             let p := mload(0x40)
             if iszero(call(not(0), local_contract_address, 0, add(call_context, 0x20), 0x1E0, p, 0x20)) {
