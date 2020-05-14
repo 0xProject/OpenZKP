@@ -10,6 +10,7 @@ import '../iterator.sol';
 import '../default_cs.sol';
 import './constant_trace.sol';
 import './constant_oods.sol';
+import '@nomiclabs/buidler/console.sol';
 
 
 // This contract checks the recurance constraint system from the testing contract
@@ -38,16 +39,22 @@ contract Constant is ConstantTrace {
         uint256[] calldata constraint_coeffiencts,
         uint256[] calldata oods_coeffiencts
     ) external override returns (uint256[] memory, uint256) {
+        console.log("0");
+
         ProofData memory data = ProofData(
             proof.trace_values,
             PrimeField.init_eval(params.log_trace_length + 4),
             proof.constraint_values, proof.trace_oods_values,
             proof.constraint_oods_values,
             params.log_trace_length);
+        console.log("1");
         PublicInput memory input = abi.decode(proof.public_inputs, (PublicInput));
+        console.log("2");
 
         uint256[] memory result = get_polynomial_points(data, oods_coeffiencts, queries, oods_point);
+        console.log("3");
         uint256 evaluated_point = evaluate_oods(oods_point, constraint_coeffiencts, data.eval, input, data.trace_oods_values);
+        console.log("4");
 
         return (result, evaluated_point);
     }
@@ -74,11 +81,11 @@ contract Constant is ConstantTrace {
         ProofTypes.ProofParameters memory params = ProofTypes.ProofParameters({
             number_of_columns: NUM_COLUMNS,
             log_trace_length: log_trace_length,
-            number_of_constraints: 4,
+            number_of_constraints: 1,
             log_blowup: 4,
             constraint_degree: CONSTRAINT_DEGREE,
             pow_bits: 10,
-            number_of_queries: 20,
+            number_of_queries: 2,
             fri_layout: fri_layout
         });
 

@@ -5,6 +5,8 @@ import './interfaces/ConstraintInterface.sol';
 import './primefield.sol';
 import './iterator.sol';
 import './utils.sol';
+import '@nomiclabs/buidler/console.sol';
+
 
 abstract contract DefaultConstraintSystem is ConstraintSystem  {
     using Iterators for Iterators.IteratorUint;
@@ -41,6 +43,7 @@ abstract contract DefaultConstraintSystem is ConstraintSystem  {
         uint64[] memory queries,
         uint256 oods_point
     ) internal returns (uint256[] memory) {
+        console.log("get_polynomial_points 0");
         uint256[] memory inverses = oods_prepare_inverses(
             queries,
             data.eval,
@@ -48,12 +51,16 @@ abstract contract DefaultConstraintSystem is ConstraintSystem  {
             data.log_trace_length + 4,
             data.log_trace_length
         );
+        console.log("get_polynomial_points 1");
         uint256[] memory results = new uint256[](queries.length);
+        console.log("get_polynomial_points 2");
 
         // Init an iterator over the oods coeffiecients
         Iterators.IteratorUint memory coeffiecients = Iterators.init_iterator(oods_coeffiecients);
+        console.log("get_polynomial_points 3");
         uint256[] memory layout = layout_col_major();
         for (uint256 i = 0; i < queries.length; i++) {
+            console.log("get_polynomial_points query", i);
             uint256 result = 0;
             {
             // These held pointers help soldity make the stack work
@@ -78,6 +85,7 @@ abstract contract DefaultConstraintSystem is ConstraintSystem  {
                 uint256 next_term = element.fmul_mont(coef);
                 result = result.fadd(next_term);
             }
+            console.log("get_polynomial_points query done", i);
             }
 
             uint256 denominator_inv = inverses[i * (NUM_OFFSETS+1) + NUM_OFFSETS];

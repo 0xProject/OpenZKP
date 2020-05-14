@@ -15,12 +15,12 @@ import constant_proof from './constant_proof.json';
 import small_fib_proof from './small_fib_proof.json';
 
 
-const INITIAL_GAS = 100000000;
+const INITIAL_GAS = 100000000000;
 
 chai.use(solidity);
 
 // tslint:disable:space-before-function-paren typedef
-describe('Recurrence testing', function(this: any) {
+describe('Constant testing', function(this: any) {
     this.timeout(0);
     let constant: Constant;
     let verifier_contract: StarkDigestTesting;
@@ -39,6 +39,10 @@ describe('Recurrence testing', function(this: any) {
 
     // Note - This checks the proof of work, but not the whole proof yet
     it('Should validate a correct proof', async () => {
+      console.log(oods.address);
+      console.log(constant.address);
+      console.log(verifier_contract.address);
+
       // @ts-ignore
       constant_proof.public_inputs = utils.defaultAbiCoder.encode(
           ['uint256'],
