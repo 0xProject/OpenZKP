@@ -27,7 +27,6 @@ contract Constant is ConstantTrace {
 
     struct PublicInput {
         uint256 value;
-        uint64 index;
     }
 
     // prettier-ignore
@@ -65,11 +64,11 @@ contract Constant is ConstantTrace {
     {
         PublicInput memory input = abi.decode(public_input, (PublicInput));
         PublicCoin.Coin memory coin = PublicCoin.Coin({
-            digest: keccak256(abi.encodePacked(input.index, input.value, uint64(2))),
+            digest: keccak256(abi.encodePacked(input.value)),
             counter: 0
         });
-        // The trace length is going to be the next power of two after index.
-        uint8 log_trace_length = Utils.num_bits(input.index) + 1;
+        // trace length is always 2, because we can't handle trace lengths that are 1.
+        uint8 log_trace_length = 1;
         uint8[] memory fri_layout = default_fri_layout(log_trace_length);
 
         ProofTypes.ProofParameters memory params = ProofTypes.ProofParameters({
@@ -95,9 +94,8 @@ contract Constant is ConstantTrace {
     ) internal returns (uint256) {
         uint256[] memory call_context = new uint256[](15);
         call_context[0] = oods_point.fmul_mont(1);
-        call_context[1] = public_input.index;
-        call_context[2] = public_input.value.from_montgomery();
-        uint256 current_index = 3;
+        call_context[1] = public_input.value.from_montgomery();
+        uint256 current_index = 2;
         for (uint256 i = 0; i < constraint_coeffiencts.length; i ++) {
             call_context[current_index] = constraint_coeffiencts[i];
             current_index++;

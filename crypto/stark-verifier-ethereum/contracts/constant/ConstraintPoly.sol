@@ -18,9 +18,8 @@ contract OodsPoly {
             )
 
             function expmod(base, exponent, modulus) -> result {
-                let
-                    p /*expmod_context*/
-                := 256
+                let p := /*expmod_context*/
+                256
                 mstore(p, 0x20) // Length of Base
                 mstore(add(p, 0x20), 0x20) // Length of Exponent
                 mstore(add(p, 0x40), 0x20) // Length of Modulus

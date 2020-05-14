@@ -272,6 +272,10 @@ pub fn verify(constraints: &Constraints, proof: &Proof) -> Result<()> {
         .iter()
         .map(|k| 1_usize << k)
         .collect::<Vec<_>>();
+
+    // dbg!(constraints.fri_layout.clone());
+    // dbg!(coset_sizes.clone());
+
     let mut fri_indices: Vec<usize> = queries
         .to_vec()
         .iter()
