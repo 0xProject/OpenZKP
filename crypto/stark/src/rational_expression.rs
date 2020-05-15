@@ -20,6 +20,7 @@ pub enum RationalExpression {
     Constant(FieldElement),
     Trace(usize, isize),
     Polynomial(DensePolynomial, Box<RationalExpression>),
+    ClaimPolynomial(usize, usize, Box<RationalExpression>),
     Add(Box<RationalExpression>, Box<RationalExpression>),
     Neg(Box<RationalExpression>),
     Mul(Box<RationalExpression>, Box<RationalExpression>),
@@ -50,6 +51,7 @@ impl RationalExpression {
         let e = match self {
             // Tree types are recursed first
             Polynomial(p, e) => Polynomial(p.clone(), Box::new(e.map(f))),
+            ClaimPolynomial(i, n, e) => ClaimPolynomial(*i, *n, Box::new(e.map(f))),
             Add(a, b) => Add(Box::new(a.map(f)), Box::new(b.map(f))),
             Neg(a) => Neg(Box::new(a.map(f))),
             Mul(a, b) => Mul(Box::new(a.map(f)), Box::new(b.map(f))),
@@ -60,6 +62,24 @@ impl RationalExpression {
             other => other.clone(),
         };
         f(e)
+    }
+
+    pub fn substitute_claim(&self, claim_polynomials: &[DensePolynomial]) -> Self {
+        use RationalExpression::*;
+        let f = |x| {
+            match x {
+                ClaimPolynomial(i, degree_bound, a) => {
+                    let claim_polynomial = claim_polynomials
+                        .get(i)
+                        .expect("ClaimPolynomial index out of bounds")
+                        .clone();
+                    assert!(claim_polynomial.degree() <= degree_bound);
+                    Polynomial(claim_polynomial, a)
+                }
+                _ => x.clone(),
+            }
+        };
+        self.map(&f)
     }
 }
 
@@ -148,6 +168,10 @@ impl RationalExpression {
                 let (n, d) = a.degree_impl(x_degree, trace_degree);
                 (p.degree() * n, p.degree() * d)
             }
+            ClaimPolynomial(_, degree_bound, a) => {
+                let (n, d) = a.degree_impl(x_degree, trace_degree);
+                (degree_bound * n, degree_bound * d)
+            }
             Add(a, b) => {
                 let (a_numerator, a_denominator) = a.degree_impl(x_degree, trace_degree);
                 let (b_numerator, b_denominator) = b.degree_impl(x_degree, trace_degree);
@@ -182,7 +206,6 @@ impl RationalExpression {
         trace: &dyn Fn(usize, isize) -> FieldElement,
     ) -> (FieldElement, bool) {
         use RationalExpression::*;
-
         match self {
             X => (x.clone(), true),
             Constant(c) => (c.clone(), true),
@@ -196,6 +219,7 @@ impl RationalExpression {
                     (FieldElement::one(), false)
                 }
             }
+            ClaimPolynomial(..) => panic!("ClaimPolynomial should be substituted by Polynomial"),
             Add(a, b) => {
                 let (res_a, a_ok) = a.check(x, trace);
                 let (res_b, b_ok) = b.check(x, trace);
@@ -271,6 +295,7 @@ impl RationalExpression {
             Constant(c) => c.clone(),
             &Trace(i, j) => trace(i, j),
             Polynomial(p, a) => p.evaluate(&a.evaluate(x, trace)),
+            ClaimPolynomial(..) => panic!("ClaimPolynomial should be substituted by Polynomial"),
             Add(a, b) => a.evaluate(x, trace) + b.evaluate(x, trace),
             Neg(a) => -&a.evaluate(x, trace),
             Mul(a, b) => a.evaluate(x, trace) * b.evaluate(x, trace),
@@ -297,6 +322,7 @@ impl RationalExpression {
                 a.trace_arguments_impl(s);
                 b.trace_arguments_impl(s);
             }
+            ClaimPolynomial(..) => panic!("ClaimPolynomial should be substituted by Polynomial"),
         }
     }
 }
@@ -349,6 +375,7 @@ impl Hash for RationalExpression {
                 a.hash(state);
                 e.hash(state);
             }
+            ClaimPolynomial(..) => panic!("ClaimPolynomial should be substituted by Polynomial"),
         }
     }
 }

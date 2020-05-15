@@ -85,6 +85,9 @@ impl Constraints {
         fri_layout
     }
 
+    /// Requires all instances of `RationalExpression::ClaimPolynomial` in the
+    /// expressions to have been replaced by
+    /// `RationalExpression::DensePolynomial`.
     // False positive
     // TODO: Remove once [1] clears
     // [1]: <https://github.com/rust-lang/rust-clippy/issues/5351>
@@ -111,6 +114,9 @@ impl Constraints {
         })
     }
 
+    /// Requires all instances of `RationalExpression::ClaimPolynomial` in the
+    /// expressions to have been replaced by
+    /// `RationalExpression::DensePolynomial`.
     // False positive
     // TODO: Remove once [1] clears
     // [1]: <https://github.com/rust-lang/rust-clippy/issues/5351>
