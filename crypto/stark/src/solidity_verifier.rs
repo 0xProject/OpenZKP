@@ -392,7 +392,7 @@ abstract contract RecurrenceTrace is DefaultConstraintSystem({}, {}, {}, {}) {{"
 // TODO - This needs testing
 fn binary_row_search_string(rows: &[usize]) -> String {
     if rows.len() == 1 {
-        return format!("return {}", rows[0]);
+        return format!("return {};", rows[0]);
     }
     format!(
         "
