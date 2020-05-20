@@ -62,13 +62,17 @@ contract Starkdex is StarkdexTrace {
         uint256[] calldata constraint_coeffiencts,
         uint256[] calldata oods_coeffiencts
     ) external override returns (uint256[] memory, uint256) {
+        console.log("constraint_calculations start");
         ProofData memory data = ProofData(
             proof.trace_values,
             PrimeField.init_eval(params.log_trace_length + 4),
             proof.constraint_values, proof.trace_oods_values,
             proof.constraint_oods_values,
             params.log_trace_length);
-        PublicInput memory input = abi.decode(proof.public_inputs, (PublicInput));
+        console.log("about to decode start");
+        console.logBytes(proof.public_inputs);
+        PublicInput memory input = PublicInput(abi.decode(proof.public_inputs, ([uint256, uint256, uint256, bytes32[], uint256[], uint256[]])));
+        console.log("decode end");
         uint256[] memory result = get_polynomial_points(data, oods_coeffiencts, queries, oods_point);
 
         uint256 evaluated_point;
@@ -77,6 +81,7 @@ contract Starkdex is StarkdexTrace {
         } else {
             revert("Unsuported tx len");
         }
+        console.log("constraint_calculations end");
         return (result, evaluated_point);
     }
 
@@ -91,7 +96,7 @@ contract Starkdex is StarkdexTrace {
         returns (ProofTypes.ProofParameters memory, PublicCoin.Coin memory)
     {
         console.log("initalize_system start");
-        PublicInput memory input = abi.decode(public_input, (PublicInput));
+        /* PublicInput memory input = abi.decode(public_input, (PublicInput)); */
         console.log("initalize_system 1");
         PublicCoin.Coin memory coin = PublicCoin.Coin({
             // TODO - Potetially insecure, FIX BEFORE LAUNCH
@@ -102,7 +107,7 @@ contract Starkdex is StarkdexTrace {
         // The trace length is going to be the next power of two after index.
         // Note - Trace length is num_txn*65536 so
         // log_trace_length = num_bits(num_txn*65536) = num_bits(num_txn) + 15
-        uint8 log_trace_length = Utils.num_bits((uint64)(input.number_of_transactions)) + 15;
+        uint8 log_trace_length = 16; //Utils.num_bits((uint64)(input.number_of_transactions)) + 15;
         uint8[] memory fri_layout = default_fri_layout(log_trace_length);
 
         console.log("initalize_system 3");
@@ -113,8 +118,8 @@ contract Starkdex is StarkdexTrace {
             // TODO - Potentially non-fixed blowup
             log_blowup: 4,
             constraint_degree: CONSTRAINT_DEGREE,
-            pow_bits: 10,
-            number_of_queries: 20,
+            pow_bits: 0,
+            number_of_queries: 45,
             fri_layout: fri_layout
         });
         console.log("initalize_system end");
@@ -129,6 +134,7 @@ contract Starkdex is StarkdexTrace {
         PublicInput memory public_input,
         uint256[] memory trace_oods_values
     ) internal returns (uint256) {
+        console.log("evaluate_oods_point1 end");
         // TODO - Resize this to match, may cause reverts
         uint256[] memory call_context = new uint256[](382);
         uint256 non_mont_oods = oods_point.fmul_mont(1);
