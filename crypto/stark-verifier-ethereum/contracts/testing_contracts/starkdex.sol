@@ -14,7 +14,7 @@ import './starkdex_periodic0.sol';
 import './starkdex_periodic1.sol';
 import './starkdex_periodic2.sol';
 import './starkdex_periodic3.sol';
-
+import '@nomiclabs/buidler/console.sol';
 
 // This contract is the constraint system for a dex
 // It can only process transactions in the following batch
@@ -90,18 +90,22 @@ contract Starkdex is StarkdexTrace {
         override
         returns (ProofTypes.ProofParameters memory, PublicCoin.Coin memory)
     {
+        console.log("initalize_system start");
         PublicInput memory input = abi.decode(public_input, (PublicInput));
+        console.log("initalize_system 1");
         PublicCoin.Coin memory coin = PublicCoin.Coin({
             // TODO - Potetially insecure, FIX BEFORE LAUNCH
             digest: keccak256(abi.encodePacked()),
             counter: 0
         });
+        console.log("initalize_system 2");
         // The trace length is going to be the next power of two after index.
         // Note - Trace length is num_txn*65536 so
         // log_trace_length = num_bits(num_txn*65536) = num_bits(num_txn) + 15
         uint8 log_trace_length = Utils.num_bits((uint64)(input.number_of_transactions)) + 15;
         uint8[] memory fri_layout = default_fri_layout(log_trace_length);
 
+        console.log("initalize_system 3");
         ProofTypes.ProofParameters memory params = ProofTypes.ProofParameters({
             number_of_columns: NUM_COLUMNS,
             log_trace_length: log_trace_length,
@@ -113,7 +117,7 @@ contract Starkdex is StarkdexTrace {
             number_of_queries: 20,
             fri_layout: fri_layout
         });
-
+        console.log("initalize_system end");
         return (params, coin);
     }
 
