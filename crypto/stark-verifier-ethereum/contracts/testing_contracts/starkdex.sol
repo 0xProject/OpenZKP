@@ -46,8 +46,8 @@ contract Starkdex is StarkdexTrace {
     // This format is likely to change as we support larger balances and other changes.
     struct PublicInput {
         uint256 number_of_transactions;
-        bytes32 inital_root;
-        bytes32 final_root;
+        uint256 inital_root;
+        uint256 final_root;
         bytes32[] packed_modification_data;
         uint256[] token_ids;
         uint256[] public_keys;
