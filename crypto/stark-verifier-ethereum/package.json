@@ -38,7 +38,7 @@
     "typescript": "^3.8.3"
   },
   "scripts": {
-    "test": "npx buidler test",
+    "test": "npm run build && npx buidler test --no-compile",
     "clean": "npx buidler clean",
     "build": "npx buidler typechain && npx buidler typechain --config oods.config.ts",
     "lint": "tslint --format stylish --project . && npm run-script solhint",
