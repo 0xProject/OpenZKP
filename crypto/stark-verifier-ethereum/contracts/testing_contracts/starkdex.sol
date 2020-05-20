@@ -71,7 +71,7 @@ contract Starkdex is StarkdexTrace {
             params.log_trace_length);
         console.log("about to decode start");
         console.logBytes(proof.public_inputs);
-        PublicInput memory input = PublicInput(abi.decode(proof.public_inputs, ([uint256, uint256, uint256, bytes32[], uint256[], uint256[]])));
+        PublicInput memory input = PublicInput(abi.decode(proof.public_inputs, (uint256, uint256, uint256, bytes32[], uint256[], uint256[])));
         console.log("decode end");
         uint256[] memory result = get_polynomial_points(data, oods_coeffiencts, queries, oods_point);
 
