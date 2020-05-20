@@ -17,7 +17,8 @@ const config: BuidlerConfig = {
     },
     networks: {
         buidlerevm: {
-            blockGasLimit: 100000000,
+            blockGasLimit: 1000000000,
+            allowUnlimitedContractSize: true,
         },
     },
 };

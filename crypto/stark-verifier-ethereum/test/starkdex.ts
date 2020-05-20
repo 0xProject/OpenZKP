@@ -29,6 +29,7 @@ describe('StarkdexVerifier', function(this: any) {
     const [wallet] = provider.getWallets();
 
     before(async () => {
+        console.log("deploying...");
         oods = (await deployContract(wallet, StarkdexOodsPolyArtifact)) as StarkdexOodsPoly;
         console.log("oods deployed");
         starkdex = (await deployContract(wallet, StarkdexArtifact, [
