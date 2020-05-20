@@ -5,6 +5,7 @@ import './interfaces/ConstraintInterface.sol';
 import './primefield.sol';
 import './iterator.sol';
 import './utils.sol';
+import '@nomiclabs/buidler/console.sol';
 
 abstract contract DefaultConstraintSystem is ConstraintSystem  {
     using Iterators for Iterators.IteratorUint;
@@ -41,6 +42,7 @@ abstract contract DefaultConstraintSystem is ConstraintSystem  {
         uint64[] memory queries,
         uint256 oods_point
     ) internal returns (uint256[] memory) {
+        console.log("get_polynomial_points start");
         uint256[] memory inverses = oods_prepare_inverses(
             queries,
             data.eval,
@@ -48,35 +50,48 @@ abstract contract DefaultConstraintSystem is ConstraintSystem  {
             data.log_trace_length + 4,
             data.log_trace_length
         );
+        console.log("get_polynomial_points 1");
         uint256[] memory results = new uint256[](queries.length);
 
         // Init an iterator over the oods coeffiecients
         Iterators.IteratorUint memory coeffiecients = Iterators.init_iterator(oods_coeffiecients);
         uint256[] memory layout = layout_col_major();
+        console.log("get_polynomial_points 2");
         for (uint256 i = 0; i < queries.length; i++) {
             uint256 result = 0;
+            console.log("get_polynomial_points 3");
             {
             // These held pointers help soldity make the stack work
             uint256[] memory trace_oods_value = data.trace_oods_values;
             uint256[] memory trace_values = data.trace_values;
             for (uint256 j = 0; j < trace_oods_value.length; j++) {
+                console.log("get_polynomial_points j start");
                 uint256 loaded_trace_data = trace_oods_value[j];
+                console.log("get_polynomial_points j 2");
                 // J*2 is the col index when the layout is in coloum major form
                 // NUM_COLUMNS*i idenifes the start of this querry's row values
                 uint256 calced_index = NUM_COLUMNS*i + layout[j*2];
+                console.log("get_polynomial_points j 3");
                 uint256 numberator = trace_values[calced_index].fsub(loaded_trace_data);
+                console.log("get_polynomial_points j 4");
 
                 // We are in col major form so we need to lookup the row offset
                 uint256 row = layout[j*2+1];
+                console.log("get_polynomial_points j 5");
                 // We then use the row to offset function to lookup the offest of the
                 // row's inverse.
                 calced_index = (NUM_OFFSETS+1)*i + row_to_offset(row);
+                console.log("get_polynomial_points j 6");
+                console.log(calced_index);
                 uint256 denominator_inv = inverses[calced_index];
 
                 uint256 element = numberator.fmul(denominator_inv);
+                console.log("get_polynomial_points j 7");
                 uint256 coef = coeffiecients.next();
                 uint256 next_term = element.fmul_mont(coef);
+                console.log("get_polynomial_points j 8");
                 result = result.fadd(next_term);
+                console.log("get_polynomial_points j end");
             }
             }
 
@@ -99,6 +114,7 @@ abstract contract DefaultConstraintSystem is ConstraintSystem  {
             coeffiecients.index = 0;
         }
 
+        console.log("get_polynomial_points end");
         return results;
     }
 
