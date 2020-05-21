@@ -1,8 +1,8 @@
 use zkp_macros_decl::field_element;
 use zkp_primefield::FieldElement;
 use zkp_stark::{
-    generate, proof_serialize, prove, Constraints, Provable, RationalExpression, TraceTable,
-    Verifiable, DensePolynomial,
+    generate, proof_serialize, prove, Constraints, DensePolynomial, Provable, RationalExpression,
+    TraceTable, Verifiable,
 };
 use zkp_u256::U256;
 
@@ -34,7 +34,12 @@ impl Provable<&Witness> for Claim {
 impl Claim {
     fn concrete_system(&self) -> Constraints {
         let claim_polynomials = vec![DensePolynomial::new(&[self.0.clone()])];
-        let expressions = self.constraints().expressions().iter().map(|x| x.substitute_claim(&claim_polynomials)).collect();
+        let expressions = self
+            .constraints()
+            .expressions()
+            .iter()
+            .map(|x| x.substitute_claim(&claim_polynomials))
+            .collect();
 
         Constraints::from_expressions(
             (2, 1),

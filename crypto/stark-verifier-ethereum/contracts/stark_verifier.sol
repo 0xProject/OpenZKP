@@ -53,14 +53,21 @@ contract StarkVerifier is Trace, ProofOfWork, Fri, ProofTypes {
             constraint_coeffiencents,
             oods_coefficients
         );
+        console.log("done with constraint_calculations");
+        console.log("fri_top_layer.length", fri_top_layer.length);
+        console.log("constraint_evaluated_oods_point", constraint_evaluated_oods_point);
         trace('constraint_calculations', false);
 
         uint8 log_eval_domain_size = constraint_parameters.log_trace_length + constraint_parameters.log_blowup;
+        console.log("check commitments...");
         check_commitments(proof, constraint_parameters, queries, log_eval_domain_size);
+        console.log("check commitments done");
 
         fri_check(proof, constraint_parameters.fri_layout, eval_points, log_eval_domain_size, queries, fri_top_layer);
+        console.log("fri check done");
 
         check_out_of_domain_sample_result(proof, oods_point, constraint_evaluated_oods_point);
+        console.log("oods done");
 
         trace('verify_proof', false);
     }
@@ -125,6 +132,7 @@ contract StarkVerifier is Trace, ProofOfWork, Fri, ProofTypes {
         uint256[] memory query_copy = new uint256[](queries.length);
         uint256 eval_domain_size = uint256(2)**(log_eval_domain_size);
 
+        console.log("preparing...");
         prepare_hashes_and_queries(
             proof.trace_values,
             uint256(constraint_parameters.number_of_columns),
@@ -133,11 +141,13 @@ contract StarkVerifier is Trace, ProofOfWork, Fri, ProofTypes {
             merkle_hashes,
             query_copy
         );
+        console.log("done preparing");
         require(
             verify_merkle_proof(proof.trace_commitment, merkle_hashes, query_copy, proof.trace_decommitment),
             'Trace commitment proof failed'
         );
 
+        console.log("more preparing");
         prepare_hashes_and_queries(
             proof.constraint_values,
             uint256(constraint_parameters.constraint_degree),
@@ -150,6 +160,7 @@ contract StarkVerifier is Trace, ProofOfWork, Fri, ProofTypes {
             verify_merkle_proof(proof.constraint_commitment, merkle_hashes, query_copy, proof.constraint_decommitment),
             'Constraint commitment proof failed'
         );
+        console.log("done more preparing");
         trace('check_commitments', false);
     }
 
@@ -163,12 +174,17 @@ contract StarkVerifier is Trace, ProofOfWork, Fri, ProofTypes {
         bytes32[] memory output_hashes,
         uint256[] memory output_queries
     ) internal {
+        console.log("prepare_hashes_and_queries");
         uint256[] memory group = new uint256[](data_group_size);
+        console.log('data_groups.length', data_groups.length);
+        console.log('data_group_size', data_group_size);
         for (uint256 i = 0; i < data_groups.length / data_group_size; i++) {
             for (uint256 j = 0; j < data_group_size; j++) {
                 group[j] = data_groups[i * data_group_size + j];
             }
+            console.log("2134123czfasd");
             output_hashes[i] = merkle_leaf_hash(group);
+            console.log("2134123czfasd12312");
         }
 
         queries.deep_copy_and_convert(output_queries);

@@ -124,7 +124,7 @@ contract Starkdex is StarkdexTrace {
             log_blowup: 4,
             constraint_degree: CONSTRAINT_DEGREE,
             pow_bits: 0,
-            number_of_queries: 45,
+            number_of_queries: 1,
             fri_layout: fri_layout
         });
         console.log("initalize_system end");

@@ -428,24 +428,12 @@ abstract contract RecurrenceTrace is DefaultConstraintSystem({}, {}, {}, {}) {{"
 
 // TODO - This needs testing
 fn binary_row_search_string(rows: &[usize]) -> String {
-    if rows.len() == 1 {
-        return format!("return {};", rows[0]);
-    }
-    format!(
-        "
-    if (row > {}) {{
-        {}
-    }} else if (row < {}) {{
-        {}
-    }}
-    return {};
-    ",
-        rows[rows.len() / 2],
-        binary_row_search_string(rows.get(0..(rows.len()) / 2).unwrap()),
-        rows[rows.len() / 2],
-        binary_row_search_string(rows.get((rows.len() / 2)..rows.len()).unwrap()),
-        rows[rows.len() / 2]
-    )
+    let ifs: Vec<_> = rows
+        .iter()
+        .enumerate()
+        .map(|(i, row)| format!("if (row == {}) {{return {};}}", row, i))
+        .collect();
+    ifs.join("\n else ")
 }
 
 #[allow(clippy::too_many_lines)]
