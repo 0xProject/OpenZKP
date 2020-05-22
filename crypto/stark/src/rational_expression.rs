@@ -294,7 +294,12 @@ impl RationalExpression {
             X => x.clone(),
             Constant(c) => c.clone(),
             &Trace(i, j) => trace(i, j),
-            Polynomial(p, a) => p.evaluate(&a.evaluate(x, trace)),
+            Polynomial(p, a) => {
+                let inner = a.evaluate(x, trace);
+                let result = p.evaluate(&inner);
+                // dbg!(result.clone());
+                result
+            },
             ClaimPolynomial(..) => panic!("ClaimPolynomial should be substituted by Polynomial"),
             Add(a, b) => a.evaluate(x, trace) + b.evaluate(x, trace),
             Neg(a) => -&a.evaluate(x, trace),

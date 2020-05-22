@@ -87,6 +87,9 @@ contract Starkdex is StarkdexTrace {
             revert("Unsuported tx len");
         }
         console.log("constraint_calculations end");
+
+        console.log("constraint_calculations result");
+        console.logBytes32((bytes32)(evaluated_point.from_montgomery()));
         return (result, evaluated_point);
     }
 
@@ -100,22 +103,22 @@ contract Starkdex is StarkdexTrace {
         override
         returns (ProofTypes.ProofParameters memory, PublicCoin.Coin memory)
     {
-        console.log("initalize_system start");
+        /* console.log("initalize_system start"); */
         /* PublicInput memory input = abi.decode(public_input, (PublicInput)); */
-        console.log("initalize_system 1");
+        /* console.log("initalize_system 1"); */
         PublicCoin.Coin memory coin = PublicCoin.Coin({
             // TODO - Potetially insecure, FIX BEFORE LAUNCH
             digest: keccak256(abi.encodePacked()),
             counter: 0
         });
-        console.log("initalize_system 2");
+        /* console.log("initalize_system 2"); */
         // The trace length is going to be the next power of two after index.
         // Note - Trace length is num_txn*65536 so
         // log_trace_length = num_bits(num_txn*65536) = num_bits(num_txn) + 15
         uint8 log_trace_length = 16; //Utils.num_bits((uint64)(input.number_of_transactions)) + 15;
         uint8[] memory fri_layout = default_fri_layout(log_trace_length);
 
-        console.log("initalize_system 3");
+        /* console.log("initalize_system 3"); */
         ProofTypes.ProofParameters memory params = ProofTypes.ProofParameters({
             number_of_columns: NUM_COLUMNS,
             log_trace_length: log_trace_length,
@@ -124,10 +127,10 @@ contract Starkdex is StarkdexTrace {
             log_blowup: 4,
             constraint_degree: CONSTRAINT_DEGREE,
             pow_bits: 0,
-            number_of_queries: 1,
+            number_of_queries: 3,
             fri_layout: fri_layout
         });
-        console.log("initalize_system end");
+        /* console.log("initalize_system end"); */
         return (params, coin);
     }
 
@@ -139,11 +142,12 @@ contract Starkdex is StarkdexTrace {
         PublicInput memory public_input,
         uint256[] memory trace_oods_values
     ) internal returns (uint256) {
-        console.log("evaluate_oods_point1 end");
+        /* console.log("evaluate_oods_point1 end"); */
         // TODO - Resize this to match, may cause reverts
         uint256[] memory call_context = new uint256[](382);
         uint256 non_mont_oods = oods_point.fmul_mont(1);
         call_context[0] = non_mont_oods;
+        // Mason! this order is wrong. these should be at the end!
         call_context[1] = (uint256)(public_input.inital_root).from_montgomery();
         call_context[2] = (uint256)(public_input.final_root).from_montgomery();
 
@@ -152,6 +156,10 @@ contract Starkdex is StarkdexTrace {
         // Calculate the is_modification polynomials
         call_context[3] = is_settlement;
         call_context[4] = is_modification_polynomial(non_mont_oods, public_input.number_of_transactions, is_settlement);
+        console.log("is_settlement");
+        console.logBytes32((bytes32)(call_context[3]));
+        console.log("is_modification");
+        console.logBytes32((bytes32)(call_context[4]));
         // Calculate the 'base', 'key', 'token', 'initial_amount', 'final_amount' and 'vault' polynomials
         // We use a single function call for for efficency and so we can reuse values
         // TODO - Further reuse could be accomplished by reusing denominators from is_settlement call, saving significant gas
@@ -162,22 +170,56 @@ contract Starkdex is StarkdexTrace {
         call_context[8] = interpolated_value_polys[3];
         call_context[9] = interpolated_value_polys[4];
         call_context[10] = interpolated_value_polys[5];
+        console.log("interpolated_value_polys 0");
+        console.logBytes32((bytes32)(call_context[5]));
+        console.log("interpolated_value_polys 1");
+        console.logBytes32((bytes32)(call_context[6]));
+        console.log("interpolated_value_polys 2");
+        console.logBytes32((bytes32)(call_context[7]));
+        console.log("interpolated_value_polys 3");
+        console.logBytes32((bytes32)(call_context[8]));
+        console.log("interpolated_value_polys 4");
+        console.logBytes32((bytes32)(call_context[9]));
+        console.log("interpolated_value_polys 5");
+        console.logBytes32((bytes32)(call_context[10]));
 
         // Next we add the perodic cols
         call_context[11] = periodic_column_0.evaluate(non_mont_oods);
         call_context[12] = periodic_column_1.evaluate(non_mont_oods);
         call_context[13] = periodic_column_2.evaluate(non_mont_oods);
         call_context[14] = periodic_column_3.evaluate(non_mont_oods);
+        console.log("periodic_column_0");
+        console.logBytes32((bytes32)(call_context[11]));
+        console.log("periodic_column_1");
+        console.logBytes32((bytes32)(call_context[12]));
+        console.log("periodic_column_2");
+        console.logBytes32((bytes32)(call_context[13]));
+        console.log("periodic_column_3");
+        console.logBytes32((bytes32)(call_context[14]));
 
         uint256 current_index = 15;
         // This array contains 240 elements, 2 for each constraint
+        console.log("constraint_coeffiencts.length", constraint_coeffiencts.length);
         for (uint256 i = 0; i < constraint_coeffiencts.length; i ++) {
-            call_context[current_index] = constraint_coeffiencts[i];
+            if (i > 0) {
+                call_context[current_index] = 0;
+            } else {
+                call_context[current_index] = constraint_coeffiencts[i];
+                console.log("coefficient = ");
+                console.logBytes32((bytes32)(call_context[current_index]));
+                console.logBytes32((bytes32)(call_context[current_index].from_montgomery()));
+            }
             current_index++;
         }
         // This array contains 127 elements, one for each trace offset in the layout
+        console.log("trace_oods_values.length", trace_oods_values.length);
         for (uint256 i = 0; i < trace_oods_values.length; i++) {
-            call_context[current_index] = trace_oods_values[i].fmul_mont(1);
+            /* if (i < 1) {
+                call_context[current_index] = 0;
+            } else { */
+                call_context[current_index] = trace_oods_values[i].fmul_mont(1);
+                console.logBytes32((bytes32)(call_context[current_index].from_montgomery()));
+            /* } */
             current_index++;
         }
 
@@ -230,7 +272,7 @@ contract Starkdex is StarkdexTrace {
     function get_weighted_field(PublicInput memory public_input, uint256 x, uint256 is_settlement, uint256 root) internal returns(uint256[6] memory) {
         uint256[6] memory outputs;
         for( uint i = 0; i < 6; i++) {
-            outputs[i] = 1;
+            outputs[i] = 0;
         }
 
         for(uint256 i = 0; i < public_input.packed_modification_data.length; i++) {

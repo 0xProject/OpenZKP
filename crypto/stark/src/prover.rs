@@ -561,7 +561,13 @@ fn get_constraint_polynomials(
     let trace_coset = extract_trace_coset(trace_lde, coset_size);
 
     info!("Combine rational expressions");
-    let combined_constraints = constraints.combine(constraint_coefficients);
+    let mut test = vec![FieldElement::zero(); constraint_coefficients.len()];
+    for i in 0..1 {
+        test[i] = constraint_coefficients[i].clone();
+        dbg!(constraint_coefficients[i].clone());
+    }
+
+    let combined_constraints = constraints.combine(&test);
     let mut dag = AlgebraicGraph::new(
         &FieldElement::generator(),
         trace_coset.num_rows(),
@@ -642,6 +648,7 @@ fn oods_combine(
     // Fetch the oods sampling point
     let trace_length = trace_polynomials[0].len();
     let oods_point: FieldElement = proof.get_random();
+    dbg!(oods_point.clone());
     let g = FieldElement::root(trace_length).expect("No root for trace polynomial length.");
 
     // Write point evaluations to proof
@@ -652,9 +659,14 @@ fn oods_combine(
     }
 
     let oods_point_pow = oods_point.pow(constraint_polynomials.len());
-    for constraint_polynomial in constraint_polynomials {
-        proof.write(&constraint_polynomial.evaluate(&oods_point_pow));
+    let mut oods_value = FieldElement::zero();
+    for (i, constraint_polynomial) in constraint_polynomials.iter().enumerate() {
+        let value = constraint_polynomial.evaluate(&oods_point_pow);
+        proof.write(&value);
+        // dbg!(oods_value);
+        oods_value += oods_point.pow(i) * value;
     }
+    dbg!(oods_value);
 
     // Divide out points and linear sum the polynomials
     // OPT: Parallelization

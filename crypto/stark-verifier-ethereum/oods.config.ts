@@ -5,7 +5,7 @@ usePlugin('buidler-typechain');
 
 const config: BuidlerConfig = {
     solc: {
-        version: '0.5.11',
+        version: '0.6.6',
         optimizer: {
             enabled: false,
         },

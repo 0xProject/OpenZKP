@@ -63,7 +63,7 @@ describe('StarkdexVerifier', function(this: any) {
     });
 
     // Note - This checks the proof of work, but not the whole proof yet
-    it('validates a correct proof', async () => {
+    it.only('validates a correct proof', async () => {
       console.log(oods.address);
       console.log(starkdex.address);
       console.log(verifier_contract.address);
@@ -71,7 +71,7 @@ describe('StarkdexVerifier', function(this: any) {
       // @ts-ignore
       starkdex_proof.public_inputs = utils.defaultAbiCoder.encode( // or solidityPack here?
           ['uint256', 'uint256', 'uint256', 'bytes32[]', 'uint256[]', 'uint256[]'],
-          [1, "0x010bbb3b97e81273d77cfdf9519ac52f9f9f73377df761b41656214d346a3d6f", "0x010bbb3b97e81273d77cfdf9519ac52f9f9f73377df761b41656214d346a3d6f", ["0x010bbb3b97e81273d77cfdf9519ac52f9f9f73377df761b41656214d346a3d6f"], [0], [0]],
+          [1, "0x010bbb3b97e81273d77cfdf9519ac52f9f9f73377df761b41656214d346a3d6f", "0x010bbb3b97e81273d77cfdf9519ac52f9f9f73377df761b41656214d346a3d6f", [], [], []],
       );
       // @ts-ignore
       (await verifier_contract.verify_proof(starkdex_proof, starkdex.address)).wait();

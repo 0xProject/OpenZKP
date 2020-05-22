@@ -189,6 +189,7 @@ pub fn verify(constraints: &Constraints, proof: &Proof) -> Result<()> {
     let lde_commitment = Commitment::from_size_hash(eval_domain_size, &low_degree_extension_root)?;
     let constraint_coefficients = channel.get_coefficients(2 * constraints.len());
 
+
     let constraint_evaluated_root: Hash = channel.replay();
     let constraint_commitment =
         Commitment::from_size_hash(eval_domain_size, &constraint_evaluated_root)?;
@@ -202,6 +203,7 @@ pub fn verify(constraints: &Constraints, proof: &Proof) -> Result<()> {
         .into_iter()
         .zip(trace_values.iter().cloned())
         .collect();
+    dbg!(trace_values.clone());
 
     let constraints_trace_degree = constraints.degree().next_power_of_two();
     let claimed_constraint_values: Vec<FieldElement> =
@@ -376,6 +378,15 @@ pub fn verify(constraints: &Constraints, proof: &Proof) -> Result<()> {
         }
     }
 
+    // dbg!(oods_point.clone());
+    // dbg!(oods_value_from_constraint_values(&claimed_constraint_values, &oods_point));
+    // dbg!(oods_value_from_trace_values(
+    //     &constraints,
+    //     &constraint_coefficients,
+    //     &claimed_trace_map,
+    //     &oods_point,
+    // ));
+
     if oods_value_from_trace_values(
         &constraints,
         &constraint_coefficients,
@@ -385,6 +396,7 @@ pub fn verify(constraints: &Constraints, proof: &Proof) -> Result<()> {
     {
         return Err(Error::OodsMismatch);
     }
+    // assert!(false);
     trace!("END Verify");
     Ok(())
 }

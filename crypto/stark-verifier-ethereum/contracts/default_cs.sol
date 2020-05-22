@@ -56,17 +56,17 @@ abstract contract DefaultConstraintSystem is ConstraintSystem  {
         // Init an iterator over the oods coeffiecients
         Iterators.IteratorUint memory coeffiecients = Iterators.init_iterator(oods_coeffiecients);
         uint256[] memory layout = layout_col_major();
-        console.log("get_polynomial_points 2");
-        console.log(queries.length);
+        /* console.log("get_polynomial_points 2"); */
+        /* console.log(queries.length); */
         /* console.log(trace_oods_value.length); */
         for (uint256 i = 0; i < queries.length; i++) {
             uint256 result = 0;
-            console.log("get_polynomial_points 3");
+            /* console.log("get_polynomial_points 3"); */
             {
                 // These held pointers help soldity make the stack work
                 uint256[] memory trace_oods_value = data.trace_oods_values;
                 uint256[] memory trace_values = data.trace_values;
-                console.log(trace_oods_value.length);
+                /* console.log(trace_oods_value.length); */
                 for (uint256 j = 0; j < trace_oods_value.length; j++) {
                     /* console.log("get_polynomial_points j start"); */
                     uint256 loaded_trace_data = trace_oods_value[j];
@@ -85,7 +85,7 @@ abstract contract DefaultConstraintSystem is ConstraintSystem  {
                     // row's inverse.
                     calced_index = (NUM_OFFSETS+1)*i + row_to_offset(row);
                     /* console.log("get_polynomial_points j 6"); */
-                    console.log(calced_index);
+                    /* console.log(calced_index); */
                     uint256 denominator_inv = inverses[calced_index];
 
                     uint256 element = numberator.fmul(denominator_inv);
@@ -120,7 +120,7 @@ abstract contract DefaultConstraintSystem is ConstraintSystem  {
             coeffiecients.index = 0;
         }
 
-        console.log("get_polynomial_points end");
+        /* console.log("get_polynomial_points end"); */
         /* require(1 == 0, "asdflawrasd3"); */
         return results;
     }

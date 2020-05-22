@@ -53,19 +53,24 @@ contract StarkVerifier is Trace, ProofOfWork, Fri, ProofTypes {
             constraint_coeffiencents,
             oods_coefficients
         );
-        console.log("done with constraint_calculations");
-        console.log("fri_top_layer.length", fri_top_layer.length);
-        console.log("constraint_evaluated_oods_point", constraint_evaluated_oods_point);
+        /* console.log("done with constraint_calculations"); */
+        /* console.log("fri_top_layer.length", fri_top_layer.length); */
+        /* console.log("constraint_evaluated_oods_point", constraint_evaluated_oods_point); */
         trace('constraint_calculations', false);
 
         uint8 log_eval_domain_size = constraint_parameters.log_trace_length + constraint_parameters.log_blowup;
-        console.log("check commitments...");
+        /* console.log("check commitments..."); */
         check_commitments(proof, constraint_parameters, queries, log_eval_domain_size);
-        console.log("check commitments done");
+        /* console.log("check commitments done"); */
 
         fri_check(proof, constraint_parameters.fri_layout, eval_points, log_eval_domain_size, queries, fri_top_layer);
-        console.log("fri check done");
+        /* console.log("fri check done"); */
 
+        console.log("oods_point");
+        // 0x06e2fc5aa1dddc8d76d49f40b7de83c727a2902b4dde86278fa3d09507d61eb0
+        console.logBytes32((bytes32)(oods_point.from_montgomery()));
+        console.log("constraint_evaluated_oods_point");
+        console.logBytes32((bytes32)(constraint_evaluated_oods_point.from_montgomery()));
         check_out_of_domain_sample_result(proof, oods_point, constraint_evaluated_oods_point);
         console.log("oods done");
 
@@ -182,9 +187,9 @@ contract StarkVerifier is Trace, ProofOfWork, Fri, ProofTypes {
             for (uint256 j = 0; j < data_group_size; j++) {
                 group[j] = data_groups[i * data_group_size + j];
             }
-            console.log("2134123czfasd");
+            /* console.log("2134123czfasd"); */
             output_hashes[i] = merkle_leaf_hash(group);
-            console.log("2134123czfasd12312");
+            /* console.log("2134123czfasd12312"); */
         }
 
         queries.deep_copy_and_convert(output_queries);
@@ -210,6 +215,10 @@ contract StarkVerifier is Trace, ProofOfWork, Fri, ProofTypes {
             result = result.fadd(oods_value_times_power);
             power = power.fmul_mont(oods_point);
         }
+        console.log("result");
+        console.logBytes32((bytes32)(result.from_montgomery()));
+        console.log("evaluated_oods_point");
+        console.logBytes32((bytes32)(evaluated_oods_point.from_montgomery()));
         require(result == evaluated_oods_point, 'Oods mismatch');
         trace('check_out_of_domain_sample', false);
     }
