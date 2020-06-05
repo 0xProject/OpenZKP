@@ -296,11 +296,8 @@ impl RationalExpression {
             &Trace(i, j) => trace(i, j),
             Polynomial(p, a) => {
                 let inner = a.evaluate(x, trace);
-                let result = p.evaluate(&inner);
-                // dbg!(a);
-                // dbg!(result.clone());
-                result
-            },
+                p.evaluate(&inner)
+            }
             ClaimPolynomial(..) => panic!("ClaimPolynomial should be substituted by Polynomial"),
             Add(a, b) => a.evaluate(x, trace) + b.evaluate(x, trace),
             Neg(a) => -&a.evaluate(x, trace),
@@ -349,13 +346,13 @@ impl Hash for RationalExpression {
                 i.hash(state);
                 j.hash(state);
             }
-            Polynomial(p, _) => {
+            Polynomial(..) => {
                 "poly".hash(state);
                 let x = field_element!(
                     "754ed488ec9208d1c552bb254c0890042078a9e1f7e36072ebff1bf4e193d11b"
                 );
-
-                (self.evaluate(&x, &|i, j| panic!("Trace in polynomial not supported"))).hash(state);
+                (self.evaluate(&x, &|_, _| panic!("Trace in polynomial not supported")))
+                    .hash(state);
             }
             Add(a, b) => {
                 "add".hash(state);

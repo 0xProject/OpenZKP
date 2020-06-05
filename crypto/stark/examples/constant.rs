@@ -52,8 +52,6 @@ fn main() {
     .unwrap();
     println!("{}", proof_string);
 
-    use RationalExpression::*;
-
     let system = claim.constraints();
 
     let _ = generate(

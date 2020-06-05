@@ -1,5 +1,4 @@
-use crate::rational_expression::RationalExpression;
-use crate::polynomial::DensePolynomial;
+use crate::{polynomial::DensePolynomial, rational_expression::RationalExpression};
 use itertools::Itertools;
 use std::{collections::BTreeSet, fmt, prelude::v1::*};
 use zkp_primefield::{FieldElement, Root};
@@ -65,8 +64,8 @@ pub struct Constraints {
     /// To make autogeneration easier we have included a 'ClaimPolynomial'
     /// these claim polynomials need to be taken out of the expressions before
     /// they can be evaluated
-    /// The following Vec of dense polys can be used to substitute claim polynomials
-    /// inside of the prover.
+    /// The following Vec of dense polys can be used to substitute claim
+    /// polynomials inside of the prover.
     pub claim_polynomials: Vec<DensePolynomial>,
 }
 
@@ -288,8 +287,12 @@ impl Constraints {
     // claim_polynomials constraint field to substitute out the
     // Rational Expression claim polynomials
     pub fn substitute(&mut self) {
-        if self.claim_polynomials.len() > 0 {
-            self.expressions = self.expressions.iter().map(|x| x.substitute_claim(&self.claim_polynomials)).collect();
+        if !self.claim_polynomials.is_empty() {
+            self.expressions = self
+                .expressions
+                .iter()
+                .map(|x| x.substitute_claim(&self.claim_polynomials))
+                .collect();
         }
     }
 }

@@ -569,8 +569,9 @@ fn get_constraint_polynomials(
     // At this point the constraint's have had degrees assigned which
     // match those where the claim polynomials aren't specified.
     // TODO - This substitution lowers overall security and should be validated.
-    // TODO - Of particular concern is that by manipulating the degree of the claimed
-    // interpolating polynomial of the modifications modifications can unchecked in the proof.
+    // TODO - Of particular concern is that by manipulating the degree of the
+    // claimed interpolating polynomial of the modifications modifications can
+    // unchecked in the proof.
     combined_constraints = combined_constraints.substitute_claim(&constraints.claim_polynomials);
     constraints.substitute();
 
@@ -1065,7 +1066,7 @@ mod tests {
 
         let constraint_polynomials = get_constraint_polynomials(
             &tree.leaves(),
-            &constraints,
+            &mut constraints,
             &constraint_coefficients,
             trace.num_rows(),
         );
