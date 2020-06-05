@@ -1,0 +1,7 @@
+# Soldity artifacts
+artifacts
+cache
+typechain
+
+# Gas logs
+*.log
