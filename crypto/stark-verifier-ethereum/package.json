@@ -38,9 +38,8 @@
     "typescript": "^3.8.3"
   },
   "scripts": {
-    "test": "npm run build && npx buidler test --no-compile",
-    "clean": "npx buidler clean",
-    "build": "npx buidler typechain && npx buidler typechain --config oods.config.ts",
+    "test": "npx buidler test",
+    "build": "npx buidler compile && npx buidler typechain",
     "lint": "tslint --format stylish --project . && npm run-script solhint",
     "prettier": "npm run-script prettier:sol && npm run-script prettier:ts",
     "prettier:ts": "prettier --write '**/*.ts' --config .prettierrc",
