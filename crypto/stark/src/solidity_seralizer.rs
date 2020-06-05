@@ -88,7 +88,11 @@ pub fn proof_serialize(
     // Get the oods information from the proof and random
     let _: FieldElement = channel.get_random();
 
-    let trace_arguments = constraints.trace_arguments();
+    // This hack around claim polynomials is awful and should be removed
+    let mut parseable_constraints = constraints.clone();
+    parseable_constraints.substitute();
+
+    let trace_arguments = parseable_constraints.trace_arguments();
     let trace_values: Vec<FieldElement> = channel.replay_many(trace_arguments.len());
     result_string.push_str(&format!(
         "\"trace_oods_values\": {}, \n",
