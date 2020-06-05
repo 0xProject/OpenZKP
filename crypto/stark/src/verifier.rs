@@ -197,13 +197,15 @@ pub fn verify(constraints: &Constraints, proof: &Proof) -> Result<()> {
     // Get the oods information from the proof and random
     let oods_point: FieldElement = channel.get_random();
 
-    let trace_arguments = constraints.trace_arguments();
+    // This hack is annoying and should be removed
+    let mut parseable_constraints = constraints.clone();
+    parseable_constraints.substitute();
+    let trace_arguments = parseable_constraints.trace_arguments();
     let trace_values: Vec<FieldElement> = channel.replay_many(trace_arguments.len());
     let claimed_trace_map: BTreeMap<(usize, isize), FieldElement> = trace_arguments
         .into_iter()
         .zip(trace_values.iter().cloned())
         .collect();
-    dbg!(trace_values.clone());
 
     let constraints_trace_degree = constraints.degree().next_power_of_two();
     let claimed_constraint_values: Vec<FieldElement> =
@@ -378,15 +380,6 @@ pub fn verify(constraints: &Constraints, proof: &Proof) -> Result<()> {
         }
     }
 
-    // dbg!(oods_point.clone());
-    // dbg!(oods_value_from_constraint_values(&claimed_constraint_values, &oods_point));
-    // dbg!(oods_value_from_trace_values(
-    //     &constraints,
-    //     &constraint_coefficients,
-    //     &claimed_trace_map,
-    //     &oods_point,
-    // ));
-
     if oods_value_from_trace_values(
         &constraints,
         &constraint_coefficients,
@@ -408,8 +401,40 @@ fn oods_value_from_trace_values(
     oods_point: &FieldElement,
 ) -> FieldElement {
     let trace = |i: usize, j: isize| trace_values.get(&(i, j)).unwrap().clone();
+
+    use crate::RationalExpression::*;
+    use itertools::Itertools;
+    let target_degree = constraints.degree() * constraints.trace_nrows() - 1;
+    let mut index = 0;
+    let mut cumulative = FieldElement::zero();
+    for (constraint, (coefficient_low, coefficient_high)) in (constraints.expressions().iter().zip(coefficients.iter().tuples())) {
+        let (num, den) = constraint.degree(constraints.trace_nrows() - 1);
+        let adjustment_degree = target_degree + den - num;
+        let mut adjustment = Constant(coefficient_low.clone())
+            + Constant(coefficient_high.clone()) * X.pow(adjustment_degree);
+        adjustment = adjustment * constraint.clone();
+        println!("_________________ Constraint {:?} _______________", index);
+        println!("Value eval {:?}",constraint.substitute_claim(&constraints.claim_polynomials).evaluate(oods_point, &trace));
+        println!("Coeff low {:}", coefficient_low.clone().as_montgomery());
+        println!("Coeff high {:}", coefficient_high.clone().as_montgomery());
+        println!("X^adjustment {:?}", (X.pow(adjustment_degree)).evaluate(oods_point, &trace));
+
+        let found = constraint.periodic_search();
+        println!("{:?}", found);
+        for poly in found.keys().collect::<Vec<_>>().iter() {
+            println!("Poly eval {:?}", poly.evaluate(oods_point, &trace))
+        }
+
+        let term = adjustment.substitute_claim(&constraints.claim_polynomials).evaluate(oods_point, &trace);
+        println!("Evaled constraint adjusted: {:?}", term.clone().as_montgomery());
+        cumulative = cumulative + term.clone();
+        println!("Cummulative {:?}", cumulative.as_montgomery());
+        index +=1;
+    }
+
     constraints
         .combine(coefficients)
+        .substitute_claim(&constraints.claim_polynomials)
         .evaluate(oods_point, &trace)
 }
 

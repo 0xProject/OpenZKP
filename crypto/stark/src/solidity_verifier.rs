@@ -188,7 +188,6 @@ pub fn generate(
             target_degree + den - num
         })
         .collect();
-
     autogen_oods_contract(constraints, n_cols, blowup, output_directory);
     let memory_map = setup_call_memory(
         &mut file,
@@ -448,22 +447,16 @@ fn setup_call_memory(
 ) -> Result<BTreeMap<RationalExpression, String>, std::io::Error> {
     let mut index = 1; // Note index 0 is taken by the oods_point
     let mut memory_lookups: BTreeMap<RationalExpression, String> = BTreeMap::new();
-    dbg!(memory_lookups.len());
     for claim_polynomial in claim_polynomial_keys {
-        // dbg!(claim_polynomial.clone());
         let _ = memory_lookups.insert(claim_polynomial.clone(), format!("mload({})", index * 32));
         index += 1;
     }
-    dbg!(memory_lookups.len());
     for &exp in periodic.iter() {
         let _ = memory_lookups.insert(exp.clone(), format!("mload({})", index * 32));
         index += 1;
     }
-    dbg!(memory_lookups.len());
     // Layout the constraints
     index += num_constraints * 2;
-    dbg!(num_constraints);
-    dbg!(index);
     // Note that the trace values must be the last inputs from the contract to make
     // the memory layout defaults work.
     for &exp in traces.iter() {
@@ -623,7 +616,6 @@ contract OodsPoly {{
         (inverse_start_index + inverses.len()) * 32
     )?;
 
-    dbg!(memory_lookups.len());
     Ok(memory_lookups)
 }
 

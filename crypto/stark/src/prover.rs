@@ -345,6 +345,10 @@ impl VectorCommitment for FriLeaves {
 // TODO: Split up
 #[allow(clippy::too_many_lines)]
 pub fn prove(constraints: &Constraints, trace: &TraceTable) -> Result<Proof> {
+    // This hack allows us to avoid changing the interface to mut for the
+    // claim polynomials but is ugly and should be removed.
+    let original_constraints = constraints.clone();
+    let mut constraints = constraints.clone();
     // TODO: Verify input
     //  * Constraint trace length matches trace table length
     //  * Fri layout is less than trace length * blowup
@@ -405,7 +409,7 @@ pub fn prove(constraints: &Constraints, trace: &TraceTable) -> Result<Proof> {
     info!("Compute constraint polynomials.");
     let constraint_polynomials = get_constraint_polynomials(
         &tree.leaves(),
-        &constraints,
+        &mut constraints,
         &constraint_coefficients,
         trace.num_rows(),
     );
@@ -501,7 +505,7 @@ pub fn prove(constraints: &Constraints, trace: &TraceTable) -> Result<Proof> {
     info!("Verify proof.");
     // TODO: Rename channel / transcript object
     let proof = Proof::from_bytes(proof.proof);
-    verify(constraints, &proof)?;
+    verify(&original_constraints, &proof)?;
 
     trace!("END Stark proof");
     Ok(proof)
@@ -541,7 +545,7 @@ fn get_indices(num: usize, bits: u32, proof: &mut ProverChannel) -> Vec<usize> {
 
 fn get_constraint_polynomials(
     trace_lde: &PolyLDE,
-    constraints: &Constraints,
+    constraints: &mut Constraints,
     constraint_coefficients: &[FieldElement],
     trace_length: usize,
 ) -> Vec<DensePolynomial> {
@@ -561,13 +565,15 @@ fn get_constraint_polynomials(
     let trace_coset = extract_trace_coset(trace_lde, coset_size);
 
     info!("Combine rational expressions");
-    let mut test = vec![FieldElement::zero(); constraint_coefficients.len()];
-    for i in 0..1 {
-        test[i] = constraint_coefficients[i].clone();
-        dbg!(constraint_coefficients[i].clone());
-    }
+    let mut combined_constraints = constraints.combine(constraint_coefficients);
+    // At this point the constraint's have had degrees assigned which
+    // match those where the claim polynomials aren't specified.
+    // TODO - This substitution lowers overall security and should be validated.
+    // TODO - Of particular concern is that by manipulating the degree of the claimed
+    // interpolating polynomial of the modifications modifications can unchecked in the proof.
+    combined_constraints = combined_constraints.substitute_claim(&constraints.claim_polynomials);
+    constraints.substitute();
 
-    let combined_constraints = constraints.combine(&test);
     let mut dag = AlgebraicGraph::new(
         &FieldElement::generator(),
         trace_coset.num_rows(),
