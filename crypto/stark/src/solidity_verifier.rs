@@ -78,7 +78,7 @@ impl RationalExpression {
                 first.extend(b.trace_search());
                 first
             }
-            ClaimPolynomial(_, _, a) | Polynomial(_, a) | Inv(a) | Exp(a, _) | Neg(a) => {
+            ClaimPolynomial(_, _, a, _) | Polynomial(_, a) | Inv(a) | Exp(a, _) | Neg(a) => {
                 a.trace_search()
             }
         }
@@ -96,7 +96,7 @@ impl RationalExpression {
                 first
             }
             Inv(_) => [(self.clone(), true)].iter().cloned().collect(),
-            ClaimPolynomial(_, _, a) | Polynomial(_, a) | Exp(a, _) | Neg(a) => a.inv_search(),
+            ClaimPolynomial(_, _, a, _) | Polynomial(_, a) | Exp(a, _) | Neg(a) => a.inv_search(),
         }
     }
 
@@ -228,6 +228,129 @@ pub fn generate(
         "      mstore(0, res)\n      return(0, 0x20)\n  }}\n  }}\n}}"
     )?;
     Ok(())
+}
+
+fn autogen_wrapper_contract(
+    claim_polynomials: &RationalExpression,
+    name: &str,
+    output_directory: &str,
+) -> Result<(), std::io::Error> {
+    let name = format!("{}/{}.sol", output_directory, name);
+    let path = Path::new(&name);
+    let display = path.display();
+    let mut file = match File::create(&path) {
+        Err(why) => panic!("couldn't create {}: {}", display, why.to_string()),
+        Ok(file) => file,
+    };
+
+    writeln!(&mut file,
+
+    )
+    "pragma solidity ^0.6.4;
+    pragma experimental ABIEncoderV2;
+
+    import '../interfaces/ConstraintInterface.sol';
+    import '../public_coin.sol';
+    import '../proof_types.sol';
+    import '../utils.sol';
+    import '../primefield.sol';
+    import '../iterator.sol';
+    import '../default_cs.sol';
+    import './_trace.sol';
+    import './NAME_ME_CONSTRAINT_POLY.sol';
+
+
+    contract {} is {}Trace {{
+        using Iterators for Iterators.IteratorUint;
+        using PrimeField for uint256;
+        using PrimeField for PrimeField.EvalX;
+        using Utils for *;
+
+        NAME_ME immutable constraint_poly;
+
+        constructor(NAME_ME constraint) public {{
+            constraint_poly = constraint;
+        }}
+
+        struct PublicInput {{
+            // Please add the public input fields to this struct
+        }}
+
+        // prettier-ignore
+        function constraint_calculations(
+            ProofTypes.StarkProof calldata proof,
+            ProofTypes.ProofParameters calldata params,
+            uint64[] calldata queries,
+            uint256 oods_point,
+            uint256[] calldata constraint_coeffiencts,
+            uint256[] calldata oods_coeffiencts
+        ) external override returns (uint256[] memory, uint256) {{
+            ProofData memory data = ProofData(
+                proof.trace_values,
+                PrimeField.init_eval(params.log_trace_length + 4),
+                proof.constraint_values, proof.trace_oods_values,
+                proof.constraint_oods_values,
+                params.log_trace_length);
+            PublicInput memory input = abi.decode(proof.public_inputs, (PublicInput));
+            uint256[] memory result = get_polynomial_points(data, oods_coeffiencts, queries, oods_point);
+
+            uint256 evaluated_point;
+            if (params.log_trace_length == 8 && input.index == 150) {{
+                evaluated_point = evaluate_oods_point256(oods_point, constraint_coeffiencts, data.eval, input, data.trace_oods_values);
+            }} else {{
+                evaluated_point = evaluate_oods_point(oods_point, constraint_coeffiencts, data.eval, input, data);
+            }}
+            return (result, evaluated_point);
+        }}
+
+        // TODO - The solidity prettier wants to delete all 'override' statements
+        // We should remove this ignore statement when that changes.
+        // prettier-ignore
+        function initalize_system(bytes calldata public_input)
+            external
+            view
+            override
+            returns (ProofTypes.ProofParameters memory, PublicCoin.Coin memory)
+        {
+            PublicInput memory input = abi.decode(public_input, (PublicInput));
+            PublicCoin.Coin memory coin = PublicCoin.Coin({{
+                // FIX ME - Please add a public input hash here
+                digest: // I'm just a robot I don't know what goes here ¯\\_(ツ)_/¯.
+                ,
+                counter: 0
+            }});
+            // The trace length is going to be the next power of two after index.
+            // FIX ME - This need a trace length set, based on public input
+            uint8 log_trace_length = 0;
+            uint8[] memory fri_layout = default_fri_layout(log_trace_length);
+
+            ProofTypes.ProofParameters memory params = ProofTypes.ProofParameters({{
+                number_of_columns: NUM_COLUMNS,
+                log_trace_length: log_trace_length,
+                number_of_constraints: {},
+                log_blowup: {},
+                constraint_degree: CONSTRAINT_DEGREE,
+                pow_bits: {},
+                number_of_queries: {},
+                fri_layout: fri_layout
+            }});
+
+            return (params, coin);
+        }}
+
+        // (Trace(0, 1) - Trace(1, 0).pow(self.exponent)) * every_row(),
+        // (Trace(1, 1) - Trace(0, 0) - Trace(1, 0)) * every_row(),
+        // (Trace(0, 0) - 1.into()) * on_row(trace_length),
+        // (Trace(0, 0) - (&self.value).into()) * on_row(self.index),
+        // TODO - Use batch inversion
+        function evaluate_oods_point(
+            uint256 oods_point,
+            uint256[] memory constraint_coeffiencts,
+            PrimeField.EvalX memory eval,
+            PublicInput memory public_input,
+            ProofData memory data
+        ) internal returns (uint256) {{
+    "
 }
 
 // Please note this function assumes a rational expression which is a polynomial
