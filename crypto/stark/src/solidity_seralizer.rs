@@ -282,27 +282,15 @@ mod tests {
         constraints.num_queries = 20;
         constraints.pow_bits = 10;
 
-        // autogen(
-        //     constraints.trace_nrows(),
-        //     &[&RationalExpression::Constant(150.into()),
-        // &RationalExpression::Constant((&public).value.clone())],
-        //     constraints.expressions(),
-        //     constraints.trace_nrows(),
-        //     16
-        // ).unwrap();
-
         let trace = public.trace(&private);
 
         let mut result_string = "".to_string();
-        //  &prove(&constraints, &trace).unwrap();
         proof_serialize(
             &constraints,
             &prove(&constraints, &trace).unwrap(),
             &mut result_string,
         )
         .unwrap();
-        // println!("{}", result_string);
-        // assert!(false);
     }
 
     // Note this test is actually more like a binary which we want run so it
