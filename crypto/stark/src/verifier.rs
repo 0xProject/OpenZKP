@@ -388,7 +388,6 @@ pub fn verify(constraints: &Constraints, proof: &Proof) -> Result<()> {
     {
         return Err(Error::OodsMismatch);
     }
-    // assert!(false);
     trace!("END Verify");
     Ok(())
 }
