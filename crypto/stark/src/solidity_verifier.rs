@@ -238,6 +238,7 @@ fn autogen_periodic(
     name: &str,
     output_directory: &str,
 ) -> Result<(), std::io::Error> {
+    // TODO - use this https://doc.rust-lang.org/std/path/struct.Path.html
     let name = format!("{}/{}.sol", output_directory, name);
     let path = Path::new(&name);
     let display = path.display();
@@ -245,8 +246,6 @@ fn autogen_periodic(
         Err(why) => panic!("couldn't create {}: {}", display, why.to_string()),
         Ok(file) => file,
     };
-
-    // println!("{}: {:?}", index, periodic);
 
     if let RationalExpression::Polynomial(poly, _) = periodic {
         writeln!(
