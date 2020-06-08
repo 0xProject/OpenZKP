@@ -1,4 +1,4 @@
-use crate::rational_expression::RationalExpression;
+use crate::{polynomial::DensePolynomial, rational_expression::RationalExpression};
 use itertools::Itertools;
 use std::{collections::BTreeSet, fmt, prelude::v1::*};
 use zkp_primefield::{FieldElement, Root};
@@ -60,6 +60,13 @@ pub struct Constraints {
     /// After `fri_layout.sum()` reductions are done, the remaining polynomial
     /// is written explicitly in coefficient form.
     pub fri_layout: Vec<usize>,
+
+    /// To make autogeneration easier we have included a 'ClaimPolynomial'
+    /// these claim polynomials need to be taken out of the expressions before
+    /// they can be evaluated
+    /// The following Vec of dense polys can be used to substitute claim
+    /// polynomials inside of the prover.
+    pub claim_polynomials: Vec<DensePolynomial>,
 }
 
 impl Constraints {
@@ -111,6 +118,7 @@ impl Constraints {
             pow_bits: 0,
             num_queries: 45,
             fri_layout: Self::default_fri_layout(trace_nrows),
+            claim_polynomials: vec![],
         })
     }
 
@@ -160,6 +168,7 @@ impl Constraints {
                 Some(x) => x,
                 None => Self::default_fri_layout(trace_nrows),
             },
+            claim_polynomials: vec![],
         })
     }
 
@@ -263,6 +272,28 @@ impl Constraints {
             .fold(BTreeSet::new(), |x, y| &x | &y)
             .into_iter()
             .collect()
+    }
+
+    // This sets a the claim polynomials field
+    // Note that since we didn't want to change the interface this is the
+    // only way to set or change the field
+    pub fn add_claim_polynomials(&mut self, polys: Vec<DensePolynomial>) {
+        self.claim_polynomials = polys;
+    }
+
+    // This function if called on a set of constraints which has both
+    // Rational Expression claim polynomials in the constraints
+    // and has set a claim_polynomials constraint field, will use the
+    // claim_polynomials constraint field to substitute out the
+    // Rational Expression claim polynomials
+    pub fn substitute(&mut self) {
+        if !self.claim_polynomials.is_empty() {
+            self.expressions = self
+                .expressions
+                .iter()
+                .map(|x| x.substitute_claim(&self.claim_polynomials))
+                .collect();
+        }
     }
 }
 
