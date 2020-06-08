@@ -294,12 +294,9 @@ fn autogen_wrapper_contract(
             PublicInput memory input = abi.decode(proof.public_inputs, (PublicInput));
             uint256[] memory result = get_polynomial_points(data, oods_coeffiencts, queries, oods_point);
 
-            uint256 evaluated_point;
-            if (params.log_trace_length == 8 && input.index == 150) {{
-                evaluated_point = evaluate_oods_point256(oods_point, constraint_coeffiencts, data.eval, input, data.trace_oods_values);
-            }} else {{
-                evaluated_point = evaluate_oods_point(oods_point, constraint_coeffiencts, data.eval, input, data);
-            }}
+            // Fix Me - This may need several internal functions
+            uint256 evaluated_point = evaluate_oods_point(oods_point, constraint_coeffiencts, data.eval, input, data);
+
             return (result, evaluated_point);
         }}
 
