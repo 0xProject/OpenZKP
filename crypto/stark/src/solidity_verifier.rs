@@ -236,7 +236,7 @@ pub fn generate(
             target_degree + den - num
         })
         .collect();
-    autogen_oods_contract(constraint_expressions, n_cols, blowup, output_directory);
+    autogen_oods_contract(constraint_expressions, n_cols, blowup, output_directory, system_name);
     let memory_map = setup_call_memory(
         &mut file,
         constraint_expressions.len(),
@@ -292,8 +292,8 @@ import '../utils.sol';
 import '../primefield.sol';
 import '../iterator.sol';
 import '../default_cs.sol';
-import './_trace.sol';
-import './NAME_ME_CONSTRAINT_POLY.sol';
+import './{}Trace.sol';
+import './{}ContraintPoly.sol';
 
 
 contract {} is {}Trace {{
@@ -302,10 +302,10 @@ contract {} is {}Trace {{
     using PrimeField for PrimeField.EvalX;
     using Utils for *;
 
-    NAME_ME immutable constraint_poly;
+    OddsPoly immutable constraint_poly;
     // FIX ME - Add polynomials state variables
 
-    constructor(NAME_ME constraint) public {{
+    constructor(OddsPoly constraint) public {{
         constraint_poly = constraint;
     }}
 
@@ -328,6 +328,7 @@ contract {} is {}Trace {{
             proof.constraint_values, proof.trace_oods_values,
             proof.constraint_oods_values,
             params.log_trace_length);
+        // FIX ME - You may need to customize this decoding
         PublicInput memory input = abi.decode(proof.public_inputs, (PublicInput));
         uint256[] memory result = get_polynomial_points(data, oods_coeffiencts, queries, \
      oods_point);
@@ -348,6 +349,7 @@ contract {} is {}Trace {{
         override
         returns (ProofTypes.ProofParameters memory, PublicCoin.Coin memory)
     {{
+        // FIX ME - You may need to customize this decoding
         PublicInput memory input = abi.decode(public_input, (PublicInput));
         PublicCoin.Coin memory coin = PublicCoin.Coin({{
             // FIX ME - Please add a public input hash here
@@ -387,7 +389,6 @@ contract {} is {}Trace {{
     };
 }
 
-#[allow(clippy::non_ascii_literal)]
 macro_rules! wrapper_contract_end {
     () => {
         "
@@ -409,20 +410,21 @@ macro_rules! wrapper_contract_end {
     // into memory
     uint256 result;
     {{
-    FixME local_contract_address = constraint_poly;
-    assembly {{
-        let p := mload(0x40)
-        // Note size is {}*32 because we have {} public inputs, {} constraint coeffiecents and \
-     {} trace decommitments
-        if iszero(call(not(0), local_contract_address, 0, add(call_context, 0x20), {}, p, \
-     0x20)) {{
-        revert(0, 0)
+    OddsPoly local_contract_address = constraint_poly;
+        assembly {{
+            let p := mload(0x40)
+            // Note size is {}*32 because we have {} public inputs, {} constraint coeffiecents and \
+        {} trace decommitments
+            if iszero(call(not(0), local_contract_address, 0, add(call_context, 0x20), {}, p, \
+        0x20)) {{
+            revert(0, 0)
+            }}
+            result := mload(p)
         }}
-        result := mload(p)
-    }}
     }}
     return result;
     }}
+}}
 "
     };
 }
@@ -431,13 +433,13 @@ fn autogen_wrapper_contract(
     claim_polynomials: &[RationalExpression],
     periodic_polys: &[&RationalExpression],
     constraints: &Constraints,
-    name: &str,
+    system_name: &str,
     output_directory: &str,
     trace_layout_len: usize,
 ) -> Result<(), std::io::Error> {
     use crate::rational_expression::RationalExpression::*;
 
-    let name = format!("{}/{}.sol", output_directory, name);
+    let name = format!("{}/{}.sol", output_directory, system_name);
     let path = Path::new(&name);
     let display = path.display();
     let mut file = match File::create(&path) {
@@ -454,10 +456,12 @@ fn autogen_wrapper_contract(
         // Note - This has to be a marco instead of constant so that the
         // format locations are properly loaded [and it compiles]
         wrapper_contract_start!(),
-        name,
-        name,
+        system_name,
+        system_name,
+        system_name,
+        system_name,
         num_constraints,
-        31 - constraints.blowup.leading_zeros(),
+        64 - constraints.blowup.leading_zeros(),
         constraints.pow_bits,
         constraints.num_queries,
         total_input_memory_size
@@ -471,17 +475,19 @@ fn autogen_wrapper_contract(
                     Some(known_name) => {
                         writeln!(
                             &mut file,
-                            "call_context[{}] = 0; // This public input is named: {}",
+                            "    call_context[{}] = 0; // This public input is named: {}",
                             index, known_name
                         )?;
+                        index += 1;
                     }
                     None => {
                         writeln!(
                             &mut file,
-                            "call_context[{}] = 0; // This public input is not named, please give \
+                            "    call_context[{}] = 0; // This public input is not named, please give \
                              it a name in Rust",
                             index
                         )?;
+                        index += 1;
                     }
                 }
             }
@@ -521,10 +527,10 @@ fn autogen_wrapper_contract(
             Polynomial(coefficients, internal_exp) => {
                 writeln!(
                     &mut file,
-                    "call_context[{}] = periodic_col{}.evaluate(non_mont_oods.fpow({:?}));",
+                    "    call_context[{}] = periodic_col{}.evaluate(non_mont_oods.fpow({:?}));",
                     index,
                     named_periodic_cols.get(coefficients).unwrap(),
-                    internal_exp
+                    extract_power(internal_exp)
                 )?;
                 index += 1;
             }
@@ -546,6 +552,15 @@ fn autogen_wrapper_contract(
         32 * (index + 2 * num_constraints + trace_layout_len)
     )?;
     Ok(())
+}
+
+fn extract_power(data: &RationalExpression) -> usize {
+    use crate::rational_expression::RationalExpression::*;
+    match data {
+        X => 1,
+        Exp(sub_data, power) => power*extract_power(sub_data),
+        _ => panic!("Unable to encode power for periodic col with non standard internal rational expression"),
+    }
 }
 
 // Please note this function assumes a rational expression which is a polynomial
@@ -599,6 +614,7 @@ fn autogen_oods_contract(
     n_cols: usize,
     blowup: usize,
     output_directory: &str,
+    system_name: &str,
 ) {
     let mut traces = BTreeMap::new();
 
@@ -621,10 +637,10 @@ fn autogen_oods_contract(
         .max()
         .expect("No constraints");
 
-    let trace_contract = autogen_trace_layout(&trace_keys, n_cols, max_degree, blowup);
+    let trace_contract = autogen_trace_layout(&trace_keys, n_cols, max_degree, blowup, system_name);
 
     // TODO - Variable naming
-    let name = format!("{}/{}.sol", output_directory, "autogenerated_trace");
+    let name = format!("{}/{}Trace.sol", output_directory, system_name);
     let path = Path::new(&name);
     let display = path.display();
     let mut file = match File::create(&path) {
@@ -640,6 +656,7 @@ fn autogen_trace_layout(
     n_cols: usize,
     constraint_degree: usize,
     blowup: usize,
+    system_name: &str,
 ) -> String {
     // We map each trace to the row it contains
     let mut rows = trace_keys
@@ -670,7 +687,8 @@ import '../default_cs.sol';
 // The linter doesn't understand 'abstract' and thinks it's indentation
 
 // solhint-disable-next-line indent
-abstract contract RecurrenceTrace is DefaultConstraintSystem({}, {}, {}, {}) {{",
+abstract contract {}Trace is DefaultConstraintSystem({}, {}, {}, {}) {{",
+        system_name,
         constraint_degree,
         rows.len(),
         n_cols,
