@@ -278,9 +278,10 @@ pub fn generate(
     Ok(())
 }
 
-
 // We declare these macros so that the code isn't inlined in the function
-macro_rules! wrapper_contract_start {() => ("
+macro_rules! wrapper_contract_start {
+    () => {
+        "
 pragma solidity ^0.6.4;
 pragma experimental ABIEncoderV2;
 
@@ -382,10 +383,14 @@ contract {} is {}Trace {{
     ) internal returns (uint256) {{
         uint256[] memory call_context = new uint256[]({});
         uint256 non_mont_oods = oods_point.fmul_mont(1);
-")}
+"
+    };
+}
 
 #[allow(clippy::non_ascii_literal)]
-macro_rules! wrapper_contract_end {() => ("
+macro_rules! wrapper_contract_end {
+    () => {
+        "
     uint256 current_index = {};
     // This array contains {} elements, 2 for each constraint
     for (uint256 i = 0; i < constraint_coeffiencts.length; i ++) {{
@@ -408,9 +413,9 @@ macro_rules! wrapper_contract_end {() => ("
     assembly {{
         let p := mload(0x40)
         // Note size is {}*32 because we have {} public inputs, {} constraint coeffiecents and \
-    {} trace decommitments
+     {} trace decommitments
         if iszero(call(not(0), local_contract_address, 0, add(call_context, 0x20), {}, p, \
-    0x20)) {{
+     0x20)) {{
         revert(0, 0)
         }}
         result := mload(p)
@@ -418,7 +423,9 @@ macro_rules! wrapper_contract_end {() => ("
     }}
     return result;
     }}
-")}
+"
+    };
+}
 
 fn autogen_wrapper_contract(
     claim_polynomials: &[RationalExpression],
@@ -745,7 +752,9 @@ fn binary_row_search_string(rows: &[usize]) -> String {
 }
 
 // We declare these macros so that the code isn't inlined in the function
-macro_rules! constraint_poly_start {() => ("
+macro_rules! constraint_poly_start {
+    () => {
+        "
 pragma solidity ^0.6.6;
 
 contract OodsPoly {{
@@ -775,7 +784,7 @@ contract OodsPoly {{
             }}
 
             function degree_adjustment(composition_polynomial_degree_bound, constraint_degree, \
-         numerator_degree,
+     numerator_degree,
                 denominator_degree) -> result {{
                     result := sub(sub(composition_polynomial_degree_bound, 1),
                        sub(add(constraint_degree, numerator_degree), denominator_degree))
@@ -787,13 +796,17 @@ contract OodsPoly {{
                     result := mulmod(result, x, prime)
                 }}
             }}
-")}
-macro_rules! constraint_poly_batch_inv {() => (
-    "{{
+"
+    };
+}
+macro_rules! constraint_poly_batch_inv {
+    () => {
+        "{{
         // Compute the inverses of the denominators into denominator_invs using batch inverse.
 
         // Start by computing the cumulative product.
-        // Let (d_0, d_1, d_2, ..., d_{{n-1}}) be the values in denominators. Then after this loop
+        // Let (d_0, d_1, d_2, ..., d_{{n-1}}) be the values in denominators. Then after this \
+     loop
         // denominator_invs will be (1, d_0, d_0 * d_1, ...) and prod will contain the value of
         // d_0 * ... * d_{{n-1}}.
         // Compute the offset between the partial_products array and the input values array.
@@ -829,9 +842,8 @@ macro_rules! constraint_poly_batch_inv {() => (
                                PRIME)
         }}
       }}"
-)}
-
-
+    };
+}
 
 fn setup_call_memory(
     file: &mut File,
