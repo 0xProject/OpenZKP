@@ -1,13 +1,16 @@
-use crate::rational_expression::*;
+use crate::{constraints::Constraints, polynomial::DensePolynomial, rational_expression::*};
 use std::{
     cmp::Ordering,
-    collections::{BTreeMap, BTreeSet},
+    collections::{hash_map::DefaultHasher, BTreeMap, BTreeSet},
     fs::File,
+    hash::{Hash, Hasher},
     io::prelude::*,
     iter::once,
     path::Path,
     prelude::v1::*,
 };
+use zkp_macros_decl::field_element;
+use zkp_primefield::FieldElement;
 use zkp_u256::U256;
 
 impl RationalExpression {
@@ -133,25 +136,63 @@ impl RationalExpression {
     }
 }
 
+#[cfg(feature = "std")]
+fn get_hash(r: &DensePolynomial) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    r.hash(&mut hasher);
+    hasher.finish()
+}
+
+impl Hash for DensePolynomial {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        let x = field_element!("754ed488ec9208d1c552bb254c0890042078a9e1f7e36072ebff1bf4e193d11b");
+        self.evaluate(&x).hash(state);
+    }
+}
+
+#[cfg(feature = "std")]
+impl PartialOrd for DensePolynomial {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+#[cfg(feature = "std")]
+impl Ord for DensePolynomial {
+    fn cmp(&self, other: &Self) -> Ordering {
+        get_hash(self).cmp(&get_hash(other))
+    }
+}
+
+// This function takes in the constraint system
+// [which should still contain claim polynomials]
+// The output directory where the files should be written too
+// and a name for the constraint system
+// It produces a set of files which should be manually edited
+// to end up with a solidity verifier
+
 pub fn generate(
-    trace_len: usize,
-    constraints: &[RationalExpression],
-    n_cols: usize,
-    blowup: usize,
+    constraints: &Constraints,
     output_directory: &str,
+    system_name: &str,
 ) -> Result<(), std::io::Error> {
+    let blowup = constraints.blowup;
+    let n_cols = constraints.trace_ncolumns();
+    let trace_len = constraints.trace_nrows();
+    let constraint_expressions = constraints.expressions();
+
     let mut traces = BTreeMap::new();
     let mut inverses = BTreeMap::new();
     let mut periodic = BTreeMap::new();
     let mut claim_polynomials = BTreeSet::new();
-    for exp in constraints.iter() {
+    for exp in constraint_expressions.iter() {
         traces.extend(exp.trace_search());
         inverses.extend(exp.inv_search());
         periodic.extend(exp.periodic_search());
         claim_polynomials.extend(exp.claim_polynomial_search());
     }
 
-    let name = format!("{}/ConstraintPoly.sol", output_directory);
+    let name = format!("{}/{}ConstraintPoly.sol", output_directory, system_name);
     let path = Path::new(&name);
     let display = path.display();
     let mut file = match File::create(&path) {
@@ -169,10 +210,17 @@ pub fn generate(
         claim_polynomials.iter().cloned().collect();
     // TODO - sorting periodic keys
     let periodic_keys: Vec<&RationalExpression> = periodic.keys().collect();
-    for (index, col) in periodic_keys.iter().enumerate() {
-        autogen_periodic(col, index, &format!("periodic{}", index), output_directory)?;
-    }
-    let max_degree = constraints
+
+    autogen_wrapper_contract(
+        claim_polynomial_keys.as_slice(),
+        periodic_keys.as_slice(),
+        &constraints,
+        system_name,
+        output_directory,
+        trace_keys.len(),
+    )?;
+
+    let max_degree = constraint_expressions
         .iter()
         .map(|c| {
             let (numerator_degree, denominator_degree) = c.trace_degree();
@@ -181,17 +229,17 @@ pub fn generate(
         .max()
         .expect("No constraints");
     let target_degree = trace_len * max_degree - 1;
-    let adjustment_degrees: Vec<usize> = constraints
+    let adjustment_degrees: Vec<usize> = constraint_expressions
         .iter()
         .map(|x| {
             let (num, den) = x.degree(trace_len - 1);
             target_degree + den - num
         })
         .collect();
-    autogen_oods_contract(constraints, n_cols, blowup, output_directory);
+    autogen_oods_contract(constraint_expressions, n_cols, blowup, output_directory);
     let memory_map = setup_call_memory(
         &mut file,
-        constraints.len(),
+        constraint_expressions.len(),
         &claim_polynomial_keys,
         inverse_keys.as_slice(),
         trace_keys.as_slice(),
@@ -200,7 +248,7 @@ pub fn generate(
     )?;
 
     let mut coefficient_index = 1 + claim_polynomial_keys.len() + periodic_keys.len();
-    for (exp, &degree) in constraints.iter().zip(adjustment_degrees.iter()) {
+    for (exp, &degree) in constraint_expressions.iter().zip(adjustment_degrees.iter()) {
         writeln!(&mut file, "      {{")?;
         writeln!(
             &mut file,
@@ -230,11 +278,158 @@ pub fn generate(
     Ok(())
 }
 
+
+// We declare these macros so that the code isn't inlined in the function
+macro_rules! wrapper_contract_start {() => ("
+pragma solidity ^0.6.4;
+pragma experimental ABIEncoderV2;
+
+import '../interfaces/ConstraintInterface.sol';
+import '../public_coin.sol';
+import '../proof_types.sol';
+import '../utils.sol';
+import '../primefield.sol';
+import '../iterator.sol';
+import '../default_cs.sol';
+import './_trace.sol';
+import './NAME_ME_CONSTRAINT_POLY.sol';
+
+
+contract {} is {}Trace {{
+    using Iterators for Iterators.IteratorUint;
+    using PrimeField for uint256;
+    using PrimeField for PrimeField.EvalX;
+    using Utils for *;
+
+    NAME_ME immutable constraint_poly;
+    // FIX ME - Add polynomials state variables
+
+    constructor(NAME_ME constraint) public {{
+        constraint_poly = constraint;
+    }}
+
+    struct PublicInput {{
+        // Please add the public input fields to this struct
+    }}
+
+    // prettier-ignore
+    function constraint_calculations(
+        ProofTypes.StarkProof calldata proof,
+        ProofTypes.ProofParameters calldata params,
+        uint64[] calldata queries,
+        uint256 oods_point,
+        uint256[] calldata constraint_coeffiencts,
+        uint256[] calldata oods_coeffiencts
+    ) external override returns (uint256[] memory, uint256) {{
+        ProofData memory data = ProofData(
+            proof.trace_values,
+            PrimeField.init_eval(params.log_trace_length + 4),
+            proof.constraint_values, proof.trace_oods_values,
+            proof.constraint_oods_values,
+            params.log_trace_length);
+        PublicInput memory input = abi.decode(proof.public_inputs, (PublicInput));
+        uint256[] memory result = get_polynomial_points(data, oods_coeffiencts, queries, \
+     oods_point);
+
+        // Fix Me - This may need several internal functions
+        uint256 evaluated_point = evaluate_oods_point(oods_point, constraint_coeffiencts, \
+     data.eval, input, data);
+
+        return (result, evaluated_point);
+    }}
+
+    // TODO - The solidity prettier wants to delete all 'override' statements
+    // We should remove this ignore statement when that changes.
+    // prettier-ignore
+    function initalize_system(bytes calldata public_input)
+        external
+        view
+        override
+        returns (ProofTypes.ProofParameters memory, PublicCoin.Coin memory)
+    {{
+        PublicInput memory input = abi.decode(public_input, (PublicInput));
+        PublicCoin.Coin memory coin = PublicCoin.Coin({{
+            // FIX ME - Please add a public input hash here
+            digest: // I'm just a robot I don't know what goes here ¯\\_(ツ)_/¯.
+            ,
+            counter: 0
+        }});
+        // The trace length is going to be the next power of two after index.
+        // FIX ME - This need a trace length set, based on public input
+        uint8 log_trace_length = 0;
+        uint8[] memory fri_layout = default_fri_layout(log_trace_length);
+
+        ProofTypes.ProofParameters memory params = ProofTypes.ProofParameters({{
+            number_of_columns: NUM_COLUMNS,
+            log_trace_length: log_trace_length,
+            number_of_constraints: {},
+            log_blowup: {},
+            constraint_degree: CONSTRAINT_DEGREE,
+            pow_bits: {},
+            number_of_queries: {},
+            fri_layout: fri_layout
+        }});
+
+        return (params, coin);
+    }}
+
+    function evaluate_oods_point(
+        uint256 oods_point,
+        uint256[] memory constraint_coeffiencts,
+        PrimeField.EvalX memory eval,
+        PublicInput memory public_input,
+        ProofData memory data
+    ) internal returns (uint256) {{
+        uint256[] memory call_context = new uint256[]({});
+        uint256 non_mont_oods = oods_point.fmul_mont(1);
+")}
+
+#[allow(clippy::non_ascii_literal)]
+macro_rules! wrapper_contract_end {() => ("
+    uint256 current_index = {};
+    // This array contains {} elements, 2 for each constraint
+    for (uint256 i = 0; i < constraint_coeffiencts.length; i ++) {{
+        call_context[current_index] = constraint_coeffiencts[i];
+        current_index++;
+    }}
+    // This array contains {} elements, one for each trace offset in the layout
+    for (uint256 i = 0; i < trace_oods_values.length; i++) {{
+        call_context[current_index] = trace_oods_values[i].fmul_mont(1);
+        current_index++;
+    }}
+
+    // The contract we are calling out to is a pure assembly contract
+    // With its own hard coded memory structure so we use an assembly
+    // call to send a non abi encoded array that will be loaded dirrectly
+    // into memory
+    uint256 result;
+    {{
+    FixME local_contract_address = constraint_poly;
+    assembly {{
+        let p := mload(0x40)
+        // Note size is {}*32 because we have {} public inputs, {} constraint coeffiecents and \
+    {} trace decommitments
+        if iszero(call(not(0), local_contract_address, 0, add(call_context, 0x20), {}, p, \
+    0x20)) {{
+        revert(0, 0)
+        }}
+        result := mload(p)
+    }}
+    }}
+    return result;
+    }}
+")}
+
 fn autogen_wrapper_contract(
-    claim_polynomials: &RationalExpression,
+    claim_polynomials: &[RationalExpression],
+    periodic_polys: &[&RationalExpression],
+    constraints: &Constraints,
     name: &str,
     output_directory: &str,
+    trace_layout_len: usize,
 ) -> Result<(), std::io::Error> {
+    use crate::rational_expression::RationalExpression::*;
+
     let name = format!("{}/{}.sol", output_directory, name);
     let path = Path::new(&name);
     let display = path.display();
@@ -242,112 +437,108 @@ fn autogen_wrapper_contract(
         Err(why) => panic!("couldn't create {}: {}", display, why.to_string()),
         Ok(file) => file,
     };
+    let num_constraints = constraints.expressions().len();
+    let total_input_memory_size =
+        claim_polynomials.len() + periodic_polys.len() + 2 * num_constraints + trace_layout_len;
 
-    writeln!(&mut file,
+    #[allow(clippy::non_ascii_literal)]
+    writeln!(
+        &mut file,
+        // Note - This has to be a marco instead of constant so that the
+        // format locations are properly loaded [and it compiles]
+        wrapper_contract_start!(),
+        name,
+        name,
+        num_constraints,
+        31 - constraints.blowup.leading_zeros(),
+        constraints.pow_bits,
+        constraints.num_queries,
+        total_input_memory_size
+    )?;
 
-    )
-    "pragma solidity ^0.6.4;
-    pragma experimental ABIEncoderV2;
+    let mut index = 0;
+    for public_input in claim_polynomials.iter() {
+        match public_input {
+            ClaimPolynomial(_, _, _, name) => {
+                match name {
+                    Some(known_name) => {
+                        writeln!(
+                            &mut file,
+                            "call_context[{}] = 0; // This public input is named: {}",
+                            index, known_name
+                        )?;
+                    }
+                    None => {
+                        writeln!(
+                            &mut file,
+                            "call_context[{}] = 0; // This public input is not named, please give \
+                             it a name in Rust",
+                            index
+                        )?;
+                    }
+                }
+            }
+            _ => panic!("Rational expression should be a claim polynomial"),
+        }
+    }
 
-    import '../interfaces/ConstraintInterface.sol';
-    import '../public_coin.sol';
-    import '../proof_types.sol';
-    import '../utils.sol';
-    import '../primefield.sol';
-    import '../iterator.sol';
-    import '../default_cs.sol';
-    import './_trace.sol';
-    import './NAME_ME_CONSTRAINT_POLY.sol';
+    // In the periodic_exp we contain every different rational expression polynomial
+    // That includes some with the same coefficients but different internal rational
+    // expressions We only want to generate and enumerate polynomial contracts
+    // with different coeffiencts. So we map (coefficient) => number and only
+    // autogenerate when the set doesn't have the next set of coefficients
+    let mut named_periodic_cols = BTreeMap::new();
+    let mut seen_polys = 0;
+    for periodic_exp in periodic_polys.iter() {
+        match periodic_exp {
+            Polynomial(coefficients, _) => {
+                if !named_periodic_cols.contains_key(coefficients) {
+                    let _ = named_periodic_cols.insert(coefficients, seen_polys);
+                    autogen_periodic(
+                        periodic_exp,
+                        seen_polys,
+                        &format!("periodic{}", seen_polys),
+                        output_directory,
+                    )?;
+                    seen_polys += 1;
+                }
+            }
+            _ => panic!("Incorrect rational expression in periodic_polys"),
+        }
+    }
 
+    // Now that we have prepared the mapping and contracts we add the polynomial
+    // expressions to the wrapper contract.
+    for periodic_exp in periodic_polys.iter() {
+        match periodic_exp {
+            Polynomial(coefficients, internal_exp) => {
+                writeln!(
+                    &mut file,
+                    "call_context[{}] = periodic_col{}.evaluate(non_mont_oods.fpow({:?}));",
+                    index,
+                    named_periodic_cols.get(coefficients).unwrap(),
+                    internal_exp
+                )?;
+                index += 1;
+            }
+            _ => panic!("Incorrect rational expression in periodic_polys"),
+        }
+    }
 
-    contract {} is {}Trace {{
-        using Iterators for Iterators.IteratorUint;
-        using PrimeField for uint256;
-        using PrimeField for PrimeField.EvalX;
-        using Utils for *;
-
-        NAME_ME immutable constraint_poly;
-
-        constructor(NAME_ME constraint) public {{
-            constraint_poly = constraint;
-        }}
-
-        struct PublicInput {{
-            // Please add the public input fields to this struct
-        }}
-
-        // prettier-ignore
-        function constraint_calculations(
-            ProofTypes.StarkProof calldata proof,
-            ProofTypes.ProofParameters calldata params,
-            uint64[] calldata queries,
-            uint256 oods_point,
-            uint256[] calldata constraint_coeffiencts,
-            uint256[] calldata oods_coeffiencts
-        ) external override returns (uint256[] memory, uint256) {{
-            ProofData memory data = ProofData(
-                proof.trace_values,
-                PrimeField.init_eval(params.log_trace_length + 4),
-                proof.constraint_values, proof.trace_oods_values,
-                proof.constraint_oods_values,
-                params.log_trace_length);
-            PublicInput memory input = abi.decode(proof.public_inputs, (PublicInput));
-            uint256[] memory result = get_polynomial_points(data, oods_coeffiencts, queries, oods_point);
-
-            // Fix Me - This may need several internal functions
-            uint256 evaluated_point = evaluate_oods_point(oods_point, constraint_coeffiencts, data.eval, input, data);
-
-            return (result, evaluated_point);
-        }}
-
-        // TODO - The solidity prettier wants to delete all 'override' statements
-        // We should remove this ignore statement when that changes.
-        // prettier-ignore
-        function initalize_system(bytes calldata public_input)
-            external
-            view
-            override
-            returns (ProofTypes.ProofParameters memory, PublicCoin.Coin memory)
-        {
-            PublicInput memory input = abi.decode(public_input, (PublicInput));
-            PublicCoin.Coin memory coin = PublicCoin.Coin({{
-                // FIX ME - Please add a public input hash here
-                digest: // I'm just a robot I don't know what goes here ¯\\_(ツ)_/¯.
-                ,
-                counter: 0
-            }});
-            // The trace length is going to be the next power of two after index.
-            // FIX ME - This need a trace length set, based on public input
-            uint8 log_trace_length = 0;
-            uint8[] memory fri_layout = default_fri_layout(log_trace_length);
-
-            ProofTypes.ProofParameters memory params = ProofTypes.ProofParameters({{
-                number_of_columns: NUM_COLUMNS,
-                log_trace_length: log_trace_length,
-                number_of_constraints: {},
-                log_blowup: {},
-                constraint_degree: CONSTRAINT_DEGREE,
-                pow_bits: {},
-                number_of_queries: {},
-                fri_layout: fri_layout
-            }});
-
-            return (params, coin);
-        }}
-
-        // (Trace(0, 1) - Trace(1, 0).pow(self.exponent)) * every_row(),
-        // (Trace(1, 1) - Trace(0, 0) - Trace(1, 0)) * every_row(),
-        // (Trace(0, 0) - 1.into()) * on_row(trace_length),
-        // (Trace(0, 0) - (&self.value).into()) * on_row(self.index),
-        // TODO - Use batch inversion
-        function evaluate_oods_point(
-            uint256 oods_point,
-            uint256[] memory constraint_coeffiencts,
-            PrimeField.EvalX memory eval,
-            PublicInput memory public_input,
-            ProofData memory data
-        ) internal returns (uint256) {{
-    "
+    #[allow(clippy::non_ascii_literal)]
+    writeln!(
+        &mut file,
+        wrapper_contract_end!(),
+        index,
+        2 * num_constraints,
+        trace_layout_len,
+        index + 2 * num_constraints + trace_layout_len,
+        index,
+        2 * num_constraints,
+        trace_layout_len,
+        32 * (index + 2 * num_constraints + trace_layout_len)
+    )?;
+    Ok(())
 }
 
 // Please note this function assumes a rational expression which is a polynomial
@@ -553,7 +744,95 @@ fn binary_row_search_string(rows: &[usize]) -> String {
     ifs.join("\n else ")
 }
 
-#[allow(clippy::too_many_lines)]
+// We declare these macros so that the code isn't inlined in the function
+macro_rules! constraint_poly_start {() => ("
+pragma solidity ^0.6.6;
+
+contract OodsPoly {{
+    fallback() external {{
+          assembly {{
+            let res := 0
+            let PRIME := 0x800000000000011000000000000000000000000000000000000000000000001
+            // NOTE - If compilation hits a stack depth error on variable PRIME,
+            // then uncomment the following line and globally replace PRIME with mload({})
+            // mstore({}, 0x800000000000011000000000000000000000000000000000000000000000001)
+            // Copy input from calldata to memory.
+            calldatacopy(0x0, 0x0, /*input_data_size*/ {})
+
+            function expmod(base, exponent, modulus) -> result {{
+                let p := /*expmod_context*/ {}
+                mstore(p, 0x20)                 // Length of Base
+                mstore(add(p, 0x20), 0x20)      // Length of Exponent
+                mstore(add(p, 0x40), 0x20)      // Length of Modulus
+                mstore(add(p, 0x60), base)      // Base
+                mstore(add(p, 0x80), exponent)  // Exponent
+                mstore(add(p, 0xa0), modulus)   // Modulus
+                // call modexp precompile
+                if iszero(call(not(0), 0x05, 0, p, 0xc0, p, 0x20)) {{
+                    revert(0, 0)
+                }}
+                result := mload(p)
+            }}
+
+            function degree_adjustment(composition_polynomial_degree_bound, constraint_degree, \
+         numerator_degree,
+                denominator_degree) -> result {{
+                    result := sub(sub(composition_polynomial_degree_bound, 1),
+                       sub(add(constraint_degree, numerator_degree), denominator_degree))
+                    }}
+
+            function small_expmod(x, num, prime) -> result {{
+                result := 1
+                for {{ let ind := 0 }} lt(ind, num) {{ ind := add(ind, 1) }} {{
+                    result := mulmod(result, x, prime)
+                }}
+            }}
+")}
+macro_rules! constraint_poly_batch_inv {() => (
+    "{{
+        // Compute the inverses of the denominators into denominator_invs using batch inverse.
+
+        // Start by computing the cumulative product.
+        // Let (d_0, d_1, d_2, ..., d_{{n-1}}) be the values in denominators. Then after this loop
+        // denominator_invs will be (1, d_0, d_0 * d_1, ...) and prod will contain the value of
+        // d_0 * ... * d_{{n-1}}.
+        // Compute the offset between the partial_products array and the input values array.
+        let products_to_values := {}
+        let prod := 1
+        let partial_product_end_ptr := {}
+        for {{ let partial_product_ptr := {} }}
+            lt(partial_product_ptr, partial_product_end_ptr)
+            {{ partial_product_ptr := add(partial_product_ptr, 0x20) }} {{
+            mstore(partial_product_ptr, prod)
+            // prod *= d_{{i}}.
+            prod := mulmod(prod,
+                           mload(add(partial_product_ptr, products_to_values)),
+                           PRIME)
+        }}
+
+        let first_partial_product_ptr := {}
+        // Compute the inverse of the product.
+        let prod_inv := expmod(prod, sub(PRIME, 2), PRIME)
+
+        // Compute the inverses.
+        // Loop over denominator_invs in reverse order.
+        // current_partial_product_ptr is initialized to one past the end.
+        for {{ let current_partial_product_ptr := {}
+            }} gt(current_partial_product_ptr, first_partial_product_ptr) {{ }} {{
+            current_partial_product_ptr := sub(current_partial_product_ptr, 0x20)
+            // Store 1/d_{{i}} = (d_0 * ... * d_{{i-1}}) * 1/(d_0 * ... * d_{{i}}).
+            mstore(current_partial_product_ptr,
+                   mulmod(mload(current_partial_product_ptr), prod_inv, PRIME))
+            // Update prod_inv to be 1/(d_0 * ... * d_{{i-1}}) by multiplying by d_i.
+            prod_inv := mulmod(prod_inv,
+                               mload(add(current_partial_product_ptr, products_to_values)),
+                               PRIME)
+        }}
+      }}"
+)}
+
+
+
 fn setup_call_memory(
     file: &mut File,
     num_constraints: usize,
@@ -611,49 +890,10 @@ fn setup_call_memory(
     let inverse_start_index = index;
     index += inverses.len();
 
+    #[allow(clippy::non_ascii_literal)]
     writeln!(
         file,
-        "pragma solidity ^0.6.6;
-
-contract OodsPoly {{
-    fallback() external {{
-          assembly {{
-            let res := 0
-            let PRIME := 0x800000000000011000000000000000000000000000000000000000000000001
-            // NOTE - If compilation hits a stack depth error on variable PRIME,
-            // then uncomment the following line and globally replace PRIME with mload({})
-            // mstore({}, 0x800000000000011000000000000000000000000000000000000000000000001)
-            // Copy input from calldata to memory.
-            calldatacopy(0x0, 0x0, /*input_data_size*/ {})
-
-            function expmod(base, exponent, modulus) -> result {{
-                let p := /*expmod_context*/ {}
-                mstore(p, 0x20)                 // Length of Base
-                mstore(add(p, 0x20), 0x20)      // Length of Exponent
-                mstore(add(p, 0x40), 0x20)      // Length of Modulus
-                mstore(add(p, 0x60), base)      // Base
-                mstore(add(p, 0x80), exponent)  // Exponent
-                mstore(add(p, 0xa0), modulus)   // Modulus
-                // call modexp precompile
-                if iszero(call(not(0), 0x05, 0, p, 0xc0, p, 0x20)) {{
-                    revert(0, 0)
-                }}
-                result := mload(p)
-            }}
-
-            function degree_adjustment(composition_polynomial_degree_bound, constraint_degree, \
-         numerator_degree,
-                denominator_degree) -> result {{
-                    result := sub(sub(composition_polynomial_degree_bound, 1),
-                       sub(add(constraint_degree, numerator_degree), denominator_degree))
-                    }}
-
-            function small_expmod(x, num, prime) -> result {{
-                result := 1
-                for {{ let ind := 0 }} lt(ind, num) {{ ind := add(ind, 1) }} {{
-                    result := mulmod(result, x, prime)
-                }}
-            }}",
+        constraint_poly_start!(),
         (index + inverses.len() + 6) * 32,
         (index + inverses.len() + 6) * 32,
         in_data_size * 32,
@@ -685,48 +925,10 @@ contract OodsPoly {{
         index += 1;
     }
 
+    #[allow(clippy::non_ascii_literal)]
     writeln!(
         file,
-        "      {{
-        // Compute the inverses of the denominators into denominator_invs using batch inverse.
-
-        // Start by computing the cumulative product.
-        // Let (d_0, d_1, d_2, ..., d_{{n-1}}) be the values in denominators. Then after this loop
-        // denominator_invs will be (1, d_0, d_0 * d_1, ...) and prod will contain the value of
-        // d_0 * ... * d_{{n-1}}.
-        // Compute the offset between the partial_products array and the input values array.
-        let products_to_values := {}
-        let prod := 1
-        let partial_product_end_ptr := {}
-        for {{ let partial_product_ptr := {} }}
-            lt(partial_product_ptr, partial_product_end_ptr)
-            {{ partial_product_ptr := add(partial_product_ptr, 0x20) }} {{
-            mstore(partial_product_ptr, prod)
-            // prod *= d_{{i}}.
-            prod := mulmod(prod,
-                           mload(add(partial_product_ptr, products_to_values)),
-                           PRIME)
-        }}
-
-        let first_partial_product_ptr := {}
-        // Compute the inverse of the product.
-        let prod_inv := expmod(prod, sub(PRIME, 2), PRIME)
-
-        // Compute the inverses.
-        // Loop over denominator_invs in reverse order.
-        // current_partial_product_ptr is initialized to one past the end.
-        for {{ let current_partial_product_ptr := {}
-            }} gt(current_partial_product_ptr, first_partial_product_ptr) {{ }} {{
-            current_partial_product_ptr := sub(current_partial_product_ptr, 0x20)
-            // Store 1/d_{{i}} = (d_0 * ... * d_{{i-1}}) * 1/(d_0 * ... * d_{{i}}).
-            mstore(current_partial_product_ptr,
-                   mulmod(mload(current_partial_product_ptr), prod_inv, PRIME))
-            // Update prod_inv to be 1/(d_0 * ... * d_{{i-1}}) by multiplying by d_i.
-            prod_inv := mulmod(prod_inv,
-                               mload(add(current_partial_product_ptr, products_to_values)),
-                               PRIME)
-        }}
-      }}",
+        constraint_poly_batch_inv!(),
         inverses.len() * 32,
         (inverse_start_index + inverses.len()) * 32,
         (inverse_start_index) * 32,

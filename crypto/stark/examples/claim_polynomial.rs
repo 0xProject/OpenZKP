@@ -66,10 +66,8 @@ fn main() {
 
     let system = claim.constraints();
     let _ = generate(
-        system.trace_nrows(),
-        &system.expressions(),
-        system.trace_ncolumns(),
-        16,
+        &system,
         "../stark-verifier-ethereum/contracts/claim_polynomial",
+        "Claim",
     );
 }
