@@ -1,6 +1,12 @@
 use crate::rational_expression::*;
 use std::{
-    cmp::Ordering, collections::BTreeMap, fs::File, io::prelude::*, path::Path, prelude::v1::*,
+    cmp::Ordering,
+    collections::{BTreeMap, BTreeSet},
+    fs::File,
+    io::prelude::*,
+    iter::once,
+    path::Path,
+    prelude::v1::*,
 };
 use zkp_u256::U256;
 
@@ -99,9 +105,8 @@ impl RationalExpression {
         use RationalExpression::*;
 
         match self {
-            X | Constant(_) | Trace(..) => BTreeMap::new(),
+            X | Constant(_) | Trace(..) | ClaimPolynomial(..) => BTreeMap::new(),
             Polynomial(..) => [(self.clone(), true)].iter().cloned().collect(),
-            ClaimPolynomial(..) => panic!("TODO"),
             Add(a, b) | Mul(a, b) => {
                 let mut first = a.periodic_search();
                 first.extend(b.periodic_search());
@@ -110,25 +115,44 @@ impl RationalExpression {
             Inv(a) | Exp(a, _) | Neg(a) => a.periodic_search(),
         }
     }
+
+    #[cfg(feature = "std")]
+    pub fn claim_polynomial_search(&self) -> BTreeSet<Self> {
+        use RationalExpression::*;
+
+        match self {
+            ClaimPolynomial(..) => once(self).cloned().collect(),
+            X | Constant(_) | Trace(..) | Polynomial(..) => BTreeSet::new(),
+            Add(a, b) | Mul(a, b) => {
+                let mut first = a.claim_polynomial_search();
+                first.extend(b.claim_polynomial_search());
+                first
+            }
+            Inv(a) | Exp(a, _) | Neg(a) => a.claim_polynomial_search(),
+        }
+    }
 }
 
 pub fn generate(
     trace_len: usize,
-    public: &[&RationalExpression],
     constraints: &[RationalExpression],
     n_cols: usize,
     blowup: usize,
+    output_directory: &str,
 ) -> Result<(), std::io::Error> {
     let mut traces = BTreeMap::new();
     let mut inverses = BTreeMap::new();
     let mut periodic = BTreeMap::new();
+    let mut claim_polynomials = BTreeSet::new();
     for exp in constraints.iter() {
         traces.extend(exp.trace_search());
         inverses.extend(exp.inv_search());
         periodic.extend(exp.periodic_search());
+        claim_polynomials.extend(exp.claim_polynomial_search());
     }
 
-    let path = Path::new("contracts/ConstraintPoly.sol");
+    let name = format!("{}/ConstraintPoly.sol", output_directory);
+    let path = Path::new(&name);
     let display = path.display();
     let mut file = match File::create(&path) {
         Err(why) => panic!("couldn't create {}: {}", display, why.to_string()),
@@ -141,10 +165,12 @@ pub fn generate(
     let mut trace_keys: Vec<&RationalExpression> = traces.keys().collect();
     trace_keys.sort_by(|a, b| lexicographic_compare(a, b));
     let inverse_keys: Vec<&RationalExpression> = inverses.keys().collect();
+    let claim_polynomial_keys: Vec<RationalExpression> =
+        claim_polynomials.iter().cloned().collect();
     // TODO - sorting periodic keys
     let periodic_keys: Vec<&RationalExpression> = periodic.keys().collect();
     for (index, col) in periodic_keys.iter().enumerate() {
-        autogen_periodic(col, index, &format!("periodic{}", index))?;
+        autogen_periodic(col, index, &format!("periodic{}", index), output_directory)?;
     }
     let max_degree = constraints
         .iter()
@@ -162,19 +188,18 @@ pub fn generate(
             target_degree + den - num
         })
         .collect();
-
-    autogen_oods_contract(constraints, n_cols, blowup);
+    autogen_oods_contract(constraints, n_cols, blowup, output_directory);
     let memory_map = setup_call_memory(
         &mut file,
         constraints.len(),
-        public,
+        &claim_polynomial_keys,
         inverse_keys.as_slice(),
         trace_keys.as_slice(),
         periodic_keys.as_slice(),
         adjustment_degrees.as_slice(),
     )?;
 
-    let mut coefficient_index = 1 + public.len() + periodic_keys.len();
+    let mut coefficient_index = 1 + claim_polynomial_keys.len() + periodic_keys.len();
     for (exp, &degree) in constraints.iter().zip(adjustment_degrees.iter()) {
         writeln!(&mut file, "      {{")?;
         writeln!(
@@ -211,16 +236,16 @@ fn autogen_periodic(
     periodic: &RationalExpression,
     index: usize,
     name: &str,
+    output_directory: &str,
 ) -> Result<(), std::io::Error> {
-    let name = format!("contracts/{}.sol", name);
+    // TODO - use this https://doc.rust-lang.org/std/path/struct.Path.html
+    let name = format!("{}/{}.sol", output_directory, name);
     let path = Path::new(&name);
     let display = path.display();
     let mut file = match File::create(&path) {
         Err(why) => panic!("couldn't create {}: {}", display, why.to_string()),
         Ok(file) => file,
     };
-
-    println!("{}: {:?}", index, periodic);
 
     if let RationalExpression::Polynomial(poly, _) = periodic {
         writeln!(
@@ -251,7 +276,12 @@ contract perodic{} {{
     Ok(())
 }
 
-fn autogen_oods_contract(constraints: &[RationalExpression], n_cols: usize, blowup: usize) {
+fn autogen_oods_contract(
+    constraints: &[RationalExpression],
+    n_cols: usize,
+    blowup: usize,
+    output_directory: &str,
+) {
     let mut traces = BTreeMap::new();
 
     for exp in constraints.iter() {
@@ -274,10 +304,9 @@ fn autogen_oods_contract(constraints: &[RationalExpression], n_cols: usize, blow
         .expect("No constraints");
 
     let trace_contract = autogen_trace_layout(&trace_keys, n_cols, max_degree, blowup);
-    println!("{}", &trace_contract);
 
     // TODO - Variable naming
-    let name = format!("contracts/{}.sol", "autogenerated_trace");
+    let name = format!("{}/{}.sol", output_directory, "autogenerated_trace");
     let path = Path::new(&name);
     let display = path.display();
     let mut file = match File::create(&path) {
@@ -396,30 +425,19 @@ abstract contract RecurrenceTrace is DefaultConstraintSystem({}, {}, {}, {}) {{"
 
 // TODO - This needs testing
 fn binary_row_search_string(rows: &[usize]) -> String {
-    if rows.len() == 1 {
-        return format!("return {}", rows[0]);
-    }
-    format!(
-        "
-    if (row > {}) {{
-        {}
-    }} else {{
-        {}
-    }}
-    return {};
-    ",
-        rows[rows.len() / 2],
-        binary_row_search_string(rows.get(0..(rows.len()) / 2).unwrap()),
-        binary_row_search_string(rows.get((rows.len() / 2)..rows.len()).unwrap()),
-        rows[rows.len() / 2]
-    )
+    let ifs: Vec<_> = rows
+        .iter()
+        .enumerate()
+        .map(|(i, row)| format!("if (row == {}) {{return {};}}", row, i))
+        .collect();
+    ifs.join("\n else ")
 }
 
 #[allow(clippy::too_many_lines)]
 fn setup_call_memory(
     file: &mut File,
     num_constraints: usize,
-    public_inputs: &[&RationalExpression],
+    claim_polynomial_keys: &[RationalExpression],
     inverses: &[&RationalExpression],
     traces: &[&RationalExpression],
     periodic: &[&RationalExpression],
@@ -427,8 +445,8 @@ fn setup_call_memory(
 ) -> Result<BTreeMap<RationalExpression, String>, std::io::Error> {
     let mut index = 1; // Note index 0 is taken by the oods_point
     let mut memory_lookups: BTreeMap<RationalExpression, String> = BTreeMap::new();
-    for &exp in public_inputs.iter() {
-        let _ = memory_lookups.insert(exp.clone(), format!("mload({})", index * 32));
+    for claim_polynomial in claim_polynomial_keys {
+        let _ = memory_lookups.insert(claim_polynomial.clone(), format!("mload({})", index * 32));
         index += 1;
     }
     for &exp in periodic.iter() {

@@ -88,7 +88,11 @@ pub fn proof_serialize(
     // Get the oods information from the proof and random
     let _: FieldElement = channel.get_random();
 
-    let trace_arguments = constraints.trace_arguments();
+    // This hack around claim polynomials is awful and should be removed
+    let mut parseable_constraints = constraints.clone();
+    parseable_constraints.substitute();
+
+    let trace_arguments = parseable_constraints.trace_arguments();
     let trace_values: Vec<FieldElement> = channel.replay_many(trace_arguments.len());
     result_string.push_str(&format!(
         "\"trace_oods_values\": {}, \n",
@@ -278,27 +282,15 @@ mod tests {
         constraints.num_queries = 20;
         constraints.pow_bits = 10;
 
-        // autogen(
-        //     constraints.trace_nrows(),
-        //     &[&RationalExpression::Constant(150.into()),
-        // &RationalExpression::Constant((&public).value.clone())],
-        //     constraints.expressions(),
-        //     constraints.trace_nrows(),
-        //     16
-        // ).unwrap();
-
         let trace = public.trace(&private);
 
         let mut result_string = "".to_string();
-        //  &prove(&constraints, &trace).unwrap();
         proof_serialize(
             &constraints,
             &prove(&constraints, &trace).unwrap(),
             &mut result_string,
         )
         .unwrap();
-        // println!("{}", result_string);
-        // assert!(false);
     }
 
     // Note this test is actually more like a binary which we want run so it
