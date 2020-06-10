@@ -20,6 +20,8 @@ pub enum RationalExpression {
     Constant(FieldElement),
     Trace(usize, isize),
     Polynomial(DensePolynomial, Box<RationalExpression>),
+    // TODO - Make this a struct with internally named members
+    // the members are (index, degree bound, expression, name)
     ClaimPolynomial(usize, usize, Box<RationalExpression>, Option<&'static str>),
     Add(Box<RationalExpression>, Box<RationalExpression>),
     Neg(Box<RationalExpression>),

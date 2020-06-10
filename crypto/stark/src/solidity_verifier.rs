@@ -415,14 +415,14 @@ macro_rules! wrapper_contract_end {
 
     // The contract we are calling out to is a pure assembly contract
     // With its own hard coded memory structure so we use an assembly
-    // call to send a non abi encoded array that will be loaded dirrectly
+    // call to send a non abi encoded array that will be loaded directly
     // into memory
     uint256 result;
     {{
     OddsPoly local_contract_address = constraint_poly;
         assembly {{
             let p := mload(0x40)
-            // Note size is {}*32 because we have {} public inputs, {} constraint coeffiecents \
+            // Note size is {}*32 because we have {} public inputs, {} constraint coefficients \
      and {} trace decommitments
             if iszero(call(not(0), local_contract_address, 0, add(call_context, 0x20), {}, p, \
      0x20)) {{
@@ -459,6 +459,8 @@ fn autogen_wrapper_contract(
     let total_input_memory_size =
         1 + claim_polynomials.len() + periodic_polys.len() + 2 * num_constraints + trace_layout_len;
 
+    // The macro invocation appears to trigger this clippy warning, but the
+    // underlying string doesn't.
     #[allow(clippy::non_ascii_literal)]
     writeln!(
         &mut file,
@@ -548,6 +550,8 @@ fn autogen_wrapper_contract(
         }
     }
 
+    // The macro invocation appears to trigger this clippy warning, but the
+    // underlying string doesn't.
     #[allow(clippy::non_ascii_literal)]
     writeln!(
         &mut file,
@@ -935,6 +939,8 @@ fn setup_call_memory(
     let inverse_start_index = index;
     index += inverses.len();
 
+    // The macro invocation appears to trigger this clippy warning, but the
+    // underlying string doesn't.
     #[allow(clippy::non_ascii_literal)]
     writeln!(
         file,
@@ -970,6 +976,8 @@ fn setup_call_memory(
         index += 1;
     }
 
+    // The macro invocation appears to trigger this clippy warning, but the
+    // underlying string doesn't.
     #[allow(clippy::non_ascii_literal)]
     writeln!(
         file,

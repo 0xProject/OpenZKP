@@ -569,6 +569,9 @@ fn get_constraint_polynomials(
     // At this point the constraint's have had degrees assigned which
     // match those where the claim polynomials aren't specified.
     // TODO - This substitution lowers overall security and should be validated.
+    // Note that this is because by fully adjusting the degree of the constraint
+    // up the max degree we give an attacker the ability to commit to a
+    // higher degree polynomial reducing security.
     // TODO - Of particular concern is that by manipulating the degree of the
     // claimed interpolating polynomial of the modifications modifications can
     // unchecked in the proof.
