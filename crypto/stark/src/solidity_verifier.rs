@@ -236,7 +236,13 @@ pub fn generate(
             target_degree + den - num
         })
         .collect();
-    autogen_oods_contract(constraint_expressions, n_cols, blowup, output_directory, system_name);
+    autogen_oods_contract(
+        constraint_expressions,
+        n_cols,
+        blowup,
+        output_directory,
+        system_name,
+    );
     let memory_map = setup_call_memory(
         &mut file,
         constraint_expressions.len(),
@@ -416,10 +422,10 @@ macro_rules! wrapper_contract_end {
     OddsPoly local_contract_address = constraint_poly;
         assembly {{
             let p := mload(0x40)
-            // Note size is {}*32 because we have {} public inputs, {} constraint coeffiecents and \
-        {} trace decommitments
+            // Note size is {}*32 because we have {} public inputs, {} constraint coeffiecents \
+     and {} trace decommitments
             if iszero(call(not(0), local_contract_address, 0, add(call_context, 0x20), {}, p, \
-        0x20)) {{
+     0x20)) {{
             revert(0, 0)
             }}
             result := mload(p)
@@ -487,8 +493,8 @@ fn autogen_wrapper_contract(
                     None => {
                         writeln!(
                             &mut file,
-                            "    call_context[{}] = 0; // This public input is not named, please give \
-                             it a name in Rust",
+                            "    call_context[{}] = 0; // This public input is not named, please \
+                             give it a name in Rust",
                             index
                         )?;
                         index += 1;
@@ -562,8 +568,13 @@ fn extract_power(data: &RationalExpression) -> usize {
     use crate::rational_expression::RationalExpression::*;
     match data {
         X => 1,
-        Exp(sub_data, power) => power*extract_power(sub_data),
-        _ => panic!("Unable to encode power for periodic col with non standard internal rational expression"),
+        Exp(sub_data, power) => power * extract_power(sub_data),
+        _ => {
+            panic!(
+                "Unable to encode power for periodic col with non standard internal rational \
+                 expression"
+            )
+        }
     }
 }
 
