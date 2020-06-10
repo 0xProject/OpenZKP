@@ -71,7 +71,7 @@ describe('StarkdexVerifier', function(this: any) {
       // @ts-ignore
       starkdex_proof.public_inputs = utils.defaultAbiCoder.encode( // or solidityPack here?
           ['uint256', 'uint256', 'uint256', 'bytes32[]', 'uint256[]', 'uint256[]'],
-          [1, "0x010bbb3b97e81273d77cfdf9519ac52f9f9f73377df761b41656214d346a3d6f", "0x010bbb3b97e81273d77cfdf9519ac52f9f9f73377df761b41656214d346a3d6f", [], [], []],
+          [1, "0x010bbb3b97e81273d77cfdf9519ac52f9f9f73377df761b41656214d346a3d6f", "0x07393d9aee44e615248eee72b95887950bfb7ce0d0c8ebd6f21ff48e1214b146", [], [], []],
       );
       // @ts-ignore
       (await verifier_contract.verify_proof(starkdex_proof, starkdex.address)).wait();

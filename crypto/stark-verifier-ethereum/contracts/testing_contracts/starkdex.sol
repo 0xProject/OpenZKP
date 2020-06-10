@@ -142,104 +142,69 @@ contract Starkdex is StarkdexTrace {
         PublicInput memory public_input,
         uint256[] memory trace_oods_values
     ) internal returns (uint256) {
-        /* console.log("evaluate_oods_point1 end"); */
-        // TODO - Resize this to match, may cause reverts
-        uint256[] memory call_context = new uint256[](382);
+        uint256[] memory call_context = new uint256[](384);
         uint256 non_mont_oods = oods_point.fmul_mont(1);
         call_context[0] = non_mont_oods;
-        // Mason! this order is wrong. these should be at the end!
-        call_context[1] = (uint256)(public_input.inital_root).from_montgomery();
-        call_context[2] = (uint256)(public_input.final_root).from_montgomery();
 
         // Calculate the is_settlement polynomial
         uint256 is_settlement = is_settlement_polynomial(public_input.packed_modification_data, non_mont_oods, root_1_tx);
-        // Calculate the is_modification polynomials
-        call_context[3] = is_settlement;
-        call_context[4] = is_modification_polynomial(non_mont_oods, public_input.number_of_transactions, is_settlement);
-        console.log("is_settlement");
-        console.logBytes32((bytes32)(call_context[3]));
-        console.log("is_modification");
-        console.logBytes32((bytes32)(call_context[4]));
+        uint256 is_modification = is_modification_polynomial(non_mont_oods, public_input.number_of_transactions, is_settlement);
         // Calculate the 'base', 'key', 'token', 'initial_amount', 'final_amount' and 'vault' polynomials
         // We use a single function call for for efficency and so we can reuse values
         // TODO - Further reuse could be accomplished by reusing denominators from is_settlement call, saving significant gas
         uint256[6] memory interpolated_value_polys = get_weighted_field(public_input, non_mont_oods, is_settlement, root_1_tx);
-        call_context[5] = interpolated_value_polys[0];
-        call_context[6] = interpolated_value_polys[1];
-        call_context[7] = interpolated_value_polys[2];
-        call_context[8] = interpolated_value_polys[3];
-        call_context[9] = interpolated_value_polys[4];
-        call_context[10] = interpolated_value_polys[5];
-        console.log("interpolated_value_polys 0");
-        console.logBytes32((bytes32)(call_context[5]));
-        console.log("interpolated_value_polys 1");
-        console.logBytes32((bytes32)(call_context[6]));
-        console.log("interpolated_value_polys 2");
-        console.logBytes32((bytes32)(call_context[7]));
-        console.log("interpolated_value_polys 3");
-        console.logBytes32((bytes32)(call_context[8]));
-        console.log("interpolated_value_polys 4");
-        console.logBytes32((bytes32)(call_context[9]));
-        console.log("interpolated_value_polys 5");
-        console.logBytes32((bytes32)(call_context[10]));
 
-        // Next we add the perodic cols
-        call_context[11] = periodic_column_0.evaluate(non_mont_oods);
-        call_context[12] = periodic_column_1.evaluate(non_mont_oods);
-        call_context[13] = periodic_column_2.evaluate(non_mont_oods);
-        call_context[14] = periodic_column_3.evaluate(non_mont_oods);
-        console.log("periodic_column_0");
-        console.logBytes32((bytes32)(call_context[11]));
-        console.log("periodic_column_1");
-        console.logBytes32((bytes32)(call_context[12]));
-        console.log("periodic_column_2");
-        console.logBytes32((bytes32)(call_context[13]));
-        console.log("periodic_column_3");
-        console.logBytes32((bytes32)(call_context[14]));
+        call_context[1] = is_settlement; // This public input is named: IsSettlement
+        call_context[2] = interpolated_value_polys[0]; // This public input is named: Base
+        call_context[3] = (uint256)(public_input.inital_root); // This public input is named: InitialRoot
+        call_context[4] = interpolated_value_polys[3]; // This public input is named: Amount1
+        call_context[5] = interpolated_value_polys[5]; // This public input is named: VaultID
+        call_context[6] = is_modification; // This public input is named: IsModification
+        call_context[7] = interpolated_value_polys[2]; // This public input is named: Token
+        call_context[8] = interpolated_value_polys[3]; // This public input is named: Amount0
+        call_context[9] = interpolated_value_polys[1]; // This public input is named: Key
+        call_context[10] = (uint256)(public_input.final_root); // This public input is named: FinalRoot
+        call_context[11] = periodic_column_0.evaluate(non_mont_oods.fpow(128));
+        call_context[12] = periodic_column_0.evaluate(non_mont_oods.fpow(32));
+        call_context[13] = periodic_column_1.evaluate(non_mont_oods.fpow(2));
+        call_context[14] = periodic_column_2.evaluate(non_mont_oods.fpow(2));
+        call_context[15] = periodic_column_3.evaluate(non_mont_oods.fpow(128));
+        call_context[16] = periodic_column_3.evaluate(non_mont_oods.fpow(32));
 
-        uint256 current_index = 15;
-        // This array contains 240 elements, 2 for each constraint
-        console.log("constraint_coeffiencts.length", constraint_coeffiencts.length);
-        for (uint256 i = 0; i < constraint_coeffiencts.length; i ++) {
-            if (i > 0) {
-                call_context[current_index] = 0;
-            } else {
-                call_context[current_index] = constraint_coeffiencts[i];
-                console.log("coefficient = ");
-                console.logBytes32((bytes32)(call_context[current_index]));
-                console.logBytes32((bytes32)(call_context[current_index].from_montgomery()));
-            }
-            current_index++;
-        }
-        // This array contains 127 elements, one for each trace offset in the layout
-        console.log("trace_oods_values.length", trace_oods_values.length);
-        for (uint256 i = 0; i < trace_oods_values.length; i++) {
-            /* if (i < 1) {
-                call_context[current_index] = 0;
-            } else { */
-                call_context[current_index] = trace_oods_values[i].fmul_mont(1);
-                console.logBytes32((bytes32)(call_context[current_index].from_montgomery()));
-            /* } */
-            current_index++;
-        }
+    uint256 current_index = 17;
+    console.log("Constraint coeffiecents");
+    // This array contains 240 elements, 2 for each constraint
+    for (uint256 i = 0; i < constraint_coeffiencts.length; i ++) {
+        call_context[current_index] = constraint_coeffiencts[i];
+        console.logBytes32((bytes32)(call_context[current_index]));
+        current_index++;
+    }
+    console.log("Trace values");
+    // This array contains 127 elements, one for each trace offset in the layout
+    for (uint256 i = 0; i < trace_oods_values.length; i++) {
+        call_context[current_index] = trace_oods_values[i].fmul_mont(1);
+        console.logBytes32((bytes32)(call_context[current_index]));
+        current_index++;
+    }
 
-        // The contract we are calling out to is a pure assembly contract
-        // With its own hard coded memory structure so we use an assembly
-        // call to send a non abi encoded array that will be loaded dirrectly
-        // into memory
-        uint256 result;
-        {
-        StarkdexOodsPoly local_contract_address = oods;
+    // The contract we are calling out to is a pure assembly contract
+    // With its own hard coded memory structure so we use an assembly
+    // call to send a non abi encoded array that will be loaded dirrectly
+    // into memory
+    uint256 result;
+    console.log("Log from oods");
+    {
+    StarkdexOodsPoly local_contract_address = oods;
         assembly {
             let p := mload(0x40)
-            // Note size is 382*32 because we have 15 public inputs, 240 constraint coeffiecents and 127 trace decommitments
-            if iszero(call(not(0), local_contract_address, 0, add(call_context, 0x20), 0x2FC0, p, 0x20)) {
-              revert(0, 0)
+            // Note size is 384*32 because we have 16 public inputs, 240 constraint coeffiecents and 127 trace decommitments
+            if iszero(call(not(0), local_contract_address, 0, add(call_context, 0x20), 12288, p, 0x20)) {
+            revert(0, 0)
             }
             result := mload(p)
         }
-        }
-        return result;
+    }
+    return result;
     }
 
     // This function takes the listing of modification data, the non-montgomery oods point, and the root of order number of transactions
