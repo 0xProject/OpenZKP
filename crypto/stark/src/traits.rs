@@ -236,8 +236,9 @@ pub(crate) mod tests {
 
             let on_row = |index| (X - trace_generator.pow(index)).inv();
 
-            let mut constraints: Vec<RationalExpression> =
-                vec![(Trace(0, 0) - ClaimPolynomial(0, 0, Box::new(X))) * on_row(self.index - 1)];
+            let mut constraints: Vec<RationalExpression> = vec![
+                (Trace(0, 0) - ClaimPolynomial(0, 0, Box::new(X), None)) * on_row(self.index - 1),
+            ];
 
             let mut recurrance_constraint = Constant(FieldElement::zero());
             for (i, (coefficient, exponent)) in
