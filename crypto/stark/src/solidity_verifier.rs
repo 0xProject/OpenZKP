@@ -303,8 +303,10 @@ contract {} is {}Trace {{
     using Utils for *;
 
     OddsPoly immutable constraint_poly;
-    // FIX ME - Add polynomials state variables
+    // FIX ME - Add polynomials immutable variables
 
+    // FIX ME - The constructor should also be setting any
+    // periodic colum contracts to immutables
     constructor(OddsPoly constraint) public {{
         constraint_poly = constraint;
     }}
@@ -385,6 +387,7 @@ contract {} is {}Trace {{
     ) internal returns (uint256) {{
         uint256[] memory call_context = new uint256[]({});
         uint256 non_mont_oods = oods_point.fmul_mont(1);
+        call_context[0] = non_mont_oods;
 "
     };
 }
@@ -448,7 +451,7 @@ fn autogen_wrapper_contract(
     };
     let num_constraints = constraints.expressions().len();
     let total_input_memory_size =
-        claim_polynomials.len() + periodic_polys.len() + 2 * num_constraints + trace_layout_len;
+        1 + claim_polynomials.len() + periodic_polys.len() + 2 * num_constraints + trace_layout_len;
 
     #[allow(clippy::non_ascii_literal)]
     writeln!(
@@ -467,7 +470,8 @@ fn autogen_wrapper_contract(
         total_input_memory_size
     )?;
 
-    let mut index = 0;
+    // The initial index is one because of the oods point
+    let mut index = 1;
     for public_input in claim_polynomials.iter() {
         match public_input {
             ClaimPolynomial(_, _, _, name) => {
