@@ -20,7 +20,9 @@ pub enum RationalExpression {
     Constant(FieldElement),
     Trace(usize, isize),
     Polynomial(DensePolynomial, Box<RationalExpression>),
-    ClaimPolynomial(usize, usize, Box<RationalExpression>),
+    // TODO - Make this a struct with internally named members
+    // the members are (index, degree bound, expression, name)
+    ClaimPolynomial(usize, usize, Box<RationalExpression>, Option<&'static str>),
     Add(Box<RationalExpression>, Box<RationalExpression>),
     Neg(Box<RationalExpression>),
     Mul(Box<RationalExpression>, Box<RationalExpression>),
@@ -51,7 +53,7 @@ impl RationalExpression {
         let e = match self {
             // Tree types are recursed first
             Polynomial(p, e) => Polynomial(p.clone(), Box::new(e.map(f))),
-            ClaimPolynomial(i, n, e) => ClaimPolynomial(*i, *n, Box::new(e.map(f))),
+            ClaimPolynomial(i, n, e, name) => ClaimPolynomial(*i, *n, Box::new(e.map(f)), *name),
             Add(a, b) => Add(Box::new(a.map(f)), Box::new(b.map(f))),
             Neg(a) => Neg(Box::new(a.map(f))),
             Mul(a, b) => Mul(Box::new(a.map(f)), Box::new(b.map(f))),
@@ -68,7 +70,7 @@ impl RationalExpression {
         use RationalExpression::*;
         let f = |x| {
             match x {
-                ClaimPolynomial(i, degree_bound, a) => {
+                ClaimPolynomial(i, degree_bound, a, _) => {
                     let claim_polynomial = claim_polynomials
                         .get(i)
                         .expect("ClaimPolynomial index out of bounds")
@@ -168,7 +170,7 @@ impl RationalExpression {
                 let (n, d) = a.degree_impl(x_degree, trace_degree);
                 (p.degree() * n, p.degree() * d)
             }
-            ClaimPolynomial(_, degree_bound, a) => {
+            ClaimPolynomial(_, degree_bound, a, _) => {
                 let (n, d) = a.degree_impl(x_degree, trace_degree);
                 (degree_bound * n, degree_bound * d)
             }
@@ -377,7 +379,7 @@ impl Hash for RationalExpression {
                 a.hash(state);
                 e.hash(state);
             }
-            ClaimPolynomial(i, n, a) => {
+            ClaimPolynomial(i, n, a, _) => {
                 "claim_polynomial".hash(state);
                 i.hash(state);
                 n.hash(state);

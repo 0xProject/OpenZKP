@@ -16,7 +16,7 @@ impl Verifiable for Claim {
     fn constraints(&self) -> Constraints {
         use RationalExpression::*;
         Constraints::from_expressions((2, 1), self.0.as_montgomery().to_bytes_be().to_vec(), vec![
-            (Trace(0, 0) - ClaimPolynomial(0, 0, Box::new(X))) / (X - 1),
+            (Trace(0, 0) - ClaimPolynomial(0, 0, Box::new(X), Some("MyClaimPoly"))) / (X - 1),
         ])
         .unwrap()
     }
@@ -66,10 +66,8 @@ fn main() {
 
     let system = claim.constraints();
     let _ = generate(
-        system.trace_nrows(),
-        &system.expressions(),
-        system.trace_ncolumns(),
-        16,
+        &system,
         "../stark-verifier-ethereum/contracts/claim_polynomial",
+        "Claim",
     );
 }
