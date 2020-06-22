@@ -752,7 +752,9 @@ abstract contract {}Trace is DefaultConstraintSystem({}, {}, {}, {}) {{",
             k + 1,
             i,
             // TODO - Support negative rows
-            rows.iter().position(|x| x == &(TryInto::<usize>::try_into(*j).unwrap())).unwrap()
+            rows.iter()
+                .position(|x| x == &(TryInto::<usize>::try_into(*j).unwrap()))
+                .unwrap()
         ));
     }
     trace_layout_contract.push_str(
