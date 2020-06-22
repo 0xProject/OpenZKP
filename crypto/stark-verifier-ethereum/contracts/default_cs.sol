@@ -5,8 +5,9 @@ import './interfaces/ConstraintInterface.sol';
 import './primefield.sol';
 import './iterator.sol';
 import './utils.sol';
+import './trace.sol';
 
-abstract contract DefaultConstraintSystem is ConstraintSystem  {
+abstract contract DefaultConstraintSystem is ConstraintSystem, Trace  {
     using Iterators for Iterators.IteratorUint;
     using PrimeField for uint256;
     using PrimeField for PrimeField.EvalX;
@@ -38,9 +39,10 @@ abstract contract DefaultConstraintSystem is ConstraintSystem  {
     function get_polynomial_points(
         ProofData memory data,
         uint256[] memory oods_coeffiecients,
-        uint64[] memory queries,
+        uint256[] memory queries,
         uint256 oods_point
     ) internal returns (uint256[] memory) {
+        trace('preparing_inverses', true);
         uint256[] memory inverses = oods_prepare_inverses(
             queries,
             data.eval,
@@ -48,6 +50,7 @@ abstract contract DefaultConstraintSystem is ConstraintSystem  {
             data.log_trace_length + 4,
             data.log_trace_length
         );
+        trace('preparing_inverses', false);
         uint256[] memory results = new uint256[](queries.length);
 
         // Init an iterator over the oods coeffiecients
@@ -66,11 +69,10 @@ abstract contract DefaultConstraintSystem is ConstraintSystem  {
                 uint256 calced_index = NUM_COLUMNS*i + layout[j*2];
                 uint256 numberator = trace_values[calced_index].fsub(loaded_trace_data);
 
-                // We are in col major form so we need to lookup the row offset
+                // Our trace layout is: (Col, Row Inverse Index),
+                // So the following will tell us where to look in the inverses
                 uint256 row = layout[j*2+1];
-                // We then use the row to offset function to lookup the offest of the
-                // row's inverse.
-                calced_index = (NUM_OFFSETS+1)*i + row_to_offset(row);
+                calced_index = (NUM_OFFSETS+1)*i + row;
                 uint256 denominator_inv = inverses[calced_index];
 
                 uint256 element = numberator.fmul(denominator_inv);
@@ -106,12 +108,12 @@ abstract contract DefaultConstraintSystem is ConstraintSystem  {
     // TODO - Attempt to make batch invert work in place
     // Note - This function should be auto generated along
     function oods_prepare_inverses(
-        uint64[] memory queries,
+        uint256[] memory queries,
         PrimeField.EvalX memory eval,
         uint256 oods_point,
         uint8 log_eval_domain_size,
         uint8 log_trace_len
-    ) internal returns (uint256[] memory) {
+    ) internal returns(uint256[] memory) {
         // The layout rows function gives us a listing of all of the row offset which
         // will be accessed for this calculation
         uint256[] memory trace_rows = layout_rows();
@@ -120,16 +122,32 @@ abstract contract DefaultConstraintSystem is ConstraintSystem  {
         uint256[] memory batch_in = new uint256[]((NUM_OFFSETS+1) * queries.length);
         // For each query we we invert several points used in the calculation of
         // the commited polynomial.
+        {
+        uint256 oods_constraint_power = oods_point.fpow(uint256(CONSTRAINT_DEGREE));
+        uint256[] memory generator_powers = new uint256[](trace_rows.length);
+
+        for (uint i = 0; i < trace_rows.length; i++) {
+            generator_powers[i] = trace_generator.fpow(trace_rows[i]);
+        }
+
         for (uint256 i = 0; i < queries.length; i++) {
             // Get the shifted eval point
-            uint256 x = eval.lookup(queries[i].bit_reverse(log_eval_domain_size)).fmul(PrimeField.GENERATOR);
-
+            uint256 x;
+            {
+                uint256 query = queries[i];
+                uint256 bit_reversed_query = query.bit_reverse(log_eval_domain_size);
+                x = eval.lookup(bit_reversed_query);
+                x = x.fmul(PrimeField.GENERATOR);
+            }
 
             for (uint j = 0; j < trace_rows.length; j ++) {
-                batch_in[i*(NUM_OFFSETS+1) + j] = x.fsub(oods_point.fmul(trace_generator.fpow(trace_rows[j])));
+                uint256 loaded_gen_power = generator_powers[j];
+                uint256 shifted_oods = oods_point.fmul(loaded_gen_power);
+                batch_in[i*(NUM_OFFSETS+1) + j] = x.fsub(shifted_oods);
             }
             // This is the shifted x - oods_point^(degree)
-            batch_in[i*(NUM_OFFSETS+1) + NUM_OFFSETS] = x.fsub(oods_point.fpow(uint256(CONSTRAINT_DEGREE)));
+            batch_in[i*(NUM_OFFSETS+1) + NUM_OFFSETS] = x.fsub(oods_constraint_power);
+        }
         }
 
         uint256[] memory batch_out = new uint256[](batch_in.length);
@@ -175,9 +193,8 @@ abstract contract DefaultConstraintSystem is ConstraintSystem  {
 
     // Returns an array of all of the row offsets which are used
     function layout_rows() internal pure virtual returns(uint256[] memory);
-    // Returns a trace layout in pairs ordered in coloum major form
+    // Returns a set of pairs (col, offset) for each element in the trace layout
+    // Where the col is what collum the trace element is and the offest is
+    // where in the inverse memory layout the offest is.
     function layout_col_major() internal pure virtual returns(uint256[] memory);
-    // A function which converts a row offset to where it is in the array of rows
-    // This lets us map rows -> inverse index
-    function row_to_offset(uint256 row) internal pure virtual returns(uint256);
 }

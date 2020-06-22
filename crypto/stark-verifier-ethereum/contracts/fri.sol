@@ -24,7 +24,7 @@ contract Fri is Trace, MerkleVerifier {
         uint8[] fri_layout;
         uint256[] eval_points;
         uint8 log_eval_domain_size;
-        uint64[] queries;
+        uint256[] queries;
         uint256[] polynomial_at_queries;
         uint256[] last_layer_coefficients;
     }
@@ -56,10 +56,10 @@ contract Fri is Trace, MerkleVerifier {
         PublicCoin.Coin memory coin,
         uint8 max_bit_length,
         uint8 num_queries
-    ) internal pure returns (uint64[] memory) {
-        uint64[] memory queries = new uint64[](num_queries);
+    ) internal pure returns (uint256[] memory) {
+        uint256[] memory queries = new uint256[](num_queries);
         // This mask sets all digits to one below the bit length
-        uint64 bit_mask = (uint64(2)**max_bit_length) - 1;
+        uint256 bit_mask = (uint256(2)**max_bit_length) - 1;
 
         // We derive four queries from each read
         for (uint256 i = 0; i <= num_queries / 4; i++) {
@@ -68,7 +68,7 @@ contract Fri is Trace, MerkleVerifier {
                 // For numbers of queries which are not diviable by four this prevents writing out of bounds.
                 if (4 * i + j < num_queries) {
                     // Note - uint64(random) would take the last bytes in the random and this takes the first.
-                    queries[4 * i + j] = uint64(bytes8(random)) & bit_mask;
+                    queries[4 * i + j] = uint256(uint64(bytes8(random))) & bit_mask;
                     // Shifts down so we can get the next set of random bytes
                     random <<= 64;
                 }
@@ -84,7 +84,7 @@ contract Fri is Trace, MerkleVerifier {
         uint8[] memory fri_layout,
         uint256[] memory eval_points,
         uint8 log_eval_domain_size,
-        uint64[] memory queries,
+        uint256[] memory queries,
         uint256[] memory polynomial_at_queries
     ) internal {
         trace('fri_check', true);
@@ -146,7 +146,7 @@ contract Fri is Trace, MerkleVerifier {
                 merkle_val
             );
             // Merkle verification is in place but we need unchanged data in the next loop.
-            fri_data.queries.deep_copy_and_convert(merkle_indices);
+            fri_data.queries.deep_copy(merkle_indices);
             // Since these two arrays only truncate we can safely resize them
             if (fri_data.queries.length != merkle_indices.length) {
                 uint256 num_queries = fri_data.queries.length;
@@ -197,7 +197,7 @@ contract Fri is Trace, MerkleVerifier {
     // It will overwrite any memory in that location.
     function fold_layer(
         uint256[] memory values,
-        uint64[] memory indices,
+        uint256[] memory indices,
         uint256[] memory coset_completion,
         uint256 eval_point,
         LayerContext memory layer_context,
@@ -252,7 +252,7 @@ contract Fri is Trace, MerkleVerifier {
             (values[write_index], layer_context.x_inv[write_index]) = fold_coset(coset, x_inv, eval_point);
 
             // Record the new index
-            indices[write_index] = uint64(coset_start / layer_context.coset_size);
+            indices[write_index] = coset_start / layer_context.coset_size;
             write_index += 1;
         }
         values.truncate(write_index);

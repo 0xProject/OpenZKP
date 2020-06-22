@@ -35,7 +35,7 @@ contract FriTesting is Fri {
         uint8[] memory fri_layout,
         uint256[] memory eval_points,
         uint8 log_eval_domain_size,
-        uint64[] memory queries,
+        uint256[] memory queries,
         uint256[] memory polynomial_at_queries
     ) public {
         fri_check(proof, fri_layout, eval_points, log_eval_domain_size, queries, polynomial_at_queries);

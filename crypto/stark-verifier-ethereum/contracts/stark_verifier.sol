@@ -41,7 +41,7 @@ contract StarkVerifier is Trace, ProofOfWork, Fri, ProofTypes {
         // Read the query indices from the coin
         uint8 eval_domain_log_size = constraint_parameters.log_trace_length + constraint_parameters.log_blowup;
         trace('get_queries', true);
-        uint64[] memory queries = get_queries(coin, eval_domain_log_size, constraint_parameters.number_of_queries);
+        uint256[] memory queries = get_queries(coin, eval_domain_log_size, constraint_parameters.number_of_queries);
         trace('get_queries', false);
         // Get the actual polynomial points which were commited too, and the inverses of the x_points where they were evaluated
         trace('constraint_calculations', true);
@@ -116,7 +116,7 @@ contract StarkVerifier is Trace, ProofOfWork, Fri, ProofTypes {
     function check_commitments(
         StarkProof memory proof,
         ProofParameters memory constraint_parameters,
-        uint64[] memory queries,
+        uint256[] memory queries,
         uint8 log_eval_domain_size
     ) internal {
         trace('check_commitments', true);
@@ -158,7 +158,7 @@ contract StarkVerifier is Trace, ProofOfWork, Fri, ProofTypes {
     function prepare_hashes_and_queries(
         uint256[] memory data_groups,
         uint256 data_group_size,
-        uint64[] memory queries,
+        uint256[] memory queries,
         uint256 eval_domain_size,
         bytes32[] memory output_hashes,
         uint256[] memory output_queries
@@ -171,7 +171,7 @@ contract StarkVerifier is Trace, ProofOfWork, Fri, ProofTypes {
             output_hashes[i] = merkle_leaf_hash(group);
         }
 
-        queries.deep_copy_and_convert(output_queries);
+        queries.deep_copy(output_queries);
         // TODO - Go to depth indexing in merkle to remove this
         for (uint256 i = 0; i < queries.length; i++) {
             output_queries[i] = output_queries[i] + eval_domain_size;

@@ -2,10 +2,10 @@ pragma solidity ^0.6.4;
 
 
 library Utils {
-    function bit_reverse(uint64 num, uint8 number_of_bits) internal pure returns (uint256 num_reversed) {
-        uint64 n = num;
-        uint64 r = 0;
-        for (uint8 k = 0; k < number_of_bits; k++) {
+    function bit_reverse(uint256 num, uint8 number_of_bits) internal pure returns (uint256 num_reversed) {
+        uint256 n = num;
+        uint256 r = 0;
+        for (uint256 k = 0; k < number_of_bits; k++) {
             r = (r * 2) | (n % 2);
             n = n / 2;
         }
@@ -69,7 +69,7 @@ library Utils {
         }
     }
 
-    function deep_copy_and_convert(uint64[] memory a, uint256[] memory b) internal pure {
+    function deep_copy(uint256[] memory a, uint256[] memory b) internal pure {
         for (uint256 i = 0; i < a.length; i++) {
             b[i] = a[i];
         }
@@ -78,7 +78,7 @@ library Utils {
     // This function sorts the array
     // Note - We use insertion sort, the array is expected to be small so this shouldn't
     // cause problems.
-    function sort(uint64[] memory data) internal pure {
+    function sort(uint256[] memory data) internal pure {
         for (uint256 i = 0; i < data.length; i++) {
             uint256 j = i;
             while (j > 0 && data[j] < data[j - 1]) {

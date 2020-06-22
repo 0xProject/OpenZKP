@@ -750,7 +750,8 @@ abstract contract {}Trace is DefaultConstraintSystem({}, {}, {}, {}) {{",
             k,
             k + 1,
             i,
-            j
+            // TODO - Support negative rows
+            rows.iter().position(|x| x == &(*j as usize)).unwrap()
         ));
     }
     trace_layout_contract.push_str(
