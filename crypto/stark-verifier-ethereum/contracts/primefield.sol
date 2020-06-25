@@ -162,28 +162,8 @@ library PrimeField {
         uint64 eval_domain_size;
     }
 
-    // TODO - Remove this
-    // Solidity won't let libraries inherit, and we depend on libary syntax
-    // but also on trace not bieng a libary so it's not possible to make
-    // the primefield trace compatible without refactors, so we repeat code
-    event LogTrace(bytes32 name, bool enter, uint256 gasLeft, uint256 allocated);
-    modifier trace_mod(bytes32 name) {
-        trace(name, true);
-        _;
-        trace(name, false);
-    }
-
-    function trace(bytes32 name, bool enter) internal {
-        uint256 gas_left = gasleft();
-        uint256 allocated = 0;
-        assembly {
-            allocated := mload(0x40)
-        }
-        emit LogTrace(name, enter, gas_left, allocated);
-    }
-
     // Lookup data at an index
-    function lookup(EvalX memory eval_x, uint256 index) internal trace_mod('eval_x_lookup') returns (uint256) {
+    function lookup(EvalX memory eval_x, uint256 index) internal returns (uint256) {
         return fpow(eval_x.eval_domain_generator, index);
     }
 
