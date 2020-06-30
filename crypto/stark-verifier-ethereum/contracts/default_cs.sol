@@ -209,6 +209,8 @@ abstract contract DefaultConstraintSystem is ConstraintSystem, Trace  {
 
     // Returns an array of all of the row offsets which are used
     function layout_rows() internal pure virtual returns(uint256[] memory);
-    // Returns a trace layout in pairs ordered in coloum major form
+    // Returns a set of pairs (col, offset) for each element in the trace layout
+    // Where the col is what collum the trace element is and the offest is
+    // where in the inverse memory layout the offest is.
     function layout_col_major() internal pure virtual returns(uint256[] memory);
 }
