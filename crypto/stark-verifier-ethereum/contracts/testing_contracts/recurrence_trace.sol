@@ -9,12 +9,6 @@ import '../default_cs.sol';
 
 // solhint-disable-next-line indent
 abstract contract RecurrenceTrace is DefaultConstraintSystem(2, 2, 2, 16) {
-    // This lets us map rows -> inverse index,
-    // In complex systems use a autogen binary search.
-    function row_to_offset(uint256 row) internal override pure returns (uint256) {
-        return row;
-    }
-
     function layout_col_major() internal override pure returns (uint256[] memory) {
         uint256[] memory result = new uint256[](8);
         (result[0], result[1]) = (0, 0);

@@ -8,6 +8,12 @@ pragma experimental ABIEncoderV2;
 contract Trace {
     event LogTrace(bytes32 name, bool enter, uint256 gasLeft, uint256 allocated);
 
+    modifier trace_mod(bytes32 name) {
+        trace(name, true);
+        _;
+        trace(name, false);
+    }
+
     function trace(bytes32 name, bool enter) internal {
         uint256 gas_left = gasleft();
         uint256 allocated = 0;
