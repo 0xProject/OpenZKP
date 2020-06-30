@@ -12,7 +12,7 @@ interface ConstraintSystem {
     function constraint_calculations(
         ProofTypes.StarkProof calldata proof,
         ProofTypes.ProofParameters calldata params,
-        uint64[] calldata queries,
+        uint256[] calldata queries,
         uint256 oods_point,
         uint256[] calldata constraint_coeffiencts,
         uint256[] calldata oods_coeffiencts

@@ -2,6 +2,7 @@ use crate::{constraints::Constraints, polynomial::DensePolynomial, rational_expr
 use std::{
     cmp::Ordering,
     collections::{hash_map::DefaultHasher, BTreeMap, BTreeSet},
+    convert::TryInto,
     fs::File,
     hash::{Hash, Hasher},
     io::prelude::*,
@@ -750,7 +751,10 @@ abstract contract {}Trace is DefaultConstraintSystem({}, {}, {}, {}) {{",
             k,
             k + 1,
             i,
-            j
+            // TODO - Support negative rows
+            rows.iter()
+                .position(|x| x == &(TryInto::<usize>::try_into(*j).unwrap()))
+                .unwrap()
         ));
     }
     trace_layout_contract.push_str(
