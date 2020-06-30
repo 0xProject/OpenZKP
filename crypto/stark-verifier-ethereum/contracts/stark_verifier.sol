@@ -45,9 +45,16 @@ contract StarkVerifier is Trace, ProofOfWork, Fri, ProofTypes {
         trace('get_queries', false);
         // Get the actual polynomial points which were commited too, and the inverses of the x_points where they were evaluated
         trace('constraint_calculations', true);
+        OodsEvaluationData memory oods_data = OodsEvaluationData(
+            proof.trace_values,
+            proof.constraint_values,
+            proof.trace_oods_values,
+            proof.constraint_oods_values,
+            constraint_parameters.log_trace_length,
+            proof.public_inputs
+        );
         (uint256[] memory fri_top_layer, uint256 constraint_evaluated_oods_point) = constraints.constraint_calculations(
-            proof,
-            constraint_parameters,
+            oods_data,
             queries,
             oods_point,
             constraint_coeffiencents,

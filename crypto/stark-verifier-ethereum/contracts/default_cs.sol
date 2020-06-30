@@ -6,6 +6,7 @@ import './primefield.sol';
 import './iterator.sol';
 import './utils.sol';
 import './trace.sol';
+import './proof_types.sol';
 
 abstract contract DefaultConstraintSystem is ConstraintSystem, Trace  {
     using Iterators for Iterators.IteratorUint;
@@ -25,32 +26,25 @@ abstract contract DefaultConstraintSystem is ConstraintSystem, Trace  {
         BLOWUP = blowup;
     }
 
-    struct ProofData {
-        uint256[] trace_values;
-        PrimeField.EvalX eval;
-        uint256[] constraint_values;
-        uint256[] trace_oods_values;
-        uint256[] constraint_oods_values;
-        uint8 log_trace_length;
-    }
     // This function calcluates the adjustments to each query point which are implied
     // by the offsets and degree of the constraint system
     // It returns the low degree polynomial points at the query indcies
     function get_polynomial_points(
-        ProofData memory data,
+        ProofTypes.OodsEvaluationData memory data,
+        PrimeField.EvalX memory eval,
         uint256[] memory oods_coeffiecients,
         uint256[] memory queries,
         uint256 oods_point
     ) internal returns (uint256[] memory) {
-        trace('preparing_inverses', true);
+        trace('oods_prepare_inverses', true);
         uint256[] memory inverses = oods_prepare_inverses(
             queries,
-            data.eval,
+            eval,
             oods_point,
             data.log_trace_length + 4,
             data.log_trace_length
         );
-        trace('preparing_inverses', false);
+        trace('oods_prepare_inverses', false);
         uint256[] memory results = new uint256[](queries.length);
 
         // Init an iterator over the oods coeffiecients
@@ -59,15 +53,16 @@ abstract contract DefaultConstraintSystem is ConstraintSystem, Trace  {
         for (uint256 i = 0; i < queries.length; i++) {
             uint256 result = 0;
             {
+            trace('get_polynomial_points_loop_1', true);
             // These held pointers help soldity make the stack work
             uint256[] memory trace_oods_value = data.trace_oods_values;
             uint256[] memory trace_values = data.trace_values;
-            for (uint256 j = 0; j < trace_oods_value.length; j++) {
+            for (uint256 j = 0; j < trace_oods_value.length; ) {
                 uint256 loaded_trace_data = trace_oods_value[j];
                 // J*2 is the col index when the layout is in coloum major form
                 // NUM_COLUMNS*i idenifes the start of this querry's row values
                 uint256 calced_index = NUM_COLUMNS*i + layout[j*2];
-                uint256 numberator = trace_values[calced_index].fsub(loaded_trace_data);
+                uint256 numberator = addmod(trace_values[calced_index], (PrimeField.MODULUS - loaded_trace_data), PrimeField.MODULUS);
 
                 // Our trace layout is: (Col, Row Inverse Index),
                 // So the following will tell us where to look in the inverses
@@ -75,26 +70,38 @@ abstract contract DefaultConstraintSystem is ConstraintSystem, Trace  {
                 calced_index = (NUM_OFFSETS+1)*i + row;
                 uint256 denominator_inv = inverses[calced_index];
 
-                uint256 element = numberator.fmul(denominator_inv);
+                uint256 element = mulmod(numberator, denominator_inv, PrimeField.MODULUS);
                 uint256 coef = coeffiecients.next();
-                uint256 next_term = element.fmul_mont(coef);
-                result = result.fadd(next_term);
+                uint256 next_term = mulmod(mulmod(element, coef, PrimeField.MODULUS), PrimeField.MONTGOMERY_R_INV, PrimeField.MODULUS);
+                result = addmod(result, next_term, PrimeField.MODULUS);
+
+                assembly {
+                    j := add(j, 1)
+                }
             }
+            trace('get_polynomial_points_loop_1', false);
+
             }
 
+            trace('get_polynomial_points_loop_2', true);
             uint256 denominator_inv = inverses[i * (NUM_OFFSETS+1) + NUM_OFFSETS];
             uint256 len = CONSTRAINT_DEGREE;
             uint256[] memory constraint_values = data.constraint_values;
             uint256[] memory constraint_oods_values = data.constraint_oods_values;
-            for (uint256 j = 0; j < len; j++) {
+            for (uint256 j = 0; j < len; ) {
                 uint256 loaded_constraint_value = constraint_values[i * len + j];
                 uint256 loaded_oods_value = constraint_oods_values[j];
-                uint256 numberator = loaded_constraint_value.fsub(loaded_oods_value);
-                uint256 element = numberator.fmul(denominator_inv);
+                uint256 numberator = addmod(loaded_constraint_value, PrimeField.MODULUS - loaded_oods_value, PrimeField.MODULUS);
+                uint256 element = mulmod(numberator, denominator_inv, PrimeField.MODULUS);
                 uint256 coef = coeffiecients.next();
-                uint256 next_term = element.fmul_mont(coef);
-                result = result.fadd(next_term);
+                uint256 next_term = mulmod(mulmod(element, coef, PrimeField.MODULUS), PrimeField.MONTGOMERY_R_INV, PrimeField.MODULUS);
+                result = addmod(result, next_term, PrimeField.MODULUS);
+
+                assembly {
+                    j := add(j, 1)
+                }
             }
+            trace('get_polynomial_points_loop_2', false);
 
             results[i] = result;
             // This resets the iterator to start from the begining again
@@ -150,20 +157,29 @@ abstract contract DefaultConstraintSystem is ConstraintSystem, Trace  {
         }
         }
 
+        trace('oods_batch_invert', true);
         uint256[] memory batch_out = new uint256[](batch_in.length);
         uint256 carried = 1;
-        for (uint256 i = 0; i < batch_in.length; i++) {
-            carried = carried.fmul(batch_in[i]);
+        uint256 pre_stored_len = batch_in.length;
+        for (uint256 i = 0; i < pre_stored_len; ) {
+            carried = mulmod(carried, batch_in[i], PrimeField.MODULUS);
             batch_out[i] = carried;
+            assembly {
+                i := add(i, 1)
+            }
         }
 
         uint256 inv_prod = carried.inverse();
 
-        for (uint256 i = batch_out.length - 1; i > 0; i--) {
-            batch_out[i] = inv_prod.fmul(batch_out[i - 1]);
+        for (uint256 i = batch_out.length - 1; i > 0; ) {
+            batch_out[i] = mulmod(inv_prod, batch_out[i - 1], PrimeField.MODULUS);
             inv_prod = inv_prod.fmul(batch_in[i]);
+            assembly {
+                i := sub(i, 1)
+            }
         }
         batch_out[0] = inv_prod;
+        trace('oods_batch_invert', false);
         return batch_out;
     }
 

@@ -163,7 +163,6 @@ library PrimeField {
     }
 
     // Lookup data at an index
-    // These lookups cost around 530k of gas overhead in the small fib proof
     function lookup(EvalX memory eval_x, uint256 index) internal returns (uint256) {
         return fpow(eval_x.eval_domain_generator, index);
     }
