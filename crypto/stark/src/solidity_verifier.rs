@@ -756,9 +756,10 @@ abstract contract {}Trace is DefaultConstraintSystem({}, {}, {}, {}) {{",
             "    (result[{}], result[{}]) = ({}, {});",
             k,
             k + 1,
-            32*i,
+            32 * i,
             // TODO - Support negative rows
-            32*rows.iter()
+            32 * rows
+                .iter()
                 .position(|x| x == &(TryInto::<usize>::try_into(*j).unwrap()))
                 .unwrap()
         ));
