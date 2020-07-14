@@ -247,8 +247,8 @@ abstract contract DefaultConstraintSystem is ConstraintSystem, Trace  {
             inverses := add(inverses, 32)
             inverses := add(inverses, mul(32, inverseOffset))
 
-            let layout_end := add(layout, mul(bound, 32))
-            for {} lt(layout, layout_end) {} {
+            let trace_oods_values_end := add(trace_oods_values, mul(bound, 32))
+            for {} lt(trace_oods_values, trace_oods_values_end) {} {
                 let numerator
                 {
                 // Load directly from the data pointer
