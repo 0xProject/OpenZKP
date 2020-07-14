@@ -746,13 +746,19 @@ abstract contract {}Trace is DefaultConstraintSystem({}, {}, {}, {}) {{",
             RationalExpression::Trace(i, j) => (i, j),
             _ => panic!("Non trace rational expression in rows"),
         };
+        // This adds code which writes the 32*row and thirty two times
+        // the index of the row to the kth and k+1-th positions.
+        // this will let us lookup the row and index of the row
+        // when we are using assembly
+        // Note the factor of 32 is the because 32 bytes is the word size
+        // of evm memory.
         trace_layout_contract.push_str(&format!(
             "    (result[{}], result[{}]) = ({}, {});",
             k,
             k + 1,
-            i,
+            32*i,
             // TODO - Support negative rows
-            rows.iter()
+            32*rows.iter()
                 .position(|x| x == &(TryInto::<usize>::try_into(*j).unwrap()))
                 .unwrap()
         ));

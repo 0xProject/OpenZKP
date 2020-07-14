@@ -12,9 +12,9 @@ abstract contract RecurrenceTrace is DefaultConstraintSystem(2, 2, 2, 16) {
     function layout_col_major() internal override pure returns (uint256[] memory) {
         uint256[] memory result = new uint256[](8);
         (result[0], result[1]) = (0, 0);
-        (result[2], result[3]) = (0, 1);
-        (result[4], result[5]) = (1, 0);
-        (result[6], result[7]) = (1, 1);
+        (result[2], result[3]) = (0, 32);
+        (result[4], result[5]) = (32, 0);
+        (result[6], result[7]) = (32, 32);
         return result;
     }
 
