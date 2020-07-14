@@ -3,13 +3,11 @@ pragma experimental ABIEncoderV2;
 
 import './interfaces/ConstraintInterface.sol';
 import './primefield.sol';
-import './iterator.sol';
 import './utils.sol';
 import './trace.sol';
 import './proof_types.sol';
 
 abstract contract DefaultConstraintSystem is ConstraintSystem, Trace  {
-    using Iterators for Iterators.IteratorUint;
     using PrimeField for uint256;
     using PrimeField for PrimeField.EvalX;
     using Utils for *;
@@ -47,65 +45,53 @@ abstract contract DefaultConstraintSystem is ConstraintSystem, Trace  {
         trace('oods_prepare_inverses', false);
         uint256[] memory results = new uint256[](queries.length);
 
-        // Init an iterator over the oods coeffiecients
-        Iterators.IteratorUint memory coeffiecients = Iterators.init_iterator(oods_coeffiecients);
+        // Note that the oods coeffients are read from the data and assumed to be
+        // in montgomery form, we remove that here to save gas.
+        for (uint256 i = 0; i < oods_coeffiecients.length; i++) {
+            oods_coeffiecients[i] = mulmod(oods_coeffiecients[i], PrimeField.MONTGOMERY_R_INV, PrimeField.MODULUS);
+        }
+
         uint256[] memory layout = layout_col_major();
         for (uint256 i = 0; i < queries.length; i++) {
             uint256 result = 0;
             {
             trace('get_polynomial_points_loop_1', true);
             // These held pointers help soldity make the stack work
-            uint256[] memory trace_oods_value = data.trace_oods_values;
+            uint256[] memory trace_oods_values = data.trace_oods_values;
             uint256[] memory trace_values = data.trace_values;
-            for (uint256 j = 0; j < trace_oods_value.length; ) {
-                uint256 loaded_trace_data = trace_oods_value[j];
-                // J*2 is the col index when the layout is in coloum major form
-                // NUM_COLUMNS*i idenifes the start of this querry's row values
-                uint256 calced_index = NUM_COLUMNS*i + layout[j*2];
-                uint256 numberator = addmod(trace_values[calced_index], (PrimeField.MODULUS - loaded_trace_data), PrimeField.MODULUS);
 
-                // Our trace layout is: (Col, Row Inverse Index),
-                // So the following will tell us where to look in the inverses
-                uint256 row = layout[j*2+1];
-                calced_index = (NUM_OFFSETS+1)*i + row;
-                uint256 denominator_inv = inverses[calced_index];
+            // This function is an assembly implementation of the logic found
+            // in commit 596a0ea670055de92d6c0240701ac4ec4aaa0f44 linked here:
+            // https://github.com/0xProject/OpenZKP/blob/596a0ea670055de92d6c0240701ac4ec4aaa0f44/crypto/stark-verifier-ethereum/contracts/default_cs.sol#L56
+            result = oods_row_adjustment(trace_oods_values, trace_values, oods_coeffiecients, layout, inverses, i);
 
-                uint256 element = mulmod(numberator, denominator_inv, PrimeField.MODULUS);
-                uint256 coef = coeffiecients.next();
-                uint256 next_term = mulmod(mulmod(element, coef, PrimeField.MODULUS), PrimeField.MONTGOMERY_R_INV, PrimeField.MODULUS);
-                result = addmod(result, next_term, PrimeField.MODULUS);
-
-                assembly {
-                    j := add(j, 1)
-                }
-            }
             trace('get_polynomial_points_loop_1', false);
-
             }
+
+            uint256 coeffiecients_index = data.trace_oods_values.length;
 
             trace('get_polynomial_points_loop_2', true);
             uint256 denominator_inv = inverses[i * (NUM_OFFSETS+1) + NUM_OFFSETS];
-            uint256 len = CONSTRAINT_DEGREE;
             uint256[] memory constraint_values = data.constraint_values;
             uint256[] memory constraint_oods_values = data.constraint_oods_values;
-            for (uint256 j = 0; j < len; ) {
-                uint256 loaded_constraint_value = constraint_values[i * len + j];
-                uint256 loaded_oods_value = constraint_oods_values[j];
-                uint256 numberator = addmod(loaded_constraint_value, PrimeField.MODULUS - loaded_oods_value, PrimeField.MODULUS);
-                uint256 element = mulmod(numberator, denominator_inv, PrimeField.MODULUS);
-                uint256 coef = coeffiecients.next();
-                uint256 next_term = mulmod(mulmod(element, coef, PrimeField.MODULUS), PrimeField.MONTGOMERY_R_INV, PrimeField.MODULUS);
-                result = addmod(result, next_term, PrimeField.MODULUS);
 
-                assembly {
-                    j := add(j, 1)
-                }
+            for (uint256 j = 0; j < CONSTRAINT_DEGREE; j ++ ) {
+                // Load the Oods coefficent
+                uint256 coef = oods_coeffiecients[coeffiecients_index + j];
+
+                // Get the constraint value, oods constraint value and use to get the numerator
+                uint256 loaded_constraint_value = constraint_values[i * CONSTRAINT_DEGREE + j];
+                uint256 loaded_oods_value = constraint_oods_values[j];
+                uint256 numerator = addmod(loaded_constraint_value, PrimeField.MODULUS - loaded_oods_value, PrimeField.MODULUS);
+
+                // Multiply numerator*denominator and add this to the result
+                uint256 element = mulmod(numerator, denominator_inv, PrimeField.MODULUS);
+                uint256 next_term = mulmod(element, coef, PrimeField.MODULUS);
+                result = addmod(result, next_term, PrimeField.MODULUS);
             }
             trace('get_polynomial_points_loop_2', false);
 
             results[i] = result;
-            // This resets the iterator to start from the begining again
-            coeffiecients.index = 0;
         }
 
         return results;
@@ -207,10 +193,107 @@ abstract contract DefaultConstraintSystem is ConstraintSystem, Trace  {
         return result;
     }
 
+    function oods_row_adjustment(uint256[] memory trace_oods_values, uint256[] memory trace_values, uint256[] memory oods_coeffiecients, uint256[] memory layout, uint256[] memory inverses, uint256 i) internal view returns(uint256 result) {
+        // We want to get the pointers to memory before passing those into
+        // the pure assembly function.
+        uint256 trace_oods_values_ptr;
+        uint256 trace_values_ptr;
+        uint256 oods_coeffiecients_ptr;
+        uint256 layout_ptr;
+        uint256 inverses_ptr;
+        // This assembly block copies the pointers of the memory objects.
+        assembly {
+            trace_oods_values_ptr := trace_oods_values
+            trace_values_ptr := trace_values
+            oods_coeffiecients_ptr := oods_coeffiecients
+            layout_ptr := layout
+            inverses_ptr := inverses
+        }
+
+        result = oods_row_adjustment_asm(trace_oods_values_ptr, trace_values_ptr, oods_coeffiecients_ptr, layout_ptr, inverses_ptr, i);
+    }
+
+
+    // We localize this constant so it can be used in assembly
+    bytes32 constant MODULUS = 0x0800000000000011000000000000000000000000000000000000000000000001;
+
+    // This pure assembly function takes in memory pointers and maniuplates them
+    // Warning - Pass in a copy of the pointer as it will corrupt the pointers passed in
+    // It then reads each of the oods values and divides out the polynomial terms needed
+    // to make the result match an intermediate calculation of the polynomial point
+    // commited too.
+    function oods_row_adjustment_asm(uint256 trace_oods_values, uint256 trace_values, uint256 oods_coeffiecients, uint256 layout, uint256 inverses, uint256 i) internal view returns(uint256 result) {
+        // We cannot access immutables in assembly
+        uint256 inverseOffset = (NUM_OFFSETS+1)*i;
+        uint256 rowOffset = NUM_COLUMNS*i;
+
+        assembly {
+            function read_array(ptr, offset) -> loaded {
+                loaded :=  mload(add(add(ptr, 32), mul(offset, 32)))
+            }
+            // We record total length to use in the loop bound
+            let bound := mload(trace_oods_values)
+            // Then because the arrays are structued as [length][data start]
+            // we move the pointers forward by one machine word.
+            trace_oods_values := add(trace_oods_values, 32)
+            // // Trace oods values is a special case, where we always want
+            // // data at the rowOffset so we add that to this pointer
+            trace_values := add(trace_values, 32)
+            trace_values := add(trace_values, mul(rowOffset, 32))
+            oods_coeffiecients := add(oods_coeffiecients, 32)
+            layout := add(layout, 32)
+            // Inverses is also a special case where we increment the data
+            // pointer to a new location in the data memory
+            inverses := add(inverses, 32)
+            inverses := add(inverses, mul(32, inverseOffset))
+
+            for {let j := 0}
+                lt(j, bound)
+                {j := add(j, 1)}
+            {
+                let numerator
+                {
+                // Load directly from the data pointer
+                let loaded_trace_data := mload(trace_oods_values)
+                // We then move the data pointer foward by one word
+                trace_oods_values := add(trace_oods_values, 32)
+                // We load from the word in the trace values data range which
+                // is at the forward location determined by layout's load
+                let loaded_trace_value := mload(add(trace_values, mload(layout)))
+                // We load the data pointer layout so now need to move it forward to the
+                // next data location.
+                layout := add(layout, 32)
+
+                numerator := addmod(loaded_trace_value, sub(MODULUS, loaded_trace_data), MODULUS)
+                }
+
+                let denominator_inv
+                {
+                // We read from the layout data pointer
+                let row := mload(layout)
+                // Then we increment it to the next data location
+                layout := add(layout, 32)
+                // To read the demoninator inverse we want to read the
+                // row-th element after the inverses data pointer,
+                // so we load from inverse + row*32
+                denominator_inv := mload(add(inverses, row))
+                }
+
+                let element := mulmod(numerator, denominator_inv, MODULUS)
+                // We read right from the oods coeffiecient data pointer
+                let coef := mload(oods_coeffiecients)
+                // We then incrrement it by word size so the next loop can use it
+                oods_coeffiecients := add(oods_coeffiecients, 32)
+
+                let next_term := mulmod(element, coef, MODULUS)
+                result := addmod(result, next_term, MODULUS)
+            }
+        }
+        return result;
+    }
+
     // Returns an array of all of the row offsets which are used
     function layout_rows() internal pure virtual returns(uint256[] memory);
-    // Returns a set of pairs (col, offset) for each element in the trace layout
-    // Where the col is what collum the trace element is and the offest is
-    // where in the inverse memory layout the offest is.
+    // Returns a trace layout in pairs ordered in coloum major form
     function layout_col_major() internal pure virtual returns(uint256[] memory);
 }
