@@ -233,7 +233,7 @@ abstract contract DefaultConstraintSystem is ConstraintSystem, Trace  {
             }
             // We record total length to use in the loop bound
             let bound := mload(trace_oods_values)
-            // Then because the arrays are structued as [length][data start]
+            // Then because the arrays are structured as [length][data start]
             // we move the pointers forward by one machine word.
             trace_oods_values := add(trace_oods_values, 32)
             // // Trace oods values is a special case, where we always want
@@ -247,10 +247,8 @@ abstract contract DefaultConstraintSystem is ConstraintSystem, Trace  {
             inverses := add(inverses, 32)
             inverses := add(inverses, mul(32, inverseOffset))
 
-            for {let j := 0}
-                lt(j, bound)
-                {j := add(j, 1)}
-            {
+            let layout_end := add(layout, mul(bound, 32))
+            for {} lt(layout, layout_end) {} {
                 let numerator
                 {
                 // Load directly from the data pointer
