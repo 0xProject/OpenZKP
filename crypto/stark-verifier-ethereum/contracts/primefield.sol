@@ -1,6 +1,5 @@
 pragma solidity ^0.6.4;
 
-
 library PrimeField {
     uint256 internal constant MODULUS = 0x0800000000000011000000000000000000000000000000000000000000000001;
     uint256 internal constant MODULUS_MASK = 0x0fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
@@ -162,8 +161,28 @@ library PrimeField {
         uint64 eval_domain_size;
     }
 
+    // TODO - Remove this
+    // Solidity won't let libraries inherit, and we depend on libary syntax
+    // but also on trace not bieng a libary so it's not possible to make
+    // the primefield trace compatible without refactors, so we repeat code
+    event LogTrace(bytes32 name, bool enter, uint256 gasLeft, uint256 allocated);
+    modifier trace_mod(bytes32 name) {
+        trace(name, true);
+        _;
+        trace(name, false);
+    }
+
+    function trace(bytes32 name, bool enter) internal {
+        uint256 gas_left = gasleft();
+        uint256 allocated = 0;
+        assembly {
+            allocated := mload(0x40)
+        }
+        emit LogTrace(name, enter, gas_left, allocated);
+    }
+
     // Lookup data at an index
-    function lookup(EvalX memory eval_x, uint256 index) internal returns (uint256) {
+    function lookup(EvalX memory eval_x, uint256 index) internal trace_mod('eval_x_lookup') returns (uint256) {
         return fpow(eval_x.eval_domain_generator, index);
     }
 
@@ -175,5 +194,110 @@ library PrimeField {
                 log_eval_domain_size,
                 uint64(2)**(log_eval_domain_size)
             );
+    }
+
+    //     uint256[] memory batch_out = new uint256[](batch_in.length);
+    // uint256 carried = 1;
+    // uint256 pre_stored_len = batch_in.length;
+    // for (uint256 i = 0; i < pre_stored_len; ) {
+    //     carried = mulmod(carried, batch_in[i], PrimeField.MODULUS);
+    //     batch_out[i] = carried;
+    //     assembly {
+    //         i := add(i, 1)
+    //     }
+    // }
+
+    // uint256 inv_prod = carried.inverse();
+
+    // for (uint256 i = batch_out.length - 1; i > 0; ) {
+    //     batch_out[i] = mulmod(inv_prod, batch_out[i - 1], PrimeField.MODULUS);
+    //     inv_prod = inv_prod.fmul(batch_in[i]);
+    //     assembly {
+    //         i := sub(i, 1)
+    //     }
+    // }
+    // batch_out[0] = inv_prod;
+
+    uint256 constant MODULUS_SUB_2 = 0x0800000000000010ffffffffffffffffffffffffffffffffffffffffffffffff;
+
+    // This is a pure assembly optiomized version of a batch inversion
+    // If the batch inversion input data array contains a zero, the batch
+    // inversion will fail.
+    // TODO - Inplace version/ version without output array?
+    function batch_invert(uint256[] memory input_data, uint256[] memory output_data) internal returns(uint256 result) {
+        require(input_data.length == output_data.length);
+
+        assembly {
+            // Uses the fact that data^p = data => data^(p-2) * data = 1
+            // to calculate the multiplicative inverse in the field
+            function invert(data) -> invert_result {
+                let p := mload(0x40)
+                mstore(p, 0x20) // Length of Base
+                mstore(add(p, 0x20), 0x20) // Length of Exponent
+                mstore(add(p, 0x40), 0x20) // Length of Modulus
+                mstore(add(p, 0x60), data) // Base
+                mstore(add(p, 0x80), MODULUS_SUB_2) // Exponent
+                mstore(add(p, 0xa0), MODULUS) // Modulus
+                // call modexp precompile
+                if iszero(call(not(0), 0x05, 0, p, 0xc0, p, 0x20)) {
+                    revert(0, 0)
+                }
+                invert_result := mload(p)
+            }
+
+            let carried := 1
+
+            // This local copy of pointers to data
+            // will be manipulated instead of the real thing
+            let in_pointer := add(input_data, 32)
+            // Note - we don't keep a copy of the output pointer
+            // intead we keep the diffrence between the memory
+            // arrays and use that to adjust the local pointer.
+            // This works no matter memory layout because of the
+            // modularity of evm additon
+            // TODO - does this dif method actually save anything?
+            let out_dif := sub(output_data, input_data)
+
+            // The end bound of the following loop is when it's
+            // 32*len past the data pointer
+            let final_pointer := add(in_pointer, mul(mload(input_data), 32))
+
+            // We interate on the pointer by moving forward
+            // a word at a time and then checking we aren't
+            // beyond the final pointer.
+            for {} lt(in_pointer, final_pointer) {in_pointer := add(in_pointer, 32)} {
+                // We want to get the product of all of the previous
+                // elements into each slot of output data
+                carried := mulmod(carried, mload(in_pointer), MODULUS)
+                // Using the outdif we store into the output array
+                mstore(add(out_dif, in_pointer), carried)
+            }
+
+            // Invert the product of all of the numbers
+            carried := invert(carried)
+            // At this point the in_pointer is beyond the data
+            // So we move it back by one word.
+            in_pointer := sub(in_pointer, 32)
+            // We want to break when our in pointer points to
+            // the very first data slot
+            final_pointer := add(input_data, 32)
+            // We now move backwards through the input data array
+            for {} gt(in_pointer, final_pointer) {in_pointer := sub(in_pointer, 32)} {
+                // Get out output pointer from the in pointer
+                let out_pointer := add(in_pointer, out_dif)
+                // Load a data slot before out pointer
+                let out_data_i_minus_1 := mload(sub(out_pointer, 32))
+                // Mul the cumulative inverse with the cummulative product
+                // from a step before to get the ith inverse
+                let ith_inverse := mulmod(carried, out_data_i_minus_1, MODULUS)
+                // Store that ith inverse
+                mstore(out_pointer, ith_inverse)
+                // Update the cumulative product
+                carried := mulmod(carried, mload(in_pointer), MODULUS)
+            }
+            // We increment down to but don't set out[0]
+            // in the loop, so we set that here.
+            mstore(add(output_data, 32), carried)
+        }
     }
 }
