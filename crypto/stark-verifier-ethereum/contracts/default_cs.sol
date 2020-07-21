@@ -145,26 +145,7 @@ abstract contract DefaultConstraintSystem is ConstraintSystem, Trace  {
 
         trace('oods_batch_invert', true);
         uint256[] memory batch_out = new uint256[](batch_in.length);
-        uint256 carried = 1;
-        uint256 pre_stored_len = batch_in.length;
-        for (uint256 i = 0; i < pre_stored_len; ) {
-            carried = mulmod(carried, batch_in[i], PrimeField.MODULUS);
-            batch_out[i] = carried;
-            assembly {
-                i := add(i, 1)
-            }
-        }
-
-        uint256 inv_prod = carried.inverse();
-
-        for (uint256 i = batch_out.length - 1; i > 0; ) {
-            batch_out[i] = mulmod(inv_prod, batch_out[i - 1], PrimeField.MODULUS);
-            inv_prod = inv_prod.fmul(batch_in[i]);
-            assembly {
-                i := sub(i, 1)
-            }
-        }
-        batch_out[0] = inv_prod;
+        PrimeField.batch_invert(batch_in, batch_out);
         trace('oods_batch_invert', false);
         return batch_out;
     }
