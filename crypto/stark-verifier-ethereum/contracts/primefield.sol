@@ -1,5 +1,6 @@
 pragma solidity ^0.6.4;
 
+
 library PrimeField {
     uint256 internal constant MODULUS = 0x0800000000000011000000000000000000000000000000000000000000000001;
     uint256 internal constant MODULUS_MASK = 0x0fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
@@ -166,6 +167,7 @@ library PrimeField {
     // but also on trace not bieng a libary so it's not possible to make
     // the primefield trace compatible without refactors, so we repeat code
     event LogTrace(bytes32 name, bool enter, uint256 gasLeft, uint256 allocated);
+
     modifier trace_mod(bytes32 name) {
         trace(name, true);
         _;
@@ -196,35 +198,13 @@ library PrimeField {
             );
     }
 
-    //     uint256[] memory batch_out = new uint256[](batch_in.length);
-    // uint256 carried = 1;
-    // uint256 pre_stored_len = batch_in.length;
-    // for (uint256 i = 0; i < pre_stored_len; ) {
-    //     carried = mulmod(carried, batch_in[i], PrimeField.MODULUS);
-    //     batch_out[i] = carried;
-    //     assembly {
-    //         i := add(i, 1)
-    //     }
-    // }
-
-    // uint256 inv_prod = carried.inverse();
-
-    // for (uint256 i = batch_out.length - 1; i > 0; ) {
-    //     batch_out[i] = mulmod(inv_prod, batch_out[i - 1], PrimeField.MODULUS);
-    //     inv_prod = inv_prod.fmul(batch_in[i]);
-    //     assembly {
-    //         i := sub(i, 1)
-    //     }
-    // }
-    // batch_out[0] = inv_prod;
-
     uint256 constant MODULUS_SUB_2 = 0x0800000000000010ffffffffffffffffffffffffffffffffffffffffffffffff;
 
     // This is a pure assembly optiomized version of a batch inversion
     // If the batch inversion input data array contains a zero, the batch
     // inversion will fail.
     // TODO - Inplace version/ version without output array?
-    function batch_invert(uint256[] memory input_data, uint256[] memory output_data) internal returns(uint256 result) {
+    function batch_invert(uint256[] memory input_data, uint256[] memory output_data) internal returns (uint256 result) {
         require(input_data.length == output_data.length);
 
         assembly {
@@ -265,7 +245,11 @@ library PrimeField {
             // We interate on the pointer by moving forward
             // a word at a time and then checking we aren't
             // beyond the final pointer.
-            for {} lt(in_pointer, final_pointer) {in_pointer := add(in_pointer, 32)} {
+            for {
+
+            } lt(in_pointer, final_pointer) {
+                in_pointer := add(in_pointer, 32)
+            } {
                 // We want to get the product of all of the previous
                 // elements into each slot of output data
                 carried := mulmod(carried, mload(in_pointer), MODULUS)
@@ -282,7 +266,11 @@ library PrimeField {
             // the very first data slot
             final_pointer := add(input_data, 32)
             // We now move backwards through the input data array
-            for {} gt(in_pointer, final_pointer) {in_pointer := sub(in_pointer, 32)} {
+            for {
+
+            } gt(in_pointer, final_pointer) {
+                in_pointer := sub(in_pointer, 32)
+            } {
                 // Get out output pointer from the in pointer
                 let out_pointer := add(in_pointer, out_dif)
                 // Load a data slot before out pointer

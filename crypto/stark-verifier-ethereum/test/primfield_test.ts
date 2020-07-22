@@ -53,4 +53,16 @@ describe('Public coin testing', () => {
         /* tslint:disable:no-console*/
         console.log('Inverse gas used : ', result.gasUsed.sub(22592).toNumber());
     });
+
+    it('Should batch invert correctly', async () => {
+        const result = await (await field_contract.batch_invert_external(['0x21', '0x22', '0x0326c9b26c9b26d064d9364d9364d9364d9364d9364d9364d9364d9364d9364e'])).wait();
+        const res = result.events;
+        // We should have find a better way of doing this
+        expect(res[0].data).to.eq('0x0326c9b26c9b26d064d9364d9364d9364d9364d9364d9364d9364d9364d9364e');
+        expect(res[1].data).to.eq('0x038787878787878f078787878787878787878787878787878787878787878788');
+        expect(res[2].data).to.eq('0x0000000000000000000000000000000000000000000000000000000000000021');
+        // TODO - Use better logging
+        /* tslint:disable:no-console*/
+        console.log('Batch invert gas used : ', result.gasUsed.sub(22592).toNumber());
+    });
 });
