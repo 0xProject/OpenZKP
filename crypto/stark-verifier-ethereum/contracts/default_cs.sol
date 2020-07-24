@@ -119,10 +119,14 @@ abstract contract DefaultConstraintSystem is ConstraintSystem, Trace  {
         uint256 oods_constraint_power = oods_point.fpow(uint256(CONSTRAINT_DEGREE));
         uint256[] memory generator_powers = new uint256[](trace_rows.length);
 
+        // NOTE - This consumes quite a bit of gas ~100k for larger constraint systems
+        // However, removing it would break our abstractions in a way that is probably
+        // not worth it.
         for (uint i = 0; i < trace_rows.length; i++) {
             generator_powers[i] = trace_generator.fpow(trace_rows[i]);
         }
 
+        trace('query_shifting_loop', true);
         for (uint256 i = 0; i < queries.length; i++) {
             // Get the shifted eval point
             uint256 x;
@@ -133,21 +137,59 @@ abstract contract DefaultConstraintSystem is ConstraintSystem, Trace  {
                 x = x.fmul(PrimeField.GENERATOR);
             }
 
-            for (uint j = 0; j < trace_rows.length; j ++) {
-                uint256 loaded_gen_power = generator_powers[j];
-                uint256 shifted_oods = oods_point.fmul(loaded_gen_power);
-                batch_in[i*(NUM_OFFSETS+1) + j] = x.fsub(shifted_oods);
-            }
+            generator_power_adjustment(batch_in, generator_powers, oods_point, i, x);
             // This is the shifted x - oods_point^(degree)
             batch_in[i*(NUM_OFFSETS+1) + NUM_OFFSETS] = x.fsub(oods_constraint_power);
         }
         }
+        trace('query_shifting_loop', false);
 
         trace('oods_batch_invert', true);
         uint256[] memory batch_out = new uint256[](batch_in.length);
         PrimeField.batch_invert(batch_in, batch_out);
         trace('oods_batch_invert', false);
         return batch_out;
+    }
+
+    function generator_power_adjustment(
+        uint256[] memory output_memory_location,
+        uint256[] memory generator_powers,
+        uint256 oods_point,
+        uint256 i,
+        uint256 x
+    ) internal {
+        // We localize the number of offsets because assembly
+        // doesn't understand immutables
+        uint256 local_num_offsets = NUM_OFFSETS;
+        assembly {
+            // Pointer to the data in the generator array
+            // Note - By copying the pointer we prevent corrution of
+            // the underlying.
+            let generator_pointer := add(generator_powers, 32)
+            // The word location which one after the end of the data
+            // array
+            let generator_end := add(generator_pointer, mul(mload(generator_powers), 32))
+            // We need to write to a memory data pointer in the output array
+            let output_pointer := add(output_memory_location, 32)
+            // Since we have been writing to this array before
+            // we need to move the data pointer forward by i*(NUM_OFFSETS+1) words
+            output_pointer := add(output_pointer, mul(mul(i, add(local_num_offsets, 1)), 32))
+
+            // This loop increments the generator pointer and checks if it
+            // is still before the end of the data on every loop.
+            for {} lt(generator_pointer, generator_end) {generator_pointer := add(generator_pointer, 32)}
+            {
+                let loaded_gen_power := mload(generator_pointer)
+                // Note - The local MODULUS const is declared below this function
+                let shifted_oods := mulmod(oods_point, loaded_gen_power, MODULUS)
+                // Add x to -shifted_oods mod P
+                let x_sub_shifted_oods := addmod(x, sub(MODULUS, shifted_oods), MODULUS)
+                // Store our computational result
+                mstore(output_pointer, x_sub_shifted_oods)
+                // Move our output pointer fowards
+                output_pointer := add(output_pointer, 32)
+            }
+        }
     }
 
     // TODO - Move this to a util file or default implementation

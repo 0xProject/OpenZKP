@@ -204,7 +204,7 @@ library PrimeField {
     // If the batch inversion input data array contains a zero, the batch
     // inversion will fail.
     // TODO - Inplace version/ version without output array?
-    function batch_invert(uint256[] memory input_data, uint256[] memory output_data) internal returns (uint256 result) {
+    function batch_invert(uint256[] memory input_data, uint256[] memory output_data) internal {
         require(input_data.length == output_data.length);
 
         assembly {
