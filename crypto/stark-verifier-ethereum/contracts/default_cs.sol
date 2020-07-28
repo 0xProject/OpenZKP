@@ -163,7 +163,7 @@ abstract contract DefaultConstraintSystem is ConstraintSystem, Trace  {
         uint256 local_num_offsets = NUM_OFFSETS;
         assembly {
             // Pointer to the data in the generator array
-            // Note - By copying the pointer we prevent corrution of
+            // Note - By copying the pointer we prevent corruption of
             // the underlying.
             let generator_pointer := add(generator_powers, 32)
             // The word location which one after the end of the data
