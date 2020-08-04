@@ -51,6 +51,7 @@
 // TODO: No asm on stable
 // See <https://github.com/rust-lang/rust/issues/29722>
 #![cfg_attr(feature = "asm", feature(llvm_asm))]
+#![cfg_attr(feature = "asm", feature(asm))]
 
 mod additive;
 pub(crate) mod algorithms;

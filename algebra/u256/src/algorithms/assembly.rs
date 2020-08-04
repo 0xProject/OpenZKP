@@ -136,6 +136,13 @@ pub(crate) fn mul_add_1_asm(
     r4
 }
 
+// FIXME: Once <https://github.com/rust-lang/rust/issues/57775> is solved we
+// could inline the modulus as a constant. Currently we pass it as a reference
+// to an array, which requires an addition register.
+
+// Rust's `asm!` syntax is unstable and specified here:
+// <https://github.com/Amanieu/rfcs/blob/inline-asm/text/0000-inline-asm.md>
+
 /// Reduce at most once
 // Currently unused
 #[allow(dead_code)]
@@ -148,52 +155,42 @@ pub(crate) fn reduce_1(
     s1: u64,
     s2: u64,
     s3: u64,
-    m0: u64,
-    m1: u64,
-    m2: u64,
-    m3: u64,
+    modulus: &[u64; 4],
 ) -> (u64, u64, u64, u64) {
     let r0: u64;
     let r1: u64;
     let r2: u64;
     let r3: u64;
     unsafe {
-        llvm_asm!(r"
-        // Copy [s0..3] into [r0..3]
-        // Subtract [m0..3] from [s0..3] in place
-        mov $4, $0
-        sub $8, $4
-        mov $5, $1
-        sbb $9, $5
-        mov $6, $2
-        sbb $10, $6
-        mov $7, $3
-        sbb $11, $7
+        asm!(r"
+        // Copy value to result
+        // Subtract modulus from value
+        mov {s0}, {r0}
+        sub {s0}, [{m} + 0x00]
+        mov {s1}, {r1}
+        sbb {s1}, [{m} + 0x08]
+        mov {s2}, {r2}
+        sbb {s2}, [{m} + 0x10]
+        mov {s3}, {r3}
+        sbb {s3}, [{m} + 0x18]
 
-        // Conditionally copy [s0..3] into [r0..3] when no carry
-        cmovnc $4, $0
-        cmovnc $5, $1
-        cmovnc $6, $2
-        cmovnc $7, $3
-        "
-        : // Output constraints
-            "=&rm"(r0),   // $0 d0..3 are in register or memory
-            "=&rm"(r1),   // $1
-            "=&rm"(r2),   // $2
-            "=&rm"(r3)    // $3
-        : // Input constraints
-            "r"(s0),      // $4 s0..3 are in registers
-            "r"(s1),      // $5
-            "r"(s2),      // $6
-            "r"(s3),      // $7
-            "rmi"(m0),    // $8 m0..3 are in registers or memory or immediate
-            "rmi"(m1),    // $9
-            "rmi"(m2),    // $10
-            "rmi"(m3)     // $11
-            // TODO: Make sure m is immediate
-        : // Clobbers
-           "cc"         // Flags
-        )
+        // Conditional copy reduced value to result
+        cmovnc {r0}, {s0}
+        cmovnc {r1}, {s1}
+        cmovnc {r2}, {s2}
+        cmovnc {r3}, {s3}
+        ",
+        m = in(reg) modulus,
+        s0 = inout(reg) s0 => _,
+        s1 = inout(reg) s1 => _,
+        s2 = inout(reg) s2 => _,
+        s3 = inout(reg) s3 => _,
+        r0 = out(reg) r0,
+        r1 = out(reg) r1,
+        r2 = out(reg) r2,
+        r3 = out(reg) r3,
+        options(pure, nomem, nostack)
+        );
     }
     (r0, r1, r2, r3)
 }
