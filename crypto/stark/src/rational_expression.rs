@@ -1,9 +1,6 @@
 use crate::polynomial::DensePolynomial;
 #[cfg(feature = "std")]
-use std::{
-    cmp::Ordering,
-    collections::{hash_map::DefaultHasher, BTreeMap},
-};
+use std::{cmp::Ordering, collections::hash_map::DefaultHasher};
 use std::{
     collections::BTreeSet,
     hash::{Hash, Hasher},
@@ -23,6 +20,9 @@ pub enum RationalExpression {
     Constant(FieldElement),
     Trace(usize, isize),
     Polynomial(DensePolynomial, Box<RationalExpression>),
+    // TODO - Make this a struct with internally named members
+    // the members are (index, degree bound, expression, name)
+    ClaimPolynomial(usize, usize, Box<RationalExpression>, Option<&'static str>),
     Add(Box<RationalExpression>, Box<RationalExpression>),
     Neg(Box<RationalExpression>),
     Mul(Box<RationalExpression>, Box<RationalExpression>),
@@ -53,6 +53,7 @@ impl RationalExpression {
         let e = match self {
             // Tree types are recursed first
             Polynomial(p, e) => Polynomial(p.clone(), Box::new(e.map(f))),
+            ClaimPolynomial(i, n, e, name) => ClaimPolynomial(*i, *n, Box::new(e.map(f)), *name),
             Add(a, b) => Add(Box::new(a.map(f)), Box::new(b.map(f))),
             Neg(a) => Neg(Box::new(a.map(f))),
             Mul(a, b) => Mul(Box::new(a.map(f)), Box::new(b.map(f))),
@@ -63,6 +64,24 @@ impl RationalExpression {
             other => other.clone(),
         };
         f(e)
+    }
+
+    pub fn substitute_claim(&self, claim_polynomials: &[DensePolynomial]) -> Self {
+        use RationalExpression::*;
+        let f = |x| {
+            match x {
+                ClaimPolynomial(i, degree_bound, a, _) => {
+                    let claim_polynomial = claim_polynomials
+                        .get(i)
+                        .expect("ClaimPolynomial index out of bounds")
+                        .clone();
+                    assert!(claim_polynomial.degree() <= degree_bound);
+                    Polynomial(claim_polynomial, a)
+                }
+                _ => x.clone(),
+            }
+        };
+        self.map(&f)
     }
 }
 
@@ -151,6 +170,10 @@ impl RationalExpression {
                 let (n, d) = a.degree_impl(x_degree, trace_degree);
                 (p.degree() * n, p.degree() * d)
             }
+            ClaimPolynomial(_, degree_bound, a, _) => {
+                let (n, d) = a.degree_impl(x_degree, trace_degree);
+                (degree_bound * n, degree_bound * d)
+            }
             Add(a, b) => {
                 let (a_numerator, a_denominator) = a.degree_impl(x_degree, trace_degree);
                 let (b_numerator, b_denominator) = b.degree_impl(x_degree, trace_degree);
@@ -185,7 +208,6 @@ impl RationalExpression {
         trace: &dyn Fn(usize, isize) -> FieldElement,
     ) -> (FieldElement, bool) {
         use RationalExpression::*;
-
         match self {
             X => (x.clone(), true),
             Constant(c) => (c.clone(), true),
@@ -199,6 +221,7 @@ impl RationalExpression {
                     (FieldElement::one(), false)
                 }
             }
+            ClaimPolynomial(..) => panic!("ClaimPolynomial should be substituted by Polynomial"),
             Add(a, b) => {
                 let (res_a, a_ok) = a.check(x, trace);
                 let (res_b, b_ok) = b.check(x, trace);
@@ -273,7 +296,11 @@ impl RationalExpression {
             X => x.clone(),
             Constant(c) => c.clone(),
             &Trace(i, j) => trace(i, j),
-            Polynomial(p, a) => p.evaluate(&a.evaluate(x, trace)),
+            Polynomial(p, a) => {
+                let inner = a.evaluate(x, trace);
+                p.evaluate(&inner)
+            }
+            ClaimPolynomial(..) => panic!("ClaimPolynomial should be substituted by Polynomial"),
             Add(a, b) => a.evaluate(x, trace) + b.evaluate(x, trace),
             Neg(a) => -&a.evaluate(x, trace),
             Mul(a, b) => a.evaluate(x, trace) * b.evaluate(x, trace),
@@ -300,108 +327,7 @@ impl RationalExpression {
                 a.trace_arguments_impl(s);
                 b.trace_arguments_impl(s);
             }
-        }
-    }
-
-    #[cfg(feature = "std")]
-    pub fn soldity_encode(&self, memory_layout: &BTreeMap<Self, String>) -> String {
-        use RationalExpression::*;
-
-        #[allow(clippy::match_same_arms)]
-        match self {
-            X => "mload(0x0)".to_owned(),
-            Constant(_) if memory_layout.contains_key(self) => {
-                memory_layout.get(self).unwrap().clone()
-            }
-            Constant(c) => format!("0x{}", U256::from(c).to_string()),
-            Trace(..) | Polynomial(..) => memory_layout.get(self).unwrap().clone(),
-            Add(a, b) => {
-                format!(
-                    "addmod({}, {}, PRIME)",
-                    a.soldity_encode(memory_layout),
-                    b.soldity_encode(memory_layout)
-                )
-            }
-            Neg(a) => format!("sub(PRIME , {})", a.soldity_encode(memory_layout)),
-            Mul(a, b) => {
-                format!(
-                    "mulmod({}, {}, PRIME)",
-                    a.soldity_encode(memory_layout),
-                    b.soldity_encode(memory_layout)
-                )
-            }
-            Inv(_) => memory_layout.get(self).unwrap().clone(),
-            Exp(a, e) => {
-                match e {
-                    0 => "0x01".to_owned(),
-                    1 => a.soldity_encode(memory_layout),
-                    _ => {
-                        // TODO - Check the gas to see what the real breaking point should be
-                        if *e < 10 {
-                            format!(
-                                "small_expmod({}, {}, PRIME)",
-                                a.soldity_encode(memory_layout),
-                                e.to_string()
-                            )
-                        } else {
-                            format!(
-                                "expmod({}, {}, PRIME)",
-                                a.soldity_encode(memory_layout),
-                                e.to_string()
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // TODO - DRY this by writing a generic search over subtypes
-    #[cfg(feature = "std")]
-    pub fn trace_search(&self) -> BTreeMap<Self, bool> {
-        use RationalExpression::*;
-
-        match self {
-            X | Constant(..) => BTreeMap::new(),
-            Trace(..) => [(self.clone(), true)].iter().cloned().collect(),
-            Add(a, b) | Mul(a, b) => {
-                let mut first = a.trace_search();
-                first.extend(b.trace_search());
-                first
-            }
-            Polynomial(_, a) | Inv(a) | Exp(a, _) | Neg(a) => a.trace_search(),
-        }
-    }
-
-    #[cfg(feature = "std")]
-    pub fn inv_search(&self) -> BTreeMap<Self, bool> {
-        use RationalExpression::*;
-
-        match self {
-            X | Constant(_) | Trace(..) => BTreeMap::new(),
-            Add(a, b) | Mul(a, b) => {
-                let mut first = a.inv_search();
-                first.extend(b.inv_search());
-                first
-            }
-            Inv(_) => [(self.clone(), true)].iter().cloned().collect(),
-            Polynomial(_, a) | Exp(a, _) | Neg(a) => a.inv_search(),
-        }
-    }
-
-    #[cfg(feature = "std")]
-    pub fn periodic_search(&self) -> BTreeMap<Self, bool> {
-        use RationalExpression::*;
-
-        match self {
-            X | Constant(_) | Trace(..) => BTreeMap::new(),
-            Polynomial(..) => [(self.clone(), true)].iter().cloned().collect(),
-            Add(a, b) | Mul(a, b) => {
-                let mut first = a.periodic_search();
-                first.extend(b.periodic_search());
-                first
-            }
-            Inv(a) | Exp(a, _) | Neg(a) => a.periodic_search(),
+            ClaimPolynomial(..) => panic!("ClaimPolynomial should be substituted by Polynomial"),
         }
     }
 }
@@ -422,14 +348,13 @@ impl Hash for RationalExpression {
                 i.hash(state);
                 j.hash(state);
             }
-            Polynomial(p, _) => {
+            Polynomial(..) => {
                 "poly".hash(state);
                 let x = field_element!(
                     "754ed488ec9208d1c552bb254c0890042078a9e1f7e36072ebff1bf4e193d11b"
                 );
-                // Note - We don't hash in the a because we can deploy the same contract for
-                // identical dense poly, for true equality we need to hash a into it.
-                (p.evaluate(&x)).hash(state);
+                (self.evaluate(&x, &|_, _| panic!("Trace in polynomial not supported")))
+                    .hash(state);
             }
             Add(a, b) => {
                 "add".hash(state);
@@ -453,6 +378,12 @@ impl Hash for RationalExpression {
                 "exp".hash(state);
                 a.hash(state);
                 e.hash(state);
+            }
+            ClaimPolynomial(i, n, a, _) => {
+                "claim_polynomial".hash(state);
+                i.hash(state);
+                n.hash(state);
+                a.hash(state);
             }
         }
     }

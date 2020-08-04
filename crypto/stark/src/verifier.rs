@@ -196,7 +196,10 @@ pub fn verify(constraints: &Constraints, proof: &Proof) -> Result<()> {
     // Get the oods information from the proof and random
     let oods_point: FieldElement = channel.get_random();
 
-    let trace_arguments = constraints.trace_arguments();
+    // This hack is annoying and should be removed
+    let mut parseable_constraints = constraints.clone();
+    parseable_constraints.substitute();
+    let trace_arguments = parseable_constraints.trace_arguments();
     let trace_values: Vec<FieldElement> = channel.replay_many(trace_arguments.len());
     let claimed_trace_map: BTreeMap<(usize, isize), FieldElement> = trace_arguments
         .into_iter()
@@ -398,6 +401,7 @@ fn oods_value_from_trace_values(
     let trace = |i: usize, j: isize| trace_values.get(&(i, j)).unwrap().clone();
     constraints
         .combine(coefficients)
+        .substitute_claim(&constraints.claim_polynomials)
         .evaluate(oods_point, &trace)
 }
 

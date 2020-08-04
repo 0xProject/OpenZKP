@@ -200,8 +200,8 @@ impl Verifiable for Claim {
                 * on_loop_rows(256),
             // Boundary constraints
             // TODO - Replace this awkward switch with a long range 'OR' constraint
-            // If start left is one then the first hash is hash(node, element), so 'element' is in
-            // row 128
+            // If start left is one then the first hash is hash(node, element), so 'element' is
+            // in row 128
             Constant(self.start_left.clone())
                 * (Trace(0, 0) - Constant(self.element.clone()))
                 * on_row(128),
