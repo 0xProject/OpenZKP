@@ -6,7 +6,7 @@ mod x86_64;
 #[cfg(all(feature = "asm", target_arch = "x86_64", target_feature = "adx"))]
 mod x86_64_adx;
 
-// TODO: ARM64
+// TODO: ARM64 and WASM
 
 // Re-export most specific architecture
 

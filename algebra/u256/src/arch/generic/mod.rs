@@ -1,4 +1,10 @@
+mod knuth_division;
+mod lehmer_gcd;
+
 use crate::U256;
+
+pub use knuth_division::{divrem_nby1, divrem_nbym};
+pub(crate) use lehmer_gcd::{gcd, gcd_extended, inv_mod};
 
 /// Reduce at most once
 #[inline(always)]

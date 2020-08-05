@@ -13,6 +13,8 @@ use std::mem::MaybeUninit;
 
 // For instruction timings and through puts
 // See <https://gmplib.org/~tege/x86-timing.pdf>
+// See <https://agner.org/optimize/>
+// See <https://www.felixcloutier.com/x86/>
 
 // For examples using mulx/adcx
 // See <https://www.intel.com/content/dam/www/public/us/en/documents/white-papers/large-integer-squaring-ia-paper.pdf>

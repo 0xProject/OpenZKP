@@ -7,6 +7,7 @@ pub(crate) use super::generic::*;
 use crate::U256;
 
 // Rust's `asm!` syntax is unstable and specified here:
+// <https://doc.rust-lang.org/unstable-book/library-features/asm.html>
 // <https://github.com/Amanieu/rfcs/blob/inline-asm/text/0000-inline-asm.md>
 
 /// Reduce at most once
@@ -19,18 +20,18 @@ pub(crate) fn reduce_1(s: &U256, modulus: &U256) -> U256 {
     let r3: u64;
     unsafe {
         asm!(r"
-        // Copy value to result
-        // Subtract modulus from value
-        mov {s0}, {r0}
+        // Copy value (s) to result (r)
+        // Subtract modulus (m) from value (s)
+        mov {r0}, {s0}
         sub {s0}, [{m} + 0x00]
-        mov {s1}, {r1}
+        mov {r1}, {s1}
         sbb {s1}, [{m} + 0x08]
-        mov {s2}, {r2}
+        mov {r2}, {s2}
         sbb {s2}, [{m} + 0x10]
-        mov {s3}, {r3}
+        mov {r3}, {s3}
         sbb {s3}, [{m} + 0x18]
 
-        // Conditional copy reduced value to result
+        // Conditional copy reduced value (s) to result (r)
         cmovnc {r0}, {s0}
         cmovnc {r1}, {s1}
         cmovnc {r2}, {s2}

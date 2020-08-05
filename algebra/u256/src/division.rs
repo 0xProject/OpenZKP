@@ -1,5 +1,6 @@
 use crate::{
-    algorithms::{div_2_1, divrem_nby1, divrem_nbym, inv_mod},
+    algorithms::div_2_1,
+    arch::{divrem_nby1, divrem_nbym, inv_mod},
     noncommutative_binop, Binary, DivRem, InvMod, U256,
 };
 use num_traits::Inv;

@@ -1,6 +1,6 @@
 use crate::{
-    algorithms::{gcd, gcd_extended, mul_redc_inline, redc_inline, square_redc_inline},
-    arch::reduce_1,
+    algorithms::{mul_redc_inline, redc_inline, square_redc_inline},
+    arch::{gcd, gcd_extended, reduce_1},
     InvMod, Montgomery, MontgomeryParameters, GCD, U256,
 };
 
