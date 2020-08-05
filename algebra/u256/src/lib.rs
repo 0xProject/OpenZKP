@@ -55,6 +55,7 @@
 
 mod additive;
 pub(crate) mod algorithms;
+mod arch;
 mod binary;
 mod conversion;
 mod division;
