@@ -21,6 +21,15 @@ impl GCD for U256 {
 
 impl Montgomery for U256 {
     #[inline(always)]
+    fn reduce_1_inline<M: MontgomeryParameters<UInt = U256>>(&self) -> Self {
+        if self >= &M::MODULUS {
+            self - M::MODULUS
+        } else {
+            self.clone()
+        }
+    }
+
+    #[inline(always)]
     fn redc_inline<M: MontgomeryParameters<UInt = U256>>(lo: &Self, hi: &Self) -> Self {
         redc_inline::<M>(lo, hi)
     }

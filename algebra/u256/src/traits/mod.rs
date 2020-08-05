@@ -306,6 +306,14 @@ pub trait Montgomery: Zero {
         Self::redc_inline::<M>(self, &Self::zero())
     }
 
+    /// Modular reduction at most once
+    /// **Note.** Implementers *must* add the `#[inline(always)]` attribute
+    fn reduce_1_inline<M: MontgomeryParameters<UInt = Self>>(&self) -> Self;
+
+    fn reduce_1<M: MontgomeryParameters<UInt = Self>>(&self) -> Self {
+        Self::reduce_1_inline::<M>(self)
+    }
+
     /// **Note.** Implementers *must* add the `#[inline(always)]` attribute
     fn redc_inline<M: MontgomeryParameters<UInt = Self>>(lo: &Self, hi: &Self) -> Self;
 
