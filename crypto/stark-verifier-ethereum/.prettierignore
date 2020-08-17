@@ -1,0 +1,5 @@
+# 'immutable' keyword crashes the linter
+contracts/default_cs.sol
+contracts/testing_contracts/recurrence.sol
+# `break` keyword in assembly crashes the linter.
+contracts/merkle.sol

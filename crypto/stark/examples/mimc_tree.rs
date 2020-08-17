@@ -175,12 +175,12 @@ impl Verifiable for Claim {
         let on_loop_rows = |length: usize| {
             (X.pow(trace_length / length)
                 - Constant(trace_generator.pow((trace_length / length) * (trace_length - 1))))
-                / (X.pow(trace_length) - 1.into())
+                / (X.pow(trace_length) - 1)
         };
 
         // Provide the loop length
         let on_loop_start_rows =
-            |length: usize| Constant(1.into()) / (X.pow(trace_length / length) - 1.into());
+            |length: usize| Constant(1.into()) / (X.pow(trace_length / length) - 1);
 
         let _shifted_loop = |loop_len: usize, shift: usize| {
             Constant(1.into())
@@ -200,13 +200,13 @@ impl Verifiable for Claim {
                 * on_loop_rows(256),
             // Boundary constraints
             // TODO - Replace this awkward switch with a long range 'OR' constraint
-            // If start left is one then the first hash is hash(node, element), so 'element' is in
-            // row 128
+            // If start left is one then the first hash is hash(node, element), so 'element' is
+            // in row 128
             Constant(self.start_left.clone())
                 * (Trace(0, 0) - Constant(self.element.clone()))
                 * on_row(128),
             // If it's zero it should be hash(element, node), so 'element' is in row 0
-            (Constant(self.start_left.clone()) - 1.into())
+            (Constant(self.start_left.clone()) - 1)
                 * (Trace(0, 0) - Constant(self.element.clone()))
                 * on_row(0),
             // Binds the right to be inited to zero on the start rows.

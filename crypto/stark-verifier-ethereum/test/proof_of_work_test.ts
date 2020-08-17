@@ -1,4 +1,3 @@
-/* tslint:disable:custom-no-magic-numbers */
 import {waffle} from '@nomiclabs/buidler';
 import chai from 'chai';
 import {deployContract, solidity} from 'ethereum-waffle';

@@ -1,5 +1,7 @@
 pragma solidity ^0.6.4;
 
+import './primefield.sol';
+
 
 library PublicCoin {
     struct Coin {
@@ -22,8 +24,23 @@ library PublicCoin {
         }
     }
 
+    function write_many_field_elements(Coin memory coin, uint256[] memory to_be_written) internal pure {
+        for (uint256 i = 0; i < to_be_written.length; i++) {
+            bytes32 element = (bytes32)(to_be_written[i]);
+            write_bytes32(coin, element);
+        }
+    }
+
     // Flexible method to write a byte string
-    function write_bytes(Coin memory coin, bytes memory to_be_written) internal pure {
+    function write_bytes8(Coin memory coin, bytes8 to_be_written) internal pure {
+        bytes32 new_hash = publicCoinHasher(abi.encodePacked(coin.digest, to_be_written));
+        coin.digest = new_hash;
+        coin.counter = 0;
+    }
+
+    // Flexible method to write a byte string
+    function write_layer(Coin memory coin, uint256[] memory to_be_written) internal pure {
+        // OPT: Could hash in place using asm by temporarily writing digest.
         bytes32 new_hash = publicCoinHasher(abi.encodePacked(coin.digest, to_be_written));
         coin.digest = new_hash;
         coin.counter = 0;
@@ -35,6 +52,24 @@ library PublicCoin {
         bytes32 hashed = publicCoinHash(coin.digest, bytes32(uint256(coin.counter)));
         coin.counter++;
         return hashed;
+    }
+
+    function read_field_element(Coin memory coin) internal pure returns (uint256) {
+        uint256 result = (uint256)(read_bytes32(coin));
+        result &= PrimeField.MODULUS_MASK;
+        while (result >= PrimeField.MODULUS) {
+            result = (uint256)(read_bytes32(coin));
+            result &= PrimeField.MODULUS_MASK;
+        }
+        return result;
+    }
+
+    function read_many_field_elements(Coin memory coin, uint256 how_many) internal pure returns (uint256[] memory) {
+        uint256[] memory result = new uint256[](how_many);
+        for (uint256 i = 0; i < how_many; i++) {
+            result[i] = read_field_element(coin);
+        }
+        return result;
     }
 
     // Bulk Read, reads 'how_many' times
@@ -58,6 +93,6 @@ library PublicCoin {
     }
 
     function publicCoinHasher(bytes memory data) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(data));
+        return keccak256(data);
     }
 }

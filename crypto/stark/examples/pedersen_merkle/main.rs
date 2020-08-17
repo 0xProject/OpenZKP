@@ -38,6 +38,8 @@
 #![cfg_attr(feature = "std", warn(missing_debug_implementations,))]
 // rand_xoshiro v0.4.0 is required for a zkp-stark example and v0.3.1 for criterion
 #![allow(clippy::multiple_crate_versions)]
+// TODO - Investigate possible truncation
+#![allow(clippy::cast_possible_truncation)]
 
 mod component;
 mod inputs;
@@ -52,7 +54,7 @@ use rand::{prelude::*, SeedableRng};
 use rand_xoshiro::Xoshiro256PlusPlus;
 use std::{num::ParseIntError, time::Instant};
 use structopt::StructOpt;
-use zkp_stark::component2::Component;
+use zkp_stark::component::Component;
 
 // Need to import to active the logging allocator
 #[allow(unused_imports)]

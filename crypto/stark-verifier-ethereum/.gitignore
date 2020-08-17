@@ -1,4 +1,7 @@
-#Buidler files
-cache
+# Soldity artifacts
 artifacts
+cache
 typechain
+
+# Gas logs
+*.log
