@@ -11,7 +11,7 @@
 * [IOPs](iops/index.md)
   * [Fractal](iops/fractal.md)
 * [R1CS](r1cs.md)
-* [LDEs](LDES/index.md)
+* [LDEs](LDEs/index.md)
   * [DEEP-ALI](LDEs/deep-ali.md)
   * [Kate](LDEs/kate.md)
   * [DARK](LDEs/dark.md)
