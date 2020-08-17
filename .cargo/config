@@ -3,6 +3,7 @@ t = "test --all-targets"
 b = "build --all-targets"
 d = "hack rustdoc -- --html-in-header .cargo/katex-header.html"
 lint = "clippy --all-targets -- -D warnings"
+cfix = "clippy -Z unstable-options --fix --all-targets"
 perf = "bench --bench benchmark"
 nostd = """
     hack check
