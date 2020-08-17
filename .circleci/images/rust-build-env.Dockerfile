@@ -8,7 +8,7 @@ FROM circleci/rust:1-node
 
 # The latest nightly
 # TODO: Update manually. 
-ENV NIGHTLY="nightly-2020-03-17"
+ENV NIGHTLY="nightly-2020-07-26"
 
 RUN true \
     # For coverage reports
