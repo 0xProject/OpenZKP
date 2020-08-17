@@ -50,9 +50,9 @@ impl From<Affine> for PublicKey {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use u256::U256;
     use zkp_macros_decl::{field_element, u256h};
     use zkp_primefield::FieldElement;
+    use zkp_u256::U256;
 
     #[test]
     fn test_pubkey() {

@@ -2,8 +2,14 @@
 #![allow(clippy::module_name_repetitions)]
 // Many false positives from trait bounds
 #![allow(single_use_lifetimes)]
-use crate::{FieldLike, Inv, RefFieldLike};
+
+// False positive: attribute has a use
+#[allow(clippy::useless_attribute)]
+// False positive: Importing preludes is allowed
+#[allow(clippy::wildcard_imports)]
 use std::prelude::v1::*;
+
+use crate::{FieldLike, Inv, RefFieldLike};
 
 pub fn invert_batch_src_dst<Field>(source: &[Field], destination: &mut [Field])
 where

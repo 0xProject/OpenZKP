@@ -138,11 +138,8 @@ impl Sum<RationalExpression> for RationalExpression {
     where
         I: Iterator<Item = RationalExpression>,
     {
-        if let Some(expr) = iter.next() {
-            iter.fold(expr, |a, b| a + b)
-        } else {
-            0.into()
-        }
+        iter.next()
+            .map_or(0.into(), |expr| iter.fold(expr, |a, b| a + b))
     }
 }
 

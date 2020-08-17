@@ -1,5 +1,12 @@
 // This module abstracts low-level `unsafe` behaviour
 #![allow(unsafe_code)]
+
+// False positive: attribute has a use
+#[allow(clippy::useless_attribute)]
+// False positive: Importing preludes is allowed
+#[allow(clippy::wildcard_imports)]
+use std::prelude::v1::*;
+
 use log::trace;
 use memmap::{MmapMut, MmapOptions};
 use std::{
@@ -7,7 +14,6 @@ use std::{
     marker::PhantomData,
     mem::size_of,
     ops::{Deref, DerefMut},
-    prelude::v1::*,
     ptr::drop_in_place,
     slice,
 };

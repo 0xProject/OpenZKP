@@ -23,6 +23,7 @@ impl Parameters for Order {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use zkp_primefield::{One, Pow, Zero};
 
     const PRIME_FACTORS: [U256; 5] = [
         u256h!("02"),

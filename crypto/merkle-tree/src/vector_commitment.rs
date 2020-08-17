@@ -1,5 +1,10 @@
-use crate::{Commitment, Result, Tree};
+// False positive: attribute has a use
+#[allow(clippy::useless_attribute)]
+// False positive: Importing preludes is allowed
+#[allow(clippy::wildcard_imports)]
 use std::prelude::v1::*;
+
+use crate::{Commitment, Result, Tree};
 use zkp_hash::{Hash, Hashable};
 
 #[cfg(feature = "mmap")]
