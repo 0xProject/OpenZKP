@@ -1,5 +1,5 @@
 use zkp_macros_decl::u256h;
-use zkp_primefield::*;
+use zkp_primefield::{Parameters, PrimeField};
 use zkp_u256::U256;
 
 pub type Element = PrimeField<Order>;

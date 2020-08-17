@@ -11,7 +11,7 @@ use rayon::prelude::*;
 // Utility function to parallelize iff on std
 fn for_each<F>(slice: &mut [Hash], f: F)
 where
-    F: Fn((usize, &mut Hash)) -> () + Sync + Send,
+    F: Fn((usize, &mut Hash)) + Sync + Send,
 {
     #[cfg(feature = "std")]
     slice.par_iter_mut().enumerate().for_each(f);

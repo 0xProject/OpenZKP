@@ -1,4 +1,6 @@
-use crate::{constraints::Constraints, polynomial::DensePolynomial, rational_expression::*};
+use crate::{
+    constraints::Constraints, polynomial::DensePolynomial, rational_expression::RationalExpression,
+};
 use std::{
     cmp::Ordering,
     collections::{hash_map::DefaultHasher, BTreeMap, BTreeSet},
@@ -447,7 +449,7 @@ fn autogen_wrapper_contract(
     output_directory: &str,
     trace_layout_len: usize,
 ) -> Result<(), std::io::Error> {
-    use crate::rational_expression::RationalExpression::*;
+    use RationalExpression::*;
 
     let name = format!("{}/{}.sol", output_directory, system_name);
     let path = Path::new(&name);
@@ -570,7 +572,7 @@ fn autogen_wrapper_contract(
 }
 
 fn extract_power(data: &RationalExpression) -> usize {
-    use crate::rational_expression::RationalExpression::*;
+    use RationalExpression::*;
     match data {
         X => 1,
         Exp(sub_data, power) => power * extract_power(sub_data),

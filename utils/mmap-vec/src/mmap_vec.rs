@@ -1,6 +1,6 @@
 // This module abstracts low-level `unsafe` behaviour
 #![allow(unsafe_code)]
-use log::*;
+use log::trace;
 use memmap::{MmapMut, MmapOptions};
 use std::{
     cmp::max,

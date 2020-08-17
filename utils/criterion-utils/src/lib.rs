@@ -43,7 +43,6 @@ use criterion::{
     AxisScale, Bencher, Criterion, ParameterizedBenchmark, PlotConfiguration, Throughput,
 };
 use lazy_static::lazy_static;
-use num_cpus;
 use rayon::ThreadPoolBuilder;
 use std::convert::TryInto;
 

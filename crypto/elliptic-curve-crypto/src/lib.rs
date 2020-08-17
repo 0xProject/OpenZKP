@@ -55,7 +55,7 @@ use std::prelude::v1::*;
 use zkp_elliptic_curve::{window_table_affine, Affine, GENERATOR};
 #[cfg(not(feature = "std"))]
 extern crate no_std_compat as std;
-use lazy_static::*;
+use lazy_static::lazy_static;
 
 lazy_static! {
     static ref GENERATOR_TABLE: [Affine; 32] = {

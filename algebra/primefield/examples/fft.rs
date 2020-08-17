@@ -1,6 +1,4 @@
-use env_logger;
 use log::{info, warn};
-use num_cpus;
 use rand::prelude::*;
 use rand_xoshiro::Xoshiro256PlusPlus;
 use raw_cpuid::{CacheType, CpuId};

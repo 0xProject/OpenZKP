@@ -1,7 +1,7 @@
 use crate::{PrivateKey, Signature, GENERATOR_TABLE};
 use serde::{Deserialize, Serialize};
 use zkp_elliptic_curve::{base_mul, double_base_mul, Affine, ScalarFieldElement};
-use zkp_primefield::*;
+use zkp_primefield::Zero;
 
 #[derive(PartialEq, Eq, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "std", derive(Debug))]
