@@ -1,0 +1,13 @@
+[book]
+authors = ["Remco Bloemen <remco@0x.org>"]
+language = "en"
+multilingual = false
+src = "src"
+title = "The OpenZKP Book"
+
+[build]
+create-missing = false
+
+[preprocessor.katex]
+command = "python3 katex.py"
+renderer = ["html"]

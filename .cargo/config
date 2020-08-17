@@ -1,6 +1,7 @@
 [alias]
 t = "test --all-targets"
 b = "build --all-targets"
+d = "hack rustdoc -- --html-in-header .cargo/katex-header.html"
 lint = "clippy --all-targets -- -D warnings"
 perf = "bench --bench benchmark"
 nostd = """
@@ -30,6 +31,11 @@ perf_all = """
     --exclude zkp-mmap-vec
     --exclude zkp-hash
     """
+
+[build]
+# TODO: This does not seem to work. Instead, we need to manually set
+# export RUSTDOCFLAGS="--html-in-header $(pwd)/.cargo/katex-header.html"
+rustdocflags = [ "--html-in-header", ".cargo/katex-header.html" ]
 
 # Build for the current CPU by default
 [target.'cfg(target_arch = "x86_64")']

@@ -217,6 +217,38 @@ jobs:
           key: benchmark-criterion-v1-{{ epoch }}
           paths:
             - ./criterion.tgz
+  doc:
+    executor: docker-rust
+    steps:
+      - checkout
+      - run:
+          name: Build docs
+          command: cargo d
+      - store_artifacts:
+          path: ./target/doc
+          destination: doc
+      - run:
+          name: Test examples
+          command: cargo d --test
+  book:
+    executor: docker-rust
+    steps:
+      - checkout
+      - run:
+          # TODO: Move to docker image
+          name: Install mdbook
+          command: cargo install mdbook
+      - run:
+          name: Build book
+          working_directory: ./book
+          command: mdbook build
+      - store_artifacts:
+          path: ./book/book
+          destination: book
+      - run:
+          name: Compile examples
+          working_directory: ./book
+          command: mdbook test
   rustformat:
     executor: docker-rust
     steps:
@@ -305,6 +337,7 @@ jobs:
     steps:
       - checkout
       - run:
+          # TODO: Move to docker image
           name: Install the npm packages
           working_directory: ./crypto/stark-verifier-ethereum
           command: npm i
@@ -345,6 +378,12 @@ workflows:
       - benchmarks:
           requires:
             - build-docker
+      - doc:
+          requires:
+            - build-docker
+      - book:
+          requires:
+            - build-docker
       - rustformat:
           requires:
             - build-docker
@@ -363,11 +402,11 @@ workflows:
       - benchmark-store:
           requires:
             - benchmark-ec2
+      - update-issues:
           filters:
             branches:
               only: master
       - solidity-checking
-      - update-issues
       # `accept` is a phony job which requires every check for a commit.
       # This allows us to set a single 'required status check' in GitHub.
       - accept:
@@ -377,6 +416,8 @@ workflows:
             - analysis
             - tests
             - benchmarks
+            - doc
+            - book
             - build-no-std
             - update-issues
             - solidity-checking
