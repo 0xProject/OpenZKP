@@ -1,6 +1,6 @@
 # Summary
 
-* [introduction](introduction.md)
+* [Introduction](introduction.md)
 * [Primes](primes.md)
 * [Polynomials](polynomials/polynomials.md)
   * [Zeroes](polynomials/zeroes.md)
