@@ -11,6 +11,7 @@ import './trace.sol';
 
 import '@nomiclabs/buidler/console.sol';
 
+
 contract StarkVerifier is Trace, ProofOfWork, Fri, ProofTypes {
     using PublicCoin for PublicCoin.Coin;
     using Utils for *;
