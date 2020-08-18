@@ -1,5 +1,10 @@
-use crate::{hash::Hash, masked_keccak::MaskedKeccak};
+// False positive: attribute has a use
+#[allow(clippy::useless_attribute)]
+// False positive: Importing preludes is allowed
+#[allow(clippy::wildcard_imports)]
 use std::prelude::v1::*;
+
+use crate::{hash::Hash, masked_keccak::MaskedKeccak};
 use zkp_primefield::FieldElement;
 use zkp_u256::U256;
 

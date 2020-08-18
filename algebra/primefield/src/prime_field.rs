@@ -1,3 +1,9 @@
+// False positive: attribute has a use
+#[allow(clippy::useless_attribute)]
+// False positive: Importing preludes is allowed
+#[allow(clippy::wildcard_imports)]
+use std::prelude::v1::*;
+
 use crate::{Root, SquareRoot, UInt as FieldUInt};
 #[cfg(feature = "std")]
 use std::fmt;
@@ -5,7 +11,6 @@ use std::{
     hash::{Hash, Hasher},
     marker::PhantomData,
     ops::Shr,
-    prelude::v1::*,
 };
 use zkp_u256::{
     AddInline, Binary, DivRem, Inv, Montgomery as _, MontgomeryParameters, MulInline, NegInline,

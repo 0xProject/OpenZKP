@@ -138,6 +138,8 @@ impl<P: Parameters> Neg for &PrimeField<P> {
 }
 
 impl<P: Parameters> DivAssign<&Self> for PrimeField<P> {
+    // Division suspiciously requires multiplication
+    #[allow(clippy::suspicious_op_assign_impl)]
     #[inline(always)]
     fn div_assign(&mut self, rhs: &Self) {
         *self *= rhs.inv().expect("Division by zero")
@@ -145,6 +147,8 @@ impl<P: Parameters> DivAssign<&Self> for PrimeField<P> {
 }
 
 impl<P: Parameters> DivAssign<Self> for PrimeField<P> {
+    // Division suspiciously requires multiplication
+    #[allow(clippy::suspicious_op_assign_impl)]
     #[inline(always)]
     fn div_assign(&mut self, rhs: Self) {
         *self *= rhs.inv().expect("Division by zero")

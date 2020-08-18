@@ -42,6 +42,10 @@
 #![allow(clippy::missing_errors_doc)]
 // TODO: Add `must_use` attributes
 #![allow(clippy::must_use_candidate)]
+// TODO: To many false positives
+#![allow(clippy::enum_glob_use)]
+// TODO: False positives <https://github.com/rust-lang/rust-clippy/issues/5917>
+#![allow(clippy::wildcard_imports)]
 
 mod channel;
 mod constraints;
@@ -106,8 +110,6 @@ pub use traits::Provable;
 
 #[cfg(test)]
 mod tests {
-    use env_logger;
-
     pub(crate) fn init() {
         let _ = env_logger::builder().is_test(true).try_init();
     }

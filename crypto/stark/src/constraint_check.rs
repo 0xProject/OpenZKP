@@ -1,4 +1,4 @@
-use crate::{constraints::*, trace_table::*};
+use crate::{constraints::Constraints, trace_table::TraceTable};
 use std::convert::TryInto;
 use zkp_primefield::{FieldElement, One, Pow, Root};
 

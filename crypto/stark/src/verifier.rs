@@ -1,5 +1,8 @@
 use crate::{
-    channel::*, constraints::Constraints, polynomial::DensePolynomial, proof_of_work, Proof,
+    channel::{RandomGenerator, Replayable, VerifierChannel},
+    constraints::Constraints,
+    polynomial::DensePolynomial,
+    proof_of_work, Proof,
 };
 use log::trace;
 #[cfg(feature = "std")]

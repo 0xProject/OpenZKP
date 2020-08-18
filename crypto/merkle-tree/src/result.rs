@@ -16,6 +16,9 @@ pub enum Error {
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // False positive
+        #[allow(clippy::useless_attribute)]
+        #[allow(clippy::enum_glob_use)]
         use Error::*;
         match *self {
             TreeToLarge => write!(f, "Tree too large"),
@@ -32,8 +35,6 @@ impl fmt::Display for Error {
 #[cfg(feature = "std")]
 impl error::Error for Error {
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
-        match *self {
-            _ => None,
-        }
+        None
     }
 }
