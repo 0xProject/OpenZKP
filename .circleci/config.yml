@@ -416,7 +416,8 @@ workflows:
           requires:
             - rustformat
             - clippy
-            - analysis
+            # TODO: Fix analysis
+            # - analysis
             - tests
             - benchmarks
             - doc
