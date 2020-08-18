@@ -1,8 +1,14 @@
 // False positives, see <https://github.com/rust-lang/rust/issues/55058>
 #![allow(single_use_lifetimes)]
 
+// False positive: attribute has a use
+#[allow(clippy::useless_attribute)]
+// False positive: Importing preludes is allowed
+#[allow(clippy::wildcard_imports)]
+use std::prelude::v1::*;
+
 use crate::{FieldLike, Pow, RefFieldLike};
-use std::{cmp::min, prelude::v1::*};
+use std::cmp::min;
 
 #[derive(Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "std", derive(Debug))]

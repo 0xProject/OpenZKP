@@ -42,6 +42,8 @@
 // #![allow(clippy::missing_errors_doc)]
 // TODO: Add `must_use` attributes
 #![allow(clippy::must_use_candidate)]
+// TODO: False positives <https://github.com/rust-lang/rust-clippy/issues/5917>
+#![allow(clippy::wildcard_imports)]
 
 mod private_key;
 mod public_key;
@@ -55,7 +57,7 @@ use std::prelude::v1::*;
 use zkp_elliptic_curve::{window_table_affine, Affine, GENERATOR};
 #[cfg(not(feature = "std"))]
 extern crate no_std_compat as std;
-use lazy_static::*;
+use lazy_static::lazy_static;
 
 lazy_static! {
     static ref GENERATOR_TABLE: [Affine; 32] = {

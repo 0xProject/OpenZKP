@@ -1,4 +1,8 @@
-use crate::{channel::*, constraints::Constraints, proof_of_work, Proof};
+use crate::{
+    channel::{RandomGenerator, Replayable, VerifierChannel},
+    constraints::Constraints,
+    proof_of_work, Proof,
+};
 use hex::encode;
 use std::{collections::BTreeMap, prelude::v1::*};
 use zkp_hash::Hash;

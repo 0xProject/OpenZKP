@@ -1,3 +1,9 @@
+// False positive: attribute has a use
+#[allow(clippy::useless_attribute)]
+// False positive: Importing preludes is allowed
+#[allow(clippy::wildcard_imports)]
+use std::prelude::v1::*;
+
 use crate::{
     algorithms::{div_2_1, divrem_nby1, divrem_nbym, inv_mod},
     noncommutative_binop, Binary, DivRem, InvMod, U256,
@@ -6,7 +12,6 @@ use num_traits::Inv;
 use std::{
     num::Wrapping,
     ops::{Div, DivAssign, Rem, RemAssign},
-    prelude::v1::*,
     u64,
 };
 

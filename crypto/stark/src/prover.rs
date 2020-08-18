@@ -854,7 +854,7 @@ fn decommit_fri_layers_and_trees(
                 let n = i * coset_size + j;
                 match previous_indices.binary_search(&n) {
                     Ok(_) => (),
-                    _ => proof.write(&tree.leaves().layer[n]),
+                    Err(_) => proof.write(&tree.leaves().layer[n]),
                 };
             }
         }

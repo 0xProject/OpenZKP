@@ -297,31 +297,34 @@ impl AlgebraicGraph {
     /// returned instead.
     fn op(&mut self, operation: Operation) -> Index {
         let hash = self.hash(&operation);
-        if let Some(index) = self.nodes.iter().position(|n| n.hash == hash) {
-            // Return existing node index
-            Index(index)
-        } else {
-            // Recognize expressions evaluating to zero or one. Simplify other
-            // expressions.
-            // OPT: Add more constants? Maybe evaluate in two points to detect all
-            // constants?
-            let operation = match &hash {
-                h if h.is_zero() => Operation::Constant(FieldElement::zero()),
-                h if h.is_one() => Operation::Constant(FieldElement::one()),
-                _ => self.simplify(operation),
-            };
-            // Create new node
-            let index = self.nodes.len();
-            let period = self.period(&operation);
-            self.nodes.push(Node {
-                op: operation,
-                hash,
-                period,
-                values: CHUNK_INIT,
-                note: FieldElement::zero(),
-            });
-            Index(index)
-        }
+        self.nodes.iter().position(|n| n.hash == hash).map_or_else(
+            || {
+                // Recognize expressions evaluating to zero or one. Simplify other
+                // expressions.
+                // OPT: Add more constants? Maybe evaluate in two points to detect all
+                // constants?
+                let operation = match &hash {
+                    h if h.is_zero() => Operation::Constant(FieldElement::zero()),
+                    h if h.is_one() => Operation::Constant(FieldElement::one()),
+                    _ => self.simplify(operation),
+                };
+                // Create new node
+                let index = self.nodes.len();
+                let period = self.period(&operation);
+                self.nodes.push(Node {
+                    op: operation,
+                    hash,
+                    period,
+                    values: CHUNK_INIT,
+                    note: FieldElement::zero(),
+                });
+                Index(index)
+            },
+            |index| {
+                // Return existing node index
+                Index(index)
+            },
+        )
     }
 
     /// Adds a rational expression to the graph and return the result node

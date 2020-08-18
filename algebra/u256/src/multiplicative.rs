@@ -1,3 +1,9 @@
+// False positive: attribute has a use
+#[allow(clippy::useless_attribute)]
+// False positive: Importing preludes is allowed
+#[allow(clippy::wildcard_imports)]
+use std::prelude::v1::*;
+
 use crate::{
     algorithms::{adc, divrem_nby1, divrem_nbym, mac},
     assign_ops_from_trait, self_ops_from_trait, MulFullInline, MulInline, SquareFullInline,
@@ -6,7 +12,6 @@ use crate::{
 use num_traits::Pow;
 use std::{
     ops::{Mul, MulAssign},
-    prelude::v1::*,
     u64,
 };
 
@@ -238,6 +243,9 @@ impl core::iter::Product for U256 {
 
 // TODO: Replace literals with u256h!
 #[allow(clippy::unreadable_literal)]
+// TODO: Better names
+#[allow(clippy::similar_names)]
+#[allow(clippy::clippy::many_single_char_names)]
 #[cfg(test)]
 mod tests {
     use super::*;

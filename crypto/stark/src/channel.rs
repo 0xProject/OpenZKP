@@ -5,7 +5,6 @@ use std::{convert::TryInto, prelude::v1::*};
 use tiny_keccak::{Hasher, Keccak};
 use zkp_hash::Hash;
 use zkp_macros_decl::u256h;
-use zkp_merkle_tree;
 use zkp_primefield::FieldElement;
 use zkp_u256::U256;
 
@@ -252,7 +251,7 @@ impl Writable<&[FieldElement]> for ProverChannel {
         let mut container = Vec::with_capacity(32 * data.len());
         for element in data {
             for byte in &element.as_montgomery().to_bytes_be() {
-                container.push(byte.clone());
+                container.push(*byte);
             }
         }
         self.write(container.as_slice());
