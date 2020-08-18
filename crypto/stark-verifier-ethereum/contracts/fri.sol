@@ -1,4 +1,4 @@
-pragma solidity 0.6.4;
+pragma solidity ^0.6.4;
 pragma experimental ABIEncoderV2;
 
 import './public_coin.sol';
@@ -24,7 +24,7 @@ contract Fri is Trace, MerkleVerifier {
         uint8[] fri_layout;
         uint256[] eval_points;
         uint8 log_eval_domain_size;
-        uint64[] queries;
+        uint256[] queries;
         uint256[] polynomial_at_queries;
         uint256[] last_layer_coefficients;
     }
@@ -52,14 +52,14 @@ contract Fri is Trace, MerkleVerifier {
     uint256 constant OROOT7 = 0x0446ed3ce295dda2b5ea677394813e6eab8bfbc55397aacac8e6df6f4bc9ca34;
 
     // Reads from channel random and returns a list of random queries
-    function get_queries(PublicCoin.Coin memory coin, uint8 max_bit_length, uint8 num_queries)
-        internal
-        pure
-        returns (uint64[] memory)
-    {
-        uint64[] memory queries = new uint64[](num_queries);
+    function get_queries(
+        PublicCoin.Coin memory coin,
+        uint8 max_bit_length,
+        uint8 num_queries
+    ) internal pure returns (uint256[] memory) {
+        uint256[] memory queries = new uint256[](num_queries);
         // This mask sets all digits to one below the bit length
-        uint64 bit_mask = (uint64(2)**max_bit_length) - 1;
+        uint256 bit_mask = (uint256(2)**max_bit_length) - 1;
 
         // We derive four queries from each read
         for (uint256 i = 0; i <= num_queries / 4; i++) {
@@ -68,7 +68,7 @@ contract Fri is Trace, MerkleVerifier {
                 // For numbers of queries which are not diviable by four this prevents writing out of bounds.
                 if (4 * i + j < num_queries) {
                     // Note - uint64(random) would take the last bytes in the random and this takes the first.
-                    queries[4 * i + j] = uint64(bytes8(random)) & bit_mask;
+                    queries[4 * i + j] = uint256(uint64(bytes8(random))) & bit_mask;
                     // Shifts down so we can get the next set of random bytes
                     random <<= 64;
                 }
@@ -84,7 +84,7 @@ contract Fri is Trace, MerkleVerifier {
         uint8[] memory fri_layout,
         uint256[] memory eval_points,
         uint8 log_eval_domain_size,
-        uint64[] memory queries,
+        uint256[] memory queries,
         uint256[] memory polynomial_at_queries
     ) internal {
         trace('fri_check', true);
@@ -146,7 +146,7 @@ contract Fri is Trace, MerkleVerifier {
                 merkle_val
             );
             // Merkle verification is in place but we need unchanged data in the next loop.
-            fri_data.queries.deep_copy_and_convert(merkle_indices);
+            fri_data.queries.deep_copy(merkle_indices);
             // Since these two arrays only truncate we can safely resize them
             if (fri_data.queries.length != merkle_indices.length) {
                 uint256 num_queries = fri_data.queries.length;
@@ -197,7 +197,7 @@ contract Fri is Trace, MerkleVerifier {
     // It will overwrite any memory in that location.
     function fold_layer(
         uint256[] memory values,
-        uint64[] memory indices,
+        uint256[] memory indices,
         uint256[] memory coset_completion,
         uint256 eval_point,
         LayerContext memory layer_context,
@@ -252,7 +252,7 @@ contract Fri is Trace, MerkleVerifier {
             (values[write_index], layer_context.x_inv[write_index]) = fold_coset(coset, x_inv, eval_point);
 
             // Record the new index
-            indices[write_index] = uint64(coset_start / layer_context.coset_size);
+            indices[write_index] = coset_start / layer_context.coset_size;
             write_index += 1;
         }
         values.truncate(write_index);
@@ -261,10 +261,11 @@ contract Fri is Trace, MerkleVerifier {
     }
 
     // Returns the fri folded point and the inverse for the base layer, which is x_inv on the next layer
-    function fold_coset(uint256[] memory coset, uint256 x_inv, uint256 eval_point)
-        internal
-        returns (uint256 result, uint256 next_x_inv)
-    {
+    function fold_coset(
+        uint256[] memory coset,
+        uint256 x_inv,
+        uint256 eval_point
+    ) internal returns (uint256 result, uint256 next_x_inv) {
         trace('fold_coset', true);
 
         uint256 factor = mulmod(eval_point, x_inv, PrimeField.MODULUS);
@@ -303,7 +304,11 @@ contract Fri is Trace, MerkleVerifier {
 
     // We now do the actual fri folding operation
     // f'(x) = (f(x) + f(-x)) + eval_point / x * (f(x) - f(-x))
-    function fold(uint256 positive, uint256 negative, uint256 factor) internal pure returns (uint256) {
+    function fold(
+        uint256 positive,
+        uint256 negative,
+        uint256 factor
+    ) internal pure returns (uint256) {
         // even = f(x) + f(-x)  (without reduction)
         uint256 even = positive + negative;
         // odd = f(x) - f(-x)   (without reduction)

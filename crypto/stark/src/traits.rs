@@ -43,7 +43,7 @@ pub trait Provable<T>: Verifiable {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
-    use crate::RationalExpression;
+    use crate::{polynomial::DensePolynomial, RationalExpression};
     use proptest::{collection::vec as prop_vec, prelude::*};
     use std::convert::TryInto;
     use zkp_primefield::{FieldElement, One, Pow, Root, Zero};
@@ -117,14 +117,14 @@ pub(crate) mod tests {
             let trace_generator = FieldElement::root(trace_length).unwrap();
             let g = Constant(trace_generator);
             let on_row = |index| (X - g.pow(index)).inv();
-            let every_row = || (X - g.pow(trace_length - 1)) / (X.pow(trace_length) - 1.into());
+            let every_row = || (X - g.pow(trace_length - 1)) / (X.pow(trace_length) - 1);
 
             // Constraints
             Constraints::from_expressions((trace_length, 2), self.seed(), vec![
                 (Trace(0, 1) - Trace(1, 0).pow(self.exponent)) * every_row(),
                 (Trace(1, 1) - Trace(0, 0) - Trace(1, 0)) * every_row(),
-                (Trace(0, 0) - 1.into()) * on_row(trace_length),
-                (Trace(0, 0) - (&self.value).into()) * on_row(self.index),
+                (Trace(0, 0) - 1) * on_row(trace_length),
+                (Trace(0, 0) - &self.value) * on_row(self.index),
             ])
             .unwrap()
         }
@@ -219,6 +219,10 @@ pub(crate) mod tests {
         fn trace_length(&self) -> usize {
             (self.index + 1).next_power_of_two()
         }
+
+        fn claim_polynomials(&self) -> Vec<DensePolynomial> {
+            vec![DensePolynomial::new(&[self.value.clone()])]
+        }
     }
 
     impl Verifiable for Claim2 {
@@ -232,24 +236,30 @@ pub(crate) mod tests {
 
             let on_row = |index| (X - trace_generator.pow(index)).inv();
 
-            let mut constraints: Vec<RationalExpression> =
-                vec![(Trace(0, 0) - (&self.value).into()) * on_row(self.index - 1)];
+            let mut constraints: Vec<RationalExpression> = vec![
+                (Trace(0, 0) - ClaimPolynomial(0, 0, Box::new(X), None)) * on_row(self.index - 1),
+            ];
 
             let mut recurrance_constraint = Constant(FieldElement::zero());
             for (i, (coefficient, exponent)) in
                 self.coefficients.iter().zip(&self.exponents).enumerate()
             {
                 recurrance_constraint = recurrance_constraint
-                    + Trace(0, i.try_into().unwrap()).pow(*exponent) * coefficient.into();
+                    + Trace(0, i.try_into().unwrap()).pow(*exponent) * coefficient;
             }
             recurrance_constraint =
                 recurrance_constraint - Trace(0, self.coefficients.len().try_into().unwrap());
-            recurrance_constraint = recurrance_constraint / (X.pow(trace_length) - 1.into());
+            recurrance_constraint = recurrance_constraint / (X.pow(trace_length) - 1);
             for i in 0..self.coefficients.len() {
                 recurrance_constraint =
                     recurrance_constraint * (X - trace_generator.pow(i + 1).inv());
             }
             constraints.push(recurrance_constraint);
+            let claim_polynomials = self.claim_polynomials();
+            constraints = constraints
+                .iter()
+                .map(|c| c.substitute_claim(&claim_polynomials))
+                .collect();
 
             Constraints::from_expressions((trace_length, 1), self.seed(), constraints).unwrap()
         }

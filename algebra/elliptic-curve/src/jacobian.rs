@@ -1,8 +1,11 @@
+// False positive: attribute has a use
+#[allow(clippy::useless_attribute)]
+// False positive: Importing preludes is allowed
+#[allow(clippy::wildcard_imports)]
+use std::prelude::v1::*;
+
 use crate::{curve_operations, Affine, ScalarFieldElement};
-use std::{
-    ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
-    prelude::v1::*,
-};
+use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 use zkp_macros_decl::field_element;
 use zkp_primefield::{FieldElement, Inv, NegInline, One, SquareInline, Zero};
 use zkp_u256::{commutative_binop, noncommutative_binop, U256};

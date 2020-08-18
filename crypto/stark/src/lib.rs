@@ -42,6 +42,10 @@
 #![allow(clippy::missing_errors_doc)]
 // TODO: Add `must_use` attributes
 #![allow(clippy::must_use_candidate)]
+// TODO: To many false positives
+#![allow(clippy::enum_glob_use)]
+// TODO: False positives <https://github.com/rust-lang/rust-clippy/issues/5917>
+#![allow(clippy::wildcard_imports)]
 
 mod channel;
 mod constraints;
@@ -51,6 +55,8 @@ mod proof_of_work;
 mod rational_expression;
 #[cfg(feature = "std")]
 mod solidity_seralizer;
+#[cfg(feature = "std")]
+mod solidity_verifier;
 mod traits;
 mod verifier;
 
@@ -59,17 +65,13 @@ mod verifier;
 #[cfg(feature = "prover")]
 mod algebraic_dag;
 #[cfg(feature = "prover")]
-mod component;
-#[cfg(feature = "prover")]
-pub mod component2;
+pub mod component;
 #[cfg(feature = "prover")]
 mod constraint_check;
 #[cfg(feature = "prover")]
 mod prover;
 #[cfg(feature = "prover")]
 mod rational_equality;
-#[cfg(feature = "prover")]
-pub mod solidity_encode;
 #[cfg(feature = "prover")]
 mod trace_table;
 // TODO: Have unconditional Debug trait on all types
@@ -93,22 +95,14 @@ pub use verifier::{verify, Error as VerifierError};
 // We want std for this so that we can use hex encode
 #[cfg(feature = "std")]
 pub use solidity_seralizer::proof_serialize;
+#[cfg(feature = "std")]
+pub use solidity_verifier::generate;
 
 // Exports for prover
-#[cfg(feature = "prover")]
-pub use component::{
-    compose::{
-        fold, fold_many, folded as compose_folded, horizontal as compose_horizontal,
-        permute_columns, shift, vertical as compose_vertical,
-    },
-    Component,
-};
 #[cfg(feature = "prover")]
 pub use constraint_check::check_constraints;
 #[cfg(feature = "prover")]
 pub use prover::{prove, Error as ProverError};
-#[cfg(feature = "prover")]
-pub use solidity_encode::autogen;
 #[cfg(feature = "prover")]
 pub use trace_table::TraceTable;
 #[cfg(feature = "prover")]
@@ -116,8 +110,6 @@ pub use traits::Provable;
 
 #[cfg(test)]
 mod tests {
-    use env_logger;
-
     pub(crate) fn init() {
         let _ = env_logger::builder().is_test(true).try_init();
     }

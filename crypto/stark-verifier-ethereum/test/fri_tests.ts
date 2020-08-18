@@ -1,14 +1,14 @@
-import { waffle } from '@nomiclabs/buidler';
+import {waffle} from '@nomiclabs/buidler';
 import chai from 'chai';
-import { deployContract, solidity } from 'ethereum-waffle';
+import {deployContract, solidity} from 'ethereum-waffle';
 
 import FriTestingArtifact from '../artifacts/FriTesting.json';
-import { FriTesting } from '../typechain/FriTesting';
+import {FriTesting} from '../typechain/FriTesting';
 
-import { txToEventsAsync } from './test_utils';
+import {txToEventsAsync} from './test_utils';
 
 chai.use(solidity);
-const { expect } = chai;
+const {expect} = chai;
 
 describe('Fri testing', () => {
     let fri_contract: FriTesting;
@@ -41,7 +41,9 @@ describe('Fri testing', () => {
                 },
             ),
         );
-        expect(result[result.length - 1].data).to.be.eq('0x07ce58276a6663f522711bf9cce5bf737f296d73d32d6c8da3e17deccd459a2b');
+        expect(result[result.length - 1].data).to.be.eq(
+            '0x07ce58276a6663f522711bf9cce5bf737f296d73d32d6c8da3e17deccd459a2b',
+        );
     });
 
     it('Should correctly fold cosets of size 8', async () => {
@@ -69,6 +71,8 @@ describe('Fri testing', () => {
                 },
             ),
         );
-        expect(result[result.length - 1].data).to.be.eq('0x0121a60f28684daf933d279d490f046286a4843b889a92902c90a7a69a7e5fab');
+        expect(result[result.length - 1].data).to.be.eq(
+            '0x0121a60f28684daf933d279d490f046286a4843b889a92902c90a7a69a7e5fab',
+        );
     });
 });

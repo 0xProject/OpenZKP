@@ -1,6 +1,12 @@
+// False positive: attribute has a use
+#[allow(clippy::useless_attribute)]
+// False positive: Importing preludes is allowed
+#[allow(clippy::wildcard_imports)]
+use std::prelude::v1::*;
+
 use crate::{Commitment, Error, Index, Node, Result};
 use itertools::Itertools;
-use std::{collections::VecDeque, prelude::v1::*};
+use std::collections::VecDeque;
 use zkp_error_utils::require;
 use zkp_hash::{Hash, Hashable};
 

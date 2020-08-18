@@ -1,0 +1,9 @@
+# Separate dockerignore for CI builds. Does not ignore `.git` folder and VCS tracked files.
+
+# Include only source code
+**/target
+**/node_modules
+**/node-data-*
+
+# Data dumps
+notebook/data

@@ -1,6 +1,8 @@
 pragma solidity ^0.6.4;
 pragma experimental ABIEncoderV2;
 
+import './primefield.sol';
+
 
 contract ProofTypes {
     // This struct contains all of the components of the STARK proof.
@@ -54,5 +56,17 @@ contract ProofTypes {
         uint8 number_of_queries;
         // TODO - Does the smaller size give us a real advantage
         uint8[] fri_layout;
+    }
+
+    // This struct will contain some of both the data from proof parameters
+    // and the data from the proof. It's used so the cross contract call
+    // for contraint calculations needs to do less work.
+    struct OodsEvaluationData {
+        uint256[] trace_values;
+        uint256[] constraint_values;
+        uint256[] trace_oods_values;
+        uint256[] constraint_oods_values;
+        uint8 log_trace_length;
+        bytes public_inputs;
     }
 }

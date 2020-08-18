@@ -3,8 +3,7 @@ use std::time::Instant;
 use zkp_macros_decl::field_element;
 use zkp_primefield::{fft::permute, Fft, FieldElement, Pow, Root, SquareInline, Zero};
 use zkp_stark::{
-    solidity_encode::autogen, Constraints, DensePolynomial, Provable, RationalExpression,
-    TraceTable, Verifiable,
+    Constraints, DensePolynomial, Provable, RationalExpression, TraceTable, Verifiable,
 };
 use zkp_u256::U256;
 
@@ -161,7 +160,7 @@ impl Verifiable for Claim {
         let trace_generator = FieldElement::root(trace_length).unwrap();
         let g = Constant(trace_generator.clone());
         let on_row = |index| (X - g.pow(index)).inv();
-        let every_row = || (X - g.pow(trace_length - 1)) / (X.pow(trace_length) - 1.into());
+        let every_row = || (X - g.pow(trace_length - 1)) / (X.pow(trace_length) - 1);
 
         let periodic = |coefficients| {
             Polynomial(
@@ -177,7 +176,7 @@ impl Verifiable for Claim {
         let on_loop_rows = |length: usize| {
             (X.pow(trace_length / length)
                 - Constant(trace_generator.pow((trace_length / length) * (trace_length - 1))))
-                / (X.pow(trace_length) - 1.into())
+                / (X.pow(trace_length) - 1)
         };
 
         let const_before_x = Constant(self.before_x.clone());
@@ -201,18 +200,8 @@ impl Verifiable for Claim {
             (Trace(0, 0) - const_after.clone()) * on_row(255),
         ];
 
-        let public = vec![&const_before_x, &const_before_y, &const_after];
+        let _public = vec![&const_before_x, &const_before_y, &const_after];
 
-        match autogen(
-            trace_length,
-            public.as_slice(),
-            expressions.as_slice(),
-            2,
-            2,
-        ) {
-            Ok(()) => {}
-            Err(error) => panic!("File io problem: {:?}", error),
-        };
         Constraints::from_expressions((trace_length, 2), seed, expressions).unwrap()
     }
 }

@@ -1,5 +1,4 @@
 #![warn(clippy::all)]
-use env_logger;
 use log::info;
 use std::time::Instant;
 use zkp_macros_decl::field_element;
@@ -31,13 +30,13 @@ impl Verifiable for Claim {
         let trace_generator = FieldElement::root(trace_length).unwrap();
         let g = Constant(trace_generator);
         let on_row = |index| (X - g.pow(index)).inv();
-        let every_row = || (X - g.pow(trace_length - 1)) / (X.pow(trace_length) - 1.into());
+        let every_row = || (X - g.pow(trace_length - 1)) / (X.pow(trace_length) - 1);
 
         Constraints::from_expressions((trace_length, 2), seed, vec![
             (Trace(0, 1) - Trace(1, 0)) * every_row(),
             (Trace(1, 1) - Trace(0, 0) - Trace(1, 0)) * every_row(),
-            (Trace(0, 0) - 1.into()) * on_row(0),
-            (Trace(0, 0) - (&self.value).into()) * on_row(self.index),
+            (Trace(0, 0) - 1) * on_row(0),
+            (Trace(0, 0) - &self.value) * on_row(self.index),
         ])
         .unwrap()
     }

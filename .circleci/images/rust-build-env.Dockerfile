@@ -8,7 +8,7 @@ FROM circleci/rust:1-node
 
 # The latest nightly
 # TODO: Update manually. 
-ENV NIGHTLY="nightly-2020-03-17"
+ENV NIGHTLY="nightly-2020-07-26"
 
 RUN true \
     # For coverage reports
@@ -42,7 +42,7 @@ RUN true \
 # identical flags in CI, which is why they are exported in an ENV.
 # See https://users.rust-lang.org/t/howto-generating-a-branch-coverage-report/8524
 # NOTE: We could add `-Coverflow-checks=off` but we want overflow checks in unit tests.
-ENV COVFLAGS="-Dwarnings -Zprofile -Zno-landing-pads -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Copt-level=1"
+ENV COVFLAGS="-Dwarnings -Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Copt-level=1"
 
 # Compile project to load up global cargo caches.
 # We also leave the `.git` and `target` folder around as this
