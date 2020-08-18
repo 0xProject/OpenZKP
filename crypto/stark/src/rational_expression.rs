@@ -97,6 +97,12 @@ impl From<&FieldElement> for RationalExpression {
     }
 }
 
+impl From<FieldElement> for RationalExpression {
+    fn from(value: FieldElement) -> Self {
+        Self::Constant(value)
+    }
+}
+
 impl<T: Into<RationalExpression>> Add<T> for RationalExpression {
     type Output = Self;
 
