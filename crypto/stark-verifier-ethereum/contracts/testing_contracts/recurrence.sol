@@ -11,7 +11,6 @@ import '../default_cs.sol';
 import './recurrence_trace.sol';
 import './recurence_constraint_256.sol';
 
-
 // This contract checks the recurance constraint system from the testing contract
 contract Recurrence is RecurrenceTrace {
     using Iterators for Iterators.IteratorUint;
@@ -192,7 +191,7 @@ contract Recurrence is RecurrenceTrace {
         call_context[1] = public_input.index;
         call_context[2] = public_input.value.from_montgomery();
         uint256 current_index = 3;
-        for (uint256 i = 0; i < constraint_coeffiencts.length; i ++) {
+        for (uint256 i = 0; i < constraint_coeffiencts.length; i++) {
             call_context[current_index] = constraint_coeffiencts[i];
             current_index++;
         }
@@ -210,7 +209,7 @@ contract Recurrence is RecurrenceTrace {
         assembly {
             let p := mload(0x40)
             if iszero(call(not(0), local_contract_address, 0, add(call_context, 0x20), 0x1E0, p, 0x20)) {
-              revert(0, 0)
+                revert(0, 0)
             }
             result := mload(p)
         }
