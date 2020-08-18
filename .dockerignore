@@ -1,0 +1,12 @@
+# Include only source code
+.git
+**/target
+**/node_modules
+**/node-data-*
+
+# Data dumps
+notebook/data
+
+# Exclude docker files to prevent cache from invalidating while editing it
+**/Dockerfile
+.dockerignore
