@@ -60,7 +60,7 @@ contract StarkVerifier is Trace, ProofOfWork, Fri, ProofTypes {
             constraint_coeffiencents,
             oods_coefficients
         );
-        trace('constraint_calculations_call', false);
+        trace('constraint_calculations', false);
 
         uint8 log_eval_domain_size = constraint_parameters.log_trace_length + constraint_parameters.log_blowup;
         check_commitments(proof, constraint_parameters, queries, log_eval_domain_size);
