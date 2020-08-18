@@ -11,7 +11,6 @@ import '../default_cs.sol';
 import './recurrence_trace.sol';
 import './recurence_constraint_256.sol';
 
-
 // This contract checks the recurance constraint system from the testing contract
 contract Recurrence is RecurrenceTrace {
     using Iterators for Iterators.IteratorUint;
@@ -30,29 +29,35 @@ contract Recurrence is RecurrenceTrace {
         uint64 index;
     }
 
+    struct StackDepthSaver {
+        PrimeField.EvalX eval;
+        ProofTypes.OodsEvaluationData data;
+    }
+
     // prettier-ignore
     function constraint_calculations(
-        ProofTypes.StarkProof calldata proof,
-        ProofTypes.ProofParameters calldata params,
-        uint64[] calldata queries,
+        ProofTypes.OodsEvaluationData memory oods_eval_data,
+        uint256[] memory queries,
         uint256 oods_point,
-        uint256[] calldata constraint_coeffiencts,
-        uint256[] calldata oods_coeffiencts
-    ) external override returns (uint256[] memory, uint256) {
-        ProofData memory data = ProofData(
-            proof.trace_values,
-            PrimeField.init_eval(params.log_trace_length + 4),
-            proof.constraint_values, proof.trace_oods_values,
-            proof.constraint_oods_values,
-            params.log_trace_length);
-        PublicInput memory input = abi.decode(proof.public_inputs, (PublicInput));
-        uint256[] memory result = get_polynomial_points(data, oods_coeffiencts, queries, oods_point);
+        uint256[] memory constraint_coeffiencts,
+        uint256[] memory oods_coeffiencts
+    ) public override returns (uint256[] memory, uint256) {
+        PublicInput memory input = abi.decode(oods_eval_data.public_inputs, (PublicInput));
+        PrimeField.EvalX memory eval = PrimeField.init_eval(oods_eval_data.log_trace_length + 4);
+        uint256[] memory result = get_polynomial_points(oods_eval_data, eval, oods_coeffiencts, queries, oods_point);
 
         uint256 evaluated_point;
-        if (params.log_trace_length == 8 && input.index == 150) {
-            evaluated_point = evaluate_oods_point256(oods_point, constraint_coeffiencts, data.eval, input, data.trace_oods_values);
-        } else {
-            evaluated_point = evaluate_oods_point(oods_point, constraint_coeffiencts, data.eval, input, data);
+        {
+            if (oods_eval_data.log_trace_length == 8 && input.index == 150) {
+                uint256[] memory preloaded_trace_values =  oods_eval_data.trace_oods_values;
+                evaluated_point = evaluate_oods_point256(oods_point, constraint_coeffiencts, eval, input, preloaded_trace_values);
+            } else {
+                StackDepthSaver memory saver = StackDepthSaver(
+                    eval,
+                    oods_eval_data
+                );
+                evaluated_point = evaluate_oods_point(oods_point, constraint_coeffiencts, input, saver);
+            }
         }
         return (result, evaluated_point);
     }
@@ -98,13 +103,12 @@ contract Recurrence is RecurrenceTrace {
     function evaluate_oods_point(
         uint256 oods_point,
         uint256[] memory constraint_coeffiencts,
-        PrimeField.EvalX memory eval,
         PublicInput memory public_input,
-        ProofData memory data
+        StackDepthSaver memory saver
     ) internal returns (uint256) {
-        uint256 trace_length = uint256(1) << data.log_trace_length;
+        uint256 trace_length = uint256(1) << saver.data.log_trace_length;
         // Note the blowup is fixed in this contract
-        uint256 trace_generator = eval.eval_domain_generator.fpow(16);
+        uint256 trace_generator = saver.eval.eval_domain_generator.fpow(16);
         // NOTE - Constraint degree is fixed in this system
         uint256 target_degree = 2 * trace_length - 1; // 511
         uint256 non_mont_oods = oods_point.fmul_mont(1);
@@ -127,8 +131,8 @@ contract Recurrence is RecurrenceTrace {
                     adjustment = constraint_coeffiencts[1].fmul(adjustment_every_row_2);
                     adjustment = adjustment.fadd(constraint_coeffiencts[0]);
                 }
-                uint256 cell_squared = data.trace_oods_values[2].fmul_mont(data.trace_oods_values[2]);
-                uint256 constraint_eval = data.trace_oods_values[1].fsub(cell_squared);
+                uint256 cell_squared = saver.data.trace_oods_values[2].fmul_mont(saver.data.trace_oods_values[2]);
+                uint256 constraint_eval = saver.data.trace_oods_values[1].fsub(cell_squared);
                 constraint_eval = constraint_eval.fmul(every_row_numb);
                 constraint_eval = constraint_eval.fmul(every_row_denom);
                 result = adjustment.fmul_mont(constraint_eval);
@@ -143,8 +147,8 @@ contract Recurrence is RecurrenceTrace {
                     adjustment = constraint_coeffiencts[3].fmul(adjustment_every_row_1);
                     adjustment = adjustment.fadd(constraint_coeffiencts[2]);
                 }
-                uint256 constraint_eval = data.trace_oods_values[3].fsub(data.trace_oods_values[0]);
-                constraint_eval = constraint_eval.fsub(data.trace_oods_values[2]);
+                uint256 constraint_eval = saver.data.trace_oods_values[3].fsub(saver.data.trace_oods_values[0]);
+                constraint_eval = constraint_eval.fsub(saver.data.trace_oods_values[2]);
                 constraint_eval = constraint_eval.fmul(every_row_numb);
                 constraint_eval = constraint_eval.fmul(every_row_denom);
                 result = result.fadd(adjustment.fmul_mont(constraint_eval));
@@ -153,7 +157,7 @@ contract Recurrence is RecurrenceTrace {
         {
             uint256 adjustment_fixed_row = non_mont_oods.fpow(degree_adjustment(target_degree, trace_length - 1, 1));
             {
-                uint256 constraint_eval = data.trace_oods_values[0].fsub((uint256(1).to_montgomery()));
+                uint256 constraint_eval = saver.data.trace_oods_values[0].fsub((uint256(1).to_montgomery()));
                 // TODO - Just make that one?
                 uint256 last_row_denom = (non_mont_oods.fsub(trace_generator.fpow(trace_length))).inverse();
                 constraint_eval = constraint_eval.fmul(last_row_denom);
@@ -163,7 +167,7 @@ contract Recurrence is RecurrenceTrace {
             }
 
             {
-                uint256 constraint_eval = data.trace_oods_values[0].fsub(public_input.value);
+                uint256 constraint_eval = saver.data.trace_oods_values[0].fsub(public_input.value);
                 uint256 index_row_denom = non_mont_oods.fsub(trace_generator.fpow(public_input.index));
                 index_row_denom = index_row_denom.inverse();
                 constraint_eval = constraint_eval.fmul(index_row_denom);
@@ -187,7 +191,7 @@ contract Recurrence is RecurrenceTrace {
         call_context[1] = public_input.index;
         call_context[2] = public_input.value.from_montgomery();
         uint256 current_index = 3;
-        for (uint256 i = 0; i < constraint_coeffiencts.length; i ++) {
+        for (uint256 i = 0; i < constraint_coeffiencts.length; i++) {
             call_context[current_index] = constraint_coeffiencts[i];
             current_index++;
         }
@@ -205,7 +209,7 @@ contract Recurrence is RecurrenceTrace {
         assembly {
             let p := mload(0x40)
             if iszero(call(not(0), local_contract_address, 0, add(call_context, 0x20), 0x1E0, p, 0x20)) {
-              revert(0, 0)
+                revert(0, 0)
             }
             result := mload(p)
         }

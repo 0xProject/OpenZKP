@@ -19,7 +19,11 @@ contract StarkDigestTesting is StarkVerifier {
     }
 
     // Takes a proof and returns the queries after reading and writing
-    function queries_read(StarkProof memory proof, ConstraintSystem constraints) public view returns (uint64[] memory) {
+    function queries_read(StarkProof memory proof, ConstraintSystem constraints)
+        public
+        view
+        returns (uint256[] memory)
+    {
         (ProofParameters memory constraint_parameters, PublicCoin.Coin memory coin) = constraints.initalize_system(
             proof.public_inputs
         );
@@ -29,7 +33,7 @@ contract StarkDigestTesting is StarkVerifier {
         require(check_proof_of_work(coin, proof.pow_nonce, constraint_parameters.pow_bits), 'POW Failed');
         // Read the query indecies from the coin
         uint8 eval_domain_log_size = constraint_parameters.log_trace_length + constraint_parameters.log_blowup;
-        uint64[] memory queries = get_queries(coin, eval_domain_log_size, constraint_parameters.number_of_queries);
+        uint256[] memory queries = get_queries(coin, eval_domain_log_size, constraint_parameters.number_of_queries);
         return queries;
     }
 }

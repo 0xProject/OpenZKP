@@ -64,6 +64,8 @@ pub trait Component {
 
     fn constraints(&self, claim: &Self::Claim) -> Vec<RationalExpression>;
 
+    // TODO: add claim_polynomials function here.
+
     fn trace<P: PolynomialWriter>(&self, trace: &mut P, witness: &Self::Witness);
 
     fn trace_generator(&self) -> RationalExpression {

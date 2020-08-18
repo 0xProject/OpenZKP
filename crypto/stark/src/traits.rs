@@ -43,7 +43,7 @@ pub trait Provable<T>: Verifiable {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
-    use crate::RationalExpression;
+    use crate::{polynomial::DensePolynomial, RationalExpression};
     use proptest::{collection::vec as prop_vec, prelude::*};
     use std::convert::TryInto;
     use zkp_primefield::{FieldElement, One, Pow, Root, Zero};
@@ -219,6 +219,10 @@ pub(crate) mod tests {
         fn trace_length(&self) -> usize {
             (self.index + 1).next_power_of_two()
         }
+
+        fn claim_polynomials(&self) -> Vec<DensePolynomial> {
+            vec![DensePolynomial::new(&[self.value.clone()])]
+        }
     }
 
     impl Verifiable for Claim2 {
@@ -232,8 +236,9 @@ pub(crate) mod tests {
 
             let on_row = |index| (X - trace_generator.pow(index)).inv();
 
-            let mut constraints: Vec<RationalExpression> =
-                vec![(Trace(0, 0) - &self.value) * on_row(self.index - 1)];
+            let mut constraints: Vec<RationalExpression> = vec![
+                (Trace(0, 0) - ClaimPolynomial(0, 0, Box::new(X), None)) * on_row(self.index - 1),
+            ];
 
             let mut recurrance_constraint = Constant(FieldElement::zero());
             for (i, (coefficient, exponent)) in
@@ -250,6 +255,11 @@ pub(crate) mod tests {
                     recurrance_constraint * (X - trace_generator.pow(i + 1).inv());
             }
             constraints.push(recurrance_constraint);
+            let claim_polynomials = self.claim_polynomials();
+            constraints = constraints
+                .iter()
+                .map(|c| c.substitute_claim(&claim_polynomials))
+                .collect();
 
             Constraints::from_expressions((trace_length, 1), self.seed(), constraints).unwrap()
         }

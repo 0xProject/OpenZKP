@@ -1,7 +1,7 @@
 use crate::{Signature, GENERATOR_TABLE};
 use tiny_keccak::{Hasher, Sha3};
 use zkp_elliptic_curve::{base_mul, Affine, ScalarFieldElement};
-use zkp_primefield::*;
+use zkp_primefield::{Inv, Zero};
 use zkp_u256::U256;
 
 #[cfg(any(test, feature = "proptest"))]

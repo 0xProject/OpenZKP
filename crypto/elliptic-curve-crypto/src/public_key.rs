@@ -1,7 +1,7 @@
 use crate::{PrivateKey, Signature, GENERATOR_TABLE};
 use serde::{Deserialize, Serialize};
 use zkp_elliptic_curve::{base_mul, double_base_mul, Affine, ScalarFieldElement};
-use zkp_primefield::*;
+use zkp_primefield::Zero;
 
 #[derive(PartialEq, Eq, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "std", derive(Debug))]
@@ -50,9 +50,9 @@ impl From<Affine> for PublicKey {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use u256::U256;
     use zkp_macros_decl::{field_element, u256h};
     use zkp_primefield::FieldElement;
+    use zkp_u256::U256;
 
     #[test]
     fn test_pubkey() {

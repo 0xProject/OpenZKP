@@ -1,6 +1,11 @@
+// False positive: attribute has a use
+#[allow(clippy::useless_attribute)]
+// False positive: Importing preludes is allowed
+#[allow(clippy::wildcard_imports)]
+use std::prelude::v1::*;
+
 use crate::{curve::Affine, jacobian::Jacobian, ScalarFieldElement};
 use itertools::izip;
-use std::prelude::v1::*;
 use zkp_primefield::{FieldElement, Inv, One, SquareInline};
 use zkp_u256::{Binary, U256};
 

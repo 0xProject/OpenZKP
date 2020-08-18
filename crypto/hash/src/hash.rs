@@ -1,7 +1,4 @@
 #[cfg(feature = "std")]
-use hex;
-
-#[cfg(feature = "std")]
 use std::fmt;
 
 #[derive(Clone, Default, PartialEq, Eq)]

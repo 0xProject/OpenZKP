@@ -1,5 +1,4 @@
 #![warn(clippy::all)]
-use env_logger;
 use log::info;
 use std::time::Instant;
 use zkp_macros_decl::field_element;
@@ -35,7 +34,8 @@ impl Verifiable for Claim {
         let every_row = || (X - g.pow(trace_length - 1)) / (X.pow(trace_length) - 1);
 
         Constraints::from_expressions((trace_length, 4), seed, vec![
-            // Square (Trace(0,0), Trace(1, 0)) and check that it equals (Trace(2,0), Trace(3,0))
+            // Square (Trace(0,0), Trace(1, 0)) and check that it equals (Trace(2,0),
+            // Trace(3,0))
             ((Trace(0, 0) * Trace(0, 0) + Constant(R) * Trace(1, 0) * Trace(1, 0) - Trace(2, 0))
                 * every_row()),
             (Constant(2.into()) * Trace(0, 0) * Trace(1, 0) - Trace(3, 0)) * every_row(),

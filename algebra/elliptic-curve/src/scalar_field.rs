@@ -1,5 +1,5 @@
 use zkp_macros_decl::u256h;
-use zkp_primefield::*;
+use zkp_primefield::{Parameters, PrimeField};
 use zkp_u256::U256;
 
 pub type Element = PrimeField<Order>;
@@ -23,6 +23,7 @@ impl Parameters for Order {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use zkp_primefield::{One, Pow, Zero};
 
     const PRIME_FACTORS: [U256; 5] = [
         u256h!("02"),

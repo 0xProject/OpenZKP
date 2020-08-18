@@ -1,5 +1,4 @@
 #![warn(clippy::all)]
-use env_logger;
 use log::info;
 use std::{env, time::Instant};
 use zkp_macros_decl::field_element;

@@ -1,12 +1,15 @@
+// False positive: attribute has a use
+#[allow(clippy::useless_attribute)]
+// False positive: Importing preludes is allowed
+#[allow(clippy::wildcard_imports)]
+use std::prelude::v1::*;
+
 use crate::{
     adc, assign_ops_from_trait, noncommutative_self_ops_from_trait, sbb, self_ops_from_trait,
     AddFullInline, AddInline, NegInline, SubFromFullInline, SubFromInline, SubFullInline,
     SubInline, U256,
 };
-use std::{
-    ops::{Add, AddAssign, Neg, Sub, SubAssign},
-    prelude::v1::*,
-};
+use std::ops::{Add, AddAssign, Neg, Sub, SubAssign};
 
 // Additive operations: Add, Sub
 

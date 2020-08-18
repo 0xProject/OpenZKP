@@ -65,12 +65,15 @@ describe('Recurrence testing', function(this: any) {
             );
             const call_data_length = call_data.length;
             const call_data_zeros = call_data.filter(byte => byte === 0).length;
-            const calldata_cost = (call_data_length - call_data_zeros) * 16 + call_data_zeros * 4;
+            const call_data_zeros_cost = call_data_zeros * 4;
+            const calldata_cost = (call_data_length - call_data_zeros) * 16 + call_data_zeros_cost;
 
             // Log gas consumption
             let gas_log = '';
             gas_log += `ENTER transaction ${INITIAL_GAS} 0\n`;
             gas_log += `ENTER calldata ${INITIAL_GAS} 0\n`;
+            gas_log += `ENTER calldata_zeros ${INITIAL_GAS - calldata_cost + call_data_zeros_cost} 0\n`;
+            gas_log += `LEAVE calldata_zeros ${INITIAL_GAS - calldata_cost} 0\n`;
             gas_log += `LEAVE calldata ${INITIAL_GAS - calldata_cost} 0\n`;
             let last_alloc = 0;
             for (const event of receipt.events) {

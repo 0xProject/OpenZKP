@@ -1,9 +1,12 @@
+// False positive: attribute has a use
+#[allow(clippy::useless_attribute)]
+// False positive: Importing preludes is allowed
+#[allow(clippy::wildcard_imports)]
+use std::prelude::v1::*;
+
 use crate::{ScalarFieldElement, BETA};
 use serde::{Deserialize, Serialize};
-use std::{
-    ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
-    prelude::v1::*,
-};
+use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 use zkp_primefield::{FieldElement, NegInline, One, Zero};
 use zkp_u256::{commutative_binop, noncommutative_binop};
 
@@ -139,6 +142,8 @@ impl AddAssign<&Affine> for Affine {
 macro_rules! curve_operations {
     ($type:ident) => {
         impl SubAssign<&$type> for $type {
+            // Subtraction suspiciously involves addition
+            #[allow(clippy::suspicious_op_assign_impl)]
             fn sub_assign(&mut self, rhs: &Self) {
                 *self += &rhs.neg()
             }
@@ -147,6 +152,8 @@ macro_rules! curve_operations {
         impl Mul<&ScalarFieldElement> for &$type {
             type Output = $type;
 
+            // We need to do a bit of math here
+            #[allow(clippy::suspicious_arithmetic_impl)]
             fn mul(self, scalar: &ScalarFieldElement) -> $type {
                 use zkp_u256::Binary;
                 let bits = scalar.to_uint();

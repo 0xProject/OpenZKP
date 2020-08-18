@@ -1,6 +1,10 @@
-use crate::U256;
-use hex;
+// False positive: attribute has a use
+#[allow(clippy::useless_attribute)]
+// False positive: Importing preludes is allowed
+#[allow(clippy::wildcard_imports)]
 use std::prelude::v1::*;
+
+use crate::U256;
 
 #[cfg(feature = "std")]
 use std::{fmt, format};
@@ -151,7 +155,7 @@ mod tests {
     proptest!(
         #[test]
         fn test_decimal_to_from(n: U256) {
-            let decimal = n.clone().to_decimal_string();
+            let decimal = n.to_decimal_string();
             let m = U256::from_decimal_str(&decimal).unwrap();
             prop_assert_eq!(n, m)
         }
