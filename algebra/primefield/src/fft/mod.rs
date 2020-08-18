@@ -197,6 +197,8 @@ mod tests {
     // O(n^2) reference implementation evaluating
     //     x_i' = Sum_j x_j * omega_n^(ij)
     // directly using Horner's method.
+    // New lint in nightly
+    #[allow(clippy::unknown_clippy_lints)]
     // False positive
     #[allow(clippy::same_item_push)]
     fn reference_fft(x: &[FieldElement], inverse: bool) -> Vec<FieldElement> {

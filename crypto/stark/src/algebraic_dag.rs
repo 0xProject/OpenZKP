@@ -295,7 +295,6 @@ impl AlgebraicGraph {
     ///
     /// If an algebraically identical node already exits, that index will be
     /// returned instead.
-    #[allow(clippy::option_if_let_else)]
     fn op(&mut self, operation: Operation) -> Index {
         let hash = self.hash(&operation);
         self.nodes.iter().position(|n| n.hash == hash).map_or_else(
