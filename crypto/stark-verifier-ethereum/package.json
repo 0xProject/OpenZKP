@@ -45,7 +45,8 @@
     "prettier:ts": "prettier --write '**/*.ts' --config .prettierrc",
     "prettier:sol": "prettier --write **/*.sol **/**/*.sol",
     "fix:ts": "tslint --fix --format stylish --project .",
-    "solhint": "./node_modules/.bin/solhint -f table contracts/*.sol contracts/**/*.sol"
+    "solhint": "./node_modules/.bin/solhint -f table contracts/*.sol contracts/**/*.sol",
+    "prepare": "npm run-script build"
   },
   "author": "Paul Vienhage",
   "license": "ISC"
