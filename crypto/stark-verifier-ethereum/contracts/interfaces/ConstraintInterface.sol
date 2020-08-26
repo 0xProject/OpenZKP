@@ -1,8 +1,8 @@
 pragma solidity ^0.6.4;
 pragma experimental ABIEncoderV2;
 
-import '../stark_verifier.sol';
 import '../proof_types.sol';
+import '../public_coin.sol';
 
 
 // solhint-disable-next-line
