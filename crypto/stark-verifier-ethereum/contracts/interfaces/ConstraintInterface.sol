@@ -4,6 +4,7 @@ pragma experimental ABIEncoderV2;
 import '../proof_types.sol';
 import '../public_coin.sol';
 
+
 // solhint-disable-next-line
 abstract contract ConstraintSystem {
     // The function should return a constraint paramters struct based on the public input.
