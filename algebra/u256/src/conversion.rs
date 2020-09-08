@@ -229,6 +229,10 @@ mod tests {
         proptest!(|(x: U256)| {
             let serialized = x.encode();
             // Encoding is lsb first (little-endian order)
+            // We prefer big-endian in IO, but the actual memory layout is
+            // little-endian. Having the encoding be identical to the memory
+            // layout may give a performance advantage down the line, which
+            // seems to be the goal of the Parity Scale codec.
             let little_endian: Vec<u8> = x.to_bytes_be().iter().rev().cloned().collect();
             prop_assert_eq!(serialized, little_endian);
         });
