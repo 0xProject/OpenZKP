@@ -11,6 +11,8 @@ use zkp_u256::{
     AddInline, Binary, DivRem, Inv, Montgomery as _, MontgomeryParameters, MulInline, NegInline,
     One, Pow, SquareInline, SubInline, Zero, U256,
 };
+#[cfg(feature = "parity_codec")]
+use parity_scale_codec::{Encode, Decode};
 
 /// A finite field of prime order.
 ///
@@ -27,6 +29,7 @@ use zkp_u256::{
 /// `proptest` support `Parameters` needs to be `'static + Send` (which it
 /// really should anyway).
 // Derive fails for Clone, PartialEq, Eq, Hash
+#[cfg_attr(feature = "parity_codec", derive(Encode, Decode))]
 pub struct PrimeField<P: Parameters> {
     // TODO: un-pub. They are pub so FieldElement can have const-fn constructors.
     pub uint:        P::UInt,

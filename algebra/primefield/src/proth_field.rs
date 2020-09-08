@@ -2,12 +2,15 @@ use crate::{Parameters, PrimeField};
 use std::marker::PhantomData;
 use zkp_macros_decl::u256h;
 use zkp_u256::{to_montgomery_const, U256};
+#[cfg(feature = "parity_codec")]
+use parity_scale_codec::{Encode, Decode};
 
 // TODO: Fix naming
 #[allow(clippy::module_name_repetitions)]
 pub type FieldElement = PrimeField<Proth>;
 
 #[derive(PartialEq, Eq, Clone, Debug, Hash)]
+#[cfg_attr(feature = "parity_codec", derive(Encode, Decode))]
 pub struct Proth();
 
 impl Parameters for Proth {

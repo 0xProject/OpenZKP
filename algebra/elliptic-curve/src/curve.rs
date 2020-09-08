@@ -6,9 +6,12 @@ use std::{
 };
 use zkp_primefield::{FieldElement, NegInline, One, Zero};
 use zkp_u256::{commutative_binop, noncommutative_binop};
+#[cfg(feature = "parity_codec")]
+use parity_scale_codec::{Encode, Decode};
 
 #[derive(PartialEq, Eq, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "std", derive(Debug))]
+#[cfg_attr(feature = "parity_codec", derive(Encode, Decode))]
 pub enum Affine {
     Zero, // Neutral element, point at infinity, additive identity, etc.
     Point { x: FieldElement, y: FieldElement },
