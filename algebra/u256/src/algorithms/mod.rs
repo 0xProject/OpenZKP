@@ -1,6 +1,6 @@
 mod binary_operator_macros;
 pub(crate) mod limb_operations;
-mod montgomery;
+pub(crate) mod montgomery;
 
 pub(crate) use montgomery::{mul_redc_inline, redc_inline, square_redc_inline};
 

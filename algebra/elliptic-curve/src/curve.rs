@@ -6,7 +6,7 @@ use std::prelude::v1::*;
 
 use crate::{ScalarFieldElement, BETA};
 #[cfg(feature = "parity_codec")]
-use parity_scale_codec::{Decode, Encode};
+use parity_scale_codec_derive::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 use zkp_primefield::{FieldElement, NegInline, One, Zero};
@@ -103,12 +103,10 @@ impl Neg for &Affine {
     fn neg(self) -> Self::Output {
         match self {
             Affine::Zero => Affine::Zero,
-            Affine::Point { x, y } => {
-                Affine::Point {
-                    x: x.clone(),
-                    y: -y,
-                }
-            }
+            Affine::Point { x, y } => Affine::Point {
+                x: x.clone(),
+                y: -y,
+            },
         }
     }
 }
@@ -117,25 +115,23 @@ impl AddAssign<&Affine> for Affine {
     fn add_assign(&mut self, rhs: &Self) {
         match self {
             Self::Zero => *self = rhs.clone(),
-            Self::Point { x: ax, y: ay } => {
-                match rhs {
-                    Self::Zero => {}
-                    Self::Point { x: bx, y: by } => {
-                        if ax == bx {
-                            if ay == by {
-                                self.double_assign()
-                            } else {
-                                *self = Self::Zero
-                            }
+            Self::Point { x: ax, y: ay } => match rhs {
+                Self::Zero => {}
+                Self::Point { x: bx, y: by } => {
+                    if ax == bx {
+                        if ay == by {
+                            self.double_assign()
                         } else {
-                            let m = (&*ay - by) / (&*ax - bx);
-                            let x = &m * &m - &*ax - &*bx;
-                            *ay = m * (&*ax - &x) - &*ay;
-                            *ax = x;
+                            *self = Self::Zero
                         }
+                    } else {
+                        let m = (&*ay - by) / (&*ax - bx);
+                        let x = &m * &m - &*ax - &*bx;
+                        *ay = m * (&*ax - &x) - &*ay;
+                        *ax = x;
                     }
                 }
-            }
+            },
         }
     }
 }
