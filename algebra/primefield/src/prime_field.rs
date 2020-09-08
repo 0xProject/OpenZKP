@@ -6,7 +6,7 @@ use std::prelude::v1::*;
 
 use crate::{Root, SquareRoot, UInt as FieldUInt};
 #[cfg(feature = "parity_codec")]
-use parity_scale_codec_derive::{Decode, Encode};
+use parity_scale_codec::{Decode, Encode};
 #[cfg(feature = "std")]
 use std::fmt;
 use std::{
