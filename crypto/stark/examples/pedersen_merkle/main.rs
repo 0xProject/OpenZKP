@@ -40,6 +40,10 @@
 #![allow(clippy::multiple_crate_versions)]
 // TODO - Investigate possible truncation
 #![allow(clippy::cast_possible_truncation)]
+// TODO: Fix false positives
+#![allow(clippy::enum_glob_use)]
+// TODO: False positives <https://github.com/rust-lang/rust-clippy/issues/5917>
+#![allow(clippy::wildcard_imports)]
 
 mod component;
 mod inputs;
@@ -48,7 +52,6 @@ mod periodic_columns;
 mod starkware_example;
 
 use crate::{component::MerkleTree, inputs::Witness, starkware_example::starkware_example};
-use env_logger;
 use log::{info, trace};
 use rand::{prelude::*, SeedableRng};
 use rand_xoshiro::Xoshiro256PlusPlus;
@@ -58,6 +61,7 @@ use zkp_stark::component::Component;
 
 // Need to import to active the logging allocator
 #[allow(unused_imports)]
+#[allow(clippy::single_component_path_imports)]
 use zkp_logging_allocator;
 
 fn parse_hex(src: &str) -> Result<u32, ParseIntError> {

@@ -1,3 +1,9 @@
+// False positive: attribute has a use
+#[allow(clippy::useless_attribute)]
+// False positive: Importing preludes is allowed
+#[allow(clippy::wildcard_imports)]
+use std::prelude::v1::*;
+
 use crate::{Root, SquareRoot, UInt as FieldUInt};
 #[cfg(feature = "parity_codec")]
 use parity_scale_codec::{Decode, Encode};
@@ -7,7 +13,6 @@ use std::{
     hash::{Hash, Hasher},
     marker::PhantomData,
     ops::Shr,
-    prelude::v1::*,
 };
 use zkp_u256::{
     AddInline, Binary, DivRem, Inv, Montgomery as _, MontgomeryParameters, MulInline, NegInline,
@@ -117,9 +122,6 @@ impl<P: Parameters> PrimeField<P> {
     #[inline(always)]
     pub fn from_montgomery(uint: P::UInt) -> Self {
         debug_assert!(uint < Self::modulus());
-        // TODO: Uncomment assertion when support in `const fn` is enabled.
-        // See https://github.com/rust-lang/rust/issues/57563
-        // debug_assert!(n < Self::MODULUS);
         Self {
             uint,
             _parameters: PhantomData,
@@ -234,11 +236,8 @@ impl<P: Parameters> One for PrimeField<P> {
 impl<P: Parameters> AddInline<&Self> for PrimeField<P> {
     #[inline(always)]
     fn add_inline(&self, rhs: &Self) -> Self {
-        let mut result = self.as_montgomery().add_inline(rhs.as_montgomery());
-        if result >= Self::modulus() {
-            result.sub_assign_inline(&Self::modulus());
-        }
-        debug_assert!(result < Self::modulus());
+        let result = self.as_montgomery().add_inline(rhs.as_montgomery());
+        let result = result.reduce_1_inline::<Montgomery<P>>();
         Self::from_montgomery(result)
     }
 }

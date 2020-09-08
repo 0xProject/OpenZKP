@@ -97,6 +97,12 @@ impl From<&FieldElement> for RationalExpression {
     }
 }
 
+impl From<FieldElement> for RationalExpression {
+    fn from(value: FieldElement) -> Self {
+        Self::Constant(value)
+    }
+}
+
 impl<T: Into<RationalExpression>> Add<T> for RationalExpression {
     type Output = Self;
 
@@ -138,11 +144,8 @@ impl Sum<RationalExpression> for RationalExpression {
     where
         I: Iterator<Item = RationalExpression>,
     {
-        if let Some(expr) = iter.next() {
-            iter.fold(expr, |a, b| a + b)
-        } else {
-            0.into()
-        }
+        iter.next()
+            .map_or(0.into(), |expr| iter.fold(expr, |a, b| a + b))
     }
 }
 

@@ -1,6 +1,12 @@
+// False positive: attribute has a use
+#[allow(clippy::useless_attribute)]
+// False positive: Importing preludes is allowed
+#[allow(clippy::wildcard_imports)]
+use std::prelude::v1::*;
+
 use crate::U256;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use std::{prelude::v1::*, u64};
+use std::u64;
 
 impl U256 {
     pub fn from_bytes_be(n: &[u8; 32]) -> Self {
@@ -159,10 +165,8 @@ impl U256 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bincode;
     use num_traits::identities::One;
     use proptest::prelude::*;
-    use serde_json;
 
     #[test]
     fn test_one() {
