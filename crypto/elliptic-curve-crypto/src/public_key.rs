@@ -2,8 +2,11 @@ use crate::{PrivateKey, Signature, GENERATOR_TABLE};
 use serde::{Deserialize, Serialize};
 use zkp_elliptic_curve::{base_mul, double_base_mul, Affine, ScalarFieldElement};
 use zkp_primefield::Zero;
+#[cfg(feature = "parity_codec")]
+use parity_scale_codec::{Encode, Decode};
 
 #[derive(PartialEq, Eq, Clone, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "parity_codec", derive(Encode, Decode))]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct PublicKey(Affine);
 
