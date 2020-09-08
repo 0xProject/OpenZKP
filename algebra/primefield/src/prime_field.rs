@@ -1,4 +1,6 @@
 use crate::{Root, SquareRoot, UInt as FieldUInt};
+#[cfg(feature = "parity_codec")]
+use parity_scale_codec::{Decode, Encode};
 #[cfg(feature = "std")]
 use std::fmt;
 use std::{
@@ -11,8 +13,6 @@ use zkp_u256::{
     AddInline, Binary, DivRem, Inv, Montgomery as _, MontgomeryParameters, MulInline, NegInline,
     One, Pow, SquareInline, SubInline, Zero, U256,
 };
-#[cfg(feature = "parity_codec")]
-use parity_scale_codec::{Encode, Decode};
 
 /// A finite field of prime order.
 ///

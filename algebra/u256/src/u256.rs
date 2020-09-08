@@ -1,8 +1,8 @@
+#[cfg(feature = "parity_codec")]
+use parity_scale_codec::{Decode, Encode};
 #[cfg(any(test, feature = "proptest"))]
 use proptest_derive::Arbitrary;
 use std::{cmp::Ordering, prelude::v1::*, u64};
-#[cfg(feature = "parity_codec")]
-use parity_scale_codec::{Encode, Decode};
 
 #[derive(PartialEq, Eq, Clone, Default, Hash)]
 #[cfg_attr(feature = "parity_codec", derive(Encode, Decode))]
