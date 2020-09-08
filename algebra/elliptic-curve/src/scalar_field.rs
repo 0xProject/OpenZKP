@@ -1,8 +1,8 @@
+#[cfg(feature = "parity_codec")]
+use parity_scale_codec::{Decode, Encode};
 use zkp_macros_decl::u256h;
 use zkp_primefield::{Parameters, PrimeField};
 use zkp_u256::U256;
-#[cfg(feature = "parity_codec")]
-use parity_scale_codec::{Encode, Decode};
 
 pub type Element = PrimeField<Order>;
 
