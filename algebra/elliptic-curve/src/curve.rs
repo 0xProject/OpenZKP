@@ -103,10 +103,12 @@ impl Neg for &Affine {
     fn neg(self) -> Self::Output {
         match self {
             Affine::Zero => Affine::Zero,
-            Affine::Point { x, y } => Affine::Point {
-                x: x.clone(),
-                y: -y,
-            },
+            Affine::Point { x, y } => {
+                Affine::Point {
+                    x: x.clone(),
+                    y: -y,
+                }
+            }
         }
     }
 }
@@ -115,23 +117,25 @@ impl AddAssign<&Affine> for Affine {
     fn add_assign(&mut self, rhs: &Self) {
         match self {
             Self::Zero => *self = rhs.clone(),
-            Self::Point { x: ax, y: ay } => match rhs {
-                Self::Zero => {}
-                Self::Point { x: bx, y: by } => {
-                    if ax == bx {
-                        if ay == by {
-                            self.double_assign()
+            Self::Point { x: ax, y: ay } => {
+                match rhs {
+                    Self::Zero => {}
+                    Self::Point { x: bx, y: by } => {
+                        if ax == bx {
+                            if ay == by {
+                                self.double_assign()
+                            } else {
+                                *self = Self::Zero
+                            }
                         } else {
-                            *self = Self::Zero
+                            let m = (&*ay - by) / (&*ax - bx);
+                            let x = &m * &m - &*ax - &*bx;
+                            *ay = m * (&*ax - &x) - &*ay;
+                            *ax = x;
                         }
-                    } else {
-                        let m = (&*ay - by) / (&*ax - bx);
-                        let x = &m * &m - &*ax - &*bx;
-                        *ay = m * (&*ax - &x) - &*ay;
-                        *ax = x;
                     }
                 }
-            },
+            }
         }
     }
 }
