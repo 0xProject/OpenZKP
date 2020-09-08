@@ -6,7 +6,7 @@ use std::prelude::v1::*;
 
 use crate::{ScalarFieldElement, BETA};
 #[cfg(feature = "parity_codec")]
-use parity_scale_codec_derive::{Decode, Encode};
+use parity_scale_codec::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 use zkp_primefield::{FieldElement, NegInline, One, Zero};
