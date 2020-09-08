@@ -56,7 +56,9 @@ std = [
 ]
 asm = []
 inline = []
-parity_codec = []
+parity_codec = [
+    "parity-scale-codec-derive",
+]
 
 # Allow math in docs
 [package.metadata.docs.rs]
