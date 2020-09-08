@@ -1,6 +1,6 @@
 use crate::{PrivateKey, Signature, GENERATOR_TABLE};
 #[cfg(feature = "parity_codec")]
-use parity_scale_codec::{Decode, Encode};
+use parity_scale_codec_derive::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 use zkp_elliptic_curve::{base_mul, double_base_mul, Affine, ScalarFieldElement};
 use zkp_primefield::Zero;

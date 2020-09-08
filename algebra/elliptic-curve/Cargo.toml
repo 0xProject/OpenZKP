@@ -57,6 +57,7 @@ inline = [
 ]
 unsafe_ecdsa = []
 parity_codec = [
+    "parity-scale-codec-derive",
     "zkp-primefield/parity_codec",
     "zkp-u256/parity_codec",
 ]

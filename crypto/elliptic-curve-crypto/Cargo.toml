@@ -52,6 +52,7 @@ std = [
 ]
 unsafe_ecdsa = []
 parity_codec = [
+    "parity-scale-codec-derive",
     "zkp-elliptic-curve/parity_codec",
     "zkp-primefield/parity_codec",
     "zkp-u256/parity_codec",

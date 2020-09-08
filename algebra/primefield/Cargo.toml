@@ -76,6 +76,7 @@ asm = [
     "zkp-u256/asm",
 ]
 parity_codec = [
+    "parity-scale-codec-derive",
     "zkp-u256/parity_codec",
 ]
 
