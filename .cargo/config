@@ -1,4 +1,5 @@
 [alias]
+# TODO: Test all features
 t = "test --all-targets"
 b = "build --all-targets"
 d = "hack rustdoc -- --html-in-header .cargo/katex-header.html"

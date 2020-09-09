@@ -1,3 +1,5 @@
+#[cfg(feature = "parity_codec")]
+use parity_scale_codec::{Decode, Encode};
 use zkp_macros_decl::u256h;
 use zkp_primefield::{Parameters, PrimeField};
 use zkp_u256::U256;
@@ -5,6 +7,7 @@ use zkp_u256::U256;
 pub type Element = PrimeField<Order>;
 
 #[derive(PartialEq, Eq, Clone, Debug, Hash)]
+#[cfg_attr(feature = "parity_codec", derive(Encode, Decode))]
 pub struct Order();
 
 impl Parameters for Order {
