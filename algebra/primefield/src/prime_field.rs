@@ -37,7 +37,7 @@ use zkp_u256::{
 #[cfg_attr(feature = "parity_codec", derive(Encode, Decode))]
 pub struct PrimeField<P: Parameters> {
     // TODO: un-pub. They are pub so FieldElement can have const-fn constructors.
-    pub uint: P::UInt,
+    pub uint:        P::UInt,
     pub _parameters: PhantomData<P>,
 }
 
