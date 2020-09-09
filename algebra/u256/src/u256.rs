@@ -6,7 +6,7 @@ use std::prelude::v1::*;
 
 #[cfg(any(test, feature = "proptest"))]
 use proptest_derive::Arbitrary;
-use std::{cmp::Ordering, prelude::v1::*, u64};
+use std::{cmp::Ordering, u64};
 
 #[cfg(feature = "parity_codec")]
 use parity_scale_codec::{Decode, Encode};
