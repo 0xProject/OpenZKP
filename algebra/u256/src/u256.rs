@@ -10,6 +10,9 @@ use parity_scale_codec::{Decode, Encode};
 use proptest_derive::Arbitrary;
 use std::{cmp::Ordering, prelude::v1::*, u64};
 
+#[cfg(feature = "parity_codec")]
+use parity_scale_codec::{Decode, Encode};
+
 #[derive(PartialEq, Eq, Clone, Default, Hash)]
 #[cfg_attr(feature = "parity_codec", derive(Encode, Decode))]
 // TODO: Generate a quasi-random sequence.
