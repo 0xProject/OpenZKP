@@ -11,7 +11,7 @@ use std::{cmp::Ordering, u64};
 #[cfg(feature = "parity_codec")]
 use parity_scale_codec::{Decode, Encode};
 
-#[derive(PartialEq, Eq, Clone, Default, Hash, Debug)]
+#[derive(PartialEq, Eq, Clone, Default, Hash)]
 #[cfg_attr(feature = "parity_codec", derive(Encode, Decode))]
 // TODO: Generate a quasi-random sequence.
 // See http://extremelearning.com.au/unreasonable-effectiveness-of-quasirandom-sequences/
