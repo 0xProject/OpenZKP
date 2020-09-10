@@ -2,13 +2,11 @@
 #[allow(clippy::useless_attribute)]
 // False positive: Importing preludes is allowed
 #[allow(clippy::wildcard_imports)]
-use std::prelude::v1::*;
+use std::{fmt, prelude::v1::*};
 
 use crate::{Root, SquareRoot, UInt as FieldUInt};
 #[cfg(feature = "parity_codec")]
 use parity_scale_codec::{Decode, Encode};
-#[cfg(feature = "std")]
-use std::fmt;
 use std::{
     hash::{Hash, Hasher},
     marker::PhantomData,
@@ -35,7 +33,6 @@ use zkp_u256::{
 /// really should anyway).
 // Derive fails for Clone, PartialEq, Eq, Hash
 #[cfg_attr(feature = "parity_codec", derive(Encode, Decode))]
-#[derive(Debug)]
 pub struct PrimeField<P: Parameters> {
     // TODO: un-pub. They are pub so FieldElement can have const-fn constructors.
     pub uint:        P::UInt,
@@ -197,7 +194,6 @@ where
     }
 }
 
-#[cfg(feature = "std")]
 impl<U, P> fmt::Debug for PrimeField<P>
 where
     U: FieldUInt + fmt::Debug,

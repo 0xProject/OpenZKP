@@ -7,7 +7,7 @@ use std::{fmt, prelude::v1::*};
 use crate::U256;
 
 #[cfg(feature = "std")]
-use std::{format};
+use std::format;
 
 impl U256 {
     pub fn from_decimal_str(s: &str) -> Result<Self, ParseError> {
