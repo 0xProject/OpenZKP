@@ -29,6 +29,8 @@ zkp-merkle-tree = { version = "0.1.0", path = "../../crypto/merkle-tree", defaul
 zkp-mmap-vec = { version = "0.1.0", path = "../../utils/mmap-vec", default-features = false }
 zkp-primefield = { version = "0.1.1", path = "../../algebra/primefield", default-features = false }
 zkp-u256 = { version = "0.1.1", path = "../../algebra/u256", default-features = false }
+tinytemplate = { version = "1.1.0", optional = true }
+serde = { version = "1.0", features = ["derive"], optional = true }
 
 [dev-dependencies]
 criterion = "0.3.0"
@@ -60,6 +62,8 @@ std = [
     "log/std",
     "no-std-compat/std",
     "rayon",
+    "serde",
+    "tinytemplate",
     "zkp-hash/std",
     "zkp-macros-decl/std",
     "zkp-merkle-tree/std",
