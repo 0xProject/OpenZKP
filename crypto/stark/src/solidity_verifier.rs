@@ -1,6 +1,7 @@
 use crate::{
     constraints::Constraints, polynomial::DensePolynomial, rational_expression::RationalExpression,
 };
+use serde::Serialize;
 use std::{
     cmp::Ordering,
     collections::{hash_map::DefaultHasher, BTreeMap, BTreeSet},
@@ -12,9 +13,20 @@ use std::{
     path::Path,
     prelude::v1::*,
 };
+use tinytemplate::TinyTemplate;
 use zkp_macros_decl::field_element;
 use zkp_primefield::FieldElement;
 use zkp_u256::U256;
+
+const OODS_POLY_TEMPLATE: &str = include_str!("../assets/OodsPoly.sol");
+
+#[derive(Clone, PartialEq, Eq, Debug, Default, Serialize)]
+struct Context {
+    prime:              String,
+    degree_adjustments: Vec<String>,
+    batch_inverted:     Vec<String>,
+    constraints:        Vec<String>,
+}
 
 impl RationalExpression {
     #[cfg(feature = "std")]
@@ -951,6 +963,15 @@ fn setup_call_memory(
 
     let inverse_start_index = index;
     index += inverses.len();
+
+    // TODO: Error handling
+
+    let mut tt = TinyTemplate::new();
+    tt.add_template("oods_poly", OODS_POLY_TEMPLATE).unwrap();
+
+    let context = Context::default();
+    let rendered = tt.render("oods_poly", &context).unwrap();
+    write!(file, "{}", &rendered)?;
 
     // The macro invocation appears to trigger this clippy warning, but the
     // underlying string doesn't.
