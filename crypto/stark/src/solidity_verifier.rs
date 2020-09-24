@@ -139,19 +139,18 @@ impl RationalExpression {
             Some(s) => s.clone(),
             None => {
                 match self {
-                    X => "mload(0x0)".to_owned(),
                     Constant(c) => format!("0x{}", U256::from(c).to_string()),
                     Add(a, b) => {
                         format!(
-                            "addmod({}, {}, PRIME)",
+                            "addmod({}, {}, mload(0))",
                             a.soldity_encode(memory_layout),
                             b.soldity_encode(memory_layout)
                         )
                     }
-                    Neg(a) => format!("sub(PRIME , {})", a.soldity_encode(memory_layout)),
+                    Neg(a) => format!("sub(mload(0) , {})", a.soldity_encode(memory_layout)),
                     Mul(a, b) => {
                         format!(
-                            "mulmod({}, {}, PRIME)",
+                            "mulmod({}, {}, mload(0))",
                             a.soldity_encode(memory_layout),
                             b.soldity_encode(memory_layout)
                         )
@@ -165,13 +164,13 @@ impl RationalExpression {
                                 // be
                                 if *e < 10 {
                                     format!(
-                                        "small_expmod({}, {}, PRIME)",
+                                        "small_expmod({}, {}, mload(0))",
                                         a.soldity_encode(memory_layout),
                                         e.to_string()
                                     )
                                 } else {
                                     format!(
-                                        "expmod({}, {}, PRIME)",
+                                        "expmod({}, {}, mload(0))",
                                         a.soldity_encode(memory_layout),
                                         e.to_string()
                                     )
@@ -663,28 +662,44 @@ fn write_oods_poly(
     tt.add_template("trace", TRACE_TEMPLATE)?;
 
     let mut context = OodsPolyContext::default();
-    context.modulus = "PRIME".to_owned();
-    context.x = "mload(0x0)".to_owned();
+    context.modulus = "mload(0)".to_owned();
+    context.x = "calldataload(0)".to_owned();
 
-    let mut index = 1; // Note index 0 is taken by the oods_point
+    // Initialize a memory map
     let mut memory_lookups: BTreeMap<RationalExpression, String> = BTreeMap::new();
+
+    // Add X to memory map
+    let _ = memory_lookups.insert(RationalExpression::X, format!("calldataload(0)"));
+
+    // Add public input to memory map
+    let mut index = 1;
     for claim_polynomial in claim_polynomial_keys {
-        let _ = memory_lookups.insert(claim_polynomial.clone(), format!("mload({})", index * 32));
+        let _ = memory_lookups.insert(
+            claim_polynomial.clone(),
+            format!("calldataload({})", index * 32),
+        );
         index += 1;
     }
+
+    // Add periodic column evaluations to memory map
     for &exp in periodic.iter() {
-        let _ = memory_lookups.insert(exp.clone(), format!("mload({})", index * 32));
+        let _ = memory_lookups.insert(exp.clone(), format!("calldataload({})", index * 32));
         index += 1;
     }
-    // Layout the constraints
+
+    // Add constraint coefficients to memory map
     index += num_constraints * 2;
     // Note that the trace values must be the last inputs from the contract to make
     // the memory layout defaults work.
     for &exp in traces.iter() {
-        let _ = memory_lookups.insert(exp.clone(), format!("mload({})", index * 32));
+        let _ = memory_lookups.insert(exp.clone(), format!("calldataload({})", index * 32));
         index += 1;
     }
+
+    // End of input, switch from calldata to memory
     let in_data_size = index;
+    index = 1; // 0 is reserved for the modulus
+
     // Here we need to add an output which writelns denominator storage and batch
     // inversion
 

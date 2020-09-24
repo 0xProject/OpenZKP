@@ -4,13 +4,9 @@ contract OodsPoly \{
     fallback() external \{
         assembly \{
             let res := 0
-            let PRIME := 0x800000000000011000000000000000000000000000000000000000000000001
-            // NOTE - If compilation hits a stack depth error on variable PRIME,
-            // then uncomment the following line and globally replace PRIME
-            // with  `mload({modulus_location})`
-            // mstore({modulus_location}, 0x800000000000011000000000000000000000000000000000000000000000001)
-            // Copy input from calldata to memory.
-            calldatacopy(0x0, 0x0, {input_data_size})
+
+            // Store modulus at 0
+            mstore(0, 0x800000000000011000000000000000000000000000000000000000000000001)
 
             function expmod(base, exponent, modulus) -> result \{
                 let p := {expmod_context}
