@@ -118,6 +118,7 @@ struct WrapperContext {
     number_of_queries:       usize,
     total_input_memory_size: usize,
     trace_layout_len:        usize,
+    log_trace_length:        usize,
     number_of_public_inputs: usize,
     coefficient_offset:      usize,
 
@@ -391,6 +392,7 @@ fn autogen_wrapper_contract(
             + 2 * constraints.expressions().len()
             + trace_layout_len,
         trace_layout_len,
+        log_trace_length: (63 - constraints.trace_nrows().leading_zeros()) as usize,
         coefficient_offset: 1 + claim_polynomials.len() + periodic_polys.len(),
         number_of_public_inputs: claim_polynomials.len(),
         ..WrapperContext::default()
