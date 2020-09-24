@@ -6,20 +6,21 @@ contract OodsPoly \{
             let res := 0
             let PRIME := 0x800000000000011000000000000000000000000000000000000000000000001
             // NOTE - If compilation hits a stack depth error on variable PRIME,
-            // then uncomment the following line and globally replace PRIME with mload(20448)
-            // mstore(20448, 0x800000000000011000000000000000000000000000000000000000000000001)
+            // then uncomment the following line and globally replace PRIME
+            // with  `mload({modulus_location})`
+            // mstore({modulus_location}, 0x800000000000011000000000000000000000000000000000000000000000001)
             // Copy input from calldata to memory.
             calldatacopy(
                 0x0,
                 0x0,
                 /*input_data_size*/
-                17600
+                {input_data_size}
             )
 
             function expmod(base, exponent, modulus) -> result \{
                 let
                     p /*expmod_context*/
-                := 20256
+                := {expmod_context}
                 mstore(p, 0x20) // Length of Base
                 mstore(add(p, 0x20), 0x20) // Length of Exponent
                 mstore(add(p, 0x40), 0x20) // Length of Modulus
@@ -74,11 +75,11 @@ contract OodsPoly \{
                 // denominator_invs will be (1, d_0, d_0 * d_1, ...) and prod will contain the value of
                 // d_0 * ... * d_\{n-1}.
                 // Compute the offset between the partial_products array and the input values array.
-                let products_to_values := 960
+                let products_to_values := {products_to_values}
                 let prod := 1
-                let partial_product_end_ptr := 19296
+                let partial_product_end_ptr := {partial_product_end_ptr}
                 for \{
-                    let partial_product_ptr := 18336
+                    let partial_product_ptr := {partial_product_start_ptr}
                 } lt(partial_product_ptr, partial_product_end_ptr) \{
                     partial_product_ptr := add(partial_product_ptr, 0x20)
                 } \{
@@ -91,7 +92,7 @@ contract OodsPoly \{
                     )
                 }
 
-                let first_partial_product_ptr := 18336
+                let first_partial_product_ptr := {first_partial_product_ptr}
                 // Compute the inverse of the product.
                 let prod_inv := expmod(prod, sub(PRIME, 2), PRIME)
 
@@ -99,7 +100,7 @@ contract OodsPoly \{
                 // Loop over denominator_invs in reverse order.
                 // current_partial_product_ptr is initialized to one past the end.
                 for \{
-                    let current_partial_product_ptr := 19296
+                    let current_partial_product_ptr := {last_partial_product_ptr}
                 } gt(current_partial_product_ptr, first_partial_product_ptr) \{
 
                 } \{

@@ -43,12 +43,26 @@ struct Constraint {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Default, Serialize)]
-struct Context {
-    modulus:            String,
-    x:                  String,
-    degree_adjustments: Vec<DegreeAdjustment>,
-    batch_inverted:     Vec<BatchInvert>,
-    constraints:        Vec<Constraint>,
+struct OodsPolyContext {
+    modulus:               String,
+    x:                     String,
+    degree_adjustments:    Vec<DegreeAdjustment>,
+    batch_inverted:        Vec<BatchInvert>,
+    constraints:           Vec<Constraint>,
+    periodic_name:         String,
+    periodic_coefficients: Vec<String>,
+
+    // Locations
+    modulus_location: usize,
+    input_data_size:  usize,
+    expmod_context:   usize,
+
+    // Batch inverse parameters
+    products_to_values:        usize,
+    partial_product_end_ptr:   usize,
+    partial_product_start_ptr: usize,
+    first_partial_product_ptr: usize,
+    last_partial_product_ptr:  usize,
 }
 
 impl RationalExpression {
@@ -950,7 +964,7 @@ fn setup_call_memory(
     tt.add_template("periodic", PERIODIC_TEMPLATE).unwrap();
     tt.add_template("trace", TRACE_TEMPLATE).unwrap();
 
-    let mut context = Context::default();
+    let mut context = OodsPolyContext::default();
     context.modulus = "PRIME".to_owned();
     context.x = "mload(0x0)".to_owned();
 
@@ -1018,6 +1032,11 @@ fn setup_call_memory(
         (index + inverses.len()) * 32
     )?;
 
+    // Various offsets that appear in the header
+    context.modulus_location = (index + inverses.len() + 6) * 32;
+    context.input_data_size = in_data_size * 32;
+    context.expmod_context = (index + inverses.len()) * 32;
+
     writeln!(file, "        // Store adjustment degrees")?;
     writeln!(file, "{}", held)?;
     writeln!(
@@ -1061,23 +1080,31 @@ fn setup_call_memory(
         (inverse_start_index + inverses.len()) * 32
     )?;
 
-    ///////////////////
+    // Set batch inverse parameters in context
+    context.products_to_values = inverses.len() * 32;
+    context.partial_product_end_ptr = (inverse_start_index + inverses.len()) * 32;
+    context.partial_product_start_ptr = (inverse_start_index) * 32;
+    context.first_partial_product_ptr = inverse_start_index * 32;
+    context.last_partial_product_ptr = (inverse_start_index + inverses.len()) * 32;
+
+    // Add constraints to context
     for (exp, &degree) in constraint_expressions.iter().zip(adjustment_degrees.iter()) {
+        let degree_adjustment_location = memory_lookups
+            .get(&RationalExpression::Exp(
+                RationalExpression::X.into(),
+                degree,
+            ))
+            .unwrap()
+            .to_owned();
         context.constraints.push(Constraint {
-            first_coefficient_location:  coefficient_index * 32,
+            first_coefficient_location: coefficient_index * 32,
             second_coefficient_location: (coefficient_index + 1) * 32,
-            degree_adjustment_location:  memory_lookups
-                .get(&RationalExpression::Exp(
-                    RationalExpression::X.into(),
-                    degree,
-                ))
-                .unwrap()
-                .to_owned(),
-            expression:                  exp.soldity_encode(&memory_lookups),
+            degree_adjustment_location,
+            expression: exp.soldity_encode(&memory_lookups),
         });
     }
-    ///////////////////
 
+    // Render OodsPoly template
     let rendered = tt.render("oods_poly", &context).unwrap();
     write!(file, "{}", &rendered)?;
 
