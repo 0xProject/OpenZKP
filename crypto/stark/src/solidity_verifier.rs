@@ -295,8 +295,8 @@ pub fn generate(
         output_directory,
         system_name,
     );
-    let mut coefficient_index = 1 + claim_polynomial_keys.len() + periodic_keys.len();
-    let memory_map = setup_call_memory(
+    let coefficient_index = 1 + claim_polynomial_keys.len() + periodic_keys.len();
+    let _memory_map = setup_call_memory(
         &mut file,
         constraint_expressions.len(),
         &claim_polynomial_keys,
@@ -308,33 +308,6 @@ pub fn generate(
         constraint_expressions,
     )?;
 
-    for (exp, &degree) in constraint_expressions.iter().zip(adjustment_degrees.iter()) {
-        writeln!(&mut file, "      {{")?;
-        writeln!(
-            &mut file,
-            "        let val := {}",
-            exp.soldity_encode(&memory_map)
-        )?;
-        writeln!(
-            &mut file,
-            "        res := addmod(res, mulmod(val, add(mload({}), mulmod(mload({}), {}, PRIME)), \
-             PRIME),PRIME)",
-            coefficient_index * 32,
-            (coefficient_index + 1) * 32,
-            memory_map
-                .get(&RationalExpression::Exp(
-                    RationalExpression::X.into(),
-                    degree
-                ))
-                .unwrap()
-        )?;
-        writeln!(&mut file, "      }}")?;
-        coefficient_index += 2;
-    }
-    writeln!(
-        &mut file,
-        "      mstore(0, res)\n      return(0, 0x20)\n  }}\n  }}\n}}"
-    )?;
     Ok(())
 }
 
@@ -852,100 +825,6 @@ fn binary_row_search_string(rows: &[usize]) -> String {
     ifs.join("\n else ")
 }
 
-// We declare these macros so that the code isn't inlined in the function
-macro_rules! constraint_poly_start {
-    () => {
-        "
-pragma solidity ^0.6.6;
-
-contract OodsPoly {{
-    fallback() external {{
-          assembly {{
-            let res := 0
-            let PRIME := 0x800000000000011000000000000000000000000000000000000000000000001
-            // NOTE - If compilation hits a stack depth error on variable PRIME,
-            // then uncomment the following line and globally replace PRIME with mload({})
-            // mstore({}, 0x800000000000011000000000000000000000000000000000000000000000001)
-            // Copy input from calldata to memory.
-            calldatacopy(0x0, 0x0, /*input_data_size*/ {})
-
-            function expmod(base, exponent, modulus) -> result {{
-                let p := /*expmod_context*/ {}
-                mstore(p, 0x20)                 // Length of Base
-                mstore(add(p, 0x20), 0x20)      // Length of Exponent
-                mstore(add(p, 0x40), 0x20)      // Length of Modulus
-                mstore(add(p, 0x60), base)      // Base
-                mstore(add(p, 0x80), exponent)  // Exponent
-                mstore(add(p, 0xa0), modulus)   // Modulus
-                // call modexp precompile
-                if iszero(call(not(0), 0x05, 0, p, 0xc0, p, 0x20)) {{
-                    revert(0, 0)
-                }}
-                result := mload(p)
-            }}
-
-            function degree_adjustment(composition_polynomial_degree_bound, constraint_degree, \
-     numerator_degree,
-                denominator_degree) -> result {{
-                    result := sub(sub(composition_polynomial_degree_bound, 1),
-                       sub(add(constraint_degree, numerator_degree), denominator_degree))
-                    }}
-
-            function small_expmod(x, num, prime) -> result {{
-                result := 1
-                for {{ let ind := 0 }} lt(ind, num) {{ ind := add(ind, 1) }} {{
-                    result := mulmod(result, x, prime)
-                }}
-            }}
-"
-    };
-}
-macro_rules! constraint_poly_batch_inv {
-    () => {
-        "{{
-        // Compute the inverses of the denominators into denominator_invs using batch inverse.
-
-        // Start by computing the cumulative product.
-        // Let (d_0, d_1, d_2, ..., d_{{n-1}}) be the values in denominators. Then after this \
-     loop
-        // denominator_invs will be (1, d_0, d_0 * d_1, ...) and prod will contain the value of
-        // d_0 * ... * d_{{n-1}}.
-        // Compute the offset between the partial_products array and the input values array.
-        let products_to_values := {}
-        let prod := 1
-        let partial_product_end_ptr := {}
-        for {{ let partial_product_ptr := {} }}
-            lt(partial_product_ptr, partial_product_end_ptr)
-            {{ partial_product_ptr := add(partial_product_ptr, 0x20) }} {{
-            mstore(partial_product_ptr, prod)
-            // prod *= d_{{i}}.
-            prod := mulmod(prod,
-                           mload(add(partial_product_ptr, products_to_values)),
-                           PRIME)
-        }}
-
-        let first_partial_product_ptr := {}
-        // Compute the inverse of the product.
-        let prod_inv := expmod(prod, sub(PRIME, 2), PRIME)
-
-        // Compute the inverses.
-        // Loop over denominator_invs in reverse order.
-        // current_partial_product_ptr is initialized to one past the end.
-        for {{ let current_partial_product_ptr := {}
-            }} gt(current_partial_product_ptr, first_partial_product_ptr) {{ }} {{
-            current_partial_product_ptr := sub(current_partial_product_ptr, 0x20)
-            // Store 1/d_{{i}} = (d_0 * ... * d_{{i-1}}) * 1/(d_0 * ... * d_{{i}}).
-            mstore(current_partial_product_ptr,
-                   mulmod(mload(current_partial_product_ptr), prod_inv, PRIME))
-            // Update prod_inv to be 1/(d_0 * ... * d_{{i-1}}) by multiplying by d_i.
-            prod_inv := mulmod(prod_inv,
-                               mload(add(current_partial_product_ptr, products_to_values)),
-                               PRIME)
-        }}
-      }}"
-    };
-}
-
 fn setup_call_memory(
     file: &mut File,
     num_constraints: usize,
@@ -990,7 +869,6 @@ fn setup_call_memory(
     // Here we need to add an output which writelns denominator storage and batch
     // inversion
 
-    let mut held = "".to_owned();
     // We put the degree adjustment calculation into the memory map: Note this means
     // that if the exp used is used in non adjustment places in the constraints
     // those will now load this [in some cases]
@@ -1000,14 +878,6 @@ fn setup_call_memory(
         #[allow(clippy::map_entry)]
         let flag = !memory_lookups.contains_key(&implied_expression);
         if flag {
-            held.extend(
-                format!(
-                    "        mstore({},expmod(mload(0x0), {}, PRIME))\n",
-                    index * 32,
-                    degree
-                )
-                .chars(),
-            );
             context.degree_adjustments.push(DegreeAdjustment {
                 location: index * 32,
                 exponent: degree,
@@ -1020,38 +890,14 @@ fn setup_call_memory(
     let inverse_start_index = index;
     index += inverses.len();
 
-    // The macro invocation appears to trigger this clippy warning, but the
-    // underlying string doesn't.
-    #[allow(clippy::non_ascii_literal)]
-    writeln!(
-        file,
-        constraint_poly_start!(),
-        (index + inverses.len() + 6) * 32,
-        (index + inverses.len() + 6) * 32,
-        in_data_size * 32,
-        (index + inverses.len()) * 32
-    )?;
-
     // Various offsets that appear in the header
     context.modulus_location = (index + inverses.len() + 6) * 32;
     context.input_data_size = in_data_size * 32;
     context.expmod_context = (index + inverses.len()) * 32;
 
-    writeln!(file, "        // Store adjustment degrees")?;
-    writeln!(file, "{}", held)?;
-    writeln!(
-        file,
-        "        // Store the values which will be batch inverted"
-    )?;
     let mut inverse_position = inverse_start_index;
     for &exp in inverses.iter() {
         if let RationalExpression::Inv(a) = exp {
-            writeln!(
-                file,
-                "        mstore({}, {})",
-                index * 32,
-                a.soldity_encode(&memory_lookups)
-            )?;
             context.batch_inverted.push(BatchInvert {
                 location:   index * 32,
                 expression: a.soldity_encode(&memory_lookups),
@@ -1066,19 +912,6 @@ fn setup_call_memory(
         inverse_position += 1;
         index += 1;
     }
-
-    // The macro invocation appears to trigger this clippy warning, but the
-    // underlying string doesn't.
-    #[allow(clippy::non_ascii_literal)]
-    writeln!(
-        file,
-        constraint_poly_batch_inv!(),
-        inverses.len() * 32,
-        (inverse_start_index + inverses.len()) * 32,
-        (inverse_start_index) * 32,
-        inverse_start_index * 32,
-        (inverse_start_index + inverses.len()) * 32
-    )?;
 
     // Set batch inverse parameters in context
     context.products_to_values = inverses.len() * 32;
