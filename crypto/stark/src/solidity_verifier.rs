@@ -96,10 +96,8 @@ struct TraceContext {
     num_cols:           usize,
     blowup:             usize,
     column_layout_size: usize,
-
-    row_offsets:   Vec<RowOffset>,
-    column_layout: Vec<usize>,
-    row_layout:    Vec<usize>,
+    column_layout:      Vec<usize>,
+    row_layout:         Vec<usize>,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Default, Serialize)]
@@ -118,6 +116,7 @@ struct WrapperContext {
     number_of_queries:       usize,
     total_input_memory_size: usize,
     trace_layout_len:        usize,
+    log_trace_length:        usize,
     number_of_public_inputs: usize,
     coefficient_offset:      usize,
 
@@ -391,7 +390,7 @@ fn autogen_wrapper_contract(
     let mut context = WrapperContext {
         name: system_name.to_owned(),
         number_of_constraints: constraints.expressions().len(),
-        log_blowup: (64 - constraints.blowup.leading_zeros()) as usize,
+        log_blowup: (63 - constraints.blowup.leading_zeros()) as usize,
         pow_bits: constraints.pow_bits,
         number_of_queries: constraints.num_queries,
         total_input_memory_size: 1
@@ -400,6 +399,7 @@ fn autogen_wrapper_contract(
             + 2 * constraints.expressions().len()
             + trace_layout_len,
         trace_layout_len,
+        log_trace_length: (63 - constraints.trace_nrows().leading_zeros()) as usize,
         coefficient_offset: 1 + claim_polynomials.len() + periodic_polys.len(),
         number_of_public_inputs: claim_polynomials.len(),
         ..WrapperContext::default()
@@ -613,16 +613,6 @@ fn autogen_trace_layout(
     // Then we remove duplicate items
     rows.dedup();
     context.num_rows = rows.len();
-
-    // Mapping for the row_to_offset function
-    let identity_map = rows.iter().enumerate().all(|(index, item)| index == *item);
-    if !identity_map {
-        context.row_offsets = rows
-            .iter()
-            .enumerate()
-            .map(|(index, &row)| RowOffset { index, row })
-            .collect();
-    }
 
     // This defines the trace layout function in solidity
     // This adds code which writes the 32*row and thirty two times

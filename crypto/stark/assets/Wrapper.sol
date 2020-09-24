@@ -75,7 +75,7 @@ contract {name} is {name}Trace \{
         });
         // The trace length is going to be the next power of two after index.
         // FIX ME - This need a trace length set, based on public input
-        uint8 log_trace_length = 0;
+        uint8 log_trace_length = {log_trace_length};
         uint8[] memory fri_layout = default_fri_layout(log_trace_length);
 
         ProofTypes.ProofParameters memory params = ProofTypes.ProofParameters(\{
