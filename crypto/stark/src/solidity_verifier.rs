@@ -13,6 +13,7 @@ use std::{
     path::Path,
     prelude::v1::*,
 };
+use thiserror::Error;
 use tinytemplate::TinyTemplate;
 use zkp_macros_decl::field_element;
 use zkp_primefield::FieldElement;
@@ -21,6 +22,15 @@ use zkp_u256::U256;
 const OODS_POLY_TEMPLATE: &str = include_str!("../assets/OodsPoly.sol");
 const PERIODIC_TEMPLATE: &str = include_str!("../assets/Periodic.sol");
 const TRACE_TEMPLATE: &str = include_str!("../assets/Trace.sol");
+
+#[derive(Debug, Error)]
+#[allow(variant_size_differences)]
+pub enum GenerateError {
+    #[error("Error writing contract")]
+    IoError(#[from] std::io::Error),
+    #[error("Error rendering template")]
+    TemplateError(#[from] tinytemplate::error::Error),
+}
 
 #[derive(Clone, PartialEq, Eq, Debug, Default, Serialize)]
 struct DegreeAdjustment {
@@ -227,7 +237,7 @@ pub fn generate(
     constraints: &Constraints,
     output_directory: &str,
     system_name: &str,
-) -> Result<(), std::io::Error> {
+) -> Result<(), GenerateError> {
     let blowup = constraints.blowup;
     let n_cols = constraints.trace_ncolumns();
     let trace_len = constraints.trace_nrows();
@@ -829,13 +839,11 @@ fn write_oods_poly(
     periodic: &[&RationalExpression],
     adjustment_degrees: &[usize],
     constraint_expressions: &[RationalExpression],
-) -> Result<(), std::io::Error> {
-    // TODO: Error handling on templates
-
+) -> Result<(), GenerateError> {
     let mut tt = TinyTemplate::new();
-    tt.add_template("oods_poly", OODS_POLY_TEMPLATE).unwrap();
-    tt.add_template("periodic", PERIODIC_TEMPLATE).unwrap();
-    tt.add_template("trace", TRACE_TEMPLATE).unwrap();
+    tt.add_template("oods_poly", OODS_POLY_TEMPLATE)?;
+    tt.add_template("periodic", PERIODIC_TEMPLATE)?;
+    tt.add_template("trace", TRACE_TEMPLATE)?;
 
     let mut context = OodsPolyContext::default();
     context.modulus = "PRIME".to_owned();
@@ -934,7 +942,7 @@ fn write_oods_poly(
     }
 
     // Render OodsPoly template
-    let rendered = tt.render("oods_poly", &context).unwrap();
+    let rendered = tt.render("oods_poly", &context)?;
     write!(file, "{}", &rendered)?;
 
     Ok(())
