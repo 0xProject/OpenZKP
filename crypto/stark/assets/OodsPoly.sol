@@ -10,17 +10,10 @@ contract OodsPoly \{
             // with  `mload({modulus_location})`
             // mstore({modulus_location}, 0x800000000000011000000000000000000000000000000000000000000000001)
             // Copy input from calldata to memory.
-            calldatacopy(
-                0x0,
-                0x0,
-                /*input_data_size*/
-                {input_data_size}
-            )
+            calldatacopy(0x0, 0x0, {input_data_size})
 
             function expmod(base, exponent, modulus) -> result \{
-                let
-                    p /*expmod_context*/
-                := {expmod_context}
+                let p := {expmod_context}
                 mstore(p, 0x20) // Length of Base
                 mstore(add(p, 0x20), 0x20) // Length of Exponent
                 mstore(add(p, 0x40), 0x20) // Length of Modulus
@@ -78,23 +71,17 @@ contract OodsPoly \{
                 let products_to_values := {products_to_values}
                 let prod := 1
                 let partial_product_end_ptr := {partial_product_end_ptr}
-                for \{
-                    let partial_product_ptr := {partial_product_start_ptr}
-                } lt(partial_product_ptr, partial_product_end_ptr) \{
-                    partial_product_ptr := add(partial_product_ptr, 0x20)
-                } \{
+                for \{ let partial_product_ptr := {partial_product_start_ptr} }
+                    lt(partial_product_ptr, partial_product_end_ptr)
+                    \{ partial_product_ptr := add(partial_product_ptr, 0x20) } \{
                     mstore(partial_product_ptr, prod)
                     // prod *= d_i.
-                    prod := mulmod(
-                        prod,
-                        mload(add(partial_product_ptr, products_to_values)),
-                        PRIME
-                    )
+                    prod := mulmod(prod, mload(add(partial_product_ptr, products_to_values)), {modulus})
                 }
 
                 let first_partial_product_ptr := {first_partial_product_ptr}
                 // Compute the inverse of the product.
-                let prod_inv := expmod(prod, sub(PRIME, 2), PRIME)
+                let prod_inv := expmod(prod, sub({modulus}, 2), {modulus})
 
                 // Compute the inverses.
                 // Loop over denominator_invs in reverse order.
@@ -114,7 +101,7 @@ contract OodsPoly \{
                         mulmod(
                             mload(current_partial_product_ptr),
                             prod_inv,
-                            PRIME
+                            {modulus}
                         )
                     )
                     // Update prod_inv to be 1/(d_0 * ... * d_\{i-1}) by multiplying by d_i.
@@ -123,7 +110,7 @@ contract OodsPoly \{
                         mload(
                             add(current_partial_product_ptr, products_to_values)
                         ),
-                        PRIME
+                        {modulus}
                     )
                 }
             }
@@ -132,9 +119,9 @@ contract OodsPoly \{
             {{ for c in constraints -}}
             \{
                 let val := {c.expression}
-                res := addmod(res, mulmod(val, add(mload({c.first_coefficient_location}), mulmod(mload({c.second_coefficient_location}, {c.degree_adjustment_location}, {modulus})), {modulus}), {modulus})
+                res := addmod(res, mulmod(val, add(mload({c.first_coefficient_location}), mulmod(mload({c.second_coefficient_location}), {c.degree_adjustment_location}, {modulus})), {modulus}), {modulus})
             }
-            {{ endfor }}
+            {{ endfor -}}
 
             // Return result
             mstore(0, res)
