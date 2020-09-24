@@ -22,6 +22,7 @@ use zkp_u256::U256;
 const OODS_POLY_TEMPLATE: &str = include_str!("../assets/OodsPoly.sol");
 const PERIODIC_TEMPLATE: &str = include_str!("../assets/Periodic.sol");
 const TRACE_TEMPLATE: &str = include_str!("../assets/Trace.sol");
+const WRAPPER_TEMPLATE: &str = include_str!("../assets/Wrapper.sol");
 
 #[derive(Debug, Error)]
 #[allow(variant_size_differences)]
@@ -101,6 +102,31 @@ struct TraceContext {
     row_offsets:   Vec<RowOffset>,
     column_layout: Vec<usize>,
     row_layout:    Vec<usize>,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug, Default, Serialize)]
+struct PeriodicColumnEvaluation {
+    name:     String,
+    index:    usize,
+    exponent: usize,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug, Default, Serialize)]
+struct WrapperContext {
+    name:                    String,
+    number_of_constraints:   usize,
+    log_blowup:              usize,
+    pow_bits:                usize,
+    number_of_queries:       usize,
+    total_input_memory_size: usize,
+    trace_layout_len:        usize,
+    number_of_public_inputs: usize,
+
+    // Call input values
+    public_input_names:          Vec<String>,
+    periodic_column_evaluations: Vec<PeriodicColumnEvaluation>,
+
+    constraint_input_size: usize,
 }
 
 impl RationalExpression {
@@ -508,6 +534,22 @@ fn autogen_wrapper_contract(
 ) -> Result<(), GenerateError> {
     use RationalExpression::*;
 
+    let mut context = WrapperContext {
+        name: system_name.to_owned(),
+        number_of_constraints: constraints.expressions().len(),
+        log_blowup: (64 - constraints.blowup.leading_zeros()) as usize,
+        pow_bits: constraints.pow_bits,
+        number_of_queries: constraints.num_queries,
+        total_input_memory_size: 1
+            + claim_polynomials.len()
+            + periodic_polys.len()
+            + 2 * constraints.expressions().len()
+            + trace_layout_len,
+        trace_layout_len,
+        number_of_public_inputs: claim_polynomials.len(),
+        ..WrapperContext::default()
+    };
+
     let name = format!("{}/{}.sol", output_directory, system_name);
     let path = Path::new(&name);
     let display = path.display();
@@ -566,6 +608,13 @@ fn autogen_wrapper_contract(
             _ => panic!("Rational expression should be a claim polynomial"),
         }
     }
+    for public_input in claim_polynomials.iter() {
+        context.public_input_names.push(match public_input {
+            ClaimPolynomial(_, _, _, Some(name)) => name.to_string(),
+            ClaimPolynomial(_, _, _, None) => String::default(),
+            _ => Err(GenerateError::InvalidExpression)?,
+        })
+    }
 
     // In the periodic_exp we contain every different rational expression polynomial
     // That includes some with the same coefficients but different internal rational
@@ -588,7 +637,7 @@ fn autogen_wrapper_contract(
                     seen_polys += 1;
                 }
             }
-            _ => panic!("Incorrect rational expression in periodic_polys"),
+            _ => Err(GenerateError::InvalidExpression)?,
         }
     }
 
@@ -604,11 +653,22 @@ fn autogen_wrapper_contract(
                     named_periodic_cols.get(coefficients).unwrap(),
                     extract_power(internal_exp)
                 )?;
+                context
+                    .periodic_column_evaluations
+                    .push(PeriodicColumnEvaluation {
+                        index,
+                        name: format!(
+                            "periodic_col{}",
+                            named_periodic_cols.get(coefficients).unwrap()
+                        ),
+                        exponent: extract_power(internal_exp),
+                    });
                 index += 1;
             }
-            _ => panic!("Incorrect rational expression in periodic_polys"),
+            _ => Err(GenerateError::InvalidExpression)?,
         }
     }
+    context.constraint_input_size = 32 * (index + 2 * num_constraints + trace_layout_len);
 
     // The macro invocation appears to trigger this clippy warning, but the
     // underlying string doesn't.
@@ -625,6 +685,12 @@ fn autogen_wrapper_contract(
         trace_layout_len,
         32 * (index + 2 * num_constraints + trace_layout_len)
     )?;
+
+    // Render template
+    let mut tt = TinyTemplate::new();
+    tt.add_template("wrapper", WRAPPER_TEMPLATE)?;
+    write!(file, "{}", tt.render("wrapper", &context)?)?;
+
     Ok(())
 }
 
