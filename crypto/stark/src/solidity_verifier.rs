@@ -165,19 +165,19 @@ impl RationalExpression {
                                 Exp(a.clone(), e + f).soldity_encode(memory_layout)
                             }
                             (_, 0) => "0x01".to_owned(),
-                            (_, 1) => a.soldity_encode(memory_layout),
-                            (_, 2) => format!("exp2({})", a.soldity_encode(memory_layout)),
-                            (_, 3) => format!("exp3({})", a.soldity_encode(memory_layout)),
-                            (_, 4) => format!("exp4({})", a.soldity_encode(memory_layout)),
+                            (a, 1) => a.soldity_encode(memory_layout),
+                            (a, 2) => format!("exp2({})", a.soldity_encode(memory_layout)),
+                            (a, 3) => format!("exp3({})", a.soldity_encode(memory_layout)),
+                            (a, 4) => format!("exp4({})", a.soldity_encode(memory_layout)),
                             // TODO: Test where the tipping point is
-                            (_, e) if *e < 16 => {
+                            (a, e) if *e < 16 => {
                                 format!(
                                     "small_expmod({}, {})",
                                     a.soldity_encode(memory_layout),
                                     e.to_string()
                                 )
                             }
-                            _ => {
+                            (a, e) => {
                                 format!(
                                     "mid_expmod({}, {})",
                                     a.soldity_encode(memory_layout),
