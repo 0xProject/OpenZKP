@@ -161,25 +161,28 @@ impl RationalExpression {
                         )
                     }
                     Exp(a, e) => {
-                        match e {
-                            0 => "0x01".to_owned(),
-                            1 => a.soldity_encode(memory_layout),
+                        match (a.as_ref(), e) {
+                            (Exp(a, f), e) => {
+                                // Recursively collapse nested Exps
+                                Exp(a.clone(), e + f).soldity_encode(memory_layout)
+                            }
+                            (_, 0) => "0x01".to_owned(),
+                            (_, 1) => a.soldity_encode(memory_layout),
+                            // TODO - Check the gas to see what the real breaking point
+                            // should be
+                            (_, e) if *e < 10 => {
+                                format!(
+                                    "small_expmod({}, {})",
+                                    a.soldity_encode(memory_layout),
+                                    e.to_string()
+                                )
+                            }
                             _ => {
-                                // TODO - Check the gas to see what the real breaking point should
-                                // be
-                                if *e < 10 {
-                                    format!(
-                                        "small_expmod({}, {})",
-                                        a.soldity_encode(memory_layout),
-                                        e.to_string()
-                                    )
-                                } else {
-                                    format!(
-                                        "expmod({}, {})",
-                                        a.soldity_encode(memory_layout),
-                                        e.to_string()
-                                    )
-                                }
+                                format!(
+                                    "expmod({}, {})",
+                                    a.soldity_encode(memory_layout),
+                                    e.to_string()
+                                )
                             }
                         }
                     }
