@@ -677,10 +677,10 @@ fn write_oods_poly(
     let mut memory_lookups: BTreeMap<RationalExpression, String> = BTreeMap::new();
 
     // Add X to memory map
-    let _ = memory_lookups.insert(RationalExpression::X, format!("calldataload(callvalue())"));
+    let mut index = 1;
+    let _ = memory_lookups.insert(RationalExpression::X, context.x.clone());
 
     // Add public input to memory map
-    let mut index = 1;
     for claim_polynomial in claim_polynomial_keys {
         let _ = memory_lookups.insert(
             claim_polynomial.clone(),
