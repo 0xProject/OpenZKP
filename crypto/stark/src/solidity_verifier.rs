@@ -410,9 +410,9 @@ fn autogen_wrapper_contract(
     // The initial index is one because of the oods point
     for public_input in claim_polynomials.iter() {
         context.public_input_names.push(match public_input {
-            ClaimPolynomial(_, _, _, Some(name)) => name.to_string(),
+            ClaimPolynomial(_, _, _, Some(name)) => (*name).to_string(),
             ClaimPolynomial(_, _, _, None) => String::default(),
-            _ => Err(GenerateError::InvalidExpression)?,
+            _ => return Err(GenerateError::InvalidExpression),
         })
     }
 
@@ -437,7 +437,7 @@ fn autogen_wrapper_contract(
                     seen_polys += 1;
                 }
             }
-            _ => Err(GenerateError::InvalidExpression)?,
+            _ => return Err(GenerateError::InvalidExpression),
         }
     }
 
@@ -459,7 +459,7 @@ fn autogen_wrapper_contract(
                     });
                 index += 1;
             }
-            _ => Err(GenerateError::InvalidExpression)?,
+            _ => return Err(GenerateError::InvalidExpression),
         }
     }
     context.constraint_input_size = 32 * (index + 2 * num_constraints + trace_layout_len);
@@ -505,7 +505,7 @@ fn autogen_periodic(
 
     let poly = match periodic {
         RationalExpression::Polynomial(poly, _) => poly,
-        _ => Err(GenerateError::InvalidExpression)?,
+        _ => return Err(GenerateError::InvalidExpression),
     };
 
     let mut context = PeriodicContext::default();
@@ -627,7 +627,7 @@ fn autogen_trace_layout(
     for k in (0..2 * trace_keys.len()).step_by(2) {
         let (i, j) = match trace_keys[k / 2] {
             RationalExpression::Trace(i, j) => (i, j),
-            _ => Err(GenerateError::InvalidExpression)?,
+            _ => return Err(GenerateError::InvalidExpression),
         };
         let row_location = i * 32;
         let index_location = 32
@@ -645,6 +645,8 @@ fn autogen_trace_layout(
     Ok(tt.render("trace", &context)?)
 }
 
+// TODO: Simplify
+#[allow(clippy::too_many_arguments)]
 fn write_oods_poly(
     file: &mut File,
     num_constraints: usize,
