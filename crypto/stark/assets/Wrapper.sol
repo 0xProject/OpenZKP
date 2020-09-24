@@ -48,12 +48,10 @@ contract {name} is {name}Trace \{
             params.log_trace_length);
         // FIX ME - You may need to customize this decoding
         PublicInput memory input = abi.decode(proof.public_inputs, (PublicInput));
-        uint256[] memory result = get_polynomial_points(data, oods_coeffiencts, queries, \
-     oods_point);
+        uint256[] memory result = get_polynomial_points(data, oods_coeffiencts, queries, oods_point);
 
         // Fix Me - This may need several internal functions
-        uint256 evaluated_point = evaluate_oods_point(oods_point, constraint_coeffiencts, \
-     data.eval, input, data);
+        uint256 evaluated_point = evaluate_oods_point(oods_point, constraint_coeffiencts, data.eval, input, data);
 
         return (result, evaluated_point);
     }
@@ -71,7 +69,7 @@ contract {name} is {name}Trace \{
         PublicInput memory input = abi.decode(public_input, (PublicInput));
         PublicCoin.Coin memory coin = PublicCoin.Coin(\{
             // FIX ME - Please add a public input hash here
-            digest: // I'm just a robot I don't know what goes here ¯\\_(ツ)_/¯.
+            digest: // I'm just a robot I don't know what goes here ¯\_(ツ)_/¯.
             ,
             counter: 0
         });
@@ -100,7 +98,7 @@ contract {name} is {name}Trace \{
         PrimeField.EvalX memory eval,
         PublicInput memory public_input,
         ProofData memory data
-    ) internal returns (uint256)\{
+    ) internal returns (uint256) \{
         uint256[] memory call_context = new uint256[]({total_input_memory_size});
         uint256 non_mont_oods = oods_point.fmul_mont(1);
         call_context[0] = non_mont_oods;
@@ -117,7 +115,7 @@ contract {name} is {name}Trace \{
         call_context[{pc.index}] = {pc.name}.evaluate(non_mont_oods.fpow({pc.exponent}));
         {{ endfor }}
 
-        uint256 current_index = {number_of_public_inputs};
+        uint256 current_index = {coefficient_offset};
         // This array contains 2 * {number_of_constraints} elements, 2 for each constraint
         for (uint256 i = 0; i < constraint_coeffiencts.length; i ++) \{
             call_context[current_index] = constraint_coeffiencts[i];
@@ -138,10 +136,10 @@ contract {name} is {name}Trace \{
         OddsPoly local_contract_address = constraint_poly;
             assembly \{
                 let p := mload(0x40)
-                // Note size is {constraint_input_size} because we have {number_of_public_inputs} public inputs,
+                // Note size is {constraint_input_size} because we have {number_of_public_inputs} public inputs, ?? periodic evaluations,
                 // 2 * {number_of_constraints} constraint coefficients and {trace_layout_len} trace decommitments,
                 // each 32 bytes.
-                if iszero(call(not(0), local_contract_address, 0, add(call_context, 0x20), {constraint_input_size}, p,     0x20)) \{
+                if iszero(call(not(0), local_contract_address, 0, add(call_context, 0x20), {constraint_input_size}, p, 0x20)) \{
                 revert(0, 0)
                 }
                 result := mload(p)

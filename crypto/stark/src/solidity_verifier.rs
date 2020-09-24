@@ -121,6 +121,7 @@ struct WrapperContext {
     total_input_memory_size: usize,
     trace_layout_len:        usize,
     number_of_public_inputs: usize,
+    coefficient_offset:      usize,
 
     // Call input values
     public_input_names:          Vec<String>,
@@ -370,160 +371,6 @@ pub fn generate(
     Ok(())
 }
 
-// We declare these macros so that the code isn't inlined in the function
-macro_rules! wrapper_contract_start {
-    () => {
-        "
-pragma solidity ^0.6.4;
-pragma experimental ABIEncoderV2;
-
-import '../interfaces/ConstraintInterface.sol';
-import '../public_coin.sol';
-import '../proof_types.sol';
-import '../utils.sol';
-import '../primefield.sol';
-import '../iterator.sol';
-import '../default_cs.sol';
-import './{}Trace.sol';
-import './{}ContraintPoly.sol';
-
-
-contract {} is {}Trace {{
-    using Iterators for Iterators.IteratorUint;
-    using PrimeField for uint256;
-    using PrimeField for PrimeField.EvalX;
-    using Utils for *;
-
-    OddsPoly immutable constraint_poly;
-    // FIX ME - Add polynomials immutable variables
-
-    // FIX ME - The constructor should also be setting any
-    // periodic colum contracts to immutables
-    constructor(OddsPoly constraint) public {{
-        constraint_poly = constraint;
-    }}
-
-    struct PublicInput {{
-        // Please add the public input fields to this struct
-    }}
-
-    // prettier-ignore
-    function constraint_calculations(
-        ProofTypes.StarkProof calldata proof,
-        ProofTypes.ProofParameters calldata params,
-        uint64[] calldata queries,
-        uint256 oods_point,
-        uint256[] calldata constraint_coeffiencts,
-        uint256[] calldata oods_coeffiencts
-    ) external override returns (uint256[] memory, uint256) {{
-        ProofData memory data = ProofData(
-            proof.trace_values,
-            PrimeField.init_eval(params.log_trace_length + 4),
-            proof.constraint_values, proof.trace_oods_values,
-            proof.constraint_oods_values,
-            params.log_trace_length);
-        // FIX ME - You may need to customize this decoding
-        PublicInput memory input = abi.decode(proof.public_inputs, (PublicInput));
-        uint256[] memory result = get_polynomial_points(data, oods_coeffiencts, queries, \
-     oods_point);
-
-        // Fix Me - This may need several internal functions
-        uint256 evaluated_point = evaluate_oods_point(oods_point, constraint_coeffiencts, \
-     data.eval, input, data);
-
-        return (result, evaluated_point);
-    }}
-
-    // TODO - The solidity prettier wants to delete all 'override' statements
-    // We should remove this ignore statement when that changes.
-    // prettier-ignore
-    function initalize_system(bytes calldata public_input)
-        external
-        view
-        override
-        returns (ProofTypes.ProofParameters memory, PublicCoin.Coin memory)
-    {{
-        // FIX ME - You may need to customize this decoding
-        PublicInput memory input = abi.decode(public_input, (PublicInput));
-        PublicCoin.Coin memory coin = PublicCoin.Coin({{
-            // FIX ME - Please add a public input hash here
-            digest: // I'm just a robot I don't know what goes here ¯\\_(ツ)_/¯.
-            ,
-            counter: 0
-        }});
-        // The trace length is going to be the next power of two after index.
-        // FIX ME - This need a trace length set, based on public input
-        uint8 log_trace_length = 0;
-        uint8[] memory fri_layout = default_fri_layout(log_trace_length);
-
-        ProofTypes.ProofParameters memory params = ProofTypes.ProofParameters({{
-            number_of_columns: NUM_COLUMNS,
-            log_trace_length: log_trace_length,
-            number_of_constraints: {},
-            log_blowup: {},
-            constraint_degree: CONSTRAINT_DEGREE,
-            pow_bits: {},
-            number_of_queries: {},
-            fri_layout: fri_layout
-        }});
-
-        return (params, coin);
-    }}
-
-    function evaluate_oods_point(
-        uint256 oods_point,
-        uint256[] memory constraint_coeffiencts,
-        PrimeField.EvalX memory eval,
-        PublicInput memory public_input,
-        ProofData memory data
-    ) internal returns (uint256) {{
-        uint256[] memory call_context = new uint256[]({});
-        uint256 non_mont_oods = oods_point.fmul_mont(1);
-        call_context[0] = non_mont_oods;
-"
-    };
-}
-
-macro_rules! wrapper_contract_end {
-    () => {
-        "
-    uint256 current_index = {};
-    // This array contains {} elements, 2 for each constraint
-    for (uint256 i = 0; i < constraint_coeffiencts.length; i ++) {{
-        call_context[current_index] = constraint_coeffiencts[i];
-        current_index++;
-    }}
-    // This array contains {} elements, one for each trace offset in the layout
-    for (uint256 i = 0; i < trace_oods_values.length; i++) {{
-        call_context[current_index] = trace_oods_values[i].fmul_mont(1);
-        current_index++;
-    }}
-
-    // The contract we are calling out to is a pure assembly contract
-    // With its own hard coded memory structure so we use an assembly
-    // call to send a non abi encoded array that will be loaded directly
-    // into memory
-    uint256 result;
-    {{
-    OddsPoly local_contract_address = constraint_poly;
-        assembly {{
-            let p := mload(0x40)
-            // Note size is {}*32 because we have {} public inputs, {} constraint coefficients \
-     and {} trace decommitments
-            if iszero(call(not(0), local_contract_address, 0, add(call_context, 0x20), {}, p, \
-     0x20)) {{
-            revert(0, 0)
-            }}
-            result := mload(p)
-        }}
-    }}
-    return result;
-    }}
-}}
-"
-    };
-}
-
 fn autogen_wrapper_contract(
     claim_polynomials: &[RationalExpression],
     periodic_polys: &[&RationalExpression],
@@ -546,6 +393,7 @@ fn autogen_wrapper_contract(
             + 2 * constraints.expressions().len()
             + trace_layout_len,
         trace_layout_len,
+        coefficient_offset: 1 + claim_polynomials.len() + periodic_polys.len(),
         number_of_public_inputs: claim_polynomials.len(),
         ..WrapperContext::default()
     };
@@ -558,56 +406,8 @@ fn autogen_wrapper_contract(
         Ok(file) => file,
     };
     let num_constraints = constraints.expressions().len();
-    let total_input_memory_size =
-        1 + claim_polynomials.len() + periodic_polys.len() + 2 * num_constraints + trace_layout_len;
-
-    // The macro invocation appears to trigger this clippy warning, but the
-    // underlying string doesn't.
-    #[allow(clippy::non_ascii_literal)]
-    writeln!(
-        &mut file,
-        // Note - This has to be a marco instead of constant so that the
-        // format locations are properly loaded [and it compiles]
-        wrapper_contract_start!(),
-        system_name,
-        system_name,
-        system_name,
-        system_name,
-        num_constraints,
-        64 - constraints.blowup.leading_zeros(),
-        constraints.pow_bits,
-        constraints.num_queries,
-        total_input_memory_size
-    )?;
 
     // The initial index is one because of the oods point
-    let mut index = 1;
-    for public_input in claim_polynomials.iter() {
-        match public_input {
-            ClaimPolynomial(_, _, _, name) => {
-                match name {
-                    Some(known_name) => {
-                        writeln!(
-                            &mut file,
-                            "    call_context[{}] = 0; // This public input is named: {}",
-                            index, known_name
-                        )?;
-                        index += 1;
-                    }
-                    None => {
-                        writeln!(
-                            &mut file,
-                            "    call_context[{}] = 0; // This public input is not named, please \
-                             give it a name in Rust",
-                            index
-                        )?;
-                        index += 1;
-                    }
-                }
-            }
-            _ => panic!("Rational expression should be a claim polynomial"),
-        }
-    }
     for public_input in claim_polynomials.iter() {
         context.public_input_names.push(match public_input {
             ClaimPolynomial(_, _, _, Some(name)) => name.to_string(),
@@ -643,16 +443,10 @@ fn autogen_wrapper_contract(
 
     // Now that we have prepared the mapping and contracts we add the polynomial
     // expressions to the wrapper contract.
+    let mut index = 1 + claim_polynomials.len();
     for periodic_exp in periodic_polys.iter() {
         match periodic_exp {
             Polynomial(coefficients, internal_exp) => {
-                writeln!(
-                    &mut file,
-                    "    call_context[{}] = periodic_col{}.evaluate(non_mont_oods.fpow({:?}));",
-                    index,
-                    named_periodic_cols.get(coefficients).unwrap(),
-                    extract_power(internal_exp)
-                )?;
                 context
                     .periodic_column_evaluations
                     .push(PeriodicColumnEvaluation {
@@ -669,22 +463,6 @@ fn autogen_wrapper_contract(
         }
     }
     context.constraint_input_size = 32 * (index + 2 * num_constraints + trace_layout_len);
-
-    // The macro invocation appears to trigger this clippy warning, but the
-    // underlying string doesn't.
-    #[allow(clippy::non_ascii_literal)]
-    writeln!(
-        &mut file,
-        wrapper_contract_end!(),
-        index,
-        2 * num_constraints,
-        trace_layout_len,
-        index + 2 * num_constraints + trace_layout_len,
-        index,
-        2 * num_constraints,
-        trace_layout_len,
-        32 * (index + 2 * num_constraints + trace_layout_len)
-    )?;
 
     // Render template
     let mut tt = TinyTemplate::new();
