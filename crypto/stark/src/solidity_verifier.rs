@@ -1102,6 +1102,7 @@ fn setup_call_memory(
             degree_adjustment_location,
             expression: exp.soldity_encode(&memory_lookups),
         });
+        coefficient_index += 2;
     }
 
     // Render OodsPoly template
