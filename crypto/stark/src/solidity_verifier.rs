@@ -383,7 +383,7 @@ fn autogen_wrapper_contract(
     let mut context = WrapperContext {
         name: system_name.to_owned(),
         number_of_constraints: constraints.expressions().len(),
-        log_blowup: (64 - constraints.blowup.leading_zeros()) as usize,
+        log_blowup: (63 - constraints.blowup.leading_zeros()) as usize,
         pow_bits: constraints.pow_bits,
         number_of_queries: constraints.num_queries,
         total_input_memory_size: 1
