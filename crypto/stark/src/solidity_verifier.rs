@@ -244,14 +244,6 @@ pub fn generate(
         claim_polynomials.extend(exp.claim_polynomial_search());
     }
 
-    let name = format!("{}/{}ConstraintPoly.sol", output_directory, system_name);
-    let path = Path::new(&name);
-    let display = path.display();
-    let mut file = match File::create(&path) {
-        Err(why) => panic!("couldn't create {}: {}", display, why.to_string()),
-        Ok(file) => file,
-    };
-
     // Note that because the hash map strategy used here is they keys are in
     // arbitrary orders. We want to enforce the restriction that the trace ones
     // be in lexicographic order though.
@@ -295,8 +287,12 @@ pub fn generate(
         output_directory,
         system_name,
     );
-    let coefficient_index = 1 + claim_polynomial_keys.len() + periodic_keys.len();
-    let _memory_map = setup_call_memory(
+
+    // Write OodsPoly contract
+    let output_directory = Path::new(output_directory);
+    let filename = format!("{}ConstraintPoly.sol", system_name);
+    let mut file = File::create(&output_directory.join(filename))?;
+    write_oods_poly(
         &mut file,
         constraint_expressions.len(),
         &claim_polynomial_keys,
@@ -304,7 +300,6 @@ pub fn generate(
         trace_keys.as_slice(),
         periodic_keys.as_slice(),
         adjustment_degrees.as_slice(),
-        coefficient_index,
         constraint_expressions,
     )?;
 
@@ -825,7 +820,7 @@ fn binary_row_search_string(rows: &[usize]) -> String {
     ifs.join("\n else ")
 }
 
-fn setup_call_memory(
+fn write_oods_poly(
     file: &mut File,
     num_constraints: usize,
     claim_polynomial_keys: &[RationalExpression],
@@ -833,9 +828,8 @@ fn setup_call_memory(
     traces: &[&RationalExpression],
     periodic: &[&RationalExpression],
     adjustment_degrees: &[usize],
-    mut coefficient_index: usize,
     constraint_expressions: &[RationalExpression],
-) -> Result<BTreeMap<RationalExpression, String>, std::io::Error> {
+) -> Result<(), std::io::Error> {
     // TODO: Error handling on templates
 
     let mut tt = TinyTemplate::new();
@@ -921,6 +915,7 @@ fn setup_call_memory(
     context.last_partial_product_ptr = (inverse_start_index + inverses.len()) * 32;
 
     // Add constraints to context
+    let mut coefficient_index = 1 + claim_polynomial_keys.len() + periodic.len();
     for (exp, &degree) in constraint_expressions.iter().zip(adjustment_degrees.iter()) {
         let degree_adjustment_location = memory_lookups
             .get(&RationalExpression::Exp(
@@ -942,7 +937,7 @@ fn setup_call_memory(
     let rendered = tt.render("oods_poly", &context).unwrap();
     write!(file, "{}", &rendered)?;
 
-    Ok(memory_lookups)
+    Ok(())
 }
 
 fn lexicographic_compare(first: &RationalExpression, second: &RationalExpression) -> Ordering {
