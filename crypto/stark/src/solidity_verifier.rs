@@ -19,6 +19,9 @@ use zkp_primefield::FieldElement;
 use zkp_u256::U256;
 
 const OODS_POLY_TEMPLATE: &str = include_str!("../assets/OodsPoly.sol");
+const PERIODIC_TEMPLATE: &str = include_str!("../assets/Periodic.sol");
+const TRACE_TEMPLATE: &str = include_str!("../assets/Trace.sol");
+
 #[derive(Clone, PartialEq, Eq, Debug, Default, Serialize)]
 struct DegreeAdjustment {
     location: usize,
@@ -944,6 +947,8 @@ fn setup_call_memory(
 
     let mut tt = TinyTemplate::new();
     tt.add_template("oods_poly", OODS_POLY_TEMPLATE).unwrap();
+    tt.add_template("periodic", PERIODIC_TEMPLATE).unwrap();
+    tt.add_template("trace", TRACE_TEMPLATE).unwrap();
 
     let mut context = Context::default();
     context.modulus = "PRIME".to_owned();
