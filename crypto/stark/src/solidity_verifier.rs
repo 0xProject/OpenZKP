@@ -162,7 +162,7 @@ impl RationalExpression {
                         match (a.as_ref(), e) {
                             (Exp(a, f), e) => {
                                 // Recursively collapse nested Exps
-                                Exp(a.clone(), e + f).soldity_encode(memory_layout)
+                                Exp(a.clone(), e * f).soldity_encode(memory_layout)
                             }
                             (_, 0) => "0x01".to_owned(),
                             (a, 1) => a.soldity_encode(memory_layout),
