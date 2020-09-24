@@ -5,6 +5,11 @@ contract OodsPoly \{
         assembly \{
             let res := 0
 
+            // Assert that callvalue() is zero
+            if callvalue() \{
+                revert(0, 0)
+            }
+
             // Store modulus at 0
             mstore(0, 0x800000000000011000000000000000000000000000000000000000000000001)
 
