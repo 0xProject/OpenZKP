@@ -83,6 +83,26 @@ struct PeriodicContext {
     coefficients: Vec<String>,
 }
 
+#[derive(Clone, PartialEq, Eq, Debug, Default, Serialize)]
+struct RowOffset {
+    row:   usize,
+    index: usize,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug, Default, Serialize)]
+struct TraceContext {
+    name:               String,
+    constraint_degree:  usize,
+    num_rows:           usize,
+    num_cols:           usize,
+    blowup:             usize,
+    column_layout_size: usize,
+
+    row_offsets:   Vec<RowOffset>,
+    column_layout: Vec<usize>,
+    row_layout:    Vec<usize>,
+}
+
 impl RationalExpression {
     #[cfg(feature = "std")]
     pub fn soldity_encode(&self, memory_layout: &BTreeMap<Self, String>) -> String {
@@ -304,7 +324,7 @@ pub fn generate(
         blowup,
         output_directory,
         system_name,
-    );
+    )?;
 
     // Write OodsPoly contract
     let output_directory = Path::new(output_directory);
@@ -665,7 +685,7 @@ fn autogen_oods_contract(
     blowup: usize,
     output_directory: &str,
     system_name: &str,
-) {
+) -> Result<(), GenerateError> {
     let mut traces = BTreeMap::new();
 
     for exp in constraints.iter() {
@@ -687,7 +707,8 @@ fn autogen_oods_contract(
         .max()
         .expect("No constraints");
 
-    let trace_contract = autogen_trace_layout(&trace_keys, n_cols, max_degree, blowup, system_name);
+    let trace_contract =
+        autogen_trace_layout(&trace_keys, n_cols, max_degree, blowup, system_name)?;
 
     // TODO - Variable naming
     let name = format!("{}/{}Trace.sol", output_directory, system_name);
@@ -697,7 +718,9 @@ fn autogen_oods_contract(
         Err(why) => panic!("couldn't create {}: {}", display, why.to_string()),
         Ok(file) => file,
     };
-    let _ = writeln!(&mut file, "{}", trace_contract);
+    writeln!(&mut file, "{}", trace_contract)?;
+
+    Ok(())
 }
 
 // TODO - Support negative row offsets
@@ -707,7 +730,21 @@ fn autogen_trace_layout(
     constraint_degree: usize,
     blowup: usize,
     system_name: &str,
-) -> String {
+) -> Result<String, GenerateError> {
+    let mut tt = TinyTemplate::new();
+    tt.add_template("oods_poly", OODS_POLY_TEMPLATE)?;
+    tt.add_template("periodic", PERIODIC_TEMPLATE)?;
+    tt.add_template("trace", TRACE_TEMPLATE)?;
+
+    let mut context = TraceContext {
+        name: system_name.to_owned(),
+        constraint_degree,
+        column_layout_size: 2 * trace_keys.len(),
+        num_cols: n_cols,
+        blowup,
+        ..TraceContext::default()
+    };
+
     // We map each trace to the row it contains
     let mut rows = trace_keys
         .iter()
@@ -724,109 +761,44 @@ fn autogen_trace_layout(
     rows.sort_unstable();
     // Then we remove duplicate items
     rows.dedup();
+    context.num_rows = rows.len();
 
-    // We now can create a solidity function which returns the right vector
-    let mut trace_layout_contract = format!(
-        "
-pragma solidity ^0.6.6;
-pragma experimental ABIEncoderV2;
-
-import '../interfaces/ConstraintInterface.sol';
-import '../default_cs.sol';
-
-// The linter doesn't understand 'abstract' and thinks it's indentation
-
-// solhint-disable-next-line indent
-abstract contract {}Trace is DefaultConstraintSystem({}, {}, {}, {}) {{",
-        system_name,
-        constraint_degree,
-        rows.len(),
-        n_cols,
-        blowup
-    );
-
-    // This specifies the lookup function
-    trace_layout_contract.push_str(
-        "\n    // This lets us map rows -> inverse index,
-    // In complex systems use a autogen binary search.
-    function row_to_offset(uint256 row) internal pure override returns(uint256) {",
-    );
-
-    // TODO  -this doesn't support negative rows
-    if rows.iter().enumerate().all(|(index, item)| index == *item) {
-        trace_layout_contract.push_str(
-            "     return row;
-         }",
-        );
-    } else {
-        trace_layout_contract.push_str(&binary_row_search_string(rows.as_slice()));
-        trace_layout_contract.push_str("}");
+    // Mapping for the row_to_offset function
+    let identity_map = rows.iter().enumerate().all(|(index, item)| index == *item);
+    if !identity_map {
+        context.row_offsets = rows
+            .iter()
+            .enumerate()
+            .map(|(index, &row)| RowOffset { index, row })
+            .collect();
     }
 
     // This defines the trace layout function in solidity
-    trace_layout_contract.push_str("\n");
-    trace_layout_contract.push_str(&format!(
-        "
-    function layout_col_major() internal pure override returns(uint256[] memory) {{
-        uint256[] memory result = new uint256[]({});",
-        2 * trace_keys.len()
-    ));
+    // This adds code which writes the 32*row and thirty two times
+    // the index of the row to the kth and k+1-th positions.
+    // this will let us lookup the row and index of the row
+    // when we are using assembly
+    // Note the factor of 32 is the because 32 bytes is the word size
+    // of evm memory.
     for k in (0..2 * trace_keys.len()).step_by(2) {
         let (i, j) = match trace_keys[k / 2] {
             RationalExpression::Trace(i, j) => (i, j),
-            _ => panic!("Non trace rational expression in rows"),
+            _ => Err(GenerateError::InvalidExpression)?,
         };
-        // This adds code which writes the 32*row and thirty two times
-        // the index of the row to the kth and k+1-th positions.
-        // this will let us lookup the row and index of the row
-        // when we are using assembly
-        // Note the factor of 32 is the because 32 bytes is the word size
-        // of evm memory.
-        trace_layout_contract.push_str(&format!(
-            "    (result[{}], result[{}]) = ({}, {});",
-            k,
-            k + 1,
-            32 * i,
-            // TODO - Support negative rows
-            32 * rows
+        let row_location = i * 32;
+        let index_location = 32
+            * rows
                 .iter()
                 .position(|x| x == &(TryInto::<usize>::try_into(*j).unwrap()))
-                .unwrap()
-        ));
+                .unwrap();
+        context.column_layout.push(row_location);
+        context.column_layout.push(index_location);
     }
-    trace_layout_contract.push_str(
-        "        return result;
-    }",
-    );
 
-    // This prints out the function called rows in solidity
-    trace_layout_contract.push_str(&format!(
-        "
-    function layout_rows() internal pure override returns(uint256[] memory) {{
-        uint256[] memory result = new uint256[]({});",
-        rows.len()
-    ));
-    for (index, row) in rows.iter().enumerate() {
-        trace_layout_contract.push_str(&format!("        result[{}] = {};", index, row));
-    }
-    trace_layout_contract.push_str(
-        "
-        return result;
-    }
-}
-    ",
-    );
-    trace_layout_contract
-}
+    // Row layout
+    context.row_layout = rows;
 
-// TODO - This needs testing
-fn binary_row_search_string(rows: &[usize]) -> String {
-    let ifs: Vec<_> = rows
-        .iter()
-        .enumerate()
-        .map(|(i, row)| format!("if (row == {}) {{return {};}}", row, i))
-        .collect();
-    ifs.join("\n else ")
+    Ok(tt.render("trace", &context)?)
 }
 
 fn write_oods_poly(
