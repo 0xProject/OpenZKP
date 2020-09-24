@@ -169,13 +169,13 @@ impl RationalExpression {
                                 // be
                                 if *e < 10 {
                                     format!(
-                                        "small_expmod({}, {}, mload(callvalue()))",
+                                        "small_expmod({}, {})",
                                         a.soldity_encode(memory_layout),
                                         e.to_string()
                                     )
                                 } else {
                                     format!(
-                                        "expmod({}, {}, mload(callvalue()))",
+                                        "expmod({}, {})",
                                         a.soldity_encode(memory_layout),
                                         e.to_string()
                                     )

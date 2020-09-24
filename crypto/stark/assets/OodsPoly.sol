@@ -13,14 +13,14 @@ contract OodsPoly \{
             // Store modulus at 0
             mstore(0, 0x800000000000011000000000000000000000000000000000000000000000001)
 
-            function expmod(base, exponent, modulus) -> result \{
+            function expmod(base, exponent) -> result \{
                 let p := {expmod_context}
                 mstore(p, 0x20) // Length of Base
                 mstore(add(p, 0x20), 0x20) // Length of Exponent
                 mstore(add(p, 0x40), 0x20) // Length of Modulus
                 mstore(add(p, 0x60), base) // Base
                 mstore(add(p, 0x80), exponent) // Exponent
-                mstore(add(p, 0xa0), modulus) // Modulus
+                mstore(add(p, 0xa0), {modulus}) // Modulus
                 // call modexp precompile
                 if iszero(call(not(0), 0x05, 0, p, 0xc0, p, 0x20)) \{
                     revert(0, 0)
@@ -43,16 +43,16 @@ contract OodsPoly \{
                 )
             }
 
-            function small_expmod(x, num, prime) -> result \{
+            function small_expmod(x, num) -> result \{
                 result := 1
                 for \{ let ind := 0 } lt(ind, num) \{ ind := add(ind, 1) } \{
-                    result := mulmod(result, x, prime)
+                    result := mulmod(result, x, {modulus})
                 }
             }
 
             // Store adjustment degrees
             {{ for da in degree_adjustments -}}
-            mstore({da.location}, expmod({x}, {da.exponent}, {modulus}))
+            mstore({da.location}, expmod({x}, {da.exponent}))
             {{ endfor }}
 
             // Store the values which will be batch inverted
@@ -82,7 +82,7 @@ contract OodsPoly \{
 
                 let first_partial_product_ptr := {first_partial_product_ptr}
                 // Compute the inverse of the product.
-                let prod_inv := expmod(prod, sub({modulus}, 2), {modulus})
+                let prod_inv := expmod(prod, sub({modulus}, 2))
 
                 // Compute the inverses.
                 // Loop over denominator_invs in reverse order.
