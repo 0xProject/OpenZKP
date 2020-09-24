@@ -66,9 +66,7 @@ struct OodsPolyContext {
     periodic_coefficients: Vec<String>,
 
     // Locations
-    modulus_location: usize,
-    input_data_size:  usize,
-    expmod_context:   usize,
+    expmod_context: usize,
 
     // Batch inverse parameters
     products_to_values:        usize,
@@ -707,7 +705,6 @@ fn write_oods_poly(
     }
 
     // End of input, switch from calldata to memory
-    let in_data_size = index;
     index = 1; // 0 is reserved for the modulus
 
     // Here we need to add an output which writelns denominator storage and batch
@@ -735,8 +732,6 @@ fn write_oods_poly(
     index += inverses.len();
 
     // Various offsets that appear in the header
-    context.modulus_location = (index + inverses.len() + 6) * 32;
-    context.input_data_size = in_data_size * 32;
     context.expmod_context = (index + inverses.len()) * 32;
 
     let mut inverse_position = inverse_start_index;

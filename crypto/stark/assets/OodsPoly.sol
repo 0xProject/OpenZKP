@@ -22,7 +22,7 @@ contract OodsPoly \{
                 mstore(add(p, 0x80), exponent) // Exponent
                 mstore(add(p, 0xa0), {modulus}) // Modulus
                 // call modexp precompile
-                if iszero(call(not(0), 0x05, 0, p, 0xc0, p, 0x20)) \{
+                if iszero(call(gasleft(), 0x05, 0, p, 0xc0, p, 0x20)) \{
                     revert(0, 0)
                 }
                 result := mload(p)
