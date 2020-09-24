@@ -43,16 +43,40 @@ contract OodsPoly \{
                 )
             }
 
-            function small_expmod(x, num) -> result \{
+            function exp2(base) -> result \{
+                result :=  mulmod(base, base, {modulus})
+            }
+
+            function exp3(base) -> result \{
+                result :=  mulmod(base, base, {modulus})
+                result :=  mulmod(result, base, {modulus})
+            }
+
+            function exp4(base) -> result \{
+                result :=  mulmod(base, base, {modulus})
+                result :=  mulmod(result, result, {modulus})
+            }
+
+            function small_expmod(base, exponent) -> result \{
                 result := 1
-                for \{ let ind := 0 } lt(ind, num) \{ ind := add(ind, 1) } \{
-                    result := mulmod(result, x, {modulus})
+                for \{  } exponent \{ exponent := sub(exponent, 1) } \{
+                    result := mulmod(result, base, {modulus})
+                }
+            }
+
+            function mid_expmod(base, exponent) -> result \{
+                result := 1
+                for \{  } exponent \{ exponent := shr(exponent, 1) } \{
+                    if and(exponent, 1) \{
+                        result := mulmod(result, base, {modulus})
+                    }
+                    base := mulmod(base, base, {modulus})
                 }
             }
 
             // Store adjustment degrees
             {{ for da in degree_adjustments -}}
-            mstore({da.location}, expmod({x}, {da.exponent}))
+            mstore({da.location}, mid_expmod({x}, {da.exponent}))
             {{ endfor }}
 
             // Store the values which will be batch inverted

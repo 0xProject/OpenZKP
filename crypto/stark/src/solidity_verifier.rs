@@ -168,9 +168,11 @@ impl RationalExpression {
                             }
                             (_, 0) => "0x01".to_owned(),
                             (_, 1) => a.soldity_encode(memory_layout),
-                            // TODO - Check the gas to see what the real breaking point
-                            // should be
-                            (_, e) if *e < 10 => {
+                            (_, 2) => format!("exp2({})", a.soldity_encode(memory_layout)),
+                            (_, 3) => format!("exp3({})", a.soldity_encode(memory_layout)),
+                            (_, 4) => format!("exp4({})", a.soldity_encode(memory_layout)),
+                            // TODO: Test where the tipping point is
+                            (_, e) if *e < 16 => {
                                 format!(
                                     "small_expmod({}, {})",
                                     a.soldity_encode(memory_layout),
@@ -179,7 +181,7 @@ impl RationalExpression {
                             }
                             _ => {
                                 format!(
-                                    "expmod({}, {})",
+                                    "mid_expmod({}, {})",
                                     a.soldity_encode(memory_layout),
                                     e.to_string()
                                 )
