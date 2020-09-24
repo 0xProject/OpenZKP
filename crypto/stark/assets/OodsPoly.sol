@@ -11,7 +11,7 @@ contract OodsPoly \{
             }
 
             // Store modulus at 0
-            mstore(0, 0x800000000000011000000000000000000000000000000000000000000000001)
+            mstore(callvalue(), 0x800000000000011000000000000000000000000000000000000000000000001)
 
             function expmod(base, exponent) -> result \{
                 let p := {expmod_context}
