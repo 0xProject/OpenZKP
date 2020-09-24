@@ -19,13 +19,33 @@ use zkp_primefield::FieldElement;
 use zkp_u256::U256;
 
 const OODS_POLY_TEMPLATE: &str = include_str!("../assets/OodsPoly.sol");
+#[derive(Clone, PartialEq, Eq, Debug, Default, Serialize)]
+struct DegreeAdjustment {
+    location: usize,
+    exponent: usize,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug, Default, Serialize)]
+struct BatchInvert {
+    location:   usize,
+    expression: String,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug, Default, Serialize)]
+struct Constraint {
+    first_coefficient_location:  usize,
+    second_coefficient_location: usize,
+    degree_adjustment_location:  String,
+    expression:                  String,
+}
 
 #[derive(Clone, PartialEq, Eq, Debug, Default, Serialize)]
 struct Context {
-    prime:              String,
-    degree_adjustments: Vec<String>,
-    batch_inverted:     Vec<String>,
-    constraints:        Vec<String>,
+    modulus:            String,
+    x:                  String,
+    degree_adjustments: Vec<DegreeAdjustment>,
+    batch_inverted:     Vec<BatchInvert>,
+    constraints:        Vec<Constraint>,
 }
 
 impl RationalExpression {
@@ -258,6 +278,7 @@ pub fn generate(
         output_directory,
         system_name,
     );
+    let mut coefficient_index = 1 + claim_polynomial_keys.len() + periodic_keys.len();
     let memory_map = setup_call_memory(
         &mut file,
         constraint_expressions.len(),
@@ -266,9 +287,10 @@ pub fn generate(
         trace_keys.as_slice(),
         periodic_keys.as_slice(),
         adjustment_degrees.as_slice(),
+        coefficient_index,
+        constraint_expressions,
     )?;
 
-    let mut coefficient_index = 1 + claim_polynomial_keys.len() + periodic_keys.len();
     for (exp, &degree) in constraint_expressions.iter().zip(adjustment_degrees.iter()) {
         writeln!(&mut file, "      {{")?;
         writeln!(
@@ -915,7 +937,18 @@ fn setup_call_memory(
     traces: &[&RationalExpression],
     periodic: &[&RationalExpression],
     adjustment_degrees: &[usize],
+    mut coefficient_index: usize,
+    constraint_expressions: &[RationalExpression],
 ) -> Result<BTreeMap<RationalExpression, String>, std::io::Error> {
+    // TODO: Error handling on templates
+
+    let mut tt = TinyTemplate::new();
+    tt.add_template("oods_poly", OODS_POLY_TEMPLATE).unwrap();
+
+    let mut context = Context::default();
+    context.modulus = "PRIME".to_owned();
+    context.x = "mload(0x0)".to_owned();
+
     let mut index = 1; // Note index 0 is taken by the oods_point
     let mut memory_lookups: BTreeMap<RationalExpression, String> = BTreeMap::new();
     for claim_polynomial in claim_polynomial_keys {
@@ -956,6 +989,10 @@ fn setup_call_memory(
                 )
                 .chars(),
             );
+            context.degree_adjustments.push(DegreeAdjustment {
+                location: index * 32,
+                exponent: degree,
+            });
             let _ = memory_lookups.insert(implied_expression, format!("mload({})", index * 32));
             index += 1;
         }
@@ -963,15 +1000,6 @@ fn setup_call_memory(
 
     let inverse_start_index = index;
     index += inverses.len();
-
-    // TODO: Error handling
-
-    let mut tt = TinyTemplate::new();
-    tt.add_template("oods_poly", OODS_POLY_TEMPLATE).unwrap();
-
-    let context = Context::default();
-    let rendered = tt.render("oods_poly", &context).unwrap();
-    write!(file, "{}", &rendered)?;
 
     // The macro invocation appears to trigger this clippy warning, but the
     // underlying string doesn't.
@@ -1000,9 +1028,14 @@ fn setup_call_memory(
                 index * 32,
                 a.soldity_encode(&memory_lookups)
             )?;
+            context.batch_inverted.push(BatchInvert {
+                location:   index * 32,
+                expression: a.soldity_encode(&memory_lookups),
+            });
         } else {
             panic!("Inverse search returned a non inverse");
         }
+
         // Out batch inversion will place the final inverted product before the
         // calculated denom
         let _ = memory_lookups.insert(exp.clone(), format!("mload({})", inverse_position * 32));
@@ -1022,6 +1055,26 @@ fn setup_call_memory(
         inverse_start_index * 32,
         (inverse_start_index + inverses.len()) * 32
     )?;
+
+    ///////////////////
+    for (exp, &degree) in constraint_expressions.iter().zip(adjustment_degrees.iter()) {
+        context.constraints.push(Constraint {
+            first_coefficient_location:  coefficient_index * 32,
+            second_coefficient_location: (coefficient_index + 1) * 32,
+            degree_adjustment_location:  memory_lookups
+                .get(&RationalExpression::Exp(
+                    RationalExpression::X.into(),
+                    degree,
+                ))
+                .unwrap()
+                .to_owned(),
+            expression:                  exp.soldity_encode(&memory_lookups),
+        });
+    }
+    ///////////////////
+
+    let rendered = tt.render("oods_poly", &context).unwrap();
+    write!(file, "{}", &rendered)?;
 
     Ok(memory_lookups)
 }

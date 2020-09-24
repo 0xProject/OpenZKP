@@ -56,14 +56,13 @@ contract OodsPoly \{
             }
 
             // Store adjustment degrees
-            {{ for degree_adjustment in degree_adjustments }}
-                {# mstore(17920,expmod(calldataload(returndatasize()), 16321, PRIME)) #}
-                {degree_adjustment}
+            {{ for da in degree_adjustments -}}
+            mstore({da.location}, expmod({x}, {da.exponent}, {modulus}))
             {{ endfor }}
 
             // Store the values which will be batch inverted
-            {{ for batch_inverted in batch_inverted }}
-                {batch_inverted}
+            {{ for bi in batch_inverted -}}
+            mstore({bi.location}, {bi.expression})
             {{ endfor }}
 
             // Compute batch inversion
@@ -129,10 +128,10 @@ contract OodsPoly \{
             }
 
             // Sum constraint polynomials
-            {{ for constraint in constraints }}
+            {{ for c in constraints -}}
             \{
-                let val := {constraint.expression}
-                res := addmod(res, mulmod(val, add(mload(640), mulmod(mload(672), mload(17600), {modulus})), {modulus}), {modulus})
+                let val := {c.expression}
+                res := addmod(res, mulmod(val, add(mload({c.first_coefficient_location}), mulmod(mload({c.second_coefficient_location}, {c.degree_adjustment_location}, {modulus})), {modulus}), {modulus})
             }
             {{ endfor }}
 
