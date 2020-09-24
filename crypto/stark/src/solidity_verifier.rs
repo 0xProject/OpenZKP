@@ -98,10 +98,8 @@ struct TraceContext {
     num_cols:           usize,
     blowup:             usize,
     column_layout_size: usize,
-
-    row_offsets:   Vec<RowOffset>,
-    column_layout: Vec<usize>,
-    row_layout:    Vec<usize>,
+    column_layout:      Vec<usize>,
+    row_layout:         Vec<usize>,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Default, Serialize)]
@@ -606,16 +604,6 @@ fn autogen_trace_layout(
     // Then we remove duplicate items
     rows.dedup();
     context.num_rows = rows.len();
-
-    // Mapping for the row_to_offset function
-    let identity_map = rows.iter().enumerate().all(|(index, item)| index == *item);
-    if !identity_map {
-        context.row_offsets = rows
-            .iter()
-            .enumerate()
-            .map(|(index, &row)| RowOffset { index, row })
-            .collect();
-    }
 
     // This defines the trace layout function in solidity
     // This adds code which writes the 32*row and thirty two times
