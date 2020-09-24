@@ -166,9 +166,9 @@ impl RationalExpression {
                             }
                             (_, 0) => "0x01".to_owned(),
                             (a, 1) => a.soldity_encode(memory_layout),
-                            (a, 2) => format!("exp2({})", a.soldity_encode(memory_layout)),
-                            (a, 3) => format!("exp3({})", a.soldity_encode(memory_layout)),
-                            (a, 4) => format!("exp4({})", a.soldity_encode(memory_layout)),
+                            (a, e) if *e <= 4 => {
+                                format!("exp{}({})", e, a.soldity_encode(memory_layout))
+                            }
                             // TODO: Test where the tipping point is
                             (a, e) if *e < 16 => {
                                 format!(
