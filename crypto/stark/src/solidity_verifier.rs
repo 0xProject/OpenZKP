@@ -30,6 +30,8 @@ pub enum GenerateError {
     IoError(#[from] std::io::Error),
     #[error("Error rendering template")]
     TemplateError(#[from] tinytemplate::error::Error),
+    #[error("Bug: invalid expression ocurred")]
+    InvalidExpression,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Default, Serialize)]
@@ -73,6 +75,12 @@ struct OodsPolyContext {
     partial_product_start_ptr: usize,
     first_partial_product_ptr: usize,
     last_partial_product_ptr:  usize,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug, Default, Serialize)]
+struct PeriodicContext {
+    name:         String,
+    coefficients: Vec<String>,
 }
 
 impl RationalExpression {
@@ -477,7 +485,7 @@ fn autogen_wrapper_contract(
     system_name: &str,
     output_directory: &str,
     trace_layout_len: usize,
-) -> Result<(), std::io::Error> {
+) -> Result<(), GenerateError> {
     use RationalExpression::*;
 
     let name = format!("{}/{}.sol", output_directory, system_name);
@@ -621,42 +629,33 @@ fn autogen_periodic(
     index: usize,
     name: &str,
     output_directory: &str,
-) -> Result<(), std::io::Error> {
-    // TODO - use this https://doc.rust-lang.org/std/path/struct.Path.html
-    let name = format!("{}/{}.sol", output_directory, name);
-    let path = Path::new(&name);
-    let display = path.display();
-    let mut file = match File::create(&path) {
-        Err(why) => panic!("couldn't create {}: {}", display, why.to_string()),
-        Ok(file) => file,
+) -> Result<(), GenerateError> {
+    let mut tt = TinyTemplate::new();
+    tt.add_template("oods_poly", OODS_POLY_TEMPLATE)?;
+    tt.add_template("periodic", PERIODIC_TEMPLATE)?;
+    tt.add_template("trace", TRACE_TEMPLATE)?;
+
+    let output_directory = Path::new(output_directory);
+    let filename = format!("{}.sol", name);
+    let mut file = File::create(&output_directory.join(filename))?;
+
+    let poly = match periodic {
+        RationalExpression::Polynomial(poly, _) => poly,
+        _ => Err(GenerateError::InvalidExpression)?,
     };
 
-    if let RationalExpression::Polynomial(poly, _) = periodic {
-        writeln!(
-            &mut file,
-            "pragma solidity ^0.6.6;
+    let mut context = PeriodicContext::default();
+    context.name = index.to_string();
+    context.coefficients = poly
+        .coefficients()
+        .iter()
+        .rev()
+        .map(|c| U256::from(c).to_string())
+        .collect();
 
-contract perodic{} {{
-    function evaluate(uint x) external pure returns (uint y){{
-        assembly {{
-                let PRIME := 0x800000000000011000000000000000000000000000000000000000000000001
-                y := 0x0",
-            index
-        )?;
-        for coef in poly.coefficients().iter().rev() {
-            writeln!(
-                &mut file,
-                "                y := addmod(mulmod(x, y, PRIME), 0x{}, PRIME)",
-                U256::from(coef).to_string()
-            )?;
-        }
-        writeln!(
-            &mut file,
-            "        }}
-    }}
-}}"
-        )?;
-    }
+    // Render Periodic template
+    let rendered = tt.render("periodic", &context)?;
+    write!(file, "{}", &rendered)?;
     Ok(())
 }
 
