@@ -4,24 +4,25 @@ contract OodsPoly \{
     fallback() external \{
         assembly \{
             let res := 0
-            let PRIME := 0x800000000000011000000000000000000000000000000000000000000000001
-            // NOTE - If compilation hits a stack depth error on variable PRIME,
-            // then uncomment the following line and globally replace PRIME
-            // with  `mload({modulus_location})`
-            // mstore({modulus_location}, 0x800000000000011000000000000000000000000000000000000000000000001)
-            // Copy input from calldata to memory.
-            calldatacopy(0x0, 0x0, {input_data_size})
 
-            function expmod(base, exponent, modulus) -> result \{
+            // Assert that callvalue() is zero
+            if callvalue() \{
+                revert(0, 0)
+            }
+
+            // Store modulus at 0
+            mstore(callvalue(), 0x800000000000011000000000000000000000000000000000000000000000001)
+
+            function expmod(base, exponent) -> result \{
                 let p := {expmod_context}
                 mstore(p, 0x20) // Length of Base
                 mstore(add(p, 0x20), 0x20) // Length of Exponent
                 mstore(add(p, 0x40), 0x20) // Length of Modulus
                 mstore(add(p, 0x60), base) // Base
                 mstore(add(p, 0x80), exponent) // Exponent
-                mstore(add(p, 0xa0), modulus) // Modulus
+                mstore(add(p, 0xa0), {modulus}) // Modulus
                 // call modexp precompile
-                if iszero(call(not(0), 0x05, 0, p, 0xc0, p, 0x20)) \{
+                if iszero(call(gasleft(), 0x05, 0, p, 0xc0, p, 0x20)) \{
                     revert(0, 0)
                 }
                 result := mload(p)
@@ -42,16 +43,40 @@ contract OodsPoly \{
                 )
             }
 
-            function small_expmod(x, num, prime) -> result \{
+            function exp2(base) -> result \{
+                result :=  mulmod(base, base, {modulus})
+            }
+
+            function exp3(base) -> result \{
+                result :=  mulmod(base, base, {modulus})
+                result :=  mulmod(result, base, {modulus})
+            }
+
+            function exp4(base) -> result \{
+                result :=  mulmod(base, base, {modulus})
+                result :=  mulmod(result, result, {modulus})
+            }
+
+            function small_expmod(base, exponent) -> result \{
                 result := 1
-                for \{ let ind := 0 } lt(ind, num) \{ ind := add(ind, 1) } \{
-                    result := mulmod(result, x, prime)
+                for \{  } exponent \{ exponent := sub(exponent, 1) } \{
+                    result := mulmod(result, base, {modulus})
+                }
+            }
+
+            function mid_expmod(base, exponent) -> result \{
+                result := 1
+                for \{  } exponent \{ exponent := shr(exponent, 1) } \{
+                    if and(exponent, 1) \{
+                        result := mulmod(result, base, {modulus})
+                    }
+                    base := mulmod(base, base, {modulus})
                 }
             }
 
             // Store adjustment degrees
             {{ for da in degree_adjustments -}}
-            mstore({da.location}, expmod({x}, {da.exponent}, {modulus}))
+            mstore({da.location}, mid_expmod({x}, {da.exponent}))
             {{ endfor }}
 
             // Store the values which will be batch inverted
@@ -81,7 +106,7 @@ contract OodsPoly \{
 
                 let first_partial_product_ptr := {first_partial_product_ptr}
                 // Compute the inverse of the product.
-                let prod_inv := expmod(prod, sub({modulus}, 2), {modulus})
+                let prod_inv := expmod(prod, sub({modulus}, 2))
 
                 // Compute the inverses.
                 // Loop over denominator_invs in reverse order.
