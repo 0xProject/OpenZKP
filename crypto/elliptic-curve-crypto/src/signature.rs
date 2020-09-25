@@ -1,11 +1,14 @@
 #[cfg(feature = "parity_codec")]
 use parity_scale_codec::{Decode, Encode};
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 use zkp_elliptic_curve::ScalarFieldElement;
 
 // TODO (SECURITY): The signatures are malleable in w -> -w.
 #[derive(PartialEq, Eq, Clone, Hash, Serialize, Deserialize, Default, Debug)]
-#[cfg_attr(feature = "parity_codec", derive(Encode, Decode,))]
+#[cfg_attr(feature = "parity_codec", derive(Encode, Decode))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Signature {
     r: ScalarFieldElement,
     w: ScalarFieldElement,
