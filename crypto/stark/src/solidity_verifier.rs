@@ -66,9 +66,7 @@ struct OodsPolyContext {
     periodic_coefficients: Vec<String>,
 
     // Locations
-    modulus_location: usize,
-    input_data_size:  usize,
-    expmod_context:   usize,
+    expmod_context: usize,
 
     // Batch inverse parameters
     products_to_values:        usize,
@@ -138,43 +136,52 @@ impl RationalExpression {
             Some(s) => s.clone(),
             None => {
                 match self {
-                    X => "mload(0x0)".to_owned(),
                     Constant(c) => format!("0x{}", U256::from(c).to_string()),
                     Add(a, b) => {
                         format!(
-                            "addmod({}, {}, PRIME)",
+                            "addmod({}, {}, mload(callvalue()))",
                             a.soldity_encode(memory_layout),
                             b.soldity_encode(memory_layout)
                         )
                     }
-                    Neg(a) => format!("sub(PRIME , {})", a.soldity_encode(memory_layout)),
+                    Neg(a) => {
+                        format!(
+                            "sub(mload(callvalue()) , {})",
+                            a.soldity_encode(memory_layout)
+                        )
+                    }
                     Mul(a, b) => {
                         format!(
-                            "mulmod({}, {}, PRIME)",
+                            "mulmod({}, {}, mload(callvalue()))",
                             a.soldity_encode(memory_layout),
                             b.soldity_encode(memory_layout)
                         )
                     }
                     Exp(a, e) => {
-                        match e {
-                            0 => "0x01".to_owned(),
-                            1 => a.soldity_encode(memory_layout),
-                            _ => {
-                                // TODO - Check the gas to see what the real breaking point should
-                                // be
-                                if *e < 10 {
-                                    format!(
-                                        "small_expmod({}, {}, PRIME)",
-                                        a.soldity_encode(memory_layout),
-                                        e.to_string()
-                                    )
-                                } else {
-                                    format!(
-                                        "expmod({}, {}, PRIME)",
-                                        a.soldity_encode(memory_layout),
-                                        e.to_string()
-                                    )
-                                }
+                        match (a.as_ref(), e) {
+                            (Exp(a, f), e) => {
+                                // Recursively collapse nested Exps
+                                Exp(a.clone(), e * f).soldity_encode(memory_layout)
+                            }
+                            (_, 0) => "0x01".to_owned(),
+                            (a, 1) => a.soldity_encode(memory_layout),
+                            (a, e) if *e <= 4 => {
+                                format!("exp{}({})", e, a.soldity_encode(memory_layout))
+                            }
+                            // TODO: Test where the tipping point is
+                            (a, e) if *e < 16 => {
+                                format!(
+                                    "small_expmod({}, {})",
+                                    a.soldity_encode(memory_layout),
+                                    e.to_string()
+                                )
+                            }
+                            (a, e) => {
+                                format!(
+                                    "mid_expmod({}, {})",
+                                    a.soldity_encode(memory_layout),
+                                    e.to_string()
+                                )
                             }
                         }
                     }
@@ -653,28 +660,43 @@ fn write_oods_poly(
     tt.add_template("trace", TRACE_TEMPLATE)?;
 
     let mut context = OodsPolyContext::default();
-    context.modulus = "PRIME".to_owned();
-    context.x = "mload(0x0)".to_owned();
+    context.modulus = "mload(callvalue())".to_owned();
+    context.x = "calldataload(callvalue())".to_owned();
 
-    let mut index = 1; // Note index 0 is taken by the oods_point
+    // Initialize a memory map
     let mut memory_lookups: BTreeMap<RationalExpression, String> = BTreeMap::new();
+
+    // Add X to memory map
+    let mut index = 1;
+    let _ = memory_lookups.insert(RationalExpression::X, context.x.clone());
+
+    // Add public input to memory map
     for claim_polynomial in claim_polynomial_keys {
-        let _ = memory_lookups.insert(claim_polynomial.clone(), format!("mload({})", index * 32));
+        let _ = memory_lookups.insert(
+            claim_polynomial.clone(),
+            format!("calldataload({})", index * 32),
+        );
         index += 1;
     }
+
+    // Add periodic column evaluations to memory map
     for &exp in periodic.iter() {
-        let _ = memory_lookups.insert(exp.clone(), format!("mload({})", index * 32));
+        let _ = memory_lookups.insert(exp.clone(), format!("calldataload({})", index * 32));
         index += 1;
     }
-    // Layout the constraints
+
+    // Add constraint coefficients to memory map
     index += num_constraints * 2;
     // Note that the trace values must be the last inputs from the contract to make
     // the memory layout defaults work.
     for &exp in traces.iter() {
-        let _ = memory_lookups.insert(exp.clone(), format!("mload({})", index * 32));
+        let _ = memory_lookups.insert(exp.clone(), format!("calldataload({})", index * 32));
         index += 1;
     }
-    let in_data_size = index;
+
+    // End of input, switch from calldata to memory
+    index = 1; // 0 is reserved for the modulus
+
     // Here we need to add an output which writelns denominator storage and batch
     // inversion
 
@@ -700,8 +722,6 @@ fn write_oods_poly(
     index += inverses.len();
 
     // Various offsets that appear in the header
-    context.modulus_location = (index + inverses.len() + 6) * 32;
-    context.input_data_size = in_data_size * 32;
     context.expmod_context = (index + inverses.len()) * 32;
 
     let mut inverse_position = inverse_start_index;
