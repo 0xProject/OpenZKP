@@ -23,7 +23,7 @@ parity-scale-codec = { version = "1.3.0", default-features = false, optional = t
 proptest = { version = "0.9.4", optional = true }
 proptest-derive = { version = "0.1.2", optional = true }
 rand = { version = "0.7.2", optional = true }
-serde = { version = "1.0", default_features = false }
+serde = { version = "1.0", default_features = false, optional = true }
 
 [dev-dependencies]
 bincode = "1.2.1"
@@ -42,6 +42,7 @@ default = [
     "inline",
     "rand",
     "std",
+    "serde",
 ]
 std = [
     "crunchy/std",
