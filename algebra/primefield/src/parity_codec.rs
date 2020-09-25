@@ -1,9 +1,9 @@
 use crate::{uint::UInt, Parameters, PrimeField};
-use parity_scale_codec::{Decode, Encode};
+use parity_scale_codec::{Decode, Encode, Error, Input, Output};
 
 impl<U, P> Encode for PrimeField<P>
 where
-    U: UInt + Serialize,
+    U: UInt + Encode,
     P: Parameters<UInt = U>,
 {
     fn size_hint(&self) -> usize {
@@ -23,13 +23,13 @@ where
     }
 }
 
-impl<'de, U, P> Decode<'de> for PrimeField<P>
+impl<U, P> Decode for PrimeField<P>
 where
-    U: UInt + Deserialize<'de>,
+    U: UInt + Decode,
     P: Parameters<UInt = U>,
 {
     fn decode<I: Input>(value: &mut I) -> Result<Self, Error> {
-        U256::decode(value).map(Self::from)
+        Ok(Self::from_uint(&U::decode(value)?))
     }
 }
 
@@ -37,7 +37,6 @@ where
 mod tests {
     use super::*;
     use crate::proth_field::Proth;
-    use num_traits::identities::One;
     use proptest::prelude::*;
 
     #[test]
