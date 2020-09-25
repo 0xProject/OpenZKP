@@ -1,3 +1,9 @@
+// Clippy false positive
+#[allow(clippy::useless_attribute)]
+// We want to import an alternative prelude.
+#[allow(clippy::wildcard_imports)]
+use std::prelude::v1::*;
+
 use crate::{uint::UInt, Parameters, PrimeField};
 use parity_scale_codec::{Decode, Encode, Error, Input, Output};
 
