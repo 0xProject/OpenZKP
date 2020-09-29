@@ -5,8 +5,6 @@
 use std::{fmt, prelude::v1::*};
 
 use crate::{Root, SquareRoot, UInt as FieldUInt};
-#[cfg(feature = "parity_codec")]
-use parity_scale_codec::{Decode, Encode};
 use std::{
     hash::{Hash, Hasher},
     marker::PhantomData,
@@ -32,7 +30,6 @@ use zkp_u256::{
 /// `proptest` support `Parameters` needs to be `'static + Send` (which it
 /// really should anyway).
 // Derive fails for Clone, PartialEq, Eq, Hash
-#[cfg_attr(feature = "parity_codec", derive(Encode, Decode))]
 pub struct PrimeField<P: Parameters> {
     // TODO: un-pub. They are pub so FieldElement can have const-fn constructors.
     pub uint:        P::UInt,
