@@ -65,7 +65,7 @@ contract OodsPoly \{
             }
 
             function mid_expmod(base, exponent) -> result \{
-                // TOOD - Find and fix the trivial bug
+                // TODO - Find and fix the trivial bug
                 // result := 1
                 // for \{  } exponent \{ exponent := shr(exponent, 1) } \{
                 //     if and(exponent, 1) \{
