@@ -5,6 +5,7 @@
 use std::prelude::v1::*;
 
 use crate::U256;
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::u64;
 
@@ -31,6 +32,7 @@ impl U256 {
     }
 }
 
+#[cfg(feature = "serde")]
 impl Serialize for U256 {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         if serializer.is_human_readable() {
@@ -41,6 +43,7 @@ impl Serialize for U256 {
     }
 }
 
+#[cfg(feature = "serde")]
 impl<'a> Deserialize<'a> for U256 {
     fn deserialize<D: Deserializer<'a>>(deserializer: D) -> Result<Self, D::Error> {
         if deserializer.is_human_readable() {
@@ -168,73 +171,78 @@ mod tests {
     use num_traits::identities::One;
     use proptest::prelude::*;
 
-    #[cfg(feature = "parity_codec")]
-    use parity_scale_codec::{Decode, Encode};
+    #[cfg(feature = "serde")]
+    mod serde {
+        use super::*;
 
-    #[test]
-    fn test_one() {
-        let one = U256::one();
-        let serialized = serde_json::to_string(&one).unwrap();
-        assert_eq!(
-            serialized,
-            "\"0x0000000000000000000000000000000000000000000000000000000000000001\""
-        );
-    }
+        #[test]
+        fn test_one() {
+            let one = U256::one();
+            let serialized = serde_json::to_string(&one).unwrap();
+            assert_eq!(
+                serialized,
+                "\"0x0000000000000000000000000000000000000000000000000000000000000001\""
+            );
+        }
 
-    #[test]
-    fn test_serde_json() {
-        proptest!(|(x: U256)| {
-            let serialized = serde_json::to_string(&x)?;
-            let deserialized: U256 = serde_json::from_str(&serialized)?;
-            prop_assert_eq!(deserialized, x);
-        });
-    }
+        #[test]
+        fn test_json() {
+            proptest!(|(x: U256)| {
+                let serialized = serde_json::to_string(&x)?;
+                let deserialized: U256 = serde_json::from_str(&serialized)?;
+                prop_assert_eq!(deserialized, x);
+            });
+        }
 
-    #[test]
-    fn test_serde_bincode() {
-        proptest!(|(x: U256)| {
-            let serialized = bincode::serialize(&x)?;
-            let deserialized: U256 = bincode::deserialize(&serialized)?;
-            prop_assert_eq!(deserialized, x);
-        });
-    }
-
-    #[cfg(feature = "parity_codec")]
-    #[test]
-    fn test_parity_codec_one() {
-        let one = U256::one();
-        let serialized = one.encode();
-        assert_eq!(
-            hex::encode(serialized),
-            "0100000000000000000000000000000000000000000000000000000000000000"
-        );
+        #[test]
+        fn test_bincode() {
+            proptest!(|(x: U256)| {
+                let serialized = bincode::serialize(&x)?;
+                let deserialized: U256 = bincode::deserialize(&serialized)?;
+                prop_assert_eq!(deserialized, x);
+            });
+        }
     }
 
     #[cfg(feature = "parity_codec")]
-    #[test]
-    fn test_parity_codec() {
-        proptest!(|(x: U256)| {
-            let serialized = x.encode();
-            // Deserialize consumes a mutable slice reference.
-            let mut slice = serialized.as_slice();
-            let deserialized: U256 = U256::decode(&mut slice)?;
-            prop_assert_eq!(slice.len(), 0); // Consumes all
-            prop_assert_eq!(deserialized, x);
-        });
-    }
+    mod parity_codec {
+        use super::*;
+        use parity_scale_codec::{Decode, Encode};
 
-    #[cfg(feature = "parity_codec")]
-    #[test]
-    fn test_parity_little_endian() {
-        proptest!(|(x: U256)| {
-            let serialized = x.encode();
-            // Encoding is lsb first (little-endian order)
-            // We prefer big-endian in IO, but the actual memory layout is
-            // little-endian. Having the encoding be identical to the memory
-            // layout may give a performance advantage down the line, which
-            // seems to be the goal of the Parity Scale codec.
-            let little_endian: Vec<u8> = x.to_bytes_be().iter().rev().cloned().collect();
-            prop_assert_eq!(serialized, little_endian);
-        });
+        #[test]
+        fn test_one() {
+            let one = U256::one();
+            let serialized = one.encode();
+            assert_eq!(
+                hex::encode(serialized),
+                "0100000000000000000000000000000000000000000000000000000000000000"
+            );
+        }
+
+        #[test]
+        fn test_roundtrip() {
+            proptest!(|(x: U256)| {
+                let serialized = x.encode();
+                // Deserialize consumes a mutable slice reference.
+                let mut slice = serialized.as_slice();
+                let deserialized: U256 = U256::decode(&mut slice)?;
+                prop_assert_eq!(slice.len(), 0); // Consumes all
+                prop_assert_eq!(deserialized, x);
+            });
+        }
+
+        #[test]
+        fn test_little_endian() {
+            proptest!(|(x: U256)| {
+                let serialized = x.encode();
+                // Encoding is lsb first (little-endian order)
+                // We prefer big-endian in IO, but the actual memory layout is
+                // little-endian. Having the encoding be identical to the memory
+                // layout may give a performance advantage down the line, which
+                // seems to be the goal of the Parity Scale codec.
+                let little_endian: Vec<u8> = x.to_bytes_be().iter().rev().cloned().collect();
+                prop_assert_eq!(serialized, little_endian);
+            });
+        }
     }
 }
