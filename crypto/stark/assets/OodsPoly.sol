@@ -22,7 +22,7 @@ contract OodsPoly \{
                 mstore(add(p, 0x80), exponent) // Exponent
                 mstore(add(p, 0xa0), {modulus}) // Modulus
                 // call modexp precompile
-                if iszero(call(gasleft(), 0x05, 0, p, 0xc0, p, 0x20)) \{
+                if iszero(call(gas(), 0x05, 0, p, 0xc0, p, 0x20)) \{
                     revert(0, 0)
                 }
                 result := mload(p)
@@ -65,13 +65,15 @@ contract OodsPoly \{
             }
 
             function mid_expmod(base, exponent) -> result \{
-                result := 1
-                for \{  } exponent \{ exponent := shr(exponent, 1) } \{
-                    if and(exponent, 1) \{
-                        result := mulmod(result, base, {modulus})
-                    }
-                    base := mulmod(base, base, {modulus})
-                }
+                // TOOD - Find and fix the trivial bug
+                // result := 1
+                // for \{  } exponent \{ exponent := shr(exponent, 1) } \{
+                //     if and(exponent, 1) \{
+                //         result := mulmod(result, base, {modulus})
+                //     }
+                //     base := mulmod(base, base, {modulus})
+                // }
+                result := expmod(base, exponent)
             }
 
             // Store adjustment degrees
@@ -144,7 +146,7 @@ contract OodsPoly \{
             {{ for c in constraints -}}
             \{
                 let val := {c.expression}
-                res := addmod(res, mulmod(val, add(mload({c.first_coefficient_location}), mulmod(mload({c.second_coefficient_location}), {c.degree_adjustment_location}, {modulus})), {modulus}), {modulus})
+                res := addmod(res, mulmod(val, add(calldataload({c.first_coefficient_location}), mulmod(calldataload({c.second_coefficient_location}), {c.degree_adjustment_location}, {modulus})), {modulus}), {modulus})
             }
             {{ endfor -}}
 
