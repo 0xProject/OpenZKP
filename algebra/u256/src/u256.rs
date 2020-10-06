@@ -1,3 +1,6 @@
+// False positive in derived code
+#![allow(unused_qualifications)]
+
 // False positive: attribute has a use
 #[allow(clippy::useless_attribute)]
 // False positive: Importing preludes is allowed
@@ -10,8 +13,6 @@ use parity_scale_codec::{Decode, Encode};
 use proptest_derive::Arbitrary;
 use std::{cmp::Ordering, u64};
 
-// False positive in derived code
-#[allow(unused_qualifications)]
 #[derive(PartialEq, Eq, Clone, Default, Hash)]
 #[cfg_attr(feature = "parity_codec", derive(Encode, Decode))]
 // TODO: Generate a quasi-random sequence.
