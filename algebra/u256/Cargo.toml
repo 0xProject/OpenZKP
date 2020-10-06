@@ -54,6 +54,7 @@ std = [
     "serde/std",
 ]
 asm = []
+stable = []
 inline = []
 parity_codec = [
     "parity-scale-codec/derive",
