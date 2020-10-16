@@ -54,6 +54,16 @@ impl<'a> Deserialize<'a> for U256 {
     }
 }
 
+impl From<bool> for U256 {
+    fn from(n: bool) -> Self {
+        if n {
+            U256::one()
+        } else {
+            U256::zero()
+        }
+    }
+}
+
 macro_rules! impl_from_uint {
     ($type:ty) => {
         impl From<$type> for U256 {
