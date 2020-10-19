@@ -56,11 +56,7 @@ impl<'a> Deserialize<'a> for U256 {
 
 impl From<bool> for U256 {
     fn from(n: bool) -> Self {
-        if n {
-            U256::one()
-        } else {
-            U256::zero()
-        }
+        Self::from_limbs([u64::from(n), 0, 0, 0])
     }
 }
 
