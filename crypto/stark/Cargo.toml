@@ -30,8 +30,8 @@ zkp-logging-allocator = { version = "0.2.0", path = "../../utils/logging-allocat
 zkp-macros-decl = { version = "0.2.0", path = "../../utils/macros-decl", default-features = false }
 zkp-merkle-tree = { version = "0.2.0", path = "../../crypto/merkle-tree", default-features = false }
 zkp-mmap-vec = { version = "0.2.0", path = "../../utils/mmap-vec", default-features = false }
-zkp-primefield = { version = "0.1.1", path = "../../algebra/primefield", default-features = false }
-zkp-u256 = { version = "0.1.1", path = "../../algebra/u256", default-features = false }
+zkp-primefield = { version = "0.2.0", path = "../../algebra/primefield", default-features = false }
+zkp-u256 = { version = "0.2.0", path = "../../algebra/u256", default-features = false }
 
 [dev-dependencies]
 criterion = "0.3.0"

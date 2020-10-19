@@ -19,7 +19,7 @@ proc-macro = true
 [dependencies]
 proc-macro-hack = "0.5.8"
 proc-macro2 = "1.0.9"
-zkp-macros-lib = { version="0.1.0", path = "../macros-lib" }
+zkp-macros-lib = { version="0.2.0", path = "../macros-lib" }
 
 [features]
 default = [ "std" ]
