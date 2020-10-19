@@ -43,15 +43,27 @@ where
 mod tests {
     use super::*;
     use crate::proth_field::Proth;
+    use hex;
+    use num_traits::One;
     use proptest::prelude::*;
 
     #[test]
+    fn test_one() {
+        let one = PrimeField::<Proth>::one();
+        let serialized = one.encode();
+        assert_eq!(
+            hex::encode(serialized),
+            "0100000000000000000000000000000000000000000000000000000000000000"
+        );
+    }
+
+    #[test]
     fn test_roundtrip() {
-        proptest!(|(x: PrimeField<Proth>)| {
+        proptest!(|(x: PrimeField::<Proth>)| {
             let serialized = x.encode();
             // Deserialize consumes a mutable slice reference.
             let mut slice = serialized.as_slice();
-            let deserialized: PrimeField<Proth> = Decode::decode(&mut slice)?;
+            let deserialized: PrimeField::<Proth> = Decode::decode(&mut slice)?;
             prop_assert_eq!(slice.len(), 0); // Consumes all
             prop_assert_eq!(deserialized, x);
         });

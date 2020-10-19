@@ -1,3 +1,6 @@
+// False positive in derived code
+#![allow(unused_qualifications)]
+
 // False positive: attribute has a use
 #[allow(clippy::useless_attribute)]
 // False positive: Importing preludes is allowed
