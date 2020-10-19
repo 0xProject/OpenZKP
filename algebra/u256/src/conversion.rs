@@ -174,8 +174,14 @@ impl U256 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use num_traits::identities::One;
+    use num_traits::identities::{One, Zero};
     use proptest::prelude::*;
+
+    #[test]
+    fn test_bool() {
+        assert_eq!(U256::from(true), U256::one());
+        assert_eq!(U256::from(false), U256::zero());
+    }
 
     #[cfg(feature = "serde")]
     mod serde {
