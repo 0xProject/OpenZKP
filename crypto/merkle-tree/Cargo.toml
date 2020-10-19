@@ -1,6 +1,6 @@
 [package]
 name = "zkp-merkle-tree"
-version = "0.1.0"
+version = "0.2.0"
 description = "Merkle tree based vector commitment"
 repository = "https://github.com/0xProject/starkcrypto/tree/master/crypto/merkle-tree"
 keywords = ["merkle-tree", "hash", "no-std"]
@@ -20,18 +20,18 @@ itertools = { version = "0.9.0", default_features = false }
 log = { version = "0.4.8", default_features = false }
 no-std-compat = { version = "0.4.0", features = [ "alloc" ] }
 rayon = { version = "1.0.3", optional = true }
-zkp-error-utils = { version = "0.1.0", path = "../../utils/error-utils", default_features = false }
-zkp-hash = { version = "0.1.0", path = "../hash", default_features = false }
-zkp-mmap-vec = { version = "0.1.0", path = "../../utils/mmap-vec", default_features = false, optional = true }
+zkp-error-utils = { version = "0.2.0", path = "../../utils/error-utils", default_features = false }
+zkp-hash = { version = "0.2.0", path = "../hash", default_features = false }
+zkp-mmap-vec = { version = "0.2.0", path = "../../utils/mmap-vec", default_features = false, optional = true }
 
 [dev-dependencies]
 criterion = "0.3.0"
 lazy_static = "1.3.0"
 proptest = "0.9.5"
 proptest-derive = "0.1.2"
-zkp-criterion-utils = { version = "0.1.0", path = "../../utils/criterion-utils" }
-zkp-macros-decl = { version = "0.1.0", path = "../../utils/macros-decl" }
-zkp-u256 = { version = "0.1.0", path = "../../algebra/u256", features = ["proptest", "proptest-derive"] }
+zkp-criterion-utils = { version = "0.2.0", path = "../../utils/criterion-utils" }
+zkp-macros-decl = { version = "0.2.0", path = "../../utils/macros-decl" }
+zkp-u256 = { version = "0.2.0", path = "../../algebra/u256", features = ["proptest", "proptest-derive"] }
 
 [[bench]]
 name = "benchmark"

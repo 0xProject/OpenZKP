@@ -1,6 +1,6 @@
 [package]
 name = "zkp-macros-decl"
-version = "0.1.0"
+version = "0.2.0"
 description = "Procedural macros"
 repository = "https://github.com/0xProject/starkcrypto/tree/master/utils/macros-decl"
 keywords = ["proc_macro_hack"]
@@ -15,7 +15,7 @@ edition = "2018"
 
 [dependencies]
 proc-macro-hack = "0.5"
-zkp-macros-impl = { version = "0.1.0", path = "../macros-impl" }
+zkp-macros-impl = { version = "0.2.0", path = "../macros-impl" }
 
 [features]
 default = ["std"]

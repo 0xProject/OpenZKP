@@ -25,11 +25,11 @@ serde = { version = "1.0", features = ["derive"], optional = true }
 thiserror = { version = "1.0", optional = true }
 tiny-keccak = { version = "2.0.1", features = ["keccak"] }
 tinytemplate = { version = "1.1.0", optional = true }
-zkp-hash = { version = "0.1.0", path = "../../crypto/hash", default-features = false }
-zkp-logging-allocator = { version = "0.1.0", path = "../../utils/logging-allocator", optional = true }
-zkp-macros-decl = { version = "0.1.0", path = "../../utils/macros-decl", default-features = false }
-zkp-merkle-tree = { version = "0.1.0", path = "../../crypto/merkle-tree", default-features = false }
-zkp-mmap-vec = { version = "0.1.0", path = "../../utils/mmap-vec", default-features = false }
+zkp-hash = { version = "0.2.0", path = "../../crypto/hash", default-features = false }
+zkp-logging-allocator = { version = "0.2.0", path = "../../utils/logging-allocator", optional = true }
+zkp-macros-decl = { version = "0.2.0", path = "../../utils/macros-decl", default-features = false }
+zkp-merkle-tree = { version = "0.2.0", path = "../../crypto/merkle-tree", default-features = false }
+zkp-mmap-vec = { version = "0.2.0", path = "../../utils/mmap-vec", default-features = false }
 zkp-primefield = { version = "0.1.1", path = "../../algebra/primefield", default-features = false }
 zkp-u256 = { version = "0.1.1", path = "../../algebra/u256", default-features = false }
 
@@ -40,12 +40,12 @@ proptest = "0.9.4"
 rand = "0.7.2"
 rand_xoshiro = "0.4.0"
 structopt = "0.3.5"
-zkp-criterion-utils = { version = "0.1.0", path = "../../utils/criterion-utils" }
-zkp-elliptic-curve = { version = "0.1.0", path = "../../algebra/elliptic-curve" }
-zkp-elliptic-curve-crypto = { version = "0.1.0", path = "../../crypto/elliptic-curve-crypto" }
-zkp-logging-allocator = { version = "0.1.0", path = "../../utils/logging-allocator" }
-zkp-primefield = { version = "0.1.0", path = "../../algebra/primefield", features = ["proptest"] }
-zkp-u256 = { version = "0.1.0", path = "../../algebra/u256", features = ["proptest", "proptest-derive"] }
+zkp-criterion-utils = { version = "0.2.0", path = "../../utils/criterion-utils" }
+zkp-elliptic-curve = { version = "0.2.0", path = "../../algebra/elliptic-curve" }
+zkp-elliptic-curve-crypto = { version = "0.2.0", path = "../../crypto/elliptic-curve-crypto" }
+zkp-logging-allocator = { version = "0.2.0", path = "../../utils/logging-allocator" }
+zkp-primefield = { version = "0.2.0", path = "../../algebra/primefield", features = ["proptest"] }
+zkp-u256 = { version = "0.2.0", path = "../../algebra/u256", features = ["proptest", "proptest-derive"] }
 
 [[bench]]
 name = "benchmark"

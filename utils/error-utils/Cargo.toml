@@ -1,6 +1,6 @@
 [package]
 name = "zkp-error-utils"
-version = "0.1.0"
+version = "0.2.0"
 description = "Assertion like macros for returning `Result::Err`"
 repository = "https://github.com/0xProject/starkcrypto/tree/master/utils/error-utils"
 keywords = ["no-std"]
