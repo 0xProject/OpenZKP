@@ -1,3 +1,6 @@
+// False positive from derive macros
+#![allow(unused_qualifications)]
+
 use crate::{Signature, GENERATOR_TABLE};
 #[cfg(feature = "parity_codec")]
 use parity_scale_codec::{Decode, Encode};
