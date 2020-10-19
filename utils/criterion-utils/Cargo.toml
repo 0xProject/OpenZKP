@@ -1,6 +1,6 @@
 [package]
 name = "zkp-criterion-utils"
-version = "0.1.0"
+version = "0.2.0"
 description = "Criterion helpers to benchmark over size and number of processors"
 repository = "https://github.com/0xProject/starkcrypto/tree/master/utils/criterion-utils"
 keywords = ["criterion", "benchmarking", "threads"]

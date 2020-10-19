@@ -1,6 +1,6 @@
 [package]
 name = "zkp-primefield-benchmarks"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Remco Bloemen <remco@0x.org>"]
 edition = "2018"
 
@@ -11,10 +11,10 @@ edition = "2018"
 
 [dev-dependencies]
 criterion = "0.3"
-zkp-macros-decl = { name = "macros-decl", version = "0.1.0", path = "../../../utils/macros-decl" }
-zkp-primefield = { name = "primefield", version = "0.1.0", path = ".." }
-zkp-u256 = { name = "u256", version = "0.1.0", path = "../../u256" }
-zkp-elliptic-curve-crypto = { name = "ecc", version = "0.1.0", path = "../../../crypto/elliptic-curve-crypto", features = ["unsafe_ecdsa"] }
+zkp-macros-decl = { name = "macros-decl", version = "0.2.0", path = "../../../utils/macros-decl" }
+zkp-primefield = { name = "primefield", version = "0.2.0", path = ".." }
+zkp-u256 = { name = "u256", version = "0.2.0", path = "../../u256" }
+zkp-elliptic-curve-crypto = { name = "ecc", version = "0.2.0", path = "../../../crypto/elliptic-curve-crypto", features = ["unsafe_ecdsa"] }
 secp256k1-bindings = { package = "secp256k1", version = "0.12.2" }
 secp256k1-native = { package = "libsecp256k1", version = "0.2.2" }
 ed25519-dalek = "0.9.1"
