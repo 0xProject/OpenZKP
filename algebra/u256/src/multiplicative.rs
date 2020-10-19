@@ -5,7 +5,8 @@
 use std::prelude::v1::*;
 
 use crate::{
-    algorithms::{adc, divrem_nby1, divrem_nbym, mac},
+    algorithms::{adc, mac},
+    arch::{divrem_nby1, divrem_nbym},
     assign_ops_from_trait, self_ops_from_trait, MulFullInline, MulInline, SquareFullInline,
     SquareInline, U256,
 };

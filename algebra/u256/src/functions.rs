@@ -1,5 +1,6 @@
 use crate::{
-    algorithms::{gcd, gcd_extended, mul_redc_inline, redc_inline, square_redc_inline},
+    algorithms::{mul_redc_inline, redc_inline, square_redc_inline},
+    arch::{gcd, gcd_extended, reduce_1},
     InvMod, Montgomery, MontgomeryParameters, GCD, U256,
 };
 
@@ -20,6 +21,11 @@ impl GCD for U256 {
 // can help here. Extra credit: make it a `const fn`.
 
 impl Montgomery for U256 {
+    #[inline(always)]
+    fn reduce_1_inline<M: MontgomeryParameters<UInt = U256>>(&self) -> Self {
+        reduce_1(self, &M::MODULUS)
+    }
+
     #[inline(always)]
     fn redc_inline<M: MontgomeryParameters<UInt = U256>>(lo: &Self, hi: &Self) -> Self {
         redc_inline::<M>(lo, hi)

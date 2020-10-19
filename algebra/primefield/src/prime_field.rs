@@ -2,11 +2,9 @@
 #[allow(clippy::useless_attribute)]
 // False positive: Importing preludes is allowed
 #[allow(clippy::wildcard_imports)]
-use std::prelude::v1::*;
+use std::{fmt, prelude::v1::*};
 
 use crate::{Root, SquareRoot, UInt as FieldUInt};
-#[cfg(feature = "std")]
-use std::fmt;
 use std::{
     hash::{Hash, Hasher},
     marker::PhantomData,
@@ -119,9 +117,6 @@ impl<P: Parameters> PrimeField<P> {
     #[inline(always)]
     pub fn from_montgomery(uint: P::UInt) -> Self {
         debug_assert!(uint < Self::modulus());
-        // TODO: Uncomment assertion when support in `const fn` is enabled.
-        // See https://github.com/rust-lang/rust/issues/57563
-        // debug_assert!(n < Self::MODULUS);
         Self {
             uint,
             _parameters: PhantomData,
@@ -196,7 +191,6 @@ where
     }
 }
 
-#[cfg(feature = "std")]
 impl<U, P> fmt::Debug for PrimeField<P>
 where
     U: FieldUInt + fmt::Debug,
@@ -236,11 +230,8 @@ impl<P: Parameters> One for PrimeField<P> {
 impl<P: Parameters> AddInline<&Self> for PrimeField<P> {
     #[inline(always)]
     fn add_inline(&self, rhs: &Self) -> Self {
-        let mut result = self.as_montgomery().add_inline(rhs.as_montgomery());
-        if result >= Self::modulus() {
-            result.sub_assign_inline(&Self::modulus());
-        }
-        debug_assert!(result < Self::modulus());
+        let result = self.as_montgomery().add_inline(rhs.as_montgomery());
+        let result = result.reduce_1_inline::<Montgomery<P>>();
         Self::from_montgomery(result)
     }
 }

@@ -34,7 +34,7 @@ fn divrem_2by1(lo: u64, hi: u64, d: u64) -> (u64, u64) {
     (q as u64, r as u64)
 }
 
-pub fn divrem_nby1(numerator: &mut [u64], divisor: u64) -> u64 {
+pub(crate) fn divrem_nby1(numerator: &mut [u64], divisor: u64) -> u64 {
     debug_assert!(divisor > 0);
     let mut remainder = 0;
     for i in (0..numerator.len()).rev() {
@@ -93,7 +93,7 @@ fn div_3by2(n: &[u64; 3], d: &[u64; 2]) -> u64 {
 // NOTE: numerator must have one additional zero at the end.
 // The result will be computed in-place in numerator.
 // The divisor will be normalized.
-pub fn divrem_nbym(numerator: &mut [u64], divisor: &mut [u64]) {
+pub(crate) fn divrem_nbym(numerator: &mut [u64], divisor: &mut [u64]) {
     debug_assert!(divisor.len() >= 2);
     debug_assert!(numerator.len() > divisor.len());
     debug_assert!(*divisor.last().unwrap() > 0);

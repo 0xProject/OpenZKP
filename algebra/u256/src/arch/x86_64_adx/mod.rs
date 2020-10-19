@@ -1,4 +1,9 @@
+// Allow `asm!` and `llvm_asm!` in this file.
 #![allow(unsafe_code)]
+
+// Re-use x86_64 routines
+pub(crate) use super::x86_64::*;
+
 use crate::{MontgomeryParameters, U256};
 use std::mem::MaybeUninit;
 
@@ -8,6 +13,8 @@ use std::mem::MaybeUninit;
 
 // For instruction timings and through puts
 // See <https://gmplib.org/~tege/x86-timing.pdf>
+// See <https://agner.org/optimize/>
+// See <https://www.felixcloutier.com/x86/>
 
 // For examples using mulx/adcx
 // See <https://www.intel.com/content/dam/www/public/us/en/documents/white-papers/large-integer-squaring-ia-paper.pdf>
@@ -20,12 +27,100 @@ use std::mem::MaybeUninit;
 // NOTE: LLVM currently always takes `m` when offered `rm`, but this seems fine
 // for our use case.
 
+#[inline(always)]
+pub(crate) fn proth_redc_asm(m3: u64, lo: &U256, hi: &U256) -> U256 {
+    // TODO: Fix carry bug
+    const ZERO: u64 = 0;
+    let lo = lo.as_limbs();
+    let hi = hi.as_limbs();
+    let mut result = MaybeUninit::<[u64; 4]>::uninit();
+    unsafe {
+        llvm_asm!(r"
+        // RDX contains M3 and we keep it there the whole time.
+        // OPT: Use operand constraints to put it there.
+        mov $4, %rdx
+
+        // [r8, r9, r10, CF] = -[lo[0] lo[1] lo[2]]
+        mov 0($1), %r8
+        xor %r9, %r9
+        xor %r10, %r10
+        neg %r8
+        sbb 8($1), %r9
+        sbb 16($1), %r10
+        // Remaining CF is for lo[3]
+
+        // Clear OF (by adding zero+OF to zero)
+        mov  $$0, %rax             // Note: we can't use xor here
+        adox %rax, %rax
+
+        // Add m3 * [k0 k1 k2] to [lo[3]+CF hi[0] hi[1] hi[2] hi[3]]
+        // and store in [r8 r11 r9 r10, r12]
+        mulx %r8, %r8, %r11
+        adcx 24($1), %r8
+        mov %r12, 24($0)
+        adox 0($2), %r11
+        mulx %r9, %rax, %r9
+        adcx %rax, %r11
+        adox 8($2), %r9
+        mulx %r10, %rax, %r10
+        adcx %rax, %r9
+        adox 16($2), %r10
+        adcx $3, %r10
+        mov $3, %r12
+        adox 24($2), %r12
+        adcx $3, %r12
+
+        // Compute k3, CF is for r11
+        neg  %r8
+        adcx $3, %r11
+        adcx $3, %r9
+
+        // Add m3 * k3 to [r10 r12]
+        mulx %r8, %rax, %rbx
+        adcx %rax, %r10
+        adcx %rbx, %r12                    // No carry, CF = 0
+
+        // Result can be up to 2 * modulus
+        // We need to conditionally subtract one modulus.
+        // This step takes 1.1ns or about 22% of total time.
+        // We could leave it out, but that complicates the function signature.
+
+        // Reduce result
+        mov %r11, %rax
+        mov %r9, %rbx
+        mov %r10, %r13
+        mov %r12, %r14
+
+        sub $$1, %rax
+        sbb $$0, %rbx
+        sbb $$0, %r13
+        sbb %rdx, %r14
+
+        // Conditionally store reduced result if CF=1
+        cmovnc %rax, %r11
+        cmovnc %rbx, %r9
+        cmovnc %r13, %r10
+        cmovnc %r14, %r12
+
+        // Store result
+        mov %r11, 0($0)
+        mov %r9, 8($0)
+        mov %r10, 16($0)
+        mov %r12, 24($0)
+        "
+            :
+            : "r"(result.as_mut_ptr()), "r"(lo), "r"(hi), "m"(ZERO), "m"(m3)
+            : "rax", "rbx", "rdx", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "cc", "memory"
+        )
+    }
+    let result = unsafe { result.assume_init() };
+    U256::from_limbs(result)
+}
+
 // Computes r[0..5] = a * b[0..4]
 // Uses MULX
 // Currently unused
-#[allow(dead_code)]
 #[inline(always)]
-#[cfg(all(target_arch = "x86_64", target_feature = "adx"))]
 pub(crate) fn mul_1_asm(a: u64, b0: u64, b1: u64, b2: u64, b3: u64) -> (u64, u64, u64, u64, u64) {
     let r0: u64;
     let r1: u64;
@@ -36,7 +131,7 @@ pub(crate) fn mul_1_asm(a: u64, b0: u64, b1: u64, b2: u64, b3: u64) -> (u64, u64
     // Binding `_lo` will not be used after assignment.
     #[allow(clippy::used_underscore_binding)]
     unsafe {
-        asm!(r"
+        llvm_asm!(r"
         mulx $7, $0, $1      // (r0, r1) = a * b0
 
         mulx $8, $5, $2      // (lo, r2) = a * b1
@@ -72,12 +167,9 @@ pub(crate) fn mul_1_asm(a: u64, b0: u64, b1: u64, b2: u64, b3: u64) -> (u64, u64
 
 // Computes r[0..4] += a * b[0..4], returns carry
 // Uses MULX and ADCX/ADOX carry chain
-// Currently unused
-#[allow(dead_code)]
 // We want each argument to be able to get it's own register after inlining.
 #[allow(clippy::too_many_arguments)]
 #[inline(always)]
-#[cfg(all(target_arch = "x86_64", target_feature = "adx"))]
 pub(crate) fn mul_add_1_asm(
     r0: &mut u64,
     r1: &mut u64,
@@ -95,7 +187,7 @@ pub(crate) fn mul_add_1_asm(
     // Bindings `_lo` and `_hi` will not be used after assignment.
     #[allow(clippy::used_underscore_binding)]
     unsafe {
-        asm!(r"
+        llvm_asm!(r"
         xor $4, $4            // r4 = CF = OF 0
 
         mulx $8, $5, $6       // a * b0
@@ -136,72 +228,7 @@ pub(crate) fn mul_add_1_asm(
     r4
 }
 
-/// Reduce at most once
-// Currently unused
-#[allow(dead_code)]
-// We want each argument to be able to get it's own register after inlining.
-#[allow(clippy::too_many_arguments)]
 #[inline(always)]
-#[cfg(all(target_arch = "x86_64", target_feature = "adx"))]
-pub(crate) fn reduce_1(
-    s0: u64,
-    s1: u64,
-    s2: u64,
-    s3: u64,
-    m0: u64,
-    m1: u64,
-    m2: u64,
-    m3: u64,
-) -> (u64, u64, u64, u64) {
-    let r0: u64;
-    let r1: u64;
-    let r2: u64;
-    let r3: u64;
-    unsafe {
-        asm!(r"
-        // Copy [s0..3] into [r0..3]
-        // Subtract [m0..3] from [s0..3] in place
-        mov $4, $0
-        sub $8, $4
-        mov $5, $1
-        sbb $9, $5
-        mov $6, $2
-        sbb $10, $6
-        mov $7, $3
-        sbb $11, $7
-
-        // Conditionally copy [s0..3] into [r0..3] when no carry
-        cmovnc $4, $0
-        cmovnc $5, $1
-        cmovnc $6, $2
-        cmovnc $7, $3
-        "
-        : // Output constraints
-            "=&rm"(r0),   // $0 d0..3 are in register or memory
-            "=&rm"(r1),   // $1
-            "=&rm"(r2),   // $2
-            "=&rm"(r3)    // $3
-        : // Input constraints
-            "r"(s0),      // $4 s0..3 are in registers
-            "r"(s1),      // $5
-            "r"(s2),      // $6
-            "r"(s3),      // $7
-            "rmi"(m0),    // $8 m0..3 are in registers or memory or immediate
-            "rmi"(m1),    // $9
-            "rmi"(m2),    // $10
-            "rmi"(m3)     // $11
-            // TODO: Make sure m is immediate
-        : // Clobbers
-           "cc"         // Flags
-        )
-    }
-    (r0, r1, r2, r3)
-}
-
-// Currently unused
-#[allow(dead_code)]
-#[inline(always)]
-#[cfg(all(target_arch = "x86_64", target_feature = "adx"))]
 pub(crate) fn full_mul_asm2(x: &U256, y: &U256) -> (U256, U256) {
     let x = x.as_limbs();
     let y = y.as_limbs();
@@ -224,16 +251,13 @@ pub(crate) fn full_mul_asm2(x: &U256, y: &U256) -> (U256, U256) {
 // TODO: Square asm
 // TODO: Mul-add
 
-// Currently unused
-#[allow(dead_code)]
 #[inline(always)]
-#[cfg(all(target_arch = "x86_64", target_feature = "adx"))]
 pub(crate) fn mul_asm(x: &U256, y: &U256) -> U256 {
     let x = x.as_limbs();
     let y = y.as_limbs();
     let mut r = MaybeUninit::<[u64; 4]>::uninit();
     unsafe {
-        asm!(r"
+        llvm_asm!(r"
         xor %rax, %rax               // CF, OF cleared
 
         // Set x[0] * y
@@ -290,10 +314,7 @@ pub(crate) fn mul_asm(x: &U256, y: &U256) -> U256 {
     U256::from_limbs(r)
 }
 
-// Currently unused
-#[allow(dead_code)]
 #[inline(always)]
-#[cfg(all(target_arch = "x86_64", target_feature = "adx"))]
 pub(crate) fn full_mul_asm(x: &U256, y: &U256) -> (U256, U256) {
     const ZERO: u64 = 0;
     let x = x.as_limbs();
@@ -302,7 +323,7 @@ pub(crate) fn full_mul_asm(x: &U256, y: &U256) -> (U256, U256) {
     let mut hi = MaybeUninit::<[u64; 4]>::uninit();
 
     unsafe {
-        asm!(r"
+        llvm_asm!(r"
         xor %rax, %rax               // CF, OF cleared
 
         // Set x[0] * y
@@ -389,99 +410,6 @@ pub(crate) fn full_mul_asm(x: &U256, y: &U256) -> (U256, U256) {
     (U256::from_limbs(lo), U256::from_limbs(hi))
 }
 
-// Currently unused
-#[allow(dead_code)]
-#[inline(always)]
-#[cfg(all(target_arch = "x86_64", target_feature = "adx"))]
-pub(crate) fn proth_redc_asm(m3: u64, lo: &U256, hi: &U256) -> U256 {
-    // TODO: Fix carry bug
-    const ZERO: u64 = 0;
-    let lo = lo.as_limbs();
-    let hi = hi.as_limbs();
-    let mut result = MaybeUninit::<[u64; 4]>::uninit();
-    unsafe {
-        asm!(r"
-        // RDX contains M3 and we keep it there the whole time.
-        // OPT: Use operand constraints to put it there.
-        mov $4, %rdx
-
-        // [r8, r9, r10, CF] = -[lo[0] lo[1] lo[2]]
-        mov 0($1), %r8
-        xor %r9, %r9
-        xor %r10, %r10
-        neg %r8
-        sbb 8($1), %r9
-        sbb 16($1), %r10
-        // Remaining CF is for lo[3]
-
-        // Clear OF (by adding zero+OF to zero)
-        mov  $$0, %rax             // Note: we can't use xor here
-        adox %rax, %rax
-
-        // Add m3 * [k0 k1 k2] to [lo[3]+CF hi[0] hi[1] hi[2] hi[3]]
-        // and store in [r8 r11 r9 r10, r12]
-        mulx %r8, %r8, %r11
-        adcx 24($1), %r8
-        mov %r12, 24($0)
-        adox 0($2), %r11
-        mulx %r9, %rax, %r9
-        adcx %rax, %r11
-        adox 8($2), %r9
-        mulx %r10, %rax, %r10
-        adcx %rax, %r9
-        adox 16($2), %r10
-        adcx $3, %r10
-        mov $3, %r12
-        adox 24($2), %r12
-        adcx $3, %r12
-
-        // Compute k3, CF is for r11
-        neg  %r8
-        adcx $3, %r11
-        adcx $3, %r9
-
-        // Add m3 * k3 to [r10 r12]
-        mulx %r8, %rax, %rbx
-        adcx %rax, %r10
-        adcx %rbx, %r12                    // No carry, CF = 0
-
-        // Result can be up to 2 * modulus
-        // We need to conditionally subtract one modulus.
-        // This step takes 1.1ns or about 22% of total time.
-        // We could leave it out, but that complicates the function signature.
-
-        // Reduce result
-        mov %r11, %rax
-        mov %r9, %rbx
-        mov %r10, %r13
-        mov %r12, %r14
-
-        sub $$1, %rax
-        sbb $$0, %rbx
-        sbb $$0, %r13
-        sbb %rdx, %r14
-
-        // Conditionally store reduced result if CF=1
-        cmovnc %rax, %r11
-        cmovnc %rbx, %r9
-        cmovnc %r13, %r10
-        cmovnc %r14, %r12
-
-        // Store result
-        mov %r11, 0($0)
-        mov %r9, 8($0)
-        mov %r10, 16($0)
-        mov %r12, 24($0)
-        "
-            :
-            : "r"(result.as_mut_ptr()), "r"(lo), "r"(hi), "m"(ZERO), "m"(m3)
-            : "rax", "rbx", "rdx", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "cc", "memory"
-        )
-    }
-    let result = unsafe { result.assume_init() };
-    U256::from_limbs(result)
-}
-
 // https://doc.rust-lang.org/1.12.0/book/inline-assembly.html
 // https://llvm.org/docs/LangRef.html#inline-assembler-expressions
 // https://www.intel.com/content/dam/www/public/us/en/documents/white-papers/large-integer-squaring-ia-paper.pdf
@@ -491,12 +419,9 @@ pub(crate) fn proth_redc_asm(m3: u64, lo: &U256, hi: &U256) -> U256 {
 // NOT INC  can be used for a carry free NEG
 // NEG sets CF and clobbers OF.
 
-// Currently unused
-#[allow(dead_code)]
 // This assembly block needs to be contiguous
 #[allow(clippy::too_many_lines)]
 #[inline(always)]
-#[cfg(all(target_arch = "x86_64", target_feature = "adx"))]
 pub(crate) fn mul_redc<M: MontgomeryParameters<UInt = U256>>(a: &U256, b: &U256) -> U256 {
     const ZERO: u64 = 0; // $3
     let modulus = M::MODULUS.as_limbs();
@@ -507,7 +432,7 @@ pub(crate) fn mul_redc<M: MontgomeryParameters<UInt = U256>>(a: &U256, b: &U256)
     // MULX dst_high, dst_low, src_b (src_a = %rdx)
     // src_b can be register or memory, not immediate
     unsafe {
-        asm!(r"
+        llvm_asm!(r"
             // Assembly from Aztec's Barretenberg implementation, see 
             // <https://github.com/AztecProtocol/barretenberg/blob/master/src/barretenberg/fields/asm_macros.hpp>
             movq 0($1), %rdx

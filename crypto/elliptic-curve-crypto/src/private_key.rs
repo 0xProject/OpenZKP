@@ -1,4 +1,11 @@
+// False positive from derive macros
+#![allow(unused_qualifications)]
+
 use crate::{Signature, GENERATOR_TABLE};
+#[cfg(feature = "parity_codec")]
+use parity_scale_codec::{Decode, Encode};
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 use tiny_keccak::{Hasher, Sha3};
 use zkp_elliptic_curve::{base_mul, Affine, ScalarFieldElement};
 use zkp_primefield::{Inv, Zero};
@@ -11,6 +18,8 @@ use proptest_derive::Arbitrary;
 #[cfg_attr(feature = "std", derive(Debug))]
 #[cfg_attr(test, derive(Arbitrary))]
 #[cfg_attr(test, proptest(no_params))]
+#[cfg_attr(feature = "parity_codec", derive(Encode, Decode))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct PrivateKey(ScalarFieldElement);
 
 impl PrivateKey {

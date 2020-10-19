@@ -5,13 +5,17 @@
 use std::prelude::v1::*;
 
 use crate::{ScalarFieldElement, BETA};
+#[cfg(feature = "parity_codec")]
+use parity_scale_codec::{Decode, Encode};
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 use zkp_primefield::{FieldElement, NegInline, One, Zero};
 use zkp_u256::{commutative_binop, noncommutative_binop};
 
-#[derive(PartialEq, Eq, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "std", derive(Debug))]
+#[derive(PartialEq, Eq, Clone, Debug)]
+#[cfg_attr(feature = "parity_codec", derive(Encode, Decode))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Affine {
     Zero, // Neutral element, point at infinity, additive identity, etc.
     Point { x: FieldElement, y: FieldElement },

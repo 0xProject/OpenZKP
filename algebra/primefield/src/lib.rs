@@ -50,12 +50,15 @@ pub mod fft;
 pub mod geometric_series;
 mod invert_batch;
 mod ops;
+#[cfg(feature = "parity_codec")]
+mod parity_codec;
 mod prime_field;
 #[cfg(any(test, feature = "proptest"))]
 mod proptest;
 mod proth_field;
 #[cfg(feature = "rand")]
 mod rand;
+#[cfg(feature = "serde")]
 mod serde;
 mod traits;
 mod uint;

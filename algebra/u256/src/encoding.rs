@@ -2,12 +2,12 @@
 #[allow(clippy::useless_attribute)]
 // False positive: Importing preludes is allowed
 #[allow(clippy::wildcard_imports)]
-use std::prelude::v1::*;
+use std::{fmt, prelude::v1::*};
 
 use crate::U256;
 
 #[cfg(feature = "std")]
-use std::{fmt, format};
+use std::format;
 
 impl U256 {
     pub fn from_decimal_str(s: &str) -> Result<Self, ParseError> {
@@ -100,7 +100,6 @@ impl fmt::Display for U256 {
     }
 }
 
-#[cfg(feature = "std")]
 impl fmt::Debug for U256 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
