@@ -54,6 +54,12 @@ impl<'a> Deserialize<'a> for U256 {
     }
 }
 
+impl From<bool> for U256 {
+    fn from(n: bool) -> Self {
+        Self::from_limbs([u64::from(n), 0, 0, 0])
+    }
+}
+
 macro_rules! impl_from_uint {
     ($type:ty) => {
         impl From<$type> for U256 {
@@ -168,8 +174,14 @@ impl U256 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use num_traits::identities::One;
+    use num_traits::identities::{One, Zero};
     use proptest::prelude::*;
+
+    #[test]
+    fn test_bool() {
+        assert_eq!(U256::from(true), U256::one());
+        assert_eq!(U256::from(false), U256::zero());
+    }
 
     #[cfg(feature = "serde")]
     mod serde {
