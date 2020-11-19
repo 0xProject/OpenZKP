@@ -32,7 +32,7 @@
     trivial_casts,
     trivial_numeric_casts,
     unreachable_pub,
-    unsafe_code,
+    // unsafe_code,
     variant_size_differences
 )]
 #![cfg_attr(feature = "std", warn(missing_debug_implementations,))]
