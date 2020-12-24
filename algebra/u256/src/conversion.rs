@@ -47,7 +47,8 @@ impl Serialize for U256 {
 impl<'a> Deserialize<'a> for U256 {
     fn deserialize<D: Deserializer<'a>>(deserializer: D) -> Result<Self, D::Error> {
         if deserializer.is_human_readable() {
-            <&str>::deserialize(deserializer).map(U256::from_hex_str)
+            let string = String::deserialize(deserializer)?;
+            Ok(U256::from_hex_str(&string))
         } else {
             <[u8; 32]>::deserialize(deserializer).map(|b| U256::from_bytes_be(&b))
         }
@@ -202,6 +203,15 @@ mod tests {
             proptest!(|(x: U256)| {
                 let serialized = serde_json::to_string(&x)?;
                 let deserialized: U256 = serde_json::from_str(&serialized)?;
+                prop_assert_eq!(deserialized, x);
+            });
+        }
+
+        #[test]
+        fn test_json_value() {
+            proptest!(|(x: U256)| {
+                let serialized = serde_json::to_value(&x)?;
+                let deserialized: U256 = serde_json::from_value(serialized)?;
                 prop_assert_eq!(deserialized, x);
             });
         }
