@@ -1,6 +1,6 @@
 [package]
 name = "zkp-u256"
-version = "0.2.0"
+version = "0.2.1"
 description = "Performant implementation of 256-bit unsigned integers"
 repository = "https://github.com/0xProject/starkcrypto/tree/master/algebra/u256"
 keywords = ["cryptography", "u256", "algebra", "no-std", "wasm"]
