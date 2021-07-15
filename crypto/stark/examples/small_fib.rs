@@ -26,7 +26,7 @@ impl Verifiable for Claim {
         seed.extend_from_slice(&self.value.as_montgomery().to_bytes_be());
 
         // Constraint repetitions
-        let trace_length = self.index.next_power_of_two();
+        let trace_length = (self.index + 1).next_power_of_two();
         let trace_generator = FieldElement::root(trace_length).unwrap();
         let g = Constant(trace_generator);
         let on_row = |index| (X - g.pow(index)).inv();
@@ -44,7 +44,7 @@ impl Verifiable for Claim {
 
 impl Provable<&Witness> for Claim {
     fn trace(&self, witness: &Witness) -> TraceTable {
-        let trace_length = self.index.next_power_of_two();
+        let trace_length = (self.index + 1).next_power_of_two();
         let mut trace = TraceTable::new(trace_length, 2);
         trace[(0, 0)] = 1.into();
         trace[(0, 1)] = witness.secret.clone();
